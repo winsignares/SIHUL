@@ -1,4 +1,4 @@
-Sobre el Proyecto
+# Sobre el Proyecto
 
 Este proyecto es un sistema de gestión y planeación académica diseñado para optimizar la estructura académica (facultades, programas, grupos, asignaturas) y la administración de recursos físicos (salones, laboratorios, espacios). Permite a los administradores de planeación organizar la oferta académica y gestionar eficientemente el inventario de espacios, mientras que los usuarios consultores pueden verificar horarios y disponibilidad.
 
@@ -21,7 +21,6 @@ cd sihul
 # 2. Configurar el Backend (Ejemplo)
 cd backend
 npm install   # o pip install -r requirements.txt, o equivalente
-# Configurar variables de entorno (.env) para DB, puertos, etc.
 
 # 3. Configurar el Frontend (Ejemplo)
 cd ../frontend
@@ -29,9 +28,9 @@ npm install
 npm start
 
 # 4. Inicialización
-# 4.1. Abrir el cmd como administrador
-# 4.2. Navegar hacia la ruta del proyecto
+4.1. Abrir el cmd como administrador
+4.2. Navegar hacia la ruta del proyecto
 cd <Ruta>
-# 4.3. Montar los contenedores
+4.3. Montar los contenedores
 docker compose up --build
-# 4.4. Abrir dirección url del contedor principal del proyecto
+4.4. Abrir dirección url del contedor principal del proyecto
