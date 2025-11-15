@@ -28,5 +28,10 @@ cd ../frontend
 npm install
 npm start
 
-# 4. Configuración de la Base de Datos
-# Pasos para levantar el servidor de DB y ejecutar las migraciones iniciales.
+# 4. Inicialización
+# 4.1. Abrir el cmd como administrador
+# 4.2. Navegar hacia la ruta del proyecto
+cd <Ruta>
+# 4.3. Montar los contenedores
+docker compose up --build
+# 4.4. Abrir dirección url del contedor principal del proyecto
