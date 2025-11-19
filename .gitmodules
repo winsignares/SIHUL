@@ -1,0 +1,12 @@
+[submodule "backend"]
+	path = backend
+	url = https://github.com/winsignares/SIHUL.git
+	branch = backend
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/winsignares/SIHUL.git
+	branch = frontend
+[submodule "chatbot"]
+	path = chatbot
+	url = https://github.com/winsignares/SIHUL.git
+	branch = chatbot
