@@ -1,0 +1,60 @@
+{%extends "base.html"%} 
+{%block content%}
+<div class="min-vh-100 d-flex align-items-center justify-content-center">
+  <div class="card shadow-sm" style="width: 100%; max-width: 420px">
+    <div class="card-body px-4 py-4">
+      <div class="text-center mb-3">
+        <div class="brand h5 mb-0">Mi Aplicación</div>
+        <small class="text-muted">Inicia sesión para continuar</small>
+      </div>
+      <form>
+        <div class="form-group">
+          <label for="inputEmail">Correo electrónico</label>
+          <input
+            type="email"
+            class="form-control"
+            id="inputEmail"
+            aria-describedby="emailHelp"
+            placeholder="ejemplo@dominio.com"
+            required
+          />
+          <small id="emailHelp" class="form-text text-muted"
+            >Nunca compartiremos tu correo.</small
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="inputPassword">Contraseña</label>
+          <input
+            type="password"
+            class="form-control"
+            id="inputPassword"
+            placeholder="********"
+            required
+          />
+        </div>
+
+        <div class="form-row align-items-center mb-3">
+          <div class="col-auto">
+            <div class="form-check">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="rememberCheck"
+              />
+              <label class="form-check-label" for="rememberCheck"
+                >Recordarme</label
+              >
+            </div>
+          </div>
+          <div class="col text-right">
+            <a href="#" class="small">¿Olvidaste tu contraseña?</a>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+      </form>
+    </div>
+  </div>
+</div>
+{%endblock%}
