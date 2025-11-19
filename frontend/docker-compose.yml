@@ -1,0 +1,16 @@
+services:
+  frontend-c1:
+    container_name: frontend-c1
+    build: .
+    working_dir: /app
+    volumes:
+      - .:/app:cached
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_USE_POLLING=true
+      - VITE_HMR_HOST=localhost
+      - VITE_HMR_PORT=5173
+    command: sh -c "if [ -f package-lock.json ] || [ -f pnpm-lock.yaml ] || [ -f yarn.lock ]; then if [ -f yarn.lock ]; then yarn install; elif [ -f pnpm-lock.yaml ]; then npm install -g pnpm && pnpm install; else npm install; fi; fi && npm run dev"
