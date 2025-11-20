@@ -203,7 +203,12 @@ def login(request):
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo
         request.session['is_authenticated'] = True
-        return JsonResponse({"message": "Login exitoso", "id": u.id, "nombre": u.nombre}, status=200)
+        return JsonResponse({
+            "message": "Login exitoso", 
+            "id": u.id, 
+            "nombre": u.nombre,
+            "rol": u.rol.nombre if u.rol else None
+        }, status=200)
     except json.JSONDecodeError:
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
