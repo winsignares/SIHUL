@@ -8,9 +8,9 @@ from .views import (
 )
 
 urlpatterns = [
-    path('crear/', create_componente, name='create_componente'),
-    path('listar/', list_componentes, name='list_componentes'),
-    path('obtener/<int:id>/', retrieve_componente, name='retrieve_componente'),
-    path('actualizar/', update_componente, name='update_componente'),
-    path('eliminar/', delete_componente, name='delete_componente'),
+    path('', create_componente, name='create_componente'),
+    path('list/', list_componentes, name='list_componentes'),
+    path('<int:id>/', retrieve_componente, name='retrieve_componente'),
+    path('update/', update_componente, name='update_componente'),
+    path('delete/', delete_componente, name='delete_componente'),
 ]
