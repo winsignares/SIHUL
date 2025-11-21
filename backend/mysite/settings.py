@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'horario',
     'usuarios',
+    'componentes',
     'sedes',
     'facultades',
     'programas',
