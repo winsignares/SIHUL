@@ -4,7 +4,7 @@ from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
-
+import secrets
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -203,11 +203,14 @@ def login(request):
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo
         request.session['is_authenticated'] = True
+        token = secrets.token_urlsafe(32)
+        request.session['token'] = token
         return JsonResponse({
             "message": "Login exitoso", 
             "id": u.id, 
             "nombre": u.nombre,
-            "rol": u.rol.nombre if u.rol else None
+            "rol": u.rol.nombre if u.rol else None,
+            "token": token
         }, status=200)
     except json.JSONDecodeError:
         return JsonResponse({"error": "JSON inválido."}, status=400)
