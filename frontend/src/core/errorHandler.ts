@@ -1,5 +1,3 @@
-import { tokenManager } from './tokenManager';
-
 export interface ApiError {
   message: string;
   status: number;
@@ -27,8 +25,22 @@ export async function handleApiError(response: Response): Promise<never> {
   // Manejo específico por código de estado
   switch (response.status) {
     case 401:
-      tokenManager.clearToken();
-      window.location.href = '/login';
+      // Limpiar sesión local y navegar al login sin recargar toda la página
+      try {
+        // Evitar dependencias circulares importando dinámicamente
+        const { db } = await import('../hooks/database');
+        db.cerrarSesion();
+      } catch (e) {
+        console.warn('No se pudo limpiar la sesión local:', e);
+      }
+      // Cambiar la URL con history API y disparar evento popstate para que React Router responda
+      try {
+        window.history.pushState({}, '', '/login');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch (e) {
+        // Fallback: navegación tradicional si algo falla
+        window.location.href = '/login';
+      }
       break;
     case 403:
       apiError.message = 'No tienes permisos para realizar esta acción';

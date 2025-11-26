@@ -1,4 +1,3 @@
-import { tokenManager } from './tokenManager.ts';
 import { handleApiError } from './errorHandler.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -20,12 +19,7 @@ class ApiClient {
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
     }
-
-    const token = tokenManager.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
+    
     return headers;
   }
 
