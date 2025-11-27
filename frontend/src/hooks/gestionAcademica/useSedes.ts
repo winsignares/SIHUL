@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../database';
+import { db } from '../../services/database';
 import { showNotification } from '../../context/ThemeContext';
 import type { Sede } from '../../models';
 

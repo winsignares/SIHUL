@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 import type { Facultad, Programa, Asignatura, EspacioFisico } from '../../models';
 import type { HorarioCompleto, AsignaturaHorario } from '../../models/horarios/visualizacion.model';
 

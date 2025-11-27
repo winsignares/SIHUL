@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import CrearHorarios from './CrearHorarios';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCentroHorarios } from '../../hooks/gestionAcademica/useCentroHorarios';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 
 export default function CentroHorarios() {
   const {

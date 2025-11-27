@@ -1,12 +1,24 @@
 import { Card, CardContent } from '../../share/card';
 import { motion } from 'motion/react';
 import { Clock, BookOpen, Users, ChevronRight, Calendar, FileText } from 'lucide-react';
+import { useConsultorDocente } from '../../hooks/dashboard/useConsultorDocente';
 
 interface ConsultorDocenteHomeProps {
   onNavigate?: (menu: string) => void;
 }
 
 export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHomeProps) {
+  const { stats } = useConsultorDocente();
+
+  const getGradient = (color: string) => {
+    switch (color) {
+      case 'blue': return 'from-blue-500 to-blue-600';
+      case 'green': return 'from-green-500 to-green-600';
+      case 'purple': return 'from-purple-500 to-purple-600';
+      default: return 'from-blue-500 to-blue-600';
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Section */}
@@ -25,65 +37,31 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-        >
-          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-                  <BookOpen className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-slate-600 dark:text-slate-400 mb-1">Asignaturas</p>
-                  <h3 className="text-slate-900 dark:text-slate-100">3 materias</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
-                  <Clock className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-slate-600 dark:text-slate-400 mb-1">Horas Semanales</p>
-                  <h3 className="text-slate-900 dark:text-slate-100">18 horas</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
-                  <Users className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-slate-600 dark:text-slate-400 mb-1">Grupos</p>
-                  <h3 className="text-slate-900 dark:text-slate-100">5 grupos</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (index + 1) * 0.1, duration: 0.5 }}
+            >
+              <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${getGradient(stat.color || 'blue')} flex items-center justify-center shadow-lg`}>
+                      <Icon className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-slate-600 dark:text-slate-400 mb-1">{stat.label}</p>
+                      <h3 className="text-slate-900 dark:text-slate-100">{stat.value}</h3>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Main Action Cards */}
@@ -106,7 +84,7 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
                   Visualiza tu horario semanal, exporta a PDF/Excel y solicita cambios al administrador.
                 </p>
                 <motion.button
-                  onClick={() => onNavigate('horario')}
+                  onClick={() => onNavigate && onNavigate('horario')}
                   className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -137,7 +115,7 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
                   Solicita espacios para clases adicionales, tutorías, conferencias y eventos académicos.
                 </p>
                 <motion.button
-                  onClick={() => onNavigate('prestamos')}
+                  onClick={() => onNavigate && onNavigate('prestamos')}
                   className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

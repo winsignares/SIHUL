@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../database';
+import { db } from '../../services/database';
 import type { Asignatura, Facultad, Programa, RecursoRequerido } from '../../models';
 
 // Lista de recursos disponibles

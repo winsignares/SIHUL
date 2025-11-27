@@ -1,32 +1,23 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
-import { 
-  Building2, 
-  MapPin, 
-  Clock, 
-  Calendar, 
-  Users, 
+import {
+  Building2,
+  MapPin,
+  Clock,
   BookOpen,
+  Users,
   TrendingUp,
   Bot,
-  ArrowUpRight,
-  Award,
-  Target,
-  Zap,
-  Star,
   Activity,
   ChevronRight,
   CheckCircle2,
   Circle,
   FileText,
-  X,
   Check,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Avatar, AvatarFallback } from '../../share/avatar';
-import { Progress } from '../../share/progress';
 import { Badge } from '../../share/badge';
 import {
   Dialog,
@@ -36,179 +27,48 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../share/dialog';
-import { useTheme } from '../../context/ThemeContext';
+import { useDashboardHome } from '../../hooks/dashboard/useDashboardHome';
 
 interface DashboardHomeProps {
   onNavigate?: (page: string) => void;
 }
 
 export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
-  const { showNotification } = useTheme();
-  // Estados para modales y funcionalidades
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [reportGenerated, setReportGenerated] = useState(false);
-  const [showOccupationDetails, setShowOccupationDetails] = useState(false);
-  const [showAllActivities, setShowAllActivities] = useState(false);
-  const [activities, setActivities] = useState<any[]>([]);
-  const stats = [
-    { 
-      label: 'Total Facultades', 
-      value: '8', 
-      change: '+12.5%', 
-      icon: Building2, 
-      gradient: 'from-violet-500 to-violet-600',
-      bgGradient: 'from-violet-500/10 to-violet-600/10',
-      iconBg: 'bg-violet-500',
-      changePositive: true
-    },
-    { 
-      label: 'Espacios Activos', 
-      value: '156', 
-      change: '+8.2%', 
-      icon: MapPin, 
-      gradient: 'from-blue-500 to-blue-600',
-      bgGradient: 'from-blue-500/10 to-blue-600/10',
-      iconBg: 'bg-blue-500',
-      changePositive: true
-    },
-    { 
-      label: 'Horarios Creados', 
-      value: '342', 
-      change: '+23.1%', 
-      icon: Clock, 
-      gradient: 'from-emerald-500 to-emerald-600',
-      bgGradient: 'from-emerald-500/10 to-emerald-600/10',
-      iconBg: 'bg-emerald-500',
-      changePositive: true
-    },
-    { 
-      label: 'Programas Activos', 
-      value: '24', 
-      change: '+5.4%', 
-      icon: BookOpen, 
-      gradient: 'from-amber-500 to-amber-600',
-      bgGradient: 'from-amber-500/10 to-amber-600/10',
-      iconBg: 'bg-amber-500',
-      changePositive: true
-    }
-  ];
+  const {
+    stats,
+    recentActivities,
+    activities,
+    quickStats,
+    occupationDetails,
+    occupationStats,
+    state,
+    setters,
+    handlers
+  } = useDashboardHome();
 
-  const skills = [
-    { name: 'Ocupación', percentage: 85, color: 'text-red-600' },
-    { name: 'Eficiencia', percentage: 92, color: 'text-blue-600' },
-    { name: 'Disponibilidad', percentage: 78, color: 'text-yellow-600' }
-  ];
+  const {
+    showReportModal,
+    isGeneratingReport,
+    reportGenerated,
+    showOccupationDetails,
+    showAllActivities
+  } = state;
 
-  // Inicializar actividades
-  useState(() => {
-    setActivities([
-      { 
-        id: '1',
-        title: 'Nuevo Horario Creado', 
-        description: 'Ingeniería de Sistemas - Grupo A', 
-        time: 'Hace 5 minutos',
-        status: 'pending',
-        icon: Clock,
-        color: 'bg-blue-500',
-        date: '2025-11-01 10:00'
-      },
-      { 
-        id: '2',
-        title: 'Espacio Actualizado', 
-        description: 'Laboratorio 301 - Edificio C', 
-        time: 'Hace 15 minutos',
-        status: 'pending',
-        icon: MapPin,
-        color: 'bg-emerald-500',
-        date: '2025-11-01 09:45'
-      },
-      { 
-        id: '3',
-        title: 'Programa Activado', 
-        description: 'Administración de Empresas 2025-1', 
-        time: 'Hace 1 hora',
-        status: 'completed',
-        icon: BookOpen,
-        color: 'bg-violet-500',
-        date: '2025-11-01 09:00'
-      },
-      { 
-        id: '4',
-        title: 'Conflicto Detectado', 
-        description: 'Aula 205 - Jueves 10:00 AM', 
-        time: 'Hace 2 horas',
-        status: 'pending',
-        icon: Activity,
-        color: 'bg-amber-500',
-        date: '2025-11-01 08:00'
-      },
-      { 
-        id: '5',
-        title: 'Usuario Creado', 
-        description: 'Nuevo docente registrado', 
-        time: 'Hace 3 horas',
-        status: 'completed',
-        icon: Users,
-        color: 'bg-indigo-500',
-        date: '2025-11-01 07:00'
-      },
-      { 
-        id: '6',
-        title: 'Préstamo Aprobado', 
-        description: 'Sala 101 - Reunión administrativa', 
-        time: 'Hace 4 horas',
-        status: 'completed',
-        icon: CheckCircle2,
-        color: 'bg-green-500',
-        date: '2025-11-01 06:00'
-      }
-    ]);
-  });
+  const {
+    setShowReportModal,
+    setShowOccupationDetails,
+    setShowAllActivities
+  } = setters;
 
-  const recentActivities = activities.slice(0, 4);
-
-  // Función para generar reporte
-  const handleGenerateReport = async () => {
-    setIsGeneratingReport(true);
-    setReportGenerated(false);
-    
-    // Simular generación de reporte
-    setTimeout(() => {
-      setIsGeneratingReport(false);
-      setReportGenerated(true);
-      
-      // Mostrar mensaje de éxito después de la animación
-      setTimeout(() => {
-        showNotification({ message: '✅ El reporte ha sido generado exitosamente', type: 'success' });
-        setShowReportModal(false);
-        setReportGenerated(false);
-      }, 1500);
-    }, 2000);
-  };
-
-  // Función para marcar actividad como realizada
-  const markActivityAsCompleted = (activityId: string) => {
-    setActivities(prev => 
-      prev.map(activity => 
-        activity.id === activityId 
-          ? { ...activity, status: 'completed' }
-          : activity
-      )
-    );
-    showNotification({ message: 'Actividad marcada como realizada', type: 'success' });
-  };
-
-  const quickStats = [
-    { label: 'Tasa de Ocupación', value: '85%', icon: TrendingUp, trend: 'up' },
-    { label: 'Conflictos Resueltos', value: '23', icon: CheckCircle2, trend: 'up' },
-    { label: 'Espacios Disponibles', value: '12', icon: Circle, trend: 'neutral' }
-  ];
+  const {
+    handleGenerateReport,
+    markActivityAsCompleted
+  } = handlers;
 
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <motion.div 
+      <motion.div
         className="flex items-center justify-between"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -219,14 +79,14 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
           <p className="text-slate-600">Aquí está el resumen de tu gestión académica</p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="border-slate-300 hover:border-red-500 hover:text-red-600"
           >
             <Calendar className="w-4 h-4 mr-2" />
             Período 2025-1
           </Button>
-          <Button 
+          <Button
             onClick={() => setShowReportModal(true)}
             className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
           >
@@ -254,7 +114,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <p className="text-slate-600 mb-2">{stat.label}</p>
-                      <motion.h2 
+                      <motion.h2
                         className="text-slate-900"
                         initial={{ scale: 0.5 }}
                         animate={{ scale: 1 }}
@@ -269,7 +129,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                         <span className="text-slate-500">este mes</span>
                       </div>
                     </div>
-                    <motion.div 
+                    <motion.div
                       className={`${stat.iconBg} w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg`}
                       whileHover={{ rotate: 360, scale: 1.1 }}
                       transition={{ duration: 0.6 }}
@@ -299,8 +159,8 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                   <CardTitle className="text-slate-900">Estadísticas de Ocupación</CardTitle>
                   <p className="text-slate-600 mt-1">Resumen semanal de uso de espacios</p>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowOccupationDetails(true)}
                 >
@@ -311,15 +171,8 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { day: 'Lunes', value: 85, color: 'bg-red-600' },
-                  { day: 'Martes', value: 92, color: 'bg-blue-600' },
-                  { day: 'Miércoles', value: 88, color: 'bg-violet-600' },
-                  { day: 'Jueves', value: 78, color: 'bg-emerald-600' },
-                  { day: 'Viernes', value: 65, color: 'bg-amber-600' },
-                  { day: 'Sábado', value: 45, color: 'bg-slate-600' }
-                ].map((item, index) => (
-                  <motion.div 
+                {occupationStats.map((item, index) => (
+                  <motion.div
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -328,7 +181,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                     <div className="flex items-center gap-4">
                       <span className="text-slate-600 w-24">{item.day}</span>
                       <div className="flex-1 bg-slate-100 rounded-full h-8 overflow-hidden relative">
-                        <motion.div 
+                        <motion.div
                           className={`${item.color} h-8 rounded-full flex items-center justify-end pr-3 text-white relative overflow-hidden`}
                           initial={{ width: 0 }}
                           animate={{ width: `${item.value}%` }}
@@ -360,9 +213,9 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-slate-900">Actividad Reciente</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   onClick={() => setShowAllActivities(true)}
                 >
@@ -464,7 +317,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
               {reportGenerated ? '¡Listo!' : '¿Desea generar el reporte del Dashboard?'}
             </DialogTitle>
             <DialogDescription>
-              {reportGenerated 
+              {reportGenerated
                 ? 'El reporte ha sido procesado correctamente'
                 : 'Se generará un reporte completo con todas las estadísticas actuales'
               }
@@ -479,7 +332,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
           )}
 
           {reportGenerated && (
-            <motion.div 
+            <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               className="flex flex-col items-center justify-center py-8"
@@ -528,70 +381,22 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
           <div className="space-y-6 py-4">
             {/* Resumen General */}
             <div className="grid grid-cols-3 gap-4">
-              <Card className="border-slate-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-slate-600 mb-2">Promedio Semanal</p>
-                    <p className="text-slate-900">78.5%</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-slate-600 mb-2">Horas Pico</p>
-                    <p className="text-slate-900">10:00 - 12:00</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-slate-600 mb-2">Espacios Activos</p>
-                    <p className="text-slate-900">145 / 156</p>
-                  </div>
-                </CardContent>
-              </Card>
+              {quickStats.map((stat, index) => (
+                <Card key={index} className="border-slate-200">
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-slate-600 mb-2">{stat.label}</p>
+                      <p className="text-slate-900">{stat.value}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
             {/* Gráfico Detallado por Día */}
             <div className="space-y-4">
               <h4 className="text-slate-900">Ocupación por Día y Franja Horaria</h4>
-              {[
-                { 
-                  day: 'Lunes', 
-                  franjas: [
-                    { hora: '07:00 - 09:00', ocupacion: 65, color: 'bg-blue-500' },
-                    { hora: '09:00 - 11:00', ocupacion: 92, color: 'bg-red-600' },
-                    { hora: '11:00 - 13:00', ocupacion: 88, color: 'bg-red-600' },
-                    { hora: '13:00 - 15:00', ocupacion: 70, color: 'bg-blue-500' },
-                    { hora: '15:00 - 17:00', ocupacion: 82, color: 'bg-red-600' },
-                    { hora: '17:00 - 19:00', ocupacion: 45, color: 'bg-emerald-500' }
-                  ]
-                },
-                { 
-                  day: 'Martes', 
-                  franjas: [
-                    { hora: '07:00 - 09:00', ocupacion: 70, color: 'bg-blue-500' },
-                    { hora: '09:00 - 11:00', ocupacion: 95, color: 'bg-red-600' },
-                    { hora: '11:00 - 13:00', ocupacion: 90, color: 'bg-red-600' },
-                    { hora: '13:00 - 15:00', ocupacion: 75, color: 'bg-blue-500' },
-                    { hora: '15:00 - 17:00', ocupacion: 85, color: 'bg-red-600' },
-                    { hora: '17:00 - 19:00', ocupacion: 50, color: 'bg-emerald-500' }
-                  ]
-                },
-                { 
-                  day: 'Miércoles', 
-                  franjas: [
-                    { hora: '07:00 - 09:00', ocupacion: 68, color: 'bg-blue-500' },
-                    { hora: '09:00 - 11:00', ocupacion: 88, color: 'bg-red-600' },
-                    { hora: '11:00 - 13:00', ocupacion: 92, color: 'bg-red-600' },
-                    { hora: '13:00 - 15:00', ocupacion: 72, color: 'bg-blue-500' },
-                    { hora: '15:00 - 17:00', ocupacion: 80, color: 'bg-blue-500' },
-                    { hora: '17:00 - 19:00', ocupacion: 48, color: 'bg-emerald-500' }
-                  ]
-                }
-              ].map((dia, idx) => (
+              {occupationDetails.map((dia, idx) => (
                 <Card key={idx} className="border-slate-200">
                   <CardContent className="pt-6">
                     <h5 className="text-slate-900 mb-4">{dia.day}</h5>
@@ -648,11 +453,10 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
-                    activity.status === 'completed' 
-                      ? 'bg-emerald-50 border-emerald-200' 
-                      : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${activity.status === 'completed'
+                    ? 'bg-emerald-50 border-emerald-200'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
                 >
                   <div className={`${activity.color} w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0`}>
                     <Icon className="w-5 h-5 text-white" />

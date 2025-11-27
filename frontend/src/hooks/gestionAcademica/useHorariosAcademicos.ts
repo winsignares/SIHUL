@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { Facultad, Programa, Asignatura, EspacioFisico, Docente } from '../../hooks/models';
+import type { Facultad, Programa, Asignatura, EspacioFisico, Docente } from '../../models/models';
 
 export interface AsignaturaHorario {
     id: string;

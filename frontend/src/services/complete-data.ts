@@ -3,7 +3,7 @@
 // ============================================
 
 import { db } from './database';
-import type { Usuario } from './models';
+import type { Usuario } from '../models/models';
 
 /**
  * Función para agregar datos completos adicionales al sistema
@@ -11,11 +11,11 @@ import type { Usuario } from './models';
  */
 export function addCompleteData() {
   console.log('📦 Agregando datos completos al sistema...');
-  
+
   // ============================================
   // DOCENTES ADICIONALES
   // ============================================
-  
+
   const docentesAdicionales: Omit<Usuario, 'id'>[] = [
     {
       nombre: 'Dr. Carlos Alberto Pérez',
@@ -134,9 +134,9 @@ export function addCompleteData() {
       docentesAgregados++;
     }
   });
-  
+
   console.log(`✅ Se agregaron ${docentesAgregados} docentes al sistema`);
-  
+
   // Obtener datos existentes
   const facultades = db.getFacultades();
   const programas = db.getProgramas();
@@ -144,7 +144,7 @@ export function addCompleteData() {
   const grupos = db.getGrupos();
   const espacios = db.getEspacios();
   const periodos = db.getPeriodos();
-  
+
   if (facultades.length === 0 || programas.length === 0) {
     console.log('⚠️  Faltan datos básicos. Ejecuta primero initializeDatabase()');
     return;
@@ -153,7 +153,7 @@ export function addCompleteData() {
   // ============================================
   // HORARIOS ACADÉMICOS COMPLETOS
   // ============================================
-  
+
   const horariosAdicionales = [
     // Horarios para Ingeniería de Sistemas - Grupo A (Semestre 1)
     {
@@ -460,13 +460,13 @@ export function addCompleteData() {
       horariosAgregados++;
     }
   });
-  
+
   console.log(`✅ Se agregaron ${horariosAgregados} horarios académicos`);
 
   // ============================================
   // ASIGNATURAS ADICIONALES SIN HORARIOS
   // ============================================
-  
+
   // Asignaturas para Ingeniería de Sistemas - Semestre 2 (SIN HORARIOS - para crear)
   const asignaturasParaCrear = [
     {
@@ -531,7 +531,7 @@ export function addCompleteData() {
   // ============================================
   // GRUPOS ADICIONALES SIN HORARIOS
   // ============================================
-  
+
   const gruposParaCrear = [
     {
       codigo: 'INSI-C',
@@ -576,7 +576,7 @@ export function addCompleteData() {
   // ============================================
   // PRÉSTAMOS DE ESPACIOS ADICIONALES
   // ============================================
-  
+
   const usuarios = db.getUsuarios();
   const prestamosAdicionales = [
     {
@@ -652,13 +652,13 @@ export function addCompleteData() {
       }
     }
   });
-  
+
   console.log(`✅ Se agregaron ${prestamosAgregados} préstamos de espacios adicionales`);
 
   // ============================================
   // ACTUALIZAR GRUPOS CON DOCENTES
   // ============================================
-  
+
   // Asignar docentes a los grupos existentes
   const gruposConDocentes = [
     { codigo: 'INSI-A', docente: 'Dr. Carlos Alberto Pérez' },

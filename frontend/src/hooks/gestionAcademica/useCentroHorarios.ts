@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
 import type { HorarioAcademico, Facultad, Programa, EspacioFisico } from '../../models/academica';
 

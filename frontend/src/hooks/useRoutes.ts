@@ -1,6 +1,6 @@
 import { useUser } from '../context/UserContext';
 import { useMemo, useCallback } from 'react';
-import { normalizeRole } from './roleUtils';
+import { normalizeRole } from '../context/roleUtils';
 
 export type Role = 'admin' | 'supervisor_general' | 'consultor_docente' | 'consultor_estudiante';
 

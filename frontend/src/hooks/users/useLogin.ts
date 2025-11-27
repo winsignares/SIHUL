@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '../../services/auth';
-import { normalizeRole } from '../../hooks/roleUtils';
+import { normalizeRole } from '../../context/roleUtils';
 import { useUser } from '../../context/UserContext';
 import type { Usuario } from '../../models/index';
 

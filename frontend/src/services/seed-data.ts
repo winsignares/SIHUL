@@ -4,13 +4,13 @@
 // ============================================
 
 import { db } from './database';
-import type { Usuario } from './models';
+import type { Usuario } from '../models/models';
 import { addCompleteData } from './complete-data';
 
 export function initializeDatabase(): void {
   // Solo inicializar si no hay datos
   const isInitialized = db.isInitialized();
-  
+
   if (isInitialized) {
     console.log('✅ Base de datos ya inicializada');
     // Verificar y agregar usuarios faltantes
@@ -318,7 +318,7 @@ if (typeof window !== 'undefined') {
 // ============================================
 function agregarUsuariosFaltantes(): void {
   const usuariosActuales = db.getUsuarios();
-  
+
   // Usuarios que deben existir
   const usuariosRequeridos: Omit<Usuario, 'id'>[] = [
     {

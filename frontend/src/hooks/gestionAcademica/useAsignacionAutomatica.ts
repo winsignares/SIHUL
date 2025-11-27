@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
 
 export interface HorarioImportado {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import { db } from './database';
+import { db } from '../services/database';
 import {
     LayoutDashboard,
     Building2,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 import type { ChecklistCierre, EstadoSalon, SalonEnriquecido } from '../../models';
-import type { EspacioFisico, HorarioAcademico } from '../../hooks/models';
+import type { EspacioFisico, HorarioAcademico } from '../../models/models';
 import { AlertCircle, DoorOpen, Users, Clock, Lock, XCircle } from 'lucide-react';
 
 export function useSupervisorSalonHome() {

@@ -23,3 +23,12 @@ export interface Mensaje {
     timestamp: Date;
     leido?: boolean;
 }
+
+export interface MensajeChat {
+    id: string;
+    remitenteId: string;
+    destinatarioId: string;
+    mensaje: string;
+    leido: boolean;
+    fecha: string;
+}

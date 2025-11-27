@@ -28,7 +28,7 @@ export async function handleApiError(response: Response): Promise<never> {
       // Limpiar sesión local y navegar al login sin recargar toda la página
       try {
         // Evitar dependencias circulares importando dinámicamente
-        const { db } = await import('../hooks/database');
+        const { db } = await import('../services/database');
         db.cerrarSesion();
       } catch (e) {
         console.warn('No se pudo limpiar la sesión local:', e);
@@ -63,7 +63,7 @@ export function formatValidationErrors(
   errors?: Record<string, string[]>
 ): string {
   if (!errors) return '';
-  
+
   return Object.entries(errors)
     .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
     .join('\n');

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { db } from '../../hooks/database';
+import { db } from '../../services/database';
 import type { EspacioFisico, HorarioAcademico } from '../../models/academica';
 
 export interface EspacioEnriquecido extends EspacioFisico {
