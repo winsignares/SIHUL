@@ -1,17 +1,15 @@
-import { useState } from 'react';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Alert, AlertDescription, AlertTitle } from '../../share/alert';
 import { Badge } from '../../share/badge';
 import { Progress } from '../../share/progress';
-import { Label } from '../../share/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/dialog';
-import { 
-  Upload, 
-  FileSpreadsheet, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
+import {
+  Upload,
+  FileSpreadsheet,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
   Zap,
   Calendar,
   Users,
@@ -35,713 +33,45 @@ import {
   Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner';
-import { Toaster } from '../../share/sonner';
-import * as XLSX from 'xlsx';
-import { db } from '../../hooks/database';
-
-interface HorarioImportado {
-  programa: string;
-  asignatura: string;
-  grupo: string;
-  docente: string;
-  diaSemana: string;
-  horaInicio: string;
-  horaFin: string;
-  cantidadEstudiantes: number;
-  recursosRequeridos: string[];
-}
-
-interface ResultadoAsignacion {
-  horario: HorarioImportado;
-  espacioAsignado: string;
-  espacioId: string;
-  exito: boolean;
-  razon?: string;
-}
+import { NotificationBanner } from '../../share/notificationBanner';
+import { useAsignacionAutomatica } from '../../hooks/gestionAcademica/useAsignacionAutomatica';
 
 export default function AsignacionAutomatica() {
-  const [archivo, setArchivo] = useState<File | null>(null);
-  const [horariosImportados, setHorariosImportados] = useState<HorarioImportado[]>([]);
-  const [procesando, setProcesando] = useState(false);
-  const [progreso, setProgreso] = useState(0);
-  const [resultados, setResultados] = useState<ResultadoAsignacion[]>([]);
-  const [etapa, setEtapa] = useState<'carga' | 'revision' | 'procesando' | 'completado'>('carga');
-  
-  // Estados para las acciones de usuario
-  const [asignacionesConfirmadas, setAsignacionesConfirmadas] = useState<Set<number>>(new Set());
-  const [asignacionesRechazadas, setAsignacionesRechazadas] = useState<Set<number>>(new Set());
-  const [horarioSeleccionado, setHorarioSeleccionado] = useState<ResultadoAsignacion | null>(null);
-  const [mostrarCalendario, setMostrarCalendario] = useState(false);
-  
-  // Estados para horario completo por grupo
-  const [mostrarHorarioCompleto, setMostrarHorarioCompleto] = useState(false);
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('');
-  const [horariosGrupoSeleccionado, setHorariosGrupoSeleccionado] = useState<ResultadoAsignacion[]>([]);
-
-  // Manejo de archivo
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      if (extension === 'xlsx' || extension === 'xls' || extension === 'csv') {
-        setArchivo(file);
-        procesarArchivo(file);
-      } else {
-        // Mostrar notificación: Por favor suba un archivo Excel (.xlsx, .xls) o CSV
-      }
-    }
-  };
-
-  // Procesar archivo Excel/CSV
-  const procesarArchivo = async (file: File) => {
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      console.log('📄 Datos crudos del Excel:', jsonData);
-
-      // Mapear datos del archivo a nuestro formato
-      const horariosParseados: HorarioImportado[] = jsonData.map((row: any) => {
-        const horario = {
-          programa: row['Programa'] || row['programa'] || '',
-          asignatura: row['Asignatura'] || row['asignatura'] || '',
-          grupo: row['Grupo'] || row['grupo'] || '',
-          docente: row['Docente'] || row['docente'] || '',
-          diaSemana: normalizarDia(row['Día'] || row['dia'] || row['Dia'] || ''),
-          horaInicio: row['Hora Inicio'] || row['hora_inicio'] || row['HoraInicio'] || '',
-          horaFin: row['Hora Fin'] || row['hora_fin'] || row['HoraFin'] || '',
-          cantidadEstudiantes: parseInt(row['Cantidad Estudiantes'] || row['Estudiantes'] || row['estudiantes'] || row['cantidadEstudiantes'] || '30'),
-          recursosRequeridos: parseRecursos(row['Recursos'] || row['recursos'] || '')
-        };
-        console.log('✓ Horario parseado:', horario);
-        return horario;
-      });
-
-      setHorariosImportados(horariosParseados);
-      setEtapa('revision');
-      
-      // Resumen de grupos
-      const grupos = [...new Set(horariosParseados.map(h => h.grupo))];
-      const programas = [...new Set(horariosParseados.map(h => h.programa))];
-      
-      // Mostrar notificación: ✅ ${horariosParseados.length} horarios cargados\n📚 ${programas.length} programa(s)\n👥 ${grupos.length} grupo(s)
-    } catch (error) {
-      console.error('Error al procesar archivo:', error);
-      // Mostrar notificación: Error al procesar el archivo. Verifique el formato.
-    }
-  };
-
-  // Normalizar días de la semana
-  const normalizarDia = (dia: string): string => {
-    const diaLower = dia.toLowerCase().trim();
-    const mapa: { [key: string]: string } = {
-      'lunes': 'lunes',
-      'martes': 'martes',
-      'miércoles': 'miercoles',
-      'miercoles': 'miercoles',
-      'jueves': 'jueves',
-      'viernes': 'viernes',
-      'sábado': 'sabado',
-      'sabado': 'sabado'
-    };
-    return mapa[diaLower] || diaLower;
-  };
-
-  // Parsear recursos desde string
-  const parseRecursos = (recursosStr: string): string[] => {
-    if (!recursosStr) return [];
-    return recursosStr.split(',').map(r => r.trim()).filter(r => r);
-  };
-
-  // Algoritmo de asignación automática
-  const iniciarAsignacionAutomatica = async () => {
-    setProcesando(true);
-    setEtapa('procesando');
-    setProgreso(0);
-
-    const espacios = db.getEspacios();
-    const resultadosTemp: ResultadoAsignacion[] = [];
-
-    for (let i = 0; i < horariosImportados.length; i++) {
-      const horario = horariosImportados[i];
-      setProgreso(((i + 1) / horariosImportados.length) * 100);
-
-      // Buscar espacio compatible
-      const espacioCompatible = encontrarEspacioCompatible(horario, espacios, resultadosTemp);
-
-      if (espacioCompatible) {
-        // Crear horario en el sistema
-        const asignacionExitosa = crearHorarioEnSistema(horario, espacioCompatible.id);
-        
-        resultadosTemp.push({
-          horario,
-          espacioAsignado: espacioCompatible.nombre,
-          espacioId: espacioCompatible.id,
-          exito: asignacionExitosa,
-          razon: asignacionExitosa ? 'Asignado correctamente' : 'Error al crear horario'
-        });
-      } else {
-        resultadosTemp.push({
-          horario,
-          espacioAsignado: 'N/A',
-          espacioId: '',
-          exito: false,
-          razon: 'No se encontró espacio compatible'
-        });
-      }
-
-      // Eliminado retraso artificial por iteración para mejorar rendimiento
-    }
-
-    setResultados(resultadosTemp);
-    setEtapa('completado');
-    setProcesando(false);
-
-    const exitosos = resultadosTemp.filter(r => r.exito).length;
-    const fallidos = resultadosTemp.length - exitosos;
-
-    if (fallidos === 0) {
-      // Mostrar notificación: 🎉 ¡Asignación completada! ${exitosos} horarios asignados correctamente
-    } else {
-      // Mostrar notificación: ⚠️ Asignación completada con advertencias: ${exitosos} exitosos, ${fallidos} fallidos
-    }
-  };
-
-  // Encontrar espacio compatible
-  const encontrarEspacioCompatible = (
-    horario: HorarioImportado, 
-    espacios: any[], 
-    asignacionesPrevias: ResultadoAsignacion[]
-  ) => {
-    console.log(`\n🔍 Buscando espacio para: ${horario.programa} - ${horario.asignatura}`);
-    console.log(`   Requisitos: ${horario.cantidadEstudiantes} estudiantes, Día: ${horario.diaSemana}, Horario: ${horario.horaInicio}-${horario.horaFin}`);
-    console.log(`   Recursos requeridos:`, horario.recursosRequeridos);
-    
-    // Ordenar espacios por capacidad (ascendente) para optimizar uso
-    const espaciosOrdenados = [...espacios].sort((a, b) => a.capacidad - b.capacidad);
-    
-    for (const espacio of espaciosOrdenados) {
-      console.log(`\n   Evaluando: ${espacio.nombre} (${espacio.codigo})`);
-      
-      // 1. Verificar estado del espacio
-      if (espacio.estado !== 'Disponible') {
-        console.log(`   ❌ Estado: ${espacio.estado}`);
-        continue;
-      }
-      console.log(`   ✓ Estado: Disponible`);
-
-      // 2. Verificar capacidad (con margen del 10%)
-      const capacidadMinima = Math.ceil(horario.cantidadEstudiantes * 0.9);
-      if (espacio.capacidad < capacidadMinima) {
-        console.log(`   ❌ Capacidad insuficiente: ${espacio.capacidad} < ${capacidadMinima}`);
-        continue;
-      }
-      console.log(`   ✓ Capacidad suficiente: ${espacio.capacidad} >= ${horario.cantidadEstudiantes}`);
-
-      // 3. Verificar recursos (modo flexible)
-      if (horario.recursosRequeridos.length > 0) {
-        const recursosEspacio = espacio.recursos || [];
-        console.log(`   Recursos del espacio:`, recursosEspacio);
-        
-        // Modo flexible: si el espacio tiene al menos 50% de los recursos requeridos, lo considera compatible
-        const recursosCoincidentes = horario.recursosRequeridos.filter(recursoReq => {
-          return recursosEspacio.some((recursoEsp: string) => {
-            const req = recursoReq.toLowerCase().trim();
-            const esp = recursoEsp.toLowerCase().trim();
-            // Coincidencia parcial más flexible
-            return esp.includes(req) || req.includes(esp) || 
-                   (req.includes('computador') && (esp.includes('pc') || esp.includes('computador') || esp.includes('computadora'))) ||
-                   (req.includes('proyector') && esp.includes('video')) ||
-                   (req.includes('pizarra') && (esp.includes('tablero') || esp.includes('pizarra')));
-          });
-        });
-        
-        const porcentajeCoincidencia = (recursosCoincidentes.length / horario.recursosRequeridos.length) * 100;
-        console.log(`   Recursos coincidentes: ${recursosCoincidentes.length}/${horario.recursosRequeridos.length} (${porcentajeCoincidencia.toFixed(0)}%)`);
-        
-        // Si tiene menos del 30% de recursos, rechazar
-        if (porcentajeCoincidencia < 30) {
-          console.log(`   ❌ Recursos insuficientes`);
-          continue;
-        }
-        console.log(`   ✓ Recursos aceptables`);
-      }
-
-      // 4. Verificar conflictos de horario
-      const tieneConflicto = asignacionesPrevias.some(asig =>
-        asig.espacioId === espacio.id &&
-        asig.horario.diaSemana.toLowerCase() === horario.diaSemana.toLowerCase() &&
-        hayConflictoHorario(
-          asig.horario.horaInicio,
-          asig.horario.horaFin,
-          horario.horaInicio,
-          horario.horaFin
-        )
-      );
-      if (tieneConflicto) {
-        console.log(`   ❌ Conflicto de horario`);
-        continue;
-      }
-      console.log(`   ✓ Sin conflictos de horario`);
-
-      // Espacio compatible encontrado
-      console.log(`   ✅ ESPACIO COMPATIBLE ENCONTRADO: ${espacio.nombre}`);
-      return espacio;
-    }
-
-    console.log(`   ❌ NO SE ENCONTRÓ ESPACIO COMPATIBLE`);
-    return null;
-  };
-
-  // Verificar conflicto de horario
-  const hayConflictoHorario = (
-    inicio1: string,
-    fin1: string,
-    inicio2: string,
-    fin2: string
-  ): boolean => {
-    const [h1i, m1i] = inicio1.split(':').map(Number);
-    const [h1f, m1f] = fin1.split(':').map(Number);
-    const [h2i, m2i] = inicio2.split(':').map(Number);
-    const [h2f, m2f] = fin2.split(':').map(Number);
-
-    const min1i = h1i * 60 + m1i;
-    const min1f = h1f * 60 + m1f;
-    const min2i = h2i * 60 + m2i;
-    const min2f = h2f * 60 + m2f;
-
-    return !(min1f <= min2i || min2f <= min1i);
-  };
-
-  // Crear horario en el sistema
-  const crearHorarioEnSistema = (horario: HorarioImportado, espacioId: string): boolean => {
-    try {
-      // Buscar el programa correspondiente
-      const programas = db.getProgramas();
-      let programa = programas.find(p => 
-        p.nombre.toLowerCase().includes(horario.programa.toLowerCase()) ||
-        horario.programa.toLowerCase().includes(p.nombre.toLowerCase())
-      );
-
-      // Si no existe el programa, crearlo automáticamente
-      if (!programa) {
-        console.log(`⚠️ Programa no encontrado, creando: ${horario.programa}`);
-        
-        // Buscar o crear facultad
-        const facultades = db.getFacultades();
-        let facultad = facultades[0]; // Usar la primera facultad por defecto
-        
-        if (!facultad) {
-          // Si no hay facultades, crear una por defecto
-          facultad = db.createFacultad({
-            nombre: 'Facultad de Ingeniería',
-            codigo: 'ING-' + Date.now().toString().slice(-4),
-            decano: 'Por Asignar',
-            email: 'facultad@unilibre.edu.co',
-            telefono: '000-0000',
-            activa: true,
-            fechaCreacion: new Date().toISOString()
-          });
-          console.log(`✓ Facultad creada: ${facultad.nombre}`);
-        }
-
-        // Buscar docenteId por nombre antes de crear el programa
-        const docentes = db.getDocentes();
-        const docenteObj = docentes.find(d => d.nombre.trim().toLowerCase() === horario.docente.trim().toLowerCase());
-        // Crear el programa
-        programa = db.createPrograma({
-          nombre: horario.programa,
-          codigo: horario.programa.substring(0, 3).toUpperCase() + '-' + Date.now().toString().slice(-4),
-          facultadId: facultad.id,
-          director: docenteObj ? docenteObj.nombre : 'Por Asignar',
-          modalidad: 'presencial',
-          activo: true,
-          fechaCreacion: new Date().toISOString(),
-          nivel: 'pregrado', // valor por defecto, ajustar si es necesario
-          semestres: 10, // valor por defecto, ajustar si es necesario
-        });
-        console.log(`✓ Programa creado: ${programa.nombre}`);
-      }
-
-      // Buscar o crear el grupo
-      let grupo = db.getGrupos().find(g => 
-        g.nombre === horario.grupo && g.programaId === programa!.id
-      );
-
-      if (!grupo) {
-        // Buscar o crear período académico
-        let periodo = db.getPeriodos()[0];
-        if (!periodo) {
-          periodo = db.createPeriodo({
-            nombre: '2025-1',
-            codigo: '2025-1',
-            fechaInicio: '2025-01-15',
-            fechaFin: '2025-05-30',
-            activo: true,
-            fechaCreacion: new Date().toISOString()
-          });
-          console.log(`✓ Período creado: ${periodo.nombre}`);
-        }
-
-        // Crear grupo
-        grupo = db.createGrupo({
-          nombre: horario.grupo,
-          programaId: programa.id,
-          semestre: 1,
-          periodoId: periodo.id,
-          cantidadEstudiantes: horario.cantidadEstudiantes,
-          codigo: horario.grupo + '-' + Date.now().toString().slice(-4),
-          asignaturaId: '',
-          modalidad: 'presencial',
-          activo: true,
-          fechaCreacion: new Date().toISOString()
-        });
-        console.log(`✓ Grupo creado: ${grupo.nombre}`);
-      }
-
-      // Buscar docenteId por nombre
-      const docentes = db.getDocentes();
-      const docenteObj = docentes.find(d => d.nombre.trim().toLowerCase() === horario.docente.trim().toLowerCase());
-      // Crear el horario académico con campos extendidos
-      const nuevoHorario = db.createHorario({
-        grupoId: grupo.id,
-        espacioId: espacioId,
-        periodoId: grupo.periodoId,
-        diaSemana: horario.diaSemana as any,
-        horaInicio: horario.horaInicio,
-        horaFin: horario.horaFin,
-        activo: true,
-        fechaCreacion: new Date().toISOString(),
-        // Campos extendidos (guardados como propiedades adicionales)
-        asignatura: horario.asignatura,
-        docente: horario.docente,
-        docenteId: docenteObj ? docenteObj.id : undefined,
-        grupo: horario.grupo,
-        programaId: programa.id,
-        semestre: 1
-      } as any);
-
-      console.log(`✅ Horario creado exitosamente:`, nuevoHorario);
-      return true;
-    } catch (error) {
-      console.error('❌ Error al crear horario:', error);
-      return false;
-    }
-  };
-
-  // Descargar plantilla Excel
-  const descargarPlantilla = () => {
-    // Plantilla ejemplo: Horario completo de un grupo (Lunes a Viernes)
-    const plantilla = [
-      // Información del Grupo - Lunes
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Lunes',
-        'Hora Inicio': '08:00',
-        'Hora Fin': '10:00',
-        'Asignatura': 'Programación I',
-        'Docente': 'Juan Pérez',
-        'Recursos': 'computador, proyector'
-      },
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Lunes',
-        'Hora Inicio': '10:00',
-        'Hora Fin': '12:00',
-        'Asignatura': 'Matemáticas I',
-        'Docente': 'Ana García',
-        'Recursos': 'pizarra, proyector'
-      },
-      // Martes
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Martes',
-        'Hora Inicio': '08:00',
-        'Hora Fin': '10:00',
-        'Asignatura': 'Física I',
-        'Docente': 'Carlos Rodríguez',
-        'Recursos': 'proyector, laboratorio'
-      },
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Martes',
-        'Hora Inicio': '14:00',
-        'Hora Fin': '16:00',
-        'Asignatura': 'Algoritmos',
-        'Docente': 'María López',
-        'Recursos': 'computador, pizarra'
-      },
-      // Miércoles
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Miércoles',
-        'Hora Inicio': '08:00',
-        'Hora Fin': '10:00',
-        'Asignatura': 'Programación I',
-        'Docente': 'Juan Pérez',
-        'Recursos': 'computador, proyector'
-      },
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Miércoles',
-        'Hora Inicio': '10:00',
-        'Hora Fin': '12:00',
-        'Asignatura': 'Inglés I',
-        'Docente': 'Laura Martínez',
-        'Recursos': 'proyector, audio'
-      },
-      // Jueves
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Jueves',
-        'Hora Inicio': '08:00',
-        'Hora Fin': '10:00',
-        'Asignatura': 'Matemáticas I',
-        'Docente': 'Ana García',
-        'Recursos': 'pizarra, proyector'
-      },
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Jueves',
-        'Hora Inicio': '14:00',
-        'Hora Fin': '16:00',
-        'Asignatura': 'Algoritmos',
-        'Docente': 'María López',
-        'Recursos': 'computador, pizarra'
-      },
-      // Viernes
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Viernes',
-        'Hora Inicio': '08:00',
-        'Hora Fin': '10:00',
-        'Asignatura': 'Física I',
-        'Docente': 'Carlos Rodríguez',
-        'Recursos': 'proyector, laboratorio'
-      },
-      {
-        'Facultad': 'Ingeniería',
-        'Programa': 'Ingeniería de Sistemas',
-        'Semestre': 1,
-        'Grupo': 'INSI-A',
-        'Cantidad Estudiantes': 35,
-        'Día': 'Viernes',
-        'Hora Inicio': '10:00',
-        'Hora Fin': '12:00',
-        'Asignatura': 'Programación I',
-        'Docente': 'Juan Pérez',
-        'Recursos': 'computador, proyector'
-      }
-    ];
-
-    const worksheet = XLSX.utils.json_to_sheet(plantilla);
-    
-    // Ajustar ancho de columnas
-    worksheet['!cols'] = [
-      { wch: 15 }, // Facultad
-      { wch: 25 }, // Programa
-      { wch: 10 }, // Semestre
-      { wch: 10 }, // Grupo
-      { wch: 18 }, // Cantidad Estudiantes
-      { wch: 12 }, // Día
-      { wch: 12 }, // Hora Inicio
-      { wch: 12 }, // Hora Fin
-      { wch: 20 }, // Asignatura
-      { wch: 20 }, // Docente
-      { wch: 30 }  // Recursos
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Horario Grupo');
-    XLSX.writeFile(workbook, 'plantilla_horario_grupo_unispace.xlsx');
-    // Mostrar notificación: ✅ Plantilla descargada - Horario completo por grupo
-  };
-
-  // Reiniciar proceso
-  const reiniciar = () => {
-    setArchivo(null);
-    setHorariosImportados([]);
-    setResultados([]);
-    setEtapa('carga');
-    setProgreso(0);
-    setAsignacionesConfirmadas(new Set());
-    setAsignacionesRechazadas(new Set());
-  };
-
-  // Confirmar asignación
-  const confirmarAsignacion = (index: number) => {
-    const nuevasConfirmadas = new Set(asignacionesConfirmadas);
-    nuevasConfirmadas.add(index);
-    setAsignacionesConfirmadas(nuevasConfirmadas);
-    
-    // Remover de rechazadas si estaba
-    const nuevasRechazadas = new Set(asignacionesRechazadas);
-    nuevasRechazadas.delete(index);
-    setAsignacionesRechazadas(nuevasRechazadas);
-    
-    // Mostrar notificación: ✅ Asignación confirmada correctamente
-  };
-
-  // Rechazar asignación
-  const rechazarAsignacion = (index: number, resultado: ResultadoAsignacion) => {
-    const nuevasRechazadas = new Set(asignacionesRechazadas);
-    nuevasRechazadas.add(index);
-    setAsignacionesRechazadas(nuevasRechazadas);
-    
-    // Remover de confirmadas si estaba
-    const nuevasConfirmadas = new Set(asignacionesConfirmadas);
-    nuevasConfirmadas.delete(index);
-    setAsignacionesConfirmadas(nuevasConfirmadas);
-    
-    // Eliminar el horario de la base de datos si existe
-    if (resultado.exito && resultado.espacioId) {
-      const horarios = db.getHorarios();
-      const horarioAEliminar = horarios.find(h => 
-        h.espacioId === resultado.espacioId &&
-        h.diaSemana === resultado.horario.diaSemana &&
-        h.horaInicio === resultado.horario.horaInicio
-      );
-      if (horarioAEliminar) {
-        db.deleteHorario(horarioAEliminar.id);
-      }
-    }
-    
-    // Mostrar notificación: ❌ Asignación rechazada
-  };
-
-  // Ver calendario del horario
-  const verCalendarioHorario = (resultado: ResultadoAsignacion) => {
-    setHorarioSeleccionado(resultado);
-    setMostrarCalendario(true);
-  };
-
-  // Capitalizar primera letra
-  const capitalize = (str: string) => {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-
-  // Agrupar resultados por grupo
-  const gruposUnicos = [...new Set(resultados.filter(r => r.exito).map(r => r.horario.grupo))];
-  
-  // Ver horario completo de un grupo
-  const verHorarioCompleto = (grupo: string) => {
-    const horariosDelGrupo = resultados.filter(r => r.exito && r.horario.grupo === grupo);
-    setGrupoSeleccionado(grupo);
-    setHorariosGrupoSeleccionado(horariosDelGrupo);
-    setMostrarHorarioCompleto(true);
-  };
-
-  // Confirmar TODO el grupo
-  const confirmarGrupoCompleto = () => {
-    const nuevasConfirmadas = new Set(asignacionesConfirmadas);
-    horariosGrupoSeleccionado.forEach((_, index) => {
-      const globalIndex = resultados.findIndex(r => r === horariosGrupoSeleccionado[index]);
-      if (globalIndex !== -1) {
-        nuevasConfirmadas.add(globalIndex);
-      }
-    });
-    setAsignacionesConfirmadas(nuevasConfirmadas);
-    setMostrarHorarioCompleto(false);
-    // Mostrar notificación: ✅ Horario completo del grupo ${grupoSeleccionado} confirmado
-  };
-
-  // Rechazar TODO el grupo
-  const rechazarGrupoCompleto = () => {
-    const nuevasRechazadas = new Set(asignacionesRechazadas);
-    horariosGrupoSeleccionado.forEach((resultado, index) => {
-      const globalIndex = resultados.findIndex(r => r === horariosGrupoSeleccionado[index]);
-      if (globalIndex !== -1) {
-        nuevasRechazadas.add(globalIndex);
-        
-        // Eliminar el horario de la base de datos
-        if (resultado.exito && resultado.espacioId) {
-          const horarios = db.getHorarios();
-          const horarioAEliminar = horarios.find(h => 
-            h.espacioId === resultado.espacioId &&
-            h.diaSemana === resultado.horario.diaSemana &&
-            h.horaInicio === resultado.horario.horaInicio
-          );
-          if (horarioAEliminar) {
-            db.deleteHorario(horarioAEliminar.id);
-          }
-        }
-      }
-    });
-    setAsignacionesRechazadas(nuevasRechazadas);
-    setMostrarHorarioCompleto(false);
-    // Mostrar notificación: ❌ Horario completo del grupo ${grupoSeleccionado} rechazado
-  };
-
-  // Generar horas del día (6am - 11pm)
-  const generarHoras = () => {
-    const horas = [];
-    for (let i = 6; i <= 23; i++) {
-      horas.push(`${i.toString().padStart(2, '0')}:00`);
-    }
-    return horas;
-  };
-
-  // Verificar si hay clase en un día y hora específicos
-  const obtenerClaseEnHora = (dia: string, hora: string) => {
-    return horariosGrupoSeleccionado.find(h => {
-      const diaHorario = h.horario.diaSemana.toLowerCase();
-      const horaInicio = h.horario.horaInicio;
-      const horaFin = h.horario.horaFin;
-      
-      // Convertir horas a minutos para comparación
-      const [hInicioH, hInicioM] = horaInicio.split(':').map(Number);
-      const [hFinH, hFinM] = horaFin.split(':').map(Number);
-      const [horaActualH, horaActualM] = hora.split(':').map(Number);
-      
-      const inicioMin = hInicioH * 60 + hInicioM;
-      const finMin = hFinH * 60 + hFinM;
-      const actualMin = horaActualH * 60 + horaActualM;
-      
-      return diaHorario === dia.toLowerCase() && actualMin >= inicioMin && actualMin < finMin;
-    });
-  };
+  const {
+    horariosImportados,
+    procesando,
+    progreso,
+    resultados,
+    etapa,
+    asignacionesConfirmadas,
+    asignacionesRechazadas,
+    horarioSeleccionado,
+    mostrarCalendario,
+    mostrarHorarioCompleto,
+    grupoSeleccionado,
+    horariosGrupoSeleccionado,
+    handleFileChange,
+    iniciarAsignacionAutomatica,
+    descargarPlantilla,
+    reiniciar,
+    confirmarAsignacion,
+    rechazarAsignacion,
+    verCalendarioHorario,
+    verHorarioCompleto,
+    confirmarGrupoCompleto,
+    rechazarGrupoCompleto,
+    setMostrarCalendario,
+    setMostrarHorarioCompleto,
+    generarHoras,
+    obtenerClaseEnHora,
+    capitalize,
+    gruposUnicos,
+    notification
+  } = useAsignacionAutomatica();
 
   return (
     <div className="p-8 space-y-6">
+      <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -832,7 +162,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Nombre del programa</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0">
                       <BookOpen className="w-4 h-4 text-blue-600" />
@@ -842,7 +172,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Nombre de la materia</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-green-100 dark:bg-green-950/30 flex items-center justify-center flex-shrink-0">
                       <UsersRound className="w-4 h-4 text-green-600" />
@@ -852,7 +182,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">ID del grupo</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center flex-shrink-0">
                       <UserRound className="w-4 h-4 text-orange-600" />
@@ -862,7 +192,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Nombre del profesor</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-yellow-100 dark:bg-yellow-950/30 flex items-center justify-center flex-shrink-0">
                       <Sun className="w-4 h-4 text-yellow-600" />
@@ -872,7 +202,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Día de la semana</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-cyan-100 dark:bg-cyan-950/30 flex items-center justify-center flex-shrink-0">
                       <Timer className="w-4 h-4 text-cyan-600" />
@@ -882,7 +212,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Ej: 08:00</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-red-100 dark:bg-red-950/30 flex items-center justify-center flex-shrink-0">
                       <TimerOff className="w-4 h-4 text-red-600" />
@@ -892,7 +222,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Ej: 10:00</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-pink-100 dark:bg-pink-950/30 flex items-center justify-center flex-shrink-0">
                       <UserCheck className="w-4 h-4 text-pink-600" />
@@ -902,7 +232,7 @@ export default function AsignacionAutomatica() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Cantidad total</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                     <div className="w-8 h-8 rounded-md bg-indigo-100 dark:bg-indigo-950/30 flex items-center justify-center flex-shrink-0">
                       <Package className="w-4 h-4 text-indigo-600" />
@@ -1136,256 +466,254 @@ export default function AsignacionAutomatica() {
                     className="border border-slate-200 rounded-lg overflow-hidden"
                   >
                     <div className="overflow-x-auto max-h-96">
-                        <table className="w-full">
-                    <thead className="bg-slate-100 sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-slate-700">Estado</th>
-                        <th className="px-4 py-3 text-left text-slate-700">Programa</th>
-                        <th className="px-4 py-3 text-left text-slate-700">Asignatura</th>
-                        <th className="px-4 py-3 text-left text-slate-700">Grupo</th>
-                        <th className="px-4 py-3 text-left text-slate-700">Horario</th>
-                        <th className="px-4 py-3 text-left text-slate-700">Espacio Asignado</th>
-                        <th className="px-4 py-3 text-left text-slate-700">Observación</th>
-                        <th className="px-4 py-3 text-center text-slate-700">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resultados.map((resultado, idx) => (
-                        <tr 
-                          key={idx} 
-                          className={`border-t border-slate-200 hover:bg-slate-50 transition-colors ${
-                            asignacionesConfirmadas.has(idx) ? 'bg-green-50' :
-                            asignacionesRechazadas.has(idx) ? 'bg-red-50' : ''
-                          }`}
-                        >
-                          <td className="px-4 py-3">
-                            {asignacionesConfirmadas.has(idx) ? (
-                              <div className="flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                <span className="text-green-600 text-sm">Confirmado</span>
-                              </div>
-                            ) : asignacionesRechazadas.has(idx) ? (
-                              <div className="flex items-center gap-2">
-                                <XCircle className="w-5 h-5 text-red-600" />
-                                <span className="text-red-600 text-sm">Rechazado</span>
-                              </div>
-                            ) : resultado.exito ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5 text-red-600" />
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-900">{resultado.horario.programa}</td>
-                          <td className="px-4 py-3 text-slate-900">{resultado.horario.asignatura}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline">{resultado.horario.grupo}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-slate-700">
-                            {capitalize(resultado.horario.diaSemana)} {resultado.horario.horaInicio}-{resultado.horario.horaFin}
-                          </td>
-                          <td className="px-4 py-3">
-                            {resultado.exito ? (
-                              <Badge className="bg-green-600">{resultado.espacioAsignado}</Badge>
-                            ) : (
-                              <span className="text-slate-400">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600 text-sm">{resultado.razon}</td>
-                          <td className="px-4 py-3">
-                            {resultado.exito && (
-                              <div className="flex items-center justify-center gap-2">
-                                {!asignacionesConfirmadas.has(idx) && !asignacionesRechazadas.has(idx) && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-green-600 text-green-600 hover:bg-green-50"
-                                      onClick={() => confirmarAsignacion(idx)}
-                                    >
-                                      <Check className="w-4 h-4 mr-1" />
-                                      Confirmar
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                                      onClick={() => verCalendarioHorario(resultado)}
-                                    >
-                                      <Eye className="w-4 h-4 mr-1" />
-                                      Ver
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-red-600 text-red-600 hover:bg-red-50"
-                                      onClick={() => rechazarAsignacion(idx, resultado)}
-                                    >
-                                      <X className="w-4 h-4 mr-1" />
-                                      Rechazar
-                                    </Button>
-                                  </>
+                      <table className="w-full">
+                        <thead className="bg-slate-100 sticky top-0">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-slate-700">Estado</th>
+                            <th className="px-4 py-3 text-left text-slate-700">Programa</th>
+                            <th className="px-4 py-3 text-left text-slate-700">Asignatura</th>
+                            <th className="px-4 py-3 text-left text-slate-700">Grupo</th>
+                            <th className="px-4 py-3 text-left text-slate-700">Horario</th>
+                            <th className="px-4 py-3 text-left text-slate-700">Espacio Asignado</th>
+                            <th className="px-4 py-3 text-left text-slate-700">Observación</th>
+                            <th className="px-4 py-3 text-center text-slate-700">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resultados.map((resultado, idx) => (
+                            <tr
+                              key={idx}
+                              className={`border-t border-slate-200 hover:bg-slate-50 transition-colors ${asignacionesConfirmadas.has(idx) ? 'bg-green-50' :
+                                  asignacionesRechazadas.has(idx) ? 'bg-red-50' : ''
+                                }`}
+                            >
+                              <td className="px-4 py-3">
+                                {asignacionesConfirmadas.has(idx) ? (
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                    <span className="text-green-600 text-sm">Confirmado</span>
+                                  </div>
+                                ) : asignacionesRechazadas.has(idx) ? (
+                                  <div className="flex items-center gap-2">
+                                    <XCircle className="w-5 h-5 text-red-600" />
+                                    <span className="text-red-600 text-sm">Rechazado</span>
+                                  </div>
+                                ) : resultado.exito ? (
+                                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                ) : (
+                                  <AlertCircle className="w-5 h-5 text-red-600" />
                                 )}
-                                {asignacionesConfirmadas.has(idx) && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                                    onClick={() => verCalendarioHorario(resultado)}
-                                  >
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    Ver Horario
-                                  </Button>
+                              </td>
+                              <td className="px-4 py-3 text-slate-900">{resultado.horario.programa}</td>
+                              <td className="px-4 py-3 text-slate-900">{resultado.horario.asignatura}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant="outline">{resultado.horario.grupo}</Badge>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">
+                                {capitalize(resultado.horario.diaSemana)} {resultado.horario.horaInicio}-{resultado.horario.horaFin}
+                              </td>
+                              <td className="px-4 py-3">
+                                {resultado.exito ? (
+                                  <Badge className="bg-green-600">{resultado.espacioAsignado}</Badge>
+                                ) : (
+                                  <span className="text-slate-400">N/A</span>
                                 )}
-                                {asignacionesRechazadas.has(idx) && (
-                                  <span className="text-slate-400 text-sm">Rechazado</span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          ) : (
-              <motion.div
-                key="horario-completo"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className="bg-white"
-              >
-                {/* Header con botones de acción */}
-                <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 p-6 border-b-4 border-yellow-400">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-8 h-8 text-white" />
-                      <div>
-                        <h2 className="text-white text-2xl mb-1">Horario Completo del Grupo {grupoSeleccionado}</h2>
-                        <p className="text-yellow-200">
-                          {horariosGrupoSeleccionado[0]?.horario.programa} • {horariosGrupoSeleccionado.length} clases asignadas
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                        onClick={() => setMostrarHorarioCompleto(false)}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Volver a Lista
-                      </Button>
-                      <Button
-                        className="bg-red-900 hover:bg-red-950 text-white border-2 border-white/20"
-                        onClick={rechazarGrupoCompleto}
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Rechazar Todo
-                      </Button>
-                      <Button
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={confirmarGrupoCompleto}
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Confirmar Todo
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {horariosGrupoSeleccionado.length > 0 && (
-                  <div className="bg-slate-50 p-6">
-                    <div className="bg-white rounded-xl shadow-2xl overflow-hidden border-2 border-slate-200">
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-gradient-to-r from-slate-800 to-slate-900">
-                              <th className="border-2 border-slate-300 p-4 text-white w-24">
-                                <Clock className="w-5 h-5 mx-auto mb-1" />
-                                Hora
-                              </th>
-                              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
-                                <th key={dia} className="border-2 border-slate-300 p-4 text-white">
-                                  {dia}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {generarHoras().map((hora) => (
-                              <tr key={hora} className="hover:bg-slate-50 transition-colors">
-                                <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center font-semibold text-slate-700">
-                                  {hora}
-                                </td>
-                                {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
-                                  const clase = obtenerClaseEnHora(dia, hora);
-                                  return (
-                                    <td
-                                      key={dia}
-                                      className={`border-2 border-slate-300 p-2 transition-all ${
-                                        clase
-                                          ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 cursor-pointer'
-                                          : 'bg-white hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      {clase ? (
-                                        <motion.div
-                                          initial={{ scale: 0.9, opacity: 0 }}
-                                          animate={{ scale: 1, opacity: 1 }}
-                                          className="h-full min-h-[120px] flex flex-col justify-center items-center text-white p-3 rounded-lg"
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 text-sm">{resultado.razon}</td>
+                              <td className="px-4 py-3">
+                                {resultado.exito && (
+                                  <div className="flex items-center justify-center gap-2">
+                                    {!asignacionesConfirmadas.has(idx) && !asignacionesRechazadas.has(idx) && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-green-600 text-green-600 hover:bg-green-50"
+                                          onClick={() => confirmarAsignacion(idx)}
                                         >
-                                          <div className="text-center space-y-2 w-full">
-                                            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm mb-2">
-                                              <p className="font-bold text-sm mb-1">{clase.horario.asignatura}</p>
-                                              <p className="text-xs text-yellow-200">{clase.horario.docente}</p>
-                                            </div>
-                                            <div className="flex items-center justify-center gap-2 bg-white/10 rounded-md p-1.5">
-                                              <MapPin className="w-4 h-4 text-yellow-300" />
-                                              <span className="font-semibold text-sm">{clase.espacioAsignado}</span>
-                                            </div>
-                                            <div className="flex items-center justify-center gap-2 bg-white/10 rounded-md p-1.5">
-                                              <Users className="w-4 h-4 text-yellow-300" />
-                                              <span className="text-xs">{clase.horario.cantidadEstudiantes} estudiantes</span>
-                                            </div>
-                                            <div className="text-xs text-yellow-100 mt-1">
-                                              {clase.horario.horaInicio} - {clase.horario.horaFin}
-                                            </div>
-                                          </div>
-                                        </motion.div>
-                                      ) : (
-                                        <div className="h-full min-h-[120px] flex items-center justify-center">
-                                          <span className="text-slate-300 text-xs">—</span>
-                                        </div>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                          <Check className="w-4 h-4 mr-1" />
+                                          Confirmar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                          onClick={() => verCalendarioHorario(resultado)}
+                                        >
+                                          <Eye className="w-4 h-4 mr-1" />
+                                          Ver
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-red-600 text-red-600 hover:bg-red-50"
+                                          onClick={() => rechazarAsignacion(idx, resultado)}
+                                        >
+                                          <X className="w-4 h-4 mr-1" />
+                                          Rechazar
+                                        </Button>
+                                      </>
+                                    )}
+                                    {asignacionesConfirmadas.has(idx) && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                        onClick={() => verCalendarioHorario(resultado)}
+                                      >
+                                        <Eye className="w-4 h-4 mr-1" />
+                                        Ver Horario
+                                      </Button>
+                                    )}
+                                    {asignacionesRechazadas.has(idx) && (
+                                      <span className="text-slate-400 text-sm">Rechazado</span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="horario-completo"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-white"
+                  >
+                    {/* Header con botones de acción */}
+                    <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 p-6 border-b-4 border-yellow-400">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-8 h-8 text-white" />
+                          <div>
+                            <h2 className="text-white text-2xl mb-1">Horario Completo del Grupo {grupoSeleccionado}</h2>
+                            <p className="text-yellow-200">
+                              {horariosGrupoSeleccionado[0]?.horario.programa} • {horariosGrupoSeleccionado.length} clases asignadas
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                            onClick={() => setMostrarHorarioCompleto(false)}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Volver a Lista
+                          </Button>
+                          <Button
+                            className="bg-red-900 hover:bg-red-950 text-white border-2 border-white/20"
+                            onClick={rechazarGrupoCompleto}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Rechazar Todo
+                          </Button>
+                          <Button
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={confirmarGrupoCompleto}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Confirmar Todo
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Leyenda */}
-                    <div className="mt-6 flex items-center justify-center gap-6 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-gradient-to-br from-red-500 to-red-600 rounded"></div>
-                        <span className="text-slate-600">Clase asignada</span>
+                    {horariosGrupoSeleccionado.length > 0 && (
+                      <div className="bg-slate-50 p-6">
+                        <div className="bg-white rounded-xl shadow-2xl overflow-hidden border-2 border-slate-200">
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="bg-gradient-to-r from-slate-800 to-slate-900">
+                                  <th className="border-2 border-slate-300 p-4 text-white w-24">
+                                    <Clock className="w-5 h-5 mx-auto mb-1" />
+                                    Hora
+                                  </th>
+                                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
+                                    <th key={dia} className="border-2 border-slate-300 p-4 text-white">
+                                      {dia}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {generarHoras().map((hora) => (
+                                  <tr key={hora} className="hover:bg-slate-50 transition-colors">
+                                    <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center font-semibold text-slate-700">
+                                      {hora}
+                                    </td>
+                                    {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+                                      const clase = obtenerClaseEnHora(dia, hora);
+                                      return (
+                                        <td
+                                          key={dia}
+                                          className={`border-2 border-slate-300 p-2 transition-all ${clase
+                                              ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 cursor-pointer'
+                                              : 'bg-white hover:bg-slate-50'
+                                            }`}
+                                        >
+                                          {clase ? (
+                                            <motion.div
+                                              initial={{ scale: 0.9, opacity: 0 }}
+                                              animate={{ scale: 1, opacity: 1 }}
+                                              className="h-full min-h-[120px] flex flex-col justify-center items-center text-white p-3 rounded-lg"
+                                            >
+                                              <div className="text-center space-y-2 w-full">
+                                                <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm mb-2">
+                                                  <p className="font-bold text-sm mb-1">{clase.horario.asignatura}</p>
+                                                  <p className="text-xs text-yellow-200">{clase.horario.docente}</p>
+                                                </div>
+                                                <div className="flex items-center justify-center gap-2 bg-white/10 rounded-md p-1.5">
+                                                  <MapPin className="w-4 h-4 text-yellow-300" />
+                                                  <span className="font-semibold text-sm">{clase.espacioAsignado}</span>
+                                                </div>
+                                                <div className="flex items-center justify-center gap-2 bg-white/10 rounded-md p-1.5">
+                                                  <Users className="w-4 h-4 text-yellow-300" />
+                                                  <span className="text-xs">{clase.horario.cantidadEstudiantes} estudiantes</span>
+                                                </div>
+                                                <div className="text-xs text-yellow-100 mt-1">
+                                                  {clase.horario.horaInicio} - {clase.horario.horaFin}
+                                                </div>
+                                              </div>
+                                            </motion.div>
+                                          ) : (
+                                            <div className="h-full min-h-[120px] flex items-center justify-center">
+                                              <span className="text-slate-300 text-xs">—</span>
+                                            </div>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Leyenda */}
+                        <div className="mt-6 flex items-center justify-center gap-6 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-gradient-to-br from-red-500 to-red-600 rounded"></div>
+                            <span className="text-slate-600">Clase asignada</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-white border-2 border-slate-300 rounded"></div>
+                            <span className="text-slate-600">Hora libre</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-white border-2 border-slate-300 rounded"></div>
-                        <span className="text-slate-600">Hora libre</span>
-                      </div>
-                    </div>
-                  </div>
+                    )}
+                  </motion.div>
                 )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </AnimatePresence>
             </CardContent>
           </Card>
         </motion.div>
@@ -1431,7 +759,7 @@ export default function AsignacionAutomatica() {
               <div className="grid grid-cols-5 gap-3">
                 {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
                   const esDiaAsignado = dia === horarioSeleccionado.horario.diaSemana.toLowerCase();
-                  
+
                   return (
                     <motion.div
                       key={dia}
@@ -1439,17 +767,16 @@ export default function AsignacionAutomatica() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].indexOf(dia) * 0.1 }}
                     >
-                      <Card className={`${
-                        esDiaAsignado 
-                          ? 'bg-gradient-to-br from-red-600 to-red-700 border-red-700 shadow-lg transform scale-105' 
+                      <Card className={`${esDiaAsignado
+                          ? 'bg-gradient-to-br from-red-600 to-red-700 border-red-700 shadow-lg transform scale-105'
                           : 'bg-slate-50 border-slate-200'
-                      } transition-all duration-300`}>
+                        } transition-all duration-300`}>
                         <CardContent className="p-4">
                           <div className="text-center">
                             <p className={`text-sm mb-3 ${esDiaAsignado ? 'text-white' : 'text-slate-600'}`}>
                               {capitalize(dia)}
                             </p>
-                            
+
                             {esDiaAsignado ? (
                               <div className="space-y-3">
                                 <div className="bg-white/20 rounded-lg p-3 backdrop-blur-sm">
@@ -1467,7 +794,7 @@ export default function AsignacionAutomatica() {
                                     </p>
                                   </div>
                                 </div>
-                                
+
                                 <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
                                   <div className="flex items-center justify-center gap-2">
                                     <MapPin className="w-4 h-4 text-yellow-300" />
@@ -1536,7 +863,6 @@ export default function AsignacionAutomatica() {
           )}
         </DialogContent>
       </Dialog>
-      <Toaster />
     </div>
   );
 }

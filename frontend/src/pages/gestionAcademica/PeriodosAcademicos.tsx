@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
@@ -6,46 +5,30 @@ import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Copy, Calendar, CheckCircle2, Clock, TrendingUp, AlertCircle, Check } from 'lucide-react';
+import { Plus, Edit, Copy, Calendar, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Checkbox } from '../../share/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { showNotification } from '../../context/ThemeContext';
-
-interface Periodo {
-  id: string;
-  nombre: string;
-  fechaInicio: string;
-  fechaFin: string;
-  tipo: 'Regular' | 'Intersemestral' | 'Verano';
-  estado: 'Activo' | 'Próximo' | 'Finalizado';
-  programasActivos: number;
-}
+import { NotificationBanner } from '../../share/notificationBanner';
+import { usePeriodosAcademicos } from '../../hooks/gestionAcademica/usePeriodosAcademicos';
 
 export default function PeriodosAcademicos() {
-  const [periodos, setPeriodos] = useState<Periodo[]>([
-    { id: '1', nombre: '2025-1', fechaInicio: '2025-01-15', fechaFin: '2025-05-30', tipo: 'Regular', estado: 'Activo', programasActivos: 18 },
-    { id: '3', nombre: '2025-2', fechaInicio: '2025-08-01', fechaFin: '2025-12-15', tipo: 'Regular', estado: 'Próximo', programasActivos: 0 },
-    { id: '2', nombre: '2024-2', fechaInicio: '2024-08-01', fechaFin: '2024-12-15', tipo: 'Regular', estado: 'Finalizado', programasActivos: 16 },
-    { id: '5', nombre: '2024-1', fechaInicio: '2024-01-15', fechaFin: '2024-05-30', tipo: 'Regular', estado: 'Finalizado', programasActivos: 15 },
-    { id: '4', nombre: '2024-Verano', fechaInicio: '2024-06-10', fechaFin: '2024-07-20', tipo: 'Verano', estado: 'Finalizado', programasActivos: 8 }
-  ]);
-
-  // Estados para modales
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showCopyDialog, setShowCopyDialog] = useState(false);
-  
-  // Estados para formularios
-  const [periodoForm, setPeriodoForm] = useState({
-    nombre: '',
-    tipo: 'Regular' as 'Regular' | 'Intersemestral' | 'Verano',
-    fechaInicio: '',
-    fechaFin: ''
-  });
-
-  const [periodoACopiar, setPeriodoACopiar] = useState<Periodo | null>(null);
-  const [periodoAEditar, setPeriodoAEditar] = useState<Periodo | null>(null);
+  const {
+    periodos,
+    periodosOrdenados,
+    periodoActivo,
+    showCreateDialog, setShowCreateDialog,
+    showEditDialog, setShowEditDialog,
+    showCopyDialog, setShowCopyDialog,
+    periodoForm, setPeriodoForm,
+    periodoACopiar,
+    handleOpenCreateDialog,
+    handleCreatePeriodo,
+    handleOpenEditDialog,
+    handleEditPeriodo,
+    handleOpenCopyDialog,
+    handleCopyPeriodo,
+    notification
+  } = usePeriodosAcademicos();
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -60,212 +43,16 @@ export default function PeriodosAcademicos() {
     }
   };
 
-  // Ordenar periodos cronológicamente (más reciente arriba)
-  const periodosOrdenados = [...periodos].sort((a, b) => {
-    return new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime();
-  });
-
-  // Calcular siguiente periodo automático
-  const calcularSiguientePeriodo = (nombreActual: string): string => {
-    const match = nombreActual.match(/(\d{4})-(\d+)/);
-    if (match) {
-      const anio = parseInt(match[1]);
-      const semestre = parseInt(match[2]);
-      if (semestre === 1) {
-        return `${anio}-2`;
-      } else {
-        return `${anio + 1}-1`;
-      }
-    }
-    return '';
-  };
-
-  // Crear nuevo periodo
-  const handleOpenCreateDialog = () => {
-    setPeriodoForm({
-      nombre: '',
-      tipo: 'Regular',
-      fechaInicio: '',
-      fechaFin: ''
-    });
-    setShowCreateDialog(true);
-  };
-
-  const handleCreatePeriodo = () => {
-    // Validaciones
-    if (!periodoForm.nombre.trim()) {
-      showNotification({ message: 'El nombre del periodo es obligatorio', type: 'error' });
-      return;
-    }
-    if (!periodoForm.fechaInicio) {
-      showNotification({ message: 'La fecha de inicio es obligatoria', type: 'error' });
-      return;
-    }
-    if (!periodoForm.fechaFin) {
-      showNotification({ message: 'La fecha de fin es obligatoria', type: 'error' });
-      return;
-    }
-
-    // Validar que fecha fin sea mayor que fecha inicio
-    if (new Date(periodoForm.fechaFin) <= new Date(periodoForm.fechaInicio)) {
-      showNotification({ message: 'La fecha de fin debe ser posterior a la fecha de inicio', type: 'error' });
-      return;
-    }
-
-    // Verificar duplicados
-    if (periodos.some(p => p.nombre === periodoForm.nombre.trim())) {
-      showNotification({ message: 'Ya existe un periodo con ese nombre', type: 'error' });
-      return;
-    }
-
-    // Crear periodo
-    const nuevoPeriodo: Periodo = {
-      id: `periodo-${Date.now()}`,
-      nombre: periodoForm.nombre.trim(),
-      tipo: periodoForm.tipo,
-      fechaInicio: periodoForm.fechaInicio,
-      fechaFin: periodoForm.fechaFin,
-      estado: 'Próximo',
-      programasActivos: 0
-    };
-
-    setPeriodos([...periodos, nuevoPeriodo]);
-    setShowCreateDialog(false);
-    
-    showNotification({ message: '✅ Periodo creado exitosamente', type: 'success' });
-  };
-
-  // Editar periodo (solo si estado es Próximo)
-  const handleOpenEditDialog = (periodo: Periodo) => {
-    if (periodo.estado !== 'Próximo') {
-      showNotification({ message: 'Solo se pueden editar periodos con estado "Próximo"', type: 'error' });
-      return;
-    }
-    
-    setPeriodoAEditar(periodo);
-    setPeriodoForm({
-      nombre: periodo.nombre,
-      tipo: periodo.tipo,
-      fechaInicio: periodo.fechaInicio,
-      fechaFin: periodo.fechaFin
-    });
-    setShowEditDialog(true);
-  };
-
-  const handleEditPeriodo = () => {
-    if (!periodoAEditar) return;
-
-    // Validaciones
-    if (!periodoForm.nombre.trim()) {
-      showNotification({ message: 'El nombre del periodo es obligatorio', type: 'error' });
-      return;
-    }
-    if (!periodoForm.fechaInicio) {
-      showNotification({ message: 'La fecha de inicio es obligatoria', type: 'error' });
-      return;
-    }
-    if (!periodoForm.fechaFin) {
-      showNotification({ message: 'La fecha de fin es obligatoria', type: 'error' });
-      return;
-    }
-
-    // Validar que fecha fin sea mayor que fecha inicio
-    if (new Date(periodoForm.fechaFin) <= new Date(periodoForm.fechaInicio)) {
-      showNotification({ message: 'La fecha de fin debe ser posterior a la fecha de inicio', type: 'error' });
-      return;
-    }
-
-    // Actualizar periodo
-    setPeriodos(periodos.map(p => {
-      if (p.id === periodoAEditar.id) {
-        return {
-          ...p,
-          nombre: periodoForm.nombre.trim(),
-          tipo: periodoForm.tipo,
-          fechaInicio: periodoForm.fechaInicio,
-          fechaFin: periodoForm.fechaFin
-        };
-      }
-      return p;
-    }));
-
-    setShowEditDialog(false);
-    setPeriodoAEditar(null);
-    
-    showNotification({ message: '✅ Periodo actualizado correctamente', type: 'success' });
-  };
-
-  // Copiar periodo
-  const handleOpenCopyDialog = (periodo: Periodo) => {
-    setPeriodoACopiar(periodo);
-    const siguienteNombre = calcularSiguientePeriodo(periodo.nombre);
-    setPeriodoForm({
-      nombre: siguienteNombre,
-      tipo: periodo.tipo,
-      fechaInicio: '',
-      fechaFin: ''
-    });
-    setShowCopyDialog(true);
-  };
-
-  const handleCopyPeriodo = () => {
-    if (!periodoACopiar) return;
-
-    // Validaciones
-    if (!periodoForm.nombre.trim()) {
-      showNotification({ message: 'El nombre del periodo es obligatorio', type: 'error' });
-      return;
-    }
-    if (!periodoForm.fechaInicio) {
-      showNotification({ message: 'La fecha de inicio es obligatoria', type: 'error' });
-      return;
-    }
-    if (!periodoForm.fechaFin) {
-      showNotification({ message: 'La fecha de fin es obligatoria', type: 'error' });
-      return;
-    }
-
-    // Validar que fecha fin sea mayor que fecha inicio
-    if (new Date(periodoForm.fechaFin) <= new Date(periodoForm.fechaInicio)) {
-      showNotification({ message: 'La fecha de fin debe ser posterior a la fecha de inicio', type: 'error' });
-      return;
-    }
-
-    // Verificar duplicados
-    if (periodos.some(p => p.nombre === periodoForm.nombre.trim())) {
-      showNotification({ message: 'Ya existe un periodo con ese nombre', type: 'error' });
-      return;
-    }
-
-    // Crear copia del periodo
-    const nuevoPeriodo: Periodo = {
-      id: `periodo-${Date.now()}`,
-      nombre: periodoForm.nombre.trim(),
-      tipo: periodoForm.tipo,
-      fechaInicio: periodoForm.fechaInicio,
-      fechaFin: periodoForm.fechaFin,
-      estado: 'Próximo',
-      programasActivos: 0
-    };
-
-    setPeriodos([...periodos, nuevoPeriodo]);
-    setShowCopyDialog(false);
-    setPeriodoACopiar(null);
-    
-    showNotification({ message: '✅ Periodo copiado exitosamente', type: 'success' });
-  };
-
-  const periodoActivo = periodos.find(p => p.estado === 'Activo');
-
   return (
     <div className="p-8 space-y-6">
+      <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-slate-900 dark:text-slate-100 mb-2">Periodos Académicos</h1>
           <p className="text-slate-600 dark:text-slate-400">Gestiona los periodos académicos de la universidad</p>
         </div>
-        <Button 
+        <Button
           onClick={handleOpenCreateDialog}
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
         >
@@ -336,24 +123,24 @@ export default function PeriodosAcademicos() {
                   <TableCell>
                     <Badge variant="outline" className={
                       periodo.tipo === 'Regular' ? 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400' :
-                      periodo.tipo === 'Verano' ? 'border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400' :
-                      'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-400'
+                        periodo.tipo === 'Verano' ? 'border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400' :
+                          'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-400'
                     }>
                       {periodo.tipo}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {new Date(periodo.fechaInicio).toLocaleDateString('es-ES', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                    {new Date(periodo.fechaInicio).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
                     })}
                   </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {new Date(periodo.fechaFin).toLocaleDateString('es-ES', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                    {new Date(periodo.fechaFin).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
                     })}
                   </TableCell>
                   <TableCell>
@@ -365,12 +152,12 @@ export default function PeriodosAcademicos() {
                   <TableCell>{getEstadoBadge(periodo.estado)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className={
-                          periodo.estado === 'Próximo' 
-                            ? 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950' 
+                          periodo.estado === 'Próximo'
+                            ? 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950'
                             : 'border-slate-300 text-slate-400 cursor-not-allowed'
                         }
                         onClick={() => handleOpenEditDialog(periodo)}
@@ -378,9 +165,9 @@ export default function PeriodosAcademicos() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
                         onClick={() => handleOpenCopyDialog(periodo)}
                       >
@@ -407,11 +194,11 @@ export default function PeriodosAcademicos() {
               {periodos.length} periodos registrados
             </Badge>
           </div>
-          
+
           <div className="relative">
             {/* Línea central */}
             <div className="absolute left-6 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-200 via-green-200 to-slate-200 dark:from-blue-900 dark:via-green-900 dark:to-slate-700 rounded-full"></div>
-            
+
             <div className="space-y-8">
               {periodosOrdenados.map((periodo, index) => (
                 <motion.div
@@ -425,27 +212,25 @@ export default function PeriodosAcademicos() {
                   <motion.div
                     whileHover={{ scale: 1.1, rotate: 360 }}
                     transition={{ duration: 0.3 }}
-                    className={`absolute left-0 w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${ 
-                      periodo.estado === 'Activo' 
-                        ? 'bg-gradient-to-br from-green-500 to-green-600' 
-                        : periodo.estado === 'Próximo' 
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
-                        : 'bg-gradient-to-br from-slate-400 to-slate-500'
-                    }`}
+                    className={`absolute left-0 w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${periodo.estado === 'Activo'
+                        ? 'bg-gradient-to-br from-green-500 to-green-600'
+                        : periodo.estado === 'Próximo'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                          : 'bg-gradient-to-br from-slate-400 to-slate-500'
+                      }`}
                   >
                     <Calendar className="w-6 h-6 text-white" />
                   </motion.div>
-                  
+
                   {/* Tarjeta */}
                   <motion.div
                     whileHover={{ scale: 1.02, x: 4 }}
-                    className={`rounded-xl p-5 border-2 shadow-md transition-all ${
-                      periodo.estado === 'Activo'
+                    className={`rounded-xl p-5 border-2 shadow-md transition-all ${periodo.estado === 'Activo'
                         ? 'bg-gradient-to-r from-green-50 to-white border-green-300 dark:from-green-950/30 dark:to-slate-900 dark:border-green-800'
                         : periodo.estado === 'Próximo'
-                        ? 'bg-gradient-to-r from-blue-50 to-white border-blue-300 dark:from-blue-950/30 dark:to-slate-900 dark:border-blue-800'
-                        : 'bg-gradient-to-r from-slate-50 to-white border-slate-300 dark:from-slate-800 dark:to-slate-900 dark:border-slate-700'
-                    }`}
+                          ? 'bg-gradient-to-r from-blue-50 to-white border-blue-300 dark:from-blue-950/30 dark:to-slate-900 dark:border-blue-800'
+                          : 'bg-gradient-to-r from-slate-50 to-white border-slate-300 dark:from-slate-800 dark:to-slate-900 dark:border-slate-700'
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -454,8 +239,8 @@ export default function PeriodosAcademicos() {
                           {getEstadoBadge(periodo.estado)}
                           <Badge variant="outline" className={
                             periodo.tipo === 'Regular' ? 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400' :
-                            periodo.tipo === 'Verano' ? 'border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400' :
-                            'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-400'
+                              periodo.tipo === 'Verano' ? 'border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400' :
+                                'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-400'
                           }>
                             {periodo.tipo}
                           </Badge>
@@ -477,7 +262,7 @@ export default function PeriodosAcademicos() {
                         />
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-red-600" />
@@ -496,18 +281,18 @@ export default function PeriodosAcademicos() {
                         </div>
                       </div>
                       <div className="flex justify-end gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className={`h-8 ${periodo.estado !== 'Próximo' ? 'text-slate-400 cursor-not-allowed' : ''}`}
                           onClick={() => handleOpenEditDialog(periodo)}
                           disabled={periodo.estado !== 'Próximo'}
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-8"
                           onClick={() => handleOpenCopyDialog(periodo)}
                         >
@@ -541,8 +326,8 @@ export default function PeriodosAcademicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre del Periodo *</Label>
-                <Input 
-                  placeholder="Ej: 2025-2" 
+                <Input
+                  placeholder="Ej: 2025-2"
                   value={periodoForm.nombre}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
                 />
@@ -564,16 +349,16 @@ export default function PeriodosAcademicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha de Inicio *</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={periodoForm.fechaInicio}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, fechaInicio: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Fin *</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={periodoForm.fechaFin}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, fechaFin: e.target.value })}
                 />
@@ -584,7 +369,7 @@ export default function PeriodosAcademicos() {
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleCreatePeriodo}
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
             >
@@ -611,8 +396,8 @@ export default function PeriodosAcademicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre del Periodo *</Label>
-                <Input 
-                  placeholder="Ej: 2025-2" 
+                <Input
+                  placeholder="Ej: 2025-2"
                   value={periodoForm.nombre}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
                 />
@@ -634,16 +419,16 @@ export default function PeriodosAcademicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha de Inicio *</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={periodoForm.fechaInicio}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, fechaInicio: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Fin *</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={periodoForm.fechaFin}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, fechaFin: e.target.value })}
                 />
@@ -654,7 +439,7 @@ export default function PeriodosAcademicos() {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleEditPeriodo}
               className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
             >
@@ -686,8 +471,8 @@ export default function PeriodosAcademicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre del Nuevo Periodo *</Label>
-                <Input 
-                  placeholder="Ej: 2025-2" 
+                <Input
+                  placeholder="Ej: 2025-2"
                   value={periodoForm.nombre}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
                 />
@@ -709,16 +494,16 @@ export default function PeriodosAcademicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha de Inicio *</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={periodoForm.fechaInicio}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, fechaInicio: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Fin *</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={periodoForm.fechaFin}
                   onChange={(e) => setPeriodoForm({ ...periodoForm, fechaFin: e.target.value })}
                 />
@@ -729,7 +514,7 @@ export default function PeriodosAcademicos() {
             <Button variant="outline" onClick={() => setShowCopyDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleCopyPeriodo}
               className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white"
             >

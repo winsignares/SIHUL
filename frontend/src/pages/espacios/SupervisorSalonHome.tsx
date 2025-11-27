@@ -1,325 +1,42 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Input } from '../../share/input';
 import { Badge } from '../../share/badge';
 import { Checkbox } from '../../share/checkbox';
 import { Textarea } from '../../share/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../share/dialog';
-import { DoorOpen, DoorClosed, Building2, Clock, MapPin, Users, CheckCircle, Layers, AlertCircle, Search, LightbulbOff, Wind, Monitor, Armchair, Eraser, XCircle, Eye, ClipboardCheck, Lock } from 'lucide-react';
+import { DoorOpen, DoorClosed, Building2, Clock, MapPin, Users, CheckCircle, Layers, Search, LightbulbOff, Wind, Monitor, Armchair, Eraser, ClipboardCheck, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db } from '../../hooks/database';
 import { Toaster } from 'sonner';
-
-interface EstadoSalon {
-  abierto: boolean;
-  cerrado: boolean;
-  horaApertura?: string;
-  horaCierre?: string;
-  checklistCierre?: ChecklistCierre;
-}
-
-interface ChecklistCierre {
-  lucesApagadas: boolean;
-  aireApagado: boolean;
-  proyectorApagado: boolean;
-  pupitresOrdenados: boolean;
-  pizarraLimpia: boolean;
-  ventanasCerradas: boolean;
-  sinObjetosOlvidados: boolean;
-  observaciones: string;
-}
+import { useSupervisorSalonHome } from '../../hooks/espacios/useSupervisorSalonHome';
 
 export default function SupervisorSalonHome() {
-  const [espacios, setEspacios] = useState<any[]>([]);
-  const [horarios, setHorarios] = useState<any[]>([]);
-  const [salonesFiltrados, setSalonesFiltrados] = useState<any[]>([]);
-  
-  // Filtros
-  const [sedeSeleccionada, setSedeSeleccionada] = useState('');
-  const [pisoSeleccionado, setPisoSeleccionado] = useState('');
-  const [horaSeleccionada, setHoraSeleccionada] = useState('08:00');
-  const [busquedaActiva, setBusquedaActiva] = useState(false);
-  
-  // Estados de salones (apertura y cierre)
-  const [estadosSalones, setEstadosSalones] = useState<Map<number, EstadoSalon>>(new Map());
-  
-  // Modal de cierre
-  const [modalCierreAbierto, setModalCierreAbierto] = useState(false);
-  const [salonParaCerrar, setSalonParaCerrar] = useState<any>(null);
-  const [checklist, setChecklist] = useState<ChecklistCierre>({
-    lucesApagadas: false,
-    aireApagado: false,
-    proyectorApagado: false,
-    pupitresOrdenados: false,
-    pizarraLimpia: false,
-    ventanasCerradas: false,
-    sinObjetosOlvidados: false,
-    observaciones: ''
-  });
-
-  // Cargar datos
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = () => {
-    const espaciosDB = db.getEspacios();
-    const horariosDB = db.getHorarios();
-    setEspacios(espaciosDB);
-    setHorarios(horariosDB);
-  };
-
-  // Obtener sedes y pisos únicos
-  const sedes = Array.from(new Set(espacios.map(e => e.sede)));
-  const pisos = sedeSeleccionada 
-    ? Array.from(new Set(espacios.filter(e => e.sede === sedeSeleccionada).map(e => e.piso)))
-    : [];
-
-  // Obtener hora actual (simulada)
-  const obtenerHoraActual = () => {
-    return horaSeleccionada;
-  };
-
-  // Verificar si un salón tiene clase en la hora seleccionada
-  const tieneClaseEnHora = (espacioId: number, hora: string) => {
-    const horarioHoy = horarios.find(h => {
-      if (h.espacioId !== espacioId || !h.activo) return false;
-      
-      const horaInicio = h.horaInicio;
-      const horaFin = h.horaFin;
-      
-      // Verificar si la hora seleccionada está dentro del rango
-      return hora >= horaInicio && hora < horaFin;
-    });
-
-    return horarioHoy;
-  };
-
-  // Verificar si la clase ya terminó (necesita cerrarse)
-  const claseTerminada = (espacioId: number, hora: string) => {
-    const horarioHoy = horarios.find(h => {
-      if (h.espacioId !== espacioId || !h.activo) return false;
-      return hora >= h.horaFin;
-    });
-
-    return horarioHoy;
-  };
-
-  // Obtener información del grupo que ocupa el salón
-  const obtenerInfoGrupo = (horario: any) => {
-    if (!horario) return null;
-    
-    const grupo = db.getGrupos().find(g => g.id === horario.grupoId);
-    const asignatura = grupo ? db.getAsignaturas().find(a => a.id === grupo.asignaturaId) : null;
-    
-    return {
-      grupo: grupo?.codigo || 'N/A',
-      asignatura: asignatura?.nombre || 'N/A',
-      docente: grupo?.docente || 'N/A',
-      estudiantes: grupo?.cantidadEstudiantes || 0,
-      horario: `${horario.horaInicio} - ${horario.horaFin}`,
-      horaInicio: horario.horaInicio,
-      horaFin: horario.horaFin
-    };
-  };
-
-  // Determinar el estado del salón
-  const obtenerEstadoSalon = (espacioId: number) => {
-    const estado = estadosSalones.get(espacioId);
-    const horaActual = obtenerHoraActual();
-    const tieneClase = tieneClaseEnHora(espacioId, horaActual);
-    const claseFinalizada = claseTerminada(espacioId, horaActual);
-
-    if (estado?.cerrado) {
-      return 'cerrado';
-    } else if (estado?.abierto && tieneClase) {
-      return 'en-clase';
-    } else if (estado?.abierto && claseFinalizada) {
-      return 'por-cerrar';
-    } else if (estado?.abierto) {
-      return 'abierto';
-    } else if (tieneClase) {
-      return 'por-abrir';
-    } else {
-      return 'sin-clase';
-    }
-  };
-
-  // Función para buscar salones
-  const buscarSalones = () => {
-    if (!sedeSeleccionada || !pisoSeleccionado) {
-      // Mostrar notificación: Por favor selecciona Sede y Piso
-      return;
-    }
-    setBusquedaActiva(true);
-    // Mostrar notificación: Búsqueda realizada
-  };
-
-  // Filtrar salones
-  useEffect(() => {
-    if (!busquedaActiva) {
-      setSalonesFiltrados([]);
-      return;
-    }
-
-    let resultado = [...espacios];
-
-    // Filtro por sede
-    if (sedeSeleccionada) {
-      resultado = resultado.filter(e => e.sede === sedeSeleccionada);
-    }
-
-    // Filtro por piso
-    if (pisoSeleccionado) {
-      resultado = resultado.filter(e => e.piso === pisoSeleccionado);
-    }
-
-    // Solo mostrar aulas y laboratorios
-    resultado = resultado.filter(e => e.tipo === 'aula' || e.tipo === 'laboratorio');
-
-    // Agregar información de horario y estado
-    resultado = resultado.map(e => {
-      const horario = tieneClaseEnHora(e.id, horaSeleccionada);
-      const infoGrupo = obtenerInfoGrupo(horario);
-      const estadoSalon = obtenerEstadoSalon(e.id);
-      
-      return {
-        ...e,
-        tieneClase: !!horario,
-        infoGrupo,
-        estadoSalon
-      };
-    });
-
-    // Ordenar: primero los que tienen clase
-    resultado.sort((a, b) => {
-      const prioridad: any = {
-        'por-abrir': 1,
-        'en-clase': 2,
-        'por-cerrar': 3,
-        'abierto': 4,
-        'cerrado': 5,
-        'sin-clase': 6
-      };
-      return prioridad[a.estadoSalon] - prioridad[b.estadoSalon];
-    });
-
-    setSalonesFiltrados(resultado);
-  }, [sedeSeleccionada, pisoSeleccionado, horaSeleccionada, espacios, horarios, estadosSalones, busquedaActiva]);
-
-  // Abrir salón
-  const abrirSalon = (espacioId: number, nombreSalon: string) => {
-    const nuevoEstado = new Map(estadosSalones);
-    nuevoEstado.set(espacioId, {
-      abierto: true,
-      cerrado: false,
-      horaApertura: obtenerHoraActual()
-    });
-    setEstadosSalones(nuevoEstado);
-    
-    // Mostrar notificación: Salón abierto
-  };
-
-  // Abrir modal de cierre
-  const abrirModalCierre = (salon: any) => {
-    setSalonParaCerrar(salon);
-    setChecklist({
-      lucesApagadas: false,
-      aireApagado: false,
-      proyectorApagado: false,
-      pupitresOrdenados: false,
-      pizarraLimpia: false,
-      ventanasCerradas: false,
-      sinObjetosOlvidados: false,
-      observaciones: ''
-    });
-    setModalCierreAbierto(true);
-  };
-
-  // Cerrar salón con checklist
-  const cerrarSalon = () => {
-    const todoCompleto = 
-      checklist.lucesApagadas &&
-      checklist.aireApagado &&
-      checklist.proyectorApagado &&
-      checklist.pupitresOrdenados &&
-      checklist.pizarraLimpia &&
-      checklist.ventanasCerradas &&
-      checklist.sinObjetosOlvidados;
-
-    if (!todoCompleto) {
-      // Mostrar notificación: Checklist incompleto
-      return;
-    }
-
-    const estadoActual = estadosSalones.get(salonParaCerrar.id);
-    const nuevoEstado = new Map(estadosSalones);
-    nuevoEstado.set(salonParaCerrar.id, {
-      ...estadoActual,
-      abierto: false,
-      cerrado: true,
-      horaCierre: obtenerHoraActual(),
-      checklistCierre: { ...checklist }
-    });
-    setEstadosSalones(nuevoEstado);
-    
-    // Mostrar notificación: Salón cerrado correctamente
-
-    setModalCierreAbierto(false);
-    setSalonParaCerrar(null);
-  };
-
-  // Estadísticas
-  const totalSalones = salonesFiltrados.length;
-  const salonesConClase = salonesFiltrados.filter(s => s.tieneClase).length;
-  const salonesAbiertos = salonesFiltrados.filter(s => s.estadoSalon === 'abierto' || s.estadoSalon === 'en-clase').length;
-  const salonesCerrados = salonesFiltrados.filter(s => s.estadoSalon === 'cerrado').length;
-  const salonesPorCerrar = salonesFiltrados.filter(s => s.estadoSalon === 'por-cerrar').length;
-
-  // Configuración de badges por estado
-  const getEstadoConfig = (estado: string) => {
-    switch (estado) {
-      case 'por-abrir':
-        return {
-          label: 'Por Abrir',
-          className: 'bg-orange-100 text-orange-800 dark:bg-orange-950/30 dark:text-orange-400 border-orange-300',
-          icon: <AlertCircle className="w-3 h-3" />
-        };
-      case 'abierto':
-        return {
-          label: 'Abierto',
-          className: 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-400 border-blue-300',
-          icon: <DoorOpen className="w-3 h-3" />
-        };
-      case 'en-clase':
-        return {
-          label: 'En Clase',
-          className: 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400 border-green-300',
-          icon: <Users className="w-3 h-3" />
-        };
-      case 'por-cerrar':
-        return {
-          label: 'Por Cerrar',
-          className: 'bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-400 border-purple-300',
-          icon: <Clock className="w-3 h-3" />
-        };
-      case 'cerrado':
-        return {
-          label: 'Cerrado',
-          className: 'bg-slate-100 text-slate-800 dark:bg-slate-950/30 dark:text-slate-400 border-slate-300',
-          icon: <Lock className="w-3 h-3" />
-        };
-      default:
-        return {
-          label: 'Sin Clase',
-          className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200',
-          icon: <XCircle className="w-3 h-3" />
-        };
-    }
-  };
+  const {
+    sedes,
+    pisos,
+    sedeSeleccionada,
+    setSedeSeleccionada,
+    pisoSeleccionado,
+    setPisoSeleccionado,
+    horaSeleccionada,
+    setHoraSeleccionada,
+    busquedaActiva,
+    setBusquedaActiva,
+    salonesFiltrados,
+    estadosSalones,
+    modalCierreAbierto,
+    setModalCierreAbierto,
+    salonParaCerrar,
+    checklist,
+    setChecklist,
+    buscarSalones,
+    abrirSalon,
+    abrirModalCierre,
+    cerrarSalon,
+    estadisticas,
+    getEstadoConfig
+  } = useSupervisorSalonHome();
 
   return (
     <div className="p-8 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full">
@@ -354,7 +71,7 @@ export default function SupervisorSalonHome() {
                   </div>
                   <div>
                     <p className="text-slate-600 dark:text-slate-400 text-sm">Total</p>
-                    <p className="text-slate-900 dark:text-slate-100 text-xl">{totalSalones}</p>
+                    <p className="text-slate-900 dark:text-slate-100 text-xl">{estadisticas.totalSalones}</p>
                   </div>
                 </div>
               </CardContent>
@@ -370,7 +87,7 @@ export default function SupervisorSalonHome() {
                   </div>
                   <div>
                     <p className="text-slate-600 dark:text-slate-400 text-sm">Con Clase</p>
-                    <p className="text-slate-900 dark:text-slate-100 text-xl">{salonesConClase}</p>
+                    <p className="text-slate-900 dark:text-slate-100 text-xl">{estadisticas.salonesConClase}</p>
                   </div>
                 </div>
               </CardContent>
@@ -386,7 +103,7 @@ export default function SupervisorSalonHome() {
                   </div>
                   <div>
                     <p className="text-slate-600 dark:text-slate-400 text-sm">Abiertos</p>
-                    <p className="text-slate-900 dark:text-slate-100 text-xl">{salonesAbiertos}</p>
+                    <p className="text-slate-900 dark:text-slate-100 text-xl">{estadisticas.salonesAbiertos}</p>
                   </div>
                 </div>
               </CardContent>
@@ -402,7 +119,7 @@ export default function SupervisorSalonHome() {
                   </div>
                   <div>
                     <p className="text-slate-600 dark:text-slate-400 text-sm">Por Cerrar</p>
-                    <p className="text-slate-900 dark:text-slate-100 text-xl">{salonesPorCerrar}</p>
+                    <p className="text-slate-900 dark:text-slate-100 text-xl">{estadisticas.salonesPorCerrar}</p>
                   </div>
                 </div>
               </CardContent>
@@ -418,7 +135,7 @@ export default function SupervisorSalonHome() {
                   </div>
                   <div>
                     <p className="text-slate-600 dark:text-slate-400 text-sm">Cerrados</p>
-                    <p className="text-slate-900 dark:text-slate-100 text-xl">{salonesCerrados}</p>
+                    <p className="text-slate-900 dark:text-slate-100 text-xl">{estadisticas.salonesCerrados}</p>
                   </div>
                 </div>
               </CardContent>
@@ -468,8 +185,8 @@ export default function SupervisorSalonHome() {
                 <Layers className="w-4 h-4 text-indigo-600" />
                 Piso
               </Label>
-              <Select 
-                value={pisoSeleccionado} 
+              <Select
+                value={pisoSeleccionado}
                 onValueChange={(value) => {
                   setPisoSeleccionado(value);
                   setBusquedaActiva(false);
@@ -602,7 +319,7 @@ export default function SupervisorSalonHome() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {salonesFiltrados.map((salon, index) => {
                     const estadoConfig = getEstadoConfig(salon.estadoSalon);
-                    
+
                     return (
                       <motion.div
                         key={salon.id}
@@ -610,19 +327,18 @@ export default function SupervisorSalonHome() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                       >
-                        <Card className={`border-2 transition-all hover:shadow-lg ${
-                          salon.estadoSalon === 'cerrado' 
-                            ? 'border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50'
-                            : salon.estadoSalon === 'en-clase'
+                        <Card className={`border-2 transition-all hover:shadow-lg ${salon.estadoSalon === 'cerrado'
+                          ? 'border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50'
+                          : salon.estadoSalon === 'en-clase'
                             ? 'border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/20'
                             : salon.estadoSalon === 'por-cerrar'
-                            ? 'border-purple-300 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/20'
-                            : salon.estadoSalon === 'abierto'
-                            ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20'
-                            : salon.estadoSalon === 'por-abrir'
-                            ? 'border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20'
-                            : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'
-                        }`}>
+                              ? 'border-purple-300 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/20'
+                              : salon.estadoSalon === 'abierto'
+                                ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20'
+                                : salon.estadoSalon === 'por-abrir'
+                                  ? 'border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20'
+                                  : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                          }`}>
                           <CardContent className="p-6">
                             {/* Header del salón */}
                             <div className="flex items-start justify-between mb-4">
@@ -640,7 +356,7 @@ export default function SupervisorSalonHome() {
                                     {salon.codigo}
                                   </code>
                                   <Badge className={`${estadoConfig.className} border`}>
-                                    {estadoConfig.icon}
+                                    <estadoConfig.icon className="w-3 h-3 mr-1" />
                                     <span className="ml-1">{estadoConfig.label}</span>
                                   </Badge>
                                 </div>
@@ -712,7 +428,7 @@ export default function SupervisorSalonHome() {
                             <div className="flex gap-2">
                               {salon.estadoSalon === 'por-abrir' && (
                                 <Button
-                                  onClick={() => abrirSalon(salon.id, salon.nombre)}
+                                  onClick={() => abrirSalon(salon.id)}
                                   className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
                                 >
                                   <DoorOpen className="w-4 h-4 mr-2" />
@@ -756,7 +472,7 @@ export default function SupervisorSalonHome() {
                                   variant="outline"
                                   className="flex-1 cursor-not-allowed"
                                 >
-                                  <XCircle className="w-4 h-4 mr-2" />
+                                  <CheckCircle className="w-4 h-4 mr-2" />
                                   Sin Clase Programada
                                 </Button>
                               )}
@@ -793,7 +509,7 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="luces"
                   checked={checklist.lucesApagadas}
-                  onCheckedChange={(checked) => setChecklist({...checklist, lucesApagadas: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, lucesApagadas: checked as boolean })}
                 />
                 <label htmlFor="luces" className="flex items-center gap-2 cursor-pointer flex-1">
                   <LightbulbOff className="w-5 h-5 text-yellow-600" />
@@ -805,7 +521,7 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="aire"
                   checked={checklist.aireApagado}
-                  onCheckedChange={(checked) => setChecklist({...checklist, aireApagado: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, aireApagado: checked as boolean })}
                 />
                 <label htmlFor="aire" className="flex items-center gap-2 cursor-pointer flex-1">
                   <Wind className="w-5 h-5 text-blue-600" />
@@ -817,10 +533,10 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="proyector"
                   checked={checklist.proyectorApagado}
-                  onCheckedChange={(checked) => setChecklist({...checklist, proyectorApagado: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, proyectorApagado: checked as boolean })}
                 />
                 <label htmlFor="proyector" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Monitor className="w-5 h-5 text-purple-600" />
+                  <Monitor className="w-5 h-5 text-indigo-600" />
                   <span className="text-slate-700 dark:text-slate-300">Proyector apagado</span>
                 </label>
               </div>
@@ -829,7 +545,7 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="pupitres"
                   checked={checklist.pupitresOrdenados}
-                  onCheckedChange={(checked) => setChecklist({...checklist, pupitresOrdenados: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, pupitresOrdenados: checked as boolean })}
                 />
                 <label htmlFor="pupitres" className="flex items-center gap-2 cursor-pointer flex-1">
                   <Armchair className="w-5 h-5 text-orange-600" />
@@ -841,10 +557,10 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="pizarra"
                   checked={checklist.pizarraLimpia}
-                  onCheckedChange={(checked) => setChecklist({...checklist, pizarraLimpia: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, pizarraLimpia: checked as boolean })}
                 />
                 <label htmlFor="pizarra" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Eraser className="w-5 h-5 text-green-600" />
+                  <Eraser className="w-5 h-5 text-slate-600" />
                   <span className="text-slate-700 dark:text-slate-300">Pizarra limpia</span>
                 </label>
               </div>
@@ -853,10 +569,10 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="ventanas"
                   checked={checklist.ventanasCerradas}
-                  onCheckedChange={(checked) => setChecklist({...checklist, ventanasCerradas: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, ventanasCerradas: checked as boolean })}
                 />
                 <label htmlFor="ventanas" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Eye className="w-5 h-5 text-cyan-600" />
+                  <DoorClosed className="w-5 h-5 text-teal-600" />
                   <span className="text-slate-700 dark:text-slate-300">Ventanas cerradas</span>
                 </label>
               </div>
@@ -865,60 +581,48 @@ export default function SupervisorSalonHome() {
                 <Checkbox
                   id="objetos"
                   checked={checklist.sinObjetosOlvidados}
-                  onCheckedChange={(checked) => setChecklist({...checklist, sinObjetosOlvidados: checked as boolean})}
+                  onCheckedChange={(checked) => setChecklist({ ...checklist, sinObjetosOlvidados: checked as boolean })}
                 />
                 <label htmlFor="objetos" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  <span className="text-slate-700 dark:text-slate-300">No hay objetos olvidados</span>
+                  <Search className="w-5 h-5 text-red-600" />
+                  <span className="text-slate-700 dark:text-slate-300">Sin objetos olvidados</span>
                 </label>
               </div>
             </div>
 
             {/* Observaciones */}
             <div className="space-y-2">
-              <Label htmlFor="observaciones" className="text-slate-700 dark:text-slate-300">
-                Observaciones (opcional)
-              </Label>
+              <Label htmlFor="observaciones">Observaciones (opcional)</Label>
               <Textarea
                 id="observaciones"
-                placeholder="Escribe cualquier observación sobre el estado del salón..."
+                placeholder="Reportar daños, objetos encontrados o novedades..."
                 value={checklist.observaciones}
-                onChange={(e) => setChecklist({...checklist, observaciones: e.target.value})}
-                className="h-24 resize-none"
+                onChange={(e) => setChecklist({ ...checklist, observaciones: e.target.value })}
+                className="resize-none"
+                rows={3}
               />
-            </div>
-
-            {/* Progreso */}
-            <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Progreso del checklist</span>
-                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {Object.values(checklist).filter((v, i) => i < 7 && v === true).length} / 7
-                </span>
-              </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all"
-                  style={{ width: `${(Object.values(checklist).filter((v, i) => i < 7 && v === true).length / 7) * 100}%` }}
-                ></div>
-              </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setModalCierreAbierto(false)}
-            >
+            <Button variant="outline" onClick={() => setModalCierreAbierto(false)}>
               Cancelar
             </Button>
             <Button
               onClick={cerrarSalon}
-              disabled={!Object.values(checklist).slice(0, 7).every(v => v === true)}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={
+                !checklist.lucesApagadas ||
+                !checklist.aireApagado ||
+                !checklist.proyectorApagado ||
+                !checklist.pupitresOrdenados ||
+                !checklist.pizarraLimpia ||
+                !checklist.ventanasCerradas ||
+                !checklist.sinObjetosOlvidados
+              }
             >
               <Lock className="w-4 h-4 mr-2" />
-              Cerrar Salón
+              Confirmar Cierre
             </Button>
           </DialogFooter>
         </DialogContent>

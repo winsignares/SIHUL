@@ -1,147 +1,50 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Badge } from '../../share/badge';
 import { Input } from '../../share/input';
 import { Button } from '../../share/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
-import { 
-  Search, 
-  MapPin, 
-  CheckCircle2, 
-  AlertTriangle, 
+import {
+  Search,
+  MapPin,
+  CheckCircle2,
+  AlertTriangle,
   XCircle,
-  Monitor,
-  Wifi,
-  Volume2,
-  Projector,
-  AirVent,
-  Lightbulb,
-  Eye,
   Info,
-  Boxes
+  Boxes,
+  Eye
 } from 'lucide-react';
-import { db } from '../../hooks/database';
-import type { EspacioFisico } from '../../hooks/models';
+import { useEstadoRecursos } from '../../hooks/gestionAcademica/useEstadoRecursos';
 
 export default function EstadoRecursos() {
-  const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState<string>('all');
-  const [filtroTipo, setFiltroTipo] = useState<string>('all');
-  const [showDetallesModal, setShowDetallesModal] = useState(false);
-  const [espacioSeleccionado, setEspacioSeleccionado] = useState<EspacioFisico | null>(null);
+  const {
+    searchTerm, setSearchTerm,
+    filtroEstado, setFiltroEstado,
+    filtroTipo, setFiltroTipo,
+    showDetallesModal, setShowDetallesModal,
+    espacioSeleccionado,
+    espaciosFiltrados,
+    estadisticas,
+    getEstadoIcon,
+    getEstadoRecursoBadge,
+    getRecursosConEstado,
+    getRecursoIcon,
+    verDetalles
+  } = useEstadoRecursos();
 
-  useEffect(() => {
-    loadEspacios();
-  }, []);
-
-  const loadEspacios = () => {
-    setEspacios(db.getEspacios());
-  };
-
-  // Iconos para recursos
-  const getRecursoIcon = (recurso: string) => {
-    const recursoLower = recurso.toLowerCase();
-    if (recursoLower.includes('computador') || recursoLower.includes('pc')) {
-      return <Monitor className="w-4 h-4" />;
-    }
-    if (recursoLower.includes('proyector')) {
-      return <Projector className="w-4 h-4" />;
-    }
-    if (recursoLower.includes('wifi') || recursoLower.includes('internet')) {
-      return <Wifi className="w-4 h-4" />;
-    }
-    if (recursoLower.includes('audio') || recursoLower.includes('sonido')) {
-      return <Volume2 className="w-4 h-4" />;
-    }
-    if (recursoLower.includes('aire') || recursoLower.includes('clima')) {
-      return <AirVent className="w-4 h-4" />;
-    }
-    return <Lightbulb className="w-4 h-4" />;
-  };
-
-  // Filtrar espacios
-  const espaciosFiltrados = espacios.filter(espacio => {
-    const matchSearch = 
-      espacio.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      espacio.codigo.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchEstado = filtroEstado === 'all' || espacio.estado === filtroEstado;
-    const matchTipo = filtroTipo === 'all' || espacio.tipo === filtroTipo;
-
-    return matchSearch && matchEstado && matchTipo;
-  });
-
-  // Estadísticas
-  const estadisticas = {
-    total: espacios.length,
-    disponibles: espacios.filter(e => e.estado === 'Disponible').length,
-    mantenimiento: espacios.filter(e => e.estado === 'Mantenimiento').length,
-    noDisponibles: espacios.filter(e => e.estado === 'No Disponible').length
-  };
-
-  // Icono de estado
-  const getEstadoIcon = (estado: string) => {
-    switch (estado) {
-      case 'Disponible':
-        return <CheckCircle2 className="w-5 h-5 text-green-600" />;
-      case 'Mantenimiento':
-        return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
-      case 'Perdido':
-        return <XCircle className="w-5 h-5 text-orange-600" />;
-      case 'No Disponible':
-        return <XCircle className="w-5 h-5 text-red-600" />;
-      default:
-        return null;
-    }
-  };
-
-  // Función para obtener el badge de estado de recurso
-  const getEstadoRecursoBadge = (estado: string) => {
-    switch (estado) {
-      case 'Disponible':
-        return <Badge className="bg-green-600">Disponible</Badge>;
-      case 'Mantenimiento':
-        return <Badge className="bg-yellow-600">Mantenimiento</Badge>;
-      case 'Perdido':
-        return <Badge className="bg-orange-600">Perdido</Badge>;
-      case 'No Disponible':
-        return <Badge className="bg-red-600">No Disponible</Badge>;
-      default:
-        return <Badge className="bg-slate-600">Desconocido</Badge>;
-    }
-  };
-
-  // Función para obtener recursos con estado (genera estados aleatorios si no existen)
-  const getRecursosConEstado = (espacio: EspacioFisico) => {
-    if (espacio.recursosConEstado && espacio.recursosConEstado.length > 0) {
-      return espacio.recursosConEstado;
-    }
-    
-    // Si no hay recursosConEstado, generarlos desde recursos de forma DETERMINÍSTICA
-    return espacio.recursos.map((recurso, index) => {
-      // Crear un hash simple basado en el ID del espacio y el nombre del recurso
-      const seed = espacio.id.charCodeAt(0) + recurso.charCodeAt(0) + index;
-      const normalized = (seed % 100) / 100;
-      
-      let estado: 'Disponible' | 'Mantenimiento' | 'Perdido' | 'No Disponible';
-      
-      if (normalized < 0.7) estado = 'Disponible';
-      else if (normalized < 0.85) estado = 'Mantenimiento';
-      else if (normalized < 0.95) estado = 'No Disponible';
-      else estado = 'Perdido';
-      
-      return { nombre: recurso, estado };
-    });
+  const renderIcon = (iconData: any) => {
+    if (!iconData) return null;
+    const Icon = iconData.component;
+    return <Icon {...iconData.props} />;
   };
 
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-slate-900 mb-2">Estado de Recursos por Espacio</h1>
-        <p className="text-slate-600">Visualiza los recursos disponibles y el estado de cada espacio físico</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Recursos</h2>
+        </div>
       </div>
 
       {/* Estadísticas */}
@@ -244,29 +147,27 @@ export default function EstadoRecursos() {
       {/* Grid de Espacios */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {espaciosFiltrados.map((espacio) => (
-          <Card 
-            key={espacio.id} 
-            className={`border-2 transition-all hover:shadow-xl ${
-              espacio.estado === 'Disponible' 
-                ? 'border-green-200 hover:border-green-400'
-                : espacio.estado === 'Mantenimiento'
+          <Card
+            key={espacio.id}
+            className={`border-2 transition-all hover:shadow-xl ${espacio.estado === 'Disponible'
+              ? 'border-green-200 hover:border-green-400'
+              : espacio.estado === 'Mantenimiento'
                 ? 'border-yellow-200 hover:border-yellow-400'
                 : 'border-red-200 hover:border-red-400'
-            }`}
+              }`}
           >
-            <CardHeader className={`${
-              espacio.estado === 'Disponible'
-                ? 'bg-green-50'
-                : espacio.estado === 'Mantenimiento'
+            <CardHeader className={`${espacio.estado === 'Disponible'
+              ? 'bg-green-50'
+              : espacio.estado === 'Mantenimiento'
                 ? 'bg-yellow-50'
                 : 'bg-red-50'
-            }`}>
+              }`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-slate-900 mb-1">{espacio.nombre}</CardTitle>
                   <p className="text-slate-600">{espacio.codigo}</p>
                 </div>
-                {getEstadoIcon(espacio.estado)}
+                {renderIcon(getEstadoIcon(espacio.estado))}
               </div>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
@@ -305,8 +206,8 @@ export default function EstadoRecursos() {
                       espacio.estado === 'Disponible'
                         ? 'bg-green-600'
                         : espacio.estado === 'Mantenimiento'
-                        ? 'bg-yellow-600'
-                        : 'bg-red-600'
+                          ? 'bg-yellow-600'
+                          : 'bg-red-600'
                     }
                   >
                     {espacio.estado}
@@ -320,15 +221,17 @@ export default function EstadoRecursos() {
                 {espacio.recursos && espacio.recursos.length > 0 ? (
                   <div className="space-y-2">
                     {getRecursosConEstado(espacio).map((recurso, idx) => (
-                      <div 
+                      <div
                         key={idx}
                         className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"
                       >
                         <div className="text-blue-600">
-                          {getRecursoIcon(recurso.nombre)}
+                          {renderIcon(getRecursoIcon(recurso.nombre))}
                         </div>
                         <span className="text-slate-900 text-sm">{recurso.nombre}</span>
-                        {getEstadoRecursoBadge(recurso.estado)}
+                        <Badge className={getEstadoRecursoBadge(recurso.estado).className}>
+                          {getEstadoRecursoBadge(recurso.estado).label}
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -347,10 +250,7 @@ export default function EstadoRecursos() {
               {/* Botón DETALLES */}
               <div className="pt-3">
                 <Button
-                  onClick={() => {
-                    setEspacioSeleccionado(espacio);
-                    setShowDetallesModal(true);
-                  }}
+                  onClick={() => verDetalles(espacio)}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 >
                   <Eye className="w-4 h-4 mr-2" />
@@ -429,11 +329,11 @@ export default function EstadoRecursos() {
                         espacioSeleccionado.estado === 'Disponible'
                           ? 'bg-green-600'
                           : espacioSeleccionado.estado === 'Mantenimiento'
-                          ? 'bg-yellow-600'
-                          : 'bg-red-600'
+                            ? 'bg-yellow-600'
+                            : 'bg-red-600'
                       }
                     >
-                      {getEstadoIcon(espacioSeleccionado.estado)}
+                      {renderIcon(getEstadoIcon(espacioSeleccionado.estado))}
                       <span className="ml-2">{espacioSeleccionado.estado}</span>
                     </Badge>
                   </div>
@@ -459,41 +359,39 @@ export default function EstadoRecursos() {
                     {getRecursosConEstado(espacioSeleccionado).map((recurso, idx) => (
                       <div
                         key={idx}
-                        className={`p-4 rounded-lg border-2 ${
-                          recurso.estado === 'Disponible'
-                            ? 'bg-green-50 border-green-200'
-                            : recurso.estado === 'Mantenimiento'
+                        className={`p-4 rounded-lg border-2 ${recurso.estado === 'Disponible'
+                          ? 'bg-green-50 border-green-200'
+                          : recurso.estado === 'Mantenimiento'
                             ? 'bg-yellow-50 border-yellow-200'
                             : recurso.estado === 'Perdido'
-                            ? 'bg-orange-50 border-orange-200'
-                            : 'bg-red-50 border-red-200'
-                        }`}
+                              ? 'bg-orange-50 border-orange-200'
+                              : 'bg-red-50 border-red-200'
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`p-2 rounded-lg ${
-                                recurso.estado === 'Disponible'
-                                  ? 'bg-green-100'
-                                  : recurso.estado === 'Mantenimiento'
+                              className={`p-2 rounded-lg ${recurso.estado === 'Disponible'
+                                ? 'bg-green-100'
+                                : recurso.estado === 'Mantenimiento'
                                   ? 'bg-yellow-100'
                                   : recurso.estado === 'Perdido'
-                                  ? 'bg-orange-100'
-                                  : 'bg-red-100'
-                              }`}
+                                    ? 'bg-orange-100'
+                                    : 'bg-red-100'
+                                }`}
                             >
                               <div
                                 className={
                                   recurso.estado === 'Disponible'
                                     ? 'text-green-600'
                                     : recurso.estado === 'Mantenimiento'
-                                    ? 'text-yellow-600'
-                                    : recurso.estado === 'Perdido'
-                                    ? 'text-orange-600'
-                                    : 'text-red-600'
+                                      ? 'text-yellow-600'
+                                      : recurso.estado === 'Perdido'
+                                        ? 'text-orange-600'
+                                        : 'text-red-600'
                                 }
                               >
-                                {getRecursoIcon(recurso.nombre)}
+                                {renderIcon(getRecursoIcon(recurso.nombre))}
                               </div>
                             </div>
                             <div>
@@ -504,8 +402,10 @@ export default function EstadoRecursos() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {getEstadoIcon(recurso.estado)}
-                            {getEstadoRecursoBadge(recurso.estado)}
+                            {renderIcon(getEstadoIcon(recurso.estado))}
+                            <Badge className={getEstadoRecursoBadge(recurso.estado).className}>
+                              {getEstadoRecursoBadge(recurso.estado).label}
+                            </Badge>
                           </div>
                         </div>
                       </div>

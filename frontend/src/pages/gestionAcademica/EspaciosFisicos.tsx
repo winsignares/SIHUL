@@ -1,288 +1,52 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Textarea } from '../../share/textarea';
 import { Card, CardContent } from '../../share/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, MapPin, Search, Check, AlertTriangle, Package, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Toaster } from '../../share/sonner';
-import { useNotification, NotificationBanner } from '../../share/notificationBanner';
-import { db } from '../../hooks/database';
-import type { EspacioFisico } from '../../hooks/models';
+import { Plus, Edit, Trash2, Search, Check, Package, X } from 'lucide-react';
+import { NotificationBanner } from '../../share/notificationBanner';
+import { useEspaciosFisicos } from '../../hooks/gestionAcademica/useEspaciosFisicos';
 
 export default function EspaciosFisicos() {
-    const { notification, showNotification } = useNotification();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterTipo, setFilterTipo] = useState<string>('all');
-  const [filterSede, setFilterSede] = useState<string>('all');
-  
-  // Estados de datos
-  const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
-  
-  // Modales
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
-  // Formulario
-  const [espacioForm, setEspacioForm] = useState({
-    codigo: '',
-    nombre: '',
-    tipo: '',
-    capacidad: '',
-    sede: '',
-    piso: '',
-    descripcion: '',
-    estado: 'Disponible' as 'Disponible' | 'Mantenimiento' | 'No Disponible'
-  });
-  
-  // Estado para recursos
-  const [recursoSeleccionado, setRecursoSeleccionado] = useState('');
-  const [recursosAgregados, setRecursosAgregados] = useState<string[]>([]);
-  const [mostrandoRecursos, setMostrandoRecursos] = useState(true);
-  
-  const [selectedEspacio, setSelectedEspacio] = useState<EspacioFisico | null>(null);
-  
-  // Cargar datos
-  useEffect(() => {
-    loadEspacios();
-  }, []);
-  
-  const loadEspacios = () => {
-    setEspacios(db.getEspacios());
-  };
-  
-  // Tipos y Sedes
-  const tiposEspacio = ['Aula', 'Laboratorio', 'Auditorio', 'Sala', 'Cancha', 'Cubículo'];
-  const sedesDisponibles = ['Sede Norte', 'Sede Centro']; // Solo estas dos
-  
-  // Recursos disponibles
-  const recursosDisponibles = [
-    { nombre: 'Proyector', icon: '📽️' },
-    { nombre: 'Micrófono', icon: '🎤' },
-    { nombre: 'Sonido', icon: '🔊' },
-    { nombre: 'Computadores', icon: '💻' },
-    { nombre: 'Videoconferencia', icon: '📹' },
-    { nombre: 'Pizarra Digital', icon: '📊' },
-    { nombre: 'Aire Acondicionado', icon: '❄️' },
-    { nombre: 'Sillas Adicionales', icon: '🪑' },
-    { nombre: 'Mesas', icon: '🪑' },
-    { nombre: 'Atril', icon: '📖' },
-    { nombre: 'Pantalla Extra', icon: '🖥️' },
-    { nombre: 'Internet', icon: '🌐' }
-  ];
-  
-  // ==================== CREAR ESPACIO ====================
-  
-  const handleCreateEspacio = () => {
-    // Validaciones
-    if (!espacioForm.codigo.trim()) {
-      showNotification('El código es obligatorio', 'error');
-      return;
-    }
-    if (!espacioForm.nombre.trim()) {
-      showNotification('El nombre es obligatorio', 'error');
-      return;
-    }
-    if (!espacioForm.tipo) {
-      showNotification('Debe seleccionar un tipo', 'error');
-      return;
-    }
-    if (!espacioForm.capacidad || Number(espacioForm.capacidad) < 1) {
-      showNotification('La capacidad debe ser mayor a 0', 'error');
-      return;
-    }
-    if (!espacioForm.sede) {
-      showNotification('Debe seleccionar una sede', 'error');
-      return;
-    }
-    if (!espacioForm.piso.trim()) {
-      showNotification('El piso es obligatorio', 'error');
-      return;
-    }
-    
-    // Crear espacio
-    const tipoValido: 'aula' | 'laboratorio' | 'auditorio' | 'sala' | 'otro' = tiposEspacio.includes(espacioForm.tipo) ? espacioForm.tipo as any : 'otro';
-    db.createEspacio({
-      codigo: espacioForm.codigo.trim(),
-      nombre: espacioForm.nombre.trim(),
-      tipo: tipoValido,
-      capacidad: Number(espacioForm.capacidad),
-      sede: espacioForm.sede,
-      piso: espacioForm.piso.trim(),
-      recursos: recursosAgregados,
-      estado: 'Disponible', // Siempre disponible al crear
-      fechaCreacion: new Date().toISOString()
-    });
-    
-    // Actualizar lista
-    loadEspacios();
-    
-    // Limpiar y cerrar
-    resetForm();
-    setShowCreateDialog(false);
-    
-    // Notificación
-    showNotification('✅ Registro guardado exitosamente', 'success');
-  };
-  
-  // ==================== EDITAR ESPACIO ====================
-  
-  const openEditDialog = (espacio: EspacioFisico) => {
-    setSelectedEspacio(espacio);
-    setEspacioForm({
-      codigo: espacio.codigo,
-      nombre: espacio.nombre,
-      tipo: espacio.tipo,
-      capacidad: espacio.capacidad.toString(),
-      sede: espacio.sede,
-      piso: espacio.piso || '',
-      descripcion: espacio.descripcion || '',
-      estado: espacio.estado
-    });
-    setRecursosAgregados(espacio.recursos || []);
-    setMostrandoRecursos(false); // No mostrar selector al inicio en edición
-    setShowEditDialog(true);
-  };
-  
-  const handleEditEspacio = () => {
-    if (!selectedEspacio) return;
-    // Validaciones (mismas que crear)
-    if (!espacioForm.codigo.trim()) {
-      showNotification('El código es obligatorio', 'error');
-      return;
-    }
-    if (!espacioForm.nombre.trim()) {
-      showNotification('El nombre es obligatorio', 'error');
-      return;
-    }
-    if (!espacioForm.tipo) {
-      showNotification('Debe seleccionar un tipo', 'error');
-      return;
-    }
-    if (!espacioForm.capacidad || Number(espacioForm.capacidad) < 1) {
-      showNotification('La capacidad debe ser mayor a 0', 'error');
-      return;
-    }
-    if (!espacioForm.sede) {
-      showNotification('Debe seleccionar una sede', 'error');
-      return;
-    }
-    if (!espacioForm.piso.trim()) {
-      showNotification('El piso es obligatorio', 'error');
-      return;
-    }
-    
-    // Actualizar
-    const tipoValido: 'aula' | 'laboratorio' | 'auditorio' | 'sala' | 'otro' = tiposEspacio.includes(espacioForm.tipo) ? espacioForm.tipo as any : 'otro';
-    db.updateEspacio(selectedEspacio.id, {
-      codigo: espacioForm.codigo.trim(),
-      nombre: espacioForm.nombre.trim(),
-      tipo: tipoValido,
-      capacidad: Number(espacioForm.capacidad),
-      sede: espacioForm.sede,
-      piso: espacioForm.piso.trim(),
-      recursos: recursosAgregados,
-      descripcion: espacioForm.descripcion.trim(),
-      estado: espacioForm.estado
-    });
-    
-    // Actualizar lista
-    loadEspacios();
-    
-    // Cerrar y limpiar
-    setShowEditDialog(false);
-    setSelectedEspacio(null);
-    resetForm();
-    
-    // Notificación
-    showNotification('✅ Actualización exitosa', 'success');
-  };
-  
-  // ==================== ELIMINAR ESPACIO ====================
-  
-  const openDeleteDialog = (espacio: EspacioFisico) => {
-    setSelectedEspacio(espacio);
-    setShowDeleteDialog(true);
-  };
-  
-  const handleDeleteEspacio = () => {
-    if (!selectedEspacio) return;
-    
-    // Eliminar
-    db.deleteEspacio(selectedEspacio.id);
-    
-    // Actualizar lista
-    loadEspacios();
-    
-    // Cerrar
-    setShowDeleteDialog(false);
-    setSelectedEspacio(null);
-    
-    showNotification('✅ Espacio eliminado correctamente', 'success');
-  };
-  
-  // ==================== UTILIDADES ====================
-  
-  const resetForm = () => {
-    setEspacioForm({
-      codigo: '',
-      nombre: '',
-      tipo: '',
-      capacidad: '',
-      sede: '',
-      piso: '',
-      descripcion: '',
-      estado: 'Disponible'
-    });
-    setRecursosAgregados([]);
-    setRecursoSeleccionado('');
-    setMostrandoRecursos(true);
-  };
-  
-  // ==================== FILTROS ====================
-  
-  const filteredEspacios = espacios.filter(espacio => {
-    const matchSearch = 
-      espacio.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      espacio.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      espacio.sede.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchTipo = filterTipo === 'all' || espacio.tipo === filterTipo;
-    const matchSede = filterSede === 'all' || espacio.sede === filterSede;
-    
-    return matchSearch && matchTipo && matchSede;
-  });
-  
-  // Badge de estado
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case 'Disponible':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-400">Disponible</Badge>;
-      case 'Mantenimiento':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400">Mantenimiento</Badge>;
-      case 'No Disponible':
-        return <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-400">No Disponible</Badge>;
-      default:
-        return <Badge variant="outline">Desconocido</Badge>;
-    }
-  };
+  const {
+    searchTerm, setSearchTerm,
+    filterTipo, setFilterTipo,
+    filterSede, setFilterSede,
+    showCreateDialog, setShowCreateDialog,
+    showEditDialog, setShowEditDialog,
+    showDeleteDialog, setShowDeleteDialog,
+    espacioForm, setEspacioForm,
+    recursoSeleccionado, setRecursoSeleccionado,
+    recursosAgregados, setRecursosAgregados,
+    mostrandoRecursos, setMostrandoRecursos,
+    tiposEspacio,
+    sedesDisponibles,
+    recursosDisponibles,
+    handleCreateEspacio,
+    openEditDialog,
+    handleEditEspacio,
+    openDeleteDialog,
+    handleDeleteEspacio,
+    resetForm,
+    filteredEspacios,
+    getEstadoBadge,
+    notification,
+    showNotification
+  } = useEspaciosFisicos();
 
   return (
     <div className="p-8 space-y-6">
       <NotificationBanner notification={notification} />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-slate-900 dark:text-slate-100 mb-2">Espacios Físicos</h1>
-          <p className="text-slate-600 dark:text-slate-400">Gestiona aulas, laboratorios y espacios académicos</p>
+          <h2 className="text-slate-900 dark:text-slate-100 text-lg font-semibold">Gestión de Espacios Físicos</h2>
         </div>
-        <Button 
+        <Button
           onClick={() => setShowCreateDialog(true)}
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
         >
@@ -305,7 +69,7 @@ export default function EspaciosFisicos() {
                 className="pl-10"
               />
             </div>
-            
+
             {/* 2️⃣ Filtro Sede (segundo) */}
             <Select value={filterSede} onValueChange={setFilterSede}>
               <SelectTrigger>
@@ -318,7 +82,7 @@ export default function EspaciosFisicos() {
                 ))}
               </SelectContent>
             </Select>
-            
+
             {/* 3️⃣ Filtro Tipo (tercero) */}
             <Select value={filterTipo} onValueChange={setFilterTipo}>
               <SelectTrigger>
@@ -373,19 +137,23 @@ export default function EspaciosFisicos() {
                       Piso {espacio.piso}
                     </TableCell>
                     <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} personas</TableCell>
-                    <TableCell>{getEstadoBadge(espacio.estado)}</TableCell>
+                    <TableCell>
+                      <Badge className={getEstadoBadge(espacio.estado).className}>
+                        {getEstadoBadge(espacio.estado).label}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openEditDialog(espacio)}
                           className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openDeleteDialog(espacio)}
                           className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
@@ -412,7 +180,7 @@ export default function EspaciosFisicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="codigo">Código *</Label>
-                <Input 
+                <Input
                   id="codigo"
                   placeholder="Ej: A101"
                   value={espacioForm.codigo}
@@ -421,7 +189,7 @@ export default function EspaciosFisicos() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="capacidad">Capacidad *</Label>
-                <Input 
+                <Input
                   id="capacidad"
                   type="number"
                   min="1"
@@ -431,21 +199,21 @@ export default function EspaciosFisicos() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre *</Label>
-              <Input 
+              <Input
                 id="nombre"
                 placeholder="Ej: Aula 101"
                 value={espacioForm.nombre}
                 onChange={(e) => setEspacioForm({ ...espacioForm, nombre: e.target.value })}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo *</Label>
-                <Select 
+                <Select
                   value={espacioForm.tipo}
                   onValueChange={(value) => setEspacioForm({ ...espacioForm, tipo: value })}
                 >
@@ -461,7 +229,7 @@ export default function EspaciosFisicos() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sede">Sede *</Label>
-                <Select 
+                <Select
                   value={espacioForm.sede}
                   onValueChange={(value) => setEspacioForm({ ...espacioForm, sede: value })}
                 >
@@ -476,10 +244,10 @@ export default function EspaciosFisicos() {
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="piso">Piso *</Label>
-              <Input 
+              <Input
                 id="piso"
                 placeholder="Ej: 1"
                 value={espacioForm.piso}
@@ -495,7 +263,7 @@ export default function EspaciosFisicos() {
                   Recursos Disponibles
                 </Label>
               </div>
-              
+
               {mostrandoRecursos && (
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -528,7 +296,7 @@ export default function EspaciosFisicos() {
                       Agregar
                     </Button>
                   </div>
-                  
+
                   <Button
                     type="button"
                     variant="outline"
@@ -540,7 +308,7 @@ export default function EspaciosFisicos() {
                   </Button>
                 </div>
               )}
-              
+
               {/* Lista de recursos agregados */}
               {recursosAgregados.length > 0 && (
                 <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
@@ -551,9 +319,9 @@ export default function EspaciosFisicos() {
                     {recursosAgregados.map(recurso => {
                       const recursoInfo = recursosDisponibles.find(r => r.nombre === recurso);
                       return (
-                        <Badge 
-                          key={recurso} 
-                          variant="outline" 
+                        <Badge
+                          key={recurso}
+                          variant="outline"
                           className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
                         >
                           {recursoInfo?.icon} {recurso}
@@ -616,7 +384,7 @@ export default function EspaciosFisicos() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-codigo">Código *</Label>
-                <Input 
+                <Input
                   id="edit-codigo"
                   value={espacioForm.codigo}
                   onChange={(e) => setEspacioForm({ ...espacioForm, codigo: e.target.value })}
@@ -624,7 +392,7 @@ export default function EspaciosFisicos() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-capacidad">Capacidad *</Label>
-                <Input 
+                <Input
                   id="edit-capacidad"
                   type="number"
                   min="1"
@@ -633,20 +401,20 @@ export default function EspaciosFisicos() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-nombre">Nombre *</Label>
-              <Input 
+              <Input
                 id="edit-nombre"
                 value={espacioForm.nombre}
                 onChange={(e) => setEspacioForm({ ...espacioForm, nombre: e.target.value })}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-tipo">Tipo *</Label>
-                <Select 
+                <Select
                   value={espacioForm.tipo}
                   onValueChange={(value) => setEspacioForm({ ...espacioForm, tipo: value })}
                 >
@@ -662,7 +430,7 @@ export default function EspaciosFisicos() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-sede">Sede *</Label>
-                <Select 
+                <Select
                   value={espacioForm.sede}
                   onValueChange={(value) => setEspacioForm({ ...espacioForm, sede: value })}
                 >
@@ -677,10 +445,10 @@ export default function EspaciosFisicos() {
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-piso">Piso *</Label>
-              <Input 
+              <Input
                 id="edit-piso"
                 placeholder="Ej: 1"
                 value={espacioForm.piso}
@@ -690,7 +458,7 @@ export default function EspaciosFisicos() {
 
             <div className="space-y-2">
               <Label htmlFor="edit-descripcion">Descripción</Label>
-              <Textarea 
+              <Textarea
                 id="edit-descripcion"
                 placeholder="Descripción opcional del espacio..."
                 value={espacioForm.descripcion}
@@ -701,7 +469,7 @@ export default function EspaciosFisicos() {
 
             <div className="space-y-2">
               <Label htmlFor="edit-estado">Estado *</Label>
-              <Select 
+              <Select
                 value={espacioForm.estado}
                 onValueChange={(value: any) => setEspacioForm({ ...espacioForm, estado: value })}
               >
@@ -724,7 +492,7 @@ export default function EspaciosFisicos() {
                   Recursos Disponibles
                 </Label>
               </div>
-              
+
               {mostrandoRecursos && (
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -757,7 +525,7 @@ export default function EspaciosFisicos() {
                       Agregar
                     </Button>
                   </div>
-                  
+
                   <Button
                     type="button"
                     variant="outline"
@@ -769,7 +537,7 @@ export default function EspaciosFisicos() {
                   </Button>
                 </div>
               )}
-              
+
               {/* Lista de recursos agregados */}
               {recursosAgregados.length > 0 && (
                 <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
@@ -780,9 +548,9 @@ export default function EspaciosFisicos() {
                     {recursosAgregados.map(recurso => {
                       const recursoInfo = recursosDisponibles.find(r => r.nombre === recurso);
                       return (
-                        <Badge 
-                          key={recurso} 
-                          variant="outline" 
+                        <Badge
+                          key={recurso}
+                          variant="outline"
                           className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
                         >
                           {recursoInfo?.icon} {recurso}
@@ -820,7 +588,6 @@ export default function EspaciosFisicos() {
               variant="outline"
               onClick={() => {
                 setShowEditDialog(false);
-                setSelectedEspacio(null);
                 resetForm();
               }}
             >
@@ -828,7 +595,7 @@ export default function EspaciosFisicos() {
             </Button>
             <Button
               onClick={handleEditEspacio}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
               Actualizar
             </Button>
@@ -838,24 +605,19 @@ export default function EspaciosFisicos() {
 
       {/* ==================== MODAL: ELIMINAR ESPACIO ==================== */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-              Confirmar Eliminación
-            </DialogTitle>
-            <DialogDescription className="text-slate-600 dark:text-slate-400">
-              ¿Está seguro que desea eliminar el espacio <strong>{selectedEspacio?.nombre}</strong>? 
-              Esta acción no se puede deshacer.
-            </DialogDescription>
+            <DialogTitle className="text-slate-900 dark:text-slate-100">Eliminar Espacio</DialogTitle>
           </DialogHeader>
+          <div className="py-4">
+            <p className="text-slate-600 dark:text-slate-400">
+              ¿Estás seguro de que deseas eliminar este espacio? Esta acción no se puede deshacer.
+            </p>
+          </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setSelectedEspacio(null);
-              }}
+              onClick={() => setShowDeleteDialog(false)}
             >
               Cancelar
             </Button>

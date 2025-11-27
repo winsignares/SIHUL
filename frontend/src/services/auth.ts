@@ -15,6 +15,26 @@ export const AuthService = {
     return { success: false, error: 'Credenciales incorrectas' };
   },
 
+  changePassword(usuarioId: string, currentPassword: string, newPassword: string): { success: boolean; error?: string } {
+    // Simulación de cambio de contraseña
+    const usuarios = db.getUsuarios();
+    const usuario = usuarios.find(u => u.id === usuarioId);
+
+    if (!usuario) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    if (usuario.password !== currentPassword) {
+      return { success: false, error: 'La contraseña actual es incorrecta' };
+    }
+
+    // En una implementación real, aquí se actualizaría la contraseña en la BD
+    // db.updateUsuario(usuarioId, { password: newPassword });
+    console.log(`Contraseña cambiada para usuario ${usuarioId}`);
+
+    return { success: true };
+  },
+
   hasPermission(usuario: Usuario, componenteId: string, requiredPermission: 'ver' | 'editar' = 'ver'): boolean {
     // Simulación de permisos
     return true;

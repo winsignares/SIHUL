@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
@@ -7,13 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Building2, Search, Users, X, Check, AlertTriangle, BookOpen, GitMerge, MapPin, Boxes, Power, PowerOff } from 'lucide-react';
-import { Switch } from '../../share/switch';
-import { Toaster } from '../../share/sonner';
-import { showNotification } from '../../context/ThemeContext';
-import { motion, AnimatePresence } from 'motion/react';
-import { db } from '../../hooks/database';
-import type { Facultad, Programa } from '../../hooks/models';
+import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, GitMerge, MapPin, Boxes, Power, PowerOff } from 'lucide-react';
+
+import { useFacultadesPrograms, type TabOption } from '../../hooks/gestionAcademica/useFacultadesPrograms';
+
 import Asignaturas from './Asignaturas';
 import GruposFusion from './GruposFusion';
 import EspaciosFisicos from './EspaciosFisicos';
@@ -23,302 +19,39 @@ import Sedes from './Sedes';
 import Docentes from './Docentes';
 
 export default function FacultadesPrograms() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos'>('sedes');
-  
-  // Estados de datos
-  const [facultades, setFacultades] = useState<Facultad[]>([]);
-  const [programas, setProgramas] = useState<Programa[]>([]);
-  
-  // Estados de modales
-  const [showCreateFacultad, setShowCreateFacultad] = useState(false);
-  const [showEditFacultad, setShowEditFacultad] = useState(false);
-  const [showDeleteFacultad, setShowDeleteFacultad] = useState(false);
-  const [showCreatePrograma, setShowCreatePrograma] = useState(false);
-  const [showEditPrograma, setShowEditPrograma] = useState(false);
-  const [showDeletePrograma, setShowDeletePrograma] = useState(false);
-  
-  // Estados de formularios
-  const [facultadForm, setFacultadForm] = useState({ nombre: '' });
-  const [programaForm, setProgramaForm] = useState({ 
-    nombre: '', 
-    facultadId: '',
-    semestres: '' 
-  });
-  
-  // Estados de selección
-  const [selectedFacultad, setSelectedFacultad] = useState<Facultad | null>(null);
-  const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
-  const [selectedFacultadFilter, setSelectedFacultadFilter] = useState<string>('all');
-  
-  // Key para forzar recarga de componentes hijos
-  const [reloadKey, setReloadKey] = useState(0);
-  
-  // Cargar datos
-  useEffect(() => {
-    loadFacultades();
-    loadProgramas();
-  }, []);
-  
-  // Recargar cuando cambie de pestaña
-  useEffect(() => {
-    loadFacultades();
-    loadProgramas();
-  }, [activeTab]);
-  
-  const loadFacultades = () => {
-    const data = db.getFacultades();
-    setFacultades(data);
-  };
-  
-  const loadProgramas = () => {
-    const data = db.getProgramas();
-    setProgramas(data);
-  };
-  
-  // Función para recargar todos los datos
-  const reloadAllData = () => {
-    loadFacultades();
-    loadProgramas();
-    setReloadKey(prev => prev + 1); // Forzar recarga de componentes hijos
-  };
-  
-  // ==================== FACULTADES ====================
-  
-  const handleCreateFacultad = () => {
-    // Validación
-    if (!facultadForm.nombre.trim()) {
-      showNotification({ message: 'El nombre de la facultad es obligatorio', type: 'error' });
-      return;
-    }
-    
-    // Crear facultad
-    const newFacultad = db.createFacultad({
-      codigo: `FAC-${Date.now().toString().slice(-4)}`,
-      nombre: facultadForm.nombre.trim(),
-      activa: true,
-      fechaCreacion: new Date().toISOString()
-    });
-    
-    // Actualizar lista
-    loadFacultades();
-    
-    // Limpiar formulario y cerrar
-    setFacultadForm({ nombre: '' });
-    setShowCreateFacultad(false);
-    
-    // Mostrar notificación con animación
-    showNotification({ message: '✅ Facultad registrada exitosamente', type: 'success' });
-  };
-  
-  const handleEditFacultad = () => {
-    if (!selectedFacultad) return;
-    
-    // Validación
-    if (!facultadForm.nombre.trim()) {
-      showNotification({ message: 'El nombre de la facultad es obligatorio', type: 'error' });
-      return;
-    }
-    
-    // Actualizar facultad
-    db.updateFacultad(selectedFacultad.id, {
-      nombre: facultadForm.nombre.trim()
-    });
-    
-    // Actualizar lista
-    loadFacultades();
-    loadProgramas(); // Por si el nombre cambió en programas
-    
-    // Cerrar modal
-    setShowEditFacultad(false);
-    setSelectedFacultad(null);
-    setFacultadForm({ nombre: '' });
-    
-    // Notificación
-    showNotification({ message: '✅ Facultad actualizada correctamente', type: 'success' });
-  };
-  
-  const handleDeleteFacultad = () => {
-    if (!selectedFacultad) return;
-    
-    // Eliminar facultad (también elimina programas relacionados)
-    db.deleteFacultad(selectedFacultad.id);
-    
-    // Actualizar listas
-    loadFacultades();
-    loadProgramas();
-    
-    // Cerrar modal
-    setShowDeleteFacultad(false);
-    setSelectedFacultad(null);
-    
-    // Notificación
-    showNotification({ message: '✅ Facultad eliminada correctamente', type: 'success' });
-  };
-  
-  const openEditFacultad = (facultad: Facultad) => {
-    setSelectedFacultad(facultad);
-    setFacultadForm({ nombre: facultad.nombre });
-    setShowEditFacultad(true);
-  };
-  
-  const openDeleteFacultad = (facultad: Facultad) => {
-    setSelectedFacultad(facultad);
-    setShowDeleteFacultad(true);
-  };
-  
-  const toggleFacultadActiva = (facultad: Facultad) => {
-    db.updateFacultad(facultad.id, {
-      activa: !facultad.activa
-    });
-    loadFacultades();
-    
-    showNotification({ message: facultad.activa ? '✅ Facultad inactivada correctamente' : '✅ Facultad activada correctamente', type: 'success' });
-  };
-  
-  // ==================== PROGRAMAS ====================
-  
-  const handleCreatePrograma = () => {
-    // Validaciones
-    if (!programaForm.nombre.trim()) {
-      showNotification({ message: 'El nombre del programa es obligatorio', type: 'error' });
-      return;
-    }
-    
-    if (!programaForm.facultadId) {
-      showNotification({ message: 'Debe seleccionar una facultad', type: 'error' });
-      return;
-    }
-    
-    if (!programaForm.semestres || Number(programaForm.semestres) < 1) {
-      showNotification({ message: 'Debe especificar el número de semestres (mínimo 1)', type: 'error' });
-      return;
-    }
-    
-    // Crear programa (siempre activo)
-    const newPrograma = db.createPrograma({
-      codigo: `PROG-${Date.now().toString().slice(-4)}`,
-      nombre: programaForm.nombre.trim(),
-      facultadId: programaForm.facultadId,
-      modalidad: 'presencial',
-      nivel: 'pregrado',
-      semestres: Number(programaForm.semestres),
-      activo: true, // Siempre activo al crear
-      fechaCreacion: new Date().toISOString()
-    });
-    
-    // Actualizar lista
-    loadProgramas();
-    
-    // Limpiar y cerrar
-    setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
-    setShowCreatePrograma(false);
-    
-    // Notificación
-    showNotification({ message: '✅ Programa registrado exitosamente', type: 'success' });
-  };
-  
-  const handleEditPrograma = () => {
-    if (!selectedPrograma) return;
-    
-    // Validaciones
-    if (!programaForm.nombre.trim()) {
-      showNotification({ message: 'El nombre del programa es obligatorio', type: 'error' });
-      return;
-    }
-    
-    if (!programaForm.facultadId) {
-      showNotification({ message: 'Debe seleccionar una facultad', type: 'error' });
-      return;
-    }
-    
-    if (!programaForm.semestres || Number(programaForm.semestres) < 1) {
-      showNotification({ message: 'Debe especificar el número de semestres (mínimo 1)', type: 'error' });
-      return;
-    }
-    
-    // Actualizar programa
-    db.updatePrograma(selectedPrograma.id, {
-      nombre: programaForm.nombre.trim(),
-      facultadId: programaForm.facultadId,
-      semestres: Number(programaForm.semestres)
-    });
-    
-    // Actualizar lista
-    loadProgramas();
-    
-    // Cerrar modal
-    setShowEditPrograma(false);
-    setSelectedPrograma(null);
-    setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
-    
-    // Notificación
-    showNotification({ message: '✅ Programa actualizado correctamente', type: 'success' });
-  };
-  
-  const handleDeletePrograma = () => {
-    if (!selectedPrograma) return;
-    
-    // Eliminar programa
-    db.deletePrograma(selectedPrograma.id);
-    
-    // Actualizar lista
-    loadProgramas();
-    
-    // Cerrar modal
-    setShowDeletePrograma(false);
-    setSelectedPrograma(null);
-    
-    // Notificación
-    showNotification({ message: '✅ Programa eliminado correctamente', type: 'success' });
-  };
-  
-  const openEditPrograma = (programa: Programa) => {
-    setSelectedPrograma(programa);
-    setProgramaForm({ 
-      nombre: programa.nombre, 
-      facultadId: programa.facultadId,
-      semestres: programa.semestres?.toString() || '' 
-    });
-    setShowEditPrograma(true);
-  };
-  
-  const openDeletePrograma = (programa: Programa) => {
-    setSelectedPrograma(programa);
-    setShowDeletePrograma(true);
-  };
-  
-  const toggleProgramaActivo = (programa: Programa) => {
-    db.updatePrograma(programa.id, {
-      activo: !programa.activo
-    });
-    loadProgramas();
-    
-    showNotification({ message: programa.activo ? '✅ Programa inactivado correctamente' : '✅ Programa activado correctamente', type: 'success' });
-  };
-  
-  // ==================== FILTROS ====================
-  
-  const filteredFacultades = facultades.filter(f => 
-    f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  const filteredProgramas = programas.filter(p => {
-    const matchSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchFacultad = selectedFacultadFilter === 'all' || p.facultadId === selectedFacultadFilter;
-    return matchSearch && matchFacultad;
-  });
-  
-  // Contar programas por facultad
-  const getProgramasCount = (facultadId: string) => {
-    return programas.filter(p => p.facultadId === facultadId).length;
-  };
-  
-  // Obtener nombre de facultad
-  const getFacultadNombre = (facultadId: string) => {
-    const facultad = facultades.find(f => f.id === facultadId);
-    return facultad?.nombre || 'Sin facultad';
-  };
+  const {
+    searchTerm, setSearchTerm,
+    activeTab, setActiveTab,
+    facultades,
+    showCreateFacultad, setShowCreateFacultad,
+    showEditFacultad, setShowEditFacultad,
+    showDeleteFacultad, setShowDeleteFacultad,
+    showCreatePrograma, setShowCreatePrograma,
+    showEditPrograma, setShowEditPrograma,
+    showDeletePrograma, setShowDeletePrograma,
+    facultadForm, setFacultadForm,
+    programaForm, setProgramaForm,
+    selectedFacultad, setSelectedFacultad,
+    selectedPrograma, setSelectedPrograma,
+    selectedFacultadFilter, setSelectedFacultadFilter,
+    reloadKey,
+    handleCreateFacultad,
+    handleEditFacultad,
+    handleDeleteFacultad,
+    openEditFacultad,
+    openDeleteFacultad,
+    toggleFacultadActiva,
+    handleCreatePrograma,
+    handleEditPrograma,
+    handleDeletePrograma,
+    openEditPrograma,
+    openDeletePrograma,
+    toggleProgramaActivo,
+    filteredFacultades,
+    filteredProgramas,
+    getProgramasCount,
+    getFacultadNombre
+  } = useFacultadesPrograms();
 
   return (
     <div className="p-8 space-y-6">
@@ -334,99 +67,90 @@ export default function FacultadesPrograms() {
       <div className="flex gap-2 border-b border-slate-200">
         <button
           onClick={() => setActiveTab('sedes')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'sedes'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'sedes'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <MapPin className="w-5 h-5 inline mr-2" />
           Sedes
         </button>
         <button
           onClick={() => setActiveTab('facultades')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'facultades'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'facultades'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Building2 className="w-5 h-5 inline mr-2" />
           Facultades
         </button>
         <button
           onClick={() => setActiveTab('programas')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'programas'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'programas'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Users className="w-5 h-5 inline mr-2" />
           Programas Académicos
         </button>
         <button
           onClick={() => setActiveTab('asignaturas')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'asignaturas'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'asignaturas'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <BookOpen className="w-5 h-5 inline mr-2" />
           Asignaturas
         </button>
         <button
           onClick={() => setActiveTab('docentes')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'docentes'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'docentes'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Users className="w-5 h-5 inline mr-2" />
           Docentes
         </button>
         <button
           onClick={() => setActiveTab('grupos')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'grupos'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'grupos'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Users className="w-5 h-5 inline mr-2" />
           Grupos
         </button>
         <button
           onClick={() => setActiveTab('fusion')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'fusion'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'fusion'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <GitMerge className="w-5 h-5 inline mr-2" />
           Fusión de Grupos
         </button>
         <button
           onClick={() => setActiveTab('espacios')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'espacios'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'espacios'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <MapPin className="w-5 h-5 inline mr-2" />
           Espacios Físicos
         </button>
         <button
           onClick={() => setActiveTab('recursos')}
-          className={`px-6 py-3 border-b-2 transition-colors ${
-            activeTab === 'recursos'
-              ? 'border-red-600 text-red-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'recursos'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Boxes className="w-5 h-5 inline mr-2" />
           Estado de Recursos
@@ -451,33 +175,14 @@ export default function FacultadesPrograms() {
       ) : (
         <>
           {/* Search and Actions - Solo para Facultades y Programas */}
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <Input
-                placeholder={`Buscar ${activeTab}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          {/* Header con botón */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-slate-900 text-lg font-semibold">
+                {activeTab === 'facultades' ? 'Gestión de Facultades' : 'Gestión de Programas'}
+              </h2>
             </div>
-            
-            {/* Filtro de Facultad (solo en Programas) */}
-            {activeTab === 'programas' && (
-              <Select value={selectedFacultadFilter} onValueChange={setSelectedFacultadFilter}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Todas las facultades" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las facultades</SelectItem>
-                  {facultades.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            
-            <Button 
+            <Button
               onClick={() => activeTab === 'facultades' ? setShowCreateFacultad(true) : setShowCreatePrograma(true)}
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
             >
@@ -485,6 +190,44 @@ export default function FacultadesPrograms() {
               {activeTab === 'facultades' ? 'Nueva Facultad' : 'Nuevo Programa'}
             </Button>
           </div>
+
+          {/* Filtros en Card */}
+          <Card className="mb-6 border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex gap-4">
+                <div className="flex-1 relative">
+                  <Label className="text-slate-700 mb-2 block">Buscar</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Input
+                      placeholder={`Buscar ${activeTab}...`}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Filtro de Facultad (solo en Programas) */}
+                {activeTab === 'programas' && (
+                  <div className="w-64">
+                    <Label className="text-slate-700 mb-2 block">Facultad</Label>
+                    <Select value={selectedFacultadFilter} onValueChange={setSelectedFacultadFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas las facultades" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas las facultades</SelectItem>
+                        {facultades.map(f => (
+                          <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="border-slate-200 shadow-lg">
             <CardContent className="p-0">
@@ -513,7 +256,7 @@ export default function FacultadesPrograms() {
                             {getProgramasCount(facultad.id)} programa(s)
                           </TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={facultad.activa ? 'default' : 'secondary'}
                               className={facultad.activa ? 'bg-green-600' : 'bg-slate-400'}
                             >
@@ -522,27 +265,27 @@ export default function FacultadesPrograms() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => openEditFacultad(facultad)}
                                 className="border-blue-600 text-blue-600 hover:bg-blue-50"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => toggleFacultadActiva(facultad)}
-                                className={facultad.activa 
-                                  ? "border-orange-600 text-orange-600 hover:bg-orange-50" 
+                                className={facultad.activa
+                                  ? "border-orange-600 text-orange-600 hover:bg-orange-50"
                                   : "border-green-600 text-green-600 hover:bg-green-50"
                                 }
                               >
                                 {facultad.activa ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                               </Button>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => openDeleteFacultad(facultad)}
                                 className="border-red-600 text-red-600 hover:bg-red-50"
@@ -581,7 +324,7 @@ export default function FacultadesPrograms() {
                           <TableCell className="text-slate-600">{getFacultadNombre(programa.facultadId)}</TableCell>
                           <TableCell className="text-slate-600">{programa.semestres || 0} semestres</TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={programa.activo ? 'default' : 'secondary'}
                               className={programa.activo ? 'bg-green-600' : 'bg-slate-400'}
                             >
@@ -590,27 +333,27 @@ export default function FacultadesPrograms() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => openEditPrograma(programa)}
                                 className="border-blue-600 text-blue-600 hover:bg-blue-50"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => toggleProgramaActivo(programa)}
-                                className={programa.activo 
-                                  ? "border-orange-600 text-orange-600 hover:bg-orange-50" 
+                                className={programa.activo
+                                  ? "border-orange-600 text-orange-600 hover:bg-orange-50"
                                   : "border-green-600 text-green-600 hover:bg-green-50"
                                 }
                               >
                                 {programa.activo ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                               </Button>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => openDeletePrograma(programa)}
                                 className="border-red-600 text-red-600 hover:bg-red-50"
@@ -631,7 +374,7 @@ export default function FacultadesPrograms() {
       )}
 
       {/* ==================== MODALES FACULTADES ==================== */}
-      
+
       {/* Modal: Crear Facultad */}
       <Dialog open={showCreateFacultad} onOpenChange={setShowCreateFacultad}>
         <DialogContent className="sm:max-w-md">
@@ -641,7 +384,7 @@ export default function FacultadesPrograms() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="nombre-facultad">Nombre de la Facultad</Label>
-              <Input 
+              <Input
                 id="nombre-facultad"
                 placeholder="Ej: Facultad de Ingeniería"
                 value={facultadForm.nombre}
@@ -678,7 +421,7 @@ export default function FacultadesPrograms() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-nombre-facultad">Nombre de la Facultad</Label>
-              <Input 
+              <Input
                 id="edit-nombre-facultad"
                 placeholder="Ej: Facultad de Ingeniería"
                 value={facultadForm.nombre}
@@ -751,7 +494,7 @@ export default function FacultadesPrograms() {
       </Dialog>
 
       {/* ==================== MODALES PROGRAMAS ==================== */}
-      
+
       {/* Modal: Crear Programa */}
       <Dialog open={showCreatePrograma} onOpenChange={setShowCreatePrograma}>
         <DialogContent className="sm:max-w-md">
@@ -761,7 +504,7 @@ export default function FacultadesPrograms() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="nombre-programa">Nombre del Programa</Label>
-              <Input 
+              <Input
                 id="nombre-programa"
                 placeholder="Ej: Ingeniería de Sistemas"
                 value={programaForm.nombre}
@@ -770,7 +513,7 @@ export default function FacultadesPrograms() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="facultad-programa">Facultad</Label>
-              <Select 
+              <Select
                 value={programaForm.facultadId}
                 onValueChange={(value) => setProgramaForm({ ...programaForm, facultadId: value })}
               >
@@ -786,11 +529,11 @@ export default function FacultadesPrograms() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="semestres-programa">Número de Semestres</Label>
-              <Input 
+              <Input
                 id="semestres-programa"
                 type="number"
                 min="1"
-                max="20"
+                max="12"
                 placeholder="Ej: 10"
                 value={programaForm.semestres}
                 onChange={(e) => setProgramaForm({ ...programaForm, semestres: e.target.value })}
@@ -831,7 +574,7 @@ export default function FacultadesPrograms() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-nombre-programa">Nombre del Programa</Label>
-              <Input 
+              <Input
                 id="edit-nombre-programa"
                 placeholder="Ej: Ingeniería de Sistemas"
                 value={programaForm.nombre}
@@ -840,7 +583,7 @@ export default function FacultadesPrograms() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-facultad-programa">Facultad</Label>
-              <Select 
+              <Select
                 value={programaForm.facultadId}
                 onValueChange={(value) => setProgramaForm({ ...programaForm, facultadId: value })}
               >
@@ -856,11 +599,11 @@ export default function FacultadesPrograms() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-semestres-programa">Número de Semestres</Label>
-              <Input 
+              <Input
                 id="edit-semestres-programa"
                 type="number"
                 min="1"
-                max="20"
+                max="12"
                 placeholder="Ej: 10"
                 value={programaForm.semestres}
                 onChange={(e) => setProgramaForm({ ...programaForm, semestres: e.target.value })}
@@ -897,7 +640,7 @@ export default function FacultadesPrograms() {
               ¿Está seguro de eliminar el programa?
             </DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer. Se eliminarán también todas las asignaturas asociadas.
+              Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           {selectedPrograma && (

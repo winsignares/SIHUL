@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
@@ -9,371 +8,61 @@ import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, BookOpen, AlertTriangle, Check, X, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Toaster } from '../../share/sonner';
-import { db } from '../../hooks/database';
-import type { Asignatura, Facultad, Programa, RecursoRequerido } from '../../hooks/models';
-
-// Lista de recursos disponibles
-const RECURSOS_DISPONIBLES = [
-  'Computadores',
-  'Proyector',
-  'Micrófono',
-  'Software Especializado',
-  'Laboratorio',
-  'Internet',
-  'Pizarra Digital',
-  'Aire Acondicionado',
-  'Videoconferencia',
-  'Equipos Audiovisuales'
-];
+import { useAsignaturas, RECURSOS_DISPONIBLES, tiposAsignatura } from '../../hooks/gestionAcademica/useAsignaturas';
 
 export default function Asignaturas() {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Estados de datos
-  const [facultades, setFacultades] = useState<Facultad[]>([]);
-  const [programas, setProgramas] = useState<Programa[]>([]);
-  const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
-  
-  // Filtros
-  const [selectedFacultad, setSelectedFacultad] = useState<string>('all');
-  const [selectedPrograma, setSelectedPrograma] = useState<string>('all');
-  const [selectedSemestre, setSelectedSemestre] = useState<string>('all');
-  
-  // Modales
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showRecursosDialog, setShowRecursosDialog] = useState(false);
-  
-  // Formulario
-  const [asignaturaForm, setAsignaturaForm] = useState({
-    codigo: '',
-    nombre: '',
-    programaId: '',
-    creditos: '',
-    horasSemana: '',
-    semestre: '',
-    tipo: 'teorica' as 'teorica' | 'practica' | 'teorico-practica'
-  });
-  
-  // Recursos seleccionados
-  const [recursosSeleccionados, setRecursosSeleccionados] = useState<string[]>([]);
-  const [recursoActual, setRecursoActual] = useState<string>('');
-  
-  const [selectedAsignatura, setSelectedAsignatura] = useState<Asignatura | null>(null);
-  
-  // Cargar datos
-  useEffect(() => {
-    loadFacultades();
-    loadProgramas();
-    loadAsignaturas();
-  }, []);
-  
-  const loadFacultades = () => {
-    setFacultades(db.getFacultades());
-  };
-  
-  const loadProgramas = () => {
-    setProgramas(db.getProgramas());
-  };
-  
-  const loadAsignaturas = () => {
-    setAsignaturas(db.getAsignaturas());
-  };
-  
-  // Obtener programas filtrados por facultad
-  const getProgramasByFacultad = (facultadId: string): Programa[] => {
-    if (facultadId === 'all') return programas;
-    return programas.filter(p => p.facultadId === facultadId);
-  };
-  
-  // Obtener nombre de entidades
-  const getProgramaNombre = (programaId: string) => {
-    const programa = programas.find(p => p.id === programaId);
-    return programa?.nombre || 'Sin programa';
-  };
-  
-  const getFacultadNombre = (programaId: string) => {
-    const programa = programas.find(p => p.id === programaId);
-    if (!programa) return 'Sin facultad';
-    const facultad = facultades.find(f => f.id === programa.facultadId);
-    return facultad?.nombre || 'Sin facultad';
-  };
-  
-  // Tipos de asignatura
-  const tiposAsignatura = [
-    { value: 'teorica', label: 'Teórica' },
-    { value: 'practica', label: 'Práctica' },
-    { value: 'teorico-practica', label: 'Teórico-Práctica' }
-  ];
-  
-  // ==================== RECURSOS ====================
-  
-  const agregarRecurso = () => {
-    if (!recursoActual) {
-      // Mostrar notificación: Debe seleccionar un recurso
-      return;
-    }
-    
-    if (recursosSeleccionados.includes(recursoActual)) {
-      // Mostrar notificación: Este recurso ya ha sido agregado
-      return;
-    }
-    
-    setRecursosSeleccionados(prev => [...prev, recursoActual]);
-    setRecursoActual('');
-    
-    // Mostrar notificación: Recurso agregado correctamente
-  };
-  
-  const eliminarRecurso = (recurso: string) => {
-    setRecursosSeleccionados(prev => prev.filter(r => r !== recurso));
-    // Mostrar notificación: Recurso eliminado
-  };
-  
-  // ==================== CREAR ASIGNATURA ====================
-  
-  const handleCreateAsignatura = () => {
-    // Validaciones
-    if (!asignaturaForm.codigo.trim()) {
-      // Mostrar notificación: El código es obligatorio
-      return;
-    }
-    
-    if (!asignaturaForm.nombre.trim()) {
-      // Mostrar notificación: El nombre es obligatorio
-      return;
-    }
-    
-    if (!asignaturaForm.programaId) {
-      // Mostrar notificación: Debe seleccionar un programa
-      return;
-    }
-    
-    if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
-      // Mostrar notificación: Los créditos deben ser mayor a 0
-      return;
-    }
-    
-    if (!asignaturaForm.horasSemana || Number(asignaturaForm.horasSemana) < 1) {
-      // Mostrar notificación: Las horas semanales deben ser mayor a 0
-      return;
-    }
-    
-    if (!asignaturaForm.semestre || Number(asignaturaForm.semestre) < 1) {
-      // Mostrar notificación: El semestre debe ser mayor a 0
-      return;
-    }
-    
-    // Crear recursos requeridos
-    const recursosRequeridos: RecursoRequerido[] = recursosSeleccionados.map(r => ({
-      tipo: r,
-      cantidad: 1,
-      especificaciones: ''
-    }));
-    
-    // Crear asignatura
-    db.createAsignatura({
-      codigo: asignaturaForm.codigo.trim(),
-      nombre: asignaturaForm.nombre.trim(),
-      programaId: asignaturaForm.programaId,
-      creditos: Number(asignaturaForm.creditos),
-      horasSemana: Number(asignaturaForm.horasSemana),
-      semestre: Number(asignaturaForm.semestre),
-      tipo: asignaturaForm.tipo,
-      recursosRequeridos: recursosRequeridos.length > 0 ? recursosRequeridos : undefined,
-      activa: true,
-      fechaCreacion: new Date().toISOString()
-    });
-    
-    // Actualizar lista
-    loadAsignaturas();
-    
-    // Limpiar y cerrar
-    resetForm();
-    setShowCreateDialog(false);
-    
-    // Notificación
-    // Mostrar notificación: Asignatura registrada exitosamente
-  };
-  
-  // ==================== EDITAR ASIGNATURA ====================
-  
-  const openEditDialog = (asignatura: Asignatura) => {
-    setSelectedAsignatura(asignatura);
-    setAsignaturaForm({
-      codigo: asignatura.codigo,
-      nombre: asignatura.nombre,
-      programaId: asignatura.programaId,
-      creditos: asignatura.creditos.toString(),
-      horasSemana: asignatura.horasSemana.toString(),
-      semestre: asignatura.semestre.toString(),
-      tipo: asignatura.tipo
-    });
-    
-    // Cargar recursos seleccionados
-    const recursos = asignatura.recursosRequeridos?.map(r => r.tipo) || [];
-    setRecursosSeleccionados(recursos);
-    
-    setShowEditDialog(true);
-  };
-  
-  const handleEditAsignatura = () => {
-    if (!selectedAsignatura) return;
-    
-    // Validaciones (mismas que crear)
-    if (!asignaturaForm.codigo.trim()) {
-      // Mostrar notificación: El código es obligatorio
-      return;
-    }
-    
-    if (!asignaturaForm.nombre.trim()) {
-      // Mostrar notificación: El nombre es obligatorio
-      return;
-    }
-    
-    if (!asignaturaForm.programaId) {
-      // Mostrar notificación: Debe seleccionar un programa
-      return;
-    }
-    
-    if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
-      // Mostrar notificación: Los créditos deben ser mayor a 0
-      return;
-    }
-    
-    if (!asignaturaForm.horasSemana || Number(asignaturaForm.horasSemana) < 1) {
-      // Mostrar notificación: Las horas semanales deben ser mayor a 0
-      return;
-    }
-    
-    if (!asignaturaForm.semestre || Number(asignaturaForm.semestre) < 1) {
-      // Mostrar notificación: El semestre debe ser mayor a 0
-      return;
-    }
-    
-    // Crear recursos requeridos
-    const recursosRequeridos: RecursoRequerido[] = recursosSeleccionados.map(r => ({
-      tipo: r,
-      cantidad: 1,
-      especificaciones: ''
-    }));
-    
-    // Actualizar
-    db.updateAsignatura(selectedAsignatura.id, {
-      codigo: asignaturaForm.codigo.trim(),
-      nombre: asignaturaForm.nombre.trim(),
-      programaId: asignaturaForm.programaId,
-      creditos: Number(asignaturaForm.creditos),
-      horasSemana: Number(asignaturaForm.horasSemana),
-      semestre: Number(asignaturaForm.semestre),
-      tipo: asignaturaForm.tipo,
-      recursosRequeridos: recursosRequeridos.length > 0 ? recursosRequeridos : undefined
-    });
-    
-    // Actualizar lista
-    loadAsignaturas();
-    
-    // Cerrar y limpiar
-    setShowEditDialog(false);
-    setSelectedAsignatura(null);
-    resetForm();
-    
-    // Notificación
-    // Mostrar notificación: Asignatura actualizada correctamente
-  };
-  
-  // ==================== ELIMINAR ASIGNATURA ====================
-  
-  const openDeleteDialog = (asignatura: Asignatura) => {
-    setSelectedAsignatura(asignatura);
-    setShowDeleteDialog(true);
-  };
-  
-  const handleDeleteAsignatura = () => {
-    if (!selectedAsignatura) return;
-    
-    // Eliminar
-    db.deleteAsignatura(selectedAsignatura.id);
-    
-    // Actualizar lista
-    loadAsignaturas();
-    
-    // Cerrar
-    setShowDeleteDialog(false);
-    setSelectedAsignatura(null);
-    
-    // Notificación
-    // Mostrar notificación: Asignatura eliminada correctamente
-  };
-  
-  // ==================== UTILIDADES ====================
-  
-  const resetForm = () => {
-    setAsignaturaForm({
-      codigo: '',
-      nombre: '',
-      programaId: '',
-      creditos: '',
-      horasSemana: '',
-      semestre: '',
-      tipo: 'teorica'
-    });
-    setRecursosSeleccionados([]);
-  };
-  
-  // ==================== FILTROS ====================
-  
-  const filteredAsignaturas = asignaturas.filter(asignatura => {
-    // Búsqueda por texto
-    const matchSearch = 
-      asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filtro por programa
-    const matchPrograma = selectedPrograma === 'all' || asignatura.programaId === selectedPrograma;
-    
-    // Filtro por facultad (indirecto a través de programa)
-    let matchFacultad = true;
-    if (selectedFacultad !== 'all') {
-      const programa = programas.find(p => p.id === asignatura.programaId);
-      matchFacultad = programa?.facultadId === selectedFacultad;
-    }
-    
-    // Filtro por semestre
-    const matchSemestre = selectedSemestre === 'all' || asignatura.semestre.toString() === selectedSemestre;
-    
-    return matchSearch && matchPrograma && matchFacultad && matchSemestre;
-  });
-  
-  // Obtener semestres del programa seleccionado
-  const getSemestresDisponibles = () => {
-    if (selectedPrograma === 'all') {
-      // Si no hay programa seleccionado, mostrar todos los semestres de todas las asignaturas
-      return Array.from(new Set(asignaturas.map(a => a.semestre))).sort((a, b) => a - b);
-    }
-    
-    // Si hay un programa seleccionado, obtener su número de semestres
-    const programa = programas.find(p => p.id === selectedPrograma);
-    if (programa && programa.semestres) {
-      // Retornar un array del 1 al número de semestres del programa
-      return Array.from({ length: programa.semestres }, (_, i) => i + 1);
-    }
-    
-    return [];
-  };
-  
-  const semestresDisponibles = getSemestresDisponibles();
-  
+  const {
+    searchTerm, setSearchTerm,
+    facultades,
+    programas,
+    selectedFacultad, setSelectedFacultad,
+    selectedPrograma, setSelectedPrograma,
+    selectedSemestre, setSelectedSemestre,
+    showCreateDialog, setShowCreateDialog,
+    showEditDialog, setShowEditDialog,
+    showDeleteDialog, setShowDeleteDialog,
+    showRecursosDialog, setShowRecursosDialog,
+    asignaturaForm, setAsignaturaForm,
+    recursosSeleccionados,
+    recursoActual, setRecursoActual,
+    selectedAsignatura, setSelectedAsignatura,
+    getProgramasByFacultad,
+    getProgramaNombre,
+    getFacultadNombre,
+    agregarRecurso,
+    eliminarRecurso,
+    handleCreateAsignatura,
+    openEditDialog,
+    handleEditAsignatura,
+    openDeleteDialog,
+    handleDeleteAsignatura,
+    resetForm,
+    filteredAsignaturas,
+    semestresDisponibles
+  } = useAsignaturas();
+
   return (
     <div className="space-y-6">
-      {/* Filtros y Botón de Crear */}
-      <div className="flex gap-4">
-        <Card className="border-slate-200 shadow-lg flex-1">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Búsqueda */}
+      {/* Header con botón */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Asignaturas</h2>
+        </div>
+        <Button
+          onClick={() => setShowCreateDialog(true)}
+          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva Asignatura
+        </Button>
+      </div>
+
+      {/* Filtros en Card */}
+      <Card className="mb-6 border-slate-200 shadow-sm">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-1">
+              <Label className="text-slate-700 mb-2 block">Buscar</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
@@ -383,8 +72,10 @@ export default function Asignaturas() {
                   className="pl-10"
                 />
               </div>
-              
-              {/* Filtro Facultad */}
+            </div>
+
+            <div>
+              <Label className="text-slate-700 mb-2 block">Facultad</Label>
               <Select value={selectedFacultad} onValueChange={(value) => {
                 setSelectedFacultad(value);
                 setSelectedPrograma('all'); // Reset programa al cambiar facultad
@@ -399,8 +90,10 @@ export default function Asignaturas() {
                   ))}
                 </SelectContent>
               </Select>
-              
-              {/* Filtro Programa */}
+            </div>
+
+            <div>
+              <Label className="text-slate-700 mb-2 block">Programa</Label>
               <Select value={selectedPrograma} onValueChange={(value) => {
                 setSelectedPrograma(value);
                 setSelectedSemestre('all'); // Reset semestre al cambiar programa
@@ -415,10 +108,12 @@ export default function Asignaturas() {
                   ))}
                 </SelectContent>
               </Select>
-              
-              {/* Filtro Semestre */}
-              <Select 
-                value={selectedSemestre} 
+            </div>
+
+            <div>
+              <Label className="text-slate-700 mb-2 block">Semestre</Label>
+              <Select
+                value={selectedSemestre}
                 onValueChange={setSelectedSemestre}
                 disabled={selectedPrograma === 'all' && semestresDisponibles.length === 0}
               >
@@ -433,19 +128,9 @@ export default function Asignaturas() {
                 </SelectContent>
               </Select>
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Botón Nueva Asignatura */}
-        <Button 
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-auto px-6"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nueva Asignatura
-        </Button>
-      </div>
-
+          </div>
+        </CardContent>
+      </Card>
       {/* Tabla */}
       <Card className="border-slate-200 shadow-lg">
         <CardContent className="p-0">
@@ -472,7 +157,7 @@ export default function Asignaturas() {
                       </div>
                       <div>
                         <p className="text-slate-900 mb-1">
-                          {selectedPrograma !== 'all' && selectedSemestre !== 'all' 
+                          {selectedPrograma !== 'all' && selectedSemestre !== 'all'
                             ? 'No se encontraron asignaturas registradas para este semestre'
                             : 'No se encontraron asignaturas'}
                         </p>
@@ -498,14 +183,14 @@ export default function Asignaturas() {
                     <TableCell className="text-slate-600">Semestre {asignatura.semestre}</TableCell>
                     <TableCell className="text-slate-600">{asignatura.creditos} créditos</TableCell>
                     <TableCell>
-                      <Badge 
+                      <Badge
                         variant="outline"
                         className={
-                          asignatura.tipo === 'teorica' 
+                          asignatura.tipo === 'teorica'
                             ? 'border-blue-600 text-blue-600'
                             : asignatura.tipo === 'practica'
-                            ? 'border-green-600 text-green-600'
-                            : 'border-purple-600 text-purple-600'
+                              ? 'border-green-600 text-green-600'
+                              : 'border-purple-600 text-purple-600'
                         }
                       >
                         {tiposAsignatura.find(t => t.value === asignatura.tipo)?.label}
@@ -531,16 +216,16 @@ export default function Asignaturas() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openEditDialog(asignatura)}
                           className="border-blue-600 text-blue-600 hover:bg-blue-50"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openDeleteDialog(asignatura)}
                           className="border-red-600 text-red-600 hover:bg-red-50"
@@ -567,7 +252,7 @@ export default function Asignaturas() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="codigo">Código *</Label>
-                <Input 
+                <Input
                   id="codigo"
                   placeholder="Ej: PROG101"
                   value={asignaturaForm.codigo}
@@ -576,7 +261,7 @@ export default function Asignaturas() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="semestre">Semestre *</Label>
-                <Input 
+                <Input
                   id="semestre"
                   type="number"
                   min="1"
@@ -587,20 +272,20 @@ export default function Asignaturas() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre *</Label>
-              <Input 
+              <Input
                 id="nombre"
                 placeholder="Ej: Programación I"
                 value={asignaturaForm.nombre}
                 onChange={(e) => setAsignaturaForm({ ...asignaturaForm, nombre: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="programa">Programa *</Label>
-              <Select 
+              <Select
                 value={asignaturaForm.programaId}
                 onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, programaId: value })}
               >
@@ -616,11 +301,11 @@ export default function Asignaturas() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="creditos">Créditos *</Label>
-                <Input 
+                <Input
                   id="creditos"
                   type="number"
                   min="1"
@@ -632,7 +317,7 @@ export default function Asignaturas() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="horas">Horas/Semana *</Label>
-                <Input 
+                <Input
                   id="horas"
                   type="number"
                   min="1"
@@ -643,10 +328,10 @@ export default function Asignaturas() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo de Asignatura *</Label>
-              <Select 
+              <Select
                 value={asignaturaForm.tipo}
                 onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, tipo: value })}
               >
@@ -660,11 +345,11 @@ export default function Asignaturas() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Recursos Necesarios */}
             <div className="space-y-3">
               <Label>Recursos Necesarios (Opcional)</Label>
-              
+
               {/* ComboBox + Botón Agregar */}
               <div className="flex gap-2">
                 <Select value={recursoActual} onValueChange={setRecursoActual}>
@@ -753,7 +438,7 @@ export default function Asignaturas() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-codigo">Código *</Label>
-                <Input 
+                <Input
                   id="edit-codigo"
                   value={asignaturaForm.codigo}
                   onChange={(e) => setAsignaturaForm({ ...asignaturaForm, codigo: e.target.value })}
@@ -761,7 +446,7 @@ export default function Asignaturas() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-semestre">Semestre *</Label>
-                <Input 
+                <Input
                   id="edit-semestre"
                   type="number"
                   min="1"
@@ -771,19 +456,19 @@ export default function Asignaturas() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-nombre">Nombre *</Label>
-              <Input 
+              <Input
                 id="edit-nombre"
                 value={asignaturaForm.nombre}
                 onChange={(e) => setAsignaturaForm({ ...asignaturaForm, nombre: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-programa">Programa *</Label>
-              <Select 
+              <Select
                 value={asignaturaForm.programaId}
                 onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, programaId: value })}
               >
@@ -799,11 +484,11 @@ export default function Asignaturas() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-creditos">Créditos *</Label>
-                <Input 
+                <Input
                   id="edit-creditos"
                   type="number"
                   min="1"
@@ -814,7 +499,7 @@ export default function Asignaturas() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-horas">Horas/Semana *</Label>
-                <Input 
+                <Input
                   id="edit-horas"
                   type="number"
                   min="1"
@@ -824,10 +509,10 @@ export default function Asignaturas() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-tipo">Tipo de Asignatura *</Label>
-              <Select 
+              <Select
                 value={asignaturaForm.tipo}
                 onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, tipo: value })}
               >
@@ -841,11 +526,11 @@ export default function Asignaturas() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Recursos Necesarios */}
             <div className="space-y-3">
               <Label>Recursos Necesarios (Opcional)</Label>
-              
+
               {/* ComboBox + Botón Agregar */}
               <div className="flex gap-2">
                 <Select value={recursoActual} onValueChange={setRecursoActual}>
@@ -1016,7 +701,6 @@ export default function Asignaturas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Toaster />
     </div>
   );
 }

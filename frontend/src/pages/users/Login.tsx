@@ -1,75 +1,22 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { GraduationCap, Lock, User, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { AuthService } from '../../services/auth';
-import type { Usuario } from '../../models/index';
-import { useNavigate } from 'react-router-dom';
-import { useRoutes } from '../../hooks/useRoutes';
-import { normalizeRole } from '../../hooks/roleUtils';
-import { useUser } from '../../context/UserContext';
 import universityImage from '../../assets/Image/UniversidadLibre.webp';
-
-type UserRole = 'admin' | 'supervisor_general' | 'consultor_docente' | 'consultor_estudiante' | null;
+import { useLogin } from '../../hooks/users/useLogin';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isHovered, setIsHovered] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasNavigated, setHasNavigated] = useState(false);
-  const navigate = useNavigate();
-  const { getHomeRouteByRole } = useRoutes();
-  const { usuario, setUsuario } = useUser();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    // Ejecutar el login inmediatamente (eliminar retraso artificial)
-    try {
-      const result = AuthService.login(email, password);
-      if (result.success && result.usuario) {
-        // Normalizar el rol usando la utilidad compartida
-        const normalizedRole = normalizeRole(result.usuario.rol as any) as
-          | 'admin'
-          | 'supervisor_general'
-          | 'consultor_docente'
-          | 'consultor_estudiante'
-          | 'autorizado'
-          | 'consultor'
-          | undefined;
-        const usuarioNormalizado: Usuario = {
-          ...result.usuario,
-          rol: (normalizedRole as any) || (result.usuario.rol as any)
-        } as Usuario;
-        console.log('Login exitoso - Usuario:', result.usuario, 'Rol original:', result.usuario.rol, 'Rol normalizado:', usuarioNormalizado.rol);
-        // Guardar usuario en contexto
-        setUsuario(usuarioNormalizado);
-      } else {
-        console.log('Login fallido:', result.error);
-        setError(result.error || 'Error al iniciar sesión');
-      }
-    } catch (err) {
-      console.error('Error en AuthService.login:', err);
-      setError('Error al iniciar sesión');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // useEffect para manejar la navegación cuando el usuario cambia
-  useEffect(() => {
-    console.log('useEffect Login - usuario:', usuario, 'rol:', usuario?.rol, 'hasNavigated:', hasNavigated);
-    if (usuario && !hasNavigated) {
-      console.log('Usuario logueado, redirigiendo a / para que el router maneje la navegación');
-      setHasNavigated(true);
-      navigate('/', { replace: true });
-    }
-  }, [usuario, navigate, hasNavigated]);
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    error,
+    isHovered,
+    setIsHovered,
+    isLoading,
+    handleSubmit
+  } = useLogin();
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
@@ -231,11 +178,11 @@ export default function Login() {
             className="relative bg-gradient-to-br from-red-600 via-red-700 to-red-900 p-12 lg:p-16 flex flex-col justify-center items-center text-white overflow-hidden"
           >
             {/* Background Image with Overlay */}
-            <div 
+            <div
               className="absolute inset-0 bg-cover bg-center opacity-40"
               style={{ backgroundImage: `url(${universityImage})` }}
             />
-            
+
             {/* Animated Geometric Shapes */}
             <motion.div
               className="absolute top-10 right-10 w-32 h-32 border-4 border-yellow-400 rounded-full opacity-20"
@@ -303,7 +250,7 @@ export default function Login() {
                   { icon: '📚', label: 'Horarios' },
                   { icon: '🏛️', label: 'Espacios' },
                   { icon: '📊', label: 'Reportes' }
-                ].map((item, index) => (
+                ].map((item) => (
                   <motion.div
                     key={item.label}
                     whileHover={{ scale: 1.05 }}

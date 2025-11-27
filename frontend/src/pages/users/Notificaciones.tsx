@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../../share/card';
 import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
@@ -6,156 +5,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from '../../share/sonner';
-
-interface Notificacion {
-  id: string;
-  tipo: 'solicitud' | 'mensaje' | 'alerta' | 'sistema' | 'exito' | 'error' | 'advertencia';
-  titulo: string;
-  descripcion: string;
-  fecha: string;
-  leida: boolean;
-  eliminada: boolean;
-  prioridad: 'alta' | 'media' | 'baja';
-}
+import { useNotificaciones } from '../../hooks/users/useNotificaciones';
 
 interface NotificacionesProps {
   onNotificacionesChange?: (count: number) => void;
 }
 
 export default function Notificaciones({ onNotificacionesChange }: NotificacionesProps) {
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([
-    {
-      id: '1',
-      tipo: 'solicitud',
-      titulo: 'Solicitud de cambio de aula',
-      descripcion: 'El docente Juan Pérez solicita cambio del Aula 101 al Aula 205 para el horario del martes 14:00-16:00',
-      fecha: '2025-10-22 10:30',
-      leida: false,
-      eliminada: false,
-      prioridad: 'alta'
-    },
-    {
-      id: '2',
-      tipo: 'alerta',
-      titulo: 'Conflicto de horario detectado',
-      descripcion: 'Se detectó un conflicto en el Laboratorio 301 para el día miércoles entre las 08:00 y 10:00',
-      fecha: '2025-10-22 09:15',
-      leida: false,
-      eliminada: false,
-      prioridad: 'alta'
-    },
-    {
-      id: '3',
-      tipo: 'mensaje',
-      titulo: 'Mensaje de María González',
-      descripcion: 'Hola, necesito confirmar la disponibilidad del Auditorio Central para el evento del próximo mes',
-      fecha: '2025-10-22 08:45',
-      leida: false,
-      eliminada: false,
-      prioridad: 'media'
-    },
-    {
-      id: '4',
-      tipo: 'exito',
-      titulo: 'Horario guardado exitosamente',
-      descripcion: 'El horario del grupo 1A ha sido guardado correctamente en el sistema',
-      fecha: '2025-10-21 18:00',
-      leida: false,
-      eliminada: false,
-      prioridad: 'baja'
-    },
-    {
-      id: '5',
-      tipo: 'advertencia',
-      titulo: 'Mantenimiento programado',
-      descripcion: 'El Laboratorio 401 estará en mantenimiento del 25 al 27 de octubre',
-      fecha: '2025-10-21 16:20',
-      leida: true,
-      eliminada: false,
-      prioridad: 'media'
-    },
-    {
-      id: '6',
-      tipo: 'error',
-      titulo: 'Error al procesar solicitud',
-      descripcion: 'No se pudo procesar la solicitud de préstamo del Auditorio debido a un conflicto de horarios',
-      fecha: '2025-10-21 14:00',
-      leida: true,
-      eliminada: false,
-      prioridad: 'alta'
-    },
-    {
-      id: '7',
-      tipo: 'sistema',
-      titulo: 'Actualización del sistema completada',
-      descripcion: 'La actualización v2.3.1 se instaló correctamente. Revisa las nuevas funcionalidades en la sección de ayuda.',
-      fecha: '2025-10-21 11:30',
-      leida: true,
-      eliminada: false,
-      prioridad: 'baja'
-    },
-    {
-      id: '8',
-      tipo: 'exito',
-      titulo: 'Reporte mensual generado',
-      descripcion: 'El reporte de ocupación de octubre está disponible para descarga',
-      fecha: '2025-10-21 09:00',
-      leida: true,
-      eliminada: false,
-      prioridad: 'baja'
-    }
-  ]);
-
-  const [filterTab, setFilterTab] = useState('todas');
-
-  // Notificar cambios en el contador al componente padre
-  useEffect(() => {
-    const noLeidasCount = notificaciones.filter(n => !n.leida && !n.eliminada).length;
-    if (onNotificacionesChange) {
-      onNotificacionesChange(noLeidasCount);
-    }
-  }, [notificaciones, onNotificacionesChange]);
-
-  const marcarComoLeida = (id: string) => {
-    setNotificaciones(notificaciones.map(n => 
-      n.id === id ? { ...n, leida: true } : n
-    ));
-    // Mostrar notificación: Notificación marcada como leída
-  };
-
-  const marcarTodasComoLeidas = () => {
-    setNotificaciones(notificaciones.map(n => 
-      n.eliminada ? n : { ...n, leida: true }
-    ));
-    // Mostrar notificación: Todas las notificaciones marcadas como leídas
-  };
-
-  const eliminarNotificacion = (id: string) => {
-    setNotificaciones(notificaciones.map(n => 
-      n.id === id ? { ...n, eliminada: true } : n
-    ));
-    // Mostrar notificación: Notificación eliminada
-  };
-
-  const restaurarNotificacion = (id: string) => {
-    setNotificaciones(notificaciones.map(n => 
-      n.id === id ? { ...n, eliminada: false } : n
-    ));
-    // Mostrar notificación: Notificación restaurada
-  };
-
-  const eliminarPermanentemente = (id: string) => {
-    setNotificaciones(notificaciones.filter(n => n.id !== id));
-    // Mostrar notificación: Notificación eliminada permanentemente
-  };
-
-  const filteredNotificaciones = notificaciones.filter(n => {
-    if (filterTab === 'todas') return !n.eliminada;
-    if (filterTab === 'pendientes') return !n.leida && !n.eliminada;
-    if (filterTab === 'leidas') return n.leida && !n.eliminada;
-    if (filterTab === 'eliminadas') return n.eliminada;
-    return n.tipo === filterTab && !n.eliminada;
-  });
+  const {
+    filterTab,
+    setFilterTab,
+    marcarComoLeida,
+    marcarTodasComoLeidas,
+    eliminarNotificacion,
+    restaurarNotificacion,
+    eliminarPermanentemente,
+    filteredNotificaciones,
+    stats
+  } = useNotificaciones(onNotificacionesChange);
 
   const getIcono = (tipo: string) => {
     switch (tipo) {
@@ -212,13 +79,6 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     }
   };
 
-  const stats = {
-    total: notificaciones.filter(n => !n.eliminada).length,
-    pendientes: notificaciones.filter(n => !n.leida && !n.eliminada).length,
-    leidas: notificaciones.filter(n => n.leida && !n.eliminada).length,
-    eliminadas: notificaciones.filter(n => n.eliminada).length
-  };
-
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
@@ -228,8 +88,8 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
           <p className="text-slate-600 dark:text-slate-400">Gestiona tus notificaciones, solicitudes y alertas del sistema</p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={marcarTodasComoLeidas}
             className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950"
             disabled={stats.pendientes === 0}
@@ -333,19 +193,18 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Card 
-                    className={`border ${getTipoColor(notif.tipo)} ${
-                      !notif.leida && !notif.eliminada
-                        ? 'shadow-lg' 
+                  <Card
+                    className={`border ${getTipoColor(notif.tipo)} ${!notif.leida && !notif.eliminada
+                        ? 'shadow-lg'
                         : 'opacity-70'
-                    } hover:shadow-xl transition-shadow`}
+                      } hover:shadow-xl transition-shadow`}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0 mt-1">
                           {getIcono(notif.tipo)}
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-4 mb-2">
                             <div className="flex-1">

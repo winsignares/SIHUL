@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
@@ -8,197 +7,30 @@ import { Button } from '../../share/button';
 import { Progress } from '../../share/progress';
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
-
-interface EspacioOcupacion {
-  id: string;
-  nombre: string;
-  tipo: string;
-  capacidad: number;
-  horasOcupadas: number;
-  horasDisponibles: number;
-  porcentajeOcupacion: number;
-  edificio: string;
-  jornada: {
-    manana: number;
-    tarde: number;
-    noche: number;
-  };
-}
+import { useOcupacionSemanal } from '../../hooks/reporte/useOcupacionSemanal';
 
 export default function OcupacionSemanal() {
-  const PERIODO_TRABAJO = '2025-1'; // Periodo activo de trabajo
-  const [tipoEspacio, setTipoEspacio] = useState<string>('todos');
-  const [calculando, setCalculando] = useState(false);
-  const [ultimaActualizacion, setUltimaActualizacion] = useState(new Date());
+  const {
+    PERIODO_TRABAJO,
+    tipoEspacio,
+    setTipoEspacio,
+    calculando,
+    ultimaActualizacion,
+    espaciosFiltrados,
+    estadisticas,
+    recalcularOcupacion,
+    exportarReporte,
+    getColorPorOcupacion,
+    getBarColor
+  } = useOcupacionSemanal();
 
-  // Datos mock de ocupación de espacios (calculados automáticamente)
-  const [espaciosOcupacion, setEspaciosOcupacion] = useState<EspacioOcupacion[]>([
-    {
-      id: '1',
-      nombre: 'Aula 101',
-      tipo: 'Aula',
-      capacidad: 40,
-      horasOcupadas: 38,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 79.2,
-      edificio: 'A',
-      jornada: { manana: 85, tarde: 90, noche: 62 }
-    },
-    {
-      id: '2',
-      nombre: 'Laboratorio 301',
-      tipo: 'Laboratorio',
-      capacidad: 25,
-      horasOcupadas: 44,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 91.7,
-      edificio: 'C',
-      jornada: { manana: 95, tarde: 100, noche: 80 }
-    },
-    {
-      id: '3',
-      nombre: 'Auditorio Central',
-      tipo: 'Auditorio',
-      capacidad: 200,
-      horasOcupadas: 18,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 37.5,
-      edificio: 'B',
-      jornada: { manana: 45, tarde: 40, noche: 25 }
-    },
-    {
-      id: '4',
-      nombre: 'Aula 205',
-      tipo: 'Aula',
-      capacidad: 35,
-      horasOcupadas: 42,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 87.5,
-      edificio: 'A',
-      jornada: { manana: 90, tarde: 95, noche: 75 }
-    },
-    {
-      id: '5',
-      nombre: 'Sala de Juntas 1',
-      tipo: 'Sala',
-      capacidad: 15,
-      horasOcupadas: 12,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 25.0,
-      edificio: 'D',
-      jornada: { manana: 30, tarde: 25, noche: 15 }
-    },
-    {
-      id: '6',
-      nombre: 'Laboratorio 302',
-      tipo: 'Laboratorio',
-      capacidad: 30,
-      horasOcupadas: 40,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 83.3,
-      edificio: 'C',
-      jornada: { manana: 88, tarde: 90, noche: 70 }
-    },
-    {
-      id: '7',
-      nombre: 'Aula 102',
-      tipo: 'Aula',
-      capacidad: 40,
-      horasOcupadas: 36,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 75.0,
-      edificio: 'A',
-      jornada: { manana: 80, tarde: 85, noche: 55 }
-    },
-    {
-      id: '8',
-      nombre: 'Cancha Deportiva 1',
-      tipo: 'Cancha',
-      capacidad: 50,
-      horasOcupadas: 15,
-      horasDisponibles: 48,
-      porcentajeOcupacion: 31.3,
-      edificio: 'Zona Deportiva',
-      jornada: { manana: 40, tarde: 35, noche: 15 }
-    }
-  ]);
-
-  const recalcularOcupacion = () => {
-    setCalculando(true);
-    
-    // Simulación de cálculo (en producción esto vendría del backend)
-    setTimeout(() => {
-      // Aquí se recalcularían los porcentajes basados en horarios reales
-      
-      // ocupacion recalculada exitosamente notificación
-      setUltimaActualizacion(new Date());
-      setCalculando(false);
-    }, 1500);
-  };
-
-  const exportarReporte = async () => {
-    try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-
-      doc.setFontSize(18);
-      doc.text('Reporte de Ocupación Semanal', 20, 20);
-      
-      doc.setFontSize(12);
-      doc.text(`Periodo: ${PERIODO_TRABAJO}`, 20, 30);
-      doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 37);
-      doc.text(`Tipo de Espacio: ${tipoEspacio === 'todos' ? 'Todos' : tipoEspacio}`, 20, 44);
-      
-      doc.line(20, 48, 190, 48);
-
-      doc.setFontSize(14);
-      doc.text('Ocupación por Espacio', 20, 58);
-      
-      doc.setFontSize(10);
-      let yPos = 68;
-      espaciosFiltrados.forEach((espacio) => {
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
-        doc.text(`${espacio.nombre}`, 25, yPos);
-        doc.text(`${espacio.porcentajeOcupacion.toFixed(1)}%`, 100, yPos);
-        doc.text(`${espacio.horasOcupadas}/${espacio.horasDisponibles}h`, 150, yPos);
-        yPos += 7;
-      });
-
-      doc.save(`ocupacion-semanal-${PERIODO_TRABAJO}.pdf`);
-      // Reporte generado exitosamente notificación
-    } catch (error) {
-      console.error('Error:', error);
-      // Error al generar reporte notificación
-    }
-  };
-
-  const espaciosFiltrados = tipoEspacio === 'todos' 
-    ? espaciosOcupacion 
-    : espaciosOcupacion.filter(e => e.tipo === tipoEspacio);
-
-  // Calcular estadísticas generales
-  const promedioOcupacion = espaciosFiltrados.reduce((acc, e) => acc + e.porcentajeOcupacion, 0) / espaciosFiltrados.length;
-  const totalHorasOcupadas = espaciosFiltrados.reduce((acc, e) => acc + e.horasOcupadas, 0);
-  const totalHorasDisponibles = espaciosFiltrados.reduce((acc, e) => acc + e.horasDisponibles, 0);
-  const espaciosSobreocupados = espaciosFiltrados.filter(e => e.porcentajeOcupacion > 85).length;
-  const espaciosSubutilizados = espaciosFiltrados.filter(e => e.porcentajeOcupacion < 50).length;
-
-  const getColorPorOcupacion = (porcentaje: number) => {
-    if (porcentaje >= 85) return 'text-red-600 bg-red-100 border-red-300';
-    if (porcentaje >= 70) return 'text-yellow-600 bg-yellow-100 border-yellow-300';
-    if (porcentaje >= 50) return 'text-green-600 bg-green-100 border-green-300';
-    return 'text-slate-600 bg-slate-100 border-slate-300';
-  };
-
-  const getBarColor = (porcentaje: number) => {
-    if (porcentaje >= 85) return 'bg-red-600';
-    if (porcentaje >= 70) return 'bg-yellow-600';
-    if (porcentaje >= 50) return 'bg-green-600';
-    return 'bg-slate-400';
-  };
+  const {
+    promedioOcupacion,
+    totalHorasOcupadas,
+    totalHorasDisponibles,
+    espaciosSobreocupados,
+    espaciosSubutilizados
+  } = estadisticas;
 
   return (
     <div className="p-8 space-y-6">
@@ -218,7 +50,7 @@ export default function OcupacionSemanal() {
             <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="text-blue-900 dark:text-blue-100"><strong>{PERIODO_TRABAJO}</strong></span>
           </div>
-          <Button 
+          <Button
             onClick={recalcularOcupacion}
             disabled={calculando}
             variant="outline"
@@ -227,7 +59,7 @@ export default function OcupacionSemanal() {
             <RefreshCw className={`w-4 h-4 mr-2 ${calculando ? 'animate-spin' : ''}`} />
             {calculando ? 'Calculando...' : 'Recalcular'}
           </Button>
-          <Button 
+          <Button
             onClick={exportarReporte}
             className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           >
@@ -350,7 +182,7 @@ export default function OcupacionSemanal() {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 w-20">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div 
+                          <div
                             className={`${getBarColor(espacio.jornada.manana)} h-2 rounded-full transition-all`}
                             style={{ width: `${espacio.jornada.manana}%` }}
                           ></div>
@@ -363,7 +195,7 @@ export default function OcupacionSemanal() {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 w-20">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div 
+                          <div
                             className={`${getBarColor(espacio.jornada.tarde)} h-2 rounded-full transition-all`}
                             style={{ width: `${espacio.jornada.tarde}%` }}
                           ></div>
@@ -376,7 +208,7 @@ export default function OcupacionSemanal() {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 w-20">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div 
+                          <div
                             className={`${getBarColor(espacio.jornada.noche)} h-2 rounded-full transition-all`}
                             style={{ width: `${espacio.jornada.noche}%` }}
                           ></div>
@@ -417,7 +249,7 @@ export default function OcupacionSemanal() {
                   </div>
                   <div className="flex-1">
                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-6 relative overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         className={`${getBarColor(espacio.porcentajeOcupacion)} h-6 rounded-full flex items-center justify-end px-2`}
                         initial={{ width: 0 }}
                         animate={{ width: `${espacio.porcentajeOcupacion}%` }}
@@ -436,6 +268,7 @@ export default function OcupacionSemanal() {
           </div>
         </CardContent>
       </Card>
+      <Toaster />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
@@ -6,135 +5,35 @@ import { Badge } from '../../share/badge';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Search, MapPin, CheckCircle, XCircle, AlertTriangle, Users, Clock, Boxes, Filter, Building2, Calendar } from 'lucide-react';
+import { Search, MapPin, CheckCircle, XCircle, AlertTriangle, Users, Clock, Boxes, Filter, Building2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { db } from '../../hooks/database';
 import { Toaster } from '../../share/sonner';
+import { usePlazasDisponibles } from '../../hooks/prestamos/usePlazasDisponibles';
 
 export default function PlazasDisponibles() {
-  const [espacios, setEspacios] = useState<any[]>([]);
-  const [espaciosFiltrados, setEspaciosFiltrados] = useState<any[]>([]);
-  const [horarios, setHorarios] = useState<any[]>([]);
-  
-  // Filtros
-  const [busqueda, setBusqueda] = useState('');
-  const [sedeSeleccionada, setSedeSeleccionada] = useState('todas');
-  const [tipoSeleccionado, setTipoSeleccionado] = useState('todos');
-  const [diaSeleccionado, setDiaSeleccionado] = useState('lunes');
-  const [horaInicio, setHoraInicio] = useState('08:00');
-  const [horaFin, setHoraFin] = useState('10:00');
-  const [capacidadMinima, setCapacidadMinima] = useState('');
-
-  // Cargar datos
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = () => {
-    const espaciosDB = db.getEspacios();
-    const horariosDB = db.getHorarios();
-    setEspacios(espaciosDB);
-    setHorarios(horariosDB);
-    setEspaciosFiltrados(espaciosDB);
-  };
-
-  // Verificar disponibilidad de un espacio en un horario específico
-  const verificarDisponibilidad = (espacioId: number, dia: string, horaIni: string, horaFin: string) => {
-    const horariosEspacio = horarios.filter(h => 
-      h.espacioId === espacioId && 
-      h.diaSemana === dia &&
-      h.activo
-    );
-
-    if (horariosEspacio.length === 0) return 'disponible';
-
-    // Verificar si hay conflicto de horarios
-    const hayConflicto = horariosEspacio.some(h => {
-      const horaInicioExistente = h.horaInicio;
-      const horaFinExistente = h.horaFin;
-      
-      // Verificar solapamiento
-      return (
-        (horaIni >= horaInicioExistente && horaIni < horaFinExistente) ||
-        (horaFin > horaInicioExistente && horaFin <= horaFinExistente) ||
-        (horaIni <= horaInicioExistente && horaFin >= horaFinExistente)
-      );
-    });
-
-    return hayConflicto ? 'ocupado' : 'disponible';
-  };
-
-  // Obtener grupo ocupando el espacio en ese horario
-  const obtenerGrupoOcupante = (espacioId: number, dia: string, horaIni: string, horaFin: string) => {
-    const horario = horarios.find(h => 
-      h.espacioId === espacioId && 
-      h.diaSemana === dia &&
-      h.activo &&
-      (
-        (horaIni >= h.horaInicio && horaIni < h.horaFin) ||
-        (horaFin > h.horaInicio && horaFin <= h.horaFin) ||
-        (horaIni <= h.horaInicio && horaFin >= h.horaFin)
-      )
-    );
-
-    if (!horario) return null;
-
-    const grupo = db.getGrupos().find(g => g.id === horario.grupoId);
-    const asignatura = grupo ? db.getAsignaturas().find(a => a.id === grupo.asignaturaId) : null;
-
-    return {
-      grupo: grupo?.codigo || 'N/A',
-      asignatura: asignatura?.nombre || 'N/A',
-      horario: `${horario.horaInicio} - ${horario.horaFin}`
-    };
-  };
-
-  // Aplicar filtros
-  useEffect(() => {
-    let resultado = [...espacios];
-
-    // Filtro por búsqueda
-    if (busqueda) {
-      resultado = resultado.filter(e => 
-        e.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        e.codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
-        e.sede.toLowerCase().includes(busqueda.toLowerCase())
-      );
-    }
-
-    // Filtro por sede
-    if (sedeSeleccionada !== 'todas') {
-      resultado = resultado.filter(e => e.sede === sedeSeleccionada);
-    }
-
-    // Filtro por tipo
-    if (tipoSeleccionado !== 'todos') {
-      resultado = resultado.filter(e => e.tipo === tipoSeleccionado);
-    }
-
-    // Filtro por capacidad mínima
-    if (capacidadMinima) {
-      resultado = resultado.filter(e => e.capacidad >= parseInt(capacidadMinima));
-    }
-
-    // Añadir información de disponibilidad
-    resultado = resultado.map(e => ({
-      ...e,
-      disponibilidad: verificarDisponibilidad(e.id, diaSeleccionado, horaInicio, horaFin),
-      grupoOcupante: obtenerGrupoOcupante(e.id, diaSeleccionado, horaInicio, horaFin)
-    }));
-
-    setEspaciosFiltrados(resultado);
-  }, [busqueda, sedeSeleccionada, tipoSeleccionado, capacidadMinima, diaSeleccionado, horaInicio, horaFin, espacios, horarios]);
-
-  // Obtener sedes únicas
-  const sedes = Array.from(new Set(espacios.map(e => e.sede)));
-
-  // Estadísticas
-  const totalEspacios = espaciosFiltrados.length;
-  const disponibles = espaciosFiltrados.filter(e => e.disponibilidad === 'disponible' && e.estado === 'Disponible').length;
-  const ocupados = espaciosFiltrados.filter(e => e.disponibilidad === 'ocupado').length;
-  const mantenimiento = espaciosFiltrados.filter(e => e.estado === 'Mantenimiento').length;
+  const {
+    espaciosFiltrados,
+    busqueda,
+    setBusqueda,
+    sedeSeleccionada,
+    setSedeSeleccionada,
+    tipoSeleccionado,
+    setTipoSeleccionado,
+    diaSeleccionado,
+    setDiaSeleccionado,
+    horaInicio,
+    setHoraInicio,
+    horaFin,
+    setHoraFin,
+    capacidadMinima,
+    setCapacidadMinima,
+    sedes,
+    totalEspacios,
+    disponibles,
+    ocupados,
+    mantenimiento,
+    limpiarFiltros
+  } = usePlazasDisponibles();
 
   const getDisponibilidadBadge = (disponibilidad: string, estado: string) => {
     if (estado === 'Mantenimiento') {
@@ -155,17 +54,6 @@ export default function PlazasDisponibles() {
       <XCircle className="w-3 h-3 mr-1" />
       Ocupado
     </Badge>;
-  };
-
-  const limpiarFiltros = () => {
-    setBusqueda('');
-    setSedeSeleccionada('todas');
-    setTipoSeleccionado('todos');
-    setDiaSeleccionado('lunes');
-    setHoraInicio('08:00');
-    setHoraFin('10:00');
-    setCapacidadMinima('');
-    // Mostrar notificación: Filtros limpiados
   };
 
   return (

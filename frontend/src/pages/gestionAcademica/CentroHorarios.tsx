@@ -1,293 +1,69 @@
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
-import { Checkbox } from '../../share/checkbox';
-import { useState, useEffect, Fragment } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Fragment } from 'react';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { 
-  Clock, 
-  Search, 
-  Filter, 
+import {
+  Clock,
+  Search,
+  Filter,
   Calendar,
-  User,
   MapPin,
   Edit,
   Trash2,
   Eye,
   RefreshCw,
   CheckCircle2,
-  AlertCircle,
-  Eraser,
   ChevronDown,
   List,
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Toaster } from '../../share/sonner';
-import { db } from '../../hooks/database';
-import type { HorarioAcademico, Facultad, Programa, EspacioFisico, Grupo } from '../../models/academica';
 import CrearHorarios from './CrearHorarios';
-import { showNotification } from '../../context/ThemeContext';
-
-interface HorarioExtendido extends HorarioAcademico {
-  asignatura: string;
-  docente: string;
-  grupo: string;
-  programaId: string;
-  semestre: number;
-}
-
-// Interface para grupos agrupados
-interface GrupoAgrupado {
-  programaId: string;
-  grupo: string;
-  semestre: number;
-  horarios: HorarioExtendido[];
-}
+import { NotificationBanner } from '../../share/notificationBanner';
+import { useCentroHorarios } from '../../hooks/gestionAcademica/useCentroHorarios';
+import { db } from '../../hooks/database';
 
 export default function CentroHorarios() {
-  const [searchParams] = useSearchParams();
-  const modeParam = searchParams.get('mode');
-  const initialMode = modeParam === 'crear' ? 'crear' : (modeParam === 'modificacion' ? 'modificacion' : 'consulta');
-  const [activeTab, setActiveTab] = useState<'consulta' | 'crear' | 'modificacion'>(initialMode);
-  const [horarios, setHorarios] = useState<HorarioAcademico[]>([]);
-  const [facultades, setFacultades] = useState<Facultad[]>([]);
-  const [programas, setProgramas] = useState<Programa[]>([]);
-  const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
-  
-  // Filtros
-  const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
-  const [filtroPrograma, setFiltroPrograma] = useState<string>('all');
-  const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
-  const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
-  
-  // Modal de edición
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [horarioEditar, setHorarioEditar] = useState<HorarioAcademico | null>(null);
-  
-  // Modal de detalles - ahora maneja un grupo completo
-  const [showDetallesModal, setShowDetallesModal] = useState(false);
-  const [grupoDetalles, setGrupoDetalles] = useState<GrupoAgrupado | null>(null);
-  
-  // Estados para selección múltiple
-  const [horariosSeleccionados, setHorariosSeleccionados] = useState<Set<string>>(new Set());
-  const [seleccionarTodos, setSeleccionarTodos] = useState(false);
-  
-  // Estado para acordeón de grupos expandidos
-  const [gruposExpandidos, setGruposExpandidos] = useState<Set<string>>(new Set());
-
-  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Si cambian los query params, sincronizar la pestaña activa
-  useEffect(() => {
-    const mode = searchParams.get('mode');
-    if (mode === 'crear' || mode === 'modificacion' || mode === 'consulta') {
-      setActiveTab(mode as any);
-    } else {
-      setActiveTab('consulta');
-    }
-  }, [searchParams]);
-
-  const loadData = () => {
-    setHorarios(db.getHorariosExtendidos());
-    setFacultades(db.getFacultades());
-    setProgramas(db.getProgramas());
-    setEspacios(db.getEspacios());
-  };
-
-  // Generar horas para el grid semanal
-  const generarHoras = () => {
-    const horas = [];
-    for (let h = 6; h <= 21; h++) {
-      horas.push(`${h.toString().padStart(2, '0')}:00`);
-    }
-    return horas;
-  };
-
-  // Obtener clase en una hora específica
-  const obtenerClaseEnHora = (dia: string, hora: string, horariosGrupo: HorarioExtendido[]) => {
-    return horariosGrupo.find(h => {
-      const diaMatch = h.diaSemana.toLowerCase() === dia.toLowerCase();
-      
-      // Convertir horas a números para comparación
-      const horaActual = parseInt(hora.split(':')[0]);
-      const horaInicio = parseInt(h.horaInicio.split(':')[0]);
-      const horaFin = parseInt(h.horaFin.split(':')[0]);
-      
-      // Verificar si la hora actual está dentro del rango de la clase
-      return diaMatch && horaActual >= horaInicio && horaActual < horaFin;
-    });
-  };
-
-  // Agrupar horarios por programa + grupo + semestre
-  const agruparHorarios = (horariosArray: HorarioAcademico[]): GrupoAgrupado[] => {
-    const grupos = new Map<string, GrupoAgrupado>();
-    
-    horariosArray.forEach(horario => {
-      const h = horario as HorarioExtendido;
-      const key = `${h.programaId}-${h.grupo}-${h.semestre}`;
-      
-      if (!grupos.has(key)) {
-        grupos.set(key, {
-          programaId: h.programaId,
-          grupo: h.grupo,
-          semestre: h.semestre,
-          horarios: []
-        });
-      }
-      
-      grupos.get(key)!.horarios.push(h);
-    });
-    
-    return Array.from(grupos.values());
-  };
-
-  // Filtrar horarios
-  const horariosFiltrados = horarios.filter(horario => {
-    const h = horario as HorarioExtendido;
-    const programa = programas.find(p => p.id === h.programaId);
-    
-    const matchFacultad = filtroFacultad === 'all' || programa?.facultadId === filtroFacultad;
-    const matchPrograma = filtroPrograma === 'all' || h.programaId === filtroPrograma;
-    const matchGrupo = filtroGrupo === 'all' || h.grupo === filtroGrupo;
-    const matchSemestre = filtroSemestre === 'all' || h.semestre?.toString() === filtroSemestre;
-
-    return matchFacultad && matchPrograma && matchGrupo && matchSemestre;
-  });
-
-  // Obtener grupos agrupados después de filtrar
-  const gruposAgrupados = agruparHorarios(horariosFiltrados);
-
-  // Obtener listas únicas para filtros
-  const gruposUnicos = [...new Set(horarios.map(h => (h as any).grupo).filter(Boolean))].sort();
-  const semestresUnicos = [...new Set(horarios.map(h => (h as any).semestre).filter(Boolean))].sort((a, b) => a - b);
-  const programasFiltrados = programas.filter(p => 
-    filtroFacultad === 'all' || p.facultadId === filtroFacultad
-  );
-
-  // Handlers
-  const handleVerDetalles = (grupo: GrupoAgrupado) => {
-    setGrupoDetalles(grupo);
-    setShowDetallesModal(true);
-  };
-
-  const handleEditar = (horario: HorarioAcademico) => {
-    setHorarioEditar({ ...horario });
-    setShowEditModal(true);
-  };
-
-  const handleGuardarEdicion = () => {
-    if (!horarioEditar) return;
-
-    const success = db.updateHorario(horarioEditar.id, horarioEditar);
-    if (success) {
-      showNotification({ message: 'Horario actualizado correctamente', type: 'success' });
-      loadData();
-      setShowEditModal(false);
-      setHorarioEditar(null);
-    } else {
-      showNotification({ message: 'Error al actualizar el horario', type: 'error' });
-    }
-  };
-
-  const handleEliminar = (id: string) => {
-    if (confirm('¿Está seguro de eliminar este horario?')) {
-      const success = db.deleteHorario(id);
-      if (success) {
-        showNotification({ message: 'Horario eliminado correctamente', type: 'success' });
-        loadData();
-      } else {
-        showNotification({ message: 'Error al eliminar el horario', type: 'error' });
-      }
-    }
-  };
-
-  const limpiarFiltros = () => {
-    setFiltroFacultad('all');
-    setFiltroPrograma('all');
-    setFiltroGrupo('all');
-    setFiltroSemestre('all');
-  };
-
-  // Funciones para selección múltiple
-  const toggleSeleccion = (id: string) => {
-    const nuevaSeleccion = new Set(horariosSeleccionados);
-    if (nuevaSeleccion.has(id)) {
-      nuevaSeleccion.delete(id);
-    } else {
-      nuevaSeleccion.add(id);
-    }
-    setHorariosSeleccionados(nuevaSeleccion);
-  };
-
-  const toggleSeleccionarTodos = () => {
-    if (seleccionarTodos) {
-      setHorariosSeleccionados(new Set());
-      setSeleccionarTodos(false);
-    } else {
-      const todosLosIds = new Set(horariosFiltrados.map(h => h.id));
-      setHorariosSeleccionados(todosLosIds);
-      setSeleccionarTodos(true);
-    }
-  };
-
-  const eliminarSeleccionados = () => {
-    if (horariosSeleccionados.size === 0) {
-      showNotification({ message: 'No hay horarios seleccionados', type: 'error' });
-      return;
-    }
-
-    if (confirm(`¿Está seguro de eliminar ${horariosSeleccionados.size} horario(s)?`)) {
-      let eliminados = 0;
-      horariosSeleccionados.forEach(id => {
-        const success = db.deleteHorario(id);
-        if (success) eliminados++;
-      });
-
-      if (eliminados > 0) {
-        showNotification({ message: `${eliminados} horario(s) eliminado(s) correctamente`, type: 'success' });
-        loadData();
-        setHorariosSeleccionados(new Set());
-        setSeleccionarTodos(false);
-      } else {
-        showNotification({ message: 'Error al eliminar los horarios', type: 'error' });
-      }
-    }
-  };
-
-  const getNombrePrograma = (programaId: string) => {
-    const programa = programas.find(p => p.id === programaId);
-    return programa?.nombre || 'N/A';
-  };
-
-  const getNombreEspacio = (espacioId: string) => {
-    const espacio = espacios.find(e => e.id === espacioId);
-    return espacio?.nombre || 'N/A';
-  };
-
-  // Toggle para expandir/colapsar grupos en Modificación
-  const toggleGrupoExpandido = (grupoKey: string) => {
-    const nuevosExpandidos = new Set(gruposExpandidos);
-    if (nuevosExpandidos.has(grupoKey)) {
-      nuevosExpandidos.delete(grupoKey);
-    } else {
-      nuevosExpandidos.add(grupoKey);
-    }
-    setGruposExpandidos(nuevosExpandidos);
-  };
+  const {
+    activeTab, setActiveTab,
+    facultades,
+    espacios,
+    filtroFacultad, setFiltroFacultad,
+    filtroPrograma, setFiltroPrograma,
+    filtroGrupo, setFiltroGrupo,
+    filtroSemestre, setFiltroSemestre,
+    showEditModal, setShowEditModal,
+    horarioEditar, setHorarioEditar,
+    showDetallesModal, setShowDetallesModal,
+    grupoDetalles,
+    gruposExpandidos,
+    loadData,
+    generarHoras,
+    obtenerClaseEnHora,
+    gruposAgrupados,
+    gruposUnicos,
+    semestresUnicos,
+    programasFiltrados,
+    handleVerDetalles,
+    handleEditar,
+    handleGuardarEdicion,
+    handleEliminar,
+    limpiarFiltros,
+    getNombrePrograma,
+    getNombreEspacio,
+    toggleGrupoExpandido,
+    dias,
+    notification
+  } = useCentroHorarios();
 
   return (
     <div className="p-8 space-y-6">
+      <NotificationBanner notification={notification} />
       {/* Header */}
       <div>
         <h1 className="text-slate-900 mb-2">Centro de Horarios</h1>
@@ -295,7 +71,7 @@ export default function CentroHorarios() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList className="grid w-full max-w-3xl grid-cols-3">
           <TabsTrigger value="crear">
             <Plus className="w-4 h-4 mr-2" />
@@ -439,7 +215,7 @@ export default function CentroHorarios() {
                       </tr>
                     </thead>
                     <tbody>
-                      {gruposAgrupados.map((grupo, index) => (
+                      {gruposAgrupados.map((grupo) => (
                         <tr key={`${grupo.programaId}-${grupo.grupo}-${grupo.semestre}`} className="border-t border-slate-200 hover:bg-slate-50">
                           <td className="px-4 py-3 text-slate-900">{getNombrePrograma(grupo.programaId)}</td>
                           <td className="px-4 py-3">
@@ -606,7 +382,7 @@ export default function CentroHorarios() {
                       {gruposAgrupados.map((grupo) => {
                         const grupoKey = `${grupo.programaId}-${grupo.grupo}-${grupo.semestre}`;
                         const estaExpandido = gruposExpandidos.has(grupoKey);
-                        
+
                         return (
                           <Fragment key={grupoKey}>
                             {/* Fila principal del grupo */}
@@ -652,10 +428,7 @@ export default function CentroHorarios() {
                                           if (success) eliminados++;
                                         });
                                         if (eliminados > 0) {
-                                          showNotification({ message: `Grupo ${grupo.grupo} eliminado correctamente (${eliminados} clases)`, type: 'success' });
                                           loadData();
-                                        } else {
-                                          showNotification({ message: 'Error al eliminar el grupo', type: 'error' });
                                         }
                                       }
                                     }}
@@ -690,7 +463,7 @@ export default function CentroHorarios() {
                                           <h3 className="text-slate-900">Asignaturas del Grupo {grupo.grupo}</h3>
                                           <Badge className="bg-purple-600">{grupo.horarios.length} asignaturas</Badge>
                                         </div>
-                                        
+
                                         {/* Tabla interna de asignaturas */}
                                         <div className="overflow-x-auto">
                                           <table className="w-full">
@@ -830,11 +603,10 @@ export default function CentroHorarios() {
                             return (
                               <td
                                 key={dia}
-                                className={`border-2 border-slate-300 p-2 transition-all ${
-                                  clase
-                                    ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 cursor-pointer'
-                                    : 'bg-white hover:bg-slate-50'
-                                }`}
+                                className={`border-2 border-slate-300 p-2 transition-all ${clase
+                                  ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 cursor-pointer'
+                                  : 'bg-white hover:bg-slate-50'
+                                  }`}
                               >
                                 {clase ? (
                                   <motion.div
@@ -907,29 +679,29 @@ export default function CentroHorarios() {
                 <div>
                   <Label>Asignatura</Label>
                   <Input
-                    value={(horarioEditar as any).asignatura || ''}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, asignatura: e.target.value } as any)}
+                    value={(horarioEditar as unknown as { asignatura?: string }).asignatura || ''}
+                    onChange={(e) => setHorarioEditar({ ...horarioEditar, asignatura: e.target.value } as typeof horarioEditar)}
                   />
                 </div>
                 <div>
                   <Label>Grupo</Label>
                   <Input
-                    value={(horarioEditar as any).grupo || ''}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, grupo: e.target.value } as any)}
+                    value={(horarioEditar as unknown as { grupo?: string }).grupo || ''}
+                    onChange={(e) => setHorarioEditar({ ...horarioEditar, grupo: e.target.value } as typeof horarioEditar)}
                   />
                 </div>
                 <div>
                   <Label>Docente</Label>
                   <Input
-                    value={(horarioEditar as any).docente || ''}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, docente: e.target.value } as any)}
+                    value={(horarioEditar as unknown as { docente?: string }).docente || ''}
+                    onChange={(e) => setHorarioEditar({ ...horarioEditar, docente: e.target.value } as typeof horarioEditar)}
                   />
                 </div>
                 <div>
                   <Label>Día</Label>
-                  <Select 
-                    value={horarioEditar.diaSemana} 
-                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, diaSemana: v as any })}
+                  <Select
+                    value={horarioEditar.diaSemana}
+                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, diaSemana: v })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -959,8 +731,8 @@ export default function CentroHorarios() {
                 </div>
                 <div className="col-span-2">
                   <Label>Espacio</Label>
-                  <Select 
-                    value={horarioEditar.espacioId} 
+                  <Select
+                    value={horarioEditar.espacioId}
                     onValueChange={(v) => setHorarioEditar({ ...horarioEditar, espacioId: v })}
                   >
                     <SelectTrigger>
@@ -980,7 +752,7 @@ export default function CentroHorarios() {
             <Button variant="outline" onClick={() => setShowEditModal(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleGuardarEdicion}
               className="bg-orange-600 hover:bg-orange-700"
             >

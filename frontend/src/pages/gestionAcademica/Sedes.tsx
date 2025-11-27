@@ -1,136 +1,39 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, AlertTriangle, Check, MapPin, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { Toaster } from '../../share/sonner';
-import { showNotification } from '../../context/ThemeContext';
-import { db } from '../../hooks/database';
-import type { Sede } from '../../hooks/models';
+import { useSedes } from '../../hooks/gestionAcademica/useSedes';
 
 export default function Sedes() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sedes, setSedes] = useState<Sede[]>([]);
-  
-  // Estados de modales
-  const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  
-  // Estados de formulario
-  const [sedeForm, setSedeForm] = useState({ nombre: '' });
-  const [selectedSede, setSelectedSede] = useState<Sede | null>(null);
-  
-  // Cargar datos
-  useEffect(() => {
-    loadSedes();
-  }, []);
-  
-  const loadSedes = () => {
-    const data = db.getSedes();
-    setSedes(data);
-  };
-  
-  // Crear sede
-  const handleCreate = () => {
-    if (!sedeForm.nombre.trim()) {
-      showNotification({ message: 'El nombre de la sede es obligatorio', type: 'error' });
-      return;
-    }
-    
-    db.createSede({
-      codigo: `SEDE-${Date.now().toString().slice(-4)}`,
-      nombre: sedeForm.nombre.trim(),
-      activa: true,
-      fechaCreacion: new Date().toISOString()
-    });
-    
-    loadSedes();
-    setSedeForm({ nombre: '' });
-    setShowCreate(false);
-    
-    showNotification({ message: '✅ Sede registrada exitosamente', type: 'success' });
-  };
-  
-  // Editar sede
-  const handleEdit = () => {
-    if (!selectedSede) return;
-    
-    if (!sedeForm.nombre.trim()) {
-      showNotification({ message: 'El nombre de la sede es obligatorio', type: 'error' });
-      return;
-    }
-    
-    db.updateSede(selectedSede.id, {
-      nombre: sedeForm.nombre.trim()
-    });
-    
-    loadSedes();
-    setShowEdit(false);
-    setSelectedSede(null);
-    setSedeForm({ nombre: '' });
-    
-    showNotification({ message: '✅ Sede actualizada correctamente', type: 'success' });
-  };
-  
-  // Eliminar sede
-  const handleDelete = () => {
-    if (!selectedSede) return;
-    
-    db.deleteSede(selectedSede.id);
-    
-    loadSedes();
-    setShowDelete(false);
-    setSelectedSede(null);
-    
-    showNotification({ message: '✅ Sede eliminada correctamente', type: 'success' });
-  };
-  
-  // Activar/Inactivar sede
-  const toggleActiva = (sede: Sede) => {
-    db.updateSede(sede.id, {
-      activa: !sede.activa
-    });
-    loadSedes();
-    
-    showNotification({ message: sede.activa ? '✅ Sede inactivada correctamente' : '✅ Sede activada correctamente', type: 'success' });
-  };
-  
-  const openEdit = (sede: Sede) => {
-    setSelectedSede(sede);
-    setSedeForm({ nombre: sede.nombre });
-    setShowEdit(true);
-  };
-  
-  const openDelete = (sede: Sede) => {
-    setSelectedSede(sede);
-    setShowDelete(true);
-  };
-  
-  // Filtros
-  const filteredSedes = sedes.filter(s => 
-    s.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const {
+    searchTerm, setSearchTerm,
+    showCreate, setShowCreate,
+    showEdit, setShowEdit,
+    showDelete, setShowDelete,
+    sedeForm, setSedeForm,
+    selectedSede, setSelectedSede,
+    handleCreate,
+    handleEdit,
+    handleDelete,
+    toggleActiva,
+    openEdit,
+    openDelete,
+    filteredSedes
+  } = useSedes();
 
   return (
     <>
-      {/* Search and Actions */}
-      <div className="flex gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <Input
-            placeholder="Buscar sedes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Header con botón */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Sedes</h2>
         </div>
-        
-        <Button 
+        <Button
           onClick={() => setShowCreate(true)}
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
         >
@@ -138,6 +41,26 @@ export default function Sedes() {
           Nueva Sede
         </Button>
       </div>
+
+      {/* Filtros en Card */}
+      <Card className="mb-6 border-slate-200 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <Label className="text-slate-700 mb-2 block">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  placeholder="Buscar sede..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-slate-200 shadow-lg">
         <CardContent className="p-0">
@@ -161,7 +84,7 @@ export default function Sedes() {
                   <TableRow key={sede.id}>
                     <TableCell className="text-slate-900">{sede.nombre}</TableCell>
                     <TableCell>
-                      <Badge 
+                      <Badge
                         variant={sede.activa ? 'default' : 'secondary'}
                         className={sede.activa ? 'bg-green-600' : 'bg-slate-400'}
                       >
@@ -170,27 +93,27 @@ export default function Sedes() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => openEdit(sede)}
                           className="border-blue-600 text-blue-600 hover:bg-blue-50"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => toggleActiva(sede)}
-                          className={sede.activa 
-                            ? "border-orange-600 text-orange-600 hover:bg-orange-50" 
+                          className={sede.activa
+                            ? "border-orange-600 text-orange-600 hover:bg-orange-50"
                             : "border-green-600 text-green-600 hover:bg-green-50"
                           }
                         >
                           {sede.activa ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openDelete(sede)}
                           className="border-red-600 text-red-600 hover:bg-red-50"
@@ -216,7 +139,7 @@ export default function Sedes() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="nombre-sede">Nombre de la Sede</Label>
-              <Input 
+              <Input
                 id="nombre-sede"
                 placeholder="Ej: Sede Norte"
                 value={sedeForm.nombre}
@@ -253,7 +176,7 @@ export default function Sedes() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-nombre-sede">Nombre de la Sede</Label>
-              <Input 
+              <Input
                 id="edit-nombre-sede"
                 placeholder="Ej: Sede Norte"
                 value={sedeForm.nombre}

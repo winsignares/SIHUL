@@ -1,68 +1,21 @@
-import DashboardHome from '../pages/dashboard/DashboardHome';
-import FacultadesPrograms from '../pages/gestionAcademica/FacultadesPrograms';
-import EspaciosFisicos from '../pages/gestionAcademica/EspaciosFisicos';
-import ConsultaEspacios from '../pages/espacios/ConsultaEspacios';
-import CentroHorarios from '../pages/gestionAcademica/CentroHorarios';
-import PeriodosAcademicos from '../pages/gestionAcademica/PeriodosAcademicos';
-import Reportes from '../pages/reporte/Reportes';
-import Notificaciones from '../pages/users/Notificaciones';
-import Ajustes from '../pages/users/Ajustes';
-import PrestamosEspacios from '../pages/espacios/PrestamosEspacios';
-import OcupacionSemanal from '../pages/reporte/OcupacionSemanal';
-import AsistentesVirtuales from '../pages/chatbot/AsistentesVirtuales';
-import GestionUsuarios from '../pages/gestionAcademica/GestionUsuarios';
-import AsignacionAutomatica from '../pages/gestionAcademica/AsignacionAutomatica';
-import EstadoRecursos from '../pages/gestionAcademica/EstadoRecursos';
-import MiHorario from '../pages/horarios/MiHorario';
-import SupervisorGeneralHome from '../pages/dashboard/SupervisorGeneralHome';
-import ConsultorDocenteHome from '../pages/dashboard/ConsultorDocenteHome';
-import ConsultorEstudianteHome from '../pages/dashboard/ConsultorEstudianteHome';
-import DocentePrestamos from '../pages/prestamos/DocentePrestamos';
-import SupervisorSalonHome from '../pages/espacios/SupervisorSalonHome';
-
-import { useState, useEffect } from 'react';
-import { Button } from '../share/button';
 import React from 'react';
 import type { ReactNode } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { db } from '../hooks/database';
+import { Link } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Building2,
-  Calendar,
-  Clock,
-  MapPin,
-  FileText,
-  LogOut,
   GraduationCap,
   Bell,
   Search,
-  MessageSquare,
   Settings,
-  Menu,
-  ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  Home,
-  Users,
-  HandCoins,
-  BarChart3,
-  Shield,
-  Eye,
-  Zap,
-  Boxes,
-  Bot,
-  MoreVertical,
-  User,
-  Wrench
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Input } from '../share/input';
 import { Avatar, AvatarFallback } from '../share/avatar';
 import { Badge } from '../share/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../share/tooltip';
+import { Button } from '../share/button';
 
-import { useUser } from '../context/UserContext';
+import { useAdminDashboard, type MenuOption } from '../hooks/useAdminDashboard';
 
 interface AdminDashboardProps {
   userName?: string;
@@ -71,343 +24,19 @@ interface AdminDashboardProps {
   children?: ReactNode;
 }
 
-type MenuOption = 'home' | 'facultades' | 'espacios' | 'asignacion' | 'centrohorarios' | 'periodos' | 'reportes' | 'prestamos' | 'recursos' | 'ocupacion' | 'notificaciones' | 'ajustes' | 'chat' | 'usuarios' | 'asistentes' | 'mihorario';
-
 export default function AdminDashboard(props: AdminDashboardProps) {
-  const { usuario, setUsuario } = useUser();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [activeMenu, setActiveMenu] = useState<MenuOption>('home');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [notificacionesSinLeer, setNotificacionesSinLeer] = useState(3);
-
-  const shouldShowExpanded = !isSidebarCollapsed || isSidebarHovered;
-
-  // Determinar el rol del usuario
-  const userRole = usuario?.rol || props.userRole || 'admin';
-  const role = userRole;
-  const userName = usuario?.nombre || props.userName || 'Usuario';
-  const onLogout = props.onLogout || (() => {
-    // Limpiar sesión en contexto y en la db local sin recargar la página
-    setUsuario(null);
-    try {
-      db.cerrarSesion();
-    } catch (e) {
-      console.warn('No se pudo limpiar la sesión local:', e);
-    }
-    navigate('/login');
-  });
-
-  // Sincronizar activeMenu con la ruta actual
-  useEffect(() => {
-    const pathToMenu: Record<string, MenuOption> = {
-      '/admin/dashboard': 'home',
-      '/admin/asignacion': 'asignacion',
-      '/admin/centro-institucional': 'facultades',
-      '/admin/centro-horarios': 'centrohorarios',
-      '/admin/prestamos': 'prestamos',
-      '/admin/periodos': 'periodos',
-      '/admin/asistente-virtual': 'asistentes',
-      '/supervisor/asistente-virtual': 'asistentes',
-      '/docente/asistente-virtual': 'asistentes',
-      '/estudiante/asistente-virtual': 'asistentes',
-      '/admin/ocupacion': 'ocupacion',
-      '/admin/reportes': 'reportes',
-      '/admin/usuarios': 'usuarios',
-      '/admin/espacios': 'espacios',
-      '/admin/recursos': 'recursos',
-      '/supervisor/dashboard': 'home',
-      '/supervisor/espacios': 'espacios',
-      '/supervisor/prestamos': 'prestamos',
-      '/supervisor/recursos': 'recursos',
-      '/docente/dashboard': 'home',
-      '/docente/horario': 'mihorario',
-      '/docente/prestamos': 'prestamos',
-      '/estudiante/dashboard': 'home',
-      '/estudiante/mi-horario': 'mihorario',
-      '/notificaciones': 'notificaciones',
-      '/ajustes': 'ajustes'
-    };
-    // Buscar la mejor coincidencia por prefijo (soporta barras finales o parámetros)
-    const keys = Object.keys(pathToMenu).sort((a, b) => b.length - a.length);
-    let found: MenuOption | undefined;
-    for (const k of keys) {
-      if (location.pathname === k || location.pathname.startsWith(k + '/') || location.pathname.startsWith(k)) {
-        found = pathToMenu[k];
-        break;
-      }
-    }
-    const menu = found || 'home';
-    setActiveMenu(menu);
-  }, [location.pathname]);
-
-  // Cuando la ruta cambia (el usuario hizo click en un Link), colapsar la sidebar
-  useEffect(() => {
-    setIsSidebarCollapsed(true);
-  }, [location.pathname]);
-
-  // Menús por rol
-  const menuByRole: Record<string, Array<{ id: string; label: string; items: any[] }>> = {
-    admin: [
-      {
-        id: 'principal',
-        label: 'Principal',
-        items: [{ id: 'home', icon: LayoutDashboard, label: 'Dashboard', action: 'home' }]
-      },
-      {
-        id: 'gestion',
-        label: 'Gestión Académica',
-        items: [
-          { id: 'facultades', icon: Building2, label: 'Centro Institucional', action: 'facultades' },
-          { id: 'prestamos', icon: HandCoins, label: 'Préstamos de Espacios', action: 'prestamos' },
-          { id: 'asignacion', icon: Zap, label: 'Asignación Automática', action: 'asignacion' },
-          { id: 'centrohorarios', icon: Clock, label: 'Centro Horarios', action: 'centrohorarios' },
-          { id: 'periodos', icon: Calendar, label: 'Períodos Académicos', action: 'periodos' },
-          { id: 'asistentes', icon: Bot, label: 'Asistentes Virtuales', action: 'asistentes' }
-        ]
-      },
-      {
-        id: 'reportes',
-        label: 'Reportes y Análisis',
-        items: [
-          { id: 'ocupacion', icon: BarChart3, label: 'Ocupación Semanal', action: 'ocupacion' },
-          { id: 'reportes', icon: FileText, label: 'Reportes Generales', action: 'reportes' }
-        ]
-      },
-      {
-        id: 'administracion',
-        label: 'Administración',
-        items: [{ id: 'usuarios', icon: Shield, label: 'Gestión de Usuarios', action: 'usuarios' }]
-      }
-    ],
-    autorizado: [
-      {
-        id: 'principal',
-        label: 'Principal',
-        items: [{ id: 'home', icon: LayoutDashboard, label: 'Dashboard', action: 'home' }]
-      },
-      {
-        id: 'gestion',
-        label: 'Gestión de Espacios',
-        items: [
-          { id: 'prestamos', icon: HandCoins, label: 'Préstamos de Espacios', action: 'prestamos' },
-          { id: 'centrohorarios', icon: Clock, label: 'Centro Horarios', action: 'centrohorarios' }
-        ]
-      },
-      {
-        id: 'reportes',
-        label: 'Reportes y Análisis',
-        items: [{ id: 'ocupacion', icon: BarChart3, label: 'Ocupación Semanal', action: 'ocupacion' }]
-      }
-    ],
-    consultor: [
-      {
-        id: 'principal',
-        label: 'Principal',
-        items: [{ id: 'home', icon: LayoutDashboard, label: 'Dashboard', action: 'home' }]
-      },
-      {
-        id: 'academico',
-        label: 'Académico',
-        items: [
-          { id: 'mihorario', icon: Clock, label: 'Mi Horario', action: 'mihorario' }
-        ]
-      }
-    ],
-    'supervisor_general': [
-      {
-        id: 'principal',
-        label: 'Principal',
-        items: [{ id: 'home', icon: LayoutDashboard, label: 'Dashboard', action: 'home' }]
-      },
-      {
-        id: 'gestion',
-        label: 'Gestión de Espacios',
-        items: [
-          { id: 'espacios', icon: MapPin, label: 'Disponibilidad de Espacios', action: 'espacios' },
-          { id: 'prestamos', icon: HandCoins, label: 'Apertura y Cierre de Salones', action: 'prestamos' },
-          { id: 'recursos', icon: Wrench, label: 'Estado de Recursos', action: 'recursos' },
-          { id: 'asistentes', icon: Bot, label: 'Asistente Virtual', action: 'asistentes' }
-        ]
-      }
-    ],
-    'consultor_docente': [
-      {
-        id: 'principal',
-        label: 'Principal',
-        items: [{ id: 'home', icon: LayoutDashboard, label: 'Dashboard', action: 'home' }]
-      },
-      {
-        id: 'academico',
-        label: 'Académico',
-        items: [
-          { id: 'mihorario', icon: Clock, label: 'Mi Horario', action: 'mihorario' },
-          { id: 'prestamos', icon: HandCoins, label: 'Préstamos de Espacios', action: 'prestamos' },
-          { id: 'asistentes', icon: Bot, label: 'Asistente Virtual', action: 'asistentes' }
-        ]
-      }
-    ],
-    'consultor_estudiante': [
-      {
-        id: 'principal',
-        label: 'Principal',
-        items: [{ id: 'home', icon: LayoutDashboard, label: 'Dashboard', action: 'home' }]
-      },
-      {
-        id: 'academico',
-        label: 'Académico',
-        items: [
-          { id: 'mihorario', icon: Clock, label: 'Mi Horario', action: 'mihorario' },
-          { id: 'asistentes', icon: Bot, label: 'Asistente Virtual', action: 'asistentes' }
-        ]
-      }
-    ]
-  };
-
-  const menuSections = menuByRole[role] || menuByRole['admin'];
-
-  // Mapear acciones de menú a rutas (AppRouter debería manejar la navegación)
-  const menuToPath = (menu: MenuOption): string => {
-    const mapping: Record<MenuOption, string> = {
-      home: userRole === 'admin' ? '/admin/dashboard' : userRole === 'supervisor_general' ? '/supervisor/dashboard' : userRole === 'consultor_docente' ? '/docente/dashboard' : '/estudiante/dashboard',
-      facultades: '/admin/centro-institucional',
-      espacios: userRole === 'supervisor_general' ? '/supervisor/espacios' : '/admin/espacios',
-      asignacion: '/admin/asignacion',
-      centrohorarios: '/admin/centro-horarios',
-      periodos: '/admin/periodos',
-      reportes: '/admin/reportes',
-      prestamos: userRole === 'admin' ? '/admin/prestamos' : userRole === 'supervisor_general' ? '/supervisor/prestamos' : '/docente/prestamos',
-      recursos: userRole === 'supervisor_general' ? '/supervisor/recursos' : '/admin/recursos',
-      ocupacion: '/admin/ocupacion',
-      notificaciones: '/notificaciones',
-      ajustes: '/ajustes',
-      chat: '/admin/chat',
-      usuarios: '/admin/usuarios',
-      asistentes: userRole === 'admin' ? '/admin/asistente-virtual' : userRole === 'supervisor_general' ? '/supervisor/asistente-virtual' : userRole === 'consultor_docente' ? '/docente/asistente-virtual' : '/estudiante/asistente-virtual',
-      mihorario: userRole === 'consultor_docente' ? '/docente/horario' : '/estudiante/mi-horario'
-    };
-    return mapping[menu] || '/';
-  };
-
-  const handleMenuChange = (menu: MenuOption) => {
-    // Mantener el estado visual del menú (colapsar la sidebar) pero NO navegar directamente.
-    setActiveMenu(menu);
-    setIsSidebarCollapsed(true);
-  };
-
-  const renderContent = () => {
-    const navigateTo = (page: string) => {
-      setActiveMenu(page as MenuOption);
-    };
-
-    switch (activeMenu) {
-      case 'home':
-        // Renderizar dashboard específico según el rol
-        if (userRole === 'admin') {
-          return <DashboardHome onNavigate={navigateTo} />;
-        } else if (userRole === 'supervisor_general') {
-          return (
-            <SupervisorGeneralHome
-              onNavigate={(action: string) => {
-                // Mapear acciones rápidas del dashboard a opciones de menú
-                if (action === 'cronograma') {
-                  handleMenuChange('espacios');
-                } else if (action === 'apertura-cierre') {
-                  handleMenuChange('prestamos');
-                } else if (action === 'estado-recursos') {
-                  handleMenuChange('recursos');
-                } else {
-                  // intentamos usar el action como MenuOption si coincide
-                  try {
-                    handleMenuChange(action as MenuOption);
-                  } catch (e) {
-                    // fallback: ir al dashboard
-                    handleMenuChange('home');
-                  }
-                }
-              }}
-            />
-          );
-        } else if (userRole === 'consultor_docente') {
-          return (
-            <ConsultorDocenteHome
-              onNavigate={(action: string) => {
-                if (action === 'horario') {
-                  handleMenuChange('mihorario');
-                } else if (action === 'prestamos') {
-                  handleMenuChange('prestamos');
-                } else if (action === 'asistentes') {
-                  handleMenuChange('asistentes');
-                } else {
-                  try { handleMenuChange(action as MenuOption); } catch (e) { handleMenuChange('home'); }
-                }
-              }}
-            />
-          );
-        } else if (userRole === 'consultor_estudiante') {
-          return (
-            <ConsultorEstudianteHome
-              onNavigate={(action: string) => {
-                if (action === 'horario') {
-                  handleMenuChange('mihorario');
-                } else if (action === 'asistentes') {
-                  handleMenuChange('asistentes');
-                } else {
-                  try { handleMenuChange(action as MenuOption); } catch (e) { handleMenuChange('home'); }
-                }
-              }}
-            />
-          );
-        } else {
-          return <DashboardHome onNavigate={navigateTo} />;
-        }
-      case 'facultades':
-        return <FacultadesPrograms />;
-      case 'espacios':
-        // Supervisores generales deben ver la vista de consulta ligera
-        if (userRole === 'supervisor_general') {
-          return <ConsultaEspacios />;
-        }
-        return <EspaciosFisicos />;
-      case 'recursos':
-        return <EstadoRecursos />;
-      case 'prestamos':
-        // Mostrar componente de préstamos según el rol activo
-        if (userRole === 'consultor_docente') {
-          return <DocentePrestamos />;
-        }
-        if (userRole === 'supervisor_general') {
-          return <SupervisorSalonHome />;
-        }
-        // Administradores y otros usan la vista general de préstamos
-        return <PrestamosEspacios />;
-      case 'centrohorarios':
-        return <CentroHorarios />;
-      case 'asignacion':
-        return <AsignacionAutomatica />;
-      case 'periodos':
-        return <PeriodosAcademicos />;
-      case 'ocupacion':
-        return <OcupacionSemanal />;
-      case 'reportes':
-        return <Reportes />;
-      case 'notificaciones':
-        return <Notificaciones onNotificacionesChange={setNotificacionesSinLeer} />;
-      case 'chat':
-        return <AsistentesVirtuales />;
-      case 'ajustes':
-        return <Ajustes />;
-      case 'usuarios':
-        return <GestionUsuarios />;
-      case 'asistentes':
-        return <AsistentesVirtuales />;
-      case 'mihorario':
-        return <MiHorario />;
-      default:
-        return <DashboardHome onNavigate={navigateTo} />;
-    }
-  };
+  const {
+    userRole,
+    userName,
+    isSidebarHovered,
+    setIsSidebarHovered,
+    shouldShowExpanded,
+    notificacionesSinLeer,
+    menuSections,
+    menuToPath,
+    handleLogout,
+    location
+  } = useAdminDashboard(props.userName, props.userRole, props.onLogout);
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900 overflow-hidden">
@@ -504,7 +133,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
 
                   {/* Menu Items */}
                   <div className="space-y-1 mt-2">
-                    {section.items.map((item) => {
+                    {section.items.map((item: any) => {
                       const Icon = item.icon;
                       const path = menuToPath(item.action as MenuOption);
                       const isActive = location.pathname === path || location.pathname.startsWith(path + '/') || (path !== '/' && location.pathname.startsWith(path));
@@ -680,7 +309,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
           <div className="p-4 border-t border-red-700/50">
             {shouldShowExpanded ? (
               <Button
-                onClick={onLogout}
+                onClick={handleLogout}
                 variant="outline"
                 className="w-full border-red-600 text-red-100 hover:bg-red-700/60 hover:text-white hover:border-red-500 bg-red-700/30 transition-colors"
               >
@@ -691,7 +320,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={onLogout}
+                    onClick={handleLogout}
                     variant="ghost"
                     className="w-10 h-10 flex items-center justify-center rounded-xl text-red-100 hover:bg-red-700/50 hover:text-white transition-colors"
                   >

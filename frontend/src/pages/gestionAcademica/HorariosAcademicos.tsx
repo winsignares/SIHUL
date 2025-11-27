@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
@@ -7,456 +6,49 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Checkbox } from '../../share/checkbox';
-import { Plus, Search, Clock, AlertCircle, Edit, Trash2, CheckCircle, X, Check, Calendar } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { Plus, Clock, AlertCircle, Trash2, CheckCircle, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
-import { db } from '../../hooks/database';
-import type { Facultad, Programa, Asignatura, EspacioFisico, Docente } from '../../hooks/models';
+import { NotificationBanner } from '../../share/notificationBanner';
+import { useHorariosAcademicos, PERIODO_FIJO, dias } from '../../hooks/gestionAcademica/useHorariosAcademicos';
 
-interface HorarioCompleto {
-  id: string;
-  grupoNombre: string; // ej: "1A", "1B"
-  facultadId: string;
-  programaId: string;
-  semestre: number;
-  periodo: string; // fijo "2025-1"
-  asignaturas: AsignaturaHorario[];
-  fechaCreacion: string;
-}
-
-interface AsignaturaHorario {
-  id: string;
-  asignaturaId: string;
-  asignaturaNombre: string;
-  dia: string;
-  horaInicio: string;
-  horaFin: string;
-  docente: string;
-  espacioId: string;
-  espacioNombre: string;
-}
-
-  const { showNotification } = useTheme();
-  // Estados de datos desde BD
-  const [facultades, setFacultades] = useState<Facultad[]>([]);
-  const [programas, setProgramas] = useState<Programa[]>([]);
-  const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
-  const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
-  const [docentes, setDocentes] = useState<Docente[]>([]);
-  
-  // Filtros en cascada
-  const [facultadSeleccionada, setFacultadSeleccionada] = useState<string>('');
-  const [programaSeleccionado, setProgramaSeleccionado] = useState<string>('');
-  const [semestreSeleccionado, setSemestreSeleccionado] = useState<string>('');
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('');
-  
-  // Horarios
-  const [horarios, setHorarios] = useState<HorarioCompleto[]>([]);
-  const [horarioActual, setHorarioActual] = useState<HorarioCompleto | null>(null);
-  
-  // Modales
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showAddAsignaturaDialog, setShowAddAsignaturaDialog] = useState(false);
-  
-  // Estado para nueva asignatura
-  const [nuevaAsignatura, setNuevaAsignatura] = useState({
-    asignaturaId: '',
-    dias: [] as string[], // Cambio: ahora soporta múltiples días
-    horaInicio: '',
-    horaFin: '',
-    docente: '',
-    espacioId: ''
-  });
-
-  // Estado para nuevo horario
-  const [nuevoHorarioForm, setNuevoHorarioForm] = useState({
-    grupoNombre: '',
-    facultadId: '',
-    programaId: '',
-    semestre: ''
-  });
-
-  const PERIODO_FIJO = '2025-1';
-  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  
-  // Generar grupos dinámicamente basados en el semestre seleccionado
-  const generarGruposPorSemestre = (semestre: string): string[] => {
-    if (!semestre) return [];
-    const semestreNum = semestre;
-    return [`${semestreNum}A`, `${semestreNum}B`, `${semestreNum}C`, `${semestreNum}D`];
-  };
-  
-  const gruposDisponibles = generarGruposPorSemestre(semestreSeleccionado);
-
-  // Cargar datos desde BD
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    setFacultades(db.getFacultades());
-    setProgramas(db.getProgramas());
-    setAsignaturas(db.getAsignaturas());
-    setEspacios(db.getEspacios());
-    setDocentes(db.getDocentes());
-    loadHorarios();
-  };
-
-  const loadHorarios = () => {
-    // Cargar horarios desde localStorage o inicializar vacío
-    const stored = localStorage.getItem('horariosCompletos');
-    if (stored) {
-      setHorarios(JSON.parse(stored));
-    }
-  };
-
-  const saveHorarios = (newHorarios: HorarioCompleto[]) => {
-    localStorage.setItem('horariosCompletos', JSON.stringify(newHorarios));
-    setHorarios(newHorarios);
-    
-    // Disparar evento personalizado para notificar a otros componentes
-    window.dispatchEvent(new Event('horariosUpdated'));
-  };
-
-  // Programas filtrados por facultad
-  const programasFiltrados = programas.filter(p => p.facultadId === facultadSeleccionada);
-
-  // Asignaturas filtradas por programa
-  const asignaturasFiltradas = asignaturas.filter(a => a.programaId === programaSeleccionado);
-
-  // Semestres únicos del programa seleccionado
-  const semestresDisponibles = [...new Set(asignaturasFiltradas.map(a => a.semestre))].sort((a, b) => a - b);
-
-  // Asignaturas del semestre seleccionado para agregar al horario
-  const asignaturasDelSemestre = asignaturasFiltradas.filter(a => a.semestre === Number(semestreSeleccionado));
-
-  // Horario actual a mostrar
-  const horarioAMostrar = horarios.find(h => 
-    h.facultadId === facultadSeleccionada &&
-    h.programaId === programaSeleccionado &&
-    h.semestre === Number(semestreSeleccionado) &&
-    h.grupoNombre === grupoSeleccionado
-  );
-
-  // Resetear filtros en cascada
-  const handleFacultadChange = (value: string) => {
-    setFacultadSeleccionada(value);
-    setProgramaSeleccionado('');
-    setSemestreSeleccionado('');
-    setGrupoSeleccionado('');
-  };
-
-  const handleProgramaChange = (value: string) => {
-    setProgramaSeleccionado(value);
-    setSemestreSeleccionado('');
-    setGrupoSeleccionado('');
-  };
-
-  const handleSemestreChange = (value: string) => {
-    setSemestreSeleccionado(value);
-    setGrupoSeleccionado('');
-  };
-
-  // Crear nuevo horario para un grupo
-  const handleOpenCreateDialog = () => {
-    setNuevoHorarioForm({
-      grupoNombre: '',
-      facultadId: '',
-      programaId: '',
-      semestre: ''
-    });
-    setShowCreateDialog(true);
-  };
-
-  const handleCreateHorario = () => {
-    // Validaciones
-    if (!nuevoHorarioForm.facultadId) {
-      showNotification({ message: 'Debe seleccionar una facultad', type: 'error' });
-      return;
-    }
-    if (!nuevoHorarioForm.programaId) {
-      showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
-      return;
-    }
-    if (!nuevoHorarioForm.semestre) {
-      showNotification({ message: 'Debe seleccionar un semestre', type: 'error' });
-      return;
-    }
-
-    // Generar automáticamente el nombre del grupo
-    const gruposExistentes = horarios
-      .filter(h => 
-        h.facultadId === nuevoHorarioForm.facultadId &&
-        h.programaId === nuevoHorarioForm.programaId &&
-        h.semestre === Number(nuevoHorarioForm.semestre)
-      )
-      .map(h => h.grupoNombre);
-    
-    // Obtener la siguiente letra disponible (A, B, C, etc.)
-    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let nuevoGrupoNombre = '';
-    
-    for (let i = 0; i < letras.length; i++) {
-      const grupoTemporal = `${nuevoHorarioForm.semestre}${letras[i]}`;
-      if (!gruposExistentes.includes(grupoTemporal)) {
-        nuevoGrupoNombre = grupoTemporal;
-        break;
-      }
-    }
-
-    if (!nuevoGrupoNombre) {
-      showNotification({ message: 'Se ha alcanzado el límite de grupos para este semestre', type: 'error' });
-      return;
-    }
-
-    // Crear horario
-    const nuevoHorario: HorarioCompleto = {
-      id: `horario-${Date.now()}`,
-      grupoNombre: nuevoGrupoNombre,
-      facultadId: nuevoHorarioForm.facultadId,
-      programaId: nuevoHorarioForm.programaId,
-      semestre: Number(nuevoHorarioForm.semestre),
-      periodo: PERIODO_FIJO,
-      asignaturas: [],
-      fechaCreacion: new Date().toISOString()
-    };
-
-    const nuevosHorarios = [...horarios, nuevoHorario];
-    saveHorarios(nuevosHorarios);
-    setShowCreateDialog(false);
-    
-    const programa = programas.find(p => p.id === nuevoHorarioForm.programaId);
-    showNotification({ message: `✅ Horario creado: Grupo ${nuevoGrupoNombre}`, type: 'success' });
-  };
-
-  // Eliminar horario completo
-  const handleOpenDeleteDialog = () => {
-    if (!horarioAMostrar) return;
-    setHorarioActual(horarioAMostrar);
-    setShowDeleteDialog(true);
-  };
-
-  const handleDeleteHorario = () => {
-    if (!horarioActual) return;
-    
-    const nuevosHorarios = horarios.filter(h => h.id !== horarioActual.id);
-    saveHorarios(nuevosHorarios);
-    setShowDeleteDialog(false);
-    setHorarioActual(null);
-    
-    showNotification({ message: '✅ Horario eliminado correctamente', type: 'success' });
-  };
-
-  // Agregar asignatura al horario
-  const handleOpenAddAsignatura = () => {
-    if (!horarioAMostrar) return;
-    setHorarioActual(horarioAMostrar);
-    setNuevaAsignatura({
-      asignaturaId: '',
-      dias: [],
-      horaInicio: '',
-      horaFin: '',
-      docente: '',
-      espacioId: ''
-    });
-    setShowAddAsignaturaDialog(true);
-  };
-
-  const handleAddAsignatura = () => {
-    if (!horarioActual) return;
-
-    // Validaciones
-    if (!nuevaAsignatura.asignaturaId) {
-      showNotification({ message: 'Debe seleccionar una asignatura', type: 'error' });
-      return;
-    }
-    if (nuevaAsignatura.dias.length === 0) {
-      showNotification({ message: 'Debe seleccionar al menos un día', type: 'error' });
-      return;
-    }
-    if (!nuevaAsignatura.horaInicio || !nuevaAsignatura.horaFin) {
-      showNotification({ message: 'Debe seleccionar hora de inicio y fin', type: 'error' });
-      return;
-    }
-    if (!nuevaAsignatura.docente.trim()) {
-      showNotification({ message: 'Debe ingresar el nombre del docente', type: 'error' });
-      return;
-    }
-    if (!nuevaAsignatura.espacioId) {
-      showNotification({ message: 'Debe seleccionar un espacio', type: 'error' });
-      return;
-    }
-
-    // Validar hora fin > hora inicio
-    const [inicioH, inicioM] = nuevaAsignatura.horaInicio.split(':').map(Number);
-    const [finH, finM] = nuevaAsignatura.horaFin.split(':').map(Number);
-    const inicioMinutos = inicioH * 60 + inicioM;
-    const finMinutos = finH * 60 + finM;
-    
-    // Permitir horarios que cruzan medianoche (ej: 20:00 a 06:00)
-    if (finMinutos <= inicioMinutos && finH < 12) {
-      // Es válido si cruza medianoche
-    } else if (finMinutos <= inicioMinutos) {
-      showNotification({ message: 'La hora de fin debe ser posterior a la hora de inicio', type: 'error' });
-      return;
-    }
-
-    // Validar conflictos para cada día seleccionado
-    for (const dia of nuevaAsignatura.dias) {
-      // Validar solapamiento en el mismo grupo
-      const conflictoGrupo = horarioActual.asignaturas.find(a =>
-        a.dia === dia &&
-        hayConflictoHorario(a.horaInicio, a.horaFin, nuevaAsignatura.horaInicio, nuevaAsignatura.horaFin)
-      );
-
-      if (conflictoGrupo) {
-        showNotification({ message: `Conflicto en ${dia}: El grupo ya tiene ${conflictoGrupo.asignaturaNombre} en este horario`, type: 'error' });
-        return;
-      }
-
-      // Validar espacio no ocupado
-      const conflictoEspacio = horarios.some(h =>
-        h.asignaturas.some(a =>
-          a.espacioId === nuevaAsignatura.espacioId &&
-          a.dia === dia &&
-          hayConflictoHorario(a.horaInicio, a.horaFin, nuevaAsignatura.horaInicio, nuevaAsignatura.horaFin)
-        )
-      );
-
-      if (conflictoEspacio) {
-        const espacio = espacios.find(e => e.id === nuevaAsignatura.espacioId);
-        showNotification({ message: `Conflicto en ${dia}: El espacio ${espacio?.nombre} ya está ocupado en este horario`, type: 'error' });
-        return;
-      }
-    }
-
-    // Agregar asignatura para cada día seleccionado
-    const asignatura = asignaturas.find(a => a.id === nuevaAsignatura.asignaturaId);
-    const espacio = espacios.find(e => e.id === nuevaAsignatura.espacioId);
-
-    const nuevasAsignaturas = nuevaAsignatura.dias.map(dia => ({
-      id: `asig-horario-${Date.now()}-${dia}`,
-      asignaturaId: nuevaAsignatura.asignaturaId,
-      asignaturaNombre: asignatura?.nombre || '',
-      dia: dia,
-      horaInicio: nuevaAsignatura.horaInicio,
-      horaFin: nuevaAsignatura.horaFin,
-      docente: nuevaAsignatura.docente.trim(),
-      espacioId: nuevaAsignatura.espacioId,
-      espacioNombre: espacio?.nombre || ''
-    }));
-
-    const nuevosHorarios = horarios.map(h => {
-      if (h.id === horarioActual.id) {
-        return {
-          ...h,
-          asignaturas: [...h.asignaturas, ...nuevasAsignaturas]
-        };
-      }
-      return h;
-    });
-
-    saveHorarios(nuevosHorarios);
-    setShowAddAsignaturaDialog(false);
-    
-    showNotification({ message: `✅ Asignatura agregada en ${nuevaAsignatura.dias.length} día(s)`, type: 'success' });
-  };
-
-  // Eliminar asignatura del horario
-  const handleDeleteAsignatura = (asignaturaId: string) => {
-    if (!horarioAMostrar) return;
-
-    const nuevosHorarios = horarios.map(h => {
-      if (h.id === horarioAMostrar.id) {
-        return {
-          ...h,
-          asignaturas: h.asignaturas.filter(a => a.id !== asignaturaId)
-        };
-      }
-      return h;
-    });
-
-    saveHorarios(nuevosHorarios);
-    
-    showNotification({ message: '✅ Asignatura eliminada del horario', type: 'success' });
-  };
-
-  const hayConflictoHorario = (inicio1: string, fin1: string, inicio2: string, fin2: string): boolean => {
-    const i1 = parseInt(inicio1.replace(':', ''));
-    const f1 = parseInt(fin1.replace(':', ''));
-    const i2 = parseInt(inicio2.replace(':', ''));
-    const f2 = parseInt(fin2.replace(':', ''));
-    return i1 < f2 && f1 > i2;
-  };
-
-  // Función para generar franjas horarias dinámicas
-  const generarFranjasHorarias = (asignaturas: AsignaturaHorario[]) => {
-    if (asignaturas.length === 0) {
-      // Si no hay asignaturas, mostrar horario por defecto de 6:00 AM a 10:00 PM
-      const franjas: { inicio: number, texto: string }[] = [];
-      for (let i = 6; i <= 21; i++) {
-        franjas.push({
-          inicio: i,
-          texto: `${String(i).padStart(2, '0')}:00 - ${String(i + 1).padStart(2, '0')}:00`
-        });
-      }
-      return franjas;
-    }
-
-    // Obtener todas las horas únicas de las asignaturas
-    const horasSet = new Set<number>();
-    
-    asignaturas.forEach(asig => {
-      const [horaInicioH] = asig.horaInicio.split(':').map(Number);
-      const [horaFinH] = asig.horaFin.split(':').map(Number);
-      
-      // Agregar hora de inicio
-      horasSet.add(horaInicioH);
-      
-      // Agregar todas las horas intermedias
-      let horaActual = horaInicioH + 1;
-      const horaFinal = horaFinH;
-      
-      while (horaActual <= horaFinal) {
-        horasSet.add(horaActual);
-        horaActual++;
-      }
-    });
-
-    // Convertir a array y ordenar
-    const horasArray = Array.from(horasSet).sort((a, b) => a - b);
-    
-    // Crear franjas horarias
-    const franjas: { inicio: number, texto: string }[] = [];
-    for (let i = 0; i < horasArray.length - 1; i++) {
-      const horaInicio = horasArray[i];
-      const horaFin = horasArray[i + 1];
-      
-      franjas.push({
-        inicio: horaInicio,
-        texto: `${String(horaInicio).padStart(2, '0')}:00 - ${String(horaFin).padStart(2, '0')}:00`
-      });
-    }
-
-    return franjas;
-  };
-
-  // Función para verificar si una asignatura está en una franja horaria
-  const asignaturaEnFranja = (asignatura: AsignaturaHorario, franja: { inicio: number, texto: string }): boolean => {
-    const [asigHoraH] = asignatura.horaInicio.split(':').map(Number);
-    return asigHoraH === franja.inicio;
-  };
-
-  // Calcular cuántas franjas ocupa una asignatura
-  const calcularFilasOcupadas = (asignatura: AsignaturaHorario, franjas: { inicio: number, texto: string }[]): number => {
-    const [horaInicioH] = asignatura.horaInicio.split(':').map(Number);
-    const [horaFinH] = asignatura.horaFin.split(':').map(Number);
-    
-    const duracionHoras = horaFinH - horaInicioH;
-    return Math.max(1, duracionHoras); // Mínimo 1 fila
-  };
+export default function HorariosAcademicos() {
+  const {
+    facultades,
+    programas,
+    asignaturas,
+    espacios,
+    docentes,
+    facultadSeleccionada,
+    programaSeleccionado,
+    semestreSeleccionado,
+    grupoSeleccionado,
+    setGrupoSeleccionado,
+    horarioActual,
+    showCreateDialog, setShowCreateDialog,
+    showDeleteDialog, setShowDeleteDialog,
+    showAddAsignaturaDialog, setShowAddAsignaturaDialog,
+    nuevaAsignatura, setNuevaAsignatura,
+    nuevoHorarioForm, setNuevoHorarioForm,
+    gruposDisponibles,
+    programasFiltrados,
+    semestresDisponibles,
+    asignaturasDelSemestre,
+    horarioAMostrar,
+    mostrarHorario,
+    handleFacultadChange,
+    handleProgramaChange,
+    handleSemestreChange,
+    handleOpenCreateDialog,
+    handleCreateHorario,
+    handleOpenDeleteDialog,
+    handleDeleteHorario,
+    handleOpenAddAsignatura,
+    handleAddAsignatura,
+    handleDeleteAsignatura,
+    getHorarioGridData,
+    calcularFilasOcupadas,
+    notification
+  } = useHorariosAcademicos();
 
   // Renderizar grid de horario
   const renderHorarioGrid = () => {
@@ -469,26 +61,9 @@ interface AsignaturaHorario {
       );
     }
 
-    const franjasHorarias = generarFranjasHorarias(horarioAMostrar.asignaturas);
-    
-    // Crear mapa de celdas ocupadas: key = "dia-franjaIdx", value = { asignatura, rowSpan, isStart }
-    const celdasOcupadas = new Map<string, { asignatura: AsignaturaHorario, isStart: boolean }>();
-    
-    // Pre-calcular qué celdas están ocupadas
-    horarioAMostrar.asignaturas.forEach(asignatura => {
-      const franjaInicio = franjasHorarias.findIndex(f => asignaturaEnFranja(asignatura, f));
-      if (franjaInicio === -1) return;
-      
-      const filasOcupadas = calcularFilasOcupadas(asignatura, franjasHorarias);
-      
-      for (let i = 0; i < filasOcupadas && franjaInicio + i < franjasHorarias.length; i++) {
-        const key = `${asignatura.dia}-${franjaInicio + i}`;
-        celdasOcupadas.set(key, {
-          asignatura,
-          isStart: i === 0
-        });
-      }
-    });
+    const gridData = getHorarioGridData();
+    if (!gridData) return null;
+    const { franjasHorarias, celdasOcupadas } = gridData;
 
     return (
       <div className="space-y-4">
@@ -548,24 +123,24 @@ interface AsignaturaHorario {
                     {dias.map(dia => {
                       const key = `${dia}-${franjaIdx}`;
                       const celdaInfo = celdasOcupadas.get(key);
-                      
+
                       // Si la celda está ocupada pero no es el inicio, no renderizar
                       if (celdaInfo && !celdaInfo.isStart) {
                         return null;
                       }
-                      
+
                       // Si es el inicio de una asignatura, renderizar con rowSpan
                       if (celdaInfo && celdaInfo.isStart) {
                         const asignatura = celdaInfo.asignatura;
                         const filasOcupadas = calcularFilasOcupadas(asignatura, franjasHorarias);
-                        
+
                         return (
-                          <td 
+                          <td
                             key={key}
                             rowSpan={filasOcupadas}
                             className="p-0 border border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/30 align-top"
                           >
-                            <motion.div 
+                            <motion.div
                               className="p-3 h-full space-y-2"
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
@@ -594,7 +169,7 @@ interface AsignaturaHorario {
                                   </p>
                                 </div>
                               </div>
-                              
+
                               <div className="flex items-center justify-between gap-2 pt-1 border-t border-blue-200 dark:border-blue-800">
                                 <Badge className="bg-blue-600 text-white text-xs px-2 py-0.5 hover:bg-blue-700">
                                   <Clock className="w-3 h-3 mr-1" />
@@ -614,10 +189,10 @@ interface AsignaturaHorario {
                           </td>
                         );
                       }
-                      
+
                       // Celda vacía
                       return (
-                        <td 
+                        <td
                           key={key}
                           className="p-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors min-h-[80px] align-top"
                         >
@@ -635,10 +210,9 @@ interface AsignaturaHorario {
     );
   };
 
-  const mostrarHorario = facultadSeleccionada && programaSeleccionado && semestreSeleccionado && grupoSeleccionado;
-
   return (
     <div className="p-8 space-y-6">
+      <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -650,7 +224,7 @@ interface AsignaturaHorario {
             <Calendar className="w-4 h-4 mr-2" />
             Periodo {PERIODO_FIJO}
           </Badge>
-          <Button 
+          <Button
             onClick={handleOpenCreateDialog}
             className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
           >
@@ -683,8 +257,8 @@ interface AsignaturaHorario {
 
             {/* Filtro 2: Programa */}
             <div>
-              <Select 
-                value={programaSeleccionado} 
+              <Select
+                value={programaSeleccionado}
                 onValueChange={handleProgramaChange}
                 disabled={!facultadSeleccionada}
               >
@@ -701,8 +275,8 @@ interface AsignaturaHorario {
 
             {/* Filtro 3: Semestre */}
             <div>
-              <Select 
-                value={semestreSeleccionado} 
+              <Select
+                value={semestreSeleccionado}
                 onValueChange={handleSemestreChange}
                 disabled={!programaSeleccionado}
               >
@@ -719,8 +293,8 @@ interface AsignaturaHorario {
 
             {/* Filtro 4: Grupo */}
             <div>
-              <Select 
-                value={grupoSeleccionado} 
+              <Select
+                value={grupoSeleccionado}
                 onValueChange={setGrupoSeleccionado}
                 disabled={!semestreSeleccionado}
               >
@@ -796,8 +370,8 @@ interface AsignaturaHorario {
               </div>
               <div className="space-y-2">
                 <Label>Programa *</Label>
-                <Select 
-                  value={nuevoHorarioForm.programaId} 
+                <Select
+                  value={nuevoHorarioForm.programaId}
                   onValueChange={(v) => setNuevoHorarioForm({ ...nuevoHorarioForm, programaId: v, semestre: '' })}
                   disabled={!nuevoHorarioForm.facultadId}
                 >
@@ -814,8 +388,8 @@ interface AsignaturaHorario {
             </div>
             <div className="space-y-2">
               <Label>Semestre *</Label>
-              <Select 
-                value={nuevoHorarioForm.semestre} 
+              <Select
+                value={nuevoHorarioForm.semestre}
                 onValueChange={(v) => setNuevoHorarioForm({ ...nuevoHorarioForm, semestre: v })}
                 disabled={!nuevoHorarioForm.programaId}
               >
@@ -829,7 +403,7 @@ interface AsignaturaHorario {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {nuevoHorarioForm.semestre && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
@@ -841,7 +415,7 @@ interface AsignaturaHorario {
                       <strong>Creación automática de grupo</strong>
                     </p>
                     <p className="text-blue-700 mt-1">
-                      El sistema creará automáticamente el siguiente grupo disponible para el semestre {nuevoHorarioForm.semestre} 
+                      El sistema creará automáticamente el siguiente grupo disponible para el semestre {nuevoHorarioForm.semestre}
                       (ejemplo: {nuevoHorarioForm.semestre}A, {nuevoHorarioForm.semestre}B, etc.)
                     </p>
                   </div>
@@ -891,25 +465,25 @@ interface AsignaturaHorario {
               <div className="grid grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                 {dias.map(dia => (
                   <div key={dia} className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id={`dia-${dia}`}
                       checked={nuevaAsignatura.dias.includes(dia)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setNuevaAsignatura({ 
-                            ...nuevaAsignatura, 
-                            dias: [...nuevaAsignatura.dias, dia] 
+                          setNuevaAsignatura({
+                            ...nuevaAsignatura,
+                            dias: [...nuevaAsignatura.dias, dia]
                           });
                         } else {
-                          setNuevaAsignatura({ 
-                            ...nuevaAsignatura, 
-                            dias: nuevaAsignatura.dias.filter(d => d !== dia) 
+                          setNuevaAsignatura({
+                            ...nuevaAsignatura,
+                            dias: nuevaAsignatura.dias.filter(d => d !== dia)
                           });
                         }
                       }}
                     />
-                    <label 
-                      htmlFor={`dia-${dia}`} 
+                    <label
+                      htmlFor={`dia-${dia}`}
                       className="text-sm cursor-pointer text-slate-700 dark:text-slate-300"
                     >
                       {dia}
@@ -962,7 +536,7 @@ interface AsignaturaHorario {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <p className="text-slate-600 dark:text-slate-400">
                 <strong>Validaciones automáticas:</strong>
@@ -1016,7 +590,7 @@ interface AsignaturaHorario {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleDeleteHorario}
               className="bg-red-600 hover:bg-red-700 text-white"
             >

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Label } from '../../share/label';
 import { Input } from '../../share/input';
@@ -8,25 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Avatar, AvatarFallback } from '../../share/avatar';
 import { Separator } from '../../share/separator';
-import { 
-  Sun, 
-  Moon, 
-  Bell, 
-  Mail, 
-  User, 
-  Shield, 
-  Palette, 
-  Globe, 
-  Save, 
-  Edit, 
+import {
+  Sun,
+  Moon,
+  Bell,
+  Mail,
+  User,
+  Palette,
+  Globe,
+  Save,
+  Edit,
   Lock,
   Check,
   X,
   Eye,
   EyeOff
 } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
-import { Toaster } from '../../share/sonner';
 import {
   Dialog,
   DialogContent,
@@ -35,171 +31,44 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../share/dialog';
-import { motion, AnimatePresence } from 'motion/react';
-import { useUser } from '../../context/UserContext';
-import { AuthService } from '../../services/auth';
+import { motion } from 'motion/react';
+import { useAjustes } from '../../hooks/users/useAjustes';
 
 export default function Ajustes() {
-  const { theme, toggleTheme } = useTheme();
-  const { usuario } = useUser();
-  
-  // Estados de edición
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isEditingSystem, setIsEditingSystem] = useState(false);
-  
-  // Estados de modales
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [showSaveNotificationsModal, setShowSaveNotificationsModal] = useState(false);
-  const [showSaveSystemModal, setShowSaveSystemModal] = useState(false);
-  
-  // Estados de contraseña
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
-  });
-  const [passwordError, setPasswordError] = useState('');
-  
-  const [perfil, setPerfil] = useState({
-    nombre: usuario?.nombre || 'Administrador Principal',
-    email: usuario?.email || 'admin@unilibre.edu.co',
-    telefono: '+57 300 123 4567',
-    cargo: 'Administrador de Planeación'
-  });
-
-  const [perfilOriginal, setPerfilOriginal] = useState({ ...perfil });
-
-  const [notificaciones, setNotificaciones] = useState({
-    emailNuevaSolicitud: true,
-    emailConflicto: true,
-    emailMensaje: false,
-    pushNuevaSolicitud: true,
-    pushConflicto: true,
-    pushMensaje: true,
-    sonido: true
-  });
-
-  const [sistema, setSistema] = useState({
-    idioma: 'es',
-    zonaHoraria: 'America/Bogota',
-    formatoFecha: 'DD/MM/YYYY',
-    formatoHora: '24h'
-  });
-
-  const [sistemaOriginal, setSistemaOriginal] = useState({ ...sistema });
-
-  // Determinar si el usuario puede editar ciertos campos según su rol
-  const canEditEmail = usuario?.rol === 'admin';
-  const canEditCargo = usuario?.rol === 'admin';
-
-  const handleEditProfile = () => {
-    setIsEditingProfile(true);
-  };
-
-  const handleCancelEditProfile = () => {
-    setPerfil({ ...perfilOriginal });
-    setIsEditingProfile(false);
-  };
-
-  const guardarPerfil = () => {
-    setPerfilOriginal({ ...perfil });
-    setIsEditingProfile(false);
-    // Mostrar notificación: ✅ Perfil actualizado correctamente
-  };
-
-  const handleChangePassword = () => {
-    setPasswordError('');
-    
-    // Validaciones
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      setPasswordError('Todos los campos son obligatorios');
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('Las contraseñas nuevas no coinciden');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setPasswordError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    if (!usuario) {
-      setPasswordError('Usuario no encontrado');
-      return;
-    }
-
-    // Intentar cambiar contraseña
-    const result = AuthService.changePassword(
-      usuario.id,
-      passwordData.currentPassword,
-      passwordData.newPassword
-    );
-
-    if (result.success) {
-      // Mostrar notificación: ✅ Contraseña actualizada correctamente
-      setShowChangePasswordModal(false);
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-    } else {
-      setPasswordError(result.error || 'Error al cambiar contraseña');
-    }
-  };
-
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotificaciones(prev => ({ ...prev, [key]: value }));
-    
-    // Mensajes personalizados según el tipo de notificación
-    const messages: Record<string, string> = {
-      emailNuevaSolicitud: value ? 'Notificaciones de nuevas solicitudes activadas' : 'Notificaciones de nuevas solicitudes desactivadas',
-      emailConflicto: value ? 'Conflictos de horario activados' : 'Conflictos de horario desactivados',
-      emailMensaje: value ? 'Notificaciones de mensajes activadas' : 'Notificaciones de mensajes desactivadas',
-      pushNuevaSolicitud: value ? 'Push de solicitudes activado' : 'Push de solicitudes desactivado',
-      pushConflicto: value ? 'Push de conflictos activado' : 'Push de conflictos desactivado',
-      pushMensaje: value ? 'Push de mensajes activado' : 'Push de mensajes desactivado',
-      sonido: value ? 'Sonido de notificaciones activado' : 'Sonido de notificaciones desactivado'
-    };
-
-    // Mostrar notificación: [messages[key] || 'Preferencia actualizada']
-  };
-
-  const confirmarGuardarNotificaciones = () => {
-    setShowSaveNotificationsModal(false);
-    // Mostrar notificación: ✅ Preferencias de notificaciones guardadas
-  };
-
-  const handleEditSystem = () => {
-    setIsEditingSystem(true);
-  };
-
-  const handleCancelEditSystem = () => {
-    setSistema({ ...sistemaOriginal });
-    setIsEditingSystem(false);
-  };
-
-  const confirmarGuardarSistema = () => {
-    setSistemaOriginal({ ...sistema });
-    setIsEditingSystem(false);
-    setShowSaveSystemModal(false);
-    // Mostrar notificación: ✅ Configuración del sistema actualizada
-  };
-
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    if (theme !== newTheme) {
-      toggleTheme();
-      // Mostrar notificación: Tema cambiado a modo [newTheme === 'light' ? 'claro' : 'oscuro']
-    }
-  };
+  const {
+    theme,
+    isEditingProfile,
+    isEditingSystem,
+    showChangePasswordModal,
+    setShowChangePasswordModal,
+    showSaveNotificationsModal,
+    setShowSaveNotificationsModal,
+    showSaveSystemModal,
+    setShowSaveSystemModal,
+    passwordData,
+    setPasswordData,
+    showPasswords,
+    setShowPasswords,
+    passwordError,
+    setPasswordError,
+    perfil,
+    setPerfil,
+    notificaciones,
+    sistema,
+    setSistema,
+    canEditEmail,
+    canEditCargo,
+    handleEditProfile,
+    handleCancelEditProfile,
+    guardarPerfil,
+    handleChangePassword,
+    handleNotificationChange,
+    confirmarGuardarNotificaciones,
+    handleEditSystem,
+    handleCancelEditSystem,
+    confirmarGuardarSistema,
+    handleThemeChange
+  } = useAjustes();
 
   return (
     <div className="p-8 space-y-6">
@@ -236,9 +105,9 @@ export default function Ajustes() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-slate-900">Información Personal</CardTitle>
                 {!isEditingProfile ? (
-                  <Button 
+                  <Button
                     onClick={handleEditProfile}
-                    variant="outline" 
+                    variant="outline"
                     className="border-red-600 text-red-600 hover:bg-red-50"
                   >
                     <Edit className="w-4 h-4 mr-2" />
@@ -246,14 +115,14 @@ export default function Ajustes() {
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       onClick={handleCancelEditProfile}
                       variant="outline"
                     >
                       <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
-                    <Button 
+                    <Button
                       onClick={guardarPerfil}
                       className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
                     >
@@ -272,8 +141,8 @@ export default function Ajustes() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="border-red-600 text-red-600 hover:bg-red-50"
                     disabled={!isEditingProfile}
                   >
@@ -347,7 +216,7 @@ export default function Ajustes() {
                   <p className="text-slate-900">Contraseña</p>
                   <p className="text-slate-600">Actualiza tu contraseña periódicamente</p>
                 </div>
-                <Button 
+                <Button
                   onClick={() => setShowChangePasswordModal(true)}
                   variant="outline"
                   className="border-red-600 text-red-600 hover:bg-red-50"
@@ -368,18 +237,17 @@ export default function Ajustes() {
             </CardHeader>
             <CardContent>
               <p className="text-slate-600 mb-6">Selecciona el tema de tu preferencia</p>
-              
+
               <div className="grid grid-cols-2 gap-6">
                 {/* Modo Claro */}
                 <motion.button
                   onClick={() => handleThemeChange('light')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`relative p-6 rounded-2xl border-2 transition-all ${
-                    theme === 'light' 
-                      ? 'border-red-600 bg-red-50 shadow-lg' 
+                  className={`relative p-6 rounded-2xl border-2 transition-all ${theme === 'light'
+                      ? 'border-red-600 bg-red-50 shadow-lg'
                       : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border-2 border-slate-200">
@@ -399,7 +267,7 @@ export default function Ajustes() {
                       </motion.div>
                     )}
                   </div>
-                  
+
                   {/* Preview */}
                   <div className="mt-4 p-3 bg-white rounded-lg border border-slate-200">
                     <div className="space-y-2">
@@ -415,11 +283,10 @@ export default function Ajustes() {
                   onClick={() => handleThemeChange('dark')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`relative p-6 rounded-2xl border-2 transition-all ${
-                    theme === 'dark' 
-                      ? 'border-red-600 bg-red-50 shadow-lg' 
+                  className={`relative p-6 rounded-2xl border-2 transition-all ${theme === 'dark'
+                      ? 'border-red-600 bg-red-50 shadow-lg'
                       : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center border-2 border-slate-600">
@@ -439,7 +306,7 @@ export default function Ajustes() {
                       </motion.div>
                     )}
                   </div>
-                  
+
                   {/* Preview */}
                   <div className="mt-4 p-3 bg-slate-800 rounded-lg border border-slate-700">
                     <div className="space-y-2">
@@ -557,7 +424,7 @@ export default function Ajustes() {
                 />
               </div>
 
-              <Button 
+              <Button
                 onClick={() => setShowSaveNotificationsModal(true)}
                 className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
               >
@@ -575,9 +442,9 @@ export default function Ajustes() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-slate-900">Configuración Regional</CardTitle>
                 {!isEditingSystem ? (
-                  <Button 
+                  <Button
                     onClick={handleEditSystem}
-                    variant="outline" 
+                    variant="outline"
                     className="border-red-600 text-red-600 hover:bg-red-50"
                   >
                     <Edit className="w-4 h-4 mr-2" />
@@ -585,14 +452,14 @@ export default function Ajustes() {
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       onClick={handleCancelEditSystem}
                       variant="outline"
                     >
                       <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => setShowSaveSystemModal(true)}
                       className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
                     >
@@ -607,8 +474,8 @@ export default function Ajustes() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="idioma">Idioma</Label>
-                  <Select 
-                    value={sistema.idioma} 
+                  <Select
+                    value={sistema.idioma}
                     onValueChange={(value) => setSistema({ ...sistema, idioma: value })}
                     disabled={!isEditingSystem}
                   >
@@ -622,11 +489,11 @@ export default function Ajustes() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="zona">Zona Horaria</Label>
-                  <Select 
-                    value={sistema.zonaHoraria} 
+                  <Select
+                    value={sistema.zonaHoraria}
                     onValueChange={(value) => setSistema({ ...sistema, zonaHoraria: value })}
                     disabled={!isEditingSystem}
                   >
@@ -640,11 +507,11 @@ export default function Ajustes() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="fecha">Formato de Fecha</Label>
-                  <Select 
-                    value={sistema.formatoFecha} 
+                  <Select
+                    value={sistema.formatoFecha}
                     onValueChange={(value) => setSistema({ ...sistema, formatoFecha: value })}
                     disabled={!isEditingSystem}
                   >
@@ -658,11 +525,11 @@ export default function Ajustes() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="hora">Formato de Hora</Label>
-                  <Select 
-                    value={sistema.formatoHora} 
+                  <Select
+                    value={sistema.formatoHora}
                     onValueChange={(value) => setSistema({ ...sistema, formatoHora: value })}
                     disabled={!isEditingSystem}
                   >
@@ -682,7 +549,7 @@ export default function Ajustes() {
       </Tabs>
 
       {/* ==================== MODALES ==================== */}
-      
+
       {/* Modal: Cambiar Contraseña */}
       <Dialog open={showChangePasswordModal} onOpenChange={setShowChangePasswordModal}>
         <DialogContent className="sm:max-w-md">
@@ -803,19 +670,19 @@ export default function Ajustes() {
               onClick={confirmarGuardarNotificaciones}
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
-              Aceptar
+              Guardar Cambios
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Guardar Configuración del Sistema */}
+      {/* Modal: Guardar Sistema */}
       <Dialog open={showSaveSystemModal} onOpenChange={setShowSaveSystemModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">¿Desea guardar esta configuración?</DialogTitle>
+            <DialogTitle className="text-slate-900">¿Desea guardar la configuración?</DialogTitle>
             <DialogDescription>
-              Los cambios regionales se aplicarán en todo el sistema
+              Algunos cambios podrían requerir reiniciar la sesión
             </DialogDescription>
           </DialogHeader>
 
@@ -830,12 +697,11 @@ export default function Ajustes() {
               onClick={confirmarGuardarSistema}
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
-              Aceptar
+              Guardar Configuración
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Toaster />
     </div>
   );
 }

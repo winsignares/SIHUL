@@ -1,129 +1,21 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Badge } from '../../share/badge';
 import { motion } from 'motion/react';
-import { Calendar, Clock, BookOpen, MapPin, User, FileDown, FileSpreadsheet, AlertCircle } from 'lucide-react';
-import { Toaster } from '../../share/sonner';
-import { db } from '../../hooks/database';
-import { useUser } from '../../context/UserContext';
-import { useNotification } from '../../share/notificationBanner';
-import type { HorarioAcademico, Asignatura, EspacioFisico, Docente, Grupo } from '../../models/academica';
-
-interface HorarioExtendido extends HorarioAcademico {
-  asignatura: string;
-  docente: string;
-  grupo: string;
-  espacio: string;
-}
+import { Calendar, Clock, BookOpen, MapPin, User, FileDown, FileSpreadsheet } from 'lucide-react';
+import { useMiHorario } from '../../hooks/horarios/useMiHorario';
 
 export default function MiHorario() {
-  const { user } = useUser() as unknown as { user: { rol: string; nombre: string; email: string; gruposAsignados?: string[] } };
-  const { showNotification } = useNotification();
-  const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
-  const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
-  const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
-  const [docentes, setDocentes] = useState<Docente[]>([]);
-  const [grupos, setGrupos] = useState<Grupo[]>([]);
-
-  const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const esDocente = user?.rol === 'consultor-docente';
-  const esEstudiante = user?.rol === 'consultor-estudiante';
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const todosHorarios = db.getHorarios();
-    const todasAsignaturas = db.getAsignaturas();
-    const todosEspacios = db.getEspacios();
-    const todosDocentes = db.getDocentes();
-    const todosGrupos = db.getGrupos();
-
-    setAsignaturas(todasAsignaturas);
-    setEspacios(todosEspacios);
-    setDocentes(todosDocentes);
-    setGrupos(todosGrupos);
-
-    // Filtrar horarios según el rol del usuario
-    let horariosFiltrados: HorarioAcademico[] = [];
-
-    if (esDocente) {
-      // Filtrar por docente
-      const docenteUsuario = todosDocentes.find(d => 
-        d.nombre.toLowerCase().includes(user?.nombre.toLowerCase() || '') ||
-        d.email === user?.email
-      );
-
-      if (docenteUsuario) {
-        horariosFiltrados = todosHorarios.filter(h => 
-          (h as any).docenteId === docenteUsuario.id
-        );
-      }
-    } else if (esEstudiante) {
-      // Filtrar por grupo del estudiante
-      // Asumir que el estudiante tiene asignado un grupo en user.gruposAsignados
-      const gruposEstudiante = user?.gruposAsignados || [];
-      
-      if (gruposEstudiante.length > 0) {
-        horariosFiltrados = todosHorarios.filter(h => {
-          const grupo = todosGrupos.find(g => g.id === h.grupoId);
-          return grupo && gruposEstudiante.includes(grupo.nombre || grupo.codigo);
-        });
-      }
-    }
-
-    // Enriquecer horarios con información adicional
-    const horariosEnriquecidos: HorarioExtendido[] = horariosFiltrados.map(h => {
-      const asignatura = todasAsignaturas.find(a => a.id === (h as any).asignaturaId);
-      const espacio = todosEspacios.find(e => e.id === h.espacioId);
-      const docente = todosDocentes.find(d => d.id === (h as any).docenteId);
-      const grupo = todosGrupos.find(g => g.id === h.grupoId);
-
-      return {
-        ...h,
-        asignatura: asignatura?.nombre || 'N/A',
-        docente: docente?.nombre || 'N/A',
-        grupo: grupo?.nombre || grupo?.codigo || 'N/A',
-        espacio: espacio?.nombre || 'N/A'
-      } as HorarioExtendido;
-    });
-
-    setHorarios(horariosEnriquecidos);
-  };
-
-  // Generar horas para el grid semanal
-  const generarHoras = () => {
-    const horas = [];
-    for (let h = 6; h <= 21; h++) {
-      horas.push(`${h.toString().padStart(2, '0')}:00`);
-    }
-    return horas;
-  };
-
-  // Obtener clase en una hora específica
-  const obtenerClaseEnHora = (dia: string, hora: string) => {
-    return horarios.find(h => {
-      const diaMatch = h.diaSemana.toLowerCase() === dia.toLowerCase();
-      const horaActual = parseInt(hora.split(':')[0]);
-      const horaInicio = parseInt(h.horaInicio.split(':')[0]);
-      const horaFin = parseInt(h.horaFin.split(':')[0]);
-      return diaMatch && horaActual >= horaInicio && horaActual < horaFin;
-    });
-  };
-
-  const handleDescargarPDF = () => {
-    showNotification('Descargando horario en PDF...', 'success');
-    // Aquí iría la lógica real de descarga PDF
-  };
-
-  const handleDescargarExcel = () => {
-    showNotification('Descargando horario en Excel...', 'success');
-    // Aquí iría la lógica real de descarga Excel
-  };
-
-  const horas = generarHoras();
+  const {
+    horarios,
+    diasSemana,
+    esDocente,
+    esEstudiante,
+    horas,
+    obtenerClaseEnHora,
+    handleDescargarPDF,
+    handleDescargarExcel
+  } = useMiHorario();
 
   return (
     <div className="p-6 space-y-6">
@@ -169,8 +61,8 @@ export default function MiHorario() {
           <Calendar className="w-20 h-20 text-slate-300 mb-4" />
           <h3 className="text-slate-700 mb-2">No hay horarios asignados</h3>
           <p className="text-slate-500">
-            {esDocente 
-              ? 'No tienes clases asignadas en este momento' 
+            {esDocente
+              ? 'No tienes clases asignadas en este momento'
               : 'No tienes un horario asignado para este periodo'}
           </p>
         </motion.div>
@@ -333,7 +225,7 @@ export default function MiHorario() {
                         {esDocente ? 'Asignaturas diferentes' : 'Total de clases'}
                       </p>
                       <p className="text-slate-900 text-2xl">
-                        {esDocente 
+                        {esDocente
                           ? new Set(horarios.map(h => h.asignatura)).size
                           : horarios.length}
                       </p>

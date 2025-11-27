@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
@@ -8,265 +7,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, Users, AlertTriangle, Eye, Power, PowerOff } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
-import { db } from '../../hooks/database';
-import type { Programa } from '../../hooks/models';
-
-interface GrupoAcademico {
-  id: string;
-  codigo: string; // Nombre del grupo: INSI-A, DERE-B, etc.
-  programaId: string;
-  semestre: number; // Semestre al que pertenece el grupo
-  activo: boolean;
-  fechaCreacion: string;
-}
+import { useGrupos } from '../../hooks/gestionAcademica/useGrupos';
 
 export default function Grupos() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [programas, setProgramas] = useState<Programa[]>([]);
-  const [grupos, setGrupos] = useState<GrupoAcademico[]>([]);
-  const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
-  const [selectedSemestreFilter, setSelectedSemestreFilter] = useState<string>('all');
-  
-  // Estados de modales
-  const [showCreateGrupo, setShowCreateGrupo] = useState(false);
-  const [showEditGrupo, setShowEditGrupo] = useState(false);
-  const [showDeleteGrupo, setShowDeleteGrupo] = useState(false);
-  const [showEstudiantes, setShowEstudiantes] = useState(false);
-  
-  // Estados de formularios
-  const [grupoForm, setGrupoForm] = useState({ 
-    codigo: '', 
-    programaId: '',
-    semestre: ''
-  });
-  
-  // Estados de selección
-  const [selectedGrupo, setSelectedGrupo] = useState<GrupoAcademico | null>(null);
-  const [estudiantesDelGrupo, setEstudiantesDelGrupo] = useState<any[]>([]);
-  const { showNotification } = useTheme();
-
-  // Cargar datos
-  useEffect(() => {
-    loadProgramas();
-    loadGrupos();
-  }, []);
-
-  const loadProgramas = () => {
-    const data = db.getProgramas();
-    setProgramas(data);
-  };
-
-  const loadGrupos = () => {
-    const data = localStorage.getItem('db_grupos_academicos');
-    if (data) {
-      setGrupos(JSON.parse(data));
-    }
-  };
-
-  const saveGrupos = (newGrupos: GrupoAcademico[]) => {
-    localStorage.setItem('db_grupos_academicos', JSON.stringify(newGrupos));
-    setGrupos(newGrupos);
-  };
-
-  // ==================== HANDLERS ====================
-
-  const handleCreateGrupo = () => {
-    // Validación
-    if (!grupoForm.codigo.trim()) {
-      showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
-      return;
-    }
-    if (!grupoForm.programaId) {
-      showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
-      return;
-    }
-    if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
-      showNotification({ message: 'Debe especificar el semestre (mínimo 1)', type: 'error' });
-      return;
-    }
-
-    // Verificar que el código no exista
-    const existe = grupos.some(g => g.codigo.toLowerCase() === grupoForm.codigo.trim().toLowerCase());
-    if (existe) {
-      showNotification({ message: 'Ya existe un grupo con este nombre', type: 'error' });
-      return;
-    }
-
-    // Crear grupo
-    const newGrupo: GrupoAcademico = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      codigo: grupoForm.codigo.trim().toUpperCase(),
-      programaId: grupoForm.programaId,
-      semestre: Number(grupoForm.semestre),
-      activo: true,
-      fechaCreacion: new Date().toISOString()
-    };
-
-    const newGrupos = [...grupos, newGrupo];
-    saveGrupos(newGrupos);
-
-    showNotification({ message: 'Grupo creado exitosamente', type: 'success' });
-    setShowCreateGrupo(false);
-    setGrupoForm({ codigo: '', programaId: '', semestre: '' });
-  };
-
-  const openEditGrupo = (grupo: GrupoAcademico) => {
-    setSelectedGrupo(grupo);
-    setGrupoForm({
-      codigo: grupo.codigo,
-      programaId: grupo.programaId,
-      semestre: grupo.semestre?.toString() || ''
-    });
-    setShowEditGrupo(true);
-  };
-
-  const handleEditGrupo = () => {
-    if (!selectedGrupo) return;
-
-    // Validación
-    if (!grupoForm.codigo.trim()) {
-      showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
-      return;
-    }
-    if (!grupoForm.programaId) {
-      showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
-      return;
-    }
-    if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
-      showNotification({ message: 'Debe especificar el semestre (mínimo 1)', type: 'error' });
-      return;
-    }
-
-    // Verificar que el código no exista (excepto el actual)
-    const existe = grupos.some(g => 
-      g.id !== selectedGrupo.id && 
-      g.codigo.toLowerCase() === grupoForm.codigo.trim().toLowerCase()
-    );
-    if (existe) {
-      showNotification({ message: 'Ya existe un grupo con este nombre', type: 'error' });
-      return;
-    }
-
-    // Actualizar grupo
-    const updatedGrupos = grupos.map(g => 
-      g.id === selectedGrupo.id 
-        ? { ...g, codigo: grupoForm.codigo.trim().toUpperCase(), programaId: grupoForm.programaId, semestre: Number(grupoForm.semestre) }
-        : g
-    );
-    saveGrupos(updatedGrupos);
-
-    showNotification({ message: 'Grupo actualizado exitosamente', type: 'success' });
-    setShowEditGrupo(false);
-    setSelectedGrupo(null);
-    setGrupoForm({ codigo: '', programaId: '', semestre: '' });
-  };
-
-  const openDeleteGrupo = (grupo: GrupoAcademico) => {
-    setSelectedGrupo(grupo);
-    setShowDeleteGrupo(true);
-  };
-
-  const handleDeleteGrupo = () => {
-    if (!selectedGrupo) return;
-
-    const newGrupos = grupos.filter(g => g.id !== selectedGrupo.id);
-    saveGrupos(newGrupos);
-
-    showNotification({ message: 'Grupo eliminado exitosamente', type: 'success' });
-    setShowDeleteGrupo(false);
-    setSelectedGrupo(null);
-  };
-
-  const toggleGrupoActivo = (grupo: GrupoAcademico) => {
-    const updatedGrupos = grupos.map(g => 
-      g.id === grupo.id ? { ...g, activo: !g.activo } : g
-    );
-    saveGrupos(updatedGrupos);
-    showNotification({ message: grupo.activo ? '✅ Grupo inactivado correctamente' : '✅ Grupo activado correctamente', type: 'success' });
-  };
-
-  const openVerEstudiantes = (grupo: GrupoAcademico) => {
-    setSelectedGrupo(grupo);
-    
-    // Buscar estudiantes que tengan este grupo asignado
-    const usuarios = db.getUsuarios();
-    const estudiantesConGrupo = usuarios.filter(u => 
-      (u.rol === 'consultor-estudiante' || u.rol === 'consultor') && 
-      (u as any).gruposAsignados?.includes(grupo.codigo)
-    );
-    
-    setEstudiantesDelGrupo(estudiantesConGrupo);
-    setShowEstudiantes(true);
-  };
-
-  // ==================== FILTROS ====================
-
-  const getProgramaNombre = (programaId: string): string => {
-    const programa = programas.find(p => p.id === programaId);
-    return programa ? programa.nombre : 'Desconocido';
-  };
-
-  const filteredGrupos = grupos.filter(grupo => {
-    const matchesSearch = grupo.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         getProgramaNombre(grupo.programaId).toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programaId === selectedProgramaFilter;
-    const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre?.toString() === selectedSemestreFilter;
-    return matchesSearch && matchesPrograma && matchesSemestre;
-  });
-
-  const getEstudiantesCount = (codigo: string): number => {
-    const usuarios = db.getUsuarios();
-    return usuarios.filter(u => 
-      (u.rol === 'consultor-estudiante' || u.rol === 'consultor') && 
-      (u as any).gruposAsignados?.includes(codigo)
-    ).length;
-  };
-
-  // Obtener semestres únicos para el filtro
-  const semestresDisponibles = Array.from(new Set(grupos.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
+  const {
+    searchTerm, setSearchTerm,
+    programas,
+    selectedProgramaFilter, setSelectedProgramaFilter,
+    selectedSemestreFilter, setSelectedSemestreFilter,
+    showCreateGrupo, setShowCreateGrupo,
+    showEditGrupo, setShowEditGrupo,
+    showDeleteGrupo, setShowDeleteGrupo,
+    showEstudiantes, setShowEstudiantes,
+    grupoForm, setGrupoForm,
+    selectedGrupo, setSelectedGrupo,
+    estudiantesDelGrupo, setEstudiantesDelGrupo,
+    handleCreateGrupo,
+    openEditGrupo,
+    handleEditGrupo,
+    openDeleteGrupo,
+    handleDeleteGrupo,
+    toggleGrupoActivo,
+    openVerEstudiantes,
+    getProgramaNombre,
+    filteredGrupos,
+    getEstudiantesCount,
+    semestresDisponibles
+  } = useGrupos();
 
   return (
     <>
-      {/* Search and Actions */}
-      <div className="flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <Input
-            placeholder="Buscar grupos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Header con botón */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Grupos</h2>
         </div>
-        
-        {/* Filtro de Programa */}
-        <Select value={selectedProgramaFilter} onValueChange={setSelectedProgramaFilter}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Todos los programas" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los programas</SelectItem>
-            {programas.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Filtro de Semestre */}
-        <Select value={selectedSemestreFilter} onValueChange={setSelectedSemestreFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Todos los semestres" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los semestres</SelectItem>
-            {semestresDisponibles.map(s => (
-              <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Button 
+        <Button
           onClick={() => setShowCreateGrupo(true)}
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
         >
@@ -274,6 +50,56 @@ export default function Grupos() {
           Nuevo Grupo
         </Button>
       </div>
+
+      {/* Filtros en Card */}
+      <Card className="mb-6 border-slate-200 shadow-sm">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Label className="text-slate-700 mb-2 block">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  placeholder="Buscar grupos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-slate-700 mb-2 block">Programa</Label>
+              <Select value={selectedProgramaFilter} onValueChange={setSelectedProgramaFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los programas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los programas</SelectItem>
+                  {programas.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-slate-700 mb-2 block">Semestre</Label>
+              <Select value={selectedSemestreFilter} onValueChange={setSelectedSemestreFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los semestres" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los semestres</SelectItem>
+                  {semestresDisponibles.map(s => (
+                    <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-slate-200 shadow-lg">
         <CardContent className="p-0">
@@ -305,7 +131,7 @@ export default function Grupos() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge 
+                      <Badge
                         variant={grupo.activo ? 'default' : 'secondary'}
                         className={grupo.activo ? 'bg-green-600' : 'bg-slate-400'}
                       >
@@ -314,27 +140,27 @@ export default function Grupos() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openEditGrupo(grupo)}
                           className="border-blue-600 text-blue-600 hover:bg-blue-50"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => toggleGrupoActivo(grupo)}
-                          className={grupo.activo 
-                            ? "border-orange-600 text-orange-600 hover:bg-orange-50" 
+                          className={grupo.activo
+                            ? "border-orange-600 text-orange-600 hover:bg-orange-50"
                             : "border-green-600 text-green-600 hover:bg-green-50"
                           }
                         >
                           {grupo.activo ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => openDeleteGrupo(grupo)}
                           className="border-red-600 text-red-600 hover:bg-red-50"
@@ -352,7 +178,7 @@ export default function Grupos() {
       </Card>
 
       {/* ==================== MODALES ==================== */}
-      
+
       {/* Modal: Crear Grupo */}
       <Dialog open={showCreateGrupo} onOpenChange={setShowCreateGrupo}>
         <DialogContent className="sm:max-w-md">
@@ -362,7 +188,7 @@ export default function Grupos() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="programa-grupo">Programa Académico</Label>
-              <Select 
+              <Select
                 value={grupoForm.programaId}
                 onValueChange={(value) => setGrupoForm({ ...grupoForm, programaId: value })}
               >
@@ -378,7 +204,7 @@ export default function Grupos() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="semestre-grupo">Semestre</Label>
-              <Input 
+              <Input
                 id="semestre-grupo"
                 type="number"
                 min="1"
@@ -390,7 +216,7 @@ export default function Grupos() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="codigo-grupo">Nombre del Grupo</Label>
-              <Input 
+              <Input
                 id="codigo-grupo"
                 placeholder="Ej: INSI-A, DERE-B"
                 value={grupoForm.codigo}
@@ -433,7 +259,7 @@ export default function Grupos() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-programa-grupo">Programa Académico</Label>
-              <Select 
+              <Select
                 value={grupoForm.programaId}
                 onValueChange={(value) => setGrupoForm({ ...grupoForm, programaId: value })}
               >
@@ -449,7 +275,7 @@ export default function Grupos() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-semestre-grupo">Semestre</Label>
-              <Input 
+              <Input
                 id="edit-semestre-grupo"
                 type="number"
                 min="1"
@@ -461,7 +287,7 @@ export default function Grupos() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-codigo-grupo">Nombre del Grupo</Label>
-              <Input 
+              <Input
                 id="edit-codigo-grupo"
                 placeholder="Ej: INSI-A, DERE-B"
                 value={grupoForm.codigo}
@@ -560,7 +386,7 @@ export default function Grupos() {
             ) : (
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {estudiantesDelGrupo.map((estudiante, index) => (
-                  <div 
+                  <div
                     key={estudiante.id}
                     className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200"
                   >
