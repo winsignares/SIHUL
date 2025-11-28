@@ -1,4 +1,3 @@
-import { tokenManager } from './tokenManager.ts';
 import { handleApiError } from './errorHandler.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -21,7 +20,8 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    const token = tokenManager.getToken();
+    // Agregar token de autenticación si existe
+    const token = localStorage.getItem('auth_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

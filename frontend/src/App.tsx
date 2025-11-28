@@ -1,10 +1,24 @@
-import { UserProvider } from './context/UserContext';
-import { AppRouter } from './router/AppRouter';
+import { useState, useEffect } from "react";
+import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider } from "./context/AuthContext";
+import { UserProvider } from "./context/UserContext";
+import { Toaster } from "./share/sonner";
+import AppRouter from "./router/AppRouter";
 
 export default function App() {
+  useEffect(() => {
+    console.log("🚀 Aplicación iniciada");
+    // La sesión se manejará mediante AuthContext
+  }, []);
+
   return (
-    <UserProvider>
-      <AppRouter />
-    </UserProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <UserProvider>
+          <AppRouter />
+          <Toaster position="bottom-right" />
+        </UserProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
