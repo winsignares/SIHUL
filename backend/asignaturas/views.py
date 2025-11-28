@@ -13,9 +13,10 @@ def create_asignatura(request):
             nombre = data.get('nombre')
             codigo = data.get('codigo')
             creditos = data.get('creditos')
+            tipo = data.get('tipo', 'presencial')
             if not nombre or not codigo or creditos is None:
                 return JsonResponse({"error": "nombre, codigo y creditos son requeridos"}, status=400)
-            a = Asignatura(nombre=nombre, codigo=codigo, creditos=int(creditos))
+            a = Asignatura(nombre=nombre, codigo=codigo, creditos=int(creditos), tipo=tipo)
             a.save()
             return JsonResponse({"message": "Asignatura creada", "id": a.id}, status=201)
         except ValueError:
@@ -41,6 +42,8 @@ def update_asignatura(request):
                 a.codigo = data.get('codigo')
             if 'creditos' in data:
                 a.creditos = int(data.get('creditos'))
+            if 'tipo' in data:
+                a.tipo = data.get('tipo')
             a.save()
             return JsonResponse({"message": "Asignatura actualizada", "id": a.id}, status=200)
         except Asignatura.DoesNotExist:
@@ -78,7 +81,7 @@ def get_asignatura(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         a = Asignatura.objects.get(id=id)
-        return JsonResponse({"id": a.id, "nombre": a.nombre, "codigo": a.codigo, "creditos": a.creditos}, status=200)
+        return JsonResponse({"id": a.id, "nombre": a.nombre, "codigo": a.codigo, "creditos": a.creditos, "tipo": a.tipo}, status=200)
     except Asignatura.DoesNotExist:
         return JsonResponse({"error": "Asignatura no encontrada."}, status=404)
     except Exception as e:
@@ -88,5 +91,5 @@ def get_asignatura(request, id=None):
 def list_asignaturas(request):
     if request.method == 'GET':
         items = Asignatura.objects.all()
-        lst = [{"id": i.id, "nombre": i.nombre, "codigo": i.codigo, "creditos": i.creditos} for i in items]
+        lst = [{"id": i.id, "nombre": i.nombre, "codigo": i.codigo, "creditos": i.creditos, "tipo": i.tipo} for i in items]
         return JsonResponse({"asignaturas": lst}, status=200)
