@@ -10,11 +10,6 @@ from .views import (
     retrieve_componente_rol,
     update_componente_rol,
     delete_componente_rol,
-    create_componente_usuario,
-    list_componente_usuarios,
-    retrieve_componente_usuario,
-    update_componente_usuario,
-    delete_componente_usuario,
 )
 
 urlpatterns = [
@@ -31,11 +26,4 @@ urlpatterns = [
     path('rol/<int:id>/', retrieve_componente_rol, name='retrieve_componente_rol'),
     path('rol/update/', update_componente_rol, name='update_componente_rol'),
     path('rol/delete/', delete_componente_rol, name='delete_componente_rol'),
-    
-    # ComponenteUsuario routes
-    path('usuario/', create_componente_usuario, name='create_componente_usuario'),
-    path('usuario/list/', list_componente_usuarios, name='list_componente_usuarios'),
-    path('usuario/<int:id>/', retrieve_componente_usuario, name='retrieve_componente_usuario'),
-    path('usuario/update/', update_componente_usuario, name='update_componente_usuario'),
-    path('usuario/delete/', delete_componente_usuario, name='delete_componente_usuario'),
 ]
