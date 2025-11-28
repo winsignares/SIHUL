@@ -297,7 +297,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     className="flex-1 min-w-0"
                   >
                     <p className="text-white text-sm truncate">{userName}</p>
-                    <p className="text-red-300 text-xs truncate">{userRole === 'admin' ? 'Administrador' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'consultor_docente' ? 'Consultor Docente' : userRole === 'consultor_estudiante' ? 'Consultor Estudiante' : userRole === 'autorizado' ? 'Autorizado' : 'Consultor'}</p>
+                    <p className="text-red-300 text-xs truncate">{userRole === 'admin' ? 'Administrador' : userRole === 'planeacion_facultad' ? 'Planeación Facultad' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'consultor_docente' ? 'Consultor Docente' : userRole === 'consultor_estudiante' ? 'Consultor Estudiante' : userRole === 'autorizado' ? 'Autorizado' : 'Consultor'}</p>
                   </motion.div>
                 )}
               </AnimatePresence>

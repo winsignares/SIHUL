@@ -8,7 +8,7 @@ export interface Usuario {
     nombre: string;
     email: string;
     password: string; // En producción esto estaría hasheado
-    rol: 'admin' | 'autorizado' | 'consultor' | 'consultor_estudiante' | 'consultor_docente' | 'supervisor_general';
+    rol: 'admin' | 'planeacion_facultad' | 'autorizado' | 'consultor' | 'consultor_estudiante' | 'consultor_docente' | 'supervisor_general';
     permisos: PermisoComponente[];
     programasRestringidos: string[]; // IDs de programas
     accesoTodosProgramas?: boolean; // Nuevo campo opcional

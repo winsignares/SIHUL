@@ -9,7 +9,7 @@ export const authService = {
      * Inicia sesión con el backend
      */
     login: async (payload: LoginPayload): Promise<LoginResponse> => {
-        return apiClient.post<LoginResponse>('/auth/login', payload, {
+        return apiClient.post<LoginResponse>('/usuarios/login/', payload, {
             requiresAuth: false // El login no requiere token
         });
     },

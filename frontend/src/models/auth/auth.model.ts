@@ -3,15 +3,17 @@
  */
 export interface LoginPayload {
     correo: string;
-    password: string;
+    contrasena: string;
 }
 
 /**
  * Componente que el usuario puede acceder
  */
 export interface Component {
-    code: string;   // Código único del componente (ej: "CENTRO_HORARIOS")
-    name: string;   // Nombre para mostrar (ej: "Centro de Horarios")
+    id: number;
+    nombre: string;
+    descripcion: string;
+    permiso: string;
 }
 
 /**
@@ -23,20 +25,25 @@ export interface Faculty {
 }
 
 /**
- * Área asociada al usuario (solo para supervisores)
+ * Espacio permitido para el usuario (solo para supervisores)
  */
-export interface Area {
+export interface AllowedSpace {
     id: number;
-    tipo: string;      // Ej: "PISO", "LABORATORIO", "EDIFICIO"
-    nombre: string;
+    tipo: string;
+    capacidad: number;
+    ubicacion: string;
+    disponible: boolean;
+    sede_id: number;
+    sede_nombre: string;
 }
 
 /**
  * Rol del usuario
  */
 export interface Role {
-    codigo: string;    // Código del rol (ej: "ADMIN_PLANEACION", "SUPERVISOR_GENERAL")
-    nombre: string;    // Nombre para mostrar (ej: "Administrador de Planeación")
+    id: number;
+    nombre: string;
+    descripcion: string;
 }
 
 /**
@@ -46,18 +53,18 @@ export interface User {
     id: number;
     nombre: string;
     correo: string;
+    rol: Role | null;
+    facultad: Faculty | null;
 }
 
 /**
  * Respuesta del endpoint de login
  */
-export interface LoginResponse {
+export interface LoginResponse extends User {
+    message: string;
     token: string;
-    user: User;
-    role: Role;
-    components: Component[];
-    faculties?: Faculty[];
-    areas?: Area[];
+    componentes: Component[];
+    espacios_permitidos: AllowedSpace[];
 }
 
 /**
@@ -68,8 +75,8 @@ export interface AuthState {
     user: User | null;
     role: Role | null;
     components: Component[];
-    faculties?: Faculty[];
-    areas?: Area[];
+    faculties?: Faculty[]; // Mantener por compatibilidad si se usa en otro lado, aunque backend no lo manda en login (manda 'facultad' singular en user)
+    areas?: AllowedSpace[]; // Mapear espacios_permitidos a areas
     isAuthenticated: boolean;
     isLoading: boolean;
 }

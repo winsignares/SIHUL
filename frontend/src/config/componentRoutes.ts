@@ -20,38 +20,53 @@ import {
  */
 export const COMPONENT_ROUTES: Record<string, string> = {
     // Admin - Planeación
-    'ADMIN_DASHBOARD': '/admin/dashboard',
-    'CENTRO_INSTITUCIONAL': '/admin/centro-institucional',
-    'CENTRO_HORARIOS': '/admin/centro-horarios',
-    'PRESTAMOS_ESPACIOS': '/admin/prestamos',
-    'PERIODOS_ACADEMICOS': '/admin/periodos',
-    'ASISTENTES_VIRTUALES': '/admin/asistente-virtual',
-    'OCUPACION_SEMANAL': '/admin/ocupacion',
-    'REPORTES_GENERALES': '/admin/reportes',
-    'GESTION_USUARIOS': '/admin/usuarios',
-    'ASIGNACION_AUTOMATICA': '/admin/asignacion',
+    'Dashboard': '/admin/dashboard',
+    'Facultades': '/admin/facultades',
+    'Programas': '/admin/programas',
+    'Periodos': '/admin/periodos',
+    'Grupos': '/admin/grupos',
+    'Asignaturas': '/admin/asignaturas',
+    'Espacios': '/admin/espacios',
+    'Horarios': '/admin/horarios',
+    'Préstamos': '/admin/prestamos',
+    'Ocupación Semanal': '/admin/ocupacion',
+    'Reportes': '/admin/reportes',
+    'Usuarios': '/admin/usuarios',
+    'Notificaciones': '/notificaciones',
+    'Chat': '/chat',
+    'Ajustes': '/ajustes',
+    'Recursos': '/admin/recursos',
+    'Mensajería': '/mensajeria',
+    'Cronograma': '/admin/cronograma',
+    'Apertura y Cierre': '/admin/apertura-cierre',
+    'Estado de Recursos': '/admin/estado-recursos',
+
+    // Mapeos adicionales para nombres compuestos o específicos
+    'Centro Institucional': '/admin/centro-institucional',
+    'Centro de Horarios': '/admin/centro-horarios',
+    'Préstamos de Espacios': '/admin/prestamos',
+    'Periodos Académicos': '/admin/periodos',
+    'Asistentes Virtuales': '/admin/asistente-virtual',
+    'Reportes Generales': '/admin/reportes',
+    'Gestión de Usuarios': '/admin/usuarios',
+    'Asignación Automática': '/admin/asignacion',
 
     // Supervisor General
-    'SUPERVISOR_DASHBOARD': '/supervisor/dashboard',
-    'DISPONIBILIDAD_ESPACIOS': '/supervisor/espacios',
-    'APERTURA_CIERRE_SALONES': '/supervisor/prestamos',
-    'ESTADO_RECURSOS': '/supervisor/recursos',
-    'ASISTENTES_VIRTUALES_SUPERVISOR': '/supervisor/asistente-virtual',
+    'Dashboard Supervisor': '/supervisor/dashboard',
+    'Disponibilidad de Espacios': '/supervisor/espacios',
+    'Apertura y Cierre de Salones': '/supervisor/prestamos',
+    'Asistentes Virtuales Supervisor': '/supervisor/asistente-virtual',
 
     // Docente
-    'DOCENTE_DASHBOARD': '/docente/dashboard',
-    'MI_HORARIO': '/docente/horario',
-    'PRESTAMOS_DOCENTE': '/docente/prestamos',
-    'ASISTENTES_VIRTUALES_DOCENTE': '/docente/asistente-virtual',
+    'Dashboard Docente': '/docente/dashboard',
+    'Mi Horario': '/docente/horario',
+    'Préstamos Docente': '/docente/prestamos',
+    'Asistentes Virtuales Docente': '/docente/asistente-virtual',
 
     // Estudiante
-    'ESTUDIANTE_DASHBOARD': '/estudiante/dashboard',
-    'MI_HORARIO_ESTUDIANTE': '/estudiante/mi-horario',
-    'ASISTENTES_VIRTUALES_ESTUDIANTE': '/estudiante/asistente-virtual',
-
-    // Compartidos
-    'NOTIFICACIONES': '/notificaciones',
-    'AJUSTES': '/ajustes',
+    'Dashboard Estudiante': '/estudiante/dashboard',
+    'Mi Horario Estudiante': '/estudiante/mi-horario',
+    'Asistentes Virtuales Estudiante': '/estudiante/asistente-virtual',
 };
 
 /**
@@ -59,48 +74,61 @@ export const COMPONENT_ROUTES: Record<string, string> = {
  */
 export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     // Dashboards
-    'ADMIN_DASHBOARD': LayoutDashboard,
-    'SUPERVISOR_DASHBOARD': LayoutDashboard,
-    'DOCENTE_DASHBOARD': LayoutDashboard,
-    'ESTUDIANTE_DASHBOARD': LayoutDashboard,
+    'Dashboard': LayoutDashboard,
+    'Dashboard Admin': LayoutDashboard,
+    'Dashboard Supervisor': LayoutDashboard,
+    'Dashboard Docente': LayoutDashboard,
+    'Dashboard Estudiante': LayoutDashboard,
 
     // Gestión Académica
-    'CENTRO_INSTITUCIONAL': Building2,
-    'CENTRO_HORARIOS': Clock,
-    'PRESTAMOS_ESPACIOS': HandCoins,
-    'PRESTAMOS_DOCENTE': HandCoins,
-    'PERIODOS_ACADEMICOS': Calendar,
-    'ASISTENTES_VIRTUALES': Bot,
-    'ASISTENTES_VIRTUALES_SUPERVISOR': Bot,
-    'ASISTENTES_VIRTUALES_DOCENTE': Bot,
-    'ASISTENTES_VIRTUALES_ESTUDIANTE': Bot,
-    'ASIGNACION_AUTOMATICA': Zap,
+    'Facultades': Building2,
+    'Programas': Building2,
+    'Periodos': Calendar,
+    'Grupos': Building2,
+    'Asignaturas': Building2,
+    'Espacios': MapPin,
+    'Horarios': Clock,
+    'Préstamos': HandCoins,
+    'Ocupación': BarChart3,
+    'Reportes': FileText,
+    'Usuarios': Shield,
+    'Notificaciones': Zap,
+    'Chat': Bot,
+    'Ajustes': Wrench,
+    'Recursos': Wrench,
+    'Mensajería': Bot,
+    'Cronograma': Calendar,
+    'Apertura y Cierre': DoorOpen,
+    'Estado de Recursos': Wrench,
 
-    // Reportes
-    'OCUPACION_SEMANAL': BarChart3,
-    'REPORTES_GENERALES': FileText,
-
-    // Administración
-    'GESTION_USUARIOS': Shield,
-
-    // Supervisor
-    'DISPONIBILIDAD_ESPACIOS': MapPin,
-    'APERTURA_CIERRE_SALONES': DoorOpen,
-    'ESTADO_RECURSOS': Wrench,
-
-    // Horarios
-    'MI_HORARIO': Clock,
-    'MI_HORARIO_ESTUDIANTE': Clock,
+    // Mapeos adicionales
+    'Centro Institucional': Building2,
+    'Centro de Horarios': Clock,
+    'Préstamos de Espacios': HandCoins,
+    'Préstamos Docente': HandCoins,
+    'Periodos Académicos': Calendar,
+    'Asistentes Virtuales': Bot,
+    'Asistentes Virtuales Supervisor': Bot,
+    'Asistentes Virtuales Docente': Bot,
+    'Asistentes Virtuales Estudiante': Bot,
+    'Asignación Automática': Zap,
+    'Ocupación Semanal': BarChart3,
+    'Reportes Generales': FileText,
+    'Gestión de Usuarios': Shield,
+    'Disponibilidad de Espacios': MapPin,
+    'Apertura y Cierre de Salones': DoorOpen,
+    'Mi Horario': Clock,
+    'Mi Horario Estudiante': Clock,
 };
 
 /**
- * Obtiene la ruta del frontend para un código de componente
+ * Obtiene la ruta del frontend para un nombre de componente
  */
-export function getRouteForComponent(code: string): string {
-    const route = COMPONENT_ROUTES[code];
+export function getRouteForComponent(name: string): string {
+    const route = COMPONENT_ROUTES[name];
 
     if (!route) {
-        console.warn(`[componentRoutes] No route found for component: ${code}`);
+        console.warn(`[componentRoutes] No route found for component: ${name}`);
         return '/';
     }
 
@@ -108,13 +136,13 @@ export function getRouteForComponent(code: string): string {
 }
 
 /**
- * Obtiene el ícono para un código de componente
+ * Obtiene el ícono para un nombre de componente
  */
-export function getIconForComponent(code: string): LucideIcon {
-    const icon = COMPONENT_ICONS[code];
+export function getIconForComponent(name: string): LucideIcon {
+    const icon = COMPONENT_ICONS[name];
 
     if (!icon) {
-        console.warn(`[componentRoutes] No icon found for component: ${code}, using default`);
+        console.warn(`[componentRoutes] No icon found for component: ${name}, using default`);
         return LayoutDashboard;
     }
 
