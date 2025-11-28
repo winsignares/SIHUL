@@ -1,0 +1,105 @@
+# ============================================
+# DOCKER COMPOSE - STACK COMPLETO SIHUL
+# Sistema de Horarios Universidad Libre
+# ============================================
+
+name: sihul
+
+services:
+  # ==========================================
+  # BASE DE DATOS POSTGRESQL
+  # ==========================================
+  db:
+    container_name: postgres_db
+    image: postgres:15
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: mypostgresdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sihul_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mypostgresdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # BACKEND DJANGO
+  # ==========================================
+  backend:
+    container_name: sihul-backend
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Código fuente montado para hot-reload
+      - ./backend:/app
+    environment:
+      # Database (usa los mismos valores que el servicio db)
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: mysecretpassword
+      DB_NAME: mypostgresdb
+      # Python
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sihul_network
+
+  # ==========================================
+  # FRONTEND REACT + VITE
+  # ==========================================
+  frontend:
+    container_name: react_vite_app
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      # Código fuente montado para hot-reload
+      - ./frontend:/app
+      # Volumen anónimo para node_modules (solo en contenedor)
+      - /app/node_modules
+    environment:
+      NODE_ENV: "development"
+      CHOKIDAR_USEPOLLING: "true"
+      VITE_USE_POLLING: "true"
+      VITE_HMR_HOST: "localhost"
+      VITE_HMR_PORT: "5173"
+      VITE_API_URL: "http://localhost:8000"
+    depends_on:
+      - backend
+    networks:
+      - sihul_network
+    stdin_open: true
+    tty: true
+
+# ==========================================
+# VOLÚMENES PERSISTENTES
+# ==========================================
+volumes:
+  postgres_data:
+    name: sihul_postgres_data
+    driver: local
+
+# ==========================================
+# RED COMPARTIDA
+# ==========================================
+networks:
+  sihul_network:
+    name: sihul_network
+    driver: bridge

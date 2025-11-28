@@ -1,0 +1,106 @@
+# ============================================
+# DOCKERIGNORE - STACK SIHUL
+# Archivos excluidos del contexto de build
+# ============================================
+
+# ==========================================
+# GIT
+# ==========================================
+.git
+.gitignore
+.gitattributes
+.github
+
+# ==========================================
+# DOCUMENTACIÓN
+# ==========================================
+README.md
+README.Docker.md
+CHANGELOG.md
+LICENSE
+*.md
+docs/
+
+# ==========================================
+# BACKEND - Python/Django
+# ==========================================
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/**/*.pyc
+backend/*.pyo
+backend/**/*.pyo
+backend/*.log
+backend/db.sqlite3
+backend/.env
+backend/.env.local
+backend/staticfiles/
+backend/media/
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+backend/*.cover
+
+# ==========================================
+# FRONTEND - Node/React
+# ==========================================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/build/
+frontend/.next/
+frontend/out/
+frontend/.cache/
+frontend/.vscode/
+frontend/.idea/
+frontend/*.log
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/coverage/
+frontend/.eslintcache
+
+# ==========================================
+# DOCKER
+# ==========================================
+docker-compose.override.yml
+.dockerignore
+
+# ==========================================
+# IDE / EDITORES
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.DS_Store
+.disc
+
+# ==========================================
+# SISTEMA OPERATIVO
+# ==========================================
+Thumbs.db
+Desktop.ini
+.Trash-*
+
+# ==========================================
+# CI/CD
+# ==========================================
+.travis.yml
+.gitlab-ci.yml
+Jenkinsfile
+.circleci/
+
+# ==========================================
+# OTROS
+# ==========================================
+*.bak
+*.tmp
+*.temp
+.editorconfig
+.prettierrc
+.prettierignore
