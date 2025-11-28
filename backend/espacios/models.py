@@ -1,5 +1,6 @@
 from django.db import models
 from sedes.models import Sede
+from usuarios.models import Usuario
 
 class EspacioFisico(models.Model):
     id = models.AutoField(primary_key=True)
@@ -12,3 +13,10 @@ class EspacioFisico(models.Model):
 
     def __str__(self):
         return f"{self.tipo} ({self.ubicacion or 'sin ubicación'})"
+    
+class EspacioPermitido(models.Model):
+    espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='espacios_permitidos')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='espacios_permitidos')   
+
+    def __str__(self):
+        return f"{self.usuario} para {self.espacio}"
