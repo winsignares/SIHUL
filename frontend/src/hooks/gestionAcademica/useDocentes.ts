@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { db } from '../../services/database';
-import type { Facultad, Asignatura } from '../../models/models';
+import type { Facultad, Asignatura } from '../../models/index';
 
 // Interfaz extendida para Docente
 export interface DocenteExtendido {

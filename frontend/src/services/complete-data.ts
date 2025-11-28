@@ -3,7 +3,7 @@
 // ============================================
 
 import { db } from './database';
-import type { Usuario } from '../models/models';
+import type { Usuario, PrestamoEspacio } from '../models';
 
 /**
  * Función para agregar datos completos adicionales al sistema
@@ -21,7 +21,7 @@ export function addCompleteData() {
       nombre: 'Dr. Carlos Alberto Pérez',
       email: 'carlos.perez@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -36,7 +36,7 @@ export function addCompleteData() {
       nombre: 'Dra. Ana María González',
       email: 'ana.gonzalez@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -51,7 +51,7 @@ export function addCompleteData() {
       nombre: 'Mg. Jorge Luis Ramírez',
       email: 'jorge.ramirez@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -66,7 +66,7 @@ export function addCompleteData() {
       nombre: 'Dra. Patricia Mendoza',
       email: 'patricia.mendoza@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -81,7 +81,7 @@ export function addCompleteData() {
       nombre: 'Mg. Fernando Silva',
       email: 'fernando.silva@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -96,7 +96,7 @@ export function addCompleteData() {
       nombre: 'Dr. Ricardo Morales',
       email: 'ricardo.morales@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -111,7 +111,7 @@ export function addCompleteData() {
       nombre: 'Dra. Claudia Rojas',
       email: 'claudia.rojas@unilibre.edu.co',
       password: 'doc123',
-      rol: 'consultor-docente',
+      rol: 'consultor_docente',
       permisos: [
         { componenteId: 'horarios', permiso: 'editar' },
         { componenteId: 'notificaciones', permiso: 'ver' },
@@ -578,77 +578,100 @@ export function addCompleteData() {
   // ============================================
 
   const usuarios = db.getUsuarios();
-  const prestamosAdicionales = [
+  const prestamosAdicionalesRaw = [
     {
       espacioId: espacios.find(e => e.codigo === 'AUD-001')?.id || '',
       solicitanteId: usuarios.find(u => u.email === 'docente@unilibre.edu.co')?.id || '',
       motivo: 'Conferencia sobre Innovación Tecnológica',
-      fechaSolicitud: '2025-01-15',
+      fechaEvento: '2025-01-15',
       horaInicio: '09:00',
       horaFin: '11:00',
       estado: 'aprobado' as const,
       observaciones: 'Requiere proyector 4K y sistema de sonido',
-      recursosSolicitados: ['Proyector 4K', 'Micrófono inalámbrico', 'Sistema de sonido'],
-      fechaCreacion: new Date().toISOString()
+      recursosSolicitados: ['Proyector 4K', 'Micrófono inalámbrico', 'Sistema de sonido']
     },
     {
       espacioId: espacios.find(e => e.codigo === 'SAL-001')?.id || '',
       solicitanteId: usuarios.find(u => u.email === 'admin@unilibre.edu.co')?.id || '',
       motivo: 'Reunión Consejo Académico',
-      fechaSolicitud: '2025-01-16',
+      fechaEvento: '2025-01-16',
       horaInicio: '14:00',
       horaFin: '17:00',
       estado: 'aprobado' as const,
       observaciones: 'Reunión mensual de consejo',
-      recursosSolicitados: ['Proyector HD', 'Laptop para presentaciones'],
-      fechaCreacion: new Date().toISOString()
+      recursosSolicitados: ['Proyector HD', 'Laptop para presentaciones']
     },
     {
       espacioId: espacios.find(e => e.codigo === 'LAB-301')?.id || '',
       solicitanteId: usuarios.find(u => u.email === 'docente@unilibre.edu.co')?.id || '',
       motivo: 'Taller de Programación Avanzada',
-      fechaSolicitud: '2025-01-17',
+      fechaEvento: '2025-01-17',
       horaInicio: '08:00',
       horaFin: '12:00',
       estado: 'pendiente' as const,
       observaciones: 'Requiere acceso a internet de alta velocidad',
-      recursosSolicitados: ['Computadores', 'Proyector HD'],
-      fechaCreacion: new Date().toISOString()
+      recursosSolicitados: ['Computadores', 'Proyector HD']
     },
     {
       espacioId: espacios.find(e => e.codigo === 'A-101')?.id || '',
       solicitanteId: usuarios.find(u => u.email === 'estudiante@unilibre.edu.co')?.id || '',
       motivo: 'Proyecto de Investigación - Grupo de Estudio',
-      fechaSolicitud: '2025-01-18',
+      fechaEvento: '2025-01-18',
       horaInicio: '16:00',
       horaFin: '18:00',
       estado: 'rechazado' as const,
       observaciones: 'Espacio no disponible en ese horario',
-      recursosSolicitados: ['Proyector HD'],
-      fechaCreacion: new Date().toISOString()
+      recursosSolicitados: ['Proyector HD']
     },
     {
       espacioId: espacios.find(e => e.codigo === 'B-201')?.id || '',
       solicitanteId: usuarios.find(u => u.email === 'autorizado@unilibre.edu.co')?.id || '',
       motivo: 'Simposio de Derecho Internacional',
-      fechaSolicitud: '2025-01-19',
+      fechaEvento: '2025-01-19',
       horaInicio: '10:00',
       horaFin: '13:00',
       estado: 'aprobado' as const,
       observaciones: 'Evento interdisciplinario',
-      recursosSolicitados: ['Proyector HD', 'Micrófono de solapa', 'Atril'],
-      fechaCreacion: new Date().toISOString()
+      recursosSolicitados: ['Proyector HD', 'Micrófono de solapa', 'Atril']
     }
   ];
 
   let prestamosAgregados = 0;
-  prestamosAdicionales.forEach(prestamo => {
-    if (prestamo.espacioId && prestamo.solicitanteId) {
+  
+  // Programa por defecto para asignar (ya que los usuarios seed no tienen programa explícito aquí)
+  const programaDefaultId = programas[0]?.id || '';
+
+  prestamosAdicionalesRaw.forEach(raw => {
+    if (raw.espacioId && raw.solicitanteId) {
       try {
-        db.createPrestamo(prestamo);
-        prestamosAgregados++;
+        const solicitanteUser = usuarios.find(u => u.id === raw.solicitanteId);
+        
+        if (solicitanteUser) {
+          // Construir observaciones combinadas
+          const recursosTexto = raw.recursosSolicitados.length > 0 
+            ? ` | Recursos: ${raw.recursosSolicitados.join(', ')}` 
+            : '';
+            
+          const prestamo: Omit<PrestamoEspacio, 'id'> = {
+            espacioId: raw.espacioId,
+            solicitante: solicitanteUser.nombre,
+            emailSolicitante: solicitanteUser.email,
+            programaId: programaDefaultId,
+            motivo: raw.motivo,
+            fecha: raw.fechaEvento,
+            horaInicio: raw.horaInicio,
+            horaFin: raw.horaFin,
+            estado: raw.estado,
+            observaciones: `${raw.observaciones}${recursosTexto}`,
+            fechaSolicitud: new Date().toISOString()
+          };
+
+          db.createPrestamo(prestamo);
+          prestamosAgregados++;
+        }
       } catch (error) {
         // Préstamo ya existe o error
+        console.error('Error creando préstamo:', error);
       }
     }
   });

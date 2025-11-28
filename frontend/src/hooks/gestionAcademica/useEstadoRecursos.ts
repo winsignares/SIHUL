@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
-import type { EspacioFisico } from '../../models/models';
+import type { EspacioFisico } from '../../models/index';
 import { Badge } from '../../share/badge';
 import {
     CheckCircle2,

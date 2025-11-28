@@ -5,7 +5,7 @@ import {
     Trophy,
     Headphones
 } from 'lucide-react';
-import type { Asistente, Mensaje } from '../../models/chatbot/chatbot';
+import type { Asistente, Mensaje } from '../../models/index';
 
 const asistentes: Asistente[] = [
     {

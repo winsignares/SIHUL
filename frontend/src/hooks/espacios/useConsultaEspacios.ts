@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Espacio, HorarioOcupacion } from '../../models';
+import type { Espacio, HorarioOcupacion } from '../../models/index';
 
 const espacios: Espacio[] = [
     { id: '1', nombre: 'Aula 101', tipo: 'Aula', capacidad: 40, sede: 'Sede Principal', edificio: 'A', estado: 'disponible', proximaClase: 'Hoy 14:00' },

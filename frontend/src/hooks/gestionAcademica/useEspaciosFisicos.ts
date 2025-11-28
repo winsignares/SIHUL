@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { db } from '../../services/database';
-import type { EspacioFisico } from '../../models/models';
+import type { EspacioFisico } from '../../models/index';
 import { Badge } from '../../share/badge';
 
 export function useEspaciosFisicos() {

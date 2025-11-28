@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
-import type { Asignatura, Facultad, Programa, RecursoRequerido } from '../../models';
+import type { Asignatura, Facultad, Programa, RecursoRequerido } from '../../models/index';
 
 // Lista de recursos disponibles
 export const RECURSOS_DISPONIBLES = [

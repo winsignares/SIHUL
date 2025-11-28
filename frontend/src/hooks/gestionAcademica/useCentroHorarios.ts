@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { HorarioAcademico, Facultad, Programa, EspacioFisico } from '../../models/academica';
+import type { HorarioAcademico, Facultad, Programa, EspacioFisico } from '../../models';
 
 export interface HorarioExtendido extends HorarioAcademico {
     asignatura: string;

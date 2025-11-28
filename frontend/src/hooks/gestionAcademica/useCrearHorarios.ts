@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { Facultad, Programa, EspacioFisico, Grupo, Asignatura, Docente, HorarioAcademico } from '../../models/academica';
+import type { Facultad, Programa, EspacioFisico, Grupo, Asignatura, Docente, HorarioAcademico } from '../../models/index';
 
 export interface GrupoSinHorario {
     id: string;

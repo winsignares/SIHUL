@@ -4,7 +4,7 @@
 // ============================================
 
 import { db } from './database';
-import type { Usuario } from '../models/models';
+import type { Usuario } from '../models';
 import { addCompleteData } from './complete-data';
 
 export function initializeDatabase(): void {

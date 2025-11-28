@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Prestamo } from '../../models/prestamos/prestamo.model';
+import type { Prestamo } from '../../models/index';
 
 export function useConsultaPrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);

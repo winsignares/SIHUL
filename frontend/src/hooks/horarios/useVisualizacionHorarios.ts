@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
-import type { Facultad, Programa, Asignatura, EspacioFisico } from '../../models';
+import type { Facultad, Programa, Asignatura, EspacioFisico } from '../../models/index';
 import type { HorarioCompleto, AsignaturaHorario } from '../../models/horarios/visualizacion.model';
 
 export function useVisualizacionHorarios() {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../../services/database';
-import type { EspacioFisico, HorarioAcademico } from '../../models/academica';
+import type { EspacioFisico, HorarioAcademico } from '../../models/index';
 
 export interface EspacioEnriquecido extends EspacioFisico {
     disponibilidad: string;
