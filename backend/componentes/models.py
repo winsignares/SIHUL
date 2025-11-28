@@ -20,16 +20,4 @@ class ComponenteRol(models.Model):
     permiso = models.CharField(max_length=20, choices=Permiso.choices, default=Permiso.VER)
 
     def __str__(self):
-        return f"{self.rol.nombre} - {self.componente.nombre} ({self.get_permiso_display()})" 
-        
-class ComponenteUsuario(models.Model):
-    class Permiso(models.TextChoices):
-        VER = 'VER', 'Ver'
-        EDITAR = 'EDITAR', 'Editar'
-
-    componente = models.ForeignKey(Componente, on_delete=models.CASCADE)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    permiso = models.CharField(max_length=20, choices=Permiso.choices, default=Permiso.VER)
-
-    def __str__(self):
-        return f"User {self.usuario.nombre} - {self.componente.nombre} ({self.get_permiso_display()})"
+        return f"{self.rol.nombre} - {self.componente.nombre} ({self.get_permiso_display()})"
