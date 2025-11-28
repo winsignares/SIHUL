@@ -1,10 +1,8 @@
-import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
-import { useRoutes } from '../hooks/useRoutes';
-import { useUser } from '../context/UserContext';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 // Importa los componentes reales según existan
 import DashboardHome from '../pages/dashboard/DashboardHome';
 import FacultadesPrograms from '../pages/gestionAcademica/FacultadesPrograms';
-import EspaciosFisicos from '../pages/gestionAcademica/EspaciosFisicos';
 import ConsultaEspacios from '../pages/espacios/ConsultaEspacios';
 import CentroHorarios from '../pages/gestionAcademica/CentroHorarios';
 import PrestamosEspacios from '../pages/espacios/PrestamosEspacios';
@@ -31,44 +29,45 @@ function AppLayout() {
   return <AdminDashboard><Outlet /></AdminDashboard>;
 }
 
-// Componente para proteger rutas por rol
-function ProtectedRoute({ 
-  children, 
-  allowedRoles 
-}: { 
-  children: React.ReactNode; 
-  allowedRoles: string[] 
+// Componente para proteger rutas por componentes del backend
+function ProtectedRoute({
+  children,
+  requiredComponent
+}: {
+  children: React.ReactNode;
+  requiredComponent?: string; // Código del componente requerido
 }) {
-  const { usuario } = useUser();
-  const { currentRole } = useRoutes();
+  const { isAuthenticated, hasPermission } = useAuth();
 
-  if (!usuario) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!currentRole || !allowedRoles.includes(currentRole)) {
-    console.log('ProtectedRoute: ACCESO DENEGADO. currentRole:', currentRole, 'allowedRoles:', allowedRoles, 'usuario:', usuario);
-    // Mostrar mensaje de no autorizado
+  // Si no requiere componente específico, permitir acceso
+  if (!requiredComponent) {
+    return <>{children}</>;
+  }
+
+  // Verificar si el usuario tiene el componente
+  if (!hasPermission(requiredComponent)) {
+    console.warn('[ProtectedRoute] Acceso denegado a componente:', requiredComponent);
     return (
       <div className="p-8 text-center">
         <h2 className="text-2xl font-bold text-red-600 mb-4">Acceso Denegado</h2>
         <p className="text-gray-600">No tienes permisos para acceder a esta sección.</p>
-        <p className="text-sm text-gray-500 mt-2">Rol actual: {currentRole}</p>
+        <p className="text-sm text-gray-500 mt-2">Componente requerido: {requiredComponent}</p>
       </div>
     );
   }
 
-  console.log('ProtectedRoute: ACCESO PERMITIDO. currentRole:', currentRole, 'allowedRoles:', allowedRoles);
   return <>{children}</>;
 }
 
 export default function AppRouter() {
-  const { usuario } = useUser();
-  const { currentRole, getHomeRouteByRole } = useRoutes();
-  const navigate = useNavigate();
+  const { isAuthenticated, components } = useAuth();
 
   // Si no está logueado, solo puede ver Login
-  if (!usuario) {
+  if (!isAuthenticated) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -77,199 +76,178 @@ export default function AppRouter() {
     );
   }
 
+  // Obtener el primer componente dashboard para redirección inicial
+  const dashboardComponent = components.find(c => c.code.includes('DASHBOARD'));
+  const homeRoute = dashboardComponent ?
+    (dashboardComponent.code === 'ADMIN_DASHBOARD' ? '/admin/dashboard' :
+      dashboardComponent.code === 'SUPERVISOR_DASHBOARD' ? '/supervisor/dashboard' :
+        dashboardComponent.code === 'DOCENTE_DASHBOARD' ? '/docente/dashboard' :
+          dashboardComponent.code === 'ESTUDIANTE_DASHBOARD' ? '/estudiante/dashboard' :
+            '/admin/dashboard') : '/admin/dashboard';
+
   // Rutas protegidas con layout compartido
   return (
     <Routes>
       {/* Todas las rutas protegidas usan el layout compartido */}
       <Route path="/" element={<AppLayout />}>
         {/* Ruta raíz - redirige al home del rol */}
-        <Route index element={<Navigate to={getHomeRouteByRole(currentRole || 'admin')} replace />} />
+        <Route index element={<Navigate to={homeRoute} replace />} />
 
-        {/* Rutas de Admin */}
+        {/* Rutas de Admin - Planeación */}
         <Route path="admin/dashboard" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <DashboardHome onNavigate={(action: string) => {
-              if (action === 'horarios') {
-                navigate('/admin/centro-horarios');
-              } else if (action === 'crear-horario') {
-                // Navegar a Centro Horarios indicando modo crear mediante query param
-                navigate('/admin/centro-horarios?mode=crear');
-              } else if (action === 'espacios') {
-                navigate('/admin/espacios');
-              } else if (action === 'facultades') {
-                navigate('/admin/centro-institucional');
-              } else if (action === 'reportes') {
-                navigate('/admin/reportes');
-              } else if (action === 'asistentes') {
-                navigate('/admin/asistente-virtual');
-              } else {
-                navigate('/admin/dashboard');
-              }
-            }} />
+          <ProtectedRoute requiredComponent="ADMIN_DASHBOARD">
+            <DashboardHome />
           </ProtectedRoute>
         } />
+
         <Route path="admin/centro-institucional" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="CENTRO_INSTITUCIONAL">
             <FacultadesPrograms />
           </ProtectedRoute>
         } />
+
         <Route path="admin/centro-horarios" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="CENTRO_HORARIOS">
             <CentroHorarios />
           </ProtectedRoute>
         } />
+
         <Route path="admin/asignacion" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="ASIGNACION_AUTOMATICA">
             <AsignacionAutomatica />
           </ProtectedRoute>
         } />
+
         <Route path="admin/prestamos" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="PRESTAMOS_ESPACIOS">
             <PrestamosEspacios />
           </ProtectedRoute>
         } />
+
         <Route path="admin/periodos" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="PERIODOS_ACADEMICOS">
             <PeriodosAcademicos />
           </ProtectedRoute>
         } />
+
         <Route path="admin/asistente-virtual" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="ASISTENTES_VIRTUALES">
             <AsistentesVirtuales />
           </ProtectedRoute>
         } />
+
         <Route path="admin/ocupacion" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="OCUPACION_SEMANAL">
             <OcupacionSemanal />
           </ProtectedRoute>
         } />
+
         <Route path="admin/reportes" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="REPORTES_GENERALES">
             <Reportes />
           </ProtectedRoute>
         } />
+
         <Route path="admin/usuarios" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredComponent="GESTION_USUARIOS">
             <GestionUsuarios />
           </ProtectedRoute>
         } />
 
         {/* Rutas de Supervisor General */}
         <Route path="supervisor/dashboard" element={
-          <ProtectedRoute allowedRoles={['supervisor_general']}>
-            <SupervisorGeneralHome onNavigate={(action: string) => {
-              if (action === 'cronograma') {
-                navigate('/supervisor/espacios');
-              } else if (action === 'apertura-cierre') {
-                navigate('/supervisor/prestamos');
-              } else if (action === 'estado-recursos') {
-                navigate('/supervisor/recursos');
-              } else if (action === 'asistentes') {
-                navigate('/supervisor/asistente-virtual');
-              } else {
-                navigate('/supervisor/dashboard');
-              }
-            }} />
+          <ProtectedRoute requiredComponent="SUPERVISOR_DASHBOARD">
+            <SupervisorGeneralHome />
           </ProtectedRoute>
         } />
+
         <Route path="supervisor/espacios" element={
-          <ProtectedRoute allowedRoles={['supervisor_general']}>
+          <ProtectedRoute requiredComponent="DISPONIBILIDAD_ESPACIOS">
             <ConsultaEspacios />
           </ProtectedRoute>
         } />
+
         <Route path="supervisor/prestamos" element={
-          <ProtectedRoute allowedRoles={['supervisor_general']}>
+          <ProtectedRoute requiredComponent="APERTURA_CIERRE_SALONES">
             <SupervisorSalonHome />
           </ProtectedRoute>
         } />
+
         <Route path="supervisor/recursos" element={
-          <ProtectedRoute allowedRoles={['supervisor_general']}>
+          <ProtectedRoute requiredComponent="ESTADO_RECURSOS">
             <EstadoRecursos />
           </ProtectedRoute>
         } />
+
         <Route path="supervisor/asistente-virtual" element={
-          <ProtectedRoute allowedRoles={['supervisor_general']}>
+          <ProtectedRoute requiredComponent="ASISTENTES_VIRTUALES_SUPERVISOR">
             <AsistentesVirtuales />
           </ProtectedRoute>
         } />
 
         {/* Rutas de Consultor Docente */}
         <Route path="docente/dashboard" element={
-          <ProtectedRoute allowedRoles={['consultor_docente']}>
-            <ConsultorDocenteHome onNavigate={(action: string) => {
-              if (action === 'horario') {
-                navigate('/docente/horario');
-              } else if (action === 'prestamos') {
-                navigate('/docente/prestamos');
-              } else if (action === 'asistentes') {
-                navigate('/docente/asistente-virtual');
-              } else {
-                navigate('/docente/dashboard');
-              }
-            }} />
+          <ProtectedRoute requiredComponent="DOCENTE_DASHBOARD">
+            <ConsultorDocenteHome />
           </ProtectedRoute>
         } />
+
         <Route path="docente/horario" element={
-          <ProtectedRoute allowedRoles={['consultor_docente']}>
+          <ProtectedRoute requiredComponent="MI_HORARIO">
             <MiHorario />
           </ProtectedRoute>
         } />
+
         <Route path="docente/prestamos" element={
-          <ProtectedRoute allowedRoles={['consultor_docente']}>
+          <ProtectedRoute requiredComponent="PRESTAMOS_DOCENTE">
             <DocentePrestamos />
           </ProtectedRoute>
         } />
+
         <Route path="docente/asistente-virtual" element={
-          <ProtectedRoute allowedRoles={['consultor_docente']}>
+          <ProtectedRoute requiredComponent="ASISTENTES_VIRTUALES_DOCENTE">
             <AsistentesVirtuales />
           </ProtectedRoute>
         } />
 
         {/* Rutas de Consultor Estudiante */}
         <Route path="estudiante/dashboard" element={
-          <ProtectedRoute allowedRoles={['consultor_estudiante']}>
-            <ConsultorEstudianteHome onNavigate={(action: string) => {
-              if (action === 'horario') {
-                navigate('/estudiante/mi-horario');
-              } else if (action === 'asistentes') {
-                navigate('/estudiante/asistente-virtual');
-              } else {
-                navigate('/estudiante/dashboard');
-              }
-            }} />
+          <ProtectedRoute requiredComponent="ESTUDIANTE_DASHBOARD">
+            <ConsultorEstudianteHome />
           </ProtectedRoute>
         } />
+
         <Route path="estudiante/mi-horario" element={
-          <ProtectedRoute allowedRoles={['consultor_estudiante']}>
+          <ProtectedRoute requiredComponent="MI_HORARIO_ESTUDIANTE">
             <MiHorario />
           </ProtectedRoute>
         } />
+
         <Route path="estudiante/asistente-virtual" element={
-          <ProtectedRoute allowedRoles={['consultor_estudiante']}>
+          <ProtectedRoute requiredComponent="ASISTENTES_VIRTUALES_ESTUDIANTE">
             <AsistentesVirtuales />
           </ProtectedRoute>
         } />
 
-        {/* Rutas compartidas */}
+        {/* Rutas compartidas - no requieren componente específico */}
         <Route path="notificaciones" element={
-          <ProtectedRoute allowedRoles={['admin', 'supervisor_general', 'consultor_docente', 'consultor_estudiante']}>
+          <ProtectedRoute>
             <Notificaciones />
           </ProtectedRoute>
         } />
+
         <Route path="ajustes" element={
-          <ProtectedRoute allowedRoles={['admin', 'supervisor_general', 'consultor_docente', 'consultor_estudiante']}>
+          <ProtectedRoute>
             <Ajustes />
           </ProtectedRoute>
         } />
 
-        {/* Ruta por defecto dentro del layout - redirige al home del rol */}
+        {/* Ruta por defecto dentro del layout - redirige al home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
 
       {/* Login fuera del layout */}
       <Route path="/login" element={<Login />} />
-
-      {/* Cualquier otra ruta no protegida redirige a login si no está logueado, pero como estamos dentro del if usuario, esto no se alcanza */}
     </Routes>
   );
 }

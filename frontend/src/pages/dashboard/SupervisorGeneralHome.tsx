@@ -12,10 +12,10 @@ import {
 import { useSupervisorDashboard } from '../../hooks/dashboard/useSupervisorDashboard';
 
 interface SupervisorGeneralHomeProps {
-  onNavigate: (page: string) => void;
+  onNavigate?: (page: string) => void;
 }
 
-export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralHomeProps) {
+export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralHomeProps = {}) {
   const { metricsCards, quickActions, activityLogs } = useSupervisorDashboard();
 
   return (

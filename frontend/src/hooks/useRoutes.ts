@@ -54,24 +54,45 @@ export function useRoutes() {
   const currentRole = normalizeRole(usuario?.rol as any) as Role | undefined;
 
   // Devuelve la ruta home por rol
-  const getHomeRouteByRole = useCallback((role: Role | string): string => {
-    const normalized = normalizeRole(role as any) as Role | undefined;
-    console.log('getHomeRouteByRole llamado con role:', role, 'normalizado:', normalized);
+  // Devuelve la ruta home por rol
+  const getHomeRouteByRole = useCallback((roleCode: string): string => {
+    console.log('[useRoutes] getHomeRouteByRole llamado con:', roleCode);
+
+    // Manejar roles del backend directamente
+    if (roleCode === 'ADMIN_PLANEACION') {
+      return '/admin/dashboard';
+    }
+
+    if (roleCode.startsWith('PLANEACION_')) {
+      // Roles como PLANEACION_INGENIERIA, PLANEACION_DERECHO, etc.
+      return '/admin/dashboard';
+    }
+
+    if (roleCode === 'SUPERVISOR_GENERAL') {
+      return '/supervisor/dashboard';
+    }
+
+    if (roleCode === 'CONSULTOR_DOCENTE') {
+      return '/docente/dashboard';
+    }
+
+    if (roleCode === 'CONSULTOR_ESTUDIANTE') {
+      return '/estudiante/dashboard';
+    }
+
+    // Fallback: intentar normalizar roles antiguos
+    const normalized = normalizeRole(roleCode) as Role | undefined;
     switch (normalized) {
       case 'admin':
-        console.log('Retornando /admin/dashboard para admin');
         return '/admin/dashboard';
       case 'supervisor_general':
-        console.log('Retornando /supervisor/dashboard para supervisor_general');
         return '/supervisor/dashboard';
       case 'consultor_docente':
-        console.log('Retornando /docente/dashboard para consultor_docente');
         return '/docente/dashboard';
       case 'consultor_estudiante':
-        console.log('Retornando /estudiante/dashboard para consultor_estudiante');
         return '/estudiante/dashboard';
       default:
-        console.log('Role desconocido:', role, 'retornando /login');
+        console.warn('[useRoutes] Role desconocido:', roleCode, 'retornando /login');
         return '/login';
     }
   }, []);

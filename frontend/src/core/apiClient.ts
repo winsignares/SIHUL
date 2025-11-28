@@ -19,7 +19,13 @@ class ApiClient {
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
     }
-    
+
+    // Agregar token de autenticación si existe
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     return headers;
   }
 

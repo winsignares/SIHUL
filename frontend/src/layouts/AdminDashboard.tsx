@@ -33,7 +33,6 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     shouldShowExpanded,
     notificacionesSinLeer,
     menuSections,
-    menuToPath,
     handleLogout,
     location
   } = useAdminDashboard(props.userName, props.userRole, props.onLogout);
@@ -135,7 +134,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                   <div className="space-y-1 mt-2">
                     {section.items.map((item: any) => {
                       const Icon = item.icon;
-                      const path = menuToPath(item.action as MenuOption);
+                      const path = item.route; // Usar route directamente del item
                       const isActive = location.pathname === path || location.pathname.startsWith(path + '/') || (path !== '/' && location.pathname.startsWith(path));
 
                       const content = (
@@ -207,7 +206,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             {/* Notificaciones */}
             {
               (() => {
-                const path = menuToPath('notificaciones');
+                const path = '/notificaciones';
                 const isActive = location.pathname === path || location.pathname.startsWith(path + '/') || location.pathname.startsWith(path);
                 return (
                   <Link to={path} className="block w-full" key="notificaciones">
@@ -248,7 +247,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             {/* Ajustes */}
             {
               (() => {
-                const path = menuToPath('ajustes');
+                const path = '/ajustes';
                 const isActive = location.pathname === path || location.pathname.startsWith(path + '/') || location.pathname.startsWith(path);
                 return (
                   <Link to={path} className="block w-full" key="ajustes">

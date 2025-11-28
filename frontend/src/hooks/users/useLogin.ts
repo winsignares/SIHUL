@@ -1,64 +1,53 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../../services/auth';
-import { normalizeRole } from '../../context/roleUtils';
-import { useUser } from '../../context/UserContext';
-import type { Usuario } from '../../models/index';
+import { useAuth } from '../../context/AuthContext';
+import { getRouteForComponent } from '../../config/componentRoutes';
 
 export function useLogin() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isHovered, setIsHovered] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
     const [hasNavigated, setHasNavigated] = useState(false);
     const navigate = useNavigate();
-    const { usuario, setUsuario } = useUser();
+    const { login, isAuthenticated, role, components, isLoading } = useAuth();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setIsLoading(true);
 
         try {
-            const result = AuthService.login(email, password);
-            if (result.success && result.usuario) {
-                const normalizedRole = normalizeRole(result.usuario.rol as string) as
-                    | 'admin'
-                    | 'supervisor_general'
-                    | 'consultor_docente'
-                    | 'consultor_estudiante'
-                    | 'autorizado'
-                    | 'consultor'
-                    | undefined;
-
-                const usuarioNormalizado: Usuario = {
-                    ...result.usuario,
-                    rol: (normalizedRole || result.usuario.rol) as Usuario['rol']
-                } as Usuario;
-
-                console.log('Login exitoso - Usuario:', result.usuario, 'Rol original:', result.usuario.rol, 'Rol normalizado:', usuarioNormalizado.rol);
-                setUsuario(usuarioNormalizado);
-            } else {
-                console.log('Login fallido:', result.error);
-                setError(result.error || 'Error al iniciar sesión');
-            }
-        } catch (err) {
-            console.error('Error en AuthService.login:', err);
-            setError('Error al iniciar sesión');
-        } finally {
-            setIsLoading(false);
+            await login({ correo: email, password });
+            // La redirección se maneja en el useEffect cuando isAuthenticated cambia
+        } catch (err: any) {
+            console.error('Error en login:', err);
+            const errorMessage = err?.response?.data?.message || err?.message || 'Error al iniciar sesión. Verifique sus credenciales.';
+            setError(errorMessage);
         }
     };
 
     useEffect(() => {
-        console.log('useEffect Login - usuario:', usuario, 'rol:', usuario?.rol, 'hasNavigated:', hasNavigated);
-        if (usuario && !hasNavigated) {
-            console.log('Usuario logueado, redirigiendo a / para que el router maneje la navegación');
-            setHasNavigated(true);
-            navigate('/', { replace: true });
+        if (isAuthenticated && role && components.length > 0 && !hasNavigated) {
+            console.log('[useLogin] Usuario autenticado, redirigiendo...', { role, components });
+
+            // Buscar el componente de dashboard para este rol
+            const dashboardComponent = components.find(c => c.code.includes('DASHBOARD'));
+
+            if (dashboardComponent) {
+                const route = getRouteForComponent(dashboardComponent.code);
+                console.log('[useLogin] Redirigiendo a:', route);
+                setHasNavigated(true);
+                navigate(route, { replace: true });
+            } else {
+                // Fallback: usar el primer componente disponible
+                const firstComponent = components[0];
+                const route = getRouteForComponent(firstComponent.code);
+                console.log('[useLogin] No dashboard found, redirigiendo a primer componente:', route);
+                setHasNavigated(true);
+                navigate(route, { replace: true });
+            }
         }
-    }, [usuario, navigate, hasNavigated]);
+    }, [isAuthenticated, role, components, navigate, hasNavigated]);
 
     return {
         email,
