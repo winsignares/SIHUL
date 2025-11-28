@@ -103,14 +103,18 @@ export default function CentroHorarios() {
                 {/* Facultad */}
                 <div>
                   <Label>Facultad</Label>
-                  <Select value={filtroFacultad} onValueChange={setFiltroFacultad}>
+                  <Select
+                    value={filtroFacultad}
+                    onValueChange={setFiltroFacultad}
+                    disabled={facultades.length === 1}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
+                      {facultades.length > 1 && <SelectItem value="all">Todas</SelectItem>}
                       {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                        <SelectItem key={f.id} value={f.id.toString()}>{f.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -266,14 +270,18 @@ export default function CentroHorarios() {
                 {/* Facultad */}
                 <div>
                   <Label>Facultad</Label>
-                  <Select value={filtroFacultad} onValueChange={setFiltroFacultad}>
+                  <Select
+                    value={filtroFacultad}
+                    onValueChange={setFiltroFacultad}
+                    disabled={facultades.length === 1}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
+                      {facultades.length > 1 && <SelectItem value="all">Todas</SelectItem>}
                       {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                        <SelectItem key={f.id} value={f.id.toString()}>{f.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

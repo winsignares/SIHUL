@@ -1,6 +1,6 @@
 export * from './users/user.model';
 export * from './academica/academica.model';
-export type { RecursoConEstado, EspacioFisico, EquipamientoEspacio } from './espacios/espacio.model';
+export * from './espacios/espacio.model';
 export * from './recursos/recurso.model';
 export * from './shared/shared.model';
 export * from './dashboard/stats.model';
@@ -14,3 +14,5 @@ export * from './espacios/espacios.model';
 export * from './espacios/prestamos-espacios.model';
 export * from './espacios/supervisor.model';
 export * from './prestamos/prestamo.model';
+export * from './auth/auth.model';
+export * from './chatbot/chatbot';

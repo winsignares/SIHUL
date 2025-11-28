@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { PrestamoEspacio } from '../../models';
+import type { PrestamoEspacioUI as PrestamoEspacio } from '../../models';
 import { Clock, Check, X, TrendingUp } from 'lucide-react';
 
 const initialPrestamos: PrestamoEspacio[] = [

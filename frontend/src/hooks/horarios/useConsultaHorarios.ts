@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { HorarioConsulta } from '../../models/horarios/horario.model';
+import type { HorarioConsulta } from '../../models/index';
 
 export function useConsultaHorarios() {
     const [searchTerm, setSearchTerm] = useState('');

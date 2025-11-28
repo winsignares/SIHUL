@@ -1,4 +1,4 @@
-export interface PrestamoEspacio {
+export interface PrestamoEspacioUI {
     id: string;
     solicitante: string;
     email: string;

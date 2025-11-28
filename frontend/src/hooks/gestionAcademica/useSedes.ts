@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { showNotification } from '../../context/ThemeContext';
-import type { Sede } from '../../models';
+import type { Sede } from '../../models/index';
 
 export function useSedes() {
     const [searchTerm, setSearchTerm] = useState('');

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { useTheme } from '../../context/ThemeContext';
-import type { Programa } from '../../models';
+import type { Programa } from '../../models/index';
 
 export interface GrupoAcademico {
     id: string;

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { EspacioOcupacion } from '../../models';
+import type { EspacioOcupacion } from '../../models/index';
 
 const PERIODO_TRABAJO = '2025-1';
 

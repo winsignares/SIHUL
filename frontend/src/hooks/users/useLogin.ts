@@ -17,7 +17,7 @@ export function useLogin() {
         setError('');
 
         try {
-            await login({ correo: email, password });
+            await login({ correo: email, contrasena: password });
             // La redirección se maneja en el useEffect cuando isAuthenticated cambia
         } catch (err: any) {
             console.error('Error en login:', err);
@@ -30,21 +30,28 @@ export function useLogin() {
         if (isAuthenticated && role && components.length > 0 && !hasNavigated) {
             console.log('[useLogin] Usuario autenticado, redirigiendo...', { role, components });
 
-            // Buscar el componente de dashboard para este rol
-            const dashboardComponent = components.find(c => c.code.includes('DASHBOARD'));
-
-            if (dashboardComponent) {
-                const route = getRouteForComponent(dashboardComponent.code);
-                console.log('[useLogin] Redirigiendo a:', route);
-                setHasNavigated(true);
-                navigate(route, { replace: true });
+            // Redireccionar según el rol y componentes
+            if (role.nombre === 'admin' || role.nombre === 'planeacion_facultad') {
+                navigate('/admin/dashboard');
+            } else if (role.nombre === 'supervisor_general') {
+                navigate('/supervisor/dashboard');
             } else {
-                // Fallback: usar el primer componente disponible
-                const firstComponent = components[0];
-                const route = getRouteForComponent(firstComponent.code);
-                console.log('[useLogin] No dashboard found, redirigiendo a primer componente:', route);
-                setHasNavigated(true);
-                navigate(route, { replace: true });
+                // Buscar el componente de dashboard para este rol
+                const dashboardComponent = components.find(c => c.nombre.toLowerCase().includes('dashboard'));
+
+                if (dashboardComponent) {
+                    const route = getRouteForComponent(dashboardComponent.nombre);
+                    console.log('[useLogin] Redirigiendo a:', route);
+                    setHasNavigated(true);
+                    navigate(route, { replace: true });
+                } else {
+                    // Fallback: usar el primer componente disponible
+                    const firstComponent = components[0];
+                    const route = getRouteForComponent(firstComponent.nombre);
+                    console.log('[useLogin] No dashboard found, redirigiendo a primer componente:', route);
+                    setHasNavigated(true);
+                    navigate(route, { replace: true });
+                }
             }
         }
     }, [isAuthenticated, role, components, navigate, hasNavigated]);

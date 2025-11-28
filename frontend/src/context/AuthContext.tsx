@@ -28,28 +28,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             const response: LoginResponse = await authService.login(payload);
 
+            // Construir objeto usuario
+            const user = {
+                id: response.id,
+                nombre: response.nombre,
+                correo: response.correo,
+                rol: response.rol,
+                facultad: response.facultad
+            };
+
             // Guardar en localStorage
             localStorage.setItem('auth_token', response.token);
-            localStorage.setItem('auth_user', JSON.stringify(response.user));
-            localStorage.setItem('auth_role', JSON.stringify(response.role));
-            localStorage.setItem('auth_components', JSON.stringify(response.components));
+            localStorage.setItem('auth_user', JSON.stringify(user));
+            localStorage.setItem('auth_role', JSON.stringify(response.rol));
+            localStorage.setItem('auth_components', JSON.stringify(response.componentes));
 
-            if (response.faculties) {
-                localStorage.setItem('auth_faculties', JSON.stringify(response.faculties));
+            if (response.facultad) {
+                localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
             }
 
-            if (response.areas) {
-                localStorage.setItem('auth_areas', JSON.stringify(response.areas));
+            if (response.espacios_permitidos) {
+                localStorage.setItem('auth_areas', JSON.stringify(response.espacios_permitidos));
             }
 
             // Actualizar estado
             setState({
                 token: response.token,
-                user: response.user,
-                role: response.role,
-                components: response.components,
-                faculties: response.faculties,
-                areas: response.areas,
+                user: user,
+                role: response.rol,
+                components: response.componentes,
+                faculties: response.facultad ? [response.facultad] : undefined,
+                areas: response.espacios_permitidos,
                 isAuthenticated: true,
                 isLoading: false,
             });
@@ -84,8 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    const hasPermission = (componentCode: string): boolean => {
-        return state.components.some(c => c.code === componentCode);
+    const hasPermission = (componentName: string): boolean => {
+        return state.components.some(c => c.nombre === componentName);
     };
 
     return (

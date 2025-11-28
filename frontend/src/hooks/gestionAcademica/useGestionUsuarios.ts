@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { Usuario, PermisoComponente } from '../../models/academica';
+import type { Usuario, PermisoComponente } from '../../models/index';
 
 export const componentesDelSistema = [
     { id: 'dashboard', nombre: 'Dashboard', categoria: 'Principal' },

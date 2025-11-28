@@ -49,120 +49,120 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         const sections: MenuSection[] = [];
 
         // Sección Principal (Dashboards)
-        const dashboardComponents = components.filter(c => c.code.includes('DASHBOARD'));
+        const dashboardComponents = components.filter(c => c.nombre.toLowerCase().includes('dashboard'));
         if (dashboardComponents.length > 0) {
             sections.push({
                 id: 'principal',
                 label: 'Principal',
                 items: dashboardComponents.map(c => ({
-                    id: c.code,
-                    icon: getIconForComponent(c.code),
-                    label: c.name,
-                    route: getRouteForComponent(c.code),
-                    code: c.code
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: c.nombre,
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
                 }))
             });
         }
 
         // Sección Gestión Académica
-        const gestionCodes = [
-            'CENTRO_INSTITUCIONAL',
-            'CENTRO_HORARIOS',
-            'PRESTAMOS_ESPACIOS',
-            'PRESTAMOS_DOCENTE',
-            'PERIODOS_ACADEMICOS',
-            'ASIGNACION_AUTOMATICA',
-            'ASISTENTES_VIRTUALES',
-            'ASISTENTES_VIRTUALES_SUPERVISOR',
-            'ASISTENTES_VIRTUALES_DOCENTE',
-            'ASISTENTES_VIRTUALES_ESTUDIANTE'
+        const gestionNames = [
+            'Centro Institucional',
+            'Centro de Horarios',
+            'Préstamos de Espacios',
+            'Préstamos Docente',
+            'Periodos Académicos',
+            'Asignación Automática',
+            'Asistentes Virtuales',
+            'Asistentes Virtuales Supervisor',
+            'Asistentes Virtuales Docente',
+            'Asistentes Virtuales Estudiante'
         ];
-        const gestionComponents = components.filter(c => gestionCodes.includes(c.code));
+        const gestionComponents = components.filter(c => gestionNames.includes(c.nombre));
         if (gestionComponents.length > 0) {
             sections.push({
                 id: 'gestion',
                 label: 'Gestión Académica',
                 items: gestionComponents.map(c => ({
-                    id: c.code,
-                    icon: getIconForComponent(c.code),
-                    label: c.name,
-                    route: getRouteForComponent(c.code),
-                    code: c.code
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: c.nombre,
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
                 }))
             });
         }
 
         // Sección Gestión de Espacios (para supervisores)
-        const espaciosCodes = [
-            'DISPONIBILIDAD_ESPACIOS',
-            'APERTURA_CIERRE_SALONES',
-            'ESTADO_RECURSOS'
+        const espaciosNames = [
+            'Disponibilidad de Espacios',
+            'Apertura y Cierre de Salones',
+            'Estado de Recursos'
         ];
-        const espaciosComponents = components.filter(c => espaciosCodes.includes(c.code));
+        const espaciosComponents = components.filter(c => espaciosNames.includes(c.nombre));
         if (espaciosComponents.length > 0) {
             sections.push({
                 id: 'espacios',
                 label: 'Gestión de Espacios',
                 items: espaciosComponents.map(c => ({
-                    id: c.code,
-                    icon: getIconForComponent(c.code),
-                    label: c.name,
-                    route: getRouteForComponent(c.code),
-                    code: c.code
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: c.nombre,
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
                 }))
             });
         }
 
         // Sección Académico (para docentes/estudiantes)
-        const academicoCodes = [
-            'MI_HORARIO',
-            'MI_HORARIO_ESTUDIANTE'
+        const academicoNames = [
+            'Mi Horario',
+            'Mi Horario Estudiante'
         ];
-        const academicoComponents = components.filter(c => academicoCodes.includes(c.code));
+        const academicoComponents = components.filter(c => academicoNames.includes(c.nombre));
         if (academicoComponents.length > 0) {
             sections.push({
                 id: 'academico',
                 label: 'Académico',
                 items: academicoComponents.map(c => ({
-                    id: c.code,
-                    icon: getIconForComponent(c.code),
-                    label: c.name,
-                    route: getRouteForComponent(c.code),
-                    code: c.code
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: c.nombre,
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
                 }))
             });
         }
 
         // Sección Reportes
-        const reportesCodes = ['OCUPACION_SEMANAL', 'REPORTES_GENERALES'];
-        const reportesComponents = components.filter(c => reportesCodes.includes(c.code));
+        const reportesNames = ['Ocupación Semanal', 'Reportes Generales'];
+        const reportesComponents = components.filter(c => reportesNames.includes(c.nombre));
         if (reportesComponents.length > 0) {
             sections.push({
                 id: 'reportes',
                 label: 'Reportes y Análisis',
                 items: reportesComponents.map(c => ({
-                    id: c.code,
-                    icon: getIconForComponent(c.code),
-                    label: c.name,
-                    route: getRouteForComponent(c.code),
-                    code: c.code
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: c.nombre,
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
                 }))
             });
         }
 
         // Sección Administración
-        const adminCodes = ['GESTION_USUARIOS'];
-        const adminComponents = components.filter(c => adminCodes.includes(c.code));
+        const adminNames = ['Gestión de Usuarios'];
+        const adminComponents = components.filter(c => adminNames.includes(c.nombre));
         if (adminComponents.length > 0) {
             sections.push({
                 id: 'administracion',
                 label: 'Administración',
                 items: adminComponents.map(c => ({
-                    id: c.code,
-                    icon: getIconForComponent(c.code),
-                    label: c.name,
-                    route: getRouteForComponent(c.code),
-                    code: c.code
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: c.nombre,
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
                 }))
             });
         }

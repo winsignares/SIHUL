@@ -68,10 +68,28 @@ const reportesDisponibles: ReporteDisponible[] = [
 const docentes = ['Todos', 'Dr. Juan Pérez', 'Dra. María López', 'Mg. Carlos Ruiz', 'Ing. Ana Martínez', 'Dr. Pedro González'];
 const programas = ['Todos', 'Ingeniería de Sistemas', 'Administración de Empresas', 'Ingeniería Industrial', 'Contaduría Pública'];
 
+import { useAuth } from '../../context/AuthContext';
+
 export function useReportes() {
+    const { user, role } = useAuth();
     const [tipoReporte, setTipoReporte] = useState('ocupacion');
     const [filtroDocente, setFiltroDocente] = useState('todos');
     const [filtroPrograma, setFiltroPrograma] = useState('todos');
+
+    // Filtrar programas según facultad del usuario
+    let programasFiltrados = programas;
+    if (role?.nombre === 'planeacion_facultad' && user?.facultad) {
+        const nombreFacultad = user.facultad.nombre.toLowerCase();
+        programasFiltrados = programas.filter(p => {
+            if (p === 'Todos') return false; // No permitir 'Todos' si está restringido
+            // Lógica simple de mapeo por nombre para demo
+            if (nombreFacultad.includes('ingeniería')) return p.includes('Ingeniería');
+            if (nombreFacultad.includes('económicas') || nombreFacultad.includes('economicas')) return p.includes('Administración') || p.includes('Contaduría');
+            return true;
+        });
+        // Si no hay coincidencias (por nombres hardcoded), mostrar todos o ninguno
+        if (programasFiltrados.length === 0) programasFiltrados = programas.filter(p => p !== 'Todos');
+    }
 
     const exportarPDF = async () => {
         try {
@@ -277,7 +295,7 @@ export function useReportes() {
         capacidadUtilizada,
         reportesDisponibles,
         docentes,
-        programas,
+        programas: programasFiltrados,
         exportarPDF,
         exportarExcel
     };

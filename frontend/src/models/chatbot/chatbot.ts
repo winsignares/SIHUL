@@ -24,7 +24,7 @@ export interface Mensaje {
     leido?: boolean;
 }
 
-export interface MensajeChat {
+export interface ChatMessage {
     id: string;
     remitenteId: string;
     destinatarioId: string;

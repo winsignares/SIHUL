@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DatoOcupacionJornada, EspacioMasUsado } from '../../models';
+import type { DatoOcupacionJornada, EspacioMasUsado } from '../../models';
 
 const datosOcupacion: DatoOcupacionJornada[] = [
     { jornada: 'Mañana (07:00 - 12:00)', ocupacion: 85, espacios: 45, color: 'bg-blue-600' },

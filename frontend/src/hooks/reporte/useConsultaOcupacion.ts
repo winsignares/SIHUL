@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { EspacioOcupacion } from '../../models';
+import type { EspacioOcupacion } from '../../models';
 
 const espaciosOcupacion: EspacioOcupacion[] = [
     {

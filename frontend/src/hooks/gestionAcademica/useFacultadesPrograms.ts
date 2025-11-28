@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { showNotification } from '../../context/ThemeContext';
-import type { Facultad, Programa } from '../../models';
+import type { Facultad, Programa } from '../../models/index';
 
 export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos';
 

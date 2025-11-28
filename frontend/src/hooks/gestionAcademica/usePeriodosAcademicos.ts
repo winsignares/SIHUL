@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { PeriodoAcademico } from '../../models/models';
+import type { PeriodoAcademico } from '../../models/index';
 
 export interface PeriodoUI extends PeriodoAcademico {
     tipo: 'Regular' | 'Intersemestral' | 'Verano';

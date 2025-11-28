@@ -3,11 +3,11 @@
 // Simula una base de datos real usando localStorage
 // ============================================
 
-import type { 
-  Usuario, Facultad, Programa, PeriodoAcademico, Asignatura, 
+import type {
+  Usuario, Facultad, Programa, PeriodoAcademico, Asignatura,
   Grupo, EspacioFisico, HorarioAcademico, PrestamoEspacio,
   RecursoAudiovisual, PrestamoRecurso, Notificacion, MensajeChat, Sede, Docente
-} from '../models/academica';
+} from '../models';
 
 // Tablas de la base de datos
 const TABLES = {
@@ -83,9 +83,9 @@ class Database {
   update<T extends { id: string }>(tableName: string, id: string, updates: Partial<T>): T | null {
     const table = this.getTable<T>(tableName);
     const index = table.findIndex(item => item.id === id);
-    
+
     if (index === -1) return null;
-    
+
     table[index] = { ...table[index], ...updates };
     this.setTable(tableName, table);
     return table[index];
@@ -95,9 +95,9 @@ class Database {
   delete(tableName: string, id: string): boolean {
     const table = this.getTable(tableName);
     const filtered = table.filter((item: any) => item.id !== id);
-    
+
     if (filtered.length === table.length) return false;
-    
+
     this.setTable(tableName, filtered);
     return true;
   }
@@ -107,11 +107,11 @@ class Database {
     const table = this.getTable(tableName);
     const filtered = table.filter(item => !predicate(item));
     const deletedCount = table.length - filtered.length;
-    
+
     if (deletedCount > 0) {
       this.setTable(tableName, filtered);
     }
-    
+
     return deletedCount;
   }
 
@@ -327,13 +327,13 @@ class Database {
     const asignaturas = this.getAsignaturas();
     const programas = this.getProgramas();
     const espacios = this.getEspacios();
-    
+
     return horarios.map(horario => {
       const grupo = grupos.find(g => g.id === horario.grupoId);
       const asignatura = asignaturas.find(a => a.id === grupo?.asignaturaId);
       const programa = programas.find(p => p.id === grupo?.programaId);
       const espacio = espacios.find(e => e.id === horario.espacioId);
-      
+
       return {
         ...horario,
         asignatura: asignatura?.nombre || 'Sin asignatura',
@@ -448,7 +448,7 @@ class Database {
 
   getMensajesByUsuario(usuarioId: string): MensajeChat[] {
     return this.find<MensajeChat>(
-      TABLES.mensajes, 
+      TABLES.mensajes,
       m => m.remitenteId === usuarioId || m.destinatarioId === usuarioId
     );
   }

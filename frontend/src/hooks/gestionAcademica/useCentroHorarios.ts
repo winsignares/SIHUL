@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { HorarioAcademico, Facultad, Programa, EspacioFisico } from '../../models/academica';
+import type { HorarioAcademico, Facultad, Programa, EspacioFisico } from '../../models';
 
 export interface HorarioExtendido extends HorarioAcademico {
     asignatura: string;
@@ -19,7 +19,10 @@ export interface GrupoAgrupado {
     horarios: HorarioExtendido[];
 }
 
+import { useAuth } from '../../context/AuthContext';
+
 export function useCentroHorarios() {
+    const { user, role } = useAuth();
     const { notification, showNotification } = useNotification();
     const [searchParams] = useSearchParams();
     const modeParam = searchParams.get('mode');
@@ -55,7 +58,7 @@ export function useCentroHorarios() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [user, role]);
 
     // Si cambian los query params, sincronizar la pestaña activa
     useEffect(() => {
@@ -69,7 +72,16 @@ export function useCentroHorarios() {
 
     const loadData = () => {
         setHorarios(db.getHorariosExtendidos());
-        setFacultades(db.getFacultades());
+
+        let allFacultades = db.getFacultades();
+        // Filtrar facultades si es planeacion_facultad
+        if (role?.nombre === 'planeacion_facultad' && user?.facultad) {
+            const userFacultadId = user.facultad.id.toString(); // Asegurar string/number match
+            allFacultades = allFacultades.filter(f => f.id.toString() === userFacultadId);
+            setFiltroFacultad(userFacultadId);
+        }
+        setFacultades(allFacultades);
+
         setProgramas(db.getProgramas());
         setEspacios(db.getEspacios());
     };
