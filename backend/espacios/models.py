@@ -8,7 +8,6 @@ class EspacioFisico(models.Model):
     tipo = models.CharField(max_length=50)
     capacidad = models.PositiveIntegerField()
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    recursos = models.TextField(blank=True, null=True)
     disponible = models.BooleanField(default=True)
 
     def __str__(self):

@@ -16,12 +16,11 @@ def create_espacio(request):
             tipo = data.get('tipo')
             capacidad = data.get('capacidad')
             ubicacion = data.get('ubicacion')
-            recursos = data.get('recursos')
             disponible = data.get('disponible', True)
             if not sede_id or not tipo or capacidad is None:
                 return JsonResponse({"error": "sede_id, tipo y capacidad son requeridos"}, status=400)
             sede = Sede.objects.get(id=sede_id)
-            e = EspacioFisico(sede=sede, tipo=tipo, capacidad=int(capacidad), ubicacion=ubicacion, recursos=recursos, disponible=bool(disponible))
+            e = EspacioFisico(sede=sede, tipo=tipo, capacidad=int(capacidad), ubicacion=ubicacion, disponible=bool(disponible))
             e.save()
             return JsonResponse({"message": "Espacio creado", "id": e.id}, status=201)
         except Sede.DoesNotExist:
@@ -51,8 +50,6 @@ def update_espacio(request):
                 e.capacidad = int(data.get('capacidad'))
             if 'ubicacion' in data:
                 e.ubicacion = data.get('ubicacion')
-            if 'recursos' in data:
-                e.recursos = data.get('recursos')
             if 'disponible' in data:
                 e.disponible = bool(data.get('disponible'))
             e.save()
@@ -94,7 +91,7 @@ def get_espacio(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         e = EspacioFisico.objects.get(id=id)
-        return JsonResponse({"id": e.id, "sede_id": e.sede.id, "tipo": e.tipo, "capacidad": e.capacidad, "ubicacion": e.ubicacion, "recursos": e.recursos, "disponible": e.disponible}, status=200)
+        return JsonResponse({"id": e.id, "sede_id": e.sede.id, "tipo": e.tipo, "capacidad": e.capacidad, "ubicacion": e.ubicacion, "disponible": e.disponible}, status=200)
     except EspacioFisico.DoesNotExist:
         return JsonResponse({"error": "Espacio no encontrado."}, status=404)
     except Exception as e:
@@ -104,7 +101,7 @@ def get_espacio(request, id=None):
 def list_espacios(request):
     if request.method == 'GET':
         items = EspacioFisico.objects.all()
-        lst = [{"id": i.id, "sede_id": i.sede.id, "tipo": i.tipo, "capacidad": i.capacidad, "ubicacion": i.ubicacion, "recursos": i.recursos, "disponible": i.disponible} for i in items]
+        lst = [{"id": i.id, "sede_id": i.sede.id, "tipo": i.tipo, "capacidad": i.capacidad, "ubicacion": i.ubicacion, "disponible": i.disponible} for i in items]
         return JsonResponse({"espacios": lst}, status=200)
 
 # ---------- EspacioPermitido CRUD ----------
@@ -233,7 +230,6 @@ def list_espacios_by_usuario(request, usuario_id=None):
                 "tipo": ep.espacio.tipo,
                 "capacidad": ep.espacio.capacidad,
                 "ubicacion": ep.espacio.ubicacion,
-                "recursos": ep.espacio.recursos,
                 "disponible": ep.espacio.disponible,
                 "sede_id": ep.espacio.sede.id
             }
