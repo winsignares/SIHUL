@@ -200,16 +200,41 @@ def login(request):
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         if u.contrasena_hash != contrasena:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
+        
+        # Obtener componentes del rol del usuario
+        componentes = []
+        if u.rol:
+            from componentes.models import ComponenteRol
+            componentes_rol = ComponenteRol.objects.filter(rol=u.rol).select_related('componente')
+            componentes = [
+                {
+                    "id": cr.componente.id,
+                    "nombre": cr.componente.nombre,
+                    "descripcion": cr.componente.descripcion,
+                    "permiso": cr.get_permiso_display()
+                }
+                for cr in componentes_rol
+            ]
+        
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo
         request.session['is_authenticated'] = True
         token = secrets.token_urlsafe(32)
         request.session['token'] = token
+        request.session['rol'] = u.rol.nombre if u.rol else None
+        request.session['id_rol'] = u.rol.id if u.rol else None
+        
         return JsonResponse({
             "message": "Login exitoso", 
             "id": u.id, 
             "nombre": u.nombre,
-            "rol": u.rol.nombre if u.rol else None,
+            "correo": u.correo,
+            "rol": {
+                "id": u.rol.id,
+                "nombre": u.rol.nombre,
+                "descripcion": u.rol.descripcion
+            } if u.rol else None,
+            "componentes": componentes,
             "token": token
         }, status=200)
     except json.JSONDecodeError:
