@@ -7,6 +7,7 @@ class Asignatura(models.Model):
     nombre = models.CharField(max_length=100)
     codigo = models.CharField(max_length=20, unique=True)
     creditos = models.PositiveIntegerField()
+    tipo = models.CharField(max_length=20, choices=[('teórica', 'Teórica'), ('práctica', 'Práctica'), ('mixta', 'Mixta')], default='presencial')
 
     def __str__(self):
-        return f"{self.codigo} - {self.nombre}"
+        return f"{self.codigo} - {self.nombre} ({self.tipo})"

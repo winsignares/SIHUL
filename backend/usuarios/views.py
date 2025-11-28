@@ -200,16 +200,62 @@ def login(request):
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         if u.contrasena_hash != contrasena:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
+        
+        # Obtener componentes del rol del usuario
+        componentes = []
+        if u.rol:
+            from componentes.models import ComponenteRol
+            componentes_rol = ComponenteRol.objects.filter(rol=u.rol).select_related('componente')
+            componentes = [
+                {
+                    "id": cr.componente.id,
+                    "nombre": cr.componente.nombre,
+                    "descripcion": cr.componente.descripcion,
+                    "permiso": cr.get_permiso_display()
+                }
+                for cr in componentes_rol
+            ]
+        
+        # Obtener espacios permitidos para el usuario
+        espacios_permitidos = []
+        try:
+            from espacios.models import EspacioPermitido
+            espacios_permisos = EspacioPermitido.objects.filter(usuario=u).select_related('espacio', 'espacio__sede')
+            espacios_permitidos = [
+                {
+                    "id": ep.espacio.id,
+                    "tipo": ep.espacio.tipo,
+                    "capacidad": ep.espacio.capacidad,
+                    "ubicacion": ep.espacio.ubicacion,
+                    "disponible": ep.espacio.disponible,
+                    "sede_id": ep.espacio.sede.id,
+                    "sede_nombre": ep.espacio.sede.nombre
+                }
+                for ep in espacios_permisos
+            ]
+        except Exception:
+            pass
+        
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo
         request.session['is_authenticated'] = True
         token = secrets.token_urlsafe(32)
         request.session['token'] = token
+        request.session['rol'] = u.rol.nombre if u.rol else None
+        request.session['id_rol'] = u.rol.id if u.rol else None
+        
         return JsonResponse({
             "message": "Login exitoso", 
             "id": u.id, 
             "nombre": u.nombre,
-            "rol": u.rol.nombre if u.rol else None,
+            "correo": u.correo,
+            "rol": {
+                "id": u.rol.id,
+                "nombre": u.rol.nombre,
+                "descripcion": u.rol.descripcion
+            } if u.rol else None,
+            "componentes": componentes,
+            "espacios_permitidos": espacios_permitidos,
             "token": token
         }, status=200)
     except json.JSONDecodeError:
