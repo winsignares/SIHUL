@@ -1,6 +1,7 @@
 import { Card, CardContent } from '../../share/card';
 import { motion } from 'motion/react';
 import { Clock, BookOpen, Users, ChevronRight, Calendar, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useConsultorDocente } from '../../hooks/dashboard/useConsultorDocente';
 
 interface ConsultorDocenteHomeProps {
@@ -8,6 +9,7 @@ interface ConsultorDocenteHomeProps {
 }
 
 export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHomeProps) {
+  const navigate = useNavigate();
   const { stats } = useConsultorDocente();
 
   const getGradient = (color: string) => {
@@ -84,7 +86,7 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
                   Visualiza tu horario semanal, exporta a PDF/Excel y solicita cambios al administrador.
                 </p>
                 <motion.button
-                  onClick={() => onNavigate && onNavigate('horario')}
+                  onClick={() => navigate('/docente/horario')}
                   className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -115,7 +117,7 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
                   Solicita espacios para clases adicionales, tutorías, conferencias y eventos académicos.
                 </p>
                 <motion.button
-                  onClick={() => onNavigate && onNavigate('prestamos')}
+                  onClick={() => navigate('/docente/prestamos')}
                   className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -144,7 +146,7 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
               </div>
               <div>
                 <motion.button
-                  onClick={() => onNavigate && onNavigate('asistentes')}
+                  onClick={() => navigate('/docente/asistente-virtual')}
                   className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
