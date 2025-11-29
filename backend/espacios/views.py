@@ -2,6 +2,7 @@ from django.shortcuts import render
 from .models import EspacioFisico, EspacioPermitido
 from sedes.models import Sede
 from usuarios.models import Usuario
+from recursos.models import Recurso, EspacioRecurso
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
@@ -13,15 +14,32 @@ def create_espacio(request):
         try:
             data = json.loads(request.body)
             sede_id = data.get('sede_id')
+            nombre = data.get('nombre')
             tipo = data.get('tipo')
             capacidad = data.get('capacidad')
             ubicacion = data.get('ubicacion')
             estado = data.get('estado', 'Disponible')
-            if not sede_id or not tipo or capacidad is None:
-                return JsonResponse({"error": "sede_id, tipo y capacidad son requeridos"}, status=400)
+            recursos_ids = data.get('recursos_ids', [])  # Lista de IDs de recursos
+            
+            if not sede_id or not nombre or not tipo or capacidad is None:
+                return JsonResponse({"error": "sede_id, nombre, tipo y capacidad son requeridos"}, status=400)
+            
             sede = Sede.objects.get(id=sede_id)
-            e = EspacioFisico(sede=sede, tipo=tipo, capacidad=int(capacidad), ubicacion=ubicacion, estado=estado)
+            e = EspacioFisico(sede=sede, nombre=nombre, tipo=tipo, capacidad=int(capacidad), ubicacion=ubicacion, estado=estado)
             e.save()
+            
+            # Crear las relaciones con recursos
+            for recurso_id in recursos_ids:
+                try:
+                    recurso = Recurso.objects.get(id=recurso_id)
+                    EspacioRecurso.objects.create(
+                        espacio=e,
+                        recurso=recurso,
+                        estado='disponible'  # Por defecto disponible
+                    )
+                except Recurso.DoesNotExist:
+                    pass  # Ignorar si el recurso no existe
+            
             return JsonResponse({"message": "Espacio creado", "id": e.id}, status=201)
         except Sede.DoesNotExist:
             return JsonResponse({"error": "Sede no encontrada."}, status=404)
@@ -41,9 +59,12 @@ def update_espacio(request):
             id = data.get('id')
             if not id:
                 return JsonResponse({"error": "ID es requerido"}, status=400)
+            
             e = EspacioFisico.objects.get(id=id)
             if 'sede_id' in data:
                 e.sede = Sede.objects.get(id=data.get('sede_id'))
+            if 'nombre' in data:
+                e.nombre = data.get('nombre')
             if 'tipo' in data:
                 e.tipo = data.get('tipo')
             if 'capacidad' in data:
@@ -53,6 +74,24 @@ def update_espacio(request):
             if 'estado' in data:
                 e.estado = data.get('estado')
             e.save()
+            
+            # Actualizar recursos si se envían
+            if 'recursos_ids' in data:
+                # Eliminar todas las relaciones actuales
+                EspacioRecurso.objects.filter(espacio=e).delete()
+                # Crear las nuevas relaciones
+                recursos_ids = data.get('recursos_ids', [])
+                for recurso_id in recursos_ids:
+                    try:
+                        recurso = Recurso.objects.get(id=recurso_id)
+                        EspacioRecurso.objects.create(
+                            espacio=e,
+                            recurso=recurso,
+                            estado='disponible'
+                        )
+                    except Recurso.DoesNotExist:
+                        pass
+            
             return JsonResponse({"message": "Espacio actualizado", "id": e.id}, status=200)
         except EspacioFisico.DoesNotExist:
             return JsonResponse({"error": "Espacio no encontrado."}, status=404)
@@ -75,6 +114,9 @@ def delete_espacio(request):
             if not id:
                 return JsonResponse({"error": "ID es requerido"}, status=400)
             e = EspacioFisico.objects.get(id=id)
+            # Eliminar explícitamente las relaciones con recursos
+            EspacioRecurso.objects.filter(espacio=e).delete()
+            # Eliminar el espacio (esto también eliminará EspacioPermitido por CASCADE)
             e.delete()
             return JsonResponse({"message": "Espacio eliminado"}, status=200)
         except EspacioFisico.DoesNotExist:
@@ -91,7 +133,25 @@ def get_espacio(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         e = EspacioFisico.objects.get(id=id)
-        return JsonResponse({"id": e.id, "sede_id": e.sede.id, "tipo": e.tipo, "capacidad": e.capacidad, "ubicacion": e.ubicacion, "estado": e.estado}, status=200)
+        # Obtener recursos del espacio
+        recursos = []
+        for er in e.espacio_recursos.all():
+            recursos.append({
+                "id": er.recurso.id,
+                "nombre": er.recurso.nombre,
+                "estado": er.estado
+            })
+        
+        return JsonResponse({
+            "id": e.id, 
+            "sede_id": e.sede.id, 
+            "nombre": e.nombre,
+            "tipo": e.tipo, 
+            "capacidad": e.capacidad, 
+            "ubicacion": e.ubicacion, 
+            "estado": e.estado,
+            "recursos": recursos
+        }, status=200)
     except EspacioFisico.DoesNotExist:
         return JsonResponse({"error": "Espacio no encontrado."}, status=404)
     except Exception as e:
@@ -101,7 +161,27 @@ def get_espacio(request, id=None):
 def list_espacios(request):
     if request.method == 'GET':
         items = EspacioFisico.objects.all()
-        lst = [{"id": i.id, "sede_id": i.sede.id, "tipo": i.tipo, "capacidad": i.capacidad, "ubicacion": i.ubicacion, "estado": i.estado} for i in items]
+        lst = []
+        for i in items:
+            # Obtener recursos del espacio
+            recursos = []
+            for er in i.espacio_recursos.all():
+                recursos.append({
+                    "id": er.recurso.id,
+                    "nombre": er.recurso.nombre,
+                    "estado": er.estado
+                })
+            
+            lst.append({
+                "id": i.id, 
+                "sede_id": i.sede.id, 
+                "nombre": i.nombre,
+                "tipo": i.tipo, 
+                "capacidad": i.capacidad, 
+                "ubicacion": i.ubicacion, 
+                "estado": i.estado,
+                "recursos": recursos
+            })
         return JsonResponse({"espacios": lst}, status=200)
 
 # ---------- EspacioPermitido CRUD ----------
@@ -224,17 +304,27 @@ def list_espacios_by_usuario(request, usuario_id=None):
     try:
         usuario = Usuario.objects.get(id=usuario_id)
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio')
-        lista = [
-            {
+        lista = []
+        for ep in espacios_permitidos:
+            # Obtener recursos del espacio
+            recursos = []
+            for er in ep.espacio.espacio_recursos.all():
+                recursos.append({
+                    "id": er.recurso.id,
+                    "nombre": er.recurso.nombre,
+                    "estado": er.estado
+                })
+            
+            lista.append({
                 "id": ep.espacio.id,
                 "tipo": ep.espacio.tipo,
+                "nombre": ep.espacio.nombre,
                 "capacidad": ep.espacio.capacidad,
                 "ubicacion": ep.espacio.ubicacion,
                 "estado": ep.espacio.estado,
-                "sede_id": ep.espacio.sede.id
-            }
-            for ep in espacios_permitidos
-        ]
+                "sede_id": ep.espacio.sede.id,
+                "recursos": recursos
+            })
         return JsonResponse({"espacios": lista}, status=200)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
