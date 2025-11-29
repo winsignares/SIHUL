@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import {
   Building2,
   TrendingUp,
@@ -16,6 +17,7 @@ interface SupervisorGeneralHomeProps {
 }
 
 export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralHomeProps = {}) {
+  const navigate = useNavigate();
   const { metricsCards, quickActions, activityLogs } = useSupervisorDashboard();
 
   return (
@@ -75,10 +77,24 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {quickActions.map((action, index) => (
+              {quickActions.map((action, index) => {
+                const getRoute = (actionName: string) => {
+                  switch (actionName) {
+                    case 'cronograma':
+                      return '/supervisor/espacios';
+                    case 'apertura-cierre':
+                      return '/supervisor/prestamos';
+                    case 'estado-recursos':
+                      return '/supervisor/recursos';
+                    default:
+                      return '#';
+                  }
+                };
+                
+                return (
                 <motion.button
                   key={action.title}
-                  onClick={() => onNavigate(action.action)}
+                  onClick={() => navigate(getRoute(action.action))}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 + index * 0.1 }}
@@ -99,7 +115,8 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
                     {action.description}
                   </p>
                 </motion.button>
-              ))}
+              );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -124,7 +141,7 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
             </div>
             <div>
               <motion.button
-                onClick={() => onNavigate && onNavigate('asistentes')}
+                onClick={() => navigate('/supervisor/asistente-virtual')}
                 className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
