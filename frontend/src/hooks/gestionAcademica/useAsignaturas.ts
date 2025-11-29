@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { showNotification } from '../../context/ThemeContext';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
-import { facultadService } from '../../services/facultades/facultadesAPI';
-import type { Facultad } from '../../services/facultades/facultadesAPI';
+import { programaService } from '../../services/programas/programaAPI';
+import type { Programa } from '../../services/programas/programaAPI';
 
 export const tiposAsignatura = [
     { value: 'teórica', label: 'Teórica' },
@@ -17,10 +17,10 @@ export function useAsignaturas() {
 
     // Estados de datos
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
-    const [facultades, setFacultades] = useState<Facultad[]>([]);
+    const [programas, setProgramas] = useState<Programa[]>([]);
 
     // Filtros
-    const [selectedFacultadFilter, setSelectedFacultadFilter] = useState<string>('all');
+    const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
 
     // Modales
     const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -33,7 +33,7 @@ export function useAsignaturas() {
         nombre: '',
         creditos: '',
         tipo: 'teórica' as 'teórica' | 'práctica' | 'mixta',
-        facultadId: '',
+        programaId: '',
         horas: ''
     });
 
@@ -47,12 +47,12 @@ export function useAsignaturas() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [asignaturasRes, facultadesRes] = await Promise.all([
+            const [asignaturasRes, programasRes] = await Promise.all([
                 asignaturaService.list(),
-                facultadService.list()
+                programaService.listarProgramas()
             ]);
             setAsignaturas(asignaturasRes.asignaturas);
-            setFacultades(facultadesRes.facultades);
+            setProgramas(programasRes.programas);
         } catch (error) {
             showNotification({
                 message: `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -91,8 +91,8 @@ export function useAsignaturas() {
             return;
         }
 
-        if (!asignaturaForm.facultadId) {
-            showNotification({ message: 'La facultad es obligatoria', type: 'error' });
+        if (!asignaturaForm.programaId) {
+            showNotification({ message: 'El programa es obligatorio', type: 'error' });
             return;
         }
 
@@ -103,7 +103,7 @@ export function useAsignaturas() {
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
                 tipo: asignaturaForm.tipo,
-                facultad_id: Number(asignaturaForm.facultadId),
+                programa_id: Number(asignaturaForm.programaId),
                 horas: Number(asignaturaForm.horas) || 0
             });
 
@@ -131,7 +131,7 @@ export function useAsignaturas() {
             nombre: asignatura.nombre,
             creditos: asignatura.creditos.toString(),
             tipo: asignatura.tipo || 'teórica',
-            facultadId: asignatura.facultad_id ? asignatura.facultad_id.toString() : '',
+            programaId: asignatura.programa_id ? asignatura.programa_id.toString() : '',
             horas: asignatura.horas ? asignatura.horas.toString() : '0'
         });
 
@@ -157,8 +157,8 @@ export function useAsignaturas() {
             return;
         }
 
-        if (!asignaturaForm.facultadId) {
-            showNotification({ message: 'La facultad es obligatoria', type: 'error' });
+        if (!asignaturaForm.programaId) {
+            showNotification({ message: 'El programa es obligatorio', type: 'error' });
             return;
         }
 
@@ -170,7 +170,7 @@ export function useAsignaturas() {
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
                 tipo: asignaturaForm.tipo,
-                facultad_id: Number(asignaturaForm.facultadId),
+                programa_id: Number(asignaturaForm.programaId),
                 horas: Number(asignaturaForm.horas) || 0
             });
 
@@ -227,20 +227,20 @@ export function useAsignaturas() {
             nombre: '',
             creditos: '',
             tipo: 'teórica',
-            facultadId: '',
+            programaId: '',
             horas: ''
         });
     };
 
-    const getFacultadNombre = (id?: number) => {
-        if (!id) return 'Sin facultad';
-        const f = facultades.find(f => f.id === id);
-        return f ? f.nombre : 'Desconocida';
+    const getProgramaNombre = (id?: number) => {
+        if (!id) return 'Sin programa';
+        const p = programas.find(p => p.id === id);
+        return p ? p.nombre : 'Desconocido';
     };
 
     // ==================== FILTROS ====================
 
-    const activeFacultades = facultades.filter(f => f.activa);
+    const activeProgramas = programas.filter(p => p.activo);
 
     const filteredAsignaturas = asignaturas.filter(asignatura => {
         // Búsqueda por texto
@@ -248,20 +248,20 @@ export function useAsignaturas() {
             asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
             asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // Filtro por facultad
-        const matchFacultad = selectedFacultadFilter === 'all' ||
-            (asignatura.facultad_id && asignatura.facultad_id.toString() === selectedFacultadFilter);
+        // Filtro por programa
+        const matchPrograma = selectedProgramaFilter === 'all' ||
+            (asignatura.programa_id && asignatura.programa_id.toString() === selectedProgramaFilter);
 
-        return matchSearch && matchFacultad;
+        return matchSearch && matchPrograma;
     });
 
     return {
         searchTerm, setSearchTerm,
         loading,
         asignaturas,
-        facultades,
-        activeFacultades,
-        selectedFacultadFilter, setSelectedFacultadFilter,
+        programas,
+        activeProgramas,
+        selectedProgramaFilter, setSelectedProgramaFilter,
         showCreateDialog, setShowCreateDialog,
         showEditDialog, setShowEditDialog,
         showDeleteDialog, setShowDeleteDialog,
@@ -274,6 +274,6 @@ export function useAsignaturas() {
         handleDeleteAsignatura,
         resetForm,
         filteredAsignaturas,
-        getFacultadNombre
+        getProgramaNombre
     };
 }

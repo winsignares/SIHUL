@@ -14,9 +14,8 @@ export default function Asignaturas() {
   const {
     searchTerm, setSearchTerm,
     loading,
-    facultades,
-    activeFacultades,
-    selectedFacultadFilter, setSelectedFacultadFilter,
+    activeProgramas,
+    selectedProgramaFilter, setSelectedProgramaFilter,
     showCreateDialog, setShowCreateDialog,
     showEditDialog, setShowEditDialog,
     showDeleteDialog, setShowDeleteDialog,
@@ -29,7 +28,7 @@ export default function Asignaturas() {
     handleDeleteAsignatura,
     resetForm,
     filteredAsignaturas,
-    getFacultadNombre
+    getProgramaNombre
   } = useAsignaturas();
 
   return (
@@ -66,15 +65,15 @@ export default function Asignaturas() {
             </div>
 
             <div className="w-64">
-              <Label className="text-slate-700 mb-2 block">Facultad</Label>
-              <Select value={selectedFacultadFilter} onValueChange={setSelectedFacultadFilter}>
+              <Label className="text-slate-700 mb-2 block">Programa</Label>
+              <Select value={selectedProgramaFilter} onValueChange={setSelectedProgramaFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas las facultades" />
+                  <SelectValue placeholder="Todos los programas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las facultades</SelectItem>
-                  {activeFacultades.map(f => (
-                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
+                  <SelectItem value="all">Todos los programas</SelectItem>
+                  {activeProgramas.map((p, index) => (
+                    <SelectItem key={p.id ?? `prog-${index}`} value={String(p.id)}>{p.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -90,7 +89,7 @@ export default function Asignaturas() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Facultad</TableHead>
+                <TableHead>Programa</TableHead>
                 <TableHead>Créditos</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Tipo</TableHead>
@@ -125,7 +124,7 @@ export default function Asignaturas() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-slate-900">{asignatura.nombre}</TableCell>
-                    <TableCell className="text-slate-600">{getFacultadNombre(asignatura.facultad_id)}</TableCell>
+                    <TableCell className="text-slate-600">{getProgramaNombre(asignatura.programa_id)}</TableCell>
                     <TableCell className="text-slate-600">{asignatura.creditos} créditos</TableCell>
                     <TableCell className="text-slate-600">{asignatura.horas || 0} horas</TableCell>
                     <TableCell>
@@ -202,19 +201,19 @@ export default function Asignaturas() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="facultad">
-                Facultad <span className="text-red-600">*</span>
+              <Label htmlFor="programa">
+                Programa <span className="text-red-600">*</span>
               </Label>
               <Select
-                value={asignaturaForm.facultadId}
-                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, facultadId: value })}
+                value={asignaturaForm.programaId}
+                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, programaId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar facultad" />
+                  <SelectValue placeholder="Seleccionar programa" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeFacultades.map(f => (
-                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
+                  {activeProgramas.map((p, index) => (
+                    <SelectItem key={p.id ?? `prog-${index}`} value={String(p.id)}>{p.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -322,19 +321,19 @@ export default function Asignaturas() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-facultad">
-                Facultad <span className="text-red-600">*</span>
+              <Label htmlFor="edit-programa">
+                Programa <span className="text-red-600">*</span>
               </Label>
               <Select
-                value={asignaturaForm.facultadId}
-                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, facultadId: value })}
+                value={asignaturaForm.programaId}
+                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, programaId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar facultad" />
+                  <SelectValue placeholder="Seleccionar programa" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeFacultades.map(f => (
-                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
+                  {activeProgramas.map((p, index) => (
+                    <SelectItem key={p.id ?? `prog-${index}`} value={String(p.id)}>{p.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -435,8 +434,8 @@ export default function Asignaturas() {
                   <p className="text-slate-900">{selectedAsignatura.nombre}</p>
                 </div>
                 <div>
-                  <p className="text-slate-600">Facultad:</p>
-                  <p className="text-slate-900">{getFacultadNombre(selectedAsignatura.facultad_id)}</p>
+                  <p className="text-slate-600">Programa:</p>
+                  <p className="text-slate-900">{getProgramaNombre(selectedAsignatura.programa_id)}</p>
                 </div>
                 <div>
                   <p className="text-slate-600">Créditos:</p>

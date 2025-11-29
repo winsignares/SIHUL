@@ -9,7 +9,7 @@ export interface Asignatura {
     codigo: string;
     creditos: number;
     tipo?: 'teórica' | 'práctica' | 'mixta';
-    facultad_id?: number;
+    programa_id?: number;
     horas?: number;
 }
 
@@ -21,7 +21,7 @@ export interface CreateAsignaturaPayload {
     codigo: string;
     creditos: number;
     tipo?: 'teórica' | 'práctica' | 'mixta';
-    facultad_id?: number;
+    programa_id?: number;
     horas?: number;
 }
 
@@ -34,7 +34,7 @@ export interface UpdateAsignaturaPayload {
     codigo?: string;
     creditos?: number;
     tipo?: 'teórica' | 'práctica' | 'mixta';
-    facultad_id?: number;
+    programa_id?: number;
     horas?: number;
 }
 
@@ -60,7 +60,7 @@ export const asignaturaService = {
      * Crea una nueva asignatura
      */
     create: async (payload: CreateAsignaturaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post<{ message: string; id: number }>('/asignaturas/', payload);
+        return apiClient.post<{ message: string; id: number }>('/asignaturas/create/', payload);
     },
 
     /**
