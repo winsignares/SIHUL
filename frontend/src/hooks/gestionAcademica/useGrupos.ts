@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { showNotification } from '../../context/ThemeContext';
 import { grupoService } from '../../services/grupos/gruposAPI';
+import { programaService, type Programa } from '../../services/programas/programaAPI';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { Grupo } from '../../services/grupos/gruposAPI';
 
 export interface GrupoAcademico {
@@ -16,6 +18,8 @@ export function useGrupos() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [grupos, setGrupos] = useState<GrupoAcademico[]>([]);
+    const [programas, setProgramas] = useState<Programa[]>([]);
+    const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
     const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
     const [selectedSemestreFilter, setSelectedSemestreFilter] = useState<string>('all');
 
@@ -50,9 +54,35 @@ export function useGrupos() {
         }
     };
 
+    const loadProgramas = async () => {
+        try {
+            const response = await programaService.listarProgramas();
+            setProgramas(response.programas);
+        } catch (error) {
+            showNotification({ 
+                message: `Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        }
+    };
+
+    const loadPeriodos = async () => {
+        try {
+            const response = await periodoService.listarPeriodos();
+            setPeriodos(response.periodos);
+        } catch (error) {
+            showNotification({ 
+                message: `Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        }
+    };
+
     // Cargar datos al montar el componente
     useEffect(() => {
         loadGrupos();
+        loadProgramas();
+        loadPeriodos();
     }, []);
 
     // ==================== HANDLERS ====================
@@ -235,6 +265,8 @@ export function useGrupos() {
         searchTerm, setSearchTerm,
         loading,
         grupos,
+        programas,
+        periodos,
         selectedProgramaFilter, setSelectedProgramaFilter,
         selectedSemestreFilter, setSelectedSemestreFilter,
         showCreateGrupo, setShowCreateGrupo,

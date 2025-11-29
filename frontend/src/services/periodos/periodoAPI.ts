@@ -16,7 +16,7 @@ export const periodoService = {
    * Obtiene la lista de todos los períodos académicos
    */
   listarPeriodos: async (): Promise<{ periodos: PeriodoAcademico[] }> => {
-    return apiClient.get('/periodos/');
+    return apiClient.get('/periodos/list/');
   },
 
   /**
@@ -32,7 +32,7 @@ export const periodoService = {
    * @param periodo Datos del período académico a crear
    */
   crearPeriodo: async (periodo: Omit<PeriodoAcademico, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/periodos/create/', periodo);
+    return apiClient.post('/periodos/', periodo);
   },
 
   /**

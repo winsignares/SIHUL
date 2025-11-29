@@ -14,6 +14,8 @@ export default function Grupos() {
     searchTerm, setSearchTerm,
     loading,
     grupos,
+    programas,
+    periodos,
     selectedProgramaFilter, setSelectedProgramaFilter,
     selectedSemestreFilter, setSelectedSemestreFilter,
     showCreateGrupo, setShowCreateGrupo,
@@ -180,29 +182,43 @@ export default function Grupos() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="programa-grupo">
-                ID del Programa <span className="text-red-600">*</span>
+                Programa Académico <span className="text-red-600">*</span>
               </Label>
-              <Input
-                id="programa-grupo"
-                type="number"
-                min="1"
-                placeholder="Ej: 1"
+              <Select
                 value={grupoForm.programa_id}
-                onChange={(e) => setGrupoForm({ ...grupoForm, programa_id: e.target.value })}
-              />
+                onValueChange={(value) => setGrupoForm({ ...grupoForm, programa_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar programa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programas.map(p => (
+                    <SelectItem key={p.id} value={p.id?.toString() || ''}>
+                      {p.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="periodo-grupo">
-                ID del Periodo <span className="text-red-600">*</span>
+                Periodo Académico <span className="text-red-600">*</span>
               </Label>
-              <Input
-                id="periodo-grupo"
-                type="number"
-                min="1"
-                placeholder="Ej: 1"
+              <Select
                 value={grupoForm.periodo_id}
-                onChange={(e) => setGrupoForm({ ...grupoForm, periodo_id: e.target.value })}
-              />
+                onValueChange={(value) => setGrupoForm({ ...grupoForm, periodo_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar periodo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodos.map(p => (
+                    <SelectItem key={p.id} value={p.id?.toString() || ''}>
+                      {p.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="semestre-grupo">
@@ -265,29 +281,43 @@ export default function Grupos() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-programa-grupo">
-                ID del Programa <span className="text-red-600">*</span>
+                Programa Académico <span className="text-red-600">*</span>
               </Label>
-              <Input
-                id="edit-programa-grupo"
-                type="number"
-                min="1"
-                placeholder="Ej: 1"
+              <Select
                 value={grupoForm.programa_id}
-                onChange={(e) => setGrupoForm({ ...grupoForm, programa_id: e.target.value })}
-              />
+                onValueChange={(value) => setGrupoForm({ ...grupoForm, programa_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar programa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programas.map(p => (
+                    <SelectItem key={p.id} value={p.id?.toString() || ''}>
+                      {p.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-periodo-grupo">
-                ID del Periodo <span className="text-red-600">*</span>
+                Periodo Académico <span className="text-red-600">*</span>
               </Label>
-              <Input
-                id="edit-periodo-grupo"
-                type="number"
-                min="1"
-                placeholder="Ej: 1"
+              <Select
                 value={grupoForm.periodo_id}
-                onChange={(e) => setGrupoForm({ ...grupoForm, periodo_id: e.target.value })}
-              />
+                onValueChange={(value) => setGrupoForm({ ...grupoForm, periodo_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar periodo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodos.map(p => (
+                    <SelectItem key={p.id} value={p.id?.toString() || ''}>
+                      {p.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-semestre-grupo">
