@@ -40,8 +40,10 @@ export function usePeriodosAcademicos() {
                 // Determinar estado basado en fechas y activo
                 let estado: 'Activo' | 'Próximo' | 'Finalizado' = 'Finalizado';
                 const now = new Date();
-                const inicio = new Date(p.fecha_inicio);
-                const fin = new Date(p.fecha_fin);
+                
+                // Parsear fechas como locales (no UTC) agregando 'T00:00:00'
+                const inicio = new Date(p.fecha_inicio + 'T00:00:00');
+                const fin = new Date(p.fecha_fin + 'T00:00:00');
 
                 if (p.activo) {
                     estado = 'Activo';
@@ -58,7 +60,7 @@ export function usePeriodosAcademicos() {
                     fecha_fin: p.fecha_fin,
                     activo: p.activo,
                     estado,
-                    programasActivos: Math.floor(Math.random() * 20) // Mock temporal
+                    programasActivos: p.programas_activos || 0
                 };
             });
             

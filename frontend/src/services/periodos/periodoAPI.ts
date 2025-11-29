@@ -6,6 +6,7 @@ export interface PeriodoAcademico {
   fecha_inicio: string;
   fecha_fin: string;
   activo: boolean;
+  programas_activos?: number;
 }
 
 /**

@@ -96,5 +96,16 @@ def get_periodo(request, id=None):
 def list_periodos(request):
     if request.method == 'GET':
         items = PeriodoAcademico.objects.all()
-        lst = [{"id": i.id, "nombre": i.nombre, "fecha_inicio": str(i.fecha_inicio), "fecha_fin": str(i.fecha_fin), "activo": i.activo} for i in items]
+        lst = []
+        for i in items:
+            # Contar programas únicos que tienen grupos en este periodo
+            programas_count = i.grupos.values('programa').distinct().count()
+            lst.append({
+                "id": i.id,
+                "nombre": i.nombre,
+                "fecha_inicio": str(i.fecha_inicio),
+                "fecha_fin": str(i.fecha_fin),
+                "activo": i.activo,
+                "programas_activos": programas_count
+            })
         return JsonResponse({"periodos": lst}, status=200)

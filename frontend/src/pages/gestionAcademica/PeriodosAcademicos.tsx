@@ -77,7 +77,7 @@ export default function PeriodosAcademicos() {
                     <Badge className="bg-green-100 text-green-800 border-green-300">Activo</Badge>
                   </div>
                   <p className="text-slate-600 dark:text-slate-400 mb-2">
-                    {new Date(periodoActivo.fecha_inicio).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} - {new Date(periodoActivo.fecha_fin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date(periodoActivo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} - {new Date(periodoActivo.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export default function PeriodosAcademicos() {
               <div className="text-right">
                 <p className="text-slate-600 dark:text-slate-400 mb-1">Días restantes</p>
                 <p className="text-slate-900 dark:text-slate-100">
-                  {Math.ceil((new Date(periodoActivo.fecha_fin).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
+                  {Math.ceil((new Date(periodoActivo.fecha_fin + 'T00:00:00').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
                 </p>
               </div>
             </div>
@@ -121,14 +121,14 @@ export default function PeriodosAcademicos() {
                 <TableRow key={periodo.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   <TableCell className="text-slate-900 dark:text-slate-100">{periodo.nombre}</TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {new Date(periodo.fecha_inicio).toLocaleDateString('es-ES', {
+                    {new Date(periodo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
                     })}
                   </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {new Date(periodo.fecha_fin).toLocaleDateString('es-ES', {
+                    {new Date(periodo.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
@@ -232,9 +232,9 @@ export default function PeriodosAcademicos() {
                         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {new Date(periodo.fecha_inicio).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                            {new Date(periodo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                             {' → '}
-                            {new Date(periodo.fecha_fin).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {new Date(periodo.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                         </div>
                       </div>
@@ -260,7 +260,7 @@ export default function PeriodosAcademicos() {
                         <div>
                           <p className="text-slate-500 dark:text-slate-400">Duración</p>
                           <p className="text-slate-900 dark:text-slate-100">
-                            {Math.ceil((new Date(periodo.fecha_fin).getTime() - new Date(periodo.fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))} días
+                            {Math.ceil((new Date(periodo.fecha_fin + 'T00:00:00').getTime() - new Date(periodo.fecha_inicio + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))} días
                           </p>
                         </div>
                       </div>
