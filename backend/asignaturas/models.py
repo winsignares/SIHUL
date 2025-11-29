@@ -10,7 +10,6 @@ class Asignatura(models.Model):
     codigo = models.CharField(max_length=20, unique=True)
     creditos = models.PositiveIntegerField()
     tipo = models.CharField(max_length=20, choices=[('teórica', 'Teórica'), ('práctica', 'Práctica'), ('mixta', 'Mixta')], default='presencial')
-    programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name='asignaturas', null=True, blank=True)
     horas = models.PositiveIntegerField(default=0)
 
     def __str__(self):
@@ -26,7 +25,7 @@ class AsignaturaPrograma(models.Model):
     programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name='asignaturas_programa')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='programas_asignatura')
     semestre = models.PositiveIntegerField()
-    tipo = models.CharField(
+    componente_formativo = models.CharField(
         max_length=20, 
         choices=[
             ('electiva', 'Electiva'),

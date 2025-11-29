@@ -17,25 +17,16 @@ def create_asignatura(request):
         codigo = data.get('codigo')
         creditos = data.get('creditos')
         tipo = data.get('tipo', 'teórica')
-        programa_id = data.get('programa_id')
         horas = data.get('horas', 0)
 
         if not all([nombre, codigo, creditos]):
             return JsonResponse({'error': 'Faltan campos obligatorios'}, status=400)
-        
-        programa = None
-        if programa_id:
-            try:
-                programa = Programa.objects.get(id=programa_id)
-            except Programa.DoesNotExist:
-                return JsonResponse({'error': 'El programa especificado no existe'}, status=404)
 
         asignatura = Asignatura(
             nombre=nombre,
             codigo=codigo,
             creditos=int(creditos),
             tipo=tipo,
-            programa=programa,
             horas=int(horas)
         )
         asignatura.save()
@@ -74,17 +65,6 @@ def update_asignatura(request, id=None):
         
         if 'horas' in data:
             asignatura.horas = int(data.get('horas'))
-            
-        if 'programa_id' in data:
-            programa_id = data.get('programa_id')
-            if programa_id:
-                try:
-                    programa = Programa.objects.get(id=programa_id)
-                    asignatura.programa = programa
-                except Programa.DoesNotExist:
-                    return JsonResponse({'error': 'El programa especificado no existe'}, status=404)
-            else:
-                asignatura.programa = None
 
         asignatura.save()
 
@@ -126,7 +106,6 @@ def get_asignatura(request, id):
             'codigo': asignatura.codigo,
             'creditos': asignatura.creditos,
             'tipo': asignatura.tipo,
-            'programa_id': asignatura.programa.id if asignatura.programa else None,
             'horas': asignatura.horas
         }
         return JsonResponse(data)
@@ -148,7 +127,6 @@ def list_asignaturas(request):
                 'codigo': asignatura.codigo,
                 'creditos': asignatura.creditos,
                 'tipo': asignatura.tipo,
-                'programa_id': asignatura.programa.id if asignatura.programa else None,
                 'horas': asignatura.horas
             })
         return JsonResponse({'asignaturas': data}, safe=False)
@@ -165,7 +143,7 @@ def create_asignatura_programa(request):
         programa_id = data.get('programa_id')
         asignatura_id = data.get('asignatura_id')
         semestre = data.get('semestre')
-        tipo = data.get('tipo', 'obligatoria')
+        componente_formativo = data.get('componente_formativo', 'profesional')
 
         if not all([programa_id, asignatura_id, semestre]):
             return JsonResponse({'error': 'Faltan campos obligatorios: programa_id, asignatura_id, semestre'}, status=400)
@@ -188,7 +166,7 @@ def create_asignatura_programa(request):
             programa=programa,
             asignatura=asignatura,
             semestre=int(semestre),
-            tipo=tipo
+            componente_formativo=componente_formativo
         )
         asignatura_programa.save()
 
@@ -218,8 +196,8 @@ def update_asignatura_programa(request, id=None):
         if 'semestre' in data:
             asignatura_programa.semestre = int(data.get('semestre'))
         
-        if 'tipo' in data:
-            asignatura_programa.tipo = data.get('tipo')
+        if 'componente_formativo' in data:
+            asignatura_programa.componente_formativo = data.get('componente_formativo')
 
         asignatura_programa.save()
 
@@ -269,7 +247,7 @@ def get_asignatura_programa(request, id):
             'asignatura_codigo': asignatura_programa.asignatura.codigo,
             'creditos': asignatura_programa.asignatura.creditos,
             'semestre': asignatura_programa.semestre,
-            'tipo': asignatura_programa.tipo,
+            'componente_formativo': asignatura_programa.componente_formativo,
             'horas': asignatura_programa.asignatura.horas
         }
         return JsonResponse(data)
@@ -307,7 +285,7 @@ def list_asignaturas_programa(request):
                 'asignatura_codigo': ap.asignatura.codigo,
                 'creditos': ap.asignatura.creditos,
                 'semestre': ap.semestre,
-                'tipo': ap.tipo,
+                'componente_formativo': ap.componente_formativo,
                 'horas': ap.asignatura.horas
             })
         

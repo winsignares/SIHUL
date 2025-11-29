@@ -44,7 +44,6 @@ export function useAsignaturas() {
         nombre: '',
         creditos: '',
         tipo: 'teórica' as 'teórica' | 'práctica' | 'mixta',
-        programaId: '',
         horas: ''
     });
 
@@ -107,12 +106,6 @@ export function useAsignaturas() {
             return;
         }
 
-        if (!asignaturaForm.programaId) {
-            console.warn('Programa no seleccionado');
-            showNotification({ message: 'El programa es obligatorio', type: 'error' });
-            return;
-        }
-
         try {
             setLoading(true);
             console.log('Enviando datos al servidor:', {
@@ -120,7 +113,6 @@ export function useAsignaturas() {
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
                 tipo: asignaturaForm.tipo,
-                programa_id: Number(asignaturaForm.programaId),
                 horas: Number(asignaturaForm.horas) || 0
             });
             
@@ -129,7 +121,6 @@ export function useAsignaturas() {
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
                 tipo: asignaturaForm.tipo,
-                programa_id: Number(asignaturaForm.programaId),
                 horas: Number(asignaturaForm.horas) || 0
             });
 
@@ -159,7 +150,6 @@ export function useAsignaturas() {
             nombre: asignatura.nombre,
             creditos: asignatura.creditos.toString(),
             tipo: asignatura.tipo || 'teórica',
-            programaId: asignatura.programa_id ? asignatura.programa_id.toString() : '',
             horas: asignatura.horas ? asignatura.horas.toString() : '0'
         });
 
@@ -185,11 +175,6 @@ export function useAsignaturas() {
             return;
         }
 
-        if (!asignaturaForm.programaId) {
-            showNotification({ message: 'El programa es obligatorio', type: 'error' });
-            return;
-        }
-
         try {
             setLoading(true);
             await asignaturaService.update({
@@ -198,7 +183,6 @@ export function useAsignaturas() {
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
                 tipo: asignaturaForm.tipo,
-                programa_id: Number(asignaturaForm.programaId),
                 horas: Number(asignaturaForm.horas) || 0
             });
 
@@ -255,20 +239,11 @@ export function useAsignaturas() {
             nombre: '',
             creditos: '',
             tipo: 'teórica',
-            programaId: '',
             horas: ''
         });
     };
 
-    const getProgramaNombre = (id?: number) => {
-        if (!id) return 'Sin programa';
-        const p = programas.find(p => p.id === id);
-        return p ? p.nombre : 'Desconocido';
-    };
-
     // ==================== FILTROS ====================
-
-    const activeProgramas = programas.filter(p => p.activo);
 
     const filteredAsignaturas = asignaturas.filter(asignatura => {
         // Búsqueda por texto
@@ -276,11 +251,7 @@ export function useAsignaturas() {
             asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
             asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // Filtro por programa
-        const matchPrograma = selectedProgramaFilter === 'all' ||
-            (asignatura.programa_id && asignatura.programa_id.toString() === selectedProgramaFilter);
-
-        return matchSearch && matchPrograma;
+        return matchSearch;
     });
 
     return {
@@ -288,8 +259,6 @@ export function useAsignaturas() {
         loading,
         asignaturas,
         programas,
-        activeProgramas,
-        selectedProgramaFilter, setSelectedProgramaFilter,
         showCreateDialog, setShowCreateDialog,
         showEditDialog, setShowEditDialog,
         showDeleteDialog, setShowDeleteDialog,
@@ -301,7 +270,6 @@ export function useAsignaturas() {
         openDeleteDialog,
         handleDeleteAsignatura,
         resetForm,
-        filteredAsignaturas,
-        getProgramaNombre
+        filteredAsignaturas
     };
 }
