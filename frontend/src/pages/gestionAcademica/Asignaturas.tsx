@@ -14,8 +14,6 @@ export default function Asignaturas() {
   const {
     searchTerm, setSearchTerm,
     loading,
-    activeProgramas,
-    selectedProgramaFilter, setSelectedProgramaFilter,
     showCreateDialog, setShowCreateDialog,
     showEditDialog, setShowEditDialog,
     showDeleteDialog, setShowDeleteDialog,
@@ -27,8 +25,7 @@ export default function Asignaturas() {
     openDeleteDialog,
     handleDeleteAsignatura,
     resetForm,
-    filteredAsignaturas,
-    getProgramaNombre
+    filteredAsignaturas
   } = useAsignaturas();
 
   return (
@@ -63,21 +60,6 @@ export default function Asignaturas() {
                 />
               </div>
             </div>
-
-            <div className="w-64">
-              <Label className="text-slate-700 mb-2 block">Programa</Label>
-              <Select value={selectedProgramaFilter} onValueChange={setSelectedProgramaFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los programas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los programas</SelectItem>
-                  {activeProgramas.map((p, index) => (
-                    <SelectItem key={p.id ?? `prog-${index}`} value={String(p.id)}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -89,7 +71,6 @@ export default function Asignaturas() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Programa</TableHead>
                 <TableHead>Créditos</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Tipo</TableHead>
@@ -99,7 +80,7 @@ export default function Asignaturas() {
             <TableBody>
               {filteredAsignaturas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={6} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
                         <Search className="w-8 h-8 text-slate-400" />
@@ -124,7 +105,6 @@ export default function Asignaturas() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-slate-900">{asignatura.nombre}</TableCell>
-                    <TableCell className="text-slate-600">{getProgramaNombre(asignatura.programa_id)}</TableCell>
                     <TableCell className="text-slate-600">{asignatura.creditos} créditos</TableCell>
                     <TableCell className="text-slate-600">{asignatura.horas || 0} horas</TableCell>
                     <TableCell>
@@ -198,25 +178,6 @@ export default function Asignaturas() {
                 value={asignaturaForm.nombre}
                 onChange={(e) => setAsignaturaForm({ ...asignaturaForm, nombre: e.target.value })}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="programa">
-                Programa <span className="text-red-600">*</span>
-              </Label>
-              <Select
-                value={asignaturaForm.programaId}
-                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, programaId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar programa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeProgramas.map((p, index) => (
-                    <SelectItem key={p.id ?? `prog-${index}`} value={String(p.id)}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -329,25 +290,6 @@ export default function Asignaturas() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-programa">
-                Programa <span className="text-red-600">*</span>
-              </Label>
-              <Select
-                value={asignaturaForm.programaId}
-                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, programaId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar programa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeProgramas.map((p, index) => (
-                    <SelectItem key={p.id ?? `prog-${index}`} value={String(p.id)}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-creditos">
@@ -452,12 +394,12 @@ export default function Asignaturas() {
                   <p className="text-slate-900">{selectedAsignatura.nombre}</p>
                 </div>
                 <div>
-                  <p className="text-slate-600">Programa:</p>
-                  <p className="text-slate-900">{getProgramaNombre(selectedAsignatura.programa_id)}</p>
-                </div>
-                <div>
                   <p className="text-slate-600">Créditos:</p>
                   <p className="text-slate-900">{selectedAsignatura.creditos}</p>
+                </div>
+                <div>
+                  <p className="text-slate-600">Horas:</p>
+                  <p className="text-slate-900">{selectedAsignatura.horas || 0}</p>
                 </div>
               </div>
             </div>
