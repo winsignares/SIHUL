@@ -42,6 +42,15 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         setIsSidebarCollapsed(true);
     }, [location.pathname]);
 
+    const cleanLabel = (name: string) => {
+        return name
+            .replace(' Supervisor', '')
+            .replace(' Docente', '')
+            .replace(' Estudiante', '')
+            .replace(' Admin', '')
+            .trim();
+    };
+
     /**
      * Agrupa los componentes en secciones para el menú
      */
@@ -57,25 +66,84 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 items: dashboardComponents.map(c => ({
                     id: c.nombre,
                     icon: getIconForComponent(c.nombre),
-                    label: c.nombre,
+                    label: cleanLabel(c.nombre),
                     route: getRouteForComponent(c.nombre),
                     code: c.nombre
                 }))
             });
         }
 
-        // Sección Gestión Académica
+        // Sección Gestión de Espacios (para supervisores)
+        let espaciosNames = [
+            'Apertura y Cierre de Salones',
+            'Disponibilidad de Espacios',
+            'Estado de Recursos'
+        ];
+
+        // Si es admin, quitamos Estado de Recursos del sidebar porque ya está en Centro Institucional
+        if (userRole.toLowerCase().includes('admin')) {
+            espaciosNames = espaciosNames.filter(n => n !== 'Estado de Recursos');
+        }
+
+        // Filtrar y ordenar según el array espaciosNames
+        const espaciosComponents = espaciosNames
+            .map(name => components.find(c => c.nombre === name))
+            .filter((c): c is typeof components[0] => c !== undefined);
+
+        if (espaciosComponents.length > 0) {
+            sections.push({
+                id: 'espacios',
+                label: 'Gestión de Espacios',
+                items: espaciosComponents.map(c => {
+                    let route = getRouteForComponent(c.nombre);
+                    // Fix para Supervisor General y Estado de Recursos
+                    if (userRole.toLowerCase().includes('supervisor') && c.nombre === 'Estado de Recursos') {
+                        route = '/supervisor/recursos';
+                    }
+                    return {
+                        id: c.nombre,
+                        icon: getIconForComponent(c.nombre),
+                        label: cleanLabel(c.nombre),
+                        route: route,
+                        code: c.nombre
+                    };
+                })
+            });
+        }
+
+        // Sección Académico (para docentes/estudiantes)
+        // Incluye Horarios y Préstamos Docente
+        const academicoNames = [
+            'Mi Horario',
+            'Mi Horario Estudiante',
+            'Préstamos Docente'
+        ];
+        // Filtrar y ordenar para mantener el orden específico: Horario -> Préstamos
+        const academicoComponents = academicoNames
+            .map(name => components.find(c => c.nombre === name))
+            .filter((c): c is typeof components[0] => c !== undefined);
+
+        if (academicoComponents.length > 0) {
+            sections.push({
+                id: 'academico',
+                label: 'Académico',
+                items: academicoComponents.map(c => ({
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: cleanLabel(c.nombre),
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
+                }))
+            });
+        }
+
+        // Sección Gestión Académica (Admin)
         const gestionNames = [
             'Centro Institucional',
             'Centro de Horarios',
             'Préstamos de Espacios',
-            'Préstamos Docente',
             'Periodos Académicos',
-            'Asignación Automática',
-            'Asistentes Virtuales',
-            'Asistentes Virtuales Supervisor',
-            'Asistentes Virtuales Docente',
-            'Asistentes Virtuales Estudiante'
+            'Asignación Automática'
         ];
         const gestionComponents = components.filter(c => gestionNames.includes(c.nombre));
         if (gestionComponents.length > 0) {
@@ -85,48 +153,29 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 items: gestionComponents.map(c => ({
                     id: c.nombre,
                     icon: getIconForComponent(c.nombre),
-                    label: c.nombre,
+                    label: cleanLabel(c.nombre),
                     route: getRouteForComponent(c.nombre),
                     code: c.nombre
                 }))
             });
         }
 
-        // Sección Gestión de Espacios (para supervisores)
-        const espaciosNames = [
-            'Disponibilidad de Espacios',
-            'Apertura y Cierre de Salones',
-            'Estado de Recursos'
+        // Sección Asistente Virtual - MOVIDO DESPUÉS DE GESTIÓN ACADÉMICA
+        const asistenteNames = [
+            'Asistentes Virtuales',
+            'Asistentes Virtuales Supervisor',
+            'Asistentes Virtuales Docente',
+            'Asistentes Virtuales Estudiante'
         ];
-        const espaciosComponents = components.filter(c => espaciosNames.includes(c.nombre));
-        if (espaciosComponents.length > 0) {
+        const asistenteComponents = components.filter(c => asistenteNames.includes(c.nombre));
+        if (asistenteComponents.length > 0) {
             sections.push({
-                id: 'espacios',
-                label: 'Gestión de Espacios',
-                items: espaciosComponents.map(c => ({
+                id: 'asistente',
+                label: 'Asistente Virtual',
+                items: asistenteComponents.map(c => ({
                     id: c.nombre,
                     icon: getIconForComponent(c.nombre),
-                    label: c.nombre,
-                    route: getRouteForComponent(c.nombre),
-                    code: c.nombre
-                }))
-            });
-        }
-
-        // Sección Académico (para docentes/estudiantes)
-        const academicoNames = [
-            'Mi Horario',
-            'Mi Horario Estudiante'
-        ];
-        const academicoComponents = components.filter(c => academicoNames.includes(c.nombre));
-        if (academicoComponents.length > 0) {
-            sections.push({
-                id: 'academico',
-                label: 'Académico',
-                items: academicoComponents.map(c => ({
-                    id: c.nombre,
-                    icon: getIconForComponent(c.nombre),
-                    label: c.nombre,
+                    label: cleanLabel(c.nombre),
                     route: getRouteForComponent(c.nombre),
                     code: c.nombre
                 }))
@@ -143,7 +192,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 items: reportesComponents.map(c => ({
                     id: c.nombre,
                     icon: getIconForComponent(c.nombre),
-                    label: c.nombre,
+                    label: cleanLabel(c.nombre),
                     route: getRouteForComponent(c.nombre),
                     code: c.nombre
                 }))
@@ -160,7 +209,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 items: adminComponents.map(c => ({
                     id: c.nombre,
                     icon: getIconForComponent(c.nombre),
-                    label: c.nombre,
+                    label: cleanLabel(c.nombre),
                     route: getRouteForComponent(c.nombre),
                     code: c.nombre
                 }))

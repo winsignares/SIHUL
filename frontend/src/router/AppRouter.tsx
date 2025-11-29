@@ -154,6 +154,12 @@ export default function AppRouter() {
           </ProtectedRoute>
         } />
 
+        <Route path="admin/estado-recursos" element={
+          <ProtectedRoute requiredComponent="Estado de Recursos">
+            <EstadoRecursos />
+          </ProtectedRoute>
+        } />
+
         {/* Rutas de Supervisor General */}
         <Route path="supervisor/dashboard" element={
           <ProtectedRoute requiredComponent="Dashboard Supervisor">
