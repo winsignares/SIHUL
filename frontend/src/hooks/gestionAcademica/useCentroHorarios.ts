@@ -38,7 +38,7 @@ export function useCentroHorarios() {
     const { notification, showNotification } = useNotification();
     const [searchParams] = useSearchParams();
     const modeParam = searchParams.get('mode');
-    const initialMode = modeParam === 'crear' ? 'crear' : (modeParam === 'modificacion' ? 'modificacion' : 'consulta');
+    const initialMode = modeParam === 'consulta' ? 'consulta' : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
     const [activeTab, setActiveTab] = useState<'consulta' | 'crear' | 'modificacion'>(initialMode);
     const [loading, setLoading] = useState(false);
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
@@ -79,7 +79,7 @@ export function useCentroHorarios() {
         if (mode === 'crear' || mode === 'modificacion' || mode === 'consulta') {
             setActiveTab(mode as any);
         } else {
-            setActiveTab('consulta');
+            setActiveTab('crear');
         }
     }, [searchParams]);
 
