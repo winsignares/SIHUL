@@ -7,7 +7,12 @@ export interface EspacioFisico {
     id?: number;
     nombre: string;
     sede_id: number;
-    tipo: string;
+    tipo_id: number;
+    tipo_espacio?: {
+        id: number;
+        nombre: string;
+        descripcion?: string;
+    };
     capacidad: number;
     descripcion?: string;
     recursos?: { id: number; nombre: string; estado: string }[];
@@ -21,7 +26,7 @@ export interface EspacioFisico {
 export interface CreateEspacioPayload {
     nombre: string;
     sede_id: number;
-    tipo: string;
+    tipo_id: number;
     capacidad: number;
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
@@ -36,7 +41,7 @@ export interface UpdateEspacioPayload {
     id: number;
     nombre?: string;
     sede_id?: number;
-    tipo?: string;
+    tipo_id?: number;
     capacidad?: number;
     descripcion?: string;
     recursos?: { id: number; estado: string }[];

@@ -3,6 +3,7 @@ import { useNotification } from '../../share/notificationBanner';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
+import { tipoEspacioService, type TipoEspacio } from '../../services/espacios/tipoEspacioAPI';
 
 export function useEspaciosFisicos() {
     const { notification, showNotification } = useNotification();
@@ -13,6 +14,7 @@ export function useEspaciosFisicos() {
     // Estados de datos
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
     const [sedes, setSedes] = useState<Sede[]>([]);
+    const [tiposEspacio, setTiposEspacio] = useState<TipoEspacio[]>([]);
     const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -24,7 +26,7 @@ export function useEspaciosFisicos() {
     // Formulario
     const [espacioForm, setEspacioForm] = useState({
         nombre: '',
-        tipo: '',
+        tipo_id: '',
         capacidad: '',
         sede_id: '',
         ubicacion: '',
@@ -47,18 +49,21 @@ export function useEspaciosFisicos() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [espaciosRes, sedesRes, recursosRes] = await Promise.all([
+            const [espaciosRes, sedesRes, tiposRes, recursosRes] = await Promise.all([
                 espacioService.list(),
                 sedeService.listarSedes(),
+                tipoEspacioService.listarTiposEspacio(),
                 recursoService.listarRecursos()
             ]);
 
             const espaciosData = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
             const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
+            const tiposData = (tiposRes as any).tipos_espacio || (Array.isArray(tiposRes) ? tiposRes : []);
             const recursosData = (recursosRes as any).recursos || (Array.isArray(recursosRes) ? recursosRes : []);
 
             setEspacios(espaciosData);
             setSedes(sedesData);
+            setTiposEspacio(tiposData);
             setRecursosDisponibles(recursosData);
         } catch (error) {
             console.error('Error loading data:', error);
@@ -78,9 +83,6 @@ export function useEspaciosFisicos() {
         }
     };
 
-    // Tipos
-    const tiposEspacio = ['Aula', 'Laboratorio', 'Auditorio', 'Sala', 'Cancha', 'Cubículo'];
-
     // ==================== CREAR ESPACIO ====================
 
     const handleCreateEspacio = async () => {
@@ -89,7 +91,7 @@ export function useEspaciosFisicos() {
             showNotification('El nombre es obligatorio', 'error');
             return;
         }
-        if (!espacioForm.tipo) {
+        if (!espacioForm.tipo_id) {
             showNotification('Debe seleccionar un tipo', 'error');
             return;
         }
@@ -116,7 +118,7 @@ export function useEspaciosFisicos() {
             // 1. Crear el espacio con recursos
             await espacioService.create({
                 nombre: espacioForm.nombre.trim(),
-                tipo: espacioForm.tipo,
+                tipo_id: Number(espacioForm.tipo_id),
                 capacidad: Number(espacioForm.capacidad),
                 sede_id: Number(espacioForm.sede_id),
                 ubicacion: espacioForm.ubicacion.trim(),
@@ -146,7 +148,7 @@ export function useEspaciosFisicos() {
         setSelectedEspacio(espacio);
         setEspacioForm({
             nombre: espacio.nombre || '',
-            tipo: espacio.tipo || '',
+            tipo_id: String(espacio.tipo_id || ''),
             capacidad: String(espacio.capacidad || ''),
             sede_id: String(espacio.sede_id || ''),
             ubicacion: espacio.ubicacion || '',
@@ -156,14 +158,10 @@ export function useEspaciosFisicos() {
 
         // Cargar recursos del espacio (ya vienen en el objeto espacio desde el listado)
         if (espacio.recursos) {
-            // Mapear los recursos del espacio a objetos Recurso completos si es necesario
-            // O usarlos directamente si coinciden. 
-            // Aquí asumimos que espacio.recursos tiene {id, nombre, estado}
-            // y recursosAgregados espera Recurso {id, nombre, descripcion?}
             const mappedRecursos = espacio.recursos.map(r => ({
                 id: r.id,
                 nombre: r.nombre,
-                descripcion: '' // No viene en el listado de espacio, pero no es crítico para mostrar
+                descripcion: ''
             }));
             setRecursosAgregados(mappedRecursos);
             setMostrandoRecursos(mappedRecursos.length === 0);
@@ -182,7 +180,7 @@ export function useEspaciosFisicos() {
             showNotification('El nombre es obligatorio', 'error');
             return;
         }
-        if (!espacioForm.tipo) {
+        if (!espacioForm.tipo_id) {
             showNotification('Debe seleccionar un tipo', 'error');
             return;
         }
@@ -203,14 +201,14 @@ export function useEspaciosFisicos() {
             // Preparar recursos para el payload
             const recursosPayload = recursosAgregados.map(r => ({
                 id: r.id!,
-                estado: 'disponible' // O mantener el estado si se pudiera editar
+                estado: 'disponible'
             }));
 
             // 1. Actualizar espacio con recursos
             await espacioService.update({
                 id: selectedEspacio.id!,
                 nombre: espacioForm.nombre.trim(),
-                tipo: espacioForm.tipo,
+                tipo_id: Number(espacioForm.tipo_id),
                 capacidad: Number(espacioForm.capacidad),
                 sede_id: Number(espacioForm.sede_id),
                 ubicacion: espacioForm.ubicacion.trim(),
@@ -267,7 +265,7 @@ export function useEspaciosFisicos() {
     const resetForm = () => {
         setEspacioForm({
             nombre: '',
-            tipo: '',
+            tipo_id: '',
             capacidad: '',
             sede_id: '',
             ubicacion: '',
@@ -285,13 +283,14 @@ export function useEspaciosFisicos() {
         // Find sede name for search
         const sede = sedes.find(s => s.id === espacio.sede_id);
         const sedeNombre = sede ? sede.nombre : '';
+        const tipoNombre = espacio.tipo_espacio?.nombre || '';
 
         const matchSearch =
             (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (sedeNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+            (sedeNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (tipoNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
-        const matchTipo = filterTipo === 'all' || espacio.tipo === filterTipo;
-        // Filter by sede_id if selected
+        const matchTipo = filterTipo === 'all' || espacio.tipo_id.toString() === filterTipo;
         const matchSede = filterSede === 'all' || espacio.sede_id.toString() === filterSede;
 
         return matchSearch && matchTipo && matchSede;
@@ -317,6 +316,7 @@ export function useEspaciosFisicos() {
         filterSede, setFilterSede,
         espacios,
         sedes,
+        tiposEspacio,
         recursosDisponibles,
         showCreateDialog, setShowCreateDialog,
         showEditDialog, setShowEditDialog,
@@ -326,7 +326,6 @@ export function useEspaciosFisicos() {
         recursosAgregados, setRecursosAgregados,
         mostrandoRecursos, setMostrandoRecursos,
         selectedEspacio, setSelectedEspacio,
-        tiposEspacio,
         handleCreateEspacio,
         openEditDialog,
         handleEditEspacio,

@@ -89,7 +89,7 @@ export default function EspaciosFisicos() {
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
                 {tiposEspacio.map(tipo => (
-                  <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                  <SelectItem key={tipo.id} value={tipo.id?.toString() || ''}>{tipo.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -126,7 +126,9 @@ export default function EspaciosFisicos() {
                   return (
                     <TableRow key={espacio.id}>
                       <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">{espacio.tipo}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {espacio.tipo_espacio?.nombre || 'Sin tipo'}
+                      </TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">{sede?.nombre || 'Sede desconocida'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} personas</TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">{espacio.ubicacion || 'Sin ubicación'}</TableCell>
@@ -209,15 +211,15 @@ export default function EspaciosFisicos() {
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo *</Label>
                 <Select
-                  value={espacioForm.tipo}
-                  onValueChange={(value) => setEspacioForm({ ...espacioForm, tipo: value })}
+                  value={espacioForm.tipo_id}
+                  onValueChange={(value) => setEspacioForm({ ...espacioForm, tipo_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {tiposEspacio.map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      <SelectItem key={tipo.id} value={tipo.id?.toString() || ''}>{tipo.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -410,15 +412,15 @@ export default function EspaciosFisicos() {
               <div className="space-y-2">
                 <Label htmlFor="edit-tipo">Tipo *</Label>
                 <Select
-                  value={espacioForm.tipo}
-                  onValueChange={(value) => setEspacioForm({ ...espacioForm, tipo: value })}
+                  value={espacioForm.tipo_id}
+                  onValueChange={(value) => setEspacioForm({ ...espacioForm, tipo_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {tiposEspacio.map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      <SelectItem key={tipo.id} value={tipo.id?.toString() || ''}>{tipo.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -68,6 +68,8 @@ export default function Sedes() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Dirección</TableHead>
+                <TableHead>Ciudad</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -75,7 +77,7 @@ export default function Sedes() {
             <TableBody>
               {filteredSedes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-slate-500 py-8">
+                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
                     No se encontraron sedes
                   </TableCell>
                 </TableRow>
@@ -83,6 +85,8 @@ export default function Sedes() {
                 filteredSedes.map((sede) => (
                   <TableRow key={sede.id}>
                     <TableCell className="text-slate-900">{sede.nombre}</TableCell>
+                    <TableCell className="text-slate-600">{sede.direccion || 'Sin dirección'}</TableCell>
+                    <TableCell className="text-slate-600">{sede.ciudad || 'Sin ciudad'}</TableCell>
                     <TableCell>
                       <Badge
                         variant={sede.activa ? 'default' : 'secondary'}
