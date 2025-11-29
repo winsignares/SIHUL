@@ -14,6 +14,7 @@ export interface PrestamoEspacioUI {
     estado: 'pendiente' | 'aprobado' | 'rechazado';
     fechaSolicitud: string;
     comentariosAdmin?: string;
+    administradorNombre?: string;
 }
 
 export interface StatsData {

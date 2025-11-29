@@ -1,92 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { PrestamoEspacioUI as PrestamoEspacio } from '../../models';
 import { Clock, Check, X, TrendingUp } from 'lucide-react';
-
-const initialPrestamos: PrestamoEspacio[] = [
-    {
-        id: '1',
-        solicitante: 'María González',
-        email: 'maria.gonzalez@universidad.edu',
-        telefono: '+57 300 123 4567',
-        espacio: 'Auditorio Central',
-        fecha: '2025-10-28',
-        horaInicio: '14:00',
-        horaFin: '18:00',
-        motivo: 'Conferencia sobre Inteligencia Artificial y Machine Learning para estudiantes de ingeniería',
-        tipoEvento: 'Conferencia',
-        asistentes: 150,
-        recursosNecesarios: ['Proyector', 'Micrófono', 'Sonido'],
-        estado: 'pendiente',
-        fechaSolicitud: '2025-10-20 10:30'
-    },
-    {
-        id: '2',
-        solicitante: 'Carlos Ruiz',
-        email: 'carlos.ruiz@universidad.edu',
-        telefono: '+57 300 987 6543',
-        espacio: 'Laboratorio 301',
-        fecha: '2025-10-25',
-        horaInicio: '18:00',
-        horaFin: '20:00',
-        motivo: 'Taller de Robótica para estudiantes de primer semestre',
-        tipoEvento: 'Taller',
-        asistentes: 20,
-        recursosNecesarios: ['Computadores', 'Proyector'],
-        estado: 'aprobado',
-        fechaSolicitud: '2025-10-18 14:20',
-        comentariosAdmin: 'Aprobado. Asegurar que el laboratorio esté preparado con los kits de robótica.'
-    },
-    {
-        id: '3',
-        solicitante: 'Ana Martínez',
-        email: 'ana.martinez@universidad.edu',
-        telefono: '+57 300 555 1234',
-        espacio: 'Sala de Juntas 1',
-        fecha: '2025-10-24',
-        horaInicio: '09:00',
-        horaFin: '12:00',
-        motivo: 'Reunión de Comité de Investigación para revisión de proyectos',
-        tipoEvento: 'Reunión',
-        asistentes: 12,
-        recursosNecesarios: ['Proyector', 'Videoconferencia'],
-        estado: 'aprobado',
-        fechaSolicitud: '2025-10-17 09:15',
-        comentariosAdmin: 'Aprobado. Verificar configuración de videoconferencia.'
-    },
-    {
-        id: '4',
-        solicitante: 'Juan Pérez',
-        email: 'juan.perez@universidad.edu',
-        telefono: '+57 300 777 8888',
-        espacio: 'Auditorio Central',
-        fecha: '2025-10-26',
-        horaInicio: '08:00',
-        horaFin: '18:00',
-        motivo: 'Simposio de Investigación con ponentes internacionales',
-        tipoEvento: 'Simposio',
-        asistentes: 250,
-        recursosNecesarios: ['Proyector', 'Micrófono', 'Sonido', 'Grabación'],
-        estado: 'rechazado',
-        fechaSolicitud: '2025-10-19 16:45',
-        comentariosAdmin: 'Rechazado. El espacio ya está reservado para exámenes finales ese día.'
-    },
-    {
-        id: '5',
-        solicitante: 'Laura Fernández',
-        email: 'laura.fernandez@universidad.edu',
-        telefono: '+57 300 444 5555',
-        espacio: 'Cancha Deportiva 1',
-        fecha: '2025-11-05',
-        horaInicio: '15:00',
-        horaFin: '18:00',
-        motivo: 'Torneo Interuniversitario de Fútbol',
-        tipoEvento: 'Evento Deportivo',
-        asistentes: 100,
-        recursosNecesarios: ['Sonido', 'Sillas Adicionales'],
-        estado: 'pendiente',
-        fechaSolicitud: '2025-10-22 11:00'
-    }
-];
+import { prestamoService } from '../../services/prestamos/prestamoAPI';
+import { showNotification } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function usePrestamosEspacios() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -94,28 +11,149 @@ export function usePrestamosEspacios() {
     const [filterFechaHora, setFilterFechaHora] = useState('todos');
     const [verSolicitudDialog, setVerSolicitudDialog] = useState<string | null>(null);
     const [comentariosAccion, setComentariosAccion] = useState('');
-    const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>(initialPrestamos);
+    const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]);
+    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
 
-    const aprobarSolicitud = (id: string, comentarios: string) => {
-        setPrestamos(prestamos.map(p =>
-            p.id === id ? { ...p, estado: 'aprobado', comentariosAdmin: comentarios } : p
-        ));
-        setVerSolicitudDialog(null);
-        setComentariosAccion('');
-        // Mostrar notificación: ✅ Solicitud aprobada correctamente
+    // Cargar datos iniciales
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            
+            // Cargar préstamos desde la API (ahora incluye datos completos)
+            const prestamosResponse = await prestamoService.listarPrestamos();
+
+            // Transformar datos del backend al formato UI
+            const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
+                return {
+                    id: p.id?.toString() || '',
+                    solicitante: p.usuario_nombre || 'Usuario Desconocido',
+                    email: p.usuario_correo || '',
+                    telefono: '', // No disponible en el backend actual
+                    espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
+                    fecha: p.fecha,
+                    horaInicio: p.hora_inicio.substring(0, 5), // HH:MM
+                    horaFin: p.hora_fin.substring(0, 5), // HH:MM
+                    motivo: p.motivo || '',
+                    tipoEvento: p.espacio_tipo || 'Evento',
+                    asistentes: 0, // No disponible en el backend actual
+                    recursosNecesarios: [], // No disponible en el backend actual
+                    estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
+                    fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
+                    comentariosAdmin: '', // No disponible en el backend actual
+                    administradorNombre: p.administrador_nombre || undefined
+                };
+            });
+
+            setPrestamos(prestamosUI);
+        } catch (error) {
+            showNotification({
+                message: `Error al cargar préstamos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const rechazarSolicitud = (id: string, comentarios: string) => {
+    const aprobarSolicitud = async (id: string, comentarios: string) => {
+        try {
+            setLoading(true);
+            
+            if (!user?.id) {
+                throw new Error('Usuario no autenticado');
+            }
+            
+            // Obtener datos completos del préstamo desde el backend
+            const prestamoCompleto = await prestamoService.obtenerPrestamo(Number(id));
+            
+            // Actualizar el estado y registrar el administrador que aprobó
+            await prestamoService.actualizarPrestamo({
+                id: Number(id),
+                espacio_id: prestamoCompleto.espacio_id,
+                usuario_id: prestamoCompleto.usuario_id,
+                administrador_id: user.id, // Guardar el ID del administrador que aprueba
+                fecha: prestamoCompleto.fecha,
+                hora_inicio: prestamoCompleto.hora_inicio,
+                hora_fin: prestamoCompleto.hora_fin,
+                motivo: prestamoCompleto.motivo,
+                estado: 'Aprobado'
+            });
+            
+            // Recargar datos para obtener el estado actualizado
+            await loadData();
+            
+            setVerSolicitudDialog(null);
+            setComentariosAccion('');
+            
+            showNotification({
+                message: '✅ Solicitud aprobada correctamente',
+                type: 'success'
+            });
+        } catch (error) {
+            showNotification({
+                message: `Error al aprobar solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const rechazarSolicitud = async (id: string, comentarios: string) => {
         if (!comentarios.trim()) {
-            // Mostrar notificación: Debe proporcionar un motivo de rechazo
+            showNotification({
+                message: 'Debe proporcionar un motivo de rechazo',
+                type: 'error'
+            });
             return;
         }
-        setPrestamos(prestamos.map(p =>
-            p.id === id ? { ...p, estado: 'rechazado', comentariosAdmin: comentarios } : p
-        ));
-        setVerSolicitudDialog(null);
-        setComentariosAccion('');
-        // Mostrar notificación: ✅ Solicitud rechazada correctamente
+
+        try {
+            setLoading(true);
+            
+            if (!user?.id) {
+                throw new Error('Usuario no autenticado');
+            }
+            
+            // Obtener datos completos del préstamo desde el backend
+            const prestamoCompleto = await prestamoService.obtenerPrestamo(Number(id));
+            
+            // Actualizar el estado y registrar el administrador que rechazó
+            await prestamoService.actualizarPrestamo({
+                id: Number(id),
+                espacio_id: prestamoCompleto.espacio_id,
+                usuario_id: prestamoCompleto.usuario_id,
+                administrador_id: user.id, // Guardar el ID del administrador que rechaza
+                fecha: prestamoCompleto.fecha,
+                hora_inicio: prestamoCompleto.hora_inicio,
+                hora_fin: prestamoCompleto.hora_fin,
+                motivo: prestamoCompleto.motivo,
+                estado: 'Rechazado'
+            });
+            
+            // Recargar datos para obtener el estado actualizado
+            await loadData();
+            
+            setVerSolicitudDialog(null);
+            setComentariosAccion('');
+            
+            showNotification({
+                message: '✅ Solicitud rechazada correctamente',
+                type: 'success'
+            });
+        } catch (error) {
+            showNotification({
+                message: `Error al rechazar solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredPrestamos = useMemo(() => {
@@ -201,6 +239,8 @@ export function usePrestamosEspacios() {
         filteredPrestamos,
         statsData,
         aprobarSolicitud,
-        rechazarSolicitud
+        rechazarSolicitud,
+        loading,
+        reloadData: loadData
     };
 }
