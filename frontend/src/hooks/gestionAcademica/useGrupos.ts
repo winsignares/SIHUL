@@ -45,9 +45,9 @@ export function useGrupos() {
             const response = await grupoService.list();
             setGrupos(response.grupos);
         } catch (error) {
-            showNotification({ 
-                message: `Error al cargar grupos: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al cargar grupos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -59,9 +59,9 @@ export function useGrupos() {
             const response = await programaService.listarProgramas();
             setProgramas(response.programas);
         } catch (error) {
-            showNotification({ 
-                message: `Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         }
     };
@@ -71,9 +71,9 @@ export function useGrupos() {
             const response = await periodoService.listarPeriodos();
             setPeriodos(response.periodos);
         } catch (error) {
-            showNotification({ 
-                message: `Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         }
     };
@@ -121,9 +121,9 @@ export function useGrupos() {
 
             showNotification({ message: '✅ Grupo creado exitosamente', type: 'success' });
         } catch (error) {
-            showNotification({ 
-                message: `Error al crear grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al crear grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -178,9 +178,9 @@ export function useGrupos() {
 
             showNotification({ message: '✅ Grupo actualizado exitosamente', type: 'success' });
         } catch (error) {
-            showNotification({ 
-                message: `Error al actualizar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al actualizar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -205,9 +205,9 @@ export function useGrupos() {
 
             showNotification({ message: '✅ Grupo eliminado exitosamente', type: 'success' });
         } catch (error) {
-            showNotification({ 
-                message: `Error al eliminar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al eliminar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -225,14 +225,14 @@ export function useGrupos() {
             });
 
             await loadGrupos();
-            showNotification({ 
-                message: grupo.activo ? '✅ Grupo inactivado correctamente' : '✅ Grupo activado correctamente', 
-                type: 'success' 
+            showNotification({
+                message: grupo.activo ? '✅ Grupo inactivado correctamente' : '✅ Grupo activado correctamente',
+                type: 'success'
             });
         } catch (error) {
-            showNotification({ 
-                message: `Error al cambiar estado del grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al cambiar estado del grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -261,6 +261,31 @@ export function useGrupos() {
 
     const semestresDisponibles = Array.from(new Set(grupos.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
 
+    // Obtener nombre del programa por ID
+    const getProgramaNombre = (programaId: number): string => {
+        const programa = programas.find(p => p.id === programaId);
+        return programa?.nombre || 'Sin programa';
+    };
+
+    // Obtener nombre del periodo por ID
+    const getPeriodoNombre = (periodoId: number): string => {
+        const periodo = periodos.find(p => p.id === periodoId);
+        return periodo?.nombre || 'Sin periodo';
+    };
+
+    // Obtener semestres disponibles filtrados por programa seleccionado
+    const getSemestresDisponiblesPorPrograma = (): number[] => {
+        if (selectedProgramaFilter === 'all') {
+            // Si no hay programa seleccionado, mostrar todos los semestres
+            return semestresDisponibles;
+        }
+
+        // Filtrar grupos por el programa seleccionado y obtener sus semestres únicos
+        const gruposFiltrados = grupos.filter(g => g.programa_id.toString() === selectedProgramaFilter);
+        const semestres = Array.from(new Set(gruposFiltrados.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
+        return semestres;
+    };
+
     return {
         searchTerm, setSearchTerm,
         loading,
@@ -282,6 +307,9 @@ export function useGrupos() {
         toggleGrupoActivo,
         resetForm,
         filteredGrupos,
-        semestresDisponibles
+        semestresDisponibles,
+        getProgramaNombre,
+        getPeriodoNombre,
+        getSemestresDisponiblesPorPrograma
     };
 }

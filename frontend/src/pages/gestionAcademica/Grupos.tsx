@@ -31,7 +31,10 @@ export default function Grupos() {
     toggleGrupoActivo,
     resetForm,
     filteredGrupos,
-    semestresDisponibles
+    semestresDisponibles,
+    getProgramaNombre,
+    getPeriodoNombre,
+    getSemestresDisponiblesPorPrograma
   } = useGrupos();
 
   return (
@@ -53,7 +56,7 @@ export default function Grupos() {
       {/* Filtros en Card */}
       <Card className="mb-6 border-slate-200 shadow-sm">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Label className="text-slate-700 mb-2 block">Buscar</Label>
               <div className="relative">
@@ -68,6 +71,23 @@ export default function Grupos() {
             </div>
 
             <div>
+              <Label className="text-slate-700 mb-2 block">Programa</Label>
+              <Select value={selectedProgramaFilter} onValueChange={setSelectedProgramaFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los programas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los programas</SelectItem>
+                  {programas.map(p => (
+                    <SelectItem key={p.id} value={p.id?.toString() || ''}>
+                      {p.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label className="text-slate-700 mb-2 block">Semestre</Label>
               <Select value={selectedSemestreFilter} onValueChange={setSelectedSemestreFilter}>
                 <SelectTrigger>
@@ -75,7 +95,7 @@ export default function Grupos() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los semestres</SelectItem>
-                  {semestresDisponibles.map(s => (
+                  {getSemestresDisponiblesPorPrograma().map(s => (
                     <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
                   ))}
                 </SelectContent>
@@ -91,7 +111,9 @@ export default function Grupos() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Programa</TableHead>
                 <TableHead>Semestre</TableHead>
+                <TableHead>Periodo</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -99,7 +121,7 @@ export default function Grupos() {
             <TableBody>
               {filteredGrupos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-slate-500 py-8">
+                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
                     No se encontraron grupos
                   </TableCell>
                 </TableRow>
@@ -111,7 +133,9 @@ export default function Grupos() {
                         {grupo.nombre}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-slate-600">{getProgramaNombre(grupo.programa_id)}</TableCell>
                     <TableCell className="text-slate-600">Semestre {grupo.semestre}</TableCell>
+                    <TableCell className="text-slate-600">{getPeriodoNombre(grupo.periodo_id)}</TableCell>
                     <TableCell>
                       <Badge
                         variant={grupo.activo ? 'default' : 'secondary'}
