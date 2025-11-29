@@ -59,7 +59,7 @@ export const recursoService = {
 export interface EspacioRecurso {
   espacio_id: number;
   recurso_id: number;
-  disponible: boolean;
+  estado: 'disponible' | 'no_disponible' | 'en_mantenimiento';
 }
 
 export const espacioRecursoService = {
@@ -87,7 +87,7 @@ export const espacioRecursoService = {
     return apiClient.post('/espacio-recursos/create/', {
       espacio_id: espacioRecurso.espacio_id,
       recurso_id: espacioRecurso.recurso_id,
-      disponible: espacioRecurso.disponible ?? true
+      estado: espacioRecurso.estado ?? 'disponible'
     });
   },
 
@@ -99,7 +99,7 @@ export const espacioRecursoService = {
     return apiClient.put('/espacio-recursos/update/', {
       espacio_id: espacioRecurso.espacio_id,
       recurso_id: espacioRecurso.recurso_id,
-      disponible: espacioRecurso.disponible
+      estado: espacioRecurso.estado
     });
   },
 
