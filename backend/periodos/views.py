@@ -28,6 +28,8 @@ def create_periodo(request):
             return JsonResponse({"error": "JSON inválido."}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método no permitido. Use POST para crear o GET /periodos/list/ para listar."}, status=405)
 
 
 @csrf_exempt
