@@ -4,6 +4,7 @@ export interface Programa {
   id?: number;
   nombre: string;
   facultad_id: number;
+  semestres: number;
   activo: boolean;
 }
 
@@ -34,6 +35,7 @@ export const programaService = {
     return apiClient.post('/programas/create/', {
       nombre: programa.nombre,
       facultad_id: programa.facultad_id,
+      semestres: programa.semestres,
       activo: programa.activo ?? true
     });
   },
@@ -46,11 +48,12 @@ export const programaService = {
     if (!programa.id) {
       throw new Error('Se requiere el ID del programa para actualizar');
     }
-    
+
     return apiClient.put('/programas/update/', {
       id: programa.id,
       nombre: programa.nombre,
       facultad_id: programa.facultad_id,
+      semestres: programa.semestres,
       activo: programa.activo
     });
   },

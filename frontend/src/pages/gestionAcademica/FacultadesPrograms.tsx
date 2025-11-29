@@ -50,7 +50,8 @@ export default function FacultadesPrograms() {
     filteredFacultades,
     filteredProgramas,
     getProgramasCount,
-    getFacultadNombre
+    getFacultadNombre,
+    activeFacultades
   } = useFacultadesPrograms();
 
   return (
@@ -218,8 +219,8 @@ export default function FacultadesPrograms() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todas las facultades</SelectItem>
-                        {facultades.map(f => (
-                          <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                        {activeFacultades.map(f => (
+                          <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -521,8 +522,8 @@ export default function FacultadesPrograms() {
                   <SelectValue placeholder="Seleccionar facultad" />
                 </SelectTrigger>
                 <SelectContent>
-                  {facultades.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                  {activeFacultades.map(f => (
+                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -591,8 +592,8 @@ export default function FacultadesPrograms() {
                   <SelectValue placeholder="Seleccionar facultad" />
                 </SelectTrigger>
                 <SelectContent>
-                  {facultades.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                  {activeFacultades.map(f => (
+                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

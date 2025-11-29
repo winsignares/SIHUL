@@ -1,7 +1,22 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import { showNotification } from '../../context/ThemeContext';
-import type { Facultad, Programa } from '../../models/index';
+import { facultadService } from '../../services/facultades/facultadesAPI';
+import type { Facultad as FacultadAPI } from '../../services/facultades/facultadesAPI';
+import { programaService } from '../../services/programas/programaAPI';
+import type { Programa as ProgramaAPI } from '../../services/programas/programaAPI';
+
+// Mapear tipos de API a modelo del frontend
+type Facultad = FacultadAPI;
+
+// Interfaz adaptada para Programa del frontend (con camelCase)
+interface Programa {
+    id?: number;
+    nombre: string;
+    facultadId: number | null; // Puede ser null si no tiene facultad asignada
+    semestres: number;
+    activo: boolean;
+}
 
 export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos';
 
@@ -12,6 +27,7 @@ export function useFacultadesPrograms() {
     // Estados de datos
     const [facultades, setFacultades] = useState<Facultad[]>([]);
     const [programas, setProgramas] = useState<Programa[]>([]);
+    const [loading, setLoading] = useState(false);
 
     // Estados de modales
     const [showCreateFacultad, setShowCreateFacultad] = useState(false);
@@ -49,14 +65,45 @@ export function useFacultadesPrograms() {
         loadProgramas();
     }, [activeTab]);
 
-    const loadFacultades = () => {
-        const data = db.getFacultades();
-        setFacultades(data);
+    const loadFacultades = async () => {
+        try {
+            setLoading(true);
+            const response = await facultadService.list();
+            setFacultades(response.facultades);
+        } catch (error) {
+            showNotification({
+                message: `Error al cargar facultades: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const loadProgramas = () => {
-        const data = db.getProgramas();
-        setProgramas(data);
+    const loadProgramas = async () => {
+        try {
+            setLoading(true);
+            const response = await programaService.listarProgramas();
+            // Mapear facultad_id (snake_case) a facultadId (camelCase)
+            // Filtrar programas sin facultad asignada
+            const mappedProgramas = response.programas
+                .filter(p => p.facultad_id !== null)
+                .map(p => ({
+                    id: p.id,
+                    nombre: p.nombre,
+                    facultadId: p.facultad_id,
+                    semestres: p.semestres,
+                    activo: p.activo
+                }));
+            setProgramas(mappedProgramas);
+        } catch (error) {
+            showNotification({
+                message: `Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Función para recargar todos los datos
@@ -68,34 +115,37 @@ export function useFacultadesPrograms() {
 
     // ==================== FACULTADES ====================
 
-    const handleCreateFacultad = () => {
+    const handleCreateFacultad = async () => {
         // Validación
         if (!facultadForm.nombre.trim()) {
             showNotification({ message: 'El nombre de la facultad es obligatorio', type: 'error' });
             return;
         }
 
-        // Crear facultad
-        db.createFacultad({
-            codigo: `FAC-${Date.now().toString().slice(-4)}`,
-            nombre: facultadForm.nombre.trim(),
-            activa: true,
-            fechaCreacion: new Date().toISOString()
-        });
+        try {
+            setLoading(true);
+            await facultadService.create({
+                nombre: facultadForm.nombre.trim(),
+                activa: true
+            });
 
-        // Actualizar lista
-        loadFacultades();
+            await loadFacultades();
+            setFacultadForm({ nombre: '' });
+            setShowCreateFacultad(false);
 
-        // Limpiar formulario y cerrar
-        setFacultadForm({ nombre: '' });
-        setShowCreateFacultad(false);
-
-        // Mostrar notificación con animación
-        showNotification({ message: '✅ Facultad registrada exitosamente', type: 'success' });
+            showNotification({ message: '✅ Facultad registrada exitosamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al crear facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleEditFacultad = () => {
-        if (!selectedFacultad) return;
+    const handleEditFacultad = async () => {
+        if (!selectedFacultad || !selectedFacultad.id) return;
 
         // Validación
         if (!facultadForm.nombre.trim()) {
@@ -103,40 +153,54 @@ export function useFacultadesPrograms() {
             return;
         }
 
-        // Actualizar facultad
-        db.updateFacultad(selectedFacultad.id, {
-            nombre: facultadForm.nombre.trim()
-        });
+        try {
+            setLoading(true);
+            await facultadService.update({
+                id: selectedFacultad.id,
+                nombre: facultadForm.nombre.trim(),
+                activa: selectedFacultad.activa
+            });
 
-        // Actualizar lista
-        loadFacultades();
-        loadProgramas(); // Por si el nombre cambió en programas
+            await loadFacultades();
+            loadProgramas(); // Por si el nombre cambió en programas
 
-        // Cerrar modal
-        setShowEditFacultad(false);
-        setSelectedFacultad(null);
-        setFacultadForm({ nombre: '' });
+            setShowEditFacultad(false);
+            setSelectedFacultad(null);
+            setFacultadForm({ nombre: '' });
 
-        // Notificación
-        showNotification({ message: '✅ Facultad actualizada correctamente', type: 'success' });
+            showNotification({ message: '✅ Facultad actualizada correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al actualizar facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDeleteFacultad = () => {
-        if (!selectedFacultad) return;
+    const handleDeleteFacultad = async () => {
+        if (!selectedFacultad || !selectedFacultad.id) return;
 
-        // Eliminar facultad (también elimina programas relacionados)
-        db.deleteFacultad(selectedFacultad.id);
+        try {
+            setLoading(true);
+            await facultadService.delete({ id: selectedFacultad.id });
 
-        // Actualizar listas
-        loadFacultades();
-        loadProgramas();
+            await loadFacultades();
+            loadProgramas();
 
-        // Cerrar modal
-        setShowDeleteFacultad(false);
-        setSelectedFacultad(null);
+            setShowDeleteFacultad(false);
+            setSelectedFacultad(null);
 
-        // Notificación
-        showNotification({ message: '✅ Facultad eliminada correctamente', type: 'success' });
+            showNotification({ message: '✅ Facultad eliminada correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al eliminar facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const openEditFacultad = (facultad: Facultad) => {
@@ -150,18 +214,33 @@ export function useFacultadesPrograms() {
         setShowDeleteFacultad(true);
     };
 
-    const toggleFacultadActiva = (facultad: Facultad) => {
-        db.updateFacultad(facultad.id, {
-            activa: !facultad.activa
-        });
-        loadFacultades();
+    const toggleFacultadActiva = async (facultad: Facultad) => {
+        if (!facultad.id) return;
 
-        showNotification({ message: facultad.activa ? '✅ Facultad inactivada correctamente' : '✅ Facultad activada correctamente', type: 'success' });
+        try {
+            setLoading(true);
+            await facultadService.update({
+                id: facultad.id,
+                nombre: facultad.nombre,
+                activa: !facultad.activa
+            });
+
+            await loadFacultades();
+
+            showNotification({ message: facultad.activa ? '✅ Facultad inactivada correctamente' : '✅ Facultad activada correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al cambiar estado de facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     // ==================== PROGRAMAS ====================
 
-    const handleCreatePrograma = () => {
+    const handleCreatePrograma = async () => {
         // Validaciones
         if (!programaForm.nombre.trim()) {
             showNotification({ message: 'El nombre del programa es obligatorio', type: 'error' });
@@ -178,31 +257,32 @@ export function useFacultadesPrograms() {
             return;
         }
 
-        // Crear programa (siempre activo)
-        db.createPrograma({
-            codigo: `PROG-${Date.now().toString().slice(-4)}`,
-            nombre: programaForm.nombre.trim(),
-            facultadId: programaForm.facultadId,
-            modalidad: 'presencial',
-            nivel: 'pregrado',
-            semestres: Number(programaForm.semestres),
-            activo: true, // Siempre activo al crear
-            fechaCreacion: new Date().toISOString()
-        });
+        try {
+            setLoading(true);
+            await programaService.crearPrograma({
+                nombre: programaForm.nombre.trim(),
+                facultad_id: Number(programaForm.facultadId),
+                semestres: Number(programaForm.semestres),
+                activo: true
+            });
 
-        // Actualizar lista
-        loadProgramas();
+            await loadProgramas();
+            setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
+            setShowCreatePrograma(false);
 
-        // Limpiar y cerrar
-        setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
-        setShowCreatePrograma(false);
-
-        // Notificación
-        showNotification({ message: '✅ Programa registrado exitosamente', type: 'success' });
+            showNotification({ message: '✅ Programa registrado exitosamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al crear programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleEditPrograma = () => {
-        if (!selectedPrograma) return;
+    const handleEditPrograma = async () => {
+        if (!selectedPrograma || !selectedPrograma.id) return;
 
         // Validaciones
         if (!programaForm.nombre.trim()) {
@@ -220,48 +300,60 @@ export function useFacultadesPrograms() {
             return;
         }
 
-        // Actualizar programa
-        db.updatePrograma(selectedPrograma.id, {
-            nombre: programaForm.nombre.trim(),
-            facultadId: programaForm.facultadId,
-            semestres: Number(programaForm.semestres)
-        });
+        try {
+            setLoading(true);
+            await programaService.actualizarPrograma({
+                id: selectedPrograma.id,
+                nombre: programaForm.nombre.trim(),
+                facultad_id: Number(programaForm.facultadId),
+                semestres: Number(programaForm.semestres),
+                activo: selectedPrograma.activo
+            });
 
-        // Actualizar lista
-        loadProgramas();
+            await loadProgramas();
+            setShowEditPrograma(false);
+            setSelectedPrograma(null);
+            setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
 
-        // Cerrar modal
-        setShowEditPrograma(false);
-        setSelectedPrograma(null);
-        setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
-
-        // Notificación
-        showNotification({ message: '✅ Programa actualizado correctamente', type: 'success' });
+            showNotification({ message: '✅ Programa actualizado correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al actualizar programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDeletePrograma = () => {
-        if (!selectedPrograma) return;
+    const handleDeletePrograma = async () => {
+        if (!selectedPrograma || !selectedPrograma.id) return;
 
-        // Eliminar programa
-        db.deletePrograma(selectedPrograma.id);
+        try {
+            setLoading(true);
+            await programaService.eliminarPrograma(selectedPrograma.id);
 
-        // Actualizar lista
-        loadProgramas();
+            await loadProgramas();
+            setShowDeletePrograma(false);
+            setSelectedPrograma(null);
 
-        // Cerrar modal
-        setShowDeletePrograma(false);
-        setSelectedPrograma(null);
-
-        // Notificación
-        showNotification({ message: '✅ Programa eliminado correctamente', type: 'success' });
+            showNotification({ message: '✅ Programa eliminado correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al eliminar programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const openEditPrograma = (programa: Programa) => {
         setSelectedPrograma(programa);
         setProgramaForm({
             nombre: programa.nombre,
-            facultadId: programa.facultadId,
-            semestres: programa.semestres?.toString() || ''
+            facultadId: programa.facultadId?.toString() || '',
+            semestres: programa.semestres.toString()
         });
         setShowEditPrograma(true);
     };
@@ -271,13 +363,30 @@ export function useFacultadesPrograms() {
         setShowDeletePrograma(true);
     };
 
-    const toggleProgramaActivo = (programa: Programa) => {
-        db.updatePrograma(programa.id, {
-            activo: !programa.activo
-        });
-        loadProgramas();
+    const toggleProgramaActivo = async (programa: Programa) => {
+        if (!programa.id) return;
 
-        showNotification({ message: programa.activo ? '✅ Programa inactivado correctamente' : '✅ Programa activado correctamente', type: 'success' });
+        try {
+            setLoading(true);
+            await programaService.actualizarPrograma({
+                id: programa.id,
+                nombre: programa.nombre,
+                facultad_id: Number(programa.facultadId),
+                semestres: programa.semestres,
+                activo: !programa.activo
+            });
+
+            await loadProgramas();
+
+            showNotification({ message: programa.activo ? '✅ Programa inactivado correctamente' : '✅ Programa activado correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al cambiar estado de programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     // ==================== FILTROS ====================
@@ -288,18 +397,22 @@ export function useFacultadesPrograms() {
 
     const filteredProgramas = programas.filter(p => {
         const matchSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchFacultad = selectedFacultadFilter === 'all' || p.facultadId === selectedFacultadFilter;
+        const matchFacultad = selectedFacultadFilter === 'all' || p.facultadId?.toString() === selectedFacultadFilter;
         return matchSearch && matchFacultad;
     });
 
     // Contar programas por facultad
-    const getProgramasCount = (facultadId: string) => {
-        return programas.filter(p => p.facultadId === facultadId).length;
+    const getProgramasCount = (facultadId: number | string) => {
+        if (!facultadId) return 0;
+        const idStr = facultadId.toString();
+        return programas.filter(p => p.facultadId?.toString() === idStr).length;
     };
 
     // Obtener nombre de facultad
-    const getFacultadNombre = (facultadId: string) => {
-        const facultad = facultades.find(f => f.id === facultadId);
+    const getFacultadNombre = (facultadId: number | string | null) => {
+        if (!facultadId) return 'Sin facultad';
+        const idStr = facultadId.toString();
+        const facultad = facultades.find(f => f.id?.toString() === idStr);
         return facultad?.nombre || 'Sin facultad';
     };
 
@@ -308,6 +421,7 @@ export function useFacultadesPrograms() {
         activeTab, setActiveTab,
         facultades,
         programas,
+        loading,
         showCreateFacultad, setShowCreateFacultad,
         showEditFacultad, setShowEditFacultad,
         showDeleteFacultad, setShowDeleteFacultad,
@@ -336,6 +450,7 @@ export function useFacultadesPrograms() {
         filteredProgramas,
         getProgramasCount,
         getFacultadNombre,
-        reloadAllData
+        reloadAllData,
+        activeFacultades: facultades.filter(f => f.activa)
     };
 }
