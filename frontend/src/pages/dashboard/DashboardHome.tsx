@@ -28,12 +28,14 @@ import {
   DialogTitle,
 } from '../../share/dialog';
 import { useDashboardHome } from '../../hooks/dashboard/useDashboardHome';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardHomeProps {
   onNavigate?: (page: string) => void;
 }
 
 export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
+  const navigate = useNavigate();
   const {
     stats,
     recentActivities,
@@ -285,16 +287,16 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
               {[
-                { label: 'Crear Horario', icon: Clock, action: 'crear-horario' },
-                { label: 'Visualizar Horario', icon: Clock, action: 'horarios' },
-                { label: 'Asistente Virtual', icon: Bot, action: 'asistentes' },
-                { label: 'Ver Reportes', icon: FileText, action: 'reportes' }
+                { label: 'Centro Horarios', icon: Clock, path: '/admin/centro-horarios' },
+                { label: 'Asistente Virtual', icon: Bot, path: '/admin/asistente-virtual' },
+                { label: 'Ver Reportes', icon: FileText, path: '/admin/reportes' },
+                { label: 'Ocupación', icon: Activity, path: '/admin/ocupacion' }
               ].map((action, index) => {
                 const Icon = action.icon;
                 return (
                   <motion.button
                     key={index}
-                    onClick={() => onNavigate(action.action)}
+                    onClick={() => navigate(action.path)}
                     className="bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-xl p-4 transition-all border border-white/20 group"
                     whileHover={{ scale: 1.05, y: -4 }}
                     whileTap={{ scale: 0.95 }}
