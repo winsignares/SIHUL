@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../services/database';
-import { useTheme } from '../../context/ThemeContext';
-import type { Programa } from '../../models/index';
+import { showNotification } from '../../context/ThemeContext';
+import { grupoService } from '../../services/grupos/gruposAPI';
+import type { Grupo } from '../../services/grupos/gruposAPI';
 
 export interface GrupoAcademico {
-    id: string;
-    codigo: string;
-    programaId: string;
+    id?: number;
+    nombre: string;
+    programa_id: number;
+    periodo_id: number;
     semestre: number;
-    activo: boolean;
-    fechaCreacion: string;
+    activo?: boolean;
 }
 
 export function useGrupos() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [programas, setProgramas] = useState<Programa[]>([]);
+    const [loading, setLoading] = useState(false);
     const [grupos, setGrupos] = useState<GrupoAcademico[]>([]);
     const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
     const [selectedSemestreFilter, setSelectedSemestreFilter] = useState<string>('all');
@@ -23,52 +23,51 @@ export function useGrupos() {
     const [showCreateGrupo, setShowCreateGrupo] = useState(false);
     const [showEditGrupo, setShowEditGrupo] = useState(false);
     const [showDeleteGrupo, setShowDeleteGrupo] = useState(false);
-    const [showEstudiantes, setShowEstudiantes] = useState(false);
 
     // Estados de formularios
     const [grupoForm, setGrupoForm] = useState({
-        codigo: '',
-        programaId: '',
+        nombre: '',
+        programa_id: '',
+        periodo_id: '',
         semestre: ''
     });
 
     // Estados de selección
     const [selectedGrupo, setSelectedGrupo] = useState<GrupoAcademico | null>(null);
-    const [estudiantesDelGrupo, setEstudiantesDelGrupo] = useState<any[]>([]);
-    const { showNotification } = useTheme();
 
-    // Cargar datos
+    const loadGrupos = async () => {
+        try {
+            setLoading(true);
+            const response = await grupoService.list();
+            setGrupos(response.grupos);
+        } catch (error) {
+            showNotification({ 
+                message: `Error al cargar grupos: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Cargar datos al montar el componente
     useEffect(() => {
-        loadProgramas();
         loadGrupos();
     }, []);
 
-    const loadProgramas = () => {
-        const data = db.getProgramas();
-        setProgramas(data);
-    };
-
-    const loadGrupos = () => {
-        const data = localStorage.getItem('db_grupos_academicos');
-        if (data) {
-            setGrupos(JSON.parse(data));
-        }
-    };
-
-    const saveGrupos = (newGrupos: GrupoAcademico[]) => {
-        localStorage.setItem('db_grupos_academicos', JSON.stringify(newGrupos));
-        setGrupos(newGrupos);
-    };
-
     // ==================== HANDLERS ====================
 
-    const handleCreateGrupo = () => {
-        if (!grupoForm.codigo.trim()) {
+    const handleCreateGrupo = async () => {
+        if (!grupoForm.nombre.trim()) {
             showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
             return;
         }
-        if (!grupoForm.programaId) {
+        if (!grupoForm.programa_id) {
             showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
+            return;
+        }
+        if (!grupoForm.periodo_id) {
+            showNotification({ message: 'Debe seleccionar un periodo', type: 'error' });
             return;
         }
         if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
@@ -76,48 +75,55 @@ export function useGrupos() {
             return;
         }
 
-        const existe = grupos.some(g => g.codigo.toLowerCase() === grupoForm.codigo.trim().toLowerCase());
-        if (existe) {
-            showNotification({ message: 'Ya existe un grupo con este nombre', type: 'error' });
-            return;
+        try {
+            setLoading(true);
+            await grupoService.create({
+                nombre: grupoForm.nombre.trim(),
+                programa_id: Number(grupoForm.programa_id),
+                periodo_id: Number(grupoForm.periodo_id),
+                semestre: Number(grupoForm.semestre),
+                activo: true
+            });
+
+            await loadGrupos();
+            resetForm();
+            setShowCreateGrupo(false);
+
+            showNotification({ message: '✅ Grupo creado exitosamente', type: 'success' });
+        } catch (error) {
+            showNotification({ 
+                message: `Error al crear grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        } finally {
+            setLoading(false);
         }
-
-        const newGrupo: GrupoAcademico = {
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            codigo: grupoForm.codigo.trim().toUpperCase(),
-            programaId: grupoForm.programaId,
-            semestre: Number(grupoForm.semestre),
-            activo: true,
-            fechaCreacion: new Date().toISOString()
-        };
-
-        const newGrupos = [...grupos, newGrupo];
-        saveGrupos(newGrupos);
-
-        showNotification({ message: 'Grupo creado exitosamente', type: 'success' });
-        setShowCreateGrupo(false);
-        setGrupoForm({ codigo: '', programaId: '', semestre: '' });
     };
 
     const openEditGrupo = (grupo: GrupoAcademico) => {
         setSelectedGrupo(grupo);
         setGrupoForm({
-            codigo: grupo.codigo,
-            programaId: grupo.programaId,
-            semestre: grupo.semestre?.toString() || ''
+            nombre: grupo.nombre,
+            programa_id: grupo.programa_id.toString(),
+            periodo_id: grupo.periodo_id.toString(),
+            semestre: grupo.semestre.toString()
         });
         setShowEditGrupo(true);
     };
 
-    const handleEditGrupo = () => {
-        if (!selectedGrupo) return;
+    const handleEditGrupo = async () => {
+        if (!selectedGrupo || !selectedGrupo.id) return;
 
-        if (!grupoForm.codigo.trim()) {
+        if (!grupoForm.nombre.trim()) {
             showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
             return;
         }
-        if (!grupoForm.programaId) {
+        if (!grupoForm.programa_id) {
             showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
+            return;
+        }
+        if (!grupoForm.periodo_id) {
+            showNotification({ message: 'Debe seleccionar un periodo', type: 'error' });
             return;
         }
         if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
@@ -125,26 +131,30 @@ export function useGrupos() {
             return;
         }
 
-        const existe = grupos.some(g =>
-            g.id !== selectedGrupo.id &&
-            g.codigo.toLowerCase() === grupoForm.codigo.trim().toLowerCase()
-        );
-        if (existe) {
-            showNotification({ message: 'Ya existe un grupo con este nombre', type: 'error' });
-            return;
+        try {
+            setLoading(true);
+            await grupoService.update({
+                id: selectedGrupo.id,
+                nombre: grupoForm.nombre.trim(),
+                programa_id: Number(grupoForm.programa_id),
+                periodo_id: Number(grupoForm.periodo_id),
+                semestre: Number(grupoForm.semestre)
+            });
+
+            await loadGrupos();
+            setShowEditGrupo(false);
+            setSelectedGrupo(null);
+            resetForm();
+
+            showNotification({ message: '✅ Grupo actualizado exitosamente', type: 'success' });
+        } catch (error) {
+            showNotification({ 
+                message: `Error al actualizar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        } finally {
+            setLoading(false);
         }
-
-        const updatedGrupos = grupos.map(g =>
-            g.id === selectedGrupo.id
-                ? { ...g, codigo: grupoForm.codigo.trim().toUpperCase(), programaId: grupoForm.programaId, semestre: Number(grupoForm.semestre) }
-                : g
-        );
-        saveGrupos(updatedGrupos);
-
-        showNotification({ message: 'Grupo actualizado exitosamente', type: 'success' });
-        setShowEditGrupo(false);
-        setSelectedGrupo(null);
-        setGrupoForm({ codigo: '', programaId: '', semestre: '' });
     };
 
     const openDeleteGrupo = (grupo: GrupoAcademico) => {
@@ -152,86 +162,94 @@ export function useGrupos() {
         setShowDeleteGrupo(true);
     };
 
-    const handleDeleteGrupo = () => {
-        if (!selectedGrupo) return;
+    const handleDeleteGrupo = async () => {
+        if (!selectedGrupo || !selectedGrupo.id) return;
 
-        const newGrupos = grupos.filter(g => g.id !== selectedGrupo.id);
-        saveGrupos(newGrupos);
+        try {
+            setLoading(true);
+            await grupoService.delete({ id: selectedGrupo.id });
 
-        showNotification({ message: 'Grupo eliminado exitosamente', type: 'success' });
-        setShowDeleteGrupo(false);
-        setSelectedGrupo(null);
+            await loadGrupos();
+            setShowDeleteGrupo(false);
+            setSelectedGrupo(null);
+
+            showNotification({ message: '✅ Grupo eliminado exitosamente', type: 'success' });
+        } catch (error) {
+            showNotification({ 
+                message: `Error al eliminar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const toggleGrupoActivo = (grupo: GrupoAcademico) => {
-        const updatedGrupos = grupos.map(g =>
-            g.id === grupo.id ? { ...g, activo: !g.activo } : g
-        );
-        saveGrupos(updatedGrupos);
-        showNotification({ message: grupo.activo ? '✅ Grupo inactivado correctamente' : '✅ Grupo activado correctamente', type: 'success' });
+    const toggleGrupoActivo = async (grupo: GrupoAcademico) => {
+        if (!grupo.id) return;
+
+        try {
+            setLoading(true);
+            await grupoService.update({
+                id: grupo.id,
+                activo: !grupo.activo
+            });
+
+            await loadGrupos();
+            showNotification({ 
+                message: grupo.activo ? '✅ Grupo inactivado correctamente' : '✅ Grupo activado correctamente', 
+                type: 'success' 
+            });
+        } catch (error) {
+            showNotification({ 
+                message: `Error al cambiar estado del grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+                type: 'error' 
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const openVerEstudiantes = (grupo: GrupoAcademico) => {
-        setSelectedGrupo(grupo);
+    // ==================== UTILIDADES ====================
 
-        const usuarios = db.getUsuarios();
-        const estudiantesConGrupo = usuarios.filter(u =>
-            (u.rol === 'consultor_estudiante' || u.rol === 'consultor') &&
-            (u as any).gruposAsignados?.includes(grupo.codigo)
-        );
-
-        setEstudiantesDelGrupo(estudiantesConGrupo);
-        setShowEstudiantes(true);
+    const resetForm = () => {
+        setGrupoForm({
+            nombre: '',
+            programa_id: '',
+            periodo_id: '',
+            semestre: ''
+        });
     };
 
     // ==================== FILTROS ====================
 
-    const getProgramaNombre = (programaId: string): string => {
-        const programa = programas.find(p => p.id === programaId);
-        return programa ? programa.nombre : 'Desconocido';
-    };
-
     const filteredGrupos = grupos.filter(grupo => {
-        const matchesSearch = grupo.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            getProgramaNombre(grupo.programaId).toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programaId === selectedProgramaFilter;
-        const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre?.toString() === selectedSemestreFilter;
+        const matchesSearch = grupo.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programa_id.toString() === selectedProgramaFilter;
+        const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre.toString() === selectedSemestreFilter;
         return matchesSearch && matchesPrograma && matchesSemestre;
     });
-
-    const getEstudiantesCount = (codigo: string): number => {
-        const usuarios = db.getUsuarios();
-        return usuarios.filter(u =>
-            (u.rol === 'consultor_estudiante' || u.rol === 'consultor') &&
-            (u as any).gruposAsignados?.includes(codigo)
-        ).length;
-    };
 
     const semestresDisponibles = Array.from(new Set(grupos.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
 
     return {
         searchTerm, setSearchTerm,
-        programas,
+        loading,
         grupos,
         selectedProgramaFilter, setSelectedProgramaFilter,
         selectedSemestreFilter, setSelectedSemestreFilter,
         showCreateGrupo, setShowCreateGrupo,
         showEditGrupo, setShowEditGrupo,
         showDeleteGrupo, setShowDeleteGrupo,
-        showEstudiantes, setShowEstudiantes,
         grupoForm, setGrupoForm,
         selectedGrupo, setSelectedGrupo,
-        estudiantesDelGrupo, setEstudiantesDelGrupo,
         handleCreateGrupo,
         openEditGrupo,
         handleEditGrupo,
         openDeleteGrupo,
         handleDeleteGrupo,
         toggleGrupoActivo,
-        openVerEstudiantes,
-        getProgramaNombre,
+        resetForm,
         filteredGrupos,
-        getEstudiantesCount,
         semestresDisponibles
     };
 }

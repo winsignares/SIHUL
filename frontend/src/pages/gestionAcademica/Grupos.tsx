@@ -6,32 +6,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, Users, AlertTriangle, Eye, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import { useGrupos } from '../../hooks/gestionAcademica/useGrupos';
 
 export default function Grupos() {
   const {
     searchTerm, setSearchTerm,
-    programas,
+    loading,
+    grupos,
     selectedProgramaFilter, setSelectedProgramaFilter,
     selectedSemestreFilter, setSelectedSemestreFilter,
     showCreateGrupo, setShowCreateGrupo,
     showEditGrupo, setShowEditGrupo,
     showDeleteGrupo, setShowDeleteGrupo,
-    showEstudiantes, setShowEstudiantes,
     grupoForm, setGrupoForm,
     selectedGrupo, setSelectedGrupo,
-    estudiantesDelGrupo, setEstudiantesDelGrupo,
     handleCreateGrupo,
     openEditGrupo,
     handleEditGrupo,
     openDeleteGrupo,
     handleDeleteGrupo,
     toggleGrupoActivo,
-    openVerEstudiantes,
-    getProgramaNombre,
+    resetForm,
     filteredGrupos,
-    getEstudiantesCount,
     semestresDisponibles
   } = useGrupos();
 
@@ -54,7 +51,7 @@ export default function Grupos() {
       {/* Filtros en Card */}
       <Card className="mb-6 border-slate-200 shadow-sm">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <Label className="text-slate-700 mb-2 block">Buscar</Label>
               <div className="relative">
@@ -66,21 +63,6 @@ export default function Grupos() {
                   className="pl-10"
                 />
               </div>
-            </div>
-
-            <div>
-              <Label className="text-slate-700 mb-2 block">Programa</Label>
-              <Select value={selectedProgramaFilter} onValueChange={setSelectedProgramaFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los programas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los programas</SelectItem>
-                  {programas.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div>
@@ -106,9 +88,8 @@ export default function Grupos() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Programa</TableHead>
-                <TableHead>Semestre</TableHead>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Semestre</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -116,20 +97,19 @@ export default function Grupos() {
             <TableBody>
               {filteredGrupos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                  <TableCell colSpan={4} className="text-center text-slate-500 py-8">
                     No se encontraron grupos
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredGrupos.map((grupo) => (
                   <TableRow key={grupo.id}>
-                    <TableCell className="text-slate-600">{getProgramaNombre(grupo.programaId)}</TableCell>
-                    <TableCell className="text-slate-600">Semestre {grupo.semestre || 'N/A'}</TableCell>
                     <TableCell>
                       <Badge className="bg-yellow-500 text-slate-900 hover:bg-yellow-600">
-                        {grupo.codigo}
+                        {grupo.nombre}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-slate-600">Semestre {grupo.semestre}</TableCell>
                     <TableCell>
                       <Badge
                         variant={grupo.activo ? 'default' : 'secondary'}
@@ -187,45 +167,59 @@ export default function Grupos() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="programa-grupo">Programa Académico</Label>
-              <Select
-                value={grupoForm.programaId}
-                onValueChange={(value) => setGrupoForm({ ...grupoForm, programaId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar programa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {programas.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="nombre-grupo">
+                Nombre del Grupo <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="nombre-grupo"
+                placeholder="Ej: INSI-A, DERE-B"
+                value={grupoForm.nombre}
+                onChange={(e) => setGrupoForm({ ...grupoForm, nombre: e.target.value })}
+              />
+              <p className="text-slate-500 text-sm">Formato recomendado: SIGLAS-LETRA</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="semestre-grupo">Semestre</Label>
+              <Label htmlFor="programa-grupo">
+                ID del Programa <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="programa-grupo"
+                type="number"
+                min="1"
+                placeholder="Ej: 1"
+                value={grupoForm.programa_id}
+                onChange={(e) => setGrupoForm({ ...grupoForm, programa_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="periodo-grupo">
+                ID del Periodo <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="periodo-grupo"
+                type="number"
+                min="1"
+                placeholder="Ej: 1"
+                value={grupoForm.periodo_id}
+                onChange={(e) => setGrupoForm({ ...grupoForm, periodo_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="semestre-grupo">
+                Semestre <span className="text-red-600">*</span>
+              </Label>
               <Input
                 id="semestre-grupo"
                 type="number"
                 min="1"
-                max="20"
+                max="10"
                 placeholder="Ej: 1, 2, 3..."
                 value={grupoForm.semestre}
                 onChange={(e) => setGrupoForm({ ...grupoForm, semestre: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="codigo-grupo">Nombre del Grupo</Label>
-              <Input
-                id="codigo-grupo"
-                placeholder="Ej: INSI-A, DERE-B"
-                value={grupoForm.codigo}
-                onChange={(e) => setGrupoForm({ ...grupoForm, codigo: e.target.value })}
-              />
-              <p className="text-slate-500">Formato recomendado: SIGLAS-LETRA</p>
-            </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-blue-800">
+              <p className="text-blue-800 text-sm">
                 ℹ️ El grupo se creará como <strong>Activo</strong> automáticamente
               </p>
             </div>
@@ -235,7 +229,7 @@ export default function Grupos() {
               variant="outline"
               onClick={() => {
                 setShowCreateGrupo(false);
-                setGrupoForm({ codigo: '', programaId: '', semestre: '' });
+                resetForm();
               }}
             >
               Cancelar
@@ -258,42 +252,56 @@ export default function Grupos() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-programa-grupo">Programa Académico</Label>
-              <Select
-                value={grupoForm.programaId}
-                onValueChange={(value) => setGrupoForm({ ...grupoForm, programaId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar programa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {programas.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="edit-nombre-grupo">
+                Nombre del Grupo <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="edit-nombre-grupo"
+                placeholder="Ej: INSI-A, DERE-B"
+                value={grupoForm.nombre}
+                onChange={(e) => setGrupoForm({ ...grupoForm, nombre: e.target.value })}
+              />
+              <p className="text-slate-500 text-sm">Formato recomendado: SIGLAS-LETRA</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-semestre-grupo">Semestre</Label>
+              <Label htmlFor="edit-programa-grupo">
+                ID del Programa <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="edit-programa-grupo"
+                type="number"
+                min="1"
+                placeholder="Ej: 1"
+                value={grupoForm.programa_id}
+                onChange={(e) => setGrupoForm({ ...grupoForm, programa_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-periodo-grupo">
+                ID del Periodo <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="edit-periodo-grupo"
+                type="number"
+                min="1"
+                placeholder="Ej: 1"
+                value={grupoForm.periodo_id}
+                onChange={(e) => setGrupoForm({ ...grupoForm, periodo_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-semestre-grupo">
+                Semestre <span className="text-red-600">*</span>
+              </Label>
               <Input
                 id="edit-semestre-grupo"
                 type="number"
                 min="1"
-                max="20"
+                max="10"
                 placeholder="Ej: 1, 2, 3..."
                 value={grupoForm.semestre}
                 onChange={(e) => setGrupoForm({ ...grupoForm, semestre: e.target.value })}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-codigo-grupo">Nombre del Grupo</Label>
-              <Input
-                id="edit-codigo-grupo"
-                placeholder="Ej: INSI-A, DERE-B"
-                value={grupoForm.codigo}
-                onChange={(e) => setGrupoForm({ ...grupoForm, codigo: e.target.value })}
-              />
-              <p className="text-slate-500">Formato recomendado: SIGLAS-LETRA</p>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -302,7 +310,7 @@ export default function Grupos() {
               onClick={() => {
                 setShowEditGrupo(false);
                 setSelectedGrupo(null);
-                setGrupoForm({ codigo: '', programaId: '', semestre: '' });
+                resetForm();
               }}
             >
               Cancelar
@@ -326,25 +334,22 @@ export default function Grupos() {
               ¿Está seguro de eliminar el grupo?
             </DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer. Los estudiantes que tengan este grupo asignado lo mantendrán en su registro.
+              Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           {selectedGrupo && (
             <div className="py-4">
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-slate-600">Grupo a eliminar:</p>
-                <Badge className="bg-yellow-500 text-slate-900 hover:bg-yellow-600 mt-2">
-                  {selectedGrupo.codigo}
-                </Badge>
-                <p className="text-slate-500 mt-2">
-                  Programa: {getProgramaNombre(selectedGrupo.programaId)}
-                </p>
-                <p className="text-slate-500">
-                  Semestre: {selectedGrupo.semestre || 'N/A'}
-                </p>
-                <p className="text-slate-500">
-                  Estudiantes asignados: {getEstudiantesCount(selectedGrupo.codigo)}
-                </p>
+              <div className="bg-slate-50 p-4 rounded-lg space-y-2">
+                <div>
+                  <p className="text-slate-600">Grupo a eliminar:</p>
+                  <Badge className="bg-yellow-500 text-slate-900 hover:bg-yellow-600 mt-2">
+                    {selectedGrupo.nombre}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-slate-600">Semestre:</p>
+                  <p className="text-slate-900">{selectedGrupo.semestre}</p>
+                </div>
               </div>
             </div>
           )}
@@ -368,54 +373,6 @@ export default function Grupos() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Ver Estudiantes */}
-      <Dialog open={showEstudiantes} onOpenChange={setShowEstudiantes}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              Estudiantes del Grupo {selectedGrupo?.codigo}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {estudiantesDelGrupo.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No hay estudiantes asignados a este grupo</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {estudiantesDelGrupo.map((estudiante, index) => (
-                  <div
-                    key={estudiante.id}
-                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200"
-                  >
-                    <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-900">{estudiante.nombre}</p>
-                      <p className="text-slate-500">{estudiante.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEstudiantes(false);
-                setSelectedGrupo(null);
-                setEstudiantesDelGrupo([]);
-              }}
-            >
-              Cerrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
