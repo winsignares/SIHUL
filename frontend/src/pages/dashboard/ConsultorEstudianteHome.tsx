@@ -1,6 +1,7 @@
 import { Card, CardContent } from '../../share/card';
 import { motion } from 'motion/react';
 import { Clock, BookOpen, Calendar, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useConsultorEstudiante } from '../../hooks/dashboard/useConsultorEstudiante';
 
 interface ConsultorEstudianteHomeProps {
@@ -8,6 +9,7 @@ interface ConsultorEstudianteHomeProps {
 }
 
 export default function ConsultorEstudianteHome({ onNavigate }: ConsultorEstudianteHomeProps) {
+  const navigate = useNavigate();
   const { stats } = useConsultorEstudiante();
 
   const getGradient = (color: string) => {
@@ -81,7 +83,7 @@ export default function ConsultorEstudianteHome({ onNavigate }: ConsultorEstudia
                   Visualiza tu horario semanal, horarios de clases, aulas asignadas y más información académica.
                 </p>
                 <motion.button
-                  onClick={() => onNavigate && onNavigate('horario')}
+                  onClick={() => navigate('/estudiante/mi-horario')}
                   className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -114,7 +116,7 @@ export default function ConsultorEstudianteHome({ onNavigate }: ConsultorEstudia
             </div>
             <div>
               <motion.button
-                onClick={() => onNavigate && onNavigate('asistentes')}
+                onClick={() => navigate('/estudiante/asistente-virtual')}
                 className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
