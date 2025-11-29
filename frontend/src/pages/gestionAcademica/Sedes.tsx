@@ -138,12 +138,32 @@ export default function Sedes() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="nombre-sede">Nombre de la Sede</Label>
+              <Label htmlFor="nombre-sede">
+                Nombre de la Sede <span className="text-red-600">*</span>
+              </Label>
               <Input
                 id="nombre-sede"
                 placeholder="Ej: Sede Norte"
                 value={sedeForm.nombre}
-                onChange={(e) => setSedeForm({ nombre: e.target.value })}
+                onChange={(e) => setSedeForm({ ...sedeForm, nombre: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="direccion-sede">Dirección</Label>
+              <Input
+                id="direccion-sede"
+                placeholder="Ej: Calle 72 # 10-20"
+                value={sedeForm.direccion}
+                onChange={(e) => setSedeForm({ ...sedeForm, direccion: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ciudad-sede">Ciudad</Label>
+              <Input
+                id="ciudad-sede"
+                placeholder="Ej: Barranquilla"
+                value={sedeForm.ciudad}
+                onChange={(e) => setSedeForm({ ...sedeForm, ciudad: e.target.value })}
               />
             </div>
           </div>
@@ -152,7 +172,7 @@ export default function Sedes() {
               variant="outline"
               onClick={() => {
                 setShowCreate(false);
-                setSedeForm({ nombre: '' });
+                setSedeForm({ nombre: '', direccion: '', ciudad: '' });
               }}
             >
               Cancelar
@@ -175,12 +195,32 @@ export default function Sedes() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-nombre-sede">Nombre de la Sede</Label>
+              <Label htmlFor="edit-nombre-sede">
+                Nombre de la Sede <span className="text-red-600">*</span>
+              </Label>
               <Input
                 id="edit-nombre-sede"
                 placeholder="Ej: Sede Norte"
                 value={sedeForm.nombre}
-                onChange={(e) => setSedeForm({ nombre: e.target.value })}
+                onChange={(e) => setSedeForm({ ...sedeForm, nombre: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-direccion-sede">Dirección</Label>
+              <Input
+                id="edit-direccion-sede"
+                placeholder="Ej: Calle 72 # 10-20"
+                value={sedeForm.direccion}
+                onChange={(e) => setSedeForm({ ...sedeForm, direccion: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-ciudad-sede">Ciudad</Label>
+              <Input
+                id="edit-ciudad-sede"
+                placeholder="Ej: Barranquilla"
+                value={sedeForm.ciudad}
+                onChange={(e) => setSedeForm({ ...sedeForm, ciudad: e.target.value })}
               />
             </div>
           </div>
@@ -190,7 +230,7 @@ export default function Sedes() {
               onClick={() => {
                 setShowEdit(false);
                 setSelectedSede(null);
-                setSedeForm({ nombre: '' });
+                setSedeForm({ nombre: '', direccion: '', ciudad: '' });
               }}
             >
               Cancelar
