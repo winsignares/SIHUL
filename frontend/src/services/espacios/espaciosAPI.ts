@@ -9,7 +9,7 @@ export interface EspacioFisico {
     tipo: string;
     capacidad: number;
     ubicacion?: string;
-    disponible?: boolean;
+    estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
 /**
@@ -20,7 +20,7 @@ export interface CreateEspacioPayload {
     tipo: string;
     capacidad: number;
     ubicacion?: string;
-    disponible?: boolean;
+    estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
 /**
@@ -32,7 +32,7 @@ export interface UpdateEspacioPayload {
     tipo?: string;
     capacidad?: number;
     ubicacion?: string;
-    disponible?: boolean;
+    estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
 /**

@@ -8,7 +8,15 @@ class EspacioFisico(models.Model):
     tipo = models.CharField(max_length=50)
     capacidad = models.PositiveIntegerField()
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
-    disponible = models.BooleanField(default=True)
+    estado = models.CharField(
+        max_length=20, 
+        choices=[
+            ('Disponible', 'Disponible'), 
+            ('Mantenimiento', 'En Mantenimiento'), 
+            ('No Disponible', 'No Disponible')
+        ], 
+        default='Disponible'
+    )
 
     def __str__(self):
         return f"{self.tipo} ({self.ubicacion or 'sin ubicación'})"
