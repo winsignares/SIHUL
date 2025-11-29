@@ -16,7 +16,7 @@ export const sedeService = {
    * Obtiene la lista de todas las sedes
    */
   listarSedes: async (): Promise<{ sedes: Sede[] }> => {
-    return apiClient.get('/sedes/');
+    return apiClient.get('/sedes/list/');
   },
 
   /**
@@ -32,7 +32,7 @@ export const sedeService = {
    * @param sede Datos de la sede a crear
    */
   crearSede: async (sede: Omit<Sede, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/sedes/create/', {
+    return apiClient.post('/sedes/', {
       nombre: sede.nombre,
       direccion: sede.direccion,
       ciudad: sede.ciudad,
