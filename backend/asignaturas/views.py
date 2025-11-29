@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_http_methods
 import json
-from .models import Asignatura
+from .models import Asignatura, AsignaturaPrograma
 from programas.models import Programa
 
 # ---------- Asignatura CRUD ----------
@@ -152,5 +152,165 @@ def list_asignaturas(request):
                 'horas': asignatura.horas
             })
         return JsonResponse({'asignaturas': data}, safe=False)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ---------- AsignaturaPrograma CRUD ----------
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_asignatura_programa(request):
+    try:
+        data = json.loads(request.body)
+        programa_id = data.get('programa_id')
+        asignatura_id = data.get('asignatura_id')
+        semestre = data.get('semestre')
+        tipo = data.get('tipo', 'obligatoria')
+
+        if not all([programa_id, asignatura_id, semestre]):
+            return JsonResponse({'error': 'Faltan campos obligatorios: programa_id, asignatura_id, semestre'}, status=400)
+        
+        try:
+            programa = Programa.objects.get(id=programa_id)
+        except Programa.DoesNotExist:
+            return JsonResponse({'error': 'El programa especificado no existe'}, status=404)
+        
+        try:
+            asignatura = Asignatura.objects.get(id=asignatura_id)
+        except Asignatura.DoesNotExist:
+            return JsonResponse({'error': 'La asignatura especificada no existe'}, status=404)
+
+        # Verificar si ya existe
+        if AsignaturaPrograma.objects.filter(programa=programa, asignatura=asignatura, semestre=semestre).exists():
+            return JsonResponse({'error': 'Esta asignatura ya está registrada para este programa y semestre'}, status=400)
+
+        asignatura_programa = AsignaturaPrograma(
+            programa=programa,
+            asignatura=asignatura,
+            semestre=int(semestre),
+            tipo=tipo
+        )
+        asignatura_programa.save()
+
+        return JsonResponse({
+            'message': 'Asignatura asignada al programa exitosamente',
+            'id': asignatura_programa.id
+        }, status=201)
+    except ValueError:
+        return JsonResponse({'error': 'El semestre debe ser un número entero'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def update_asignatura_programa(request, id=None):
+    try:
+        data = json.loads(request.body)
+        if id is None:
+            id = data.get('id')
+        
+        if not id:
+            return JsonResponse({'error': 'ID es requerido'}, status=400)
+
+        asignatura_programa = AsignaturaPrograma.objects.get(id=id)
+
+        if 'semestre' in data:
+            asignatura_programa.semestre = int(data.get('semestre'))
+        
+        if 'tipo' in data:
+            asignatura_programa.tipo = data.get('tipo')
+
+        asignatura_programa.save()
+
+        return JsonResponse({
+            'message': 'Relación asignatura-programa actualizada exitosamente',
+            'id': asignatura_programa.id
+        })
+    except AsignaturaPrograma.DoesNotExist:
+        return JsonResponse({'error': 'Relación asignatura-programa no encontrada'}, status=404)
+    except ValueError:
+        return JsonResponse({'error': 'El semestre debe ser un número entero'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_asignatura_programa(request, id=None):
+    try:
+        if id is None:
+            data = json.loads(request.body)
+            id = data.get('id')
+            
+        if not id:
+            return JsonResponse({'error': 'ID es requerido'}, status=400)
+
+        asignatura_programa = AsignaturaPrograma.objects.get(id=id)
+        asignatura_programa.delete()
+        return JsonResponse({'message': 'Relación asignatura-programa eliminada exitosamente'})
+    except AsignaturaPrograma.DoesNotExist:
+        return JsonResponse({'error': 'Relación asignatura-programa no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_asignatura_programa(request, id):
+    try:
+        asignatura_programa = AsignaturaPrograma.objects.select_related('programa', 'asignatura').get(id=id)
+        data = {
+            'id': asignatura_programa.id,
+            'programa_id': asignatura_programa.programa.id,
+            'programa_nombre': asignatura_programa.programa.nombre,
+            'asignatura_id': asignatura_programa.asignatura.id,
+            'asignatura_nombre': asignatura_programa.asignatura.nombre,
+            'asignatura_codigo': asignatura_programa.asignatura.codigo,
+            'creditos': asignatura_programa.asignatura.creditos,
+            'semestre': asignatura_programa.semestre,
+            'tipo': asignatura_programa.tipo,
+            'horas': asignatura_programa.asignatura.horas
+        }
+        return JsonResponse(data)
+    except AsignaturaPrograma.DoesNotExist:
+        return JsonResponse({'error': 'Relación asignatura-programa no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_asignaturas_programa(request):
+    """
+    Lista todas las relaciones asignatura-programa.
+    Puede filtrar por programa_id si se pasa como query parameter.
+    """
+    try:
+        programa_id = request.GET.get('programa_id')
+        
+        if programa_id:
+            asignaturas_programa = AsignaturaPrograma.objects.filter(
+                programa_id=programa_id
+            ).select_related('programa', 'asignatura')
+        else:
+            asignaturas_programa = AsignaturaPrograma.objects.all().select_related('programa', 'asignatura')
+        
+        data = []
+        for ap in asignaturas_programa:
+            data.append({
+                'id': ap.id,
+                'programa_id': ap.programa.id,
+                'programa_nombre': ap.programa.nombre,
+                'asignatura_id': ap.asignatura.id,
+                'asignatura_nombre': ap.asignatura.nombre,
+                'asignatura_codigo': ap.asignatura.codigo,
+                'creditos': ap.asignatura.creditos,
+                'semestre': ap.semestre,
+                'tipo': ap.tipo,
+                'horas': ap.asignatura.horas
+            })
+        
+        return JsonResponse({'asignaturas_programa': data}, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
