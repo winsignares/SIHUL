@@ -1,7 +1,6 @@
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
-import { Textarea } from '../../share/textarea';
 import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
@@ -34,8 +33,7 @@ export default function EspaciosFisicos() {
     resetForm,
     filteredEspacios,
     getEstadoBadge,
-    notification,
-    showNotification
+    notification
   } = useEspaciosFisicos();
 
   return (
@@ -105,12 +103,12 @@ export default function EspaciosFisicos() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Sede</TableHead>
-                <TableHead>Piso</TableHead>
                 <TableHead>Capacidad</TableHead>
+                <TableHead>Ubicación</TableHead>
+                <TableHead>Recursos</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -127,18 +125,22 @@ export default function EspaciosFisicos() {
                   const sede = sedes.find(s => s.id === espacio.sede_id);
                   return (
                     <TableRow key={espacio.id}>
-                      <TableCell>
-                        <Badge variant="outline" className="border-red-600 text-red-600 dark:border-red-400 dark:text-red-400">
-                          {espacio.codigo || 'Sin código'}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">{espacio.tipo}</TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">{sede?.nombre || 'Sede desconocida'}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">
-                        Piso {espacio.piso}
-                      </TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} personas</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">{espacio.ubicacion || 'Sin ubicación'}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {espacio.recursos && espacio.recursos.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {espacio.recursos.map(r => (
+                              <Badge key={r.id} variant="outline" className="text-xs">{r.nombre}</Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Sin recursos</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge className={getEstadoBadge(espacio.estado || 'Disponible').className}>
                           {getEstadoBadge(espacio.estado || 'Disponible').label}
@@ -182,12 +184,12 @@ export default function EspaciosFisicos() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="codigo">Código *</Label>
+                <Label htmlFor="nombre">Nombre *</Label>
                 <Input
-                  id="codigo"
-                  placeholder="Ej: A101"
-                  value={espacioForm.codigo}
-                  onChange={(e) => setEspacioForm({ ...espacioForm, codigo: e.target.value })}
+                  id="nombre"
+                  placeholder="Ej: Aula 101"
+                  value={espacioForm.nombre}
+                  onChange={(e) => setEspacioForm({ ...espacioForm, nombre: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -201,16 +203,6 @@ export default function EspaciosFisicos() {
                   onChange={(e) => setEspacioForm({ ...espacioForm, capacidad: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre *</Label>
-              <Input
-                id="nombre"
-                placeholder="Ej: Aula 101"
-                value={espacioForm.nombre}
-                onChange={(e) => setEspacioForm({ ...espacioForm, nombre: e.target.value })}
-              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -249,12 +241,12 @@ export default function EspaciosFisicos() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="piso">Piso *</Label>
+              <Label htmlFor="ubicacion">Ubicación *</Label>
               <Input
-                id="piso"
-                placeholder="Ej: 1"
-                value={espacioForm.piso}
-                onChange={(e) => setEspacioForm({ ...espacioForm, piso: e.target.value })}
+                id="ubicacion"
+                placeholder="Ej: Edificio A, Pasillo 2"
+                value={espacioForm.ubicacion}
+                onChange={(e) => setEspacioForm({ ...espacioForm, ubicacion: e.target.value })}
               />
             </div>
 
@@ -275,9 +267,9 @@ export default function EspaciosFisicos() {
                         <SelectValue placeholder="Seleccione un recurso..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {recursosDisponibles.filter(r => !recursosAgregados.includes(r.nombre)).map(recurso => (
-                          <SelectItem key={recurso.nombre} value={recurso.nombre}>
-                            {recurso.icon} {recurso.nombre}
+                        {recursosDisponibles.filter(r => !recursosAgregados.some(ra => ra.id === r.id)).map(recurso => (
+                          <SelectItem key={recurso.id} value={recurso.id?.toString() || ''}>
+                            {recurso.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -286,10 +278,10 @@ export default function EspaciosFisicos() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        if (recursoSeleccionado && !recursosAgregados.includes(recursoSeleccionado)) {
-                          setRecursosAgregados([...recursosAgregados, recursoSeleccionado]);
+                        const recurso = recursosDisponibles.find(r => r.id?.toString() === recursoSeleccionado);
+                        if (recurso && !recursosAgregados.some(ra => ra.id === recurso.id)) {
+                          setRecursosAgregados([...recursosAgregados, recurso]);
                           setRecursoSeleccionado('');
-                          showNotification('Recurso agregado', 'success');
                         }
                       }}
                       disabled={!recursoSeleccionado}
@@ -319,28 +311,25 @@ export default function EspaciosFisicos() {
                     <strong>Recursos agregados:</strong>
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {recursosAgregados.map(recurso => {
-                      const recursoInfo = recursosDisponibles.find(r => r.nombre === recurso);
-                      return (
-                        <Badge
-                          key={recurso}
-                          variant="outline"
-                          className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                    {recursosAgregados.map(recurso => (
+                      <Badge
+                        key={recurso.id}
+                        variant="outline"
+                        className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                      >
+                        {recurso.nombre}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRecursosAgregados(recursosAgregados.filter(r => r.id !== recurso.id));
+                            setMostrandoRecursos(true);
+                          }}
+                          className="ml-2 hover:text-red-600"
                         >
-                          {recursoInfo?.icon} {recurso}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRecursosAgregados(recursosAgregados.filter(r => r !== recurso));
-                              setMostrandoRecursos(true);
-                            }}
-                            className="ml-2 hover:text-red-600"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      );
-                    })}
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
                   {!mostrandoRecursos && (
                     <Button
@@ -398,11 +387,11 @@ export default function EspaciosFisicos() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-codigo">Código *</Label>
+                <Label htmlFor="edit-nombre">Nombre *</Label>
                 <Input
-                  id="edit-codigo"
-                  value={espacioForm.codigo}
-                  onChange={(e) => setEspacioForm({ ...espacioForm, codigo: e.target.value })}
+                  id="edit-nombre"
+                  value={espacioForm.nombre}
+                  onChange={(e) => setEspacioForm({ ...espacioForm, nombre: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -415,15 +404,6 @@ export default function EspaciosFisicos() {
                   onChange={(e) => setEspacioForm({ ...espacioForm, capacidad: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-nombre">Nombre *</Label>
-              <Input
-                id="edit-nombre"
-                value={espacioForm.nombre}
-                onChange={(e) => setEspacioForm({ ...espacioForm, nombre: e.target.value })}
-              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -462,13 +442,30 @@ export default function EspaciosFisicos() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-piso">Piso *</Label>
+              <Label htmlFor="edit-ubicacion">Ubicación *</Label>
               <Input
-                id="edit-piso"
-                placeholder="Ej: 1"
-                value={espacioForm.piso}
-                onChange={(e) => setEspacioForm({ ...espacioForm, piso: e.target.value })}
+                id="edit-ubicacion"
+                placeholder="Ej: Edificio A, Pasillo 2"
+                value={espacioForm.ubicacion}
+                onChange={(e) => setEspacioForm({ ...espacioForm, ubicacion: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-estado">Estado *</Label>
+              <Select
+                value={espacioForm.estado}
+                onValueChange={(value: any) => setEspacioForm({ ...espacioForm, estado: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Disponible">Disponible</SelectItem>
+                  <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                  <SelectItem value="No Disponible">No Disponible</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Recursos Necesarios */}
@@ -488,9 +485,9 @@ export default function EspaciosFisicos() {
                         <SelectValue placeholder="Seleccione un recurso..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {recursosDisponibles.filter(r => !recursosAgregados.includes(r.nombre)).map(recurso => (
-                          <SelectItem key={recurso.nombre} value={recurso.nombre}>
-                            {recurso.icon} {recurso.nombre}
+                        {recursosDisponibles.filter(r => !recursosAgregados.some(ra => ra.id === r.id)).map(recurso => (
+                          <SelectItem key={recurso.id} value={recurso.id?.toString() || ''}>
+                            {recurso.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -499,10 +496,10 @@ export default function EspaciosFisicos() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        if (recursoSeleccionado && !recursosAgregados.includes(recursoSeleccionado)) {
-                          setRecursosAgregados([...recursosAgregados, recursoSeleccionado]);
+                        const recurso = recursosDisponibles.find(r => r.id?.toString() === recursoSeleccionado);
+                        if (recurso && !recursosAgregados.some(ra => ra.id === recurso.id)) {
+                          setRecursosAgregados([...recursosAgregados, recurso]);
                           setRecursoSeleccionado('');
-                          showNotification('Recurso agregado', 'success');
                         }
                       }}
                       disabled={!recursoSeleccionado}
@@ -532,28 +529,25 @@ export default function EspaciosFisicos() {
                     <strong>Recursos agregados:</strong>
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {recursosAgregados.map(recurso => {
-                      const recursoInfo = recursosDisponibles.find(r => r.nombre === recurso);
-                      return (
-                        <Badge
-                          key={recurso}
-                          variant="outline"
-                          className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                    {recursosAgregados.map(recurso => (
+                      <Badge
+                        key={recurso.id}
+                        variant="outline"
+                        className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                      >
+                        {recurso.nombre}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRecursosAgregados(recursosAgregados.filter(r => r.id !== recurso.id));
+                            setMostrandoRecursos(true);
+                          }}
+                          className="ml-2 hover:text-red-600"
                         >
-                          {recursoInfo?.icon} {recurso}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRecursosAgregados(recursosAgregados.filter(r => r !== recurso));
-                              setMostrandoRecursos(true);
-                            }}
-                            className="ml-2 hover:text-red-600"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      );
-                    })}
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
                   {!mostrandoRecursos && (
                     <Button

@@ -5,14 +5,12 @@ import { apiClient } from '../../core/apiClient';
  */
 export interface EspacioFisico {
     id?: number;
-    codigo: string;
     nombre: string;
     sede_id: number;
     tipo: string;
     capacidad: number;
-    piso?: string;
     descripcion?: string;
-    recursos?: string[];
+    recursos?: { id: number; nombre: string; estado: string }[];
     ubicacion?: string;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
@@ -21,14 +19,12 @@ export interface EspacioFisico {
  * Payload para crear un espacio físico
  */
 export interface CreateEspacioPayload {
-    codigo: string;
     nombre: string;
     sede_id: number;
     tipo: string;
     capacidad: number;
-    piso: string;
     descripcion?: string;
-    recursos?: string[];
+    recursos?: { id: number; estado: string }[];
     ubicacion?: string;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
@@ -38,14 +34,12 @@ export interface CreateEspacioPayload {
  */
 export interface UpdateEspacioPayload {
     id: number;
-    codigo?: string;
     nombre?: string;
     sede_id?: number;
     tipo?: string;
     capacidad?: number;
-    piso?: string;
     descripcion?: string;
-    recursos?: string[];
+    recursos?: { id: number; estado: string }[];
     ubicacion?: string;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }

@@ -14,7 +14,7 @@ export const recursoService = {
    * Obtiene la lista de todos los recursos
    */
   listarRecursos: async (): Promise<{ recursos: Recurso[] }> => {
-    return apiClient.get('/recursos/');
+    return apiClient.get('/recursos/list/');
   },
 
   /**
@@ -67,7 +67,7 @@ export const espacioRecursoService = {
    * Obtiene la lista de todas las relaciones espacio-recurso
    */
   listarEspacioRecursos: async (): Promise<{ espacio_recursos: EspacioRecurso[] }> => {
-    return apiClient.get('/espacio-recursos/');
+    return apiClient.get('/espacio-recursos/list/');
   },
 
   /**

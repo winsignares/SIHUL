@@ -19,7 +19,7 @@ def create_espacio(request):
             capacidad = data.get('capacidad')
             ubicacion = data.get('ubicacion')
             estado = data.get('estado', 'Disponible')
-            recursos_ids = data.get('recursos_ids', [])  # Lista de IDs de recursos
+            recursos = data.get('recursos', [])  # Lista de objetos recursos {id, estado}
             
             if not sede_id or not nombre or not tipo or capacidad is None:
                 return JsonResponse({"error": "sede_id, nombre, tipo y capacidad son requeridos"}, status=400)
@@ -29,14 +29,17 @@ def create_espacio(request):
             e.save()
             
             # Crear las relaciones con recursos
-            for recurso_id in recursos_ids:
+            for res_data in recursos:
                 try:
-                    recurso = Recurso.objects.get(id=recurso_id)
-                    EspacioRecurso.objects.create(
-                        espacio=e,
-                        recurso=recurso,
-                        estado='disponible'  # Por defecto disponible
-                    )
+                    recurso_id = res_data.get('id')
+                    estado_recurso = res_data.get('estado', 'disponible')
+                    if recurso_id:
+                        recurso = Recurso.objects.get(id=recurso_id)
+                        EspacioRecurso.objects.create(
+                            espacio=e,
+                            recurso=recurso,
+                            estado=estado_recurso
+                        )
                 except Recurso.DoesNotExist:
                     pass  # Ignorar si el recurso no existe
             
@@ -76,19 +79,22 @@ def update_espacio(request):
             e.save()
             
             # Actualizar recursos si se envían
-            if 'recursos_ids' in data:
+            if 'recursos' in data:
                 # Eliminar todas las relaciones actuales
                 EspacioRecurso.objects.filter(espacio=e).delete()
                 # Crear las nuevas relaciones
-                recursos_ids = data.get('recursos_ids', [])
-                for recurso_id in recursos_ids:
+                recursos = data.get('recursos', [])
+                for res_data in recursos:
                     try:
-                        recurso = Recurso.objects.get(id=recurso_id)
-                        EspacioRecurso.objects.create(
-                            espacio=e,
-                            recurso=recurso,
-                            estado='disponible'
-                        )
+                        recurso_id = res_data.get('id')
+                        estado_recurso = res_data.get('estado', 'disponible')
+                        if recurso_id:
+                            recurso = Recurso.objects.get(id=recurso_id)
+                            EspacioRecurso.objects.create(
+                                espacio=e,
+                                recurso=recurso,
+                                estado=estado_recurso
+                            )
                     except Recurso.DoesNotExist:
                         pass
             
