@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, BookOpen, AlertTriangle, Check, X, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, BookOpen, AlertTriangle, Check, X, Eye, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAsignaturas, tiposAsignatura } from '../../hooks/gestionAcademica/useAsignaturas';
 
@@ -276,14 +276,23 @@ export default function Asignaturas() {
                 setShowCreateDialog(false);
                 resetForm();
               }}
+              disabled={loading}
             >
               Cancelar
             </Button>
             <Button
               onClick={handleCreateAsignatura}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+              disabled={loading}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Guardar
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -397,14 +406,23 @@ export default function Asignaturas() {
                 setSelectedAsignatura(null);
                 resetForm();
               }}
+              disabled={loading}
             >
               Cancelar
             </Button>
             <Button
               onClick={handleEditAsignatura}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+              disabled={loading}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Guardar
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { showNotification } from '../../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { programaService } from '../../services/programas/programaAPI';
@@ -12,6 +12,17 @@ export const tiposAsignatura = [
 ];
 
 export function useAsignaturas() {
+    let showNotification: any;
+    try {
+        const theme = useTheme();
+        showNotification = theme.showNotification;
+    } catch (error) {
+        console.warn('ThemeContext no disponible, usando fallback', error);
+        showNotification = (notification: any) => {
+            console.log(`Notification: ${notification.type} - ${notification.message}`);
+        };
+    }
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -75,29 +86,44 @@ export function useAsignaturas() {
     // ==================== CREAR ASIGNATURA ====================
 
     const handleCreateAsignatura = async () => {
+        console.log('handleCreateAsignatura called', asignaturaForm);
+        
         // Validaciones
         if (!asignaturaForm.codigo.trim()) {
+            console.warn('Código vacío');
             showNotification({ message: 'El código es obligatorio', type: 'error' });
             return;
         }
 
         if (!asignaturaForm.nombre.trim()) {
+            console.warn('Nombre vacío');
             showNotification({ message: 'El nombre es obligatorio', type: 'error' });
             return;
         }
 
         if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
+            console.warn('Créditos inválidos');
             showNotification({ message: 'Los créditos deben ser mayor a 0', type: 'error' });
             return;
         }
 
         if (!asignaturaForm.programaId) {
+            console.warn('Programa no seleccionado');
             showNotification({ message: 'El programa es obligatorio', type: 'error' });
             return;
         }
 
         try {
             setLoading(true);
+            console.log('Enviando datos al servidor:', {
+                codigo: asignaturaForm.codigo.trim(),
+                nombre: asignaturaForm.nombre.trim(),
+                creditos: Number(asignaturaForm.creditos),
+                tipo: asignaturaForm.tipo,
+                programa_id: Number(asignaturaForm.programaId),
+                horas: Number(asignaturaForm.horas) || 0
+            });
+            
             await asignaturaService.create({
                 codigo: asignaturaForm.codigo.trim(),
                 nombre: asignaturaForm.nombre.trim(),
@@ -107,12 +133,14 @@ export function useAsignaturas() {
                 horas: Number(asignaturaForm.horas) || 0
             });
 
+            console.log('Asignatura creada exitosamente');
             await loadAsignaturas();
             resetForm();
             setShowCreateDialog(false);
 
             showNotification({ message: '✅ Asignatura registrada exitosamente', type: 'success' });
         } catch (error) {
+            console.error('Error al crear asignatura:', error);
             showNotification({
                 message: `Error al crear asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
                 type: 'error'

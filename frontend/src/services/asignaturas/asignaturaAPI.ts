@@ -60,21 +60,21 @@ export const asignaturaService = {
      * Crea una nueva asignatura
      */
     create: async (payload: CreateAsignaturaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post<{ message: string; id: number }>('/asignaturas/create/', payload);
+        return apiClient.post<{ message: string; id: number }>('/asignaturas/', payload);
     },
 
     /**
      * Actualiza una asignatura existente
      */
     update: async (payload: UpdateAsignaturaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/asignaturas/update/', payload);
+        return apiClient.put<{ message: string; id: number }>(`/asignaturas/${payload.id}/`, payload);
     },
 
     /**
      * Elimina una asignatura
      */
     delete: async (payload: DeleteAsignaturaPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/asignaturas/delete/', payload);
+        return apiClient.delete<{ message: string }>(`/asignaturas/${payload.id}/`, payload);
     },
 
     /**
