@@ -59,6 +59,35 @@ export interface ListHorariosResponse {
 }
 
 /**
+ * Interfaz para horarios extendidos con información de relaciones
+ */
+export interface HorarioExtendido {
+    id: number;
+    grupo_id: number;
+    grupo_nombre: string;
+    programa_id: number;
+    programa_nombre: string;
+    semestre: number;
+    asignatura_id: number;
+    asignatura_nombre: string;
+    docente_id: number | null;
+    docente_nombre: string;
+    espacio_id: number;
+    espacio_nombre: string;
+    dia_semana: string;
+    hora_inicio: string;
+    hora_fin: string;
+    cantidad_estudiantes: number | null;
+}
+
+/**
+ * Respuesta de la lista de horarios extendidos
+ */
+export interface ListHorariosExtendidosResponse {
+    horarios: HorarioExtendido[];
+}
+
+/**
  * Interfaz para el modelo de HorarioFusionado
  */
 export interface HorarioFusionado {
@@ -162,6 +191,13 @@ export const horarioService = {
      */
     list: async (): Promise<ListHorariosResponse> => {
         return apiClient.get<ListHorariosResponse>('/horario/list/');
+    },
+
+    /**
+     * Lista todos los horarios con información extendida
+     */
+    listExtendidos: async (): Promise<ListHorariosExtendidosResponse> => {
+        return apiClient.get<ListHorariosExtendidosResponse>('/horario/list/extendidos/');
     }
 };
 

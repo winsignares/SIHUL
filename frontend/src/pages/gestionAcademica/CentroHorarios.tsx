@@ -26,11 +26,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import CrearHorarios from './CrearHorarios';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCentroHorarios } from '../../hooks/gestionAcademica/useCentroHorarios';
-import { db } from '../../services/database';
 
 export default function CentroHorarios() {
   const {
     activeTab, setActiveTab,
+    loading,
     facultades,
     espacios,
     filtroFacultad, setFiltroFacultad,
@@ -54,8 +54,6 @@ export default function CentroHorarios() {
     handleGuardarEdicion,
     handleEliminar,
     limpiarFiltros,
-    getNombrePrograma,
-    getNombreEspacio,
     toggleGrupoExpandido,
     dias,
     notification
@@ -221,7 +219,7 @@ export default function CentroHorarios() {
                     <tbody>
                       {gruposAgrupados.map((grupo) => (
                         <tr key={`${grupo.programaId}-${grupo.grupo}-${grupo.semestre}`} className="border-t border-slate-200 hover:bg-slate-50">
-                          <td className="px-4 py-3 text-slate-900">{getNombrePrograma(grupo.programaId)}</td>
+                          <td className="px-4 py-3 text-slate-900">{grupo.horarios[0]?.programa_nombre || 'N/A'}</td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="border-blue-600 text-blue-600">{grupo.grupo}</Badge>
                           </td>
@@ -395,7 +393,7 @@ export default function CentroHorarios() {
                           <Fragment key={grupoKey}>
                             {/* Fila principal del grupo */}
                             <tr className="border-t border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-3 text-slate-900">{getNombrePrograma(grupo.programaId)}</td>
+                              <td className="px-4 py-3 text-slate-900">{grupo.horarios[0]?.programa_nombre || 'N/A'}</td>
                               <td className="px-4 py-3">
                                 <Badge variant="outline" className="border-orange-600 text-orange-600">{grupo.grupo}</Badge>
                               </td>
@@ -428,15 +426,10 @@ export default function CentroHorarios() {
                                     size="sm"
                                     variant="outline"
                                     className="border-red-600 text-red-600 hover:bg-red-50"
-                                    onClick={() => {
+                                    onClick={async () => {
                                       if (confirm(`¿Está seguro de eliminar todo el horario del grupo ${grupo.grupo}? Se eliminarán ${grupo.horarios.length} clases.`)) {
-                                        let eliminados = 0;
-                                        grupo.horarios.forEach(horario => {
-                                          const success = db.deleteHorario(horario.id);
-                                          if (success) eliminados++;
-                                        });
-                                        if (eliminados > 0) {
-                                          loadData();
+                                        for (const horario of grupo.horarios) {
+                                          await handleEliminar(horario.id);
                                         }
                                       }
                                     }}
@@ -494,18 +487,18 @@ export default function CentroHorarios() {
                                                   transition={{ delay: idx * 0.05 }}
                                                   className="border-t border-purple-100 hover:bg-purple-50 transition-colors"
                                                 >
-                                                  <td className="px-3 py-2 text-slate-900">{horario.asignatura}</td>
-                                                  <td className="px-3 py-2 text-slate-700">{horario.docente}</td>
+                                                  <td className="px-3 py-2 text-slate-900">{horario.asignatura_nombre}</td>
+                                                  <td className="px-3 py-2 text-slate-700">{horario.docente_nombre}</td>
                                                   <td className="px-3 py-2 text-center">
                                                     <Badge variant="outline" className="border-slate-600 text-slate-700 text-xs">
-                                                      {horario.diaSemana.charAt(0).toUpperCase() + horario.diaSemana.slice(1)}
+                                                      {horario.dia_semana.charAt(0).toUpperCase() + horario.dia_semana.slice(1)}
                                                     </Badge>
                                                   </td>
                                                   <td className="px-3 py-2 text-center text-slate-700 text-sm">
-                                                    {horario.horaInicio} - {horario.horaFin}
+                                                    {horario.hora_inicio} - {horario.hora_fin}
                                                   </td>
                                                   <td className="px-3 py-2 text-center text-slate-700 text-sm">
-                                                    {getNombreEspacio(horario.espacioId)}
+                                                    {horario.espacio_nombre}
                                                   </td>
                                                   <td className="px-3 py-2">
                                                     <div className="flex gap-2 justify-center">
@@ -569,7 +562,7 @@ export default function CentroHorarios() {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-slate-600 text-sm mb-1">Programa</p>
-                      <p className="text-slate-900">{getNombrePrograma(grupoDetalles.programaId)}</p>
+                      <p className="text-slate-900">{grupoDetalles.horarios[0]?.programa_nombre || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-slate-600 text-sm mb-1">Grupo</p>
@@ -624,15 +617,15 @@ export default function CentroHorarios() {
                                   >
                                     <div className="text-center space-y-2 w-full">
                                       <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm mb-2">
-                                        <p className="text-sm mb-1">{clase.asignatura}</p>
-                                        <p className="text-xs text-yellow-200">{clase.docente}</p>
+                                        <p className="text-sm mb-1">{clase.asignatura_nombre}</p>
+                                        <p className="text-xs text-yellow-200">{clase.docente_nombre}</p>
                                       </div>
                                       <div className="flex items-center justify-center gap-2 bg-white/10 rounded-md p-1.5">
                                         <MapPin className="w-4 h-4 text-yellow-300" />
-                                        <span className="text-sm">{getNombreEspacio(clase.espacioId)}</span>
+                                        <span className="text-sm">{clase.espacio_nombre}</span>
                                       </div>
                                       <div className="text-xs text-yellow-100 mt-1">
-                                        {clase.horaInicio} - {clase.horaFin}
+                                        {clase.hora_inicio} - {clase.hora_fin}
                                       </div>
                                     </div>
                                   </motion.div>
@@ -687,29 +680,32 @@ export default function CentroHorarios() {
                 <div>
                   <Label>Asignatura</Label>
                   <Input
-                    value={(horarioEditar as unknown as { asignatura?: string }).asignatura || ''}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, asignatura: e.target.value } as typeof horarioEditar)}
+                    value={horarioEditar.asignatura_nombre || ''}
+                    disabled
+                    className="bg-slate-100"
                   />
                 </div>
                 <div>
                   <Label>Grupo</Label>
                   <Input
-                    value={(horarioEditar as unknown as { grupo?: string }).grupo || ''}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, grupo: e.target.value } as typeof horarioEditar)}
+                    value={horarioEditar.grupo_nombre || ''}
+                    disabled
+                    className="bg-slate-100"
                   />
                 </div>
                 <div>
                   <Label>Docente</Label>
                   <Input
-                    value={(horarioEditar as unknown as { docente?: string }).docente || ''}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, docente: e.target.value } as typeof horarioEditar)}
+                    value={horarioEditar.docente_nombre || ''}
+                    disabled
+                    className="bg-slate-100"
                   />
                 </div>
                 <div>
                   <Label>Día</Label>
                   <Select
-                    value={horarioEditar.diaSemana}
-                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, diaSemana: v })}
+                    value={horarioEditar.dia_semana}
+                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, dia_semana: v })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -725,30 +721,30 @@ export default function CentroHorarios() {
                   <Label>Hora Inicio</Label>
                   <Input
                     type="time"
-                    value={horarioEditar.horaInicio}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, horaInicio: e.target.value })}
+                    value={horarioEditar.hora_inicio}
+                    onChange={(e) => setHorarioEditar({ ...horarioEditar, hora_inicio: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>Hora Fin</Label>
                   <Input
                     type="time"
-                    value={horarioEditar.horaFin}
-                    onChange={(e) => setHorarioEditar({ ...horarioEditar, horaFin: e.target.value })}
+                    value={horarioEditar.hora_fin}
+                    onChange={(e) => setHorarioEditar({ ...horarioEditar, hora_fin: e.target.value })}
                   />
                 </div>
                 <div className="col-span-2">
                   <Label>Espacio</Label>
                   <Select
-                    value={horarioEditar.espacioId}
-                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, espacioId: v })}
+                    value={horarioEditar.espacio_id?.toString()}
+                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, espacio_id: parseInt(v) })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {espacios.map(e => (
-                        <SelectItem key={e.id} value={e.id}>{e.nombre} - {e.codigo}</SelectItem>
+                        <SelectItem key={e.id} value={e.id.toString()}>{e.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

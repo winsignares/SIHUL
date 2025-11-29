@@ -141,6 +141,33 @@ def list_horarios(request):
         } for i in items]
         return JsonResponse({"horarios": lst}, status=200)
 
+@csrf_exempt
+def list_horarios_extendidos(request):
+    """Lista horarios con información extendida (nombres de relaciones)"""
+    if request.method == 'GET':
+        items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').all()
+        lst = []
+        for i in items:
+            lst.append({
+                "id": i.id,
+                "grupo_id": i.grupo.id,
+                "grupo_nombre": i.grupo.nombre,
+                "programa_id": i.grupo.programa.id,
+                "programa_nombre": i.grupo.programa.nombre,
+                "semestre": i.grupo.semestre,
+                "asignatura_id": i.asignatura.id,
+                "asignatura_nombre": i.asignatura.nombre,
+                "docente_id": (i.docente.id if i.docente else None),
+                "docente_nombre": f"{i.docente.nombre} {i.docente.apellido}" if i.docente else "Sin asignar",
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "dia_semana": i.dia_semana,
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "cantidad_estudiantes": i.cantidad_estudiantes
+            })
+        return JsonResponse({"horarios": lst}, status=200)
+
 # ---------- HorarioFusionado CRUD ----------
 # ---------- Horario_Fusionado CRUD ----------
 @csrf_exempt

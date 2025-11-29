@@ -8,6 +8,7 @@ urlpatterns = [
     path('delete/', views.delete_horario, name='delete_horario'),
     path('<int:id>/', views.get_horario, name='get_horario'),
     path('list/', views.list_horarios, name='list_horarios'),
+    path('list/extendidos/', views.list_horarios_extendidos, name='list_horarios_extendidos'),
     
     # HorarioFusionado endpoints
     path('fusionado/', views.create_horario_fusionado, name='create_horario_fusionado'),

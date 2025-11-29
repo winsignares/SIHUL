@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { Facultad, Programa, EspacioFisico, Grupo, Asignatura, Docente, HorarioAcademico } from '../../models/index';
+import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
+import { programaService, type Programa } from '../../services/programas/programaAPI';
+import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
+import { asignaturaService, type Asignatura } from '../../services/asignaturas/asignaturaAPI';
+import { userService, type Usuario } from '../../services/users/authService';
+import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
+import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
+import { useAuth } from '../../context/AuthContext';
 
-export interface GrupoSinHorario {
-    id: string;
-    nombre: string;
-    programaId: string;
-    programaNombre: string;
-    semestre: number;
-    facultadId: string;
+export interface GrupoConInfo extends Grupo {
+    programa_nombre?: string;
+    facultad_id?: number;
 }
 
 export interface HorarioDia {
@@ -23,32 +25,35 @@ export interface CrearHorariosHookProps {
 }
 
 export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {}) {
+    const { user, role } = useAuth();
     const { notification, showNotification } = useNotification();
 
     // Estados principales
+    const [loading, setLoading] = useState(false);
     const [facultades, setFacultades] = useState<Facultad[]>([]);
     const [programas, setProgramas] = useState<Programa[]>([]);
-    const [grupos, setGrupos] = useState<Grupo[]>([]);
+    const [grupos, setGrupos] = useState<GrupoConInfo[]>([]);
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
-    const [docentes, setDocentes] = useState<Docente[]>([]);
+    const [docentes, setDocentes] = useState<Usuario[]>([]);
+    const [todosLosHorarios, setTodosLosHorarios] = useState<HorarioExtendido[]>([]);
 
     // Filtros
     const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
-    const [filtroPrograma, setFiltroPrograma] = useState<string>('all');
+    const [filtroPrograma, setFiltroPrograma] = useState<number | string>('all');
     const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
     const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
 
     // Estados de la UI
     const [vistaActual, setVistaActual] = useState<'lista' | 'asignar'>('lista');
-    const [grupoSeleccionado, setGrupoSeleccionado] = useState<GrupoSinHorario | null>(null);
-    const [horariosAsignados, setHorariosAsignados] = useState<HorarioAcademico[]>([]);
+    const [grupoSeleccionado, setGrupoSeleccionado] = useState<GrupoConInfo | null>(null);
+    const [horariosAsignados, setHorariosAsignados] = useState<HorarioExtendido[]>([]);
 
     // Modal de asignar asignatura
     const [showModalAsignar, setShowModalAsignar] = useState(false);
-    const [asignaturaSeleccionada, setAsignaturaSeleccionada] = useState<string>('');
-    const [docenteSeleccionado, setDocenteSeleccionado] = useState<string>('');
-    const [espacioSeleccionado, setEspacioSeleccionado] = useState<string>('');
+    const [asignaturaSeleccionada, setAsignaturaSeleccionada] = useState<number | ''>('');
+    const [docenteSeleccionado, setDocenteSeleccionado] = useState<number | ''>('');
+    const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | ''>('');
     const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
     const [horasPorDia, setHorasPorDia] = useState<{ [key: string]: { inicio: string; fin: string } }>({});
 
@@ -57,42 +62,75 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [user, role]);
 
-    const loadData = () => {
-        setFacultades(db.getFacultades());
-        setProgramas(db.getProgramas());
-        setGrupos(db.getGrupos());
-        setEspacios(db.getEspacios());
-        setAsignaturas(db.getAsignaturas());
-        setDocentes(db.getDocentes());
-    };
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            
+            // Cargar horarios extendidos
+            const horariosResponse = await horarioService.listExtendidos();
+            setTodosLosHorarios(horariosResponse.horarios);
 
-    // Obtener grupos sin horario
-    const obtenerGruposSinHorario = (): GrupoSinHorario[] => {
-        const todosLosHorarios = db.getHorarios();
-        const gruposConHorario = new Set(todosLosHorarios.map(h => (h as any).grupoId));
+            // Cargar facultades
+            const facultadesResponse = await facultadService.list();
+            let allFacultades = facultadesResponse.facultades;
+            
+            // Filtrar por facultad si el usuario tiene rol de planeacion_facultad
+            if (role?.nombre === 'planeacion_facultad' && user?.facultad) {
+                const userFacultadId = user.facultad.id.toString();
+                allFacultades = allFacultades.filter(f => f.id?.toString() === userFacultadId);
+                setFiltroFacultad(userFacultadId);
+            }
+            setFacultades(allFacultades);
 
-        return grupos
-            .filter(grupo => !gruposConHorario.has(grupo.id))
-            .map(grupo => {
-                const programa = programas.find(p => p.id === grupo.programaId);
-                const facultad = facultades.find(f => f.id === programa?.facultadId);
+            // Cargar programas
+            const programasResponse = await programaService.listarProgramas();
+            setProgramas(programasResponse.programas);
+
+            // Cargar grupos
+            const gruposResponse = await grupoService.list();
+            const gruposConInfo = gruposResponse.grupos.map(grupo => {
+                const programa = programasResponse.programas.find(p => p.id === grupo.programa_id);
                 return {
-                    id: grupo.id,
-                    nombre: grupo.nombre,
-                    programaId: grupo.programaId,
-                    programaNombre: programa?.nombre || 'N/A',
-                    semestre: grupo.semestre,
-                    facultadId: programa?.facultadId || ''
+                    ...grupo,
+                    programa_nombre: programa?.nombre,
+                    facultad_id: programa?.facultad_id
                 };
             });
+            setGrupos(gruposConInfo);
+
+            // Cargar espacios
+            const espaciosResponse = await espacioService.list();
+            setEspacios(espaciosResponse.espacios);
+
+            // Cargar asignaturas
+            const asignaturasResponse = await asignaturaService.list();
+            setAsignaturas(asignaturasResponse.asignaturas);
+
+            // Cargar docentes (usuarios con rol de docente)
+            const usuariosResponse = await userService.listarUsuarios();
+            setDocentes(usuariosResponse.usuarios);
+            
+        } catch (error) {
+            showNotification(
+                `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                'error'
+            );
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Filtrar grupos sin horario
-    const gruposSinHorarioFiltrados = obtenerGruposSinHorario().filter(grupo => {
-        const matchFacultad = filtroFacultad === 'all' || grupo.facultadId === filtroFacultad;
-        const matchPrograma = filtroPrograma === 'all' || grupo.programaId === filtroPrograma;
+    // Obtener grupos sin horario (o con horarios incompletos)
+    const obtenerGrupos = (): GrupoConInfo[] => {
+        return grupos;
+    };
+
+    // Filtrar grupos
+    const gruposSinHorarioFiltrados = obtenerGrupos().filter(grupo => {
+        const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
+        const matchPrograma = filtroPrograma === 'all' || grupo.programa_id === filtroPrograma;
         const matchSemestre = filtroSemestre === 'all' || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
         const matchGrupo = filtroGrupo === 'all' || (grupo.nombre && grupo.nombre.toLowerCase().includes(filtroGrupo.toLowerCase()));
 
@@ -100,7 +138,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     });
 
     const programasFiltrados = programas.filter(p =>
-        filtroFacultad === 'all' || p.facultadId === filtroFacultad
+        filtroFacultad === 'all' || p.facultad_id?.toString() === filtroFacultad
     );
 
     const limpiarFiltros = () => {
@@ -110,9 +148,11 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         setFiltroGrupo('all');
     };
 
-    const handleAsignarHorario = (grupo: GrupoSinHorario) => {
+    const handleAsignarHorario = async (grupo: GrupoConInfo) => {
         setGrupoSeleccionado(grupo);
-        setHorariosAsignados([]);
+        // Cargar horarios existentes del grupo
+        const horariosDelGrupo = todosLosHorarios.filter(h => h.grupo_id === grupo.id);
+        setHorariosAsignados(horariosDelGrupo);
         setVistaActual('asignar');
     };
 
@@ -120,6 +160,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         setVistaActual('lista');
         setGrupoSeleccionado(null);
         setHorariosAsignados([]);
+        loadData(); // Recargar datos al volver
     };
 
     const handleAbrirModalAsignar = () => {
@@ -155,8 +196,8 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
     // Validar conflictos
     const validarConflictos = (): { valido: boolean; mensaje: string } => {
-        if (!asignaturaSeleccionada || !docenteSeleccionado || !espacioSeleccionado) {
-            return { valido: false, mensaje: 'Todos los campos son obligatorios' };
+        if (!asignaturaSeleccionada || !espacioSeleccionado) {
+            return { valido: false, mensaje: 'Asignatura y espacio son obligatorios' };
         }
 
         if (diasSeleccionados.length === 0) {
@@ -174,40 +215,48 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             }
         }
 
-        // Validar conflictos de docente
-        const todosLosHorarios = db.getHorarios();
+        // Validar conflictos de docente (si se seleccionó uno)
+        if (docenteSeleccionado) {
+            for (const dia of diasSeleccionados) {
+                const horas = horasPorDia[dia];
+                const diaLower = dia.toLowerCase();
+                
+                const conflictoDocente = todosLosHorarios.find(h =>
+                    h.docente_id === docenteSeleccionado &&
+                    h.dia_semana === diaLower &&
+                    ((horas.inicio >= h.hora_inicio && horas.inicio < h.hora_fin) ||
+                        (horas.fin > h.hora_inicio && horas.fin <= h.hora_fin) ||
+                        (horas.inicio <= h.hora_inicio && horas.fin >= h.hora_fin))
+                );
+
+                if (conflictoDocente) {
+                    const docente = docentes.find(d => d.id === docenteSeleccionado);
+                    return {
+                        valido: false,
+                        mensaje: `El docente ${docente?.nombre || ''} ya tiene una clase el ${dia} de ${conflictoDocente.hora_inicio} a ${conflictoDocente.hora_fin}`
+                    };
+                }
+            }
+        }
+
+        // Validar conflictos de espacio
         for (const dia of diasSeleccionados) {
             const horas = horasPorDia[dia];
-            const conflictoDocente = todosLosHorarios.find(h =>
-                (h as any).docenteId === docenteSeleccionado &&
-                h.diaSemana === dia &&
-                ((horas.inicio >= h.horaInicio && horas.inicio < h.horaFin) ||
-                    (horas.fin > h.horaInicio && horas.fin <= h.horaFin) ||
-                    (horas.inicio <= h.horaInicio && horas.fin >= h.horaFin))
-            );
-
-            if (conflictoDocente) {
-                const docente = docentes.find(d => d.id === docenteSeleccionado);
-                return {
-                    valido: false,
-                    mensaje: `El docente ${docente?.nombre || ''} ya tiene una clase el ${dia} de ${conflictoDocente.horaInicio} a ${conflictoDocente.horaFin}`
-                };
-            }
-
-            // Validar conflictos de espacio
+            const diaLower = dia.toLowerCase();
+            
             const conflictoEspacio = todosLosHorarios.find(h =>
-                h.espacioId === espacioSeleccionado &&
-                h.diaSemana === dia &&
-                ((horas.inicio >= h.horaInicio && horas.inicio < h.horaFin) ||
-                    (horas.fin > h.horaInicio && horas.fin <= h.horaFin) ||
-                    (horas.inicio <= h.horaInicio && horas.fin >= h.horaFin))
+                h.espacio_id === espacioSeleccionado &&
+                h.dia_semana === diaLower &&
+                ((horas.inicio >= h.hora_inicio && horas.inicio < h.hora_fin) ||
+                    (horas.fin > h.hora_inicio && horas.fin <= h.hora_fin) ||
+                    (horas.inicio <= h.hora_inicio && horas.fin >= h.hora_fin))
             );
 
             if (conflictoEspacio) {
                 const espacio = espacios.find(e => e.id === espacioSeleccionado);
                 return {
                     valido: false,
-                    mensaje: `El espacio ${espacio?.nombre || ''} ya está ocupado el ${dia} de ${conflictoEspacio.horaInicio} a ${conflictoEspacio.horaFin}`
+                    mensaje: `El espacio ${espacio?.nombre || ''} ya está ocupado el ${dia} de ${conflictoEspacio.hora_inicio} a ${conflictoEspacio.hora_fin}`
                 };
             }
         }
@@ -215,7 +264,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         return { valido: true, mensaje: '' };
     };
 
-    const handleGuardarAsignacion = () => {
+    const handleGuardarAsignacion = async () => {
         const validacion = validarConflictos();
 
         if (!validacion.valido) {
@@ -223,59 +272,77 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             return;
         }
 
-        if (!grupoSeleccionado) return;
+        if (!grupoSeleccionado || !grupoSeleccionado.id) return;
 
-        const asignatura = asignaturas.find(a => a.id === asignaturaSeleccionada);
-        const docente = docentes.find(d => d.id === docenteSeleccionado);
-        const espacio = espacios.find(e => e.id === espacioSeleccionado);
+        try {
+            setLoading(true);
+            const asignatura = asignaturas.find(a => a.id === asignaturaSeleccionada);
 
-        // Crear un horario por cada día seleccionado
-        const nuevosHorarios: any[] = diasSeleccionados.map(dia => {
-            const horas = horasPorDia[dia];
-            return {
-                id: `horario-${Date.now()}-${Math.random()}`,
-                asignaturaId: asignaturaSeleccionada,
-                docenteId: docenteSeleccionado,
-                espacioId: espacioSeleccionado,
-                diaSemana: dia.toLowerCase(),
-                horaInicio: horas.inicio,
-                horaFin: horas.fin,
-                grupoId: grupoSeleccionado.id,
-                periodoId: db.getPeriodoActivo()?.id || 'periodo-1',
-                activo: true,
-                fechaCreacion: new Date().toISOString(),
-                // Campos extendidos para visualización
-                asignatura: asignatura?.nombre || '',
-                docente: docente?.nombre || '',
-                grupo: grupoSeleccionado.nombre,
-                programaId: grupoSeleccionado.programaId,
-                semestre: grupoSeleccionado.semestre
-            };
-        });
+            // Crear un horario por cada día seleccionado
+            for (const dia of diasSeleccionados) {
+                const horas = horasPorDia[dia];
+                
+                await horarioService.create({
+                    grupo_id: grupoSeleccionado.id,
+                    asignatura_id: asignaturaSeleccionada as number,
+                    docente_id: docenteSeleccionado ? (docenteSeleccionado as number) : null,
+                    espacio_id: espacioSeleccionado as number,
+                    dia_semana: dia.toLowerCase(),
+                    hora_inicio: horas.inicio,
+                    hora_fin: horas.fin,
+                    cantidad_estudiantes: null
+                });
+            }
 
-        // Guardar en la base de datos
-        nuevosHorarios.forEach(horario => {
-            db.createHorario(horario);
-        });
+            showNotification(`✅ Asignatura ${asignatura?.nombre || ''} asignada correctamente`, 'success');
+            setShowModalAsignar(false);
 
-        // Actualizar vista local
-        setHorariosAsignados([...horariosAsignados, ...nuevosHorarios]);
+            // Recargar datos
+            await loadData();
+            
+            // Actualizar horarios del grupo
+            if (grupoSeleccionado.id) {
+                const horariosResponse = await horarioService.listExtendidos();
+                const horariosDelGrupo = horariosResponse.horarios.filter(h => h.grupo_id === grupoSeleccionado.id);
+                setHorariosAsignados(horariosDelGrupo);
+            }
 
-        showNotification(`Asignatura ${asignatura?.nombre || ''} asignada correctamente`, 'success');
-        setShowModalAsignar(false);
-
-        // Llamar a la función de callback si está definida
-        if (onHorarioCreado) {
-            onHorarioCreado();
+            // Llamar a la función de callback si está definida
+            if (onHorarioCreado) {
+                onHorarioCreado();
+            }
+        } catch (error) {
+            showNotification(
+                `Error al guardar horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                'error'
+            );
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleEliminarHorarioAsignado = (horarioId: string) => {
+    const handleEliminarHorarioAsignado = async (horarioId: number) => {
         if (confirm('¿Está seguro de eliminar esta asignación?')) {
-            const success = db.deleteHorario(horarioId);
-            if (success) {
+            try {
+                setLoading(true);
+                await horarioService.delete({ id: horarioId });
+                
                 setHorariosAsignados(horariosAsignados.filter(h => h.id !== horarioId));
-                showNotification('Asignación eliminada correctamente', 'success');
+                showNotification('✅ Asignación eliminada correctamente', 'success');
+                
+                // Recargar datos
+                await loadData();
+                
+                if (onHorarioCreado) {
+                    onHorarioCreado();
+                }
+            } catch (error) {
+                showNotification(
+                    `Error al eliminar horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                    'error'
+                );
+            } finally {
+                setLoading(false);
             }
         }
     };
@@ -291,10 +358,10 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
     const obtenerClaseEnHora = (dia: string, hora: string) => {
         return horariosAsignados.find(h => {
-            const diaMatch = h.diaSemana.toLowerCase() === dia.toLowerCase();
+            const diaMatch = h.dia_semana.toLowerCase() === dia.toLowerCase();
             const horaActual = parseInt(hora.split(':')[0]);
-            const horaInicio = parseInt(h.horaInicio.split(':')[0]);
-            const horaFin = parseInt(h.horaFin.split(':')[0]);
+            const horaInicio = parseInt(h.hora_inicio.split(':')[0]);
+            const horaFin = parseInt(h.hora_fin.split(':')[0]);
             return diaMatch && horaActual >= horaInicio && horaActual < horaFin;
         });
     };
@@ -302,6 +369,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const horas = generarHoras();
 
     return {
+        loading,
         facultades,
         programas,
         grupos,

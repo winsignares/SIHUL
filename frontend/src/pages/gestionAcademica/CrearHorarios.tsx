@@ -64,6 +64,15 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     notification
   } = useCrearHorarios({ onHorarioCreado });
 
+  // Debug: imprimir asignaturas cuando cambian
+  console.log('Total asignaturas:', asignaturas.length);
+  console.log('Asignaturas:', asignaturas);
+  console.log('Grupo seleccionado:', grupoSeleccionado);
+  if (grupoSeleccionado) {
+    const asignaturasFiltradas = asignaturas.filter(a => a.programa_id === grupoSeleccionado?.programa_id);
+    console.log('Asignaturas filtradas para programa', grupoSeleccionado.programa_id, ':', asignaturasFiltradas);
+  }
+
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {
     return (
@@ -213,7 +222,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                           transition={{ delay: index * 0.05 }}
                           className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         >
-                          <td className="px-6 py-4 text-slate-900">{grupo.programaNombre}</td>
+                          <td className="px-6 py-4 text-slate-900">{grupo.programa_nombre || 'N/A'}</td>
                           <td className="px-6 py-4">
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                               {grupo.nombre}
@@ -252,7 +261,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
           <div>
             <h2 className="text-slate-900">Horario del Grupo — {grupoSeleccionado?.nombre}</h2>
             <p className="text-slate-600 mt-1">
-              {grupoSeleccionado?.programaNombre} • Semestre {grupoSeleccionado?.semestre}
+              {grupoSeleccionado?.programa_nombre} • Semestre {grupoSeleccionado?.semestre}
             </p>
           </div>
           <div className="flex gap-3">
@@ -324,7 +333,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                             const clase = obtenerClaseEnHora(dia, hora);
                             return (
                               <td key={`${dia}-${hora}`} className="border border-slate-200 p-1 h-16 align-top">
-                                {clase && parseInt(hora.split(':')[0]) === parseInt(clase.horaInicio.split(':')[0]) && (
+                                {clase && parseInt(hora.split(':')[0]) === parseInt(clase.hora_inicio.split(':')[0]) && (
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -332,24 +341,15 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                                   >
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1 min-w-0">
-                                        {(() => {
-                                          const horarioAny = clase as any;
-                                          const asignaturaNombre = asignaturas.find(a => a.id === horarioAny.asignaturaId)?.nombre || horarioAny.asignatura || '';
-                                          const docenteNombre = docentes.find(d => d.id === horarioAny.docenteId)?.nombre || horarioAny.docente || '';
-                                          return (
-                                            <>
-                                              <p className="text-slate-900 truncate">{asignaturaNombre}</p>
-                                              <p className="text-slate-600 text-xs truncate mt-1">
-                                                <User className="w-3 h-3 inline mr-1" />
-                                                {docenteNombre}
-                                              </p>
-                                              <p className="text-slate-500 text-xs truncate">
-                                                <Clock className="w-3 h-3 inline mr-1" />
-                                                {clase.horaInicio} - {clase.horaFin}
-                                              </p>
-                                            </>
-                                          );
-                                        })()}
+                                        <p className="text-slate-900 truncate">{clase.asignatura_nombre}</p>
+                                        <p className="text-slate-600 text-xs truncate mt-1">
+                                          <User className="w-3 h-3 inline mr-1" />
+                                          {clase.docente_nombre}
+                                        </p>
+                                        <p className="text-slate-500 text-xs truncate">
+                                          <Clock className="w-3 h-3 inline mr-1" />
+                                          {clase.hora_inicio} - {clase.hora_fin}
+                                        </p>
                                       </div>
                                       <button
                                         onClick={() => handleEliminarHorarioAsignado(clase.id)}
@@ -379,9 +379,6 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               <CardContent className="p-4">
                 <div className="space-y-3">
                   {horariosAsignados.map((horario, index) => {
-                    const asignatura = asignaturas.find(a => a.id === horario.asignaturaId) || ("asignatura" in horario ? asignaturas.find(a => a.nombre === (horario as any).asignatura) : undefined);
-                    const docente = docentes.find(d => d.id === horario.docenteId) || ("docente" in horario ? docentes.find(d => d.nombre === (horario as any).docente) : undefined);
-                    const espacio = espacios.find(e => e.id === horario.espacioId);
                     return (
                       <motion.div
                         key={horario.id}
@@ -393,25 +390,25 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                         <div className="flex-1 grid grid-cols-5 gap-4">
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Asignatura</p>
-                            <p className="text-slate-900">{asignatura?.nombre || ((horario as any).asignatura || '')}</p>
+                            <p className="text-slate-900">{horario.asignatura_nombre}</p>
                           </div>
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Docente</p>
-                            <p className="text-slate-700">{docente?.nombre || ((horario as any).docente || '')}</p>
+                            <p className="text-slate-700">{horario.docente_nombre}</p>
                           </div>
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Espacio</p>
-                            <p className="text-slate-700">{espacio?.nombre}</p>
+                            <p className="text-slate-700">{horario.espacio_nombre}</p>
                           </div>
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Día</p>
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {horario.diaSemana}
+                              {horario.dia_semana.charAt(0).toUpperCase() + horario.dia_semana.slice(1)}
                             </Badge>
                           </div>
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Horario</p>
-                            <p className="text-slate-700">{horario.horaInicio} - {horario.horaFin}</p>
+                            <p className="text-slate-700">{horario.hora_inicio} - {horario.hora_fin}</p>
                           </div>
                         </div>
                         <Button
@@ -448,7 +445,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-slate-600">Programa:</span>
-                  <span className="text-slate-900 ml-2">{grupoSeleccionado?.programaNombre}</span>
+                  <span className="text-slate-900 ml-2">{grupoSeleccionado?.programa_nombre}</span>
                 </div>
                 <div>
                   <span className="text-slate-600">Semestre:</span>
@@ -463,18 +460,29 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <Label>
                   Asignatura <span className="text-red-600">*</span>
                 </Label>
-                <Select value={asignaturaSeleccionada} onValueChange={setAsignaturaSeleccionada}>
+                <Select 
+                  value={asignaturaSeleccionada?.toString() || ''} 
+                  onValueChange={(v) => setAsignaturaSeleccionada(v ? parseInt(v) : '')}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar asignatura" />
                   </SelectTrigger>
                   <SelectContent>
-                    {asignaturas
-                      .filter(a => a.programaId === grupoSeleccionado?.programaId && a.semestre === grupoSeleccionado?.semestre)
+                    {asignaturas.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-slate-500">No hay asignaturas disponibles</div>
+                    ) : asignaturas
+                      .filter(a => a.programa_id === grupoSeleccionado?.programa_id)
                       .map(a => (
-                        <SelectItem key={a.id} value={a.id}>
+                        <SelectItem key={a.id} value={a.id?.toString() || ''}>
                           {a.nombre} ({a.creditos} créditos)
                         </SelectItem>
                       ))}
+                    {asignaturas.length > 0 && 
+                     asignaturas.filter(a => a.programa_id === grupoSeleccionado?.programa_id).length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-slate-500">
+                        No hay asignaturas para el programa {grupoSeleccionado?.programa_nombre}
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -483,13 +491,18 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <Label>
                   Docente <span className="text-red-600">*</span>
                 </Label>
-                <Select value={docenteSeleccionado} onValueChange={setDocenteSeleccionado}>
+                <Select 
+                  value={docenteSeleccionado?.toString() || ''} 
+                  onValueChange={(v) => setDocenteSeleccionado(v ? parseInt(v) : '')}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar docente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {docentes.map(d => (
-                      <SelectItem key={d.id} value={d.id}>
+                    {docentes.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-slate-500">No hay docentes disponibles</div>
+                    ) : docentes.map(d => (
+                      <SelectItem key={d.id} value={d.id?.toString() || ''}>
                         {d.nombre}
                       </SelectItem>
                     ))}
@@ -501,13 +514,18 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <Label>
                   Espacio Físico <span className="text-red-600">*</span>
                 </Label>
-                <Select value={espacioSeleccionado} onValueChange={setEspacioSeleccionado}>
+                <Select 
+                  value={espacioSeleccionado?.toString() || ''} 
+                  onValueChange={(v) => setEspacioSeleccionado(v ? parseInt(v) : '')}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar espacio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {espacios.map(e => (
-                      <SelectItem key={e.id} value={e.id}>
+                    {espacios.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-slate-500">No hay espacios disponibles</div>
+                    ) : espacios.map(e => (
+                      <SelectItem key={e.id} value={e.id?.toString() || ''}>
                         {e.nombre} - Capacidad: {e.capacidad}
                       </SelectItem>
                     ))}
