@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNotification } from '../../share/notificationBanner';
-import { db } from '../../services/database';
-import type { EspacioFisico } from '../../models/index';
-import { Badge } from '../../share/badge';
+import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
+import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 
 export function useEspaciosFisicos() {
     const { notification, showNotification } = useNotification();
@@ -12,6 +11,8 @@ export function useEspaciosFisicos() {
 
     // Estados de datos
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
+    const [sedes, setSedes] = useState<Sede[]>([]);
+    const [loading, setLoading] = useState(false);
 
     // Modales
     const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -24,7 +25,7 @@ export function useEspaciosFisicos() {
         nombre: '',
         tipo: '',
         capacidad: '',
-        sede: '',
+        sede_id: '', // Store ID as string for Select compatibility
         piso: '',
         descripcion: '',
         estado: 'Disponible' as 'Disponible' | 'Mantenimiento' | 'No Disponible'
@@ -39,16 +40,42 @@ export function useEspaciosFisicos() {
 
     // Cargar datos
     useEffect(() => {
-        loadEspacios();
+        loadData();
     }, []);
 
-    const loadEspacios = () => {
-        setEspacios(db.getEspacios());
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [espaciosRes, sedesRes] = await Promise.all([
+                espacioService.list(),
+                sedeService.listarSedes()
+            ]);
+
+            const espaciosData = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
+            const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
+
+            setEspacios(espaciosData);
+            setSedes(sedesData);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            showNotification('Error al cargar los datos', 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Tipos y Sedes
+    const loadEspacios = async () => {
+        try {
+            const response = await espacioService.list();
+            const data = (response as any).espacios || (Array.isArray(response) ? response : []);
+            setEspacios(data);
+        } catch (error) {
+            console.error('Error loading espacios:', error);
+        }
+    };
+
+    // Tipos
     const tiposEspacio = ['Aula', 'Laboratorio', 'Auditorio', 'Sala', 'Cancha', 'Cubículo'];
-    const sedesDisponibles = ['Sede Norte', 'Sede Centro']; // Solo estas dos
 
     // Recursos disponibles
     const recursosDisponibles = [
@@ -68,7 +95,7 @@ export function useEspaciosFisicos() {
 
     // ==================== CREAR ESPACIO ====================
 
-    const handleCreateEspacio = () => {
+    const handleCreateEspacio = async () => {
         // Validaciones
         if (!espacioForm.codigo.trim()) {
             showNotification('El código es obligatorio', 'error');
@@ -86,7 +113,7 @@ export function useEspaciosFisicos() {
             showNotification('La capacidad debe ser mayor a 0', 'error');
             return;
         }
-        if (!espacioForm.sede) {
+        if (!espacioForm.sede_id) {
             showNotification('Debe seleccionar una sede', 'error');
             return;
         }
@@ -95,29 +122,32 @@ export function useEspaciosFisicos() {
             return;
         }
 
-        // Crear espacio
-        const tipoValido: 'aula' | 'laboratorio' | 'auditorio' | 'sala' | 'otro' = tiposEspacio.includes(espacioForm.tipo) ? espacioForm.tipo as any : 'otro';
-        db.createEspacio({
-            codigo: espacioForm.codigo.trim(),
-            nombre: espacioForm.nombre.trim(),
-            tipo: tipoValido,
-            capacidad: Number(espacioForm.capacidad),
-            sede: espacioForm.sede,
-            piso: espacioForm.piso.trim(),
-            recursos: recursosAgregados,
-            estado: 'Disponible', // Siempre disponible al crear
-            fechaCreacion: new Date().toISOString()
-        });
+        try {
+            await espacioService.create({
+                codigo: espacioForm.codigo.trim(),
+                nombre: espacioForm.nombre.trim(),
+                tipo: espacioForm.tipo,
+                capacidad: Number(espacioForm.capacidad),
+                sede_id: Number(espacioForm.sede_id),
+                piso: espacioForm.piso.trim(),
+                recursos: recursosAgregados,
+                estado: 'Disponible',
+                descripcion: espacioForm.descripcion
+            });
 
-        // Actualizar lista
-        loadEspacios();
+            // Actualizar lista
+            await loadEspacios();
 
-        // Limpiar y cerrar
-        resetForm();
-        setShowCreateDialog(false);
+            // Limpiar y cerrar
+            resetForm();
+            setShowCreateDialog(false);
 
-        // Notificación
-        showNotification('✅ Registro guardado exitosamente', 'success');
+            // Notificación
+            showNotification('✅ Registro guardado exitosamente', 'success');
+        } catch (error) {
+            console.error('Error creating espacio:', error);
+            showNotification('Error al crear el espacio', 'error');
+        }
     };
 
     // ==================== EDITAR ESPACIO ====================
@@ -125,21 +155,22 @@ export function useEspaciosFisicos() {
     const openEditDialog = (espacio: EspacioFisico) => {
         setSelectedEspacio(espacio);
         setEspacioForm({
-            codigo: espacio.codigo,
-            nombre: espacio.nombre,
-            tipo: espacio.tipo,
-            capacidad: espacio.capacidad.toString(),
-            sede: espacio.sede,
+            codigo: espacio.codigo || '',
+            nombre: espacio.nombre || '',
+            tipo: espacio.tipo || '',
+            capacidad: String(espacio.capacidad || ''),
+            sede_id: String(espacio.sede_id || ''),
             piso: espacio.piso || '',
             descripcion: espacio.descripcion || '',
-            estado: espacio.estado
+            estado: espacio.estado || 'Disponible'
         });
         setRecursosAgregados(espacio.recursos || []);
-        setMostrandoRecursos(false); // No mostrar selector al inicio en edición
+        // Si no hay recursos, mostrar el selector para agregar. Si hay, mostrar la lista.
+        setMostrandoRecursos(!espacio.recursos || espacio.recursos.length === 0);
         setShowEditDialog(true);
     };
 
-    const handleEditEspacio = () => {
+    const handleEditEspacio = async () => {
         if (!selectedEspacio) return;
         // Validaciones (mismas que crear)
         if (!espacioForm.codigo.trim()) {
@@ -158,7 +189,7 @@ export function useEspaciosFisicos() {
             showNotification('La capacidad debe ser mayor a 0', 'error');
             return;
         }
-        if (!espacioForm.sede) {
+        if (!espacioForm.sede_id) {
             showNotification('Debe seleccionar una sede', 'error');
             return;
         }
@@ -167,30 +198,34 @@ export function useEspaciosFisicos() {
             return;
         }
 
-        // Actualizar
-        const tipoValido: 'aula' | 'laboratorio' | 'auditorio' | 'sala' | 'otro' = tiposEspacio.includes(espacioForm.tipo) ? espacioForm.tipo as any : 'otro';
-        db.updateEspacio(selectedEspacio.id, {
-            codigo: espacioForm.codigo.trim(),
-            nombre: espacioForm.nombre.trim(),
-            tipo: tipoValido,
-            capacidad: Number(espacioForm.capacidad),
-            sede: espacioForm.sede,
-            piso: espacioForm.piso.trim(),
-            recursos: recursosAgregados,
-            descripcion: espacioForm.descripcion.trim(),
-            estado: espacioForm.estado
-        });
+        try {
+            await espacioService.update({
+                id: selectedEspacio.id,
+                codigo: espacioForm.codigo.trim(),
+                nombre: espacioForm.nombre.trim(),
+                tipo: espacioForm.tipo,
+                capacidad: Number(espacioForm.capacidad),
+                sede_id: Number(espacioForm.sede_id),
+                piso: espacioForm.piso.trim(),
+                recursos: recursosAgregados,
+                descripcion: espacioForm.descripcion.trim(),
+                estado: espacioForm.estado
+            });
 
-        // Actualizar lista
-        loadEspacios();
+            // Actualizar lista
+            await loadEspacios();
 
-        // Cerrar y limpiar
-        setShowEditDialog(false);
-        setSelectedEspacio(null);
-        resetForm();
+            // Cerrar y limpiar
+            setShowEditDialog(false);
+            setSelectedEspacio(null);
+            resetForm();
 
-        // Notificación
-        showNotification('✅ Actualización exitosa', 'success');
+            // Notificación
+            showNotification('✅ Actualización exitosa', 'success');
+        } catch (error) {
+            console.error('Error updating espacio:', error);
+            showNotification('Error al actualizar el espacio', 'error');
+        }
     };
 
     // ==================== ELIMINAR ESPACIO ====================
@@ -200,20 +235,24 @@ export function useEspaciosFisicos() {
         setShowDeleteDialog(true);
     };
 
-    const handleDeleteEspacio = () => {
+    const handleDeleteEspacio = async () => {
         if (!selectedEspacio) return;
 
-        // Eliminar
-        db.deleteEspacio(selectedEspacio.id);
+        try {
+            await espacioService.delete({ id: selectedEspacio.id });
 
-        // Actualizar lista
-        loadEspacios();
+            // Actualizar lista
+            await loadEspacios();
 
-        // Cerrar
-        setShowDeleteDialog(false);
-        setSelectedEspacio(null);
+            // Cerrar
+            setShowDeleteDialog(false);
+            setSelectedEspacio(null);
 
-        showNotification('✅ Espacio eliminado correctamente', 'success');
+            showNotification('✅ Espacio eliminado correctamente', 'success');
+        } catch (error) {
+            console.error('Error deleting espacio:', error);
+            showNotification('Error al eliminar el espacio', 'error');
+        }
     };
 
     // ==================== UTILIDADES ====================
@@ -224,7 +263,7 @@ export function useEspaciosFisicos() {
             nombre: '',
             tipo: '',
             capacidad: '',
-            sede: '',
+            sede_id: '',
             piso: '',
             descripcion: '',
             estado: 'Disponible'
@@ -237,13 +276,18 @@ export function useEspaciosFisicos() {
     // ==================== FILTROS ====================
 
     const filteredEspacios = espacios.filter(espacio => {
+        // Find sede name for search
+        const sede = sedes.find(s => s.id === espacio.sede_id);
+        const sedeNombre = sede ? sede.nombre : '';
+
         const matchSearch =
-            espacio.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            espacio.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            espacio.sede.toLowerCase().includes(searchTerm.toLowerCase());
+            (espacio.codigo?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (sedeNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
         const matchTipo = filterTipo === 'all' || espacio.tipo === filterTipo;
-        const matchSede = filterSede === 'all' || espacio.sede === filterSede;
+        // Filter by sede_id if selected
+        const matchSede = filterSede === 'all' || espacio.sede_id.toString() === filterSede;
 
         return matchSearch && matchTipo && matchSede;
     });
@@ -267,6 +311,7 @@ export function useEspaciosFisicos() {
         filterTipo, setFilterTipo,
         filterSede, setFilterSede,
         espacios,
+        sedes, // Export sedes
         showCreateDialog, setShowCreateDialog,
         showEditDialog, setShowEditDialog,
         showDeleteDialog, setShowDeleteDialog,
@@ -276,7 +321,6 @@ export function useEspaciosFisicos() {
         mostrandoRecursos, setMostrandoRecursos,
         selectedEspacio, setSelectedEspacio,
         tiposEspacio,
-        sedesDisponibles,
         recursosDisponibles,
         handleCreateEspacio,
         openEditDialog,
@@ -288,7 +332,6 @@ export function useEspaciosFisicos() {
         getEstadoBadge,
         notification,
         showNotification,
-        loadEspacios,
-        db
+        loadEspacios
     };
 }

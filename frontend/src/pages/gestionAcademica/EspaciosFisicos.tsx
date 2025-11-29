@@ -24,7 +24,7 @@ export default function EspaciosFisicos() {
     recursosAgregados, setRecursosAgregados,
     mostrandoRecursos, setMostrandoRecursos,
     tiposEspacio,
-    sedesDisponibles,
+    sedes,
     recursosDisponibles,
     handleCreateEspacio,
     openEditDialog,
@@ -77,8 +77,8 @@ export default function EspaciosFisicos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las sedes</SelectItem>
-                {sedesDisponibles.map(sede => (
-                  <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                {sedes.map(sede => (
+                  <SelectItem key={sede.id} value={sede.id?.toString() || ''}>{sede.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -123,47 +123,50 @@ export default function EspaciosFisicos() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEspacios.map((espacio) => (
-                  <TableRow key={espacio.id}>
-                    <TableCell>
-                      <Badge variant="outline" className="border-red-600 text-red-600 dark:border-red-400 dark:text-red-400">
-                        {espacio.codigo}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">{espacio.tipo}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">{espacio.sede}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      Piso {espacio.piso}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} personas</TableCell>
-                    <TableCell>
-                      <Badge className={getEstadoBadge(espacio.estado).className}>
-                        {getEstadoBadge(espacio.estado).label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(espacio)}
-                          className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(espacio)}
-                          className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredEspacios.map((espacio) => {
+                  const sede = sedes.find(s => s.id === espacio.sede_id);
+                  return (
+                    <TableRow key={espacio.id}>
+                      <TableCell>
+                        <Badge variant="outline" className="border-red-600 text-red-600 dark:border-red-400 dark:text-red-400">
+                          {espacio.codigo || 'Sin código'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">{espacio.tipo}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">{sede?.nombre || 'Sede desconocida'}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        Piso {espacio.piso}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} personas</TableCell>
+                      <TableCell>
+                        <Badge className={getEstadoBadge(espacio.estado || 'Disponible').className}>
+                          {getEstadoBadge(espacio.estado || 'Disponible').label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(espacio)}
+                            className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDeleteDialog(espacio)}
+                            className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -230,15 +233,15 @@ export default function EspaciosFisicos() {
               <div className="space-y-2">
                 <Label htmlFor="sede">Sede *</Label>
                 <Select
-                  value={espacioForm.sede}
-                  onValueChange={(value) => setEspacioForm({ ...espacioForm, sede: value })}
+                  value={espacioForm.sede_id}
+                  onValueChange={(value) => setEspacioForm({ ...espacioForm, sede_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar sede" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sedesDisponibles.map(sede => (
-                      <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                    {sedes.map(sede => (
+                      <SelectItem key={sede.id} value={sede.id?.toString() || ''}>{sede.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -310,7 +313,7 @@ export default function EspaciosFisicos() {
               )}
 
               {/* Lista de recursos agregados */}
-              {recursosAgregados.length > 0 && (
+              {recursosAgregados.length > 0 ? (
                 <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                     <strong>Recursos agregados:</strong>
@@ -351,6 +354,18 @@ export default function EspaciosFisicos() {
                     </Button>
                   )}
                 </div>
+              ) : (
+                !mostrandoRecursos && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMostrandoRecursos(true)}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar recursos
+                  </Button>
+                )
               )}
             </div>
           </div>
@@ -431,15 +446,15 @@ export default function EspaciosFisicos() {
               <div className="space-y-2">
                 <Label htmlFor="edit-sede">Sede *</Label>
                 <Select
-                  value={espacioForm.sede}
-                  onValueChange={(value) => setEspacioForm({ ...espacioForm, sede: value })}
+                  value={espacioForm.sede_id}
+                  onValueChange={(value) => setEspacioForm({ ...espacioForm, sede_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar sede" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sedesDisponibles.map(sede => (
-                      <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                    {sedes.map(sede => (
+                      <SelectItem key={sede.id} value={sede.id?.toString() || ''}>{sede.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -454,34 +469,6 @@ export default function EspaciosFisicos() {
                 value={espacioForm.piso}
                 onChange={(e) => setEspacioForm({ ...espacioForm, piso: e.target.value })}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-descripcion">Descripción</Label>
-              <Textarea
-                id="edit-descripcion"
-                placeholder="Descripción opcional del espacio..."
-                value={espacioForm.descripcion}
-                onChange={(e) => setEspacioForm({ ...espacioForm, descripcion: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-estado">Estado *</Label>
-              <Select
-                value={espacioForm.estado}
-                onValueChange={(value: any) => setEspacioForm({ ...espacioForm, estado: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Disponible">Disponible</SelectItem>
-                  <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
-                  <SelectItem value="No Disponible">No Disponible</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Recursos Necesarios */}
@@ -539,7 +526,7 @@ export default function EspaciosFisicos() {
               )}
 
               {/* Lista de recursos agregados */}
-              {recursosAgregados.length > 0 && (
+              {recursosAgregados.length > 0 ? (
                 <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                     <strong>Recursos agregados:</strong>
@@ -580,6 +567,18 @@ export default function EspaciosFisicos() {
                     </Button>
                   )}
                 </div>
+              ) : (
+                !mostrandoRecursos && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMostrandoRecursos(true)}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar recursos
+                  </Button>
+                )
               )}
             </div>
           </div>
