@@ -14,6 +14,9 @@ export default function Asignaturas() {
   const {
     searchTerm, setSearchTerm,
     loading,
+    facultades,
+    activeFacultades,
+    selectedFacultadFilter, setSelectedFacultadFilter,
     showCreateDialog, setShowCreateDialog,
     showEditDialog, setShowEditDialog,
     showDeleteDialog, setShowDeleteDialog,
@@ -25,7 +28,8 @@ export default function Asignaturas() {
     openDeleteDialog,
     handleDeleteAsignatura,
     resetForm,
-    filteredAsignaturas
+    filteredAsignaturas,
+    getFacultadNombre
   } = useAsignaturas();
 
   return (
@@ -60,6 +64,21 @@ export default function Asignaturas() {
                 />
               </div>
             </div>
+
+            <div className="w-64">
+              <Label className="text-slate-700 mb-2 block">Facultad</Label>
+              <Select value={selectedFacultadFilter} onValueChange={setSelectedFacultadFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas las facultades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las facultades</SelectItem>
+                  {activeFacultades.map(f => (
+                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -71,7 +90,9 @@ export default function Asignaturas() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Facultad</TableHead>
                 <TableHead>Créditos</TableHead>
+                <TableHead>Horas</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -79,7 +100,7 @@ export default function Asignaturas() {
             <TableBody>
               {filteredAsignaturas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
                         <Search className="w-8 h-8 text-slate-400" />
@@ -104,7 +125,9 @@ export default function Asignaturas() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-slate-900">{asignatura.nombre}</TableCell>
+                    <TableCell className="text-slate-600">{getFacultadNombre(asignatura.facultad_id)}</TableCell>
                     <TableCell className="text-slate-600">{asignatura.creditos} créditos</TableCell>
+                    <TableCell className="text-slate-600">{asignatura.horas || 0} horas</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -179,18 +202,53 @@ export default function Asignaturas() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="creditos">
-                Créditos <span className="text-red-600">*</span>
+              <Label htmlFor="facultad">
+                Facultad <span className="text-red-600">*</span>
               </Label>
-              <Input
-                id="creditos"
-                type="number"
-                min="1"
-                max="8"
-                placeholder="Ej: 4"
-                value={asignaturaForm.creditos}
-                onChange={(e) => setAsignaturaForm({ ...asignaturaForm, creditos: e.target.value })}
-              />
+              <Select
+                value={asignaturaForm.facultadId}
+                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, facultadId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar facultad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeFacultades.map(f => (
+                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="creditos">
+                  Créditos <span className="text-red-600">*</span>
+                </Label>
+                <Input
+                  id="creditos"
+                  type="number"
+                  min="1"
+                  max="8"
+                  placeholder="Ej: 4"
+                  value={asignaturaForm.creditos}
+                  onChange={(e) => setAsignaturaForm({ ...asignaturaForm, creditos: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="horas">
+                  Horas Semanales
+                </Label>
+                <Input
+                  id="horas"
+                  type="number"
+                  min="1"
+                  max="20"
+                  placeholder="Ej: 4"
+                  value={asignaturaForm.horas}
+                  onChange={(e) => setAsignaturaForm({ ...asignaturaForm, horas: e.target.value })}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -264,18 +322,53 @@ export default function Asignaturas() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-creditos">
-                Créditos <span className="text-red-600">*</span>
+              <Label htmlFor="edit-facultad">
+                Facultad <span className="text-red-600">*</span>
               </Label>
-              <Input
-                id="edit-creditos"
-                type="number"
-                min="1"
-                max="8"
-                placeholder="Ej: 4"
-                value={asignaturaForm.creditos}
-                onChange={(e) => setAsignaturaForm({ ...asignaturaForm, creditos: e.target.value })}
-              />
+              <Select
+                value={asignaturaForm.facultadId}
+                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, facultadId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar facultad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeFacultades.map(f => (
+                    <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-creditos">
+                  Créditos <span className="text-red-600">*</span>
+                </Label>
+                <Input
+                  id="edit-creditos"
+                  type="number"
+                  min="1"
+                  max="8"
+                  placeholder="Ej: 4"
+                  value={asignaturaForm.creditos}
+                  onChange={(e) => setAsignaturaForm({ ...asignaturaForm, creditos: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-horas">
+                  Horas Semanales
+                </Label>
+                <Input
+                  id="edit-horas"
+                  type="number"
+                  min="1"
+                  max="20"
+                  placeholder="Ej: 4"
+                  value={asignaturaForm.horas}
+                  onChange={(e) => setAsignaturaForm({ ...asignaturaForm, horas: e.target.value })}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -340,6 +433,10 @@ export default function Asignaturas() {
                 <div>
                   <p className="text-slate-600">Asignatura:</p>
                   <p className="text-slate-900">{selectedAsignatura.nombre}</p>
+                </div>
+                <div>
+                  <p className="text-slate-600">Facultad:</p>
+                  <p className="text-slate-900">{getFacultadNombre(selectedAsignatura.facultad_id)}</p>
                 </div>
                 <div>
                   <p className="text-slate-600">Créditos:</p>

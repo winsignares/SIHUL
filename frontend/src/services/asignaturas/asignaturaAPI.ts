@@ -9,6 +9,8 @@ export interface Asignatura {
     codigo: string;
     creditos: number;
     tipo?: 'teórica' | 'práctica' | 'mixta';
+    facultad_id?: number;
+    horas?: number;
 }
 
 /**
@@ -19,6 +21,8 @@ export interface CreateAsignaturaPayload {
     codigo: string;
     creditos: number;
     tipo?: 'teórica' | 'práctica' | 'mixta';
+    facultad_id?: number;
+    horas?: number;
 }
 
 /**
@@ -30,6 +34,8 @@ export interface UpdateAsignaturaPayload {
     codigo?: string;
     creditos?: number;
     tipo?: 'teórica' | 'práctica' | 'mixta';
+    facultad_id?: number;
+    horas?: number;
 }
 
 /**

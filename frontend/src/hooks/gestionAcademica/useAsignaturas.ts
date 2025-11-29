@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { showNotification } from '../../context/ThemeContext';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
+import { facultadService } from '../../services/facultades/facultadesAPI';
+import type { Facultad } from '../../services/facultades/facultadesAPI';
 
 export const tiposAsignatura = [
     { value: 'teórica', label: 'Teórica' },
@@ -15,39 +17,58 @@ export function useAsignaturas() {
 
     // Estados de datos
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
+    const [facultades, setFacultades] = useState<Facultad[]>([]);
+
+    // Filtros
+    const [selectedFacultadFilter, setSelectedFacultadFilter] = useState<string>('all');
 
     // Modales
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-    // Formulario (solo campos que soporta el backend)
+    // Formulario
     const [asignaturaForm, setAsignaturaForm] = useState({
         codigo: '',
         nombre: '',
         creditos: '',
-        tipo: 'teórica' as 'teórica' | 'práctica' | 'mixta'
+        tipo: 'teórica' as 'teórica' | 'práctica' | 'mixta',
+        facultadId: '',
+        horas: ''
     });
 
     const [selectedAsignatura, setSelectedAsignatura] = useState<Asignatura | null>(null);
 
     // Cargar datos
     useEffect(() => {
-        loadAsignaturas();
+        loadData();
     }, []);
 
-    const loadAsignaturas = async () => {
+    const loadData = async () => {
         try {
             setLoading(true);
-            const response = await asignaturaService.list();
-            setAsignaturas(response.asignaturas);
+            const [asignaturasRes, facultadesRes] = await Promise.all([
+                asignaturaService.list(),
+                facultadService.list()
+            ]);
+            setAsignaturas(asignaturasRes.asignaturas);
+            setFacultades(facultadesRes.facultades);
         } catch (error) {
-            showNotification({ 
-                message: `Error al cargar asignaturas: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadAsignaturas = async () => {
+        try {
+            const response = await asignaturaService.list();
+            setAsignaturas(response.asignaturas);
+        } catch (error) {
+            console.error("Error reloading asignaturas", error);
         }
     };
 
@@ -70,13 +91,20 @@ export function useAsignaturas() {
             return;
         }
 
+        if (!asignaturaForm.facultadId) {
+            showNotification({ message: 'La facultad es obligatoria', type: 'error' });
+            return;
+        }
+
         try {
             setLoading(true);
             await asignaturaService.create({
                 codigo: asignaturaForm.codigo.trim(),
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
-                tipo: asignaturaForm.tipo
+                tipo: asignaturaForm.tipo,
+                facultad_id: Number(asignaturaForm.facultadId),
+                horas: Number(asignaturaForm.horas) || 0
             });
 
             await loadAsignaturas();
@@ -85,9 +113,9 @@ export function useAsignaturas() {
 
             showNotification({ message: '✅ Asignatura registrada exitosamente', type: 'success' });
         } catch (error) {
-            showNotification({ 
-                message: `Error al crear asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al crear asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -102,7 +130,9 @@ export function useAsignaturas() {
             codigo: asignatura.codigo,
             nombre: asignatura.nombre,
             creditos: asignatura.creditos.toString(),
-            tipo: asignatura.tipo || 'teórica'
+            tipo: asignatura.tipo || 'teórica',
+            facultadId: asignatura.facultad_id ? asignatura.facultad_id.toString() : '',
+            horas: asignatura.horas ? asignatura.horas.toString() : '0'
         });
 
         setShowEditDialog(true);
@@ -127,6 +157,11 @@ export function useAsignaturas() {
             return;
         }
 
+        if (!asignaturaForm.facultadId) {
+            showNotification({ message: 'La facultad es obligatoria', type: 'error' });
+            return;
+        }
+
         try {
             setLoading(true);
             await asignaturaService.update({
@@ -134,7 +169,9 @@ export function useAsignaturas() {
                 codigo: asignaturaForm.codigo.trim(),
                 nombre: asignaturaForm.nombre.trim(),
                 creditos: Number(asignaturaForm.creditos),
-                tipo: asignaturaForm.tipo
+                tipo: asignaturaForm.tipo,
+                facultad_id: Number(asignaturaForm.facultadId),
+                horas: Number(asignaturaForm.horas) || 0
             });
 
             await loadAsignaturas();
@@ -144,9 +181,9 @@ export function useAsignaturas() {
 
             showNotification({ message: '✅ Asignatura actualizada correctamente', type: 'success' });
         } catch (error) {
-            showNotification({ 
-                message: `Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -173,9 +210,9 @@ export function useAsignaturas() {
 
             showNotification({ message: '✅ Asignatura eliminada correctamente', type: 'success' });
         } catch (error) {
-            showNotification({ 
-                message: `Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
+            showNotification({
+                message: `Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
             });
         } finally {
             setLoading(false);
@@ -189,26 +226,42 @@ export function useAsignaturas() {
             codigo: '',
             nombre: '',
             creditos: '',
-            tipo: 'teórica'
+            tipo: 'teórica',
+            facultadId: '',
+            horas: ''
         });
-        // setRecursosSeleccionados([]);
+    };
+
+    const getFacultadNombre = (id?: number) => {
+        if (!id) return 'Sin facultad';
+        const f = facultades.find(f => f.id === id);
+        return f ? f.nombre : 'Desconocida';
     };
 
     // ==================== FILTROS ====================
 
+    const activeFacultades = facultades.filter(f => f.activa);
+
     const filteredAsignaturas = asignaturas.filter(asignatura => {
-        // Búsqueda por texto (solo código y nombre, ya que no tenemos otros campos)
+        // Búsqueda por texto
         const matchSearch =
             asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
             asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return matchSearch;
+        // Filtro por facultad
+        const matchFacultad = selectedFacultadFilter === 'all' ||
+            (asignatura.facultad_id && asignatura.facultad_id.toString() === selectedFacultadFilter);
+
+        return matchSearch && matchFacultad;
     });
 
     return {
         searchTerm, setSearchTerm,
         loading,
         asignaturas,
+        facultades,
+        activeFacultades,
+        selectedFacultadFilter, setSelectedFacultadFilter,
         showCreateDialog, setShowCreateDialog,
         showEditDialog, setShowEditDialog,
         showDeleteDialog, setShowDeleteDialog,
@@ -220,6 +273,7 @@ export function useAsignaturas() {
         openDeleteDialog,
         handleDeleteAsignatura,
         resetForm,
-        filteredAsignaturas
+        filteredAsignaturas,
+        getFacultadNombre
     };
 }
