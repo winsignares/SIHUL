@@ -13,6 +13,7 @@ import { usePeriodosAcademicos } from '../../hooks/gestionAcademica/usePeriodosA
 
 export default function PeriodosAcademicos() {
   const {
+    loading,
     periodos,
     periodosOrdenados,
     periodoActivo,
@@ -76,7 +77,7 @@ export default function PeriodosAcademicos() {
                     <Badge className="bg-green-100 text-green-800 border-green-300">Activo</Badge>
                   </div>
                   <p className="text-slate-600 dark:text-slate-400 mb-2">
-                    {new Date(periodoActivo.fechaInicio).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} - {new Date(periodoActivo.fechaFin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date(periodoActivo.fecha_inicio).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} - {new Date(periodoActivo.fecha_fin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
@@ -93,7 +94,7 @@ export default function PeriodosAcademicos() {
               <div className="text-right">
                 <p className="text-slate-600 dark:text-slate-400 mb-1">Días restantes</p>
                 <p className="text-slate-900 dark:text-slate-100">
-                  {Math.ceil((new Date(periodoActivo.fechaFin).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
+                  {Math.ceil((new Date(periodoActivo.fecha_fin).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
                 </p>
               </div>
             </div>
@@ -108,7 +109,6 @@ export default function PeriodosAcademicos() {
             <TableHeader>
               <TableRow className="bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
                 <TableHead className="text-slate-900 dark:text-slate-100">Periodo</TableHead>
-                <TableHead className="text-slate-900 dark:text-slate-100">Tipo</TableHead>
                 <TableHead className="text-slate-900 dark:text-slate-100">Fecha de Inicio</TableHead>
                 <TableHead className="text-slate-900 dark:text-slate-100">Fecha de Fin</TableHead>
                 <TableHead className="text-slate-900 dark:text-slate-100">Programas</TableHead>
@@ -120,24 +120,15 @@ export default function PeriodosAcademicos() {
               {periodosOrdenados.map((periodo) => (
                 <TableRow key={periodo.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   <TableCell className="text-slate-900 dark:text-slate-100">{periodo.nombre}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={
-                      periodo.tipo === 'Regular' ? 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400' :
-                        periodo.tipo === 'Verano' ? 'border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400' :
-                          'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-400'
-                    }>
-                      {periodo.tipo}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {new Date(periodo.fechaInicio).toLocaleDateString('es-ES', {
+                    {new Date(periodo.fecha_inicio).toLocaleDateString('es-ES', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
                     })}
                   </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {new Date(periodo.fechaFin).toLocaleDateString('es-ES', {
+                    {new Date(periodo.fecha_fin).toLocaleDateString('es-ES', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
@@ -237,20 +228,13 @@ export default function PeriodosAcademicos() {
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="text-slate-900 dark:text-slate-100">{periodo.nombre}</h4>
                           {getEstadoBadge(periodo.estado)}
-                          <Badge variant="outline" className={
-                            periodo.tipo === 'Regular' ? 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400' :
-                              periodo.tipo === 'Verano' ? 'border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400' :
-                                'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-400'
-                          }>
-                            {periodo.tipo}
-                          </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {new Date(periodo.fechaInicio).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                            {new Date(periodo.fecha_inicio).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                             {' → '}
-                            {new Date(periodo.fechaFin).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {new Date(periodo.fecha_fin).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                         </div>
                       </div>
@@ -276,7 +260,7 @@ export default function PeriodosAcademicos() {
                         <div>
                           <p className="text-slate-500 dark:text-slate-400">Duración</p>
                           <p className="text-slate-900 dark:text-slate-100">
-                            {Math.ceil((new Date(periodo.fechaFin).getTime() - new Date(periodo.fechaInicio).getTime()) / (1000 * 60 * 60 * 24))} días
+                            {Math.ceil((new Date(periodo.fecha_fin).getTime() - new Date(periodo.fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))} días
                           </p>
                         </div>
                       </div>
@@ -323,44 +307,29 @@ export default function PeriodosAcademicos() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nombre del Periodo *</Label>
-                <Input
-                  placeholder="Ej: 2025-2"
-                  value={periodoForm.nombre}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Periodo *</Label>
-                <Select value={periodoForm.tipo} onValueChange={(v) => setPeriodoForm({ ...periodoForm, tipo: v as any })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Regular">Regular</SelectItem>
-                    <SelectItem value="Intersemestral">Intersemestral</SelectItem>
-                    <SelectItem value="Verano">Verano</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Nombre del Periodo *</Label>
+              <Input
+                placeholder="Ej: 2025-2"
+                value={periodoForm.nombre}
+                onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha de Inicio *</Label>
                 <Input
                   type="date"
-                  value={periodoForm.fechaInicio}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, fechaInicio: e.target.value })}
+                  value={periodoForm.fecha_inicio}
+                  onChange={(e) => setPeriodoForm({ ...periodoForm, fecha_inicio: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Fin *</Label>
                 <Input
                   type="date"
-                  value={periodoForm.fechaFin}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, fechaFin: e.target.value })}
+                  value={periodoForm.fecha_fin}
+                  onChange={(e) => setPeriodoForm({ ...periodoForm, fecha_fin: e.target.value })}
                 />
               </div>
             </div>
@@ -393,44 +362,29 @@ export default function PeriodosAcademicos() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nombre del Periodo *</Label>
-                <Input
-                  placeholder="Ej: 2025-2"
-                  value={periodoForm.nombre}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Periodo *</Label>
-                <Select value={periodoForm.tipo} onValueChange={(v) => setPeriodoForm({ ...periodoForm, tipo: v as any })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Regular">Regular</SelectItem>
-                    <SelectItem value="Intersemestral">Intersemestral</SelectItem>
-                    <SelectItem value="Verano">Verano</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Nombre del Periodo *</Label>
+              <Input
+                placeholder="Ej: 2025-2"
+                value={periodoForm.nombre}
+                onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha de Inicio *</Label>
                 <Input
                   type="date"
-                  value={periodoForm.fechaInicio}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, fechaInicio: e.target.value })}
+                  value={periodoForm.fecha_inicio}
+                  onChange={(e) => setPeriodoForm({ ...periodoForm, fecha_inicio: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Fin *</Label>
                 <Input
                   type="date"
-                  value={periodoForm.fechaFin}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, fechaFin: e.target.value })}
+                  value={periodoForm.fecha_fin}
+                  onChange={(e) => setPeriodoForm({ ...periodoForm, fecha_fin: e.target.value })}
                 />
               </div>
             </div>
@@ -468,44 +422,29 @@ export default function PeriodosAcademicos() {
                 Se creará un nuevo periodo basado en la configuración del periodo seleccionado.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nombre del Nuevo Periodo *</Label>
-                <Input
-                  placeholder="Ej: 2025-2"
-                  value={periodoForm.nombre}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Periodo *</Label>
-                <Select value={periodoForm.tipo} onValueChange={(v) => setPeriodoForm({ ...periodoForm, tipo: v as any })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Regular">Regular</SelectItem>
-                    <SelectItem value="Intersemestral">Intersemestral</SelectItem>
-                    <SelectItem value="Verano">Verano</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Nombre del Nuevo Periodo *</Label>
+              <Input
+                placeholder="Ej: 2025-2"
+                value={periodoForm.nombre}
+                onChange={(e) => setPeriodoForm({ ...periodoForm, nombre: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha de Inicio *</Label>
                 <Input
                   type="date"
-                  value={periodoForm.fechaInicio}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, fechaInicio: e.target.value })}
+                  value={periodoForm.fecha_inicio}
+                  onChange={(e) => setPeriodoForm({ ...periodoForm, fecha_inicio: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Fin *</Label>
                 <Input
                   type="date"
-                  value={periodoForm.fechaFin}
-                  onChange={(e) => setPeriodoForm({ ...periodoForm, fechaFin: e.target.value })}
+                  value={periodoForm.fecha_fin}
+                  onChange={(e) => setPeriodoForm({ ...periodoForm, fecha_fin: e.target.value })}
                 />
               </div>
             </div>
