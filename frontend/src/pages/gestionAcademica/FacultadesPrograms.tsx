@@ -6,17 +6,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, GitMerge, MapPin, Boxes, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff } from 'lucide-react';
 
 import { useFacultadesPrograms, type TabOption } from '../../hooks/gestionAcademica/useFacultadesPrograms';
 
 import Asignaturas from './Asignaturas';
-import GruposFusion from './GruposFusion';
 import EspaciosFisicos from './EspaciosFisicos';
 import EstadoRecursos from './EstadoRecursos';
 import Grupos from './Grupos';
 import Sedes from './Sedes';
-import Docentes from './Docentes';
 
 export default function FacultadesPrograms() {
   const {
@@ -107,16 +105,6 @@ export default function FacultadesPrograms() {
           Asignaturas
         </button>
         <button
-          onClick={() => setActiveTab('docentes')}
-          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'docentes'
-            ? 'border-red-600 text-red-600'
-            : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-        >
-          <Users className="w-5 h-5 inline mr-2" />
-          Docentes
-        </button>
-        <button
           onClick={() => setActiveTab('grupos')}
           className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'grupos'
             ? 'border-red-600 text-red-600'
@@ -125,16 +113,6 @@ export default function FacultadesPrograms() {
         >
           <Users className="w-5 h-5 inline mr-2" />
           Grupos
-        </button>
-        <button
-          onClick={() => setActiveTab('fusion')}
-          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'fusion'
-            ? 'border-red-600 text-red-600'
-            : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-        >
-          <GitMerge className="w-5 h-5 inline mr-2" />
-          Fusión de Grupos
         </button>
         <button
           onClick={() => setActiveTab('espacios')}
@@ -163,12 +141,8 @@ export default function FacultadesPrograms() {
         <Sedes key={reloadKey} />
       ) : activeTab === 'asignaturas' ? (
         <Asignaturas key={reloadKey} />
-      ) : activeTab === 'docentes' ? (
-        <Docentes key={reloadKey} />
       ) : activeTab === 'grupos' ? (
         <Grupos key={reloadKey} />
-      ) : activeTab === 'fusion' ? (
-        <GruposFusion key={reloadKey} />
       ) : activeTab === 'espacios' ? (
         <EspaciosFisicos key={reloadKey} />
       ) : activeTab === 'recursos' ? (
