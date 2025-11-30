@@ -4,6 +4,17 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def create_default_tipo_actividad(apps, schema_editor):
+    """Crear el tipo de actividad por defecto antes de agregar el campo FK"""
+    TipoActividad = apps.get_model('prestamos', 'TipoActividad')
+    if not TipoActividad.objects.filter(id=1).exists():
+        TipoActividad.objects.create(
+            id=1,
+            nombre='Otro',
+            descripcion='Otras actividades academicas'
+        )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -12,6 +23,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Paso 1: Crear el modelo TipoActividad
         migrations.CreateModel(
             name='TipoActividad',
             fields=[
@@ -25,6 +37,9 @@ class Migration(migrations.Migration):
                 'ordering': ['nombre'],
             },
         ),
+        # Paso 2: Crear el registro por defecto con id=1
+        migrations.RunPython(create_default_tipo_actividad, migrations.RunPython.noop),
+        # Paso 3: Agregar el campo con el default que ahora existe
         migrations.AddField(
             model_name='prestamoespacio',
             name='tipo_actividad',
