@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'espacios',
     'recursos',
     'prestamos',
+    'chatbot',
     'notificaciones',
     'rest_framework',
     'corsheaders',
