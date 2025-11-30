@@ -1,39 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
-import type { Usuario, PermisoComponente } from '../../models/index';
-
-export const componentesDelSistema = [
-    { id: 'dashboard', nombre: 'Dashboard', categoria: 'Principal' },
-    { id: 'facultades', nombre: 'Facultades y Programas', categoria: 'Gestión Académica' },
-    { id: 'asignaturas', nombre: 'Asignaturas', categoria: 'Gestión Académica' },
-    { id: 'grupos', nombre: 'Grupos', categoria: 'Gestión Académica' },
-    { id: 'fusion', nombre: 'Fusión de Grupos', categoria: 'Gestión Académica' },
-    { id: 'espacios', nombre: 'Espacios Físicos', categoria: 'Gestión Académica' },
-    { id: 'horarios', nombre: 'Horarios Académicos', categoria: 'Gestión Académica' },
-    { id: 'visualizacion', nombre: 'Visualización de Horarios', categoria: 'Gestión Académica' },
-    { id: 'periodos', nombre: 'Períodos Académicos', categoria: 'Gestión Académica' },
-    { id: 'prestamos', nombre: 'Préstamos de Espacios', categoria: 'Gestión Académica' },
-    { id: 'ocupacion', nombre: 'Ocupación Semanal', categoria: 'Reportes' },
-    { id: 'reportes', nombre: 'Reportes Generales', categoria: 'Reportes' },
-    { id: 'notificaciones', nombre: 'Notificaciones', categoria: 'Comunicación' },
-    { id: 'mensajeria', nombre: 'Mensajería', categoria: 'Comunicación' },
-    { id: 'chat', nombre: 'Chat Interno', categoria: 'Comunicación' },
-    { id: 'recursos', nombre: 'Gestión de Recursos', categoria: 'Recursos' },
-    { id: 'usuarios', nombre: 'Gestión de Usuarios', categoria: 'Administración' },
-    { id: 'ajustes', nombre: 'Ajustes', categoria: 'Configuración' }
-];
-
-export const programasDisponibles = [
-    'Ingeniería de Sistemas',
-    'Medicina',
-    'Derecho',
-    'Salud',
-    'Administración',
-    'Contaduría',
-    'Psicología',
-    'Arquitectura'
-];
+import { apiClient } from '../../core/apiClient';
+import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
 
 export function useGestionUsuarios() {
     const { notification, showNotification } = useNotification();
@@ -52,459 +20,260 @@ export function useGestionUsuarios() {
     // Estados para creación de usuario
     const [nuevoUsuario, setNuevoUsuario] = useState<Partial<Usuario>>({
         nombre: '',
-        email: '',
-        password: '',
-        rol: 'consultor',
-        permisos: [],
-        programasRestringidos: [],
-        accesoTodosProgramas: false
+        correo: '',
+        contrasena: '',
+        rol_id: null,
+        activo: true
     });
 
-    // Estados para agregación dinámica de componentes (Creación)
-    const [componenteSeleccionado, setComponenteSeleccionado] = useState('');
-    const [permisoSeleccionado, setPermisoSeleccionado] = useState<'ver' | 'editar'>('ver');
-    const [mostrandoComponentes, setMostrandoComponentes] = useState(true);
-    const [componenteEnEdicion, setComponenteEnEdicion] = useState<PermisoComponente | null>(null);
+    // Estados para datos dinámicos desde backend
+    const [rolesDisponibles, setRolesDisponibles] = useState<Rol[]>([]);
+    const [facultadesDisponibles, setFacultadesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
 
-    // Estados para agregación dinámica de programas (Creación)
-    const [programaSeleccionado, setProgramaSeleccionado] = useState('');
-    const [mostrandoProgramas, setMostrandoProgramas] = useState(true);
-    const [accesoTodosProgramas, setAccesoTodosProgramas] = useState(false);
+    // Estados para espacios permitidos (solo supervisor_general)
+    const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
+    const [espaciosPermitidos, setEspaciosPermitidos] = useState<number[]>([]);
+    const [espacioSeleccionadoEdit, setEspacioSeleccionadoEdit] = useState('');
+    const [espaciosPermitidosEdit, setEspaciosPermitidosEdit] = useState<number[]>([]);
 
-    // Estados para agregación dinámica de componentes (Edición)
-    const [componenteSeleccionadoEdit, setComponenteSeleccionadoEdit] = useState('');
-    const [permisoSeleccionadoEdit, setPermisoSeleccionadoEdit] = useState<'ver' | 'editar'>('ver');
-    const [mostrandoComponentesEdit, setMostrandoComponentesEdit] = useState(true);
-    const [componenteEnEdicionEdit, setComponenteEnEdicionEdit] = useState<PermisoComponente | null>(null);
-
-    // Estados para agregación dinámica de programas (Edición)
-    const [programaSeleccionadoEdit, setProgramaSeleccionadoEdit] = useState('');
-    const [mostrandoProgramasEdit, setMostrandoProgramasEdit] = useState(true);
-    const [accesoTodosProgramasEdit, setAccesoTodosProgramasEdit] = useState(false);
+    // Estado para facultad seleccionada (solo planeacion_facultad)
+    const [facultadSeleccionada, setFacultadSeleccionada] = useState<number | null>(null);
+    const [facultadSeleccionadaEdit, setFacultadSeleccionadaEdit] = useState<number | null>(null);
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = () => {
-        const users = db.getUsuarios();
-        if (users.length === 0) {
-            // Seed initial users if empty
-            const initialUsers: Usuario[] = [
-                {
-                    id: '1',
-                    nombre: 'María González',
-                    email: 'admin@unilibre.edu.co',
-                    password: 'admin123',
-                    rol: 'admin',
-                    activo: true,
-                    fechaCreacion: '2024-01-15',
-                    ultimoAcceso: '2025-11-01 14:30',
-                    permisos: componentesDelSistema.map(c => ({
-                        componenteId: c.id,
-                        permiso: 'editar' as const
-                    })),
-                    programasRestringidos: [],
-                    accesoTodosProgramas: true
-                },
-                {
-                    id: '2',
-                    nombre: 'Roberto Medina',
-                    email: 'autorizado@unilibre.edu.co',
-                    password: 'auto123',
-                    rol: 'autorizado',
-                    activo: true,
-                    fechaCreacion: '2024-03-20',
-                    ultimoAcceso: '2025-11-01 10:15',
-                    permisos: [
-                        { componenteId: 'dashboard', permiso: 'ver' },
-                        { componenteId: 'horarios', permiso: 'editar' },
-                        { componenteId: 'visualizacion', permiso: 'ver' },
-                        { componenteId: 'prestamos', permiso: 'editar' },
-                        { componenteId: 'ocupacion', permiso: 'ver' },
-                        { componenteId: 'reportes', permiso: 'ver' }
-                    ],
-                    programasRestringidos: ['Ingeniería de Sistemas', 'Derecho'],
-                    accesoTodosProgramas: false
-                },
-                {
-                    id: '3',
-                    nombre: 'Carlos Ramírez',
-                    email: 'consultor@unilibre.edu.co',
-                    password: 'consultor123',
-                    rol: 'consultor',
-                    activo: true,
-                    fechaCreacion: '2024-05-10',
-                    ultimoAcceso: '2025-10-31 16:45',
-                    permisos: [
-                        { componenteId: 'dashboard', permiso: 'ver' },
-                        { componenteId: 'facultades', permiso: 'ver' },
-                        { componenteId: 'grupos', permiso: 'ver' },
-                        { componenteId: 'espacios', permiso: 'ver' },
-                        { componenteId: 'horarios', permiso: 'ver' },
-                        { componenteId: 'ocupacion', permiso: 'ver' },
-                        { componenteId: 'reportes', permiso: 'ver' }
-                    ],
-                    programasRestringidos: [],
-                    accesoTodosProgramas: true
-                }
-            ];
-            initialUsers.forEach(u => db.createUsuario(u));
-            setUsuarios(initialUsers);
-        } else {
-            setUsuarios(users);
+    const loadData = async () => {
+        await Promise.all([
+            loadUsuarios(),
+            loadRoles(),
+            loadFacultades(),
+            loadEspacios()
+        ]);
+    };
+
+    // Cargar usuarios desde backend
+    const loadUsuarios = async () => {
+        try {
+            const response = await userService.listarUsuarios();
+            setUsuarios(response.usuarios || []);
+        } catch (error) {
+            console.error('Error cargando usuarios:', error);
+            showNotification('Error al cargar usuarios', 'error');
         }
     };
 
-    const cargarPermisosPorRol = (rol: Usuario['rol']) => {
-        let permisos: PermisoComponente[] = [];
-        let accesoTotal = false;
-
-        if (rol === 'admin') {
-            permisos = componentesDelSistema.map(c => ({
-                componenteId: c.id,
-                permiso: 'editar' as const
-            }));
-            accesoTotal = true;
-        } else if (rol === 'autorizado') {
-            const componentesAutorizado = ['dashboard', 'horarios', 'visualizacion', 'prestamos', 'ocupacion', 'reportes'];
-            permisos = componentesDelSistema
-                .filter(c => componentesAutorizado.includes(c.id))
-                .map(c => ({
-                    componenteId: c.id,
-                    permiso: c.id === 'horarios' || c.id === 'prestamos' ? 'editar' as const : 'ver' as const
-                }));
-            accesoTotal = false;
-        } else if (rol === 'consultor') {
-            const componentesConsultor = ['dashboard', 'facultades', 'grupos', 'espacios', 'horarios', 'ocupacion', 'reportes'];
-            permisos = componentesDelSistema
-                .filter(c => componentesConsultor.includes(c.id))
-                .map(c => ({
-                    componenteId: c.id,
-                    permiso: 'ver' as const
-                }));
-            accesoTotal = true;
-        } else if (rol === 'estudiante') {
-            const componentesEstudiante = ['dashboard', 'horarios'];
-            permisos = componentesDelSistema
-                .filter(c => componentesEstudiante.includes(c.id))
-                .map(c => ({
-                    componenteId: c.id,
-                    permiso: 'ver' as const
-                }));
-            accesoTotal = false;
-        } else if (rol === 'docente') {
-            const componentesDocente = ['dashboard', 'horarios'];
-            permisos = componentesDelSistema
-                .filter(c => componentesDocente.includes(c.id))
-                .map(c => ({
-                    componenteId: c.id,
-                    permiso: c.id === 'horarios' ? 'editar' as const : 'ver' as const
-                }));
-            accesoTotal = false;
+    // Cargar roles desde backend
+    const loadRoles = async () => {
+        try {
+            const response = await rolService.listarRoles();
+            setRolesDisponibles(response.roles || []);
+        } catch (error) {
+            console.error('Error cargando roles:', error);
         }
-
-        setNuevoUsuario({ ...nuevoUsuario, rol, permisos });
-        setAccesoTodosProgramas(accesoTotal);
     };
 
-    // Funciones para creación
-    const agregarComponente = () => {
-        if (!componenteSeleccionado) {
-            showNotification('Seleccione un componente', 'error');
+    // Cargar facultades desde backend
+    const loadFacultades = async () => {
+        try {
+            const response = await apiClient.get<{ facultades: Array<{ id: number, nombre: string }> }>('/facultades/list/');
+            setFacultadesDisponibles(response.facultades || []);
+        } catch (error) {
+            console.error('Error cargando facultades:', error);
+        }
+    };
+
+    // Cargar espacios desde backend
+    const loadEspacios = async () => {
+        try {
+            const response = await apiClient.get<{ espacios: Array<{ id: number, nombre: string }> }>('/espacios/list/');
+            setEspaciosDisponibles(response.espacios || []);
+        } catch (error) {
+            console.error('Error cargando espacios:', error);
+        }
+    };
+
+    // Funciones para manejar espacios permitidos (Creación)
+    const agregarEspacioPermitido = () => {
+        if (espacioSeleccionado && !espaciosPermitidos.includes(parseInt(espacioSeleccionado))) {
+            setEspaciosPermitidos([...espaciosPermitidos, parseInt(espacioSeleccionado)]);
+            setEspacioSeleccionado('');
+        }
+    };
+
+    const eliminarEspacioPermitido = (espacioId: number) => {
+        setEspaciosPermitidos(espaciosPermitidos.filter(id => id !== espacioId));
+    };
+
+    // Funciones para manejar espacios permitidos (Edición)
+    const agregarEspacioPermitidoEdit = () => {
+        if (espacioSeleccionadoEdit && !espaciosPermitidosEdit.includes(parseInt(espacioSeleccionadoEdit))) {
+            setEspaciosPermitidosEdit([...espaciosPermitidosEdit, parseInt(espacioSeleccionadoEdit)]);
+            setEspacioSeleccionadoEdit('');
+        }
+    };
+
+    const eliminarEspacioPermitidoEdit = (espacioId: number) => {
+        setEspaciosPermitidosEdit(espaciosPermitidosEdit.filter(id => id !== espacioId));
+    };
+
+    // Crear usuario
+    const crearUsuario = async () => {
+        if (!nuevoUsuario.nombre || !nuevoUsuario.correo || !nuevoUsuario.contrasena || !nuevoUsuario.rol_id) {
+            showNotification('Por favor complete todos los campos obligatorios', 'error');
             return;
         }
 
-        if (nuevoUsuario.permisos?.find(p => p.componenteId === componenteSeleccionado)) {
-            showNotification('Este componente ya está agregado', 'error');
-            return;
+        try {
+            // Si es supervisor_general, incluir espacios permitidos
+            const rol = rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
+            const espaciosPayload = (rol?.nombre === 'supervisor_general') ? espaciosPermitidos : [];
+
+            await userService.crearUsuario({
+                nombre: nuevoUsuario.nombre,
+                correo: nuevoUsuario.correo,
+                contrasena: nuevoUsuario.contrasena,
+                rol_id: nuevoUsuario.rol_id,
+                facultad_id: facultadSeleccionada,
+                activo: true,
+                espacios_permitidos: espaciosPayload
+            });
+
+            showNotification('Usuario creado exitosamente', 'success');
+            setDialogOpen(false);
+            resetNuevoUsuario();
+            loadUsuarios();
+        } catch (error: any) {
+            console.error('Error creando usuario:', error);
+            showNotification(error.message || 'Error al crear usuario', 'error');
         }
-
-        setNuevoUsuario({
-            ...nuevoUsuario,
-            permisos: [...(nuevoUsuario.permisos || []), {
-                componenteId: componenteSeleccionado,
-                permiso: permisoSeleccionado
-            }]
-        });
-
-        setComponenteSeleccionado('');
-        setPermisoSeleccionado('ver');
-        showNotification('Componente agregado', 'success');
     };
 
-    const eliminarComponente = (componenteId: string) => {
-        setNuevoUsuario({
-            ...nuevoUsuario,
-            permisos: nuevoUsuario.permisos?.filter(p => p.componenteId !== componenteId) || []
-        });
-        setMostrandoComponentes(true);
-    };
-
-    const iniciarEdicionComponente = (permiso: PermisoComponente) => {
-        setComponenteEnEdicion({ ...permiso });
-        setComponenteSeleccionado(permiso.componenteId);
-        setPermisoSeleccionado(permiso.permiso);
-    };
-
-    const guardarEdicionComponente = () => {
-        if (!componenteEnEdicion) return;
-
-        setNuevoUsuario({
-            ...nuevoUsuario,
-            permisos: nuevoUsuario.permisos?.map(p =>
-                p.componenteId === componenteEnEdicion.componenteId
-                    ? { ...p, permiso: permisoSeleccionado }
-                    : p
-            ) || []
-        });
-
-        setComponenteEnEdicion(null);
-        setComponenteSeleccionado('');
-        setPermisoSeleccionado('ver');
-        showNotification('Permiso actualizado', 'success');
-    };
-
-    const cancelarEdicionComponente = () => {
-        setComponenteEnEdicion(null);
-        setComponenteSeleccionado('');
-        setPermisoSeleccionado('ver');
-    };
-
-    const agregarPrograma = () => {
-        if (!programaSeleccionado) {
-            showNotification('Seleccione un programa', 'error');
-            return;
-        }
-
-        if (nuevoUsuario.programasRestringidos?.includes(programaSeleccionado)) {
-            showNotification('Este programa ya está agregado', 'error');
-            return;
-        }
-
-        setNuevoUsuario({
-            ...nuevoUsuario,
-            programasRestringidos: [...(nuevoUsuario.programasRestringidos || []), programaSeleccionado]
-        });
-
-        setProgramaSeleccionado('');
-        showNotification('Programa agregado', 'success');
-    };
-
-    const eliminarPrograma = (programa: string) => {
-        setNuevoUsuario({
-            ...nuevoUsuario,
-            programasRestringidos: nuevoUsuario.programasRestringidos?.filter(p => p !== programa) || []
-        });
-        setMostrandoProgramas(true);
-    };
-
-    // Funciones para edición
-    const agregarComponenteEdit = () => {
-        if (!componenteSeleccionadoEdit || !editingUser) {
-            showNotification('Seleccione un componente', 'error');
-            return;
-        }
-
-        if (editingUser.permisos.find(p => p.componenteId === componenteSeleccionadoEdit)) {
-            showNotification('Este componente ya está agregado', 'error');
-            return;
-        }
-
-        setEditingUser({
-            ...editingUser,
-            permisos: [...editingUser.permisos, {
-                componenteId: componenteSeleccionadoEdit,
-                permiso: permisoSeleccionadoEdit
-            }]
-        });
-
-        setComponenteSeleccionadoEdit('');
-        setPermisoSeleccionadoEdit('ver');
-        showNotification('Componente agregado', 'success');
-    };
-
-    const eliminarComponenteEdit = (componenteId: string) => {
+    // Actualizar usuario
+    const actualizarUsuario = async () => {
         if (!editingUser) return;
-        setEditingUser({
-            ...editingUser,
-            permisos: editingUser.permisos.filter(p => p.componenteId !== componenteId)
-        });
-        setMostrandoComponentesEdit(true);
-    };
 
-    const iniciarEdicionComponenteEdit = (permiso: PermisoComponente) => {
-        setComponenteEnEdicionEdit({ ...permiso });
-        setComponenteSeleccionadoEdit(permiso.componenteId);
-        setPermisoSeleccionadoEdit(permiso.permiso);
-    };
+        try {
+            // Si es supervisor_general, incluir espacios permitidos
+            const rolId = editingUser.rol_id || editingUser.rol?.id;
+            const rol = rolesDisponibles.find(r => r.id === rolId);
+            const espaciosPayload = (rol?.nombre === 'supervisor_general') ? espaciosPermitidosEdit : [];
 
-    const guardarEdicionComponenteEdit = () => {
-        if (!componenteEnEdicionEdit || !editingUser) return;
+            await userService.actualizarUsuario({
+                ...editingUser,
+                facultad_id: facultadSeleccionadaEdit,
+                espacios_permitidos: espaciosPayload
+            });
 
-        setEditingUser({
-            ...editingUser,
-            permisos: editingUser.permisos.map(p =>
-                p.componenteId === componenteEnEdicionEdit.componenteId
-                    ? { ...p, permiso: permisoSeleccionadoEdit }
-                    : p
-            )
-        });
-
-        setComponenteEnEdicionEdit(null);
-        setComponenteSeleccionadoEdit('');
-        setPermisoSeleccionadoEdit('ver');
-        showNotification('Permiso actualizado', 'success');
-    };
-
-    const cancelarEdicionComponenteEdit = () => {
-        setComponenteEnEdicionEdit(null);
-        setComponenteSeleccionadoEdit('');
-        setPermisoSeleccionadoEdit('ver');
-    };
-
-    const agregarProgramaEdit = () => {
-        if (!programaSeleccionadoEdit || !editingUser) {
-            showNotification('Seleccione un programa', 'error');
-            return;
+            showNotification('Usuario actualizado exitosamente', 'success');
+            setEditDialogOpen(false);
+            resetEditStates();
+            loadUsuarios();
+        } catch (error: any) {
+            console.error('Error actualizando usuario:', error);
+            showNotification(error.message || 'Error al actualizar usuario', 'error');
         }
-
-        if (editingUser.programasRestringidos.includes(programaSeleccionadoEdit)) {
-            showNotification('Este programa ya está agregado', 'error');
-            return;
-        }
-
-        setEditingUser({
-            ...editingUser,
-            programasRestringidos: [...editingUser.programasRestringidos, programaSeleccionadoEdit]
-        });
-
-        setProgramaSeleccionadoEdit('');
-        showNotification('Programa agregado', 'success');
     };
 
-    const eliminarProgramaEdit = (programa: string) => {
-        if (!editingUser) return;
-        setEditingUser({
-            ...editingUser,
-            programasRestringidos: editingUser.programasRestringidos.filter(p => p !== programa)
-        });
-        setMostrandoProgramasEdit(true);
+    // Cambiar estado de usuario
+    const cambiarEstadoUsuario = async (id: number) => {
+        try {
+            const usuario = usuarios.find(u => u.id === id);
+            if (!usuario) return;
+
+            await userService.actualizarUsuario({ ...usuario, activo: !usuario.activo });
+            showNotification(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'} exitosamente`, 'success');
+            loadUsuarios();
+        } catch (error) {
+            console.error('Error cambiando estado:', error);
+            showNotification('Error al cambiar estado del usuario', 'error');
+        }
     };
 
-    const crearUsuario = () => {
-        if (!nuevoUsuario.nombre || !nuevoUsuario.email || !nuevoUsuario.password) {
-            showNotification('Complete todos los campos obligatorios', 'error');
-            return;
-        }
+    // Eliminar usuario
+    const confirmarEliminarUsuario = async () => {
+        if (!userToDelete || !userToDelete.id) return;
 
-        if (!nuevoUsuario.email.endsWith('@unilibre.edu.co')) {
-            showNotification('El email debe tener el formato @unilibre.edu.co', 'error');
-            return;
+        try {
+            await userService.eliminarUsuario(userToDelete.id as number);
+            showNotification('Usuario eliminado exitosamente', 'success');
+            setDeleteDialogOpen(false);
+            setUserToDelete(null);
+            loadUsuarios();
+        } catch (error) {
+            console.error('Error eliminando usuario:', error);
+            showNotification('Error al eliminar usuario', 'error');
         }
+    };
 
-        if (usuarios.find(u => u.email === nuevoUsuario.email)) {
-            showNotification('Ya existe un usuario con ese email', 'error');
-            return;
-        }
+    // Abrir edición
+    const abrirEdicion = async (usuario: Usuario) => {
+        // Resolver el rol completo usando rol_id si es necesario
+        const rolId = usuario.rol_id || usuario.rol?.id;
+        const rolNombre = usuario.rol?.nombre || rolesDisponibles.find(r => r.id === rolId)?.nombre;
 
-        const usuario: Omit<Usuario, 'id'> = {
-            nombre: nuevoUsuario.nombre,
-            email: nuevoUsuario.email,
-            password: nuevoUsuario.password,
-            rol: nuevoUsuario.rol as any,
-            activo: true,
-            fechaCreacion: new Date().toISOString().split('T')[0],
-            permisos: nuevoUsuario.permisos || [],
-            programasRestringidos: nuevoUsuario.programasRestringidos || [],
-            accesoTodosProgramas: accesoTodosProgramas
+        // Resolver facultad_id
+        const facultadId = usuario.facultad_id || usuario.facultad?.id || null;
+
+        const usuarioConDatosCompletos = {
+            ...usuario,
+            rol_id: rolId,
+            facultad_id: facultadId,
+            rol: usuario.rol || rolesDisponibles.find(r => r.id === rolId) // Asegurar que el objeto rol exista si es posible
         };
 
-        db.createUsuario(usuario);
-        loadData();
-        resetNuevoUsuario();
-        setDialogOpen(false);
-        showNotification('Usuario creado exitosamente', 'success');
-    };
+        setEditingUser(usuarioConDatosCompletos);
+        setFacultadSeleccionadaEdit(facultadId);
 
-    const resetNuevoUsuario = () => {
-        setNuevoUsuario({
-            nombre: '',
-            email: '',
-            password: '',
-            rol: 'consultor',
-            permisos: [],
-            programasRestringidos: [],
-            accesoTodosProgramas: false
-        });
-        setComponenteSeleccionado('');
-        setPermisoSeleccionado('ver');
-        setMostrandoComponentes(true);
-        setComponenteEnEdicion(null);
-        setProgramaSeleccionado('');
-        setMostrandoProgramas(true);
-        setAccesoTodosProgramas(false);
-    };
+        // Cargar espacios permitidos si es supervisor_general
+        if (rolNombre === 'supervisor_general') {
+            try {
+                // Usar el endpoint correcto: /espacios/permitido/usuario/<id>/
+                const response = await apiClient.get<{ espacios: any[] }>(`/espacios/permitido/usuario/${usuario.id}/`);
+                // El endpoint retorna objetos de espacio completos con ID, nombre, etc.
+                const espaciosIds = response.espacios.map(e => e.id);
+                setEspaciosPermitidosEdit(espaciosIds);
+            } catch (error) {
+                console.error('Error cargando espacios permitidos:', error);
+                setEspaciosPermitidosEdit([]);
+            }
+        } else {
+            setEspaciosPermitidosEdit([]);
+        }
 
-    const actualizarUsuario = () => {
-        if (!editingUser) return;
-
-        db.updateUsuario(editingUser.id, {
-            ...editingUser,
-            accesoTodosProgramas: accesoTodosProgramasEdit
-        });
-
-        loadData();
-        setEditingUser(null);
-        setEditDialogOpen(false);
-        resetEditStates();
-        showNotification('Usuario actualizado exitosamente', 'success');
-    };
-
-    const resetEditStates = () => {
-        setComponenteSeleccionadoEdit('');
-        setPermisoSeleccionadoEdit('ver');
-        setMostrandoComponentesEdit(true);
-        setComponenteEnEdicionEdit(null);
-        setProgramaSeleccionadoEdit('');
-        setMostrandoProgramasEdit(true);
-        setAccesoTodosProgramasEdit(false);
-    };
-
-    const abrirEdicion = (usuario: Usuario) => {
-        setEditingUser({ ...usuario });
-        setAccesoTodosProgramasEdit(usuario.accesoTodosProgramas || false);
         setEditDialogOpen(true);
     };
 
-    const cambiarEstadoUsuario = (usuarioId: string) => {
-        const usuario = usuarios.find(u => u.id === usuarioId);
-        if (usuario) {
-            const nuevoEstado = !usuario.activo;
-            db.updateUsuario(usuarioId, { activo: nuevoEstado });
-            loadData();
-            showNotification(`Usuario ${nuevoEstado ? 'activado' : 'desactivado'}`, 'success');
-        }
+    // Reset estados
+    const resetNuevoUsuario = () => {
+        setNuevoUsuario({
+            nombre: '',
+            correo: '',
+            contrasena: '',
+            rol_id: null,
+            activo: true
+        });
+        setEspaciosPermitidos([]);
+        setFacultadSeleccionada(null);
     };
 
-    const confirmarEliminarUsuario = () => {
-        if (!userToDelete) return;
-        db.deleteUsuario(userToDelete.id);
-        loadData();
-        setDeleteDialogOpen(false);
-        setUserToDelete(null);
-        showNotification('Usuario eliminado exitosamente', 'success');
+    const resetEditStates = () => {
+        setEditingUser(null);
+        setEspaciosPermitidosEdit([]);
+        setFacultadSeleccionadaEdit(null);
     };
 
-    const filteredUsuarios = usuarios.filter(u => {
-        const matchesSearch = u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            u.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRol = filterRol === 'todos' || u.rol === filterRol;
+    // Usuarios filtrados
+    const filteredUsuarios = usuarios.filter(user => {
+        const matchesSearch = user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.correo.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRol = filterRol === 'todos' || user.rol?.nombre === filterRol;
         return matchesSearch && matchesRol;
     });
 
     return {
-        usuarios,
         searchTerm, setSearchTerm,
         filterRol, setFilterRol,
         dialogOpen, setDialogOpen,
@@ -513,35 +282,6 @@ export function useGestionUsuarios() {
         userToDelete, setUserToDelete,
         editingUser, setEditingUser,
         nuevoUsuario, setNuevoUsuario,
-        componenteSeleccionado, setComponenteSeleccionado,
-        permisoSeleccionado, setPermisoSeleccionado,
-        mostrandoComponentes, setMostrandoComponentes,
-        componenteEnEdicion, setComponenteEnEdicion,
-        programaSeleccionado, setProgramaSeleccionado,
-        mostrandoProgramas, setMostrandoProgramas,
-        accesoTodosProgramas, setAccesoTodosProgramas,
-        componenteSeleccionadoEdit, setComponenteSeleccionadoEdit,
-        permisoSeleccionadoEdit, setPermisoSeleccionadoEdit,
-        mostrandoComponentesEdit, setMostrandoComponentesEdit,
-        componenteEnEdicionEdit, setComponenteEnEdicionEdit,
-        programaSeleccionadoEdit, setProgramaSeleccionadoEdit,
-        mostrandoProgramasEdit, setMostrandoProgramasEdit,
-        accesoTodosProgramasEdit, setAccesoTodosProgramasEdit,
-        cargarPermisosPorRol,
-        agregarComponente,
-        eliminarComponente,
-        iniciarEdicionComponente,
-        guardarEdicionComponente,
-        cancelarEdicionComponente,
-        agregarPrograma,
-        eliminarPrograma,
-        agregarComponenteEdit,
-        eliminarComponenteEdit,
-        iniciarEdicionComponenteEdit,
-        guardarEdicionComponenteEdit,
-        cancelarEdicionComponenteEdit,
-        agregarProgramaEdit,
-        eliminarProgramaEdit,
         crearUsuario,
         resetNuevoUsuario,
         actualizarUsuario,
@@ -550,6 +290,20 @@ export function useGestionUsuarios() {
         cambiarEstadoUsuario,
         confirmarEliminarUsuario,
         filteredUsuarios,
-        notification
+        notification,
+        // Datos dinámicos
+        rolesDisponibles,
+        facultadesDisponibles,
+        espaciosDisponibles,
+        espacioSeleccionado, setEspacioSeleccionado,
+        espaciosPermitidos,
+        espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
+        espaciosPermitidosEdit,
+        facultadSeleccionada, setFacultadSeleccionada,
+        facultadSeleccionadaEdit, setFacultadSeleccionadaEdit,
+        agregarEspacioPermitido,
+        eliminarEspacioPermitido,
+        agregarEspacioPermitidoEdit,
+        eliminarEspacioPermitidoEdit
     };
 }
