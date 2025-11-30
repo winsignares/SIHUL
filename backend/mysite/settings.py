@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'espacios',
     'recursos',
     'prestamos',
+    'notificaciones',
+    'rest_framework',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',

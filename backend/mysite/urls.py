@@ -15,4 +15,5 @@ urlpatterns = [
     path('componentes/', include('componentes.urls')),
     path('horario/', include('horario.urls')),
     path('prestamos/', include('prestamos.urls')),
+    path('notificaciones/', include('notificaciones.urls')),
 ]
