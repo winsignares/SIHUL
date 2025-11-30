@@ -333,15 +333,42 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                           </td>
                           {diasSemana.map(dia => {
                             const clase = obtenerClaseEnHora(dia, hora);
+                            const horaActual = parseInt(hora.split(':')[0]);
+                            
+                            // Solo mostrar la clase en la primera hora de su rango
+                            const esInicioClase = clase && parseInt(clase.hora_inicio.split(':')[0]) === horaActual;
+                            
+                            // Calcular rowspan si es el inicio de la clase
+                            let rowspan = 1;
+                            if (esInicioClase) {
+                              const horaInicio = parseInt(clase.hora_inicio.split(':')[0]);
+                              const horaFin = parseInt(clase.hora_fin.split(':')[0]);
+                              rowspan = horaFin - horaInicio;
+                            }
+                            
+                            // Si la celda está ocupada por una clase que empezó antes, no renderizar
+                            const claseOcupante = obtenerClaseEnHora(dia, hora);
+                            const estaOcupadaPorClaseAnterior = claseOcupante && 
+                              parseInt(claseOcupante.hora_inicio.split(':')[0]) < horaActual;
+                            
+                            if (estaOcupadaPorClaseAnterior) {
+                              return null; // Esta celda está siendo ocupada por el rowspan
+                            }
+                            
                             return (
-                              <td key={`${dia}-${hora}`} className="border border-slate-200 p-1 h-16 align-top">
-                                {clase && parseInt(hora.split(':')[0]) === parseInt(clase.hora_inicio.split(':')[0]) && (
+                              <td 
+                                key={`${dia}-${hora}`} 
+                                className="border border-slate-200 p-1 align-top"
+                                rowSpan={esInicioClase ? rowspan : 1}
+                                style={esInicioClase ? { height: `${rowspan * 4}rem` } : { height: '4rem' }}
+                              >
+                                {esInicioClase && (
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="bg-gradient-to-br from-red-100 to-yellow-50 border-l-4 border-red-600 rounded p-2 text-xs h-full relative group"
                                   >
-                                    <div className="flex items-start justify-between">
+                                    <div className="flex items-start justify-between h-full">
                                       <div className="flex-1 min-w-0">
                                         <p className="text-slate-900 truncate font-medium">{clase.asignatura_nombre}</p>
                                         <p className="text-slate-600 text-xs truncate mt-0.5">
