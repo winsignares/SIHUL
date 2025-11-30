@@ -34,7 +34,7 @@ export function useDashboardHome() {
         const loadDashboardData = async () => {
             try {
                 setIsLoadingStats(true);
-                
+
                 // Fetch all data in parallel
                 const [facultadesResponse, programasResponse, espaciosResponse, asignaturasResponse] = await Promise.all([
                     facultadService.list(),

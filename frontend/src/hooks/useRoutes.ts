@@ -2,7 +2,7 @@ import { useUser } from '../context/UserContext';
 import { useMemo, useCallback } from 'react';
 import { normalizeRole } from '../context/roleUtils';
 
-export type Role = 'admin' | 'supervisor_general' | 'consultor_docente' | 'consultor_estudiante';
+export type Role = 'admin' | 'supervisor_general' | 'docente' | 'estudiante';
 
 export interface RouteConfig {
   path: string;
@@ -33,7 +33,7 @@ export const routesByRole: Record<Role, Array<{ path: string; component: string 
     { path: '/notificaciones', component: 'Notificaciones' },
     { path: '/ajustes', component: 'Ajustes' }
   ],
-  consultor_docente: [
+  docente: [
     { path: '/docente/dashboard', component: 'ConsultorDocenteHome' },
     { path: '/docente/horario', component: 'MiHorario' },
     { path: '/docente/prestamos', component: 'PrestamosEspacios' },
@@ -41,7 +41,7 @@ export const routesByRole: Record<Role, Array<{ path: string; component: string 
     { path: '/notificaciones', component: 'Notificaciones' },
     { path: '/ajustes', component: 'Ajustes' }
   ],
-  consultor_estudiante: [
+  estudiante: [
     { path: '/estudiante/dashboard', component: 'ConsultorEstudianteHome' },
     { path: '/estudiante/mi-horario', component: 'MiHorario' },
     { path: '/notificaciones', component: 'Notificaciones' },
@@ -72,11 +72,11 @@ export function useRoutes() {
       return '/supervisor/dashboard';
     }
 
-    if (roleCode === 'CONSULTOR_DOCENTE') {
+    if (roleCode === 'DOCENTE') {
       return '/docente/dashboard';
     }
 
-    if (roleCode === 'CONSULTOR_ESTUDIANTE') {
+    if (roleCode === 'ESTUDIANTE') {
       return '/estudiante/dashboard';
     }
 
@@ -87,9 +87,9 @@ export function useRoutes() {
         return '/admin/dashboard';
       case 'supervisor_general':
         return '/supervisor/dashboard';
-      case 'consultor_docente':
+      case 'docente':
         return '/docente/dashboard';
-      case 'consultor_estudiante':
+      case 'estudiante':
         return '/estudiante/dashboard';
       default:
         console.warn('[useRoutes] Role desconocido:', roleCode, 'retornando /login');

@@ -184,7 +184,7 @@ export function useGestionUsuarios() {
                     permiso: 'ver' as const
                 }));
             accesoTotal = true;
-        } else if (rol === 'consultor_estudiante') {
+        } else if (rol === 'estudiante') {
             const componentesEstudiante = ['dashboard', 'horarios'];
             permisos = componentesDelSistema
                 .filter(c => componentesEstudiante.includes(c.id))
@@ -193,7 +193,7 @@ export function useGestionUsuarios() {
                     permiso: 'ver' as const
                 }));
             accesoTotal = false;
-        } else if (rol === 'consultor_docente') {
+        } else if (rol === 'docente') {
             const componentesDocente = ['dashboard', 'horarios'];
             permisos = componentesDelSistema
                 .filter(c => componentesDocente.includes(c.id))

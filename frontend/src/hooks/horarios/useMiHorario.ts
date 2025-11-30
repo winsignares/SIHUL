@@ -32,8 +32,8 @@ export function useMiHorario() {
     const [loading, setLoading] = useState(true);
 
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const esDocente = user?.rol?.nombre === 'consultor_docente';
-    const esEstudiante = user?.rol?.nombre === 'consultor_estudiante';
+    const esDocente = user?.rol?.nombre === 'docente';
+    const esEstudiante = user?.rol?.nombre === 'estudiante';
 
     useEffect(() => {
         if (user?.id) {
@@ -52,8 +52,12 @@ export function useMiHorario() {
         try {
             setLoading(true);
 
-            // Llamar al endpoint con el ID del usuario
-            const response = await apiClient.get<HorarioResponse>(`/horario/mi-horario/?usuario_id=${user.id}`);
+            // Determinar endpoint basado en el rol
+            const endpoint = esEstudiante
+                ? `/horario/mi-horario-estudiante/?usuario_id=${user.id}`
+                : `/horario/mi-horario/?usuario_id=${user.id}`;
+
+            const response = await apiClient.get<HorarioResponse>(endpoint);
 
             setHorarios(response.horarios || []);
         } catch (error) {
@@ -85,14 +89,72 @@ export function useMiHorario() {
         });
     };
 
-    const handleDescargarPDF = () => {
-        showNotification('Descargando horario en PDF...', 'success');
-        // Aquí iría la lógica real de descarga PDF
+    const handleDescargarPDF = async () => {
+        if (!user?.id) return;
+
+        showNotification('Preparando descarga...', 'info');
+
+        try {
+            const response = await fetch(`http://localhost:8000/horario/exportar-pdf/?usuario_id=${user.id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/pdf',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al generar PDF');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mi_horario.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showNotification('¡Horario descargado exitosamente en PDF!', 'success');
+        } catch (error) {
+            console.error('Error al descargar PDF:', error);
+            showNotification('Error al descargar el PDF', 'error');
+        }
     };
 
-    const handleDescargarExcel = () => {
-        showNotification('Descargando horario en Excel...', 'success');
-        // Aquí iría la lógica real de descarga Excel
+    const handleDescargarExcel = async () => {
+        if (!user?.id) return;
+
+        showNotification('Preparando descarga...', 'info');
+
+        try {
+            const response = await fetch(`http://localhost:8000/horario/exportar-excel/?usuario_id=${user.id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al generar Excel');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mi_horario.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showNotification('¡Horario descargado exitosamente en Excel!', 'success');
+        } catch (error) {
+            console.error('Error al descargar Excel:', error);
+            showNotification('Error al descargar el Excel', 'error');
+        }
     };
 
     const horas = generarHoras();

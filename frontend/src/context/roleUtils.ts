@@ -4,16 +4,16 @@ export type RawRole = string;
 export type CanonicalRole =
   | 'admin'
   | 'supervisor_general'
-  | 'consultor_docente'
-  | 'consultor_estudiante'
+  | 'docente'
+  | 'estudiante'
   | 'autorizado'
   | 'consultor';
 
 const KNOWN_ROLES: CanonicalRole[] = [
   'admin',
   'supervisor_general',
-  'consultor_docente',
-  'consultor_estudiante',
+  'docente',
+  'estudiante',
   'autorizado',
   'consultor'
 ];
@@ -38,8 +38,8 @@ export function normalizeRole(role?: RawRole): CanonicalRole | undefined {
 
   // Some sources may already be lowercased but missing underscore: try to map common patterns
   const legacyMap: Record<string, CanonicalRole> = {
-    consultordocente: 'consultor_docente',
-    consultorestudiante: 'consultor_estudiante',
+    consultordocente: 'docente',
+    consultorestudiante: 'estudiante',
     supervisorgeneral: 'supervisor_general'
   };
 

@@ -10,6 +10,10 @@ urlpatterns = [
     path('list/', views.list_horarios, name='list_horarios'),
     path('list/extendidos/', views.list_horarios_extendidos, name='list_horarios_extendidos'),
     path('mi-horario/', views.mi_horario_docente, name='mi_horario_docente'),
+    path('mi-horario-estudiante/', views.mi_horario_estudiante, name='mi_horario_estudiante'),
+    path('inscribir-estudiante/', views.inscribir_estudiante, name='inscribir_estudiante'),
+    path('exportar-pdf/', views.exportar_horario_pdf, name='exportar_horario_pdf'),
+    path('exportar-excel/', views.exportar_horario_excel, name='exportar_horario_excel'),
     
     # HorarioFusionado endpoints
     path('fusionado/', views.create_horario_fusionado, name='create_horario_fusionado'),
