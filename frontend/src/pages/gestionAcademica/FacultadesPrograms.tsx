@@ -21,16 +21,22 @@ export default function FacultadesPrograms() {
     searchTerm, setSearchTerm,
     activeTab, setActiveTab,
     facultades,
+    asignaturas,
+    asignaturasPrograma,
     showCreateFacultad, setShowCreateFacultad,
     showEditFacultad, setShowEditFacultad,
     showDeleteFacultad, setShowDeleteFacultad,
     showCreatePrograma, setShowCreatePrograma,
     showEditPrograma, setShowEditPrograma,
     showDeletePrograma, setShowDeletePrograma,
+    showAsignaturasModal, setShowAsignaturasModal,
+    showAddAsignaturaModal, setShowAddAsignaturaModal,
     facultadForm, setFacultadForm,
     programaForm, setProgramaForm,
+    asignaturaForm, setAsignaturaForm,
     selectedFacultad, setSelectedFacultad,
     selectedPrograma, setSelectedPrograma,
+    selectedProgramaForAsignaturas,
     selectedFacultadFilter, setSelectedFacultadFilter,
     reloadKey,
     handleCreateFacultad,
@@ -45,11 +51,18 @@ export default function FacultadesPrograms() {
     openEditPrograma,
     openDeletePrograma,
     toggleProgramaActivo,
+    openAsignaturasModal,
+    openAddAsignaturaModal,
+    handleAddAsignatura,
+    handleRemoveAsignatura,
+    handleUpdateAsignaturaPrograma,
     filteredFacultades,
     filteredProgramas,
     getProgramasCount,
     getFacultadNombre,
-    activeFacultades
+    activeFacultades,
+    availableAsignaturas,
+    asignaturasBySemestre
   } = useFacultadesPrograms();
 
   return (
@@ -308,6 +321,15 @@ export default function FacultadesPrograms() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openAsignaturasModal(programa)}
+                                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                                title="Gestionar asignaturas"
+                              >
+                                <BookOpen className="w-4 h-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -644,6 +666,225 @@ export default function FacultadesPrograms() {
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Gestionar Asignaturas del Programa */}
+      <Dialog open={showAsignaturasModal} onOpenChange={setShowAsignaturasModal}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-purple-600" />
+              Plan de Estudios - {selectedProgramaForAsignaturas?.nombre}
+            </DialogTitle>
+            <DialogDescription>
+              Gestiona las asignaturas del plan de estudios del programa
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            {/* Botón para agregar asignatura */}
+            <div className="flex justify-end">
+              <Button
+                onClick={openAddAsignaturaModal}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Asignatura
+              </Button>
+            </div>
+
+            {/* Asignaturas agrupadas por semestre */}
+            {selectedProgramaForAsignaturas && (
+              <div className="space-y-6">
+                {Array.from({ length: selectedProgramaForAsignaturas.semestres }, (_, i) => i + 1).map(semestre => {
+                  const asignaturasDelSemestre = asignaturasBySemestre[semestre] || [];
+                  
+                  return (
+                    <Card key={semestre} className="border-slate-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-slate-900 font-semibold">
+                            Semestre {semestre}
+                          </h3>
+                          <Badge variant="outline" className="border-purple-600 text-purple-600">
+                            {asignaturasDelSemestre.length} asignaturas
+                          </Badge>
+                        </div>
+
+                        {asignaturasDelSemestre.length === 0 ? (
+                          <p className="text-slate-500 text-sm">No hay asignaturas en este semestre</p>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Código</TableHead>
+                                <TableHead>Asignatura</TableHead>
+                                <TableHead>Créditos</TableHead>
+                                <TableHead>Horas</TableHead>
+                                <TableHead>Tipo</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {asignaturasDelSemestre.map(ap => (
+                                <TableRow key={ap.id}>
+                                  <TableCell>
+                                    <Badge variant="outline" className="border-purple-600 text-purple-600">
+                                      {ap.asignatura_codigo}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-slate-900">{ap.asignatura_nombre}</TableCell>
+                                  <TableCell className="text-slate-600">{ap.creditos} créditos</TableCell>
+                                  <TableCell className="text-slate-600">{ap.horas || 0} horas</TableCell>
+                                  <TableCell>
+                                    <Select
+                                      value={ap.componente_formativo}
+                                      onValueChange={(value: any) => handleUpdateAsignaturaPrograma(ap, { componente_formativo: value })}
+                                    >
+                                      <SelectTrigger className="w-40">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="básica">Básica</SelectItem>
+                                        <SelectItem value="profesional">Profesional</SelectItem>
+                                        <SelectItem value="electiva">Electiva</SelectItem>
+                                        <SelectItem value="optativa">Optativa</SelectItem>
+                                        <SelectItem value="humanística">Humanística</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleRemoveAsignatura(ap)}
+                                      className="border-red-600 text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAsignaturasModal(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Agregar Asignatura al Programa */}
+      <Dialog open={showAddAsignaturaModal} onOpenChange={setShowAddAsignaturaModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900">Agregar Asignatura al Plan de Estudios</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="asignatura">
+                Asignatura <span className="text-red-600">*</span>
+              </Label>
+              <Select
+                value={asignaturaForm.asignaturaId}
+                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, asignaturaId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar asignatura" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAsignaturas.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-slate-500">
+                      Todas las asignaturas ya están asignadas
+                    </div>
+                  ) : (
+                    availableAsignaturas.map(a => (
+                      <SelectItem key={a.id} value={a.id?.toString() || ''}>
+                        {a.codigo} - {a.nombre} ({a.creditos} créditos)
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="semestre">
+                Semestre <span className="text-red-600">*</span>
+              </Label>
+              <Select
+                value={asignaturaForm.semestre}
+                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, semestre: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar semestre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedProgramaForAsignaturas && Array.from(
+                    { length: selectedProgramaForAsignaturas.semestres },
+                    (_, i) => i + 1
+                  ).map(sem => (
+                    <SelectItem key={sem} value={sem.toString()}>
+                      Semestre {sem}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo">
+                Tipo de Asignatura <span className="text-red-600">*</span>
+              </Label>
+              <Select
+                value={asignaturaForm.componente_formativo}
+                onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, componente_formativo: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="básica">Básica</SelectItem>
+                  <SelectItem value="profesional">Profesional</SelectItem>
+                  <SelectItem value="electiva">Electiva</SelectItem>
+                  <SelectItem value="optativa">Optativa</SelectItem>
+                  <SelectItem value="humanística">Humanística</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddAsignaturaModal(false);
+                setAsignaturaForm({
+                  asignaturaId: '',
+                  semestre: '',
+                  componente_formativo: 'profesional'
+                });
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddAsignatura}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Agregar
             </Button>
           </DialogFooter>
         </DialogContent>

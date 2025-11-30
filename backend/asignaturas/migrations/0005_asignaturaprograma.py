@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('semestre', models.PositiveIntegerField()),
-                ('tipo', models.CharField(choices=[('electiva', 'Electiva'), ('optativa', 'Optativa'), ('profesional', 'Profesional'), ('humanística', 'Humanística'), ('básica', 'Básica')], default='profesional', max_length=20)),
+                ('componente_formativo', models.CharField(choices=[('electiva', 'Electiva'), ('optativa', 'Optativa'), ('profesional', 'Profesional'), ('humanística', 'Humanística'), ('básica', 'Básica')], default='profesional', max_length=20)),
                 ('asignatura', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='programas_asignatura', to='asignaturas.asignatura')),
                 ('programa', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='asignaturas_programa', to='programas.programa')),
             ],

@@ -5,6 +5,8 @@ import { facultadService } from '../../services/facultades/facultadesAPI';
 import type { Facultad as FacultadAPI } from '../../services/facultades/facultadesAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import type { Programa as ProgramaAPI } from '../../services/programas/programaAPI';
+import { asignaturaService, asignaturaProgramaService } from '../../services/asignaturas/asignaturaAPI';
+import type { Asignatura, AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
 
 // Mapear tipos de API a modelo del frontend
 type Facultad = FacultadAPI;
@@ -27,6 +29,8 @@ export function useFacultadesPrograms() {
     // Estados de datos
     const [facultades, setFacultades] = useState<Facultad[]>([]);
     const [programas, setProgramas] = useState<Programa[]>([]);
+    const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
+    const [asignaturasPrograma, setAsignaturasPrograma] = useState<AsignaturaPrograma[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Estados de modales
@@ -36,6 +40,8 @@ export function useFacultadesPrograms() {
     const [showCreatePrograma, setShowCreatePrograma] = useState(false);
     const [showEditPrograma, setShowEditPrograma] = useState(false);
     const [showDeletePrograma, setShowDeletePrograma] = useState(false);
+    const [showAsignaturasModal, setShowAsignaturasModal] = useState(false);
+    const [showAddAsignaturaModal, setShowAddAsignaturaModal] = useState(false);
 
     // Estados de formularios
     const [facultadForm, setFacultadForm] = useState({ nombre: '' });
@@ -44,10 +50,17 @@ export function useFacultadesPrograms() {
         facultadId: '',
         semestres: ''
     });
+    const [asignaturaForm, setAsignaturaForm] = useState({
+        asignaturaId: '',
+        semestre: '',
+        componente_formativo: 'profesional' as 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica'
+    });
 
     // Estados de selección
     const [selectedFacultad, setSelectedFacultad] = useState<Facultad | null>(null);
     const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
+    const [selectedProgramaForAsignaturas, setSelectedProgramaForAsignaturas] = useState<Programa | null>(null);
+    const [selectedAsignaturaPrograma, setSelectedAsignaturaPrograma] = useState<AsignaturaPrograma | null>(null);
     const [selectedFacultadFilter, setSelectedFacultadFilter] = useState<string>('all');
 
     // Key para forzar recarga de componentes hijos
@@ -57,12 +70,14 @@ export function useFacultadesPrograms() {
     useEffect(() => {
         loadFacultades();
         loadProgramas();
+        loadAsignaturas();
     }, []);
 
     // Recargar cuando cambie de pestaña
     useEffect(() => {
         loadFacultades();
         loadProgramas();
+        loadAsignaturas();
     }, [activeTab]);
 
     const loadFacultades = async () => {
@@ -106,11 +121,155 @@ export function useFacultadesPrograms() {
         }
     };
 
+    const loadAsignaturas = async () => {
+        try {
+            const response = await asignaturaService.list();
+            setAsignaturas(response.asignaturas);
+        } catch (error) {
+            showNotification({
+                message: `Error al cargar asignaturas: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        }
+    };
+
+    const loadAsignaturasPrograma = async (programaId: number) => {
+        try {
+            setLoading(true);
+            const response = await asignaturaProgramaService.list(programaId);
+            setAsignaturasPrograma(response.asignaturas_programa);
+        } catch (error) {
+            showNotification({
+                message: `Error al cargar asignaturas del programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Función para recargar todos los datos
     const reloadAllData = () => {
         loadFacultades();
         loadProgramas();
+        loadAsignaturas();
         setReloadKey(prev => prev + 1); // Forzar recarga de componentes hijos
+    };
+
+    // ==================== ASIGNATURAS DEL PROGRAMA ====================
+
+    const openAsignaturasModal = async (programa: Programa) => {
+        setSelectedProgramaForAsignaturas(programa);
+        if (programa.id) {
+            await loadAsignaturasPrograma(programa.id);
+        }
+        setShowAsignaturasModal(true);
+    };
+
+    const openAddAsignaturaModal = () => {
+        setAsignaturaForm({
+            asignaturaId: '',
+            semestre: '',
+            componente_formativo: 'profesional'
+        });
+        setShowAddAsignaturaModal(true);
+    };
+
+    const handleAddAsignatura = async () => {
+        if (!selectedProgramaForAsignaturas || !selectedProgramaForAsignaturas.id) return;
+
+        // Validaciones
+        if (!asignaturaForm.asignaturaId) {
+            showNotification({ message: 'Debe seleccionar una asignatura', type: 'error' });
+            return;
+        }
+
+        if (!asignaturaForm.semestre || Number(asignaturaForm.semestre) < 1) {
+            showNotification({ message: 'Debe especificar el semestre', type: 'error' });
+            return;
+        }
+
+        if (Number(asignaturaForm.semestre) > selectedProgramaForAsignaturas.semestres) {
+            showNotification({ 
+                message: `El semestre no puede ser mayor a ${selectedProgramaForAsignaturas.semestres}`, 
+                type: 'error' 
+            });
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await asignaturaProgramaService.create({
+                programa_id: selectedProgramaForAsignaturas.id,
+                asignatura_id: Number(asignaturaForm.asignaturaId),
+                semestre: Number(asignaturaForm.semestre),
+                componente_formativo: asignaturaForm.componente_formativo
+            });
+
+            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
+            setShowAddAsignaturaModal(false);
+            setAsignaturaForm({
+                asignaturaId: '',
+                semestre: '',
+                componente_formativo: 'profesional'
+            });
+
+            showNotification({ message: '✅ Asignatura agregada al programa exitosamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al agregar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRemoveAsignatura = async (asignaturaPrograma: AsignaturaPrograma) => {
+        if (!asignaturaPrograma.id || !selectedProgramaForAsignaturas?.id) return;
+
+        if (!confirm(`¿Está seguro de eliminar ${asignaturaPrograma.asignatura_nombre} del programa?`)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await asignaturaProgramaService.delete({ id: asignaturaPrograma.id });
+
+            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
+
+            showNotification({ message: '✅ Asignatura eliminada del programa correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateAsignaturaPrograma = async (asignaturaPrograma: AsignaturaPrograma, updates: Partial<AsignaturaPrograma>) => {
+        if (!asignaturaPrograma.id || !selectedProgramaForAsignaturas?.id) return;
+
+        try {
+            setLoading(true);
+            await asignaturaProgramaService.update({
+                id: asignaturaPrograma.id,
+                ...updates
+            });
+
+            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
+
+            showNotification({ message: '✅ Asignatura actualizada correctamente', type: 'success' });
+        } catch (error) {
+            showNotification({
+                message: `Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     // ==================== FACULTADES ====================
@@ -416,11 +575,28 @@ export function useFacultadesPrograms() {
         return facultad?.nombre || 'Sin facultad';
     };
 
+    // Obtener asignaturas disponibles (que no estén ya asignadas al programa)
+    const availableAsignaturas = asignaturas.filter(a => 
+        !asignaturasPrograma.some(ap => ap.asignatura_id === a.id)
+    );
+
+    // Agrupar asignaturas por semestre
+    const asignaturasBySemestre = asignaturasPrograma.reduce((acc, ap) => {
+        const semestre = ap.semestre;
+        if (!acc[semestre]) {
+            acc[semestre] = [];
+        }
+        acc[semestre].push(ap);
+        return acc;
+    }, {} as Record<number, AsignaturaPrograma[]>);
+
     return {
         searchTerm, setSearchTerm,
         activeTab, setActiveTab,
         facultades,
         programas,
+        asignaturas,
+        asignaturasPrograma,
         loading,
         showCreateFacultad, setShowCreateFacultad,
         showEditFacultad, setShowEditFacultad,
@@ -428,10 +604,15 @@ export function useFacultadesPrograms() {
         showCreatePrograma, setShowCreatePrograma,
         showEditPrograma, setShowEditPrograma,
         showDeletePrograma, setShowDeletePrograma,
+        showAsignaturasModal, setShowAsignaturasModal,
+        showAddAsignaturaModal, setShowAddAsignaturaModal,
         facultadForm, setFacultadForm,
         programaForm, setProgramaForm,
+        asignaturaForm, setAsignaturaForm,
         selectedFacultad, setSelectedFacultad,
         selectedPrograma, setSelectedPrograma,
+        selectedProgramaForAsignaturas, setSelectedProgramaForAsignaturas,
+        selectedAsignaturaPrograma, setSelectedAsignaturaPrograma,
         selectedFacultadFilter, setSelectedFacultadFilter,
         reloadKey,
         handleCreateFacultad,
@@ -446,11 +627,18 @@ export function useFacultadesPrograms() {
         openEditPrograma,
         openDeletePrograma,
         toggleProgramaActivo,
+        openAsignaturasModal,
+        openAddAsignaturaModal,
+        handleAddAsignatura,
+        handleRemoveAsignatura,
+        handleUpdateAsignaturaPrograma,
         filteredFacultades,
         filteredProgramas,
         getProgramasCount,
         getFacultadNombre,
         reloadAllData,
-        activeFacultades: facultades.filter(f => f.activa)
+        activeFacultades: facultades.filter(f => f.activa),
+        availableAsignaturas,
+        asignaturasBySemestre
     };
 }

@@ -61,7 +61,7 @@ export interface AsignaturaPrograma {
     asignatura_codigo?: string;
     creditos?: number;
     semestre: number;
-    tipo: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
+    componente_formativo: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
     horas?: number;
 }
 
@@ -72,7 +72,7 @@ export interface CreateAsignaturaProgramaPayload {
     programa_id: number;
     asignatura_id: number;
     semestre: number;
-    tipo?: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
+    componente_formativo?: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
 }
 
 /**
@@ -81,7 +81,7 @@ export interface CreateAsignaturaProgramaPayload {
 export interface UpdateAsignaturaProgramaPayload {
     id: number;
     semestre?: number;
-    tipo?: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
+    componente_formativo?: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
 }
 
 /**
@@ -113,14 +113,14 @@ export const asignaturaService = {
      * Actualiza una asignatura existente
      */
     update: async (payload: UpdateAsignaturaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>(`/asignaturas/${payload.id}/`, payload);
+        return apiClient.put<{ message: string; id: number }>('/asignaturas/update/', payload);
     },
 
     /**
      * Elimina una asignatura
      */
     delete: async (payload: DeleteAsignaturaPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>(`/asignaturas/${payload.id}/`, payload);
+        return apiClient.delete<{ message: string }>('/asignaturas/delete/', payload);
     },
 
     /**
