@@ -73,6 +73,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             
             // Cargar horarios extendidos
             const horariosResponse = await horarioService.listExtendidos();
+            console.log('📋 Horarios cargados:', horariosResponse.horarios.slice(0, 2)); // Mostrar primeros 2
             setTodosLosHorarios(horariosResponse.horarios);
 
             // Cargar facultades

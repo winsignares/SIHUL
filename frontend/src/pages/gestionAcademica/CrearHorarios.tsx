@@ -343,12 +343,15 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                                   >
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-slate-900 truncate">{clase.asignatura_nombre}</p>
-                                        <p className="text-slate-600 text-xs truncate mt-1">
+                                        <p className="text-slate-900 truncate font-medium">{clase.asignatura_nombre}</p>
+                                        <p className="text-slate-600 text-xs truncate mt-0.5">
                                           <User className="w-3 h-3 inline mr-1" />
                                           {clase.docente_nombre}
                                         </p>
-                                        <p className="text-slate-500 text-xs truncate">
+                                        <p className="text-slate-500 text-xs truncate mt-0.5">
+                                          📍 {clase.espacio_nombre}
+                                        </p>
+                                        <p className="text-slate-500 text-xs truncate mt-0.5">
                                           <Clock className="w-3 h-3 inline mr-1" />
                                           {clase.hora_inicio} - {clase.hora_fin}
                                         </p>
