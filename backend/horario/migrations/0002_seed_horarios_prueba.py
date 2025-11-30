@@ -129,6 +129,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('horario', '0001_initial'),
+        ('asignaturas', '0006_remove_asignatura_programa'),
     ]
 
     operations = [
