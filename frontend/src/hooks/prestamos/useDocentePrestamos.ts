@@ -1,118 +1,213 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { prestamoService, type PrestamoEspacio, type RecursoPrestamo } from '../../services/prestamos/prestamoAPI';
+import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
+import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
+import { espacioService } from '../../services/espacios/espaciosAPI';
 import type { Prestamo } from '../../models/index';
 
+// Helper function to map backend PrestamoEspacio to UI Prestamo model
+const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
+    return {
+        id: prestamo.id?.toString() || '',
+        solicitante: prestamo.usuario_nombre || '',
+        email: prestamo.usuario_correo || '',
+        telefono: '', // No disponible en modelo backend
+        espacio: prestamo.espacio_nombre || '',
+        fecha: prestamo.fecha,
+        horaInicio: prestamo.hora_inicio.substring(0, 5), // Remove seconds HH:MM:SS -> HH:MM
+        horaFin: prestamo.hora_fin.substring(0, 5),
+        motivo: prestamo.motivo || '',
+        tipoEvento: prestamo.tipo_actividad_nombre || '',
+        asistentes: 0, // No disponible en modelo backend
+        recursosNecesarios: prestamo.recursos?.map(r => r.recurso_nombre || '') || [],
+        estado: prestamo.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
+        fechaSolicitud: '', // No disponible en modelo backend
+        comentariosAdmin: ''
+    };
+};
+
 export function useDocentePrestamos() {
+    const { user } = useAuth();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
+
+    // Estado para datos dinámicos de la API
+    const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
+    const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<any[]>([]);
+
+    // Estado para recursos seleccionados (con cantidad)
+    const [recursosSeleccionados, setRecursosSeleccionados] = useState<RecursoPrestamo[]>([]);
 
     const [nuevaSolicitud, setNuevaSolicitud] = useState({
-        solicitante: 'Roberto Sánchez Torres', // Pre-llenado con nombre del docente
-        email: 'docente@unilibre.edu.co',
+        solicitante: user?.nombre || '',
+        email: user?.correo || '',
         telefono: '',
-        espacio: '',
+        espacio_id: 0, // Changed from espacio string to ID
         fecha: '',
         horaInicio: '',
         horaFin: '',
         motivo: '',
-        tipoEvento: '',
-        asistentes: '',
-        recursosNecesarios: [] as string[]
+        tipo_actividad_id: 0, // Changed from tipoEvento string to ID
+        asistentes: ''
     });
 
-    const [prestamos] = useState<Prestamo[]>([
-        {
-            id: '1',
-            solicitante: 'Roberto Sánchez Torres',
-            email: 'docente@unilibre.edu.co',
-            telefono: '+57 300 123 4567',
-            espacio: 'Laboratorio 301',
-            fecha: '2025-11-15',
-            horaInicio: '14:00',
-            horaFin: '16:00',
-            motivo: 'Práctica de laboratorio adicional para estudiantes de Programación Avanzada',
-            tipoEvento: 'Clase Adicional',
-            asistentes: 25,
-            recursosNecesarios: ['Proyector', 'Computadores'],
-            estado: 'aprobado',
-            fechaSolicitud: '2025-11-08 09:30',
-            comentariosAdmin: 'Aprobado. El laboratorio estará disponible con todos los equipos listos.'
-        },
-        {
-            id: '2',
-            solicitante: 'Roberto Sánchez Torres',
-            email: 'docente@unilibre.edu.co',
-            telefono: '+57 300 123 4567',
-            espacio: 'Auditorio Central',
-            fecha: '2025-11-20',
-            horaInicio: '18:00',
-            horaFin: '20:00',
-            motivo: 'Conferencia sobre Inteligencia Artificial y Machine Learning',
-            tipoEvento: 'Conferencia',
-            asistentes: 100,
-            recursosNecesarios: ['Proyector', 'Micrófono', 'Sonido'],
-            estado: 'pendiente',
-            fechaSolicitud: '2025-11-08 10:15'
+    // Fetch initial data (tipos de actividad, recursos, espacios)
+    const fetchInitialData = async () => {
+        try {
+            const [tiposResp, recursosResp, espaciosResp] = await Promise.all([
+                tipoActividadService.listarTiposActividad(),
+                recursoService.listarRecursos(),
+                espacioService.list()
+            ]);
+
+            setTiposActividad(tiposResp.tipos_actividad);
+            setRecursosDisponibles(recursosResp.recursos);
+            setEspaciosDisponibles(espaciosResp.espacios);
+        } catch (err) {
+            console.error('Error fetching initial data:', err);
+            setError('Error al cargar datos iniciales');
         }
-    ]);
+    };
 
-    const espaciosDisponibles = [
-        'Auditorio Central',
-        'Laboratorio 301',
-        'Laboratorio 401',
-        'Sala de Juntas 1',
-        'Sala de Juntas 2',
-        'Aula 101',
-        'Aula 205',
-        'Sala de Conferencias',
-        'Biblioteca - Sala Grupal'
-    ];
+    // Fetch prestamos when component mounts or user changes
+    const fetchPrestamos = async () => {
+        if (!user?.id) return;
 
-    const tiposEvento = [
-        'Clase Adicional',
-        'Tutoría Grupal',
-        'Conferencia',
-        'Taller',
-        'Reunión Académica',
-        'Asesoría de Proyecto',
-        'Examen Especial',
-        'Evento Cultural',
-        'Otro'
-    ];
+        setLoading(true);
+        setError(null);
 
-    const recursosDisponibles = [
-        'Proyector',
-        'Micrófono',
-        'Sonido',
-        'Computadores',
-        'Videoconferencia',
-        'Grabación',
-        'Pizarra Digital',
-        'Aire Acondicionado'
-    ];
+        try {
+            const response = await prestamoService.listarPrestamosPorUsuario(user.id);
+            const mappedPrestamos = response.prestamos.map(mapPrestamoEspacioToPrestamo);
+            setPrestamos(mappedPrestamos);
+        } catch (err) {
+            console.error('Error fetching prestamos:', err);
+            setError('Error al cargar los préstamos');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const crearSolicitud = () => {
-        if (!nuevaSolicitud.espacio || !nuevaSolicitud.fecha || !nuevaSolicitud.horaInicio ||
-            !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo || !nuevaSolicitud.tipoEvento) {
-            // Mostrar notificación: Por favor complete todos los campos obligatorios
+    // Load initial data and prestamos on mount
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
+
+    useEffect(() => {
+        if (tiposActividad.length > 0) {
+            fetchPrestamos();
+        }
+    }, [user?.id, tiposActividad]);
+
+    // Funciones para manejar recursos dinámicamente
+    const agregarRecurso = (recurso_id: number, cantidad: number = 1) => {
+        const recursoExistente = recursosSeleccionados.find(r => r.recurso_id === recurso_id);
+
+        if (recursoExistente) {
+            // Si ya existe, actualizar cantidad
+            setRecursosSeleccionados(prev =>
+                prev.map(r => r.recurso_id === recurso_id ? { ...r, cantidad } : r)
+            );
+        } else {
+            // Si no existe, agregar nuevo
+            const recurso = recursosDisponibles.find(r => r.id === recurso_id);
+            setRecursosSeleccionados(prev => [
+                ...prev,
+                {
+                    recurso_id,
+                    recurso_nombre: recurso?.nombre,
+                    cantidad
+                }
+            ]);
+        }
+    };
+
+    const eliminarRecurso = (recurso_id: number) => {
+        setRecursosSeleccionados(prev => prev.filter(r => r.recurso_id !== recurso_id));
+    };
+
+    const actualizarCantidadRecurso = (recurso_id: number, cantidad: number) => {
+        if (cantidad <= 0) {
+            eliminarRecurso(recurso_id);
+        } else {
+            setRecursosSeleccionados(prev =>
+                prev.map(r => r.recurso_id === recurso_id ? { ...r, cantidad } : r)
+            );
+        }
+    };
+
+    const crearSolicitud = async () => {
+        if (!nuevaSolicitud.espacio_id || !nuevaSolicitud.fecha || !nuevaSolicitud.horaInicio ||
+            !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo || !nuevaSolicitud.tipo_actividad_id) {
+            setError('Por favor complete todos los campos obligatorios');
             return;
         }
 
-        setDialogOpen(false);
-        setNuevaSolicitud({
-            solicitante: 'Roberto Sánchez Torres',
-            email: 'docente@unilibre.edu.co',
-            telefono: '',
-            espacio: '',
-            fecha: '',
-            horaInicio: '',
-            horaFin: '',
-            motivo: '',
-            tipoEvento: '',
-            asistentes: '',
-            recursosNecesarios: []
-        });
-        // Mostrar notificación: Solicitud enviada exitosamente. Será revisada por un administrador.
+        if (!user?.id) {
+            setError('Usuario no autenticado');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            await prestamoService.crearPrestamo({
+                espacio_id: nuevaSolicitud.espacio_id,
+                usuario_id: user.id,
+                administrador_id: null,
+                tipo_actividad_id: nuevaSolicitud.tipo_actividad_id,
+                fecha: nuevaSolicitud.fecha,
+                hora_inicio: `${nuevaSolicitud.horaInicio}:00`, // Add seconds
+                hora_fin: `${nuevaSolicitud.horaFin}:00`,
+                motivo: nuevaSolicitud.motivo,
+                estado: 'Pendiente',
+                recursos: recursosSeleccionados.map(r => ({
+                    recurso_id: r.recurso_id,
+                    cantidad: r.cantidad
+                }))
+            });
+
+            // Reset form
+            setNuevaSolicitud({
+                solicitante: user?.nombre || '',
+                email: user?.correo || '',
+                telefono: '',
+                espacio_id: 0,
+                fecha: '',
+                horaInicio: '',
+                horaFin: '',
+                motivo: '',
+                tipo_actividad_id: 0,
+                asistentes: ''
+            });
+            setRecursosSeleccionados([]);
+
+            setDialogOpen(false);
+
+            // Refresh prestamos list
+            await fetchPrestamos();
+
+            // TODO: Show success notification
+            console.log('Solicitud enviada exitosamente');
+        } catch (err: any) {
+            // Handle availability conflict errors
+            if (err.message?.includes('reservado') || err.message?.includes('disponible') || err.status === 409) {
+                // No console error for validation issues
+                setError(err.message);
+            } else {
+                console.error('Error creating prestamo:', err);
+                setError('Error al crear la solicitud de préstamo');
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredPrestamos = prestamos.filter(p => {
@@ -140,10 +235,17 @@ export function useDocentePrestamos() {
         setNuevaSolicitud,
         prestamos,
         espaciosDisponibles,
-        tiposEvento,
+        tiposActividad,
         recursosDisponibles,
+        recursosSeleccionados,
+        agregarRecurso,
+        eliminarRecurso,
+        actualizarCantidadRecurso,
         crearSolicitud,
         filteredPrestamos,
-        estadisticas
+        estadisticas,
+        loading,
+        error,
+        refetch: fetchPrestamos
     };
 }

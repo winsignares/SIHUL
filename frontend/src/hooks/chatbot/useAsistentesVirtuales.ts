@@ -3,88 +3,82 @@ import {
     BookOpen,
     DoorOpen,
     Trophy,
-    Headphones
+    Headphones,
+    Bot
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
+import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
 
-const asistentes: Asistente[] = [
-    {
-        id: 'biblioteca',
-        nombre: 'Agente Biblioteca',
-        subtitulo: 'Asistente de Biblioteca',
-        descripcion: 'Consultas sobre préstamos de libros, horarios de la biblioteca, reservas de salas de estudio y recursos bibliográficos.',
-        icon: BookOpen,
-        color: 'blue',
-        bgGradient: 'from-blue-500 via-blue-600 to-indigo-600',
-        ultimoMensaje: '¿En qué puedo ayudarte hoy?',
+// Mapeo de nombres de iconos a componentes de icono
+const iconMap: Record<string, any> = {
+    'BookOpen': BookOpen,
+    'DoorOpen': DoorOpen,
+    'Trophy': Trophy,
+    'Headphones': Headphones,
+    'Bot': Bot
+};
+
+// Función para convertir agente del API a formato UI
+const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
+    return {
+        id: agenteAPI.id.toString(),
+        nombre: agenteAPI.nombre,
+        subtitulo: agenteAPI.subtitulo || '',
+        descripcion: agenteAPI.descripcion,
+        icon: iconMap[agenteAPI.icono] || Bot,
+        color: agenteAPI.color,
+        bgGradient: agenteAPI.bgGradient,
+        ultimoMensaje: '¿En qué puedo ayudarte?',
         timestamp: 'Ahora',
         online: true,
-        mensajeBienvenida: '¡Hola! 👋 Soy tu asistente de biblioteca.\n\nPuedo ayudarte con:\n📚 Préstamos de libros\n⏰ Horarios de la biblioteca\n📖 Reservas de salas de estudio\n🔄 Renovaciones\n\n¿En qué puedo asistirte hoy?',
-        prompt: 'biblioteca',
-        preguntasRapidas: ['¿Qué horarios tiene la biblioteca?', '¿Cómo puedo reservar una sala de estudio?', '¿Cómo puedo renovar un libro?']
-    },
-    {
-        id: 'salones',
-        nombre: 'Agente Salones',
-        subtitulo: 'Gestión de Espacios',
-        descripcion: 'Información sobre disponibilidad de salones, horarios académicos, préstamos de espacios y equipamiento de aulas.',
-        icon: DoorOpen,
-        color: 'red',
-        bgGradient: 'from-red-500 via-red-600 to-rose-600',
-        ultimoMensaje: 'Disponible para consultas',
-        timestamp: 'Ahora',
-        online: true,
-        mensajeBienvenida: '¡Hola! 🏛️ Soy tu asistente de salones.\n\nPuedo ayudarte con:\n🚪 Disponibilidad de espacios\n📅 Horarios académicos\n📝 Préstamos temporales\n🎯 Equipamiento y recursos\n\n¿Qué necesitas saber?',
-        prompt: 'salones',
-        preguntasRapidas: ['¿Qué salones están disponibles?', '¿Cómo puedo reservar un salón?', '¿Qué recursos tienen los salones?']
-    },
-    {
-        id: 'deporte',
-        nombre: 'Agente Deporte',
-        subtitulo: 'Centro Deportivo',
-        descripcion: 'Reservas de canchas deportivas, inscripción a actividades deportivas, horarios de gimnasio y eventos deportivos.',
-        icon: Trophy,
-        color: 'green',
-        bgGradient: 'from-green-500 via-emerald-600 to-teal-600',
-        ultimoMensaje: 'Listo para ayudarte',
-        timestamp: 'Ahora',
-        online: true,
-        mensajeBienvenida: '¡Hola! ⚽ Soy tu asistente de deportes.\n\nPuedo ayudarte con:\n🏀 Reservas de canchas\n💪 Inscripciones a actividades\n🏋️ Horarios de gimnasio\n🏆 Eventos deportivos\n\n¿Cómo puedo ayudarte?',
-        prompt: 'deportes',
-        preguntasRapidas: ['¿Cómo reservo una cancha deportiva?', '¿Qué actividades deportivas hay?', '¿Qué horarios tiene el gimnasio?']
-    },
-    {
-        id: 'soporte',
-        nombre: 'Agente Soporte',
-        subtitulo: 'Soporte Técnico',
-        descripcion: 'Ayuda con problemas técnicos, acceso a plataformas universitarias, credenciales y soporte general del sistema.',
-        icon: Headphones,
-        color: 'yellow',
-        bgGradient: 'from-yellow-500 via-orange-500 to-amber-600',
-        ultimoMensaje: 'Resolviendo problemas',
-        timestamp: 'Ahora',
-        online: true,
-        mensajeBienvenida: '¡Hola! 🔧 Soy tu asistente de soporte técnico.\n\nPuedo ayudarte con:\n🔐 Problemas de acceso\n🔑 Credenciales\n💻 Plataformas universitarias\n📧 Correo institucional\n📡 WiFi y conectividad\n\n¿Qué problema tienes?',
-        prompt: 'soporte',
-        preguntasRapidas: ['¿Cómo recupero mi contraseña?', '¿Cómo accedo a una plataforma?', '¿Cómo me conecto al WiFi?']
-    }
-];
+        mensajeBienvenida: agenteAPI.mensajeBienvenida,
+        prompt: agenteAPI.id.toString(),
+        preguntasRapidas: agenteAPI.preguntasRapidas
+    };
+};
 
 export function useAsistentesVirtuales() {
-    const [asistenteActivo, setAsistenteActivo] = useState<Asistente | null>(asistentes[0]);
-    const [mensajes, setMensajes] = useState<{ [key: string]: Mensaje[] }>({
-        'biblioteca': [{
-            id: '1',
-            tipo: 'bot',
-            texto: asistentes[0].mensajeBienvenida,
-            timestamp: new Date(),
-            leido: true
-        }]
-    });
+    const [asistentes, setAsistentes] = useState<Asistente[]>([]);
+    const [asistenteActivo, setAsistenteActivo] = useState<Asistente | null>(null);
+    const [mensajes, setMensajes] = useState<{ [key: string]: Mensaje[] }>({});
     const [inputMensaje, setInputMensaje] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Cargar agentes desde el backend
+    useEffect(() => {
+        const cargarAgentes = async () => {
+            try {
+                setLoading(true);
+                const response = await chatbotAPI.listarAgentes();
+                const agentesUI = response.agentes.map(convertirAgenteAPI);
+                setAsistentes(agentesUI);
+
+                // Seleccionar el primer agente por defecto
+                if (agentesUI.length > 0) {
+                    const primerAgente = agentesUI[0];
+                    setAsistenteActivo(primerAgente);
+                    setMensajes({
+                        [primerAgente.id]: [{
+                            id: '1',
+                            tipo: 'bot',
+                            texto: primerAgente.mensajeBienvenida,
+                            timestamp: new Date(),
+                            leido: true
+                        }]
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cargar agentes:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        cargarAgentes();
+    }, []);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -111,79 +105,6 @@ export function useAsistentesVirtuales() {
         }
     };
 
-    const generarRespuesta = (pregunta: string, tipo: string): string => {
-        const preguntaLower = pregunta.toLowerCase();
-
-        if (tipo === 'biblioteca') {
-            if (preguntaLower.includes('horario') || preguntaLower.includes('hora')) {
-                return '📅 La biblioteca está abierta:\n\n🕐 Lunes a Viernes: 7:00 AM - 9:00 PM\n🕐 Sábados: 8:00 AM - 2:00 PM\n🚫 Domingos: Cerrado\n\n¿Necesitas algo más?';
-            }
-            if (preguntaLower.includes('préstamo') || preguntaLower.includes('prestamo') || preguntaLower.includes('libro')) {
-                return '📚 Para realizar préstamos:\n\n✅ Necesitas tu carnet estudiantil vigente\n✅ Hasta 3 libros por 15 días\n✅ Renovaciones en línea o en mostrador\n\n¿Te gustaría saber cómo renovar?';
-            }
-            if (preguntaLower.includes('sala') || preguntaLower.includes('estudio')) {
-                return '🏫 Reserva de salas de estudio:\n\n⏰ Con 24 horas de anticipación\n📱 A través del sistema UNISPACE\n⏱️ Duración máxima: 2 horas\n\n¿Necesitas ayuda con la reserva?';
-            }
-            if (preguntaLower.includes('renovar') || preguntaLower.includes('renovación')) {
-                return '🔄 Para renovar tus libros:\n\n1️⃣ Ingresa a "Mi cuenta" en el portal\n2️⃣ Selecciona los libros a renovar\n3️⃣ O acércate al mostrador\n\n¿Tienes alguna duda?';
-            }
-            return '📖 Puedo ayudarte con:\n\n📚 Préstamos de libros\n⏰ Horarios\n🏫 Salas de estudio\n🔄 Renovaciones\n\n¿Qué necesitas saber específicamente?';
-        }
-
-        if (tipo === 'salones') {
-            if (preguntaLower.includes('disponible') || preguntaLower.includes('disponibilidad')) {
-                return '🏛️ Para consultar disponibilidad:\n\n📍 Ve al módulo "Centro de Horarios"\n📊 Encontrarás ocupamiento semanal actualizado\n🔍 Disponibilidad en tiempo real\n\n¿Necesitas reservar un salón?';
-            }
-            if (preguntaLower.includes('reservar') || preguntaLower.includes('préstamo')) {
-                return '📝 Para solicitar préstamo de salón:\n\n1️⃣ Ve a "Préstamos de Espacios"\n2️⃣ Completa el formulario\n3️⃣ Indica fecha, hora y motivo\n⏱️ Aprobación: 24-48 horas\n\n¿Qué tipo de evento planeas?';
-            }
-            if (preguntaLower.includes('capacidad')) {
-                return '👥 Capacidades de salones:\n\n📏 Desde 20 hasta 100 personas\n📊 Ver detalles en "Espacios Físicos"\n🎯 Diferentes configuraciones\n\n¿Cuántas personas esperan?';
-            }
-            if (preguntaLower.includes('equipamiento') || preguntaLower.includes('recursos')) {
-                return '🎯 Recursos disponibles:\n\n📽️ Proyectores\n💻 Computadores\n🔊 Sistemas de audio\n📊 Pizarras digitales\n❄️ Aire acondicionado\n\nVerifica estado en "Estado de Recursos"';
-            }
-            return '🏛️ Puedo ayudarte con:\n\n✅ Disponibilidad de salones\n📝 Préstamos temporales\n🎯 Equipamiento\n👥 Capacidades\n\n¿Sobre qué deseas información?';
-        }
-
-        if (tipo === 'deportes') {
-            if (preguntaLower.includes('cancha') || preguntaLower.includes('reserva')) {
-                return '⚽ Reserva de canchas:\n\n🏀 Fútbol, Baloncesto, Voleibol, Tenis\n📅 Hasta 7 días de anticipación\n🔐 Login con @unilibre.edu.co\n\n¿Qué deporte practicas?';
-            }
-            if (preguntaLower.includes('gimnasio') || preguntaLower.includes('gym')) {
-                return '🏋️ Gimnasio Universitario:\n\n⏰ Lunes a Viernes: 6:00 AM - 8:00 PM\n💳 Inscripción gratuita para estudiantes\n📝 Programa de actividad física\n\n¿Te gustaría inscribirte?';
-            }
-            if (preguntaLower.includes('inscri') || preguntaLower.includes('actividad')) {
-                return '💪 Actividades deportivas:\n\n🎯 Inscripciones al inicio del semestre\n⚽ Fútbol, Baloncesto, Natación\n🧘 Yoga, Entrenamiento funcional\n✅ GRATIS para estudiantes\n\n¿Cuál te interesa?';
-            }
-            if (preguntaLower.includes('torneo') || preguntaLower.includes('evento')) {
-                return '🏆 Torneos internos:\n\n📅 Cada semestre\n👥 Inscripción de equipos: primeras 3 semanas\n📋 Calendario en cartelera deportiva\n\n¿Tienes equipo formado?';
-            }
-            return '⚽ Puedo ayudarte con:\n\n🏀 Reservas de canchas\n💪 Actividades deportivas\n🏋️ Horarios de gimnasio\n🏆 Torneos y eventos\n\n¿Qué necesitas?';
-        }
-
-        if (tipo === 'soporte') {
-            if (preguntaLower.includes('contraseña') || preguntaLower.includes('password') || preguntaLower.includes('clave')) {
-                return '🔐 Recuperar contraseña:\n\n1️⃣ Ve a la página de login\n2️⃣ Click en "¿Olvidaste tu contraseña?"\n3️⃣ Recibirás email a @unilibre.edu.co\n4️⃣ Sigue las instrucciones\n\n¿Sigues teniendo problemas?';
-            }
-            if (preguntaLower.includes('acceso') || preguntaLower.includes('ingresar') || preguntaLower.includes('login')) {
-                return '🔑 Problemas de acceso:\n\n✅ Usa tu email completo: ejemplo@unilibre.edu.co\n✅ Verifica mayúsculas/minúsculas\n✅ Si persiste: ext. 1234\n\n¿Cuál es el error específico?';
-            }
-            if (preguntaLower.includes('plataforma') || preguntaLower.includes('sistema')) {
-                return '💻 Plataformas disponibles:\n\n🎯 UNISPACE (gestión académica)\n👤 Portal Estudiante\n📚 Biblioteca Virtual\n📖 Moodle (aula virtual)\n\n🔐 Mismas credenciales para todas\n\n¿Cuál necesitas usar?';
-            }
-            if (preguntaLower.includes('correo') || preguntaLower.includes('email')) {
-                return '📧 Correo institucional:\n\n✅ Formato: nombre.apellido@unilibre.edu.co\n✅ Asignado en matrícula\n🌐 Acceso: mail.unilibre.edu.co\n\n¿Necesitas ayuda para acceder?';
-            }
-            if (preguntaLower.includes('wifi') || preguntaLower.includes('internet')) {
-                return '📡 WiFi Institucional:\n\n📶 Red: "UNILIBRE-Estudiantes"\n🔐 Usuario y contraseña institucional\n🔄 Si hay problemas: reinicia dispositivo\n🏢 Soporte: Edificio A, 2do piso\n\n¿Sigue sin conectar?';
-            }
-            return '🔧 Puedo ayudarte con:\n\n🔐 Acceso y contraseñas\n💻 Plataformas\n📧 Correo institucional\n📡 WiFi\n\n¿Cuál es tu problema?';
-        }
-
-        return '🤔 Entiendo tu consulta. ¿Podrías ser más específico para ayudarte mejor?';
-    };
-
     const enviarMensaje = async () => {
         if (!inputMensaje.trim() || !asistenteActivo) return;
 
@@ -200,16 +121,21 @@ export function useAsistentesVirtuales() {
             [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), nuevoMensajeUser]
         }));
 
+        const preguntaEnviada = inputMensaje;
         setInputMensaje('');
         setIsTyping(true);
 
-        setTimeout(() => {
-            const respuesta = generarRespuesta(inputMensaje, asistenteActivo.prompt);
+        try {
+            // Enviar pregunta al backend (que llama al RAG)
+            const response = await chatbotAPI.enviarPregunta({
+                agente_id: Number(asistenteActivo.id),
+                pregunta: preguntaEnviada
+            });
 
             const nuevoMensajeBot: Mensaje = {
                 id: (Date.now() + 1).toString(),
                 tipo: 'bot',
-                texto: respuesta,
+                texto: response.respuesta,
                 timestamp: new Date(),
                 leido: false
             };
@@ -219,8 +145,7 @@ export function useAsistentesVirtuales() {
                 [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), nuevoMensajeBot]
             }));
 
-            setIsTyping(false);
-
+            // Marcar como leído después de un momento
             setTimeout(() => {
                 setMensajes(prev => ({
                     ...prev,
@@ -229,7 +154,25 @@ export function useAsistentesVirtuales() {
                     )
                 }));
             }, 1000);
-        }, 1500 + Math.random() * 1000);
+
+        } catch (error) {
+            console.error('Error al enviar pregunta:', error);
+
+            const mensajeError: Mensaje = {
+                id: (Date.now() + 1).toString(),
+                tipo: 'bot',
+                texto: 'Lo siento, hubo un error al procesar tu pregunta. Por favor, int intenta nuevamente.',
+                timestamp: new Date(),
+                leido: true
+            };
+
+            setMensajes(prev => ({
+                ...prev,
+                [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeError]
+            }));
+        } finally {
+            setIsTyping(false);
+        }
     };
 
     const enviarPreguntaRapida = (pregunta: string) => {
@@ -245,7 +188,8 @@ export function useAsistentesVirtuales() {
     };
 
     const mensajesActuales = asistenteActivo ? (mensajes[asistenteActivo.id] || []) : [];
-    const mostrarPreguntasRapidas = mensajesActuales.length === 1;
+    // Mostrar preguntas sugeridas siempre, excepto cuando el bot está escribiendo
+    const mostrarPreguntasRapidas = !isTyping;
 
     const filteredAsistentes = asistentes.filter(a =>
         a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -268,6 +212,7 @@ export function useAsistentesVirtuales() {
         handleKeyPress,
         mensajesActuales,
         mostrarPreguntasRapidas,
-        filteredAsistentes
+        filteredAsistentes,
+        loading
     };
 }

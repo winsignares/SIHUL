@@ -33,12 +33,15 @@ import {
 } from '../../share/dialog';
 import { motion } from 'motion/react';
 import { useAjustes } from '../../hooks/users/useAjustes';
+import { Toaster } from 'sonner';
 
 export default function Ajustes() {
   const {
     theme,
+    usuario,
     isEditingProfile,
     isEditingSystem,
+    isSaving,
     showChangePasswordModal,
     setShowChangePasswordModal,
     showSaveNotificationsModal,
@@ -57,7 +60,7 @@ export default function Ajustes() {
     sistema,
     setSistema,
     canEditEmail,
-    canEditCargo,
+    canEditRol,
     handleEditProfile,
     handleCancelEditProfile,
     guardarPerfil,
@@ -124,10 +127,11 @@ export default function Ajustes() {
                     </Button>
                     <Button
                       onClick={guardarPerfil}
+                      disabled={isSaving}
                       className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      Guardar
+                      {isSaving ? 'Guardando...' : 'Guardar'}
                     </Button>
                   </div>
                 )}
@@ -166,41 +170,57 @@ export default function Ajustes() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cargo">
-                    Cargo
-                    {!canEditCargo && <span className="text-slate-500 ml-2">(Solo lectura)</span>}
-                  </Label>
+                  <Label htmlFor="correo">Correo Electrónico</Label>
                   <Input
-                    id="cargo"
-                    value={perfil.cargo}
-                    onChange={(e) => setPerfil({ ...perfil, cargo: e.target.value })}
-                    disabled={!isEditingProfile || !canEditCargo}
-                    className={(!isEditingProfile || !canEditCargo) ? 'bg-slate-50 cursor-not-allowed' : ''}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    Correo Electrónico
-                    {!canEditEmail && <span className="text-slate-500 ml-2">(Solo lectura)</span>}
-                  </Label>
-                  <Input
-                    id="email"
+                    id="correo"
                     type="email"
-                    value={perfil.email}
-                    onChange={(e) => setPerfil({ ...perfil, email: e.target.value })}
+                    value={perfil.correo}
+                    onChange={(e) => setPerfil({ ...perfil, correo: e.target.value })}
                     disabled={!isEditingProfile || !canEditEmail}
                     className={(!isEditingProfile || !canEditEmail) ? 'bg-slate-50 cursor-not-allowed' : ''}
                   />
+                  {!canEditEmail && (
+                    <p className="text-xs text-slate-500">Solo administradores pueden editar el correo</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="telefono">Teléfono</Label>
+                  <Label htmlFor="rol">Rol</Label>
                   <Input
-                    id="telefono"
-                    value={perfil.telefono}
-                    onChange={(e) => setPerfil({ ...perfil, telefono: e.target.value })}
-                    disabled={!isEditingProfile}
-                    className={!isEditingProfile ? 'bg-slate-50 cursor-not-allowed' : ''}
+                    id="rol"
+                    value={usuario?.rol?.nombre || 'Sin rol asignado'}
+                    disabled
+                    className="bg-slate-50 cursor-not-allowed"
                   />
+                  <p className="text-xs text-slate-500">El rol no se puede editar desde aquí</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="facultad">Facultad</Label>
+                  <Input
+                    id="facultad"
+                    value={usuario?.facultad?.nombre || 'Sin facultad asignada'}
+                    disabled
+                    className="bg-slate-50 cursor-not-allowed"
+                  />
+                  <p className="text-xs text-slate-500">La facultad no se puede editar desde aquí</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="activo">Estado de la Cuenta</Label>
+                  <Select
+                    value={perfil.activo ? 'true' : 'false'}
+                    onValueChange={(value) => setPerfil({ ...perfil, activo: value === 'true' })}
+                    disabled={!isEditingProfile || !canEditRol}
+                  >
+                    <SelectTrigger className={(!isEditingProfile || !canEditRol) ? 'bg-slate-50 cursor-not-allowed' : ''}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">✅ Activo</SelectItem>
+                      <SelectItem value="false">❌ Inactivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!canEditRol && (
+                    <p className="text-xs text-slate-500">Solo administradores pueden cambiar el estado</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -641,9 +661,10 @@ export default function Ajustes() {
             </Button>
             <Button
               onClick={handleChangePassword}
+              disabled={isSaving}
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
-              Actualizar Contraseña
+              {isSaving ? 'Actualizando...' : 'Actualizar Contraseña'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -702,6 +723,8 @@ export default function Ajustes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Toaster position="top-right" richColors />
     </div>
   );
 }

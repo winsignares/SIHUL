@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
@@ -7,8 +8,10 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Calendar, Clock, MapPin, FileText, Search, Plus } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { Toaster } from '../../share/sonner';
+import { toast } from 'sonner';
+import { Alert, AlertDescription } from '../../share/alert';
 import { useDocentePrestamos } from '../../hooks/prestamos/useDocentePrestamos';
 
 export default function DocentePrestamos() {
@@ -22,12 +25,24 @@ export default function DocentePrestamos() {
     nuevaSolicitud,
     setNuevaSolicitud,
     espaciosDisponibles,
-    tiposEvento,
+    tiposActividad,
     recursosDisponibles,
+    recursosSeleccionados,
+    agregarRecurso,
+    eliminarRecurso,
+    actualizarCantidadRecurso,
     crearSolicitud,
     filteredPrestamos,
-    estadisticas
+    estadisticas,
+    error
   } = useDocentePrestamos();
+
+  // Mostrar error con toast cuando cambie
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -62,6 +77,14 @@ export default function DocentePrestamos() {
               <DialogTitle>Nueva Solicitud de Préstamo</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="solicitante">Nombre del Solicitante</Label>
@@ -99,26 +122,32 @@ export default function DocentePrestamos() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="espacio">Espacio Solicitado *</Label>
-                  <Select value={nuevaSolicitud.espacio} onValueChange={(v) => setNuevaSolicitud({ ...nuevaSolicitud, espacio: v })}>
+                  <Select
+                    value={nuevaSolicitud.espacio_id ? nuevaSolicitud.espacio_id.toString() : ''}
+                    onValueChange={(v) => setNuevaSolicitud({ ...nuevaSolicitud, espacio_id: parseInt(v) })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar espacio" />
                     </SelectTrigger>
                     <SelectContent>
                       {espaciosDisponibles.map(espacio => (
-                        <SelectItem key={espacio} value={espacio}>{espacio}</SelectItem>
+                        <SelectItem key={espacio.id} value={espacio.id.toString()}>{espacio.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tipoEvento">Tipo de Actividad *</Label>
-                  <Select value={nuevaSolicitud.tipoEvento} onValueChange={(v) => setNuevaSolicitud({ ...nuevaSolicitud, tipoEvento: v })}>
+                  <Select
+                    value={nuevaSolicitud.tipo_actividad_id ? nuevaSolicitud.tipo_actividad_id.toString() : ''}
+                    onValueChange={(v) => setNuevaSolicitud({ ...nuevaSolicitud, tipo_actividad_id: parseInt(v) })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {tiposEvento.map(tipo => (
-                        <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      {tiposActividad.map(tipo => (
+                        <SelectItem key={tipo.id} value={tipo.id.toString()}>{tipo.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -177,33 +206,46 @@ export default function DocentePrestamos() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Recursos Necesarios</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {recursosDisponibles.map(recurso => (
-                    <label key={recurso} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={nuevaSolicitud.recursosNecesarios.includes(recurso)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNuevaSolicitud({
-                              ...nuevaSolicitud,
-                              recursosNecesarios: [...nuevaSolicitud.recursosNecesarios, recurso]
-                            });
-                          } else {
-                            setNuevaSolicitud({
-                              ...nuevaSolicitud,
-                              recursosNecesarios: nuevaSolicitud.recursosNecesarios.filter(r => r !== recurso)
-                            });
-                          }
-                        }}
-                        className="rounded border-slate-300"
-                      />
-                      <span className="text-slate-700 dark:text-slate-300">{recurso}</span>
-                    </label>
-                  ))}
+              <div className="space-y-4 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-medium">Recursos Necesarios</Label>
+                  <Select onValueChange={(v) => agregarRecurso(parseInt(v))}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Agregar recurso..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recursosDisponibles.map((recurso) => (
+                        <SelectItem key={recurso.id} value={recurso.id!.toString()}>
+                          {recurso.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {recursosSeleccionados.length > 0 ? (
+                  <div className="space-y-3">
+                    {recursosSeleccionados.map((item) => (
+                      <div key={item.recurso_id} className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {item.recurso_nombre}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => eliminarRecurso(item.recurso_id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-slate-500 dark:text-slate-400 text-sm italic">
+                    No has seleccionado ningún recurso
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4">

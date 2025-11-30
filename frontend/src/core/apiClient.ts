@@ -57,8 +57,11 @@ class ApiClient {
 
       const data = await response.json();
       return data as T;
-    } catch (error) {
-      console.error('API Request Error:', error);
+    } catch (error: any) {
+      // Don't log 409 Conflict errors as they are expected validation errors
+      if (error.status !== 409) {
+        console.error('API Request Error:', error);
+      }
       throw error;
     }
   }
