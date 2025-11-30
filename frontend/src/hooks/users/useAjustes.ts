@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { useUser } from '../../context/UserContext';
-import { AuthService } from '../../services/auth';
+import { authService, userService, type Usuario, type ChangePasswordPayload } from '../../services/users/authService';
+import { settingsService, type NotificationSettings, type SystemSettings } from '../../services/users/settingsService';
+import { toast } from 'sonner';
 
 export function useAjustes() {
     const { theme, toggleTheme } = useTheme();
-    const { usuario } = useUser();
+    
+    // Obtener usuario del localStorage
+    const [usuario, setUsuario] = useState<Usuario | null>(() => {
+        const storedUser = localStorage.getItem('auth_user');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
 
     // Estados de edición
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isEditingSystem, setIsEditingSystem] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Estados de modales
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -30,36 +37,40 @@ export function useAjustes() {
     const [passwordError, setPasswordError] = useState('');
 
     const [perfil, setPerfil] = useState({
-        nombre: usuario?.nombre || 'Administrador Principal',
-        email: usuario?.email || 'admin@unilibre.edu.co',
-        telefono: '+57 300 123 4567',
-        cargo: 'Administrador de Planeación'
+        nombre: usuario?.nombre || '',
+        correo: usuario?.correo || '',
+        rol_id: usuario?.rol_id || usuario?.rol?.id || null,
+        facultad_id: usuario?.facultad_id || usuario?.facultad?.id || null,
+        activo: usuario?.activo ?? true
     });
 
     const [perfilOriginal, setPerfilOriginal] = useState({ ...perfil });
 
-    const [notificaciones, setNotificaciones] = useState({
-        emailNuevaSolicitud: true,
-        emailConflicto: true,
-        emailMensaje: false,
-        pushNuevaSolicitud: true,
-        pushConflicto: true,
-        pushMensaje: true,
-        sonido: true
-    });
+    // Cargar perfil del usuario al montar
+    useEffect(() => {
+        if (usuario) {
+            const newPerfil = {
+                nombre: usuario.nombre,
+                correo: usuario.correo,
+                // Extraer IDs de los objetos si existen, o usar los IDs directos
+                rol_id: usuario.rol_id || usuario.rol?.id || null,
+                facultad_id: usuario.facultad_id || usuario.facultad?.id || null,
+                activo: usuario.activo
+            };
+            setPerfil(newPerfil);
+            setPerfilOriginal(newPerfil);
+        }
+    }, [usuario]);
 
-    const [sistema, setSistema] = useState({
-        idioma: 'es',
-        zonaHoraria: 'America/Bogota',
-        formatoFecha: 'DD/MM/YYYY',
-        formatoHora: '24h'
-    });
+    const [notificaciones, setNotificaciones] = useState<NotificationSettings>(
+        settingsService.getNotificationSettings()
+    );
 
-    const [sistemaOriginal, setSistemaOriginal] = useState({ ...sistema });
+    const [sistema, setSistema] = useState<SystemSettings>(
+        settingsService.getSystemSettings()
+    );
 
-    // Determinar si el usuario puede editar ciertos campos según su rol
-    const canEditEmail = usuario?.rol === 'admin';
-    const canEditCargo = usuario?.rol === 'admin';
+    const [sistemaOriginal, setSistemaOriginal] = useState<SystemSettings>({ ...sistema });
 
     const handleEditProfile = () => {
         setIsEditingProfile(true);
@@ -70,13 +81,46 @@ export function useAjustes() {
         setIsEditingProfile(false);
     };
 
-    const guardarPerfil = () => {
-        setPerfilOriginal({ ...perfil });
-        setIsEditingProfile(false);
-        // Mostrar notificación: ✅ Perfil actualizado correctamente
+    const guardarPerfil = async () => {
+        if (!usuario?.id) {
+            toast.error('No se pudo identificar el usuario');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await userService.actualizarUsuario({
+                id: usuario.id,
+                nombre: perfil.nombre,
+                correo: perfil.correo,
+                rol_id: perfil.rol_id,
+                facultad_id: perfil.facultad_id,
+                activo: perfil.activo
+            });
+
+            // Actualizar localStorage manteniendo la estructura de objetos completos
+            const updatedUser = { 
+                ...usuario, 
+                nombre: perfil.nombre,
+                correo: perfil.correo,
+                activo: perfil.activo
+                // Mantenemos usuario.rol y usuario.facultad como objetos completos
+            };
+            localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+            setUsuario(updatedUser);
+            
+            setPerfilOriginal({ ...perfil });
+            setIsEditingProfile(false);
+            toast.success('✅ Perfil actualizado correctamente');
+        } catch (error: any) {
+            console.error('Error al actualizar perfil:', error);
+            toast.error(error.message || 'Error al actualizar el perfil');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleChangePassword = () => {
+    const handleChangePassword = async () => {
         setPasswordError('');
 
         // Validaciones
@@ -95,39 +139,49 @@ export function useAjustes() {
             return;
         }
 
-        if (!usuario) {
+        if (!usuario?.correo) {
             setPasswordError('Usuario no encontrado');
             return;
         }
 
-        // Intentar cambiar contraseña
-        const result = AuthService.changePassword(
-            usuario.id,
-            passwordData.currentPassword,
-            passwordData.newPassword
-        );
+        setIsSaving(true);
+        try {
+            const payload: ChangePasswordPayload = {
+                correo: usuario.correo,
+                old_contrasena: passwordData.currentPassword,
+                new_contrasena: passwordData.newPassword
+            };
 
-        if (result.success) {
-            // Mostrar notificación: ✅ Contraseña actualizada correctamente
+            await authService.changePassword(payload);
+            
+            toast.success('✅ Contraseña actualizada correctamente');
             setShowChangePasswordModal(false);
             setPasswordData({
                 currentPassword: '',
                 newPassword: '',
                 confirmPassword: ''
             });
-        } else {
-            setPasswordError(result.error || 'Error al cambiar contraseña');
+        } catch (error: any) {
+            console.error('Error al cambiar contraseña:', error);
+            setPasswordError(error.message || 'Error al cambiar la contraseña');
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const handleNotificationChange = (key: string, value: boolean) => {
         setNotificaciones(prev => ({ ...prev, [key]: value }));
-        // Mostrar notificación: [value ? 'Activado' : 'Desactivado']
+        toast.info(value ? '🔔 Notificación activada' : '🔕 Notificación desactivada');
     };
 
     const confirmarGuardarNotificaciones = () => {
-        setShowSaveNotificationsModal(false);
-        // Mostrar notificación: ✅ Preferencias de notificaciones guardadas
+        try {
+            settingsService.saveNotificationSettings(notificaciones);
+            setShowSaveNotificationsModal(false);
+            toast.success('✅ Preferencias de notificaciones guardadas');
+        } catch (error) {
+            toast.error('Error al guardar preferencias de notificaciones');
+        }
     };
 
     const handleEditSystem = () => {
@@ -140,24 +194,45 @@ export function useAjustes() {
     };
 
     const confirmarGuardarSistema = () => {
-        setSistemaOriginal({ ...sistema });
-        setIsEditingSystem(false);
-        setShowSaveSystemModal(false);
-        // Mostrar notificación: ✅ Configuración del sistema actualizada
+        try {
+            settingsService.saveSystemSettings(sistema);
+            setSistemaOriginal({ ...sistema });
+            setIsEditingSystem(false);
+            setShowSaveSystemModal(false);
+            toast.success('✅ Configuración del sistema actualizada');
+        } catch (error) {
+            toast.error('Error al guardar configuración del sistema');
+        }
     };
 
     const handleThemeChange = (newTheme: 'light' | 'dark') => {
         if (theme !== newTheme) {
             toggleTheme();
-            // Mostrar notificación: Tema cambiado a modo [newTheme === 'light' ? 'claro' : 'oscuro']
+            toast.success(`🎨 Tema cambiado a modo ${newTheme === 'light' ? 'claro' : 'oscuro'}`);
         }
     };
+
+    // Cargar preferencias guardadas al montar
+    useEffect(() => {
+        const savedNotificaciones = settingsService.getNotificationSettings();
+        setNotificaciones(savedNotificaciones);
+
+        const savedSistema = settingsService.getSystemSettings();
+        setSistema(savedSistema);
+        setSistemaOriginal(savedSistema);
+    }, []);
+
+    // Determinar permisos según rol
+    // Nota: El rol 'admin' es el nombre real en la BD según seed_roles.py
+    const canEditEmail = usuario?.rol?.nombre === 'admin';
+    const canEditRol = usuario?.rol?.nombre === 'admin';
 
     return {
         theme,
         usuario,
         isEditingProfile,
         isEditingSystem,
+        isSaving,
         showChangePasswordModal,
         setShowChangePasswordModal,
         showSaveNotificationsModal,
@@ -176,7 +251,7 @@ export function useAjustes() {
         sistema,
         setSistema,
         canEditEmail,
-        canEditCargo,
+        canEditRol,
         handleEditProfile,
         handleCancelEditProfile,
         guardarPerfil,
