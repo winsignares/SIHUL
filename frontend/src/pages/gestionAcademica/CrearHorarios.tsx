@@ -44,6 +44,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     asignaturaSeleccionada, setAsignaturaSeleccionada,
     docenteSeleccionado, setDocenteSeleccionado,
     espacioSeleccionado, setEspacioSeleccionado,
+    cantidadEstudiantes, setCantidadEstudiantes,
     diasSeleccionados,
     horasPorDia,
     handleAsignarHorario,
@@ -58,6 +59,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     gruposSinHorarioFiltrados,
     programasFiltrados,
     getAsignaturasByProgramaYSemestre,
+    getEspaciosDisponibles,
     diasSemana,
     semestres,
     horas,
@@ -69,6 +71,9 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
   const asignaturasFiltradas = (grupoSeleccionado?.programa_id && grupoSeleccionado?.semestre)
     ? getAsignaturasByProgramaYSemestre(grupoSeleccionado.programa_id, grupoSeleccionado.semestre)
     : [];
+
+  // Obtener espacios disponibles según la cantidad de estudiantes
+  const espaciosDisponibles = getEspaciosDisponibles(cantidadEstudiantes as number);
 
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {
@@ -484,6 +489,24 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
 
               <div className="col-span-2">
                 <Label>
+                  Cantidad de Estudiantes <span className="text-red-600">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="Ejemplo: 30"
+                  value={cantidadEstudiantes}
+                  onChange={(e) => setCantidadEstudiantes(e.target.value ? parseInt(e.target.value) : '')}
+                />
+                {cantidadEstudiantes && cantidadEstudiantes > 0 && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Se mostrarán solo espacios con capacidad ≥ {cantidadEstudiantes} estudiantes
+                  </p>
+                )}
+              </div>
+
+              <div className="col-span-2">
+                <Label>
                   Docente <span className="text-red-600">*</span>
                 </Label>
                 <Select 
@@ -517,9 +540,13 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                     <SelectValue placeholder="Seleccionar espacio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {espacios.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-slate-500">No hay espacios disponibles</div>
-                    ) : espacios.map(e => (
+                    {espaciosDisponibles.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-slate-500">
+                        {cantidadEstudiantes && cantidadEstudiantes > 0
+                          ? `No hay espacios con capacidad para ${cantidadEstudiantes} estudiantes`
+                          : 'No hay espacios disponibles'}
+                      </div>
+                    ) : espaciosDisponibles.map(e => (
                       <SelectItem key={e.id} value={e.id?.toString() || ''}>
                         {e.nombre} - Capacidad: {e.capacidad}
                       </SelectItem>
