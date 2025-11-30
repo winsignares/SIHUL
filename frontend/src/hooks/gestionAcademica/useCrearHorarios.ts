@@ -252,6 +252,9 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             }
         }
 
+        // Normalizar horas para comparación (quitar segundos si existen)
+        const normalizeTime = (time: string) => time.substring(0, 5); // "07:00:00" -> "07:00"
+
         // Validar conflictos de docente (si se seleccionó uno)
         if (docenteSeleccionado) {
             for (const dia of diasSeleccionados) {
@@ -277,9 +280,31 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                     const conflictoReal = horariosDocenteSuperpuestos.find(h =>
                         // Es un conflicto si NO coinciden asignatura, hora inicio o hora fin
                         h.asignatura_id !== asignaturaSeleccionada ||
-                        h.hora_inicio !== horas.inicio ||
-                        h.hora_fin !== horas.fin
+                        normalizeTime(h.hora_inicio) !== normalizeTime(horas.inicio) ||
+                        normalizeTime(h.hora_fin) !== normalizeTime(horas.fin)
                     );
+
+                    console.log('🔍 DEBUG - Verificación de misma clase:', {
+                        asignaturaSeleccionadaNueva: asignaturaSeleccionada,
+                        horasNuevas: horas,
+                        horarioExistente: horariosDocenteSuperpuestos[0],
+                        comparaciones: horariosDocenteSuperpuestos.map(h => ({
+                            horario_id: h.id,
+                            asignatura_coincide: h.asignatura_id === asignaturaSeleccionada,
+                            hora_inicio_coincide: normalizeTime(h.hora_inicio) === normalizeTime(horas.inicio),
+                            hora_fin_coincide: normalizeTime(h.hora_fin) === normalizeTime(horas.fin),
+                            valores: {
+                                asignatura_existente: h.asignatura_id,
+                                asignatura_nueva: asignaturaSeleccionada,
+                                hora_inicio_existente: h.hora_inicio,
+                                hora_inicio_nueva: horas.inicio,
+                                hora_fin_existente: h.hora_fin,
+                                hora_fin_nueva: horas.fin
+                            }
+                        })),
+                        esConflictoReal: conflictoReal !== undefined,
+                        conflictoEncontrado: conflictoReal
+                    });
 
                     if (conflictoReal) {
                         // No es la misma clase, hay un conflicto real de docente
@@ -318,8 +343,8 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 const horarioCompartible = horariosSuperpuestos.find(h =>
                     h.asignatura_id === asignaturaSeleccionada &&
                     h.docente_id === docenteSeleccionado &&
-                    h.hora_inicio === horas.inicio &&
-                    h.hora_fin === horas.fin
+                    normalizeTime(h.hora_inicio) === normalizeTime(horas.inicio) &&
+                    normalizeTime(h.hora_fin) === normalizeTime(horas.fin)
                 );
 
                 if (horarioCompartible) {
@@ -327,24 +352,38 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                     const espacioSelec = espacios.find(e => e.id === espacioSeleccionado);
                     if (espacioSelec) {
                         // Sumar todos los estudiantes de horarios que comparten exactamente el mismo horario
-                        const totalEstudiantesExistentes = horariosSuperpuestos
-                            .filter(h =>
-                                h.asignatura_id === asignaturaSeleccionada &&
-                                h.docente_id === docenteSeleccionado &&
-                                h.hora_inicio === horas.inicio &&
-                                h.hora_fin === horas.fin
-                            )
+                        const horariosCompartidos = horariosSuperpuestos.filter(h =>
+                            h.asignatura_id === asignaturaSeleccionada &&
+                            h.docente_id === docenteSeleccionado &&
+                            normalizeTime(h.hora_inicio) === normalizeTime(horas.inicio) &&
+                            normalizeTime(h.hora_fin) === normalizeTime(horas.fin)
+                        );
+
+                        const totalEstudiantesExistentes = horariosCompartidos
                             .reduce((sum, h) => sum + (h.cantidad_estudiantes || 0), 0);
 
                         const totalEstudiantes = totalEstudiantesExistentes + (cantidadEstudiantes as number);
+
+                        console.log('📊 DEBUG - Validación de capacidad compartida:', {
+                            espacioNombre: espacioSelec.nombre,
+                            capacidadEspacio: espacioSelec.capacidad,
+                            cantidadEstudiantesNueva: cantidadEstudiantes,
+                            horariosCompartidos: horariosCompartidos.map(h => ({
+                                grupo: h.grupo_nombre,
+                                cantidad_estudiantes: h.cantidad_estudiantes
+                            })),
+                            totalEstudiantesExistentes,
+                            totalEstudiantes,
+                            excedeLaCapacidad: totalEstudiantes > espacioSelec.capacidad
+                        });
 
                         if (totalEstudiantes > espacioSelec.capacidad) {
                             const gruposCompartiendo = horariosSuperpuestos
                                 .filter(h =>
                                     h.asignatura_id === asignaturaSeleccionada &&
                                     h.docente_id === docenteSeleccionado &&
-                                    h.hora_inicio === horas.inicio &&
-                                    h.hora_fin === horas.fin
+                                    normalizeTime(h.hora_inicio) === normalizeTime(horas.inicio) &&
+                                    normalizeTime(h.hora_fin) === normalizeTime(horas.fin)
                                 )
                                 .map(h => h.grupo_nombre)
                                 .join(', ');
