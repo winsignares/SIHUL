@@ -373,6 +373,19 @@ export default function PrestamosEspacios() {
                               </div>
                             )}
 
+                            {/* Información del Administrador (si existe) */}
+                            {prestamo.administradorNombre && (prestamo.estado === 'aprobado' || prestamo.estado === 'rechazado') && (
+                              <div className="space-y-3">
+                                <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                  <User className="w-5 h-5 text-indigo-600" />
+                                  {prestamo.estado === 'aprobado' ? 'Aprobado por' : 'Rechazado por'}
+                                </h3>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                                  <p className="text-slate-900 dark:text-slate-100 font-medium">{prestamo.administradorNombre}</p>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Comentarios del Admin (si existen) */}
                             {prestamo.comentariosAdmin && (
                               <div className="space-y-3">

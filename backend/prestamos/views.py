@@ -105,12 +105,17 @@ def get_prestamo(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        p = PrestamoEspacio.objects.get(id=id)
+        p = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador').get(id=id)
         return JsonResponse({
             "id": p.id,
             "espacio_id": p.espacio.id,
+            "espacio_nombre": p.espacio.nombre,
+            "espacio_tipo": p.espacio.tipo,
             "usuario_id": (p.usuario.id if p.usuario else None),
+            "usuario_nombre": (p.usuario.nombre if p.usuario else None),
+            "usuario_correo": (p.usuario.correo if p.usuario else None),
             "administrador_id": (p.administrador.id if p.administrador else None),
+            "administrador_nombre": (p.administrador.nombre if p.administrador else None),
             "fecha": str(p.fecha),
             "hora_inicio": str(p.hora_inicio),
             "hora_fin": str(p.hora_fin),
@@ -124,12 +129,17 @@ def get_prestamo(request, id=None):
     
 def list_prestamos(request):
     if request.method == 'GET':
-        items = PrestamoEspacio.objects.all()
+        items = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador').all()
         lst = [{
             "id": i.id,
             "espacio_id": i.espacio.id,
+            "espacio_nombre": i.espacio.nombre,
+            "espacio_tipo": i.espacio.tipo,
             "usuario_id": (i.usuario.id if i.usuario else None),
+            "usuario_nombre": (i.usuario.nombre if i.usuario else None),
+            "usuario_correo": (i.usuario.correo if i.usuario else None),
             "administrador_id": (i.administrador.id if i.administrador else None),
+            "administrador_nombre": (i.administrador.nombre if i.administrador else None),
             "fecha": str(i.fecha),
             "hora_inicio": str(i.hora_inicio),
             "hora_fin": str(i.hora_fin),

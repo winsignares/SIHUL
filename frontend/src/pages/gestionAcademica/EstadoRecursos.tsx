@@ -29,7 +29,10 @@ export default function EstadoRecursos() {
     getEstadoRecursoBadge,
     getRecursosConEstado,
     getRecursoIcon,
-    verDetalles
+    verDetalles,
+    getSedeNombre,
+    tiposDisponibles,
+    loading
   } = useEstadoRecursos();
 
   const renderIcon = (iconData: any) => {
@@ -133,11 +136,9 @@ export default function EstadoRecursos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="aula">Aula</SelectItem>
-                <SelectItem value="laboratorio">Laboratorio</SelectItem>
-                <SelectItem value="auditorio">Auditorio</SelectItem>
-                <SelectItem value="sala">Sala</SelectItem>
-                <SelectItem value="otro">Otro</SelectItem>
+                {tiposDisponibles.map(tipo => (
+                  <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -145,125 +146,126 @@ export default function EstadoRecursos() {
       </Card>
 
       {/* Grid de Espacios */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {espaciosFiltrados.map((espacio) => (
-          <Card
-            key={espacio.id}
-            className={`border-2 transition-all hover:shadow-xl ${espacio.estado === 'Disponible'
-              ? 'border-green-200 hover:border-green-400'
-              : espacio.estado === 'Mantenimiento'
-                ? 'border-yellow-200 hover:border-yellow-400'
-                : 'border-red-200 hover:border-red-400'
-              }`}
-          >
-            <CardHeader className={`${espacio.estado === 'Disponible'
-              ? 'bg-green-50'
-              : espacio.estado === 'Mantenimiento'
-                ? 'bg-yellow-50'
-                : 'bg-red-50'
-              }`}>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-slate-900 mb-1">{espacio.nombre}</CardTitle>
-                  <p className="text-slate-600">{espacio.codigo}</p>
+      {loading ? (
+        <Card className="border-slate-200">
+          <CardContent className="p-12 text-center">
+            <p className="text-slate-600">Cargando espacios...</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {espaciosFiltrados.map((espacio) => (
+            <Card
+              key={espacio.id}
+              className={`border-2 transition-all hover:shadow-xl ${espacio.estado === 'Disponible'
+                ? 'border-green-200 hover:border-green-400'
+                : espacio.estado === 'Mantenimiento'
+                  ? 'border-yellow-200 hover:border-yellow-400'
+                  : 'border-red-200 hover:border-red-400'
+                }`}
+            >
+              <CardHeader className={`${espacio.estado === 'Disponible'
+                ? 'bg-green-50'
+                : espacio.estado === 'Mantenimiento'
+                  ? 'bg-yellow-50'
+                  : 'bg-red-50'
+                }`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-slate-900 mb-1">{espacio.nombre}</CardTitle>
+                    <p className="text-slate-600">{espacio.tipo_espacio?.nombre || 'Sin tipo'}</p>
+                  </div>
+                  {renderIcon(getEstadoIcon(espacio.estado || 'Disponible'))}
                 </div>
-                {renderIcon(getEstadoIcon(espacio.estado))}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              {/* Información básica */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Tipo:</span>
-                  <Badge variant="outline" className="capitalize">
-                    {espacio.tipo}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Capacidad:</span>
-                  <Badge className="bg-blue-600">
-                    {espacio.capacidad} personas
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Sede:</span>
-                  <span className="text-slate-900">{espacio.sede}</span>
-                </div>
-                {espacio.piso && (
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                {/* Información básica */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Piso:</span>
-                    <span className="text-slate-900">{espacio.piso}</span>
+                    <span className="text-slate-600">Tipo:</span>
+                    <Badge variant="outline" className="capitalize">
+                      {espacio.tipo_espacio?.nombre || 'Sin tipo'}
+                    </Badge>
                   </div>
-                )}
-              </div>
-
-              {/* Estado */}
-              <div className="pt-3 border-t border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-slate-600">Estado:</span>
-                  <Badge
-                    className={
-                      espacio.estado === 'Disponible'
-                        ? 'bg-green-600'
-                        : espacio.estado === 'Mantenimiento'
-                          ? 'bg-yellow-600'
-                          : 'bg-red-600'
-                    }
-                  >
-                    {espacio.estado}
-                  </Badge>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Capacidad:</span>
+                    <Badge className="bg-blue-600">
+                      {espacio.capacidad} personas
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Sede:</span>
+                    <span className="text-slate-900">{getSedeNombre(espacio.sede_id)}</span>
+                  </div>
+                  {espacio.ubicacion && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600">Ubicación:</span>
+                      <span className="text-slate-900">{espacio.ubicacion}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Recursos */}
-              <div className="pt-3 border-t border-slate-200">
-                <p className="text-slate-600 mb-3">Recursos Disponibles:</p>
-                {espacio.recursos && espacio.recursos.length > 0 ? (
-                  <div className="space-y-2">
-                    {getRecursosConEstado(espacio).map((recurso, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"
-                      >
-                        <div className="text-blue-600">
-                          {renderIcon(getRecursoIcon(recurso.nombre))}
-                        </div>
-                        <span className="text-slate-900 text-sm">{recurso.nombre}</span>
-                        <Badge className={getEstadoRecursoBadge(recurso.estado).className}>
-                          {getEstadoRecursoBadge(recurso.estado).label}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-slate-400 text-sm italic">Sin recursos registrados</p>
-                )}
-              </div>
-
-              {/* Descripción */}
-              {espacio.descripcion && (
+                {/* Estado */}
                 <div className="pt-3 border-t border-slate-200">
-                  <p className="text-slate-600 text-sm">{espacio.descripcion}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-600">Estado:</span>
+                    <Badge
+                      className={
+                        espacio.estado === 'Disponible'
+                          ? 'bg-green-600'
+                          : espacio.estado === 'Mantenimiento'
+                            ? 'bg-yellow-600'
+                            : 'bg-red-600'
+                      }
+                    >
+                      {espacio.estado || 'Disponible'}
+                    </Badge>
+                  </div>
                 </div>
-              )}
 
-              {/* Botón DETALLES */}
-              <div className="pt-3">
-                <Button
-                  onClick={() => verDetalles(espacio)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  VER DETALLES
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                {/* Recursos */}
+                <div className="pt-3 border-t border-slate-200">
+                  <p className="text-slate-600 mb-3">Recursos Disponibles:</p>
+                  {espacio.recursos && espacio.recursos.length > 0 ? (
+                    <div className="space-y-2">
+                      {getRecursosConEstado(espacio).map((recurso, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"
+                        >
+                          <div className="text-blue-600">
+                            {renderIcon(getRecursoIcon(recurso.nombre))}
+                          </div>
+                          <span className="text-slate-900 text-sm flex-1">{recurso.nombre}</span>
+                          <Badge className={getEstadoRecursoBadge(recurso.estado).className}>
+                            {getEstadoRecursoBadge(recurso.estado).label}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-sm italic">Sin recursos registrados</p>
+                  )}
+                </div>
+
+                {/* Botón DETALLES */}
+                <div className="pt-3">
+                  <Button
+                    onClick={() => verDetalles(espacio)}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    VER DETALLES
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Sin resultados */}
-      {espaciosFiltrados.length === 0 && (
+      {!loading && espaciosFiltrados.length === 0 && (
         <Card className="border-dashed border-2 border-slate-300">
           <CardContent className="p-12 text-center">
             <Search className="w-16 h-16 text-slate-400 mx-auto mb-4" />
@@ -297,13 +299,9 @@ export default function EstadoRecursos() {
                     <p className="text-slate-900">{espacioSeleccionado.nombre}</p>
                   </div>
                   <div>
-                    <p className="text-slate-600 text-sm">Código:</p>
-                    <p className="text-slate-900">{espacioSeleccionado.codigo}</p>
-                  </div>
-                  <div>
                     <p className="text-slate-600 text-sm">Tipo:</p>
                     <Badge variant="outline" className="capitalize">
-                      {espacioSeleccionado.tipo}
+                      {espacioSeleccionado.tipo_espacio?.nombre || 'Sin tipo'}
                     </Badge>
                   </div>
                   <div>
@@ -314,12 +312,12 @@ export default function EstadoRecursos() {
                   </div>
                   <div>
                     <p className="text-slate-600 text-sm">Sede:</p>
-                    <p className="text-slate-900">{espacioSeleccionado.sede}</p>
+                    <p className="text-slate-900">{getSedeNombre(espacioSeleccionado.sede_id)}</p>
                   </div>
-                  {espacioSeleccionado.piso && (
+                  {espacioSeleccionado.ubicacion && (
                     <div>
-                      <p className="text-slate-600 text-sm">Piso:</p>
-                      <p className="text-slate-900">{espacioSeleccionado.piso}</p>
+                      <p className="text-slate-600 text-sm">Ubicación:</p>
+                      <p className="text-slate-900">{espacioSeleccionado.ubicacion}</p>
                     </div>
                   )}
                   <div className="col-span-2">
@@ -333,8 +331,8 @@ export default function EstadoRecursos() {
                             : 'bg-red-600'
                       }
                     >
-                      {renderIcon(getEstadoIcon(espacioSeleccionado.estado))}
-                      <span className="ml-2">{espacioSeleccionado.estado}</span>
+                      {renderIcon(getEstadoIcon(espacioSeleccionado.estado || 'Disponible'))}
+                      <span className="ml-2">{espacioSeleccionado.estado || 'Disponible'}</span>
                     </Badge>
                   </div>
                 </div>
@@ -356,60 +354,63 @@ export default function EstadoRecursos() {
                 </h3>
                 {getRecursosConEstado(espacioSeleccionado).length > 0 ? (
                   <div className="space-y-3">
-                    {getRecursosConEstado(espacioSeleccionado).map((recurso, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-4 rounded-lg border-2 ${recurso.estado === 'Disponible'
-                          ? 'bg-green-50 border-green-200'
-                          : recurso.estado === 'Mantenimiento'
-                            ? 'bg-yellow-50 border-yellow-200'
-                            : recurso.estado === 'Perdido'
-                              ? 'bg-orange-50 border-orange-200'
-                              : 'bg-red-50 border-red-200'
-                          }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-lg ${recurso.estado === 'Disponible'
-                                ? 'bg-green-100'
-                                : recurso.estado === 'Mantenimiento'
-                                  ? 'bg-yellow-100'
-                                  : recurso.estado === 'Perdido'
-                                    ? 'bg-orange-100'
-                                    : 'bg-red-100'
-                                }`}
-                            >
+                    {getRecursosConEstado(espacioSeleccionado).map((recurso, idx) => {
+                      const estadoLower = recurso.estado.toLowerCase();
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-lg border-2 ${estadoLower === 'disponible'
+                            ? 'bg-green-50 border-green-200'
+                            : estadoLower === 'mantenimiento'
+                              ? 'bg-yellow-50 border-yellow-200'
+                              : estadoLower === 'perdido'
+                                ? 'bg-orange-50 border-orange-200'
+                                : 'bg-red-50 border-red-200'
+                            }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
                               <div
-                                className={
-                                  recurso.estado === 'Disponible'
-                                    ? 'text-green-600'
-                                    : recurso.estado === 'Mantenimiento'
-                                      ? 'text-yellow-600'
-                                      : recurso.estado === 'Perdido'
-                                        ? 'text-orange-600'
-                                        : 'text-red-600'
-                                }
+                                className={`p-2 rounded-lg ${estadoLower === 'disponible'
+                                  ? 'bg-green-100'
+                                  : estadoLower === 'mantenimiento'
+                                    ? 'bg-yellow-100'
+                                    : estadoLower === 'perdido'
+                                      ? 'bg-orange-100'
+                                      : 'bg-red-100'
+                                  }`}
                               >
-                                {renderIcon(getRecursoIcon(recurso.nombre))}
+                                <div
+                                  className={
+                                    estadoLower === 'disponible'
+                                      ? 'text-green-600'
+                                      : estadoLower === 'mantenimiento'
+                                        ? 'text-yellow-600'
+                                        : estadoLower === 'perdido'
+                                          ? 'text-orange-600'
+                                          : 'text-red-600'
+                                  }
+                                >
+                                  {renderIcon(getRecursoIcon(recurso.nombre))}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-slate-900">{recurso.nombre}</p>
+                                <p className="text-slate-600 text-sm">
+                                  Estado actual del recurso
+                                </p>
                               </div>
                             </div>
-                            <div>
-                              <p className="text-slate-900">{recurso.nombre}</p>
-                              <p className="text-slate-600 text-sm">
-                                Estado actual del recurso
-                              </p>
+                            <div className="flex items-center gap-2">
+                              {renderIcon(getEstadoIcon(recurso.estado))}
+                              <Badge className={getEstadoRecursoBadge(recurso.estado).className}>
+                                {getEstadoRecursoBadge(recurso.estado).label}
+                              </Badge>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {renderIcon(getEstadoIcon(recurso.estado))}
-                            <Badge className={getEstadoRecursoBadge(recurso.estado).className}>
-                              {getEstadoRecursoBadge(recurso.estado).label}
-                            </Badge>
-                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -435,7 +436,7 @@ export default function EstadoRecursos() {
                       <p className="text-green-900 text-xl">
                         {
                           getRecursosConEstado(espacioSeleccionado).filter(
-                            (r) => r.estado === 'Disponible'
+                            (r) => r.estado.toLowerCase() === 'disponible'
                           ).length
                         }
                       </p>
@@ -445,7 +446,7 @@ export default function EstadoRecursos() {
                       <p className="text-yellow-900 text-xl">
                         {
                           getRecursosConEstado(espacioSeleccionado).filter(
-                            (r) => r.estado === 'Mantenimiento'
+                            (r) => r.estado.toLowerCase() === 'mantenimiento'
                           ).length
                         }
                       </p>
@@ -455,7 +456,10 @@ export default function EstadoRecursos() {
                       <p className="text-red-900 text-xl">
                         {
                           getRecursosConEstado(espacioSeleccionado).filter(
-                            (r) => r.estado === 'No Disponible' || r.estado === 'Perdido'
+                            (r) => {
+                              const est = r.estado.toLowerCase();
+                              return est === 'no disponible' || est === 'perdido' || est === 'no_disponible';
+                            }
                           ).length
                         }
                       </p>

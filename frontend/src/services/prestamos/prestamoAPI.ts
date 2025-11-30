@@ -3,8 +3,13 @@ import { apiClient } from '../../core/apiClient';
 export interface PrestamoEspacio {
   id?: number;
   espacio_id: number;
+  espacio_nombre?: string;
+  espacio_tipo?: string;
   usuario_id: number | null;
+  usuario_nombre?: string;
+  usuario_correo?: string;
   administrador_id: number | null;
+  administrador_nombre?: string;
   fecha: string; // Formato: YYYY-MM-DD
   hora_inicio: string; // Formato: HH:MM:SS
   hora_fin: string;    // Formato: HH:MM:SS
@@ -20,7 +25,7 @@ export const prestamoService = {
    * Obtiene la lista de todos los préstamos
    */
   listarPrestamos: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
-    return apiClient.get('/prestamos/');
+    return apiClient.get('/prestamos/list/');
   },
 
   /**
@@ -36,7 +41,7 @@ export const prestamoService = {
    * @param prestamo Datos del préstamo a crear
    */
   crearPrestamo: async (prestamo: Omit<PrestamoEspacio, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/prestamos/create/', {
+    return apiClient.post('/prestamos/', {
       espacio_id: prestamo.espacio_id,
       usuario_id: prestamo.usuario_id,
       administrador_id: prestamo.administrador_id,
@@ -76,14 +81,5 @@ export const prestamoService = {
    */
   eliminarPrestamo: async (id: number): Promise<{ message: string }> => {
     return apiClient.delete('/prestamos/delete/', { id });
-  },
-
-  /**
-   * Cambia el estado de un préstamo
-   * @param id ID del préstamo
-   * @param nuevoEstado Nuevo estado del préstamo
-   */
-  cambiarEstadoPrestamo: async (id: number, nuevoEstado: PrestamoEspacio['estado']): Promise<{ message: string; id: number }> => {
-    return apiClient.put(`/prestamos/${id}/cambiar-estado/`, { estado: nuevoEstado });
   }
 };

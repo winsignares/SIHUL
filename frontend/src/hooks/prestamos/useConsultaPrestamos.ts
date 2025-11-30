@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Prestamo } from '../../models/index';
+import { prestamoService } from '../../services/prestamos/prestamoAPI';
+import { espacioService } from '../../services/espacios/espaciosAPI';
+import { showNotification } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function useConsultaPrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
+    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
 
     const [nuevaSolicitud, setNuevaSolicitud] = useState({
         solicitante: '',
@@ -20,69 +26,8 @@ export function useConsultaPrestamos() {
         recursosNecesarios: [] as string[]
     });
 
-    const [prestamos] = useState<Prestamo[]>([
-        {
-            id: '1',
-            solicitante: 'María González',
-            email: 'maria.gonzalez@universidad.edu',
-            telefono: '+57 300 123 4567',
-            espacio: 'Auditorio Central',
-            fecha: '2025-10-28',
-            horaInicio: '14:00',
-            horaFin: '18:00',
-            motivo: 'Conferencia sobre Inteligencia Artificial',
-            tipoEvento: 'Conferencia',
-            asistentes: 150,
-            recursosNecesarios: ['Proyector', 'Micrófono', 'Sonido'],
-            estado: 'aprobado',
-            fechaSolicitud: '2025-10-20 10:30',
-            comentariosAdmin: 'Aprobado. El auditorio estará listo con todo el equipo necesario.'
-        },
-        {
-            id: '2',
-            solicitante: 'Carlos Ruiz',
-            email: 'carlos.ruiz@universidad.edu',
-            telefono: '+57 300 987 6543',
-            espacio: 'Laboratorio 301',
-            fecha: '2025-10-25',
-            horaInicio: '18:00',
-            horaFin: '20:00',
-            motivo: 'Taller de Robótica',
-            tipoEvento: 'Taller',
-            asistentes: 20,
-            recursosNecesarios: ['Computadores', 'Proyector'],
-            estado: 'aprobado',
-            fechaSolicitud: '2025-10-18 14:20',
-            comentariosAdmin: 'Aprobado. Asegurar que el laboratorio esté preparado con los kits de robótica.'
-        },
-        {
-            id: '3',
-            solicitante: 'Ana Martínez',
-            email: 'ana.martinez@universidad.edu',
-            telefono: '+57 300 555 1234',
-            espacio: 'Sala de Juntas 1',
-            fecha: '2025-11-05',
-            horaInicio: '09:00',
-            horaFin: '12:00',
-            motivo: 'Reunión de Comité de Investigación',
-            tipoEvento: 'Reunión',
-            asistentes: 12,
-            recursosNecesarios: ['Proyector', 'Videoconferencia'],
-            estado: 'pendiente',
-            fechaSolicitud: '2025-10-21 09:15'
-        }
-    ]);
-
-    const espaciosDisponibles = [
-        'Auditorio Central',
-        'Laboratorio 301',
-        'Laboratorio 401',
-        'Sala de Juntas 1',
-        'Sala de Juntas 2',
-        'Aula 101',
-        'Aula 205',
-        'Cancha Deportiva 1'
-    ];
+    const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number; nombre: string }>>([]);
 
     const tiposEvento = [
         'Conferencia',
@@ -106,29 +51,123 @@ export function useConsultaPrestamos() {
         'Aire Acondicionado'
     ];
 
-    const crearSolicitud = () => {
-        if (!nuevaSolicitud.solicitante || !nuevaSolicitud.email || !nuevaSolicitud.espacio ||
-            !nuevaSolicitud.fecha || !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin ||
-            !nuevaSolicitud.motivo || !nuevaSolicitud.tipoEvento) {
-            // Faltan campos obligatorios notificación
+    // Cargar datos iniciales
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            
+            // Cargar préstamos y espacios en paralelo
+            const [prestamosResponse, espaciosResponse] = await Promise.all([
+                prestamoService.listarPrestamos(),
+                espacioService.list()
+            ]);
+
+            // Transformar préstamos al formato UI
+            const prestamosUI: Prestamo[] = prestamosResponse.prestamos
+                .filter(p => !user || p.usuario_id === user.id) // Filtrar por usuario actual si existe
+                .map(p => ({
+                    id: p.id?.toString() || '',
+                    solicitante: p.usuario_nombre || 'Usuario Desconocido',
+                    email: p.usuario_correo || '',
+                    telefono: '',
+                    espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
+                    fecha: p.fecha,
+                    horaInicio: p.hora_inicio.substring(0, 5),
+                    horaFin: p.hora_fin.substring(0, 5),
+                    motivo: p.motivo || '',
+                    tipoEvento: p.espacio_tipo || 'Evento',
+                    asistentes: 0,
+                    recursosNecesarios: [],
+                    estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
+                    fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
+                    comentariosAdmin: ''
+                }));
+
+            setPrestamos(prestamosUI);
+            
+            // Mapear espacios disponibles
+            setEspaciosDisponibles(
+                espaciosResponse.espacios
+                    .filter(e => e.estado === 'Disponible')
+                    .map(e => ({ id: e.id!, nombre: e.nombre }))
+            );
+        } catch (error) {
+            showNotification({
+                message: `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const crearSolicitud = async () => {
+        if (!nuevaSolicitud.espacio || !nuevaSolicitud.fecha || 
+            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo) {
+            showNotification({
+                message: 'Por favor complete todos los campos obligatorios',
+                type: 'error'
+            });
             return;
         }
 
-        setDialogOpen(false);
-        setNuevaSolicitud({
-            solicitante: '',
-            email: '',
-            telefono: '',
-            espacio: '',
-            fecha: '',
-            horaInicio: '',
-            horaFin: '',
-            motivo: '',
-            tipoEvento: '',
-            asistentes: '',
-            recursosNecesarios: []
-        });
-        // Solicitud creada exitosamente notificación
+        try {
+            setLoading(true);
+
+            // Buscar el ID del espacio por nombre
+            const espacioSeleccionado = espaciosDisponibles.find(e => e.nombre === nuevaSolicitud.espacio);
+            
+            if (!espacioSeleccionado) {
+                showNotification({
+                    message: 'Espacio no encontrado',
+                    type: 'error'
+                });
+                return;
+            }
+
+            await prestamoService.crearPrestamo({
+                espacio_id: espacioSeleccionado.id,
+                usuario_id: user?.id || null,
+                administrador_id: null,
+                fecha: nuevaSolicitud.fecha,
+                hora_inicio: nuevaSolicitud.horaInicio + ':00',
+                hora_fin: nuevaSolicitud.horaFin + ':00',
+                motivo: nuevaSolicitud.motivo,
+                estado: 'Pendiente'
+            });
+
+            await loadData();
+            setDialogOpen(false);
+            setNuevaSolicitud({
+                solicitante: '',
+                email: '',
+                telefono: '',
+                espacio: '',
+                fecha: '',
+                horaInicio: '',
+                horaFin: '',
+                motivo: '',
+                tipoEvento: '',
+                asistentes: '',
+                recursosNecesarios: []
+            });
+
+            showNotification({
+                message: '✅ Solicitud creada exitosamente',
+                type: 'success'
+            });
+        } catch (error) {
+            showNotification({
+                message: `Error al crear solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredPrestamos = prestamos.filter(p => {
@@ -155,11 +194,13 @@ export function useConsultaPrestamos() {
         nuevaSolicitud,
         setNuevaSolicitud,
         prestamos,
-        espaciosDisponibles,
+        espaciosDisponibles: espaciosDisponibles.map(e => e.nombre),
         tiposEvento,
         recursosDisponibles,
         crearSolicitud,
         filteredPrestamos,
-        estadisticas
+        estadisticas,
+        loading,
+        reloadData: loadData
     };
 }
