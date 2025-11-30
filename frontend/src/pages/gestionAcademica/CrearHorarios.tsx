@@ -57,7 +57,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     loadData,
     gruposSinHorarioFiltrados,
     programasFiltrados,
-    getAsignaturasByPrograma,
+    getAsignaturasByProgramaYSemestre,
     diasSemana,
     semestres,
     horas,
@@ -65,15 +65,10 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     notification
   } = useCrearHorarios({ onHorarioCreado });
 
-  // Obtener asignaturas filtradas por el programa del grupo seleccionado
-  const asignaturasFiltradas = grupoSeleccionado?.programa_id 
-    ? getAsignaturasByPrograma(grupoSeleccionado.programa_id)
+  // Obtener asignaturas filtradas por programa y semestre del grupo seleccionado
+  const asignaturasFiltradas = (grupoSeleccionado?.programa_id && grupoSeleccionado?.semestre)
+    ? getAsignaturasByProgramaYSemestre(grupoSeleccionado.programa_id, grupoSeleccionado.semestre)
     : [];
-
-  // Debug: imprimir asignaturas cuando cambian
-  console.log('Total asignaturas:', asignaturas.length);
-  console.log('Asignaturas:', asignaturas);
-  console.log('Grupo seleccionado:', grupoSeleccionado);
 
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {

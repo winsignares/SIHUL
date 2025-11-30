@@ -158,7 +158,7 @@ def list_horarios_extendidos(request):
                 "asignatura_id": i.asignatura.id,
                 "asignatura_nombre": i.asignatura.nombre,
                 "docente_id": (i.docente.id if i.docente else None),
-                "docente_nombre": f"{i.docente.nombre} {i.docente.apellido}" if i.docente else "Sin asignar",
+                "docente_nombre": i.docente.nombre if i.docente else "Sin asignar",
                 "espacio_id": i.espacio.id,
                 "espacio_nombre": i.espacio.nombre,
                 "dia_semana": i.dia_semana,

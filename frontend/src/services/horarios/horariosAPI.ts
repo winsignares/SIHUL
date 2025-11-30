@@ -197,7 +197,7 @@ export const horarioService = {
      * Lista todos los horarios con información extendida
      */
     listExtendidos: async (): Promise<ListHorariosExtendidosResponse> => {
-        return apiClient.get<ListHorariosExtendidosResponse>('/horario/list/extendidos/');
+        return apiClient.get<ListHorariosExtendidosResponse>('/horario/list/');
     }
 };
 

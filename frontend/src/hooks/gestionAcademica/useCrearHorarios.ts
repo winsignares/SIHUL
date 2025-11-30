@@ -417,7 +417,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         loadData,
         gruposSinHorarioFiltrados,
         programasFiltrados,
-        getAsignaturasByPrograma,
+        getAsignaturasByProgramaYSemestre,
         diasSemana,
         semestres,
         horas,
