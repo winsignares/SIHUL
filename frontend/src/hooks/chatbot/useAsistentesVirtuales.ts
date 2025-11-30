@@ -45,6 +45,7 @@ export function useAsistentesVirtuales() {
     const [isTyping, setIsTyping] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [preguntasRotadas, setPreguntasRotadas] = useState<string[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Cargar agentes desde el backend
@@ -79,6 +80,34 @@ export function useAsistentesVirtuales() {
 
         cargarAgentes();
     }, []);
+
+    // Rotación de preguntas sugeridas
+    useEffect(() => {
+        if (!asistenteActivo?.preguntasRapidas?.length) {
+            setPreguntasRotadas([]);
+            return;
+        }
+
+        const rotarPreguntas = () => {
+            const todas = asistenteActivo.preguntasRapidas;
+            // Si hay 4 o menos, mostrar todas sin rotar
+            if (todas.length <= 4) {
+                setPreguntasRotadas(todas);
+                return;
+            }
+
+            // Mezclar y tomar 4 aleatorias
+            const shuffled = [...todas].sort(() => 0.5 - Math.random());
+            setPreguntasRotadas(shuffled.slice(0, 4));
+        };
+
+        rotarPreguntas(); // Carga inicial
+
+        // Rotar cada 10 segundos
+        const interval = setInterval(rotarPreguntas, 10000);
+
+        return () => clearInterval(interval);
+    }, [asistenteActivo]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -213,6 +242,7 @@ export function useAsistentesVirtuales() {
         mensajesActuales,
         mostrarPreguntasRapidas,
         filteredAsistentes,
-        loading
+        loading,
+        preguntasRotadas
     };
 }

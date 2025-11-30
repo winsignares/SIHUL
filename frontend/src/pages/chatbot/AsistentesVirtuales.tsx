@@ -29,7 +29,8 @@ export default function AsistentesVirtuales() {
     mostrarPreguntasRapidas,
     filteredAsistentes,
     enviarPreguntaRapida,
-    enviarMensaje
+    enviarMensaje,
+    preguntasRotadas
   } = useAsistentesVirtuales();
 
   return (
@@ -122,16 +123,7 @@ export default function AsistentesVirtuales() {
         <div className="flex-1 overflow-y-auto relative z-10 p-3 scrollbar-hidden">
           {filteredAsistentes.map((asistente, index) => {
             const Icon = asistente.icon;
-            const isActive = asistenteActivo?.id === asistente.id; // Note: This logic was slightly different in original, accessing messages by ID. 
-            // In the hook, mensajesActuales is derived from asistenteActivo. 
-            // But here we are mapping over ALL assistants. We need access to the messages map from the hook if we want to show the last message for EACH assistant.
-            // Let's check the hook again. It returns 'mensajes' map. I should use that.
-            // Wait, I didn't export 'mensajes' map in the return of the hook in my mental model, let me check the hook file content I wrote.
-            // I exported 'mensajes'. So I can use it here.
-
-            // Re-reading hook content:
-            // return { ... messages, ... }
-            // So I need to destructure messages from the hook result in the component.
+            const isActive = asistenteActivo?.id === asistente.id;
 
             return (
               <motion.div
@@ -511,12 +503,12 @@ export default function AsistentesVirtuales() {
                     </motion.div>
                     <span className="text-sm text-slate-600 dark:text-slate-400">Preguntas sugeridas:</span>
                   </div>
-                  {asistenteActivo.preguntasRapidas.map((pregunta, idx) => (
+                  {preguntasRotadas.map((pregunta, idx) => (
                     <motion.button
-                      key={idx}
+                      key={`${pregunta}-${idx}`}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + idx * 0.1 }}
+                      transition={{ delay: 0.1 * idx }}
                       onClick={() => enviarPreguntaRapida(pregunta)}
                       whileHover={{
                         scale: 1.03,
@@ -550,7 +542,7 @@ export default function AsistentesVirtuales() {
                   className="flex-1 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-red-500/20"
                 />
                 <Button
-                  onClick={enviarMensaje} // Changed from () => enviarMensaje() to enviarMensaje to match hook signature
+                  onClick={enviarMensaje}
                   disabled={!inputMensaje.trim() || isTyping}
                   className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg shadow-red-500/20"
                 >

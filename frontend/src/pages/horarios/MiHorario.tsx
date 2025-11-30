@@ -14,7 +14,8 @@ export default function MiHorario() {
     horas,
     obtenerClaseEnHora,
     handleDescargarPDF,
-    handleDescargarExcel
+    handleDescargarExcel,
+    loading
   } = useMiHorario();
 
   return (
@@ -52,7 +53,21 @@ export default function MiHorario() {
         </div>
       </motion.div>
 
-      {horarios.length === 0 ? (
+
+      {loading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center py-20"
+        >
+          <motion.div
+            className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          />
+          <p className="text-slate-600 mt-4">Cargando horario...</p>
+        </motion.div>
+      ) : horarios.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}

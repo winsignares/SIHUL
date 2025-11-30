@@ -1,90 +1,68 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../services/database';
-import { useUser } from '../../context/UserContext';
+import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../share/notificationBanner';
-import type { HorarioAcademico, Asignatura, EspacioFisico, Docente, Grupo } from '../../models/index';
+import { apiClient } from '../../core/apiClient';
 
-export interface HorarioExtendido extends HorarioAcademico {
+export interface HorarioExtendido {
+    id: number;
+    diaSemana: string;
+    horaInicio: string;
+    horaFin: string;
     asignatura: string;
+    asignaturaId: number;
     docente: string;
+    docenteId?: number;
     grupo: string;
+    grupoId: number;
     espacio: string;
+    espacioId: number;
+    cantidadEstudiantes?: number;
+    programa?: string;
+    semestre?: number;
+}
+
+interface HorarioResponse {
+    horarios: HorarioExtendido[];
 }
 
 export function useMiHorario() {
-    const { user } = useUser() as unknown as { user: { rol: string; nombre: string; email: string; gruposAsignados?: string[] } };
+    const { user } = useAuth();
     const { showNotification } = useNotification();
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
-    const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
-    const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
-    const [docentes, setDocentes] = useState<Docente[]>([]);
-    const [grupos, setGrupos] = useState<Grupo[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const esDocente = user?.rol === 'consultor-docente';
-    const esEstudiante = user?.rol === 'consultor-estudiante';
+    const esDocente = user?.rol?.nombre === 'consultor_docente';
+    const esEstudiante = user?.rol?.nombre === 'consultor_estudiante';
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (user?.id) {
+            loadData();
+        } else {
+            setLoading(false);
+        }
+    }, [user?.id]);
 
-    const loadData = () => {
-        const todosHorarios = db.getHorarios();
-        const todasAsignaturas = db.getAsignaturas();
-        const todosEspacios = db.getEspacios();
-        const todosDocentes = db.getDocentes();
-        const todosGrupos = db.getGrupos();
-
-        setAsignaturas(todasAsignaturas);
-        setEspacios(todosEspacios);
-        setDocentes(todosDocentes);
-        setGrupos(todosGrupos);
-
-        // Filtrar horarios según el rol del usuario
-        let horariosFiltrados: HorarioAcademico[] = [];
-
-        if (esDocente) {
-            // Filtrar por docente
-            const docenteUsuario = todosDocentes.find(d =>
-                d.nombre.toLowerCase().includes(user?.nombre.toLowerCase() || '') ||
-                d.email === user?.email
-            );
-
-            if (docenteUsuario) {
-                horariosFiltrados = todosHorarios.filter(h =>
-                    h.docenteId === docenteUsuario.id
-                );
-            }
-        } else if (esEstudiante) {
-            // Filtrar por grupo del estudiante
-            // Asumir que el estudiante tiene asignado un grupo en user.gruposAsignados
-            const gruposEstudiante = user?.gruposAsignados || [];
-
-            if (gruposEstudiante.length > 0) {
-                horariosFiltrados = todosHorarios.filter(h => {
-                    const grupo = todosGrupos.find(g => g.id === h.grupoId);
-                    return grupo && gruposEstudiante.includes(grupo.nombre || grupo.codigo);
-                });
-            }
+    const loadData = async () => {
+        if (!user?.id) {
+            setLoading(false);
+            return;
         }
 
-        // Enriquecer horarios con información adicional
-        const horariosEnriquecidos: HorarioExtendido[] = horariosFiltrados.map(h => {
-            const asignatura = todasAsignaturas.find(a => a.id === h.asignaturaId);
-            const espacio = todosEspacios.find(e => e.id === h.espacioId);
-            const docente = todosDocentes.find(d => d.id === h.docenteId);
-            const grupo = todosGrupos.find(g => g.id === h.grupoId);
+        try {
+            setLoading(true);
 
-            return {
-                ...h,
-                asignatura: asignatura?.nombre || 'N/A',
-                docente: docente?.nombre || 'N/A',
-                grupo: grupo?.nombre || grupo?.codigo || 'N/A',
-                espacio: espacio?.nombre || 'N/A'
-            } as HorarioExtendido;
-        });
+            // Llamar al endpoint con el ID del usuario
+            const response = await apiClient.get<HorarioResponse>(`/horario/mi-horario/?usuario_id=${user.id}`);
 
-        setHorarios(horariosEnriquecidos);
+            setHorarios(response.horarios || []);
+        } catch (error) {
+            console.error('Error cargando horario:', error);
+            showNotification('Error al cargar el horario', 'error');
+            setHorarios([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Generar horas para el grid semanal
@@ -121,16 +99,13 @@ export function useMiHorario() {
 
     return {
         horarios,
-        asignaturas,
-        espacios,
-        docentes,
-        grupos,
         diasSemana,
         esDocente,
         esEstudiante,
         horas,
         obtenerClaseEnHora,
         handleDescargarPDF,
-        handleDescargarExcel
+        handleDescargarExcel,
+        loading
     };
 }

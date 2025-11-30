@@ -9,6 +9,56 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 
+# ---------- Endpoint para Mi Horario (Docente) ----------
+@csrf_exempt
+def mi_horario_docente(request):
+    """Retorna el horario del docente logueado"""
+    if request.method != 'GET':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    
+    try:
+        # Obtener usuario_id de headers o query params
+        usuario_id = request.GET.get('usuario_id') or request.headers.get('X-Usuario-Id')
+        
+        if not usuario_id:
+            return JsonResponse({"error": "usuario_id es requerido"}, status=400)
+        
+        # Verificar que el usuario existe
+        try:
+            docente = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({"error": "Usuario no encontrado"}, status=404)
+        
+        # Obtener horarios del docente con información extendida
+        horarios = Horario.objects.filter(
+            docente=docente
+        ).select_related('grupo', 'asignatura', 'espacio', 'grupo__programa').all()
+        
+        lst = []
+        for h in horarios:
+            lst.append({
+                "id": h.id,
+                "diaSemana": h.dia_semana,
+                "horaInicio": str(h.hora_inicio),
+                "horaFin": str(h.hora_fin),
+                "asignaturaId": h.asignatura.id,
+                "asignatura": h.asignatura.nombre,
+                "grupoId": h.grupo.id,
+                "grupo": h.grupo.nombre,
+                "espacioId": h.espacio.id,
+                "espacio": h.espacio.nombre,
+                "docenteId": h.docente.id if h.docente else None,
+                "docente": h.docente.nombre if h.docente else "Sin asignar",
+                "cantidadEstudiantes": h.cantidad_estudiantes,
+                "programa": h.grupo.programa.nombre if h.grupo.programa else None,
+                "semestre": h.grupo.semestre
+            })
+        
+        return JsonResponse({"horarios": lst}, status=200)
+        
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 # ---------- Horario CRUD ----------
 @csrf_exempt
 def create_horario(request):
