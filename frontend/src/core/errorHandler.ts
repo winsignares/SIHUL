@@ -10,7 +10,7 @@ export async function handleApiError(response: Response): Promise<never> {
 
   try {
     const errorData = await response.json();
-    errorMessage = errorData.message || errorData.detail || errorMessage;
+    errorMessage = errorData.message || errorData.detail || errorData.error || errorMessage;
     errors = errorData.errors;
   } catch {
     // Si no hay JSON, usar mensaje por defecto

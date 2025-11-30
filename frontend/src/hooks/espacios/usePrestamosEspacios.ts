@@ -23,7 +23,7 @@ export function usePrestamosEspacios() {
     const loadData = async () => {
         try {
             setLoading(true);
-            
+
             // Cargar préstamos desde la API (ahora incluye datos completos)
             const prestamosResponse = await prestamoService.listarPrestamos();
 
@@ -33,15 +33,15 @@ export function usePrestamosEspacios() {
                     id: p.id?.toString() || '',
                     solicitante: p.usuario_nombre || 'Usuario No Disponible',
                     email: p.usuario_correo || '',
-                    telefono: '', // No disponible en el backend actual
+                    telefono: p.telefono || '',
                     espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
                     fecha: p.fecha,
                     horaInicio: p.hora_inicio.substring(0, 5), // HH:MM
                     horaFin: p.hora_fin.substring(0, 5), // HH:MM
                     motivo: p.motivo || '',
-                    tipoEvento: p.espacio_tipo || 'Evento',
-                    asistentes: 0, // No disponible en el backend actual
-                    recursosNecesarios: [], // No disponible en el backend actual
+                    tipoEvento: p.tipo_actividad_nombre || 'Evento',
+                    asistentes: p.asistentes || 0,
+                    recursosNecesarios: p.recursos?.map(r => r.recurso_nombre || '') || [],
                     estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
                     fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
                     comentariosAdmin: '', // No disponible en el backend actual
@@ -63,33 +63,36 @@ export function usePrestamosEspacios() {
     const aprobarSolicitud = async (id: string, comentarios: string) => {
         try {
             setLoading(true);
-            
+
             if (!user?.id) {
                 throw new Error('Usuario no autenticado');
             }
-            
+
             // Obtener datos completos del préstamo desde el backend
             const prestamoCompleto = await prestamoService.obtenerPrestamo(Number(id));
-            
+
             // Actualizar el estado y registrar el administrador que aprobó
             await prestamoService.actualizarPrestamo({
                 id: Number(id),
                 espacio_id: prestamoCompleto.espacio_id,
                 usuario_id: prestamoCompleto.usuario_id,
                 administrador_id: user.id, // Guardar el ID del administrador que aprueba
+                tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
                 fecha: prestamoCompleto.fecha,
                 hora_inicio: prestamoCompleto.hora_inicio,
                 hora_fin: prestamoCompleto.hora_fin,
                 motivo: prestamoCompleto.motivo,
+                asistentes: prestamoCompleto.asistentes,
+                telefono: prestamoCompleto.telefono,
                 estado: 'Aprobado'
             });
-            
+
             // Recargar datos para obtener el estado actualizado
             await loadData();
-            
+
             setVerSolicitudDialog(null);
             setComentariosAccion('');
-            
+
             showNotification({
                 message: '✅ Solicitud aprobada correctamente',
                 type: 'success'
@@ -115,33 +118,36 @@ export function usePrestamosEspacios() {
 
         try {
             setLoading(true);
-            
+
             if (!user?.id) {
                 throw new Error('Usuario no autenticado');
             }
-            
+
             // Obtener datos completos del préstamo desde el backend
             const prestamoCompleto = await prestamoService.obtenerPrestamo(Number(id));
-            
+
             // Actualizar el estado y registrar el administrador que rechazó
             await prestamoService.actualizarPrestamo({
                 id: Number(id),
                 espacio_id: prestamoCompleto.espacio_id,
                 usuario_id: prestamoCompleto.usuario_id,
                 administrador_id: user.id, // Guardar el ID del administrador que rechaza
+                tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
                 fecha: prestamoCompleto.fecha,
                 hora_inicio: prestamoCompleto.hora_inicio,
                 hora_fin: prestamoCompleto.hora_fin,
                 motivo: prestamoCompleto.motivo,
+                asistentes: prestamoCompleto.asistentes,
+                telefono: prestamoCompleto.telefono,
                 estado: 'Rechazado'
             });
-            
+
             // Recargar datos para obtener el estado actualizado
             await loadData();
-            
+
             setVerSolicitudDialog(null);
             setComentariosAccion('');
-            
+
             showNotification({
                 message: '✅ Solicitud rechazada correctamente',
                 type: 'success'
