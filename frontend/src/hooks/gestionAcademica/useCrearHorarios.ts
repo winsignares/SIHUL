@@ -3,7 +3,7 @@ import { useNotification } from '../../share/notificationBanner';
 import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
-import { asignaturaService, type Asignatura } from '../../services/asignaturas/asignaturaAPI';
+import { asignaturaService, asignaturaProgramaService, type Asignatura, type AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
 import { userService, type Usuario } from '../../services/users/authService';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
@@ -35,6 +35,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [grupos, setGrupos] = useState<GrupoConInfo[]>([]);
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
+    const [asignaturasPrograma, setAsignaturasPrograma] = useState<AsignaturaPrograma[]>([]);
     const [docentes, setDocentes] = useState<Usuario[]>([]);
     const [todosLosHorarios, setTodosLosHorarios] = useState<HorarioExtendido[]>([]);
 
@@ -108,6 +109,10 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             const asignaturasResponse = await asignaturaService.list();
             setAsignaturas(asignaturasResponse.asignaturas);
 
+            // Cargar relaciones asignatura-programa
+            const asignaturasProgramaResponse = await asignaturaProgramaService.list();
+            setAsignaturasPrograma(asignaturasProgramaResponse.asignaturas_programa);
+
             // Cargar docentes (usuarios con rol de docente)
             const usuariosResponse = await userService.listarUsuarios();
             setDocentes(usuariosResponse.usuarios);
@@ -146,6 +151,17 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         setFiltroPrograma('all');
         setFiltroSemestre('all');
         setFiltroGrupo('all');
+    };
+
+    // Obtener asignaturas de un programa específico y semestre
+    const getAsignaturasByProgramaYSemestre = (programaId: number, semestre: number): Asignatura[] => {
+        // Obtener IDs de asignaturas que pertenecen al programa Y al semestre específico
+        const asignaturaIdsDelProgramaYSemestre = asignaturasPrograma
+            .filter(ap => ap.programa_id === programaId && ap.semestre === semestre)
+            .map(ap => ap.asignatura_id);
+
+        // Retornar las asignaturas completas que están en el programa y semestre
+        return asignaturas.filter(a => a.id && asignaturaIdsDelProgramaYSemestre.includes(a.id));
     };
 
     const handleAsignarHorario = async (grupo: GrupoConInfo) => {
@@ -375,6 +391,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         grupos,
         espacios,
         asignaturas,
+        asignaturasPrograma,
         docentes,
         filtroFacultad, setFiltroFacultad,
         filtroPrograma, setFiltroPrograma,
@@ -400,6 +417,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         loadData,
         gruposSinHorarioFiltrados,
         programasFiltrados,
+        getAsignaturasByPrograma,
         diasSemana,
         semestres,
         horas,

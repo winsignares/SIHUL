@@ -57,6 +57,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     loadData,
     gruposSinHorarioFiltrados,
     programasFiltrados,
+    getAsignaturasByPrograma,
     diasSemana,
     semestres,
     horas,
@@ -64,14 +65,15 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     notification
   } = useCrearHorarios({ onHorarioCreado });
 
+  // Obtener asignaturas filtradas por el programa del grupo seleccionado
+  const asignaturasFiltradas = grupoSeleccionado?.programa_id 
+    ? getAsignaturasByPrograma(grupoSeleccionado.programa_id)
+    : [];
+
   // Debug: imprimir asignaturas cuando cambian
   console.log('Total asignaturas:', asignaturas.length);
   console.log('Asignaturas:', asignaturas);
   console.log('Grupo seleccionado:', grupoSeleccionado);
-  if (grupoSeleccionado) {
-    const asignaturasFiltradas = asignaturas.filter(a => a.programa_id === grupoSeleccionado?.programa_id);
-    console.log('Asignaturas filtradas para programa', grupoSeleccionado.programa_id, ':', asignaturasFiltradas);
-  }
 
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {
@@ -468,20 +470,18 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                     <SelectValue placeholder="Seleccionar asignatura" />
                   </SelectTrigger>
                   <SelectContent>
-                    {asignaturas.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-slate-500">No hay asignaturas disponibles</div>
-                    ) : asignaturas
-                      .filter(a => a.programa_id === grupoSeleccionado?.programa_id)
-                      .map(a => (
+                    {asignaturasFiltradas.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-slate-500">
+                        {grupoSeleccionado?.programa_nombre 
+                          ? `No hay asignaturas asignadas al programa ${grupoSeleccionado.programa_nombre}`
+                          : 'No hay asignaturas disponibles'}
+                      </div>
+                    ) : (
+                      asignaturasFiltradas.map(a => (
                         <SelectItem key={a.id} value={a.id?.toString() || ''}>
                           {a.nombre} ({a.creditos} créditos)
                         </SelectItem>
-                      ))}
-                    {asignaturas.length > 0 && 
-                     asignaturas.filter(a => a.programa_id === grupoSeleccionado?.programa_id).length === 0 && (
-                      <div className="px-2 py-1.5 text-sm text-slate-500">
-                        No hay asignaturas para el programa {grupoSeleccionado?.programa_nombre}
-                      </div>
+                      ))
                     )}
                   </SelectContent>
                 </Select>
