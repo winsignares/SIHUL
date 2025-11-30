@@ -101,7 +101,7 @@ export default function ConsultaEspacios() {
       {/* Header */}
       <div>
         <h1 className="text-slate-900 dark:text-slate-100 mb-2">Disponibilidad de Espacios</h1>
-        <p className="text-slate-600 dark:text-slate-400">Consulta la disponibilidad de aulas, laboratorios y espacios</p>
+        <p className="text-slate-600 dark:text-slate-400">Consultas la disponibilidad de aulas, laboratorios y espacios</p>
       </div>
 
       {/* Statistics */}
@@ -110,7 +110,7 @@ export default function ConsultaEspacios() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Total Espacios</p>
+                <p className="text-slate-600 dark:text-slate-400 mb-1">Total Espaciosss</p>
                 <p className="text-slate-900 dark:text-slate-100">{estadisticas.total}</p>
               </div>
               <Home className="w-10 h-10 text-blue-600" />
