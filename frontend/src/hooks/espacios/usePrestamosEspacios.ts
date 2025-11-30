@@ -31,7 +31,7 @@ export function usePrestamosEspacios() {
             const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
                 return {
                     id: p.id?.toString() || '',
-                    solicitante: p.usuario_nombre || 'Usuario Desconocido',
+                    solicitante: p.usuario_nombre || 'Usuario No Disponible',
                     email: p.usuario_correo || '',
                     telefono: '', // No disponible en el backend actual
                     espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
