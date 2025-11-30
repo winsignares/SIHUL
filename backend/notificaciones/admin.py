@@ -6,7 +6,7 @@ class NotificacionAdmin(admin.ModelAdmin):
     list_display = ('tipo_notificacion', 'id_usuario', 'prioridad', 'es_leida', 'fecha_creacion')
     list_filter = ('tipo_notificacion', 'prioridad', 'es_leida', 'fecha_creacion')
     search_fields = ('mensaje', 'id_usuario')
-    readonly_fields = ('fecha_creacion', 'fecha_lectura')
+    readonly_fields = ('fecha_creacion',)
     
     fieldsets = (
         ('Información del Usuario', {
@@ -15,12 +15,8 @@ class NotificacionAdmin(admin.ModelAdmin):
         ('Contenido de la Notificación', {
             'fields': ('tipo_notificacion', 'mensaje', 'prioridad')
         }),
-        ('Relación con Otros Modelos', {
-            'fields': ('id_relacion', 'tabla_relacion'),
-            'classes': ('collapse',)
-        }),
         ('Estado de Lectura', {
-            'fields': ('es_leida', 'fecha_lectura')
+            'fields': ('es_leida',)
         }),
         ('Timestamps', {
             'fields': ('fecha_creacion',),
