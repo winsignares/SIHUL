@@ -20,6 +20,7 @@ export interface Usuario {
     id: number;
     nombre: string;
   } | null;
+  espacios_permitidos?: number[];
 }
 
 export interface LoginPayload {
@@ -128,7 +129,8 @@ export const userService = {
       contrasena: usuario.contrasena,
       rol_id: usuario.rol_id,
       facultad_id: usuario.facultad_id,
-      activo: usuario.activo ?? true
+      activo: usuario.activo ?? true,
+      espacios_permitidos: usuario.espacios_permitidos
     });
   },
 
@@ -146,7 +148,8 @@ export const userService = {
       correo: usuario.correo,
       rol_id: usuario.rol_id,
       facultad_id: usuario.facultad_id,
-      activo: usuario.activo
+      activo: usuario.activo,
+      espacios_permitidos: usuario.espacios_permitidos
     });
   },
 

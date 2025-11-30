@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Switch } from '../../share/switch';
-import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Eye, Edit3, Plus, X, Check } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
-import { useGestionUsuarios, componentesDelSistema, programasDisponibles } from '../../hooks/gestionAcademica/useGestionUsuarios';
+import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 
 export default function GestionUsuarios() {
   const {
@@ -21,35 +21,6 @@ export default function GestionUsuarios() {
     userToDelete, setUserToDelete,
     editingUser, setEditingUser,
     nuevoUsuario, setNuevoUsuario,
-    componenteSeleccionado, setComponenteSeleccionado,
-    permisoSeleccionado, setPermisoSeleccionado,
-
-    componenteEnEdicion,
-    programaSeleccionado, setProgramaSeleccionado,
-    mostrandoProgramas, setMostrandoProgramas,
-    accesoTodosProgramas, setAccesoTodosProgramas,
-    componenteSeleccionadoEdit, setComponenteSeleccionadoEdit,
-    permisoSeleccionadoEdit, setPermisoSeleccionadoEdit,
-
-    componenteEnEdicionEdit,
-    programaSeleccionadoEdit, setProgramaSeleccionadoEdit,
-    mostrandoProgramasEdit, setMostrandoProgramasEdit,
-    accesoTodosProgramasEdit, setAccesoTodosProgramasEdit,
-    cargarPermisosPorRol,
-    agregarComponente,
-    eliminarComponente,
-    iniciarEdicionComponente,
-    guardarEdicionComponente,
-    cancelarEdicionComponente,
-    agregarPrograma,
-    eliminarPrograma,
-    agregarComponenteEdit,
-    eliminarComponenteEdit,
-    iniciarEdicionComponenteEdit,
-    guardarEdicionComponenteEdit,
-    cancelarEdicionComponenteEdit,
-    agregarProgramaEdit,
-    eliminarProgramaEdit,
     crearUsuario,
     resetNuevoUsuario,
     actualizarUsuario,
@@ -58,20 +29,58 @@ export default function GestionUsuarios() {
     cambiarEstadoUsuario,
     confirmarEliminarUsuario,
     filteredUsuarios,
-    notification
+    notification,
+    rolesDisponibles,
+    facultadesDisponibles,
+    espaciosDisponibles,
+    espacioSeleccionado, setEspacioSeleccionado,
+    espaciosPermitidos,
+    espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
+    espaciosPermitidosEdit,
+    facultadSeleccionada, setFacultadSeleccionada,
+    facultadSeleccionadaEdit, setFacultadSeleccionadaEdit,
+    agregarEspacioPermitido,
+    eliminarEspacioPermitido,
+    agregarEspacioPermitidoEdit,
+    eliminarEspacioPermitidoEdit
   } = useGestionUsuarios();
 
-  const getRolBadge = (rol: string) => {
-    switch (rol) {
-      case 'admin':
-        return <Badge className="bg-red-600 text-white"><UserCog className="w-3 h-3 mr-1" />Administrador</Badge>;
-      case 'autorizado':
-        return <Badge className="bg-purple-600 text-white"><Users className="w-3 h-3 mr-1" />Autorizado</Badge>;
-      case 'consultor':
-        return <Badge className="bg-blue-600 text-white"><BookOpen className="w-3 h-3 mr-1" />Consultor</Badge>;
-      default:
-        return null;
+  const getRolBadge = (usuario: any) => {
+    // Intentar obtener el nombre del rol del objeto anidado o buscarlo por ID
+    let rolNombre = usuario.rol?.nombre;
+    if (!rolNombre && usuario.rol_id) {
+      const rolEncontrado = rolesDisponibles.find(r => r.id === usuario.rol_id);
+      rolNombre = rolEncontrado?.nombre;
     }
+    rolNombre = rolNombre || 'desconocido';
+
+    const colors: Record<string, string> = {
+      admin: 'bg-red-600',
+      supervisor_general: 'bg-purple-600',
+      planeacion_facultad: 'bg-blue-600',
+      docente: 'bg-green-600',
+      estudiante: 'bg-yellow-600'
+    };
+
+    // Para planeacion_facultad, mostrar "Planeacion (Facultad)"
+    if (rolNombre === 'planeacion_facultad') {
+      let facultadNombre = usuario.facultad?.nombre;
+      if (!facultadNombre && usuario.facultad_id) {
+        const facultadEncontrada = facultadesDisponibles.find(f => f.id === usuario.facultad_id);
+        facultadNombre = facultadEncontrada?.nombre;
+      }
+
+      if (facultadNombre) {
+        return (
+          <Badge className={`${colors[rolNombre]} text-white`}>
+            <UserCog className="w-3 h-3 mr-1" />
+            Planeacion ({facultadNombre})
+          </Badge>
+        );
+      }
+    }
+
+    return <Badge className={`${colors[rolNombre] || 'bg-gray-600'} text-white`}><UserCog className="w-3 h-3 mr-1" />{rolNombre}</Badge>;
   };
 
   const getEstadoBadge = (activo: boolean) => {
@@ -80,15 +89,28 @@ export default function GestionUsuarios() {
       : <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Inactivo</Badge>;
   };
 
+  const getRolNombre = () => {
+    const rolActual = rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
+    return rolActual?.nombre || '';
+  };
+
+  const getRolNombreEdit = () => {
+    const rolId = editingUser?.rol_id || editingUser?.rol?.id;
+    const rolActual = rolesDisponibles.find(r => r.id === rolId);
+    return rolActual?.nombre || '';
+  };
+
   return (
     <div className="p-8 space-y-6">
       <NotificationBanner notification={notification} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-slate-900 dark:text-slate-100 mb-2">Gestión de Usuarios</h1>
-          <p className="text-slate-600 dark:text-slate-400">Administra usuarios, componentes y permisos por programa</p>
+          <p className="text-slate-600 dark:text-slate-400">Administra usuarios del sistema</p>
         </div>
+
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetNuevoUsuario();
@@ -99,7 +121,8 @@ export default function GestionUsuarios() {
               Crear Usuario
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Crear Nuevo Usuario</DialogTitle>
             </DialogHeader>
@@ -122,8 +145,8 @@ export default function GestionUsuarios() {
                     <Input
                       type="email"
                       placeholder="usuario@unilibre.edu.co"
-                      value={nuevoUsuario.email}
-                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, email: e.target.value })}
+                      value={nuevoUsuario.correo}
+                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, correo: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -131,256 +154,108 @@ export default function GestionUsuarios() {
                     <Input
                       type="password"
                       placeholder="********"
-                      value={nuevoUsuario.password}
-                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })}
+                      value={nuevoUsuario.contrasena}
+                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, contrasena: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Rol *</Label>
-                    <Select value={nuevoUsuario.rol} onValueChange={(value) => cargarPermisosPorRol(value as typeof nuevoUsuario.rol)}>
+                    <Select
+                      value={nuevoUsuario.rol_id?.toString() || ''}
+                      onValueChange={(value) => setNuevoUsuario({ ...nuevoUsuario, rol_id: parseInt(value) })}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Seleccione un rol" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="autorizado">Autorizado</SelectItem>
-                        <SelectItem value="consultor">Consultor</SelectItem>
+                        {rolesDisponibles.map(rol => (
+                          <SelectItem key={rol.id} value={rol.id.toString()}>
+                            {rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </div>
 
-              {/* Componentes Asignados */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Componentes Asignados</h3>
-
-                <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {componenteEnEdicion ? (
-                      <>
-                        <Input
-                          value={componentesDelSistema.find(c => c.id === componenteEnEdicion.componenteId)?.nombre || ''}
-                          disabled
-                          className="flex-1 bg-white text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <Select value={permisoSeleccionado} onValueChange={(value: 'ver' | 'editar') => setPermisoSeleccionado(value)}>
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ver">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Eye className="w-3 h-3" /> Ver
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="editar">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Edit3 className="w-3 h-3" /> Editar
-                                </span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="default"
-                            onClick={guardarEdicionComponente}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelarEdicionComponente}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <Select value={componenteSeleccionado} onValueChange={setComponenteSeleccionado}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Seleccione componente..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {componentesDelSistema
-                              .filter(c => !nuevoUsuario.permisos?.find(p => p.componenteId === c.id))
-                              .map(comp => (
-                                <SelectItem key={comp.id} value={comp.id}>
-                                  {comp.nombre}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex gap-2">
-                          <Select value={permisoSeleccionado} onValueChange={(value: 'ver' | 'editar') => setPermisoSeleccionado(value)}>
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ver">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Eye className="w-3 h-3" /> Ver
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="editar">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Edit3 className="w-3 h-3" /> Editar
-                                </span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={agregarComponente}
-                            disabled={!componenteSeleccionado}
-                            className="whitespace-nowrap"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </>
-                    )}
+              {/* Facultad (solo para planeacion_facultad) */}
+              {getRolNombre() === 'planeacion_facultad' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Facultad</h3>
+                  <div className="space-y-2">
+                    <Label>Facultad Asignada *</Label>
+                    <Select
+                      value={facultadSeleccionada?.toString() || ''}
+                      onValueChange={(value) => setFacultadSeleccionada(parseInt(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione una facultad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {facultadesDisponibles.map(facultad => (
+                          <SelectItem key={facultad.id} value={facultad.id.toString()}>
+                            {facultad.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+              )}
 
-                {nuevoUsuario.permisos && nuevoUsuario.permisos.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-lg p-3">
-                    <p className="text-xs text-slate-600 mb-2">Click para editar permiso, X para eliminar</p>
-                    <div className="flex flex-wrap gap-1.5 max-h-[200px] overflow-y-auto">
-                      {nuevoUsuario.permisos.map(permiso => (
-                        <Badge
-                          key={permiso.componenteId}
-                          variant="outline"
-                          className={`px-2 py-1 text-xs cursor-pointer transition-colors ${permiso.permiso === 'editar'
-                            ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                            : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                            }`}
-                          onClick={() => iniciarEdicionComponente(permiso)}
-                        >
-                          {permiso.permiso === 'editar' ? <Edit3 className="w-2.5 h-2.5 mr-1 inline" /> : <Eye className="w-2.5 h-2.5 mr-1 inline" />}
-                          {componentesDelSistema.find(c => c.id === permiso.componenteId)?.nombre}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              eliminarComponente(permiso.componenteId);
-                            }}
-                            className="ml-1.5 hover:text-red-600"
-                          >
-                            <X className="w-2.5 h-2.5 inline" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Programas Asignados (Solo para Admin y Autorizado) */}
-              {nuevoUsuario.rol !== 'consultor' && (
+              {/* Espacios Permitidos (solo para supervisor_general) */}
+              {getRolNombre() === 'supervisor_general' && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Programas Asignados</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Espacios Permitidos</h3>
 
-                  <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div>
-                      <Label className="text-sm text-purple-900">Acceso a todos los programas</Label>
-                      <p className="text-xs text-purple-700 mt-1">
-                        Si está activado, el usuario tendrá acceso a todos los programas
-                      </p>
+                  <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div className="flex gap-2">
+                      <Select value={espacioSeleccionado} onValueChange={setEspacioSeleccionado}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Seleccione un espacio..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {espaciosDisponibles
+                            .filter(e => !espaciosPermitidos.includes(e.id))
+                            .map(espacio => (
+                              <SelectItem key={espacio.id} value={espacio.id.toString()}>
+                                {espacio.nombre}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={agregarEspacioPermitido}
+                        disabled={!espacioSeleccionado}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Switch
-                      checked={accesoTodosProgramas}
-                      onCheckedChange={setAccesoTodosProgramas}
-                    />
                   </div>
 
-                  {!accesoTodosProgramas && (
-                    <>
-                      {mostrandoProgramas && (
-                        <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
-                          <div className="flex gap-2">
-                            <Select value={programaSeleccionado} onValueChange={setProgramaSeleccionado}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Seleccione un programa..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {programasDisponibles
-                                  .filter(p => !nuevoUsuario.programasRestringidos?.includes(p))
-                                  .map(prog => (
-                                    <SelectItem key={prog} value={prog}>{prog}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={agregarPrograma}
-                              disabled={!programaSeleccionado}
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Agregar
-                            </Button>
-                          </div>
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setMostrandoProgramas(false)}
-                            className="w-full border-green-600 text-green-600 hover:bg-green-50"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Finalizar Agregación
-                          </Button>
-                        </div>
-                      )}
-
-                      {nuevoUsuario.programasRestringidos && nuevoUsuario.programasRestringidos.length > 0 && (
-                        <div className="bg-white border border-slate-200 rounded-lg p-4">
-                          <div className="flex flex-wrap gap-2">
-                            {nuevoUsuario.programasRestringidos.map(prog => (
-                              <Badge key={prog} className="bg-purple-600 text-white px-3 py-2 text-sm">
-                                {prog}
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarPrograma(prog)}
-                                  className="ml-2 hover:text-red-200"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                          {!mostrandoProgramas && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setMostrandoProgramas(true)}
-                              className="mt-3 w-full text-blue-600"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Agregar más programas
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {accesoTodosProgramas && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mb-2" />
-                      <p className="text-sm text-blue-900">
-                        El usuario tendrá acceso a <strong>todos los programas</strong> del sistema.
-                      </p>
+                  {espaciosPermitidos.length > 0 && (
+                    <div className="bg-white border border-slate-200 rounded-lg p-3">
+                      <p className="text-xs text-slate-600 mb-2">Espacios asignados (Click en X para eliminar)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {espaciosPermitidos.map(espacioId => {
+                          const espacio = espaciosDisponibles.find(e => e.id === espacioId);
+                          return espacio ? (
+                            <Badge key={espacioId} className="bg-purple-600 text-white px-3 py-2">
+                              {espacio.nombre}
+                              <button
+                                type="button"
+                                onClick={() => eliminarEspacioPermitido(espacioId)}
+                                className="ml-2 hover:text-red-200"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -419,9 +294,11 @@ export default function GestionUsuarios() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los roles</SelectItem>
-            <SelectItem value="admin">Administrador</SelectItem>
-            <SelectItem value="autorizado">Autorizado</SelectItem>
-            <SelectItem value="consultor">Consultor</SelectItem>
+            {rolesDisponibles.map(rol => (
+              <SelectItem key={rol.id} value={rol.nombre}>
+                {rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -439,16 +316,13 @@ export default function GestionUsuarios() {
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Permisos</TableHead>
-                <TableHead>Programas</TableHead>
-                <TableHead>Último Acceso</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsuarios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                     No se encontraron usuarios
                   </TableCell>
                 </TableRow>
@@ -461,52 +335,38 @@ export default function GestionUsuarios() {
                         <p className="text-xs text-slate-500">ID: {usuario.id}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-700">{usuario.email}</TableCell>
-                    <TableCell>{getRolBadge(usuario.rol)}</TableCell>
+                    <TableCell className="text-slate-700">{usuario.correo}</TableCell>
+                    <TableCell>{getRolBadge(usuario)}</TableCell>
                     <TableCell>{getEstadoBadge(usuario.activo)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {usuario.permisos.length} componentes
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {usuario.accesoTodosProgramas ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Todos
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                          {usuario.programasRestringidos.length} programas
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-slate-600 text-sm">{usuario.ultimoAcceso || 'Nunca'}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <Button
                           size="sm"
-                          variant="ghost"
                           onClick={() => abrirEdicion(usuario)}
-                          className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                          className="bg-blue-600 hover:bg-blue-700 text-white h-8 w-8 p-0"
+                          title="Editar"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
                           size="sm"
-                          variant="ghost"
-                          onClick={() => cambiarEstadoUsuario(usuario.id)}
-                          className={`h-8 w-8 p-0 ${usuario.activo ? 'hover:bg-red-50 hover:text-red-600' : 'hover:bg-green-50 hover:text-green-600'}`}
+                          onClick={() => cambiarEstadoUsuario(usuario.id as number)}
+                          className={`h-8 w-8 p-0 ${usuario.activo
+                            ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          title={usuario.activo ? 'Desactivar' : 'Activar'}
                         >
                           {usuario.activo ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                         </Button>
                         <Button
                           size="sm"
-                          variant="ghost"
                           onClick={() => {
                             setUserToDelete(usuario);
                             setDeleteDialogOpen(true);
                           }}
-                          className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                          className="bg-red-600 hover:bg-red-700 text-white h-8 w-8 p-0"
+                          title="Eliminar"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -528,7 +388,7 @@ export default function GestionUsuarios() {
           resetEditStates();
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuario: {editingUser?.nombre}</DialogTitle>
           </DialogHeader>
@@ -540,277 +400,126 @@ export default function GestionUsuarios() {
                 <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Información Básica</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Nombre Completo</Label>
+                    <Label>Nombre Completo *</Label>
                     <Input
+                      placeholder="Ej: Juan Pérez"
                       value={editingUser.nombre}
                       onChange={(e) => setEditingUser({ ...editingUser, nombre: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email</Label>
+                    <Label>Correo Institucional *</Label>
                     <Input
                       type="email"
-                      value={editingUser.email}
-                      onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                      placeholder="usuario@unilibre.edu.co"
+                      value={editingUser.correo}
+                      onChange={(e) => setEditingUser({ ...editingUser, correo: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Contraseña</Label>
+                    <Label>Nueva Contraseña (opcional)</Label>
                     <Input
                       type="password"
-                      value={editingUser.password}
-                      onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                      placeholder="Dejar vacío para no cambiar"
+                      value={editingUser.contrasena || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, contrasena: e.target.value })}
                     />
+                    <p className="text-xs text-slate-500">Solo ingrese una contraseña si desea cambiarla</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Rol</Label>
+                    <Label>Rol *</Label>
                     <Select
-                      value={editingUser.rol}
-                      onValueChange={(value) => setEditingUser({ ...editingUser, rol: value as typeof editingUser.rol })}
+                      value={editingUser.rol_id?.toString() || ''}
+                      onValueChange={(value) => setEditingUser({ ...editingUser, rol_id: parseInt(value) })}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="autorizado">Autorizado</SelectItem>
-                        <SelectItem value="consultor">Consultor</SelectItem>
+                        {rolesDisponibles.map(rol => (
+                          <SelectItem key={rol.id} value={rol.id.toString()}>
+                            {rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </div>
 
-              {/* Componentes Asignados */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Componentes Asignados</h3>
-
-                <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {componenteEnEdicionEdit ? (
-                      <>
-                        <Input
-                          value={componentesDelSistema.find(c => c.id === componenteEnEdicionEdit.componenteId)?.nombre || ''}
-                          disabled
-                          className="flex-1 bg-white text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <Select value={permisoSeleccionadoEdit} onValueChange={(value: 'ver' | 'editar') => setPermisoSeleccionadoEdit(value)}>
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ver">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Eye className="w-3 h-3" /> Ver
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="editar">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Edit3 className="w-3 h-3" /> Editar
-                                </span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="default"
-                            onClick={guardarEdicionComponenteEdit}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelarEdicionComponenteEdit}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <Select value={componenteSeleccionadoEdit} onValueChange={setComponenteSeleccionadoEdit}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Seleccione componente..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {componentesDelSistema
-                              .filter(c => !editingUser.permisos.find(p => p.componenteId === c.id))
-                              .map(comp => (
-                                <SelectItem key={comp.id} value={comp.id}>
-                                  {comp.nombre}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex gap-2">
-                          <Select value={permisoSeleccionadoEdit} onValueChange={(value: 'ver' | 'editar') => setPermisoSeleccionadoEdit(value)}>
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ver">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Eye className="w-3 h-3" /> Ver
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="editar">
-                                <span className="flex items-center gap-1 text-xs">
-                                  <Edit3 className="w-3 h-3" /> Editar
-                                </span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={agregarComponenteEdit}
-                            disabled={!componenteSeleccionadoEdit}
-                            className="whitespace-nowrap"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {editingUser.permisos.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-lg p-3">
-                    <p className="text-xs text-slate-600 mb-2">Click para editar permiso, X para eliminar</p>
-                    <div className="flex flex-wrap gap-1.5 max-h-[200px] overflow-y-auto">
-                      {editingUser.permisos.map(permiso => (
-                        <Badge
-                          key={permiso.componenteId}
-                          variant="outline"
-                          className={`px-2 py-1 text-xs cursor-pointer transition-colors ${permiso.permiso === 'editar'
-                            ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                            : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                            }`}
-                          onClick={() => iniciarEdicionComponenteEdit(permiso)}
-                        >
-                          {permiso.permiso === 'editar' ? <Edit3 className="w-2.5 h-2.5 mr-1 inline" /> : <Eye className="w-2.5 h-2.5 mr-1 inline" />}
-                          {componentesDelSistema.find(c => c.id === permiso.componenteId)?.nombre}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              eliminarComponenteEdit(permiso.componenteId);
-                            }}
-                            className="ml-1.5 hover:text-red-600"
-                          >
-                            <X className="w-2.5 h-2.5 inline" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Programas Asignados */}
-              {editingUser.rol !== 'consultor' && (
+              {/* Facultad (solo para planeacion_facultad) */}
+              {getRolNombreEdit() === 'planeacion_facultad' && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Programas Asignados</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Facultad</h3>
+                  <Select
+                    value={facultadSeleccionadaEdit?.toString() || ''}
+                    onValueChange={(value) => setFacultadSeleccionadaEdit(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione una facultad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facultadesDisponibles.map(facultad => (
+                        <SelectItem key={facultad.id} value={facultad.id.toString()}>
+                          {facultad.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-                  <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div>
-                      <Label className="text-sm text-purple-900">Acceso a todos los programas</Label>
-                      <p className="text-xs text-purple-700 mt-1">
-                        Si está activado, el usuario tendrá acceso a todos los programas
-                      </p>
+              {/* Espacios Permitidos (solo para supervisor_general) */}
+              {getRolNombreEdit() === 'supervisor_general' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Espacios Permitidos</h3>
+
+                  <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div className="flex gap-2">
+                      <Select value={espacioSeleccionadoEdit} onValueChange={setEspacioSeleccionadoEdit}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Seleccione un espacio..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {espaciosDisponibles
+                            .filter(e => !espaciosPermitidosEdit.includes(e.id))
+                            .map(espacio => (
+                              <SelectItem key={espacio.id} value={espacio.id.toString()}>
+                                {espacio.nombre}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={agregarEspacioPermitidoEdit}
+                        disabled={!espacioSeleccionadoEdit}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Switch
-                      checked={accesoTodosProgramasEdit}
-                      onCheckedChange={setAccesoTodosProgramasEdit}
-                    />
                   </div>
 
-                  {!accesoTodosProgramasEdit && (
-                    <>
-                      {mostrandoProgramasEdit && (
-                        <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
-                          <div className="flex gap-2">
-                            <Select value={programaSeleccionadoEdit} onValueChange={setProgramaSeleccionadoEdit}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Seleccione un programa..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {programasDisponibles
-                                  .filter(p => !editingUser.programasRestringidos.includes(p))
-                                  .map(prog => (
-                                    <SelectItem key={prog} value={prog}>{prog}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={agregarProgramaEdit}
-                              disabled={!programaSeleccionadoEdit}
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Agregar
-                            </Button>
-                          </div>
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setMostrandoProgramasEdit(false)}
-                            className="w-full border-green-600 text-green-600 hover:bg-green-50"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Finalizar
-                          </Button>
-                        </div>
-                      )}
-
-                      {editingUser.programasRestringidos.length > 0 && (
-                        <div className="bg-white border border-slate-200 rounded-lg p-4">
-                          <div className="flex flex-wrap gap-2">
-                            {editingUser.programasRestringidos.map(prog => (
-                              <Badge key={prog} className="bg-purple-600 text-white px-3 py-2 text-sm">
-                                {prog}
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarProgramaEdit(prog)}
-                                  className="ml-2 hover:text-red-200"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                          {!mostrandoProgramasEdit && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setMostrandoProgramasEdit(true)}
-                              className="mt-3 w-full text-blue-600"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Agregar más programas
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {accesoTodosProgramasEdit && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mb-2" />
-                      <p className="text-sm text-blue-900">
-                        El usuario tendrá acceso a <strong>todos los programas</strong> del sistema.
-                      </p>
+                  {espaciosPermitidosEdit.length > 0 && (
+                    <div className="bg-white border border-slate-200 rounded-lg p-3">
+                      <div className="flex flex-wrap gap-2">
+                        {espaciosPermitidosEdit.map(espacioId => {
+                          const espacio = espaciosDisponibles.find(e => e.id === espacioId);
+                          return espacio ? (
+                            <Badge key={espacioId} className="bg-purple-600 text-white px-3 py-2">
+                              {espacio.nombre}
+                              <button
+                                type="button"
+                                onClick={() => eliminarEspacioPermitidoEdit(espacioId)}
+                                className="ml-2 hover:text-red-200"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -839,14 +548,18 @@ export default function GestionUsuarios() {
           <DialogHeader>
             <DialogTitle>Confirmar Eliminación</DialogTitle>
           </DialogHeader>
-          <p className="text-slate-700">
-            ¿Está seguro que desea eliminar al usuario <strong>{userToDelete?.nombre}</strong>? Esta acción no se puede deshacer.
+          <p className="text-slate-600">
+            ¿Está seguro que desea eliminar al usuario <strong>{userToDelete?.nombre}</strong>?
+            Esta acción no se puede deshacer.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={confirmarEliminarUsuario} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button
+              onClick={confirmarEliminarUsuario}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               Eliminar
             </Button>
           </DialogFooter>

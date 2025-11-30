@@ -97,6 +97,8 @@ def create_usuario(request):
         rol_id = data.get('rol_id')
         facultad_id = data.get('facultad_id')
         activo = data.get('activo', True)
+        espacios_permitidos = data.get('espacios_permitidos', []) # Lista de IDs de espacios
+
         if not nombre or not correo or not contrasena:
             return JsonResponse({"error": "nombre, correo y contrasena son requeridos"}, status=400)
         rol = None
@@ -108,6 +110,17 @@ def create_usuario(request):
             facultad = Facultad.objects.get(id=facultad_id)
         u = Usuario(nombre=nombre, correo=correo, contrasena_hash=contrasena, rol=rol, facultad=facultad, activo=bool(activo))
         u.save()
+
+        # Manejar espacios permitidos
+        if espacios_permitidos and isinstance(espacios_permitidos, list):
+            from espacios.models import EspacioFisico, EspacioPermitido
+            for espacio_id in espacios_permitidos:
+                try:
+                    espacio = EspacioFisico.objects.get(id=espacio_id)
+                    EspacioPermitido.objects.create(usuario=u, espacio=espacio)
+                except EspacioFisico.DoesNotExist:
+                    pass # Ignorar si el espacio no existe
+
         return JsonResponse({"message": "Usuario creado", "id": u.id}, status=201)
     except Rol.DoesNotExist:
         return JsonResponse({"error": "Rol no encontrado."}, status=404)
@@ -140,6 +153,22 @@ def update_usuario(request):
         if 'activo' in data:
             u.activo = bool(data.get('activo'))
         u.save()
+
+        # Manejar espacios permitidos (si se envía la clave en el JSON)
+        if 'espacios_permitidos' in data:
+            espacios_permitidos = data.get('espacios_permitidos')
+            if isinstance(espacios_permitidos, list):
+                from espacios.models import EspacioFisico, EspacioPermitido
+                # Eliminar permisos existentes
+                EspacioPermitido.objects.filter(usuario=u).delete()
+                # Crear nuevos permisos
+                for espacio_id in espacios_permitidos:
+                    try:
+                        espacio = EspacioFisico.objects.get(id=espacio_id)
+                        EspacioPermitido.objects.create(usuario=u, espacio=espacio)
+                    except EspacioFisico.DoesNotExist:
+                        pass
+
         return JsonResponse({"message": "Usuario actualizado", "id": u.id}, status=200)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
