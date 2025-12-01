@@ -138,7 +138,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     // Filtrar grupos
     const gruposSinHorarioFiltrados = obtenerGrupos().filter(grupo => {
         const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
-        const matchPrograma = filtroPrograma === 'all' || grupo.programa_id === filtroPrograma;
+        const matchPrograma = filtroPrograma === 'all' || grupo.programa_id?.toString() === filtroPrograma.toString();
         const matchSemestre = filtroSemestre === 'all' || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
         const matchGrupo = filtroGrupo === 'all' || (grupo.nombre && grupo.nombre.toLowerCase().includes(filtroGrupo.toLowerCase()));
 
