@@ -13,6 +13,7 @@ import { espacioService } from '../../services/espacios/espaciosAPI';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import { obtenerEstadisticasDashboard } from '../../services/dashboard/dashboardAPI';
 import { ocupacionSemanalService } from '../../services/reporte/ocupacionSemanalAPI';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { EspacioOcupacion } from '../../models/index';
 import type { DashboardStat } from '../../models/dashboard/types';
 import {
@@ -42,6 +43,8 @@ export function useDashboardHome() {
     const [isLoadingOccupation, setIsLoadingOccupation] = useState(true);
     const [isLoadingActivities, setIsLoadingActivities] = useState(true);
     const [topEspaciosOcupados, setTopEspaciosOcupados] = useState<EspacioOcupacion[]>([]);
+    const [periodoActivo, setPeriodoActivo] = useState<PeriodoAcademico | null>(null);
+    const [isLoadingPeriodo, setIsLoadingPeriodo] = useState(true);
 
     // Derived state
     const recentActivities = activities.slice(0, 4);
@@ -53,6 +56,7 @@ export function useDashboardHome() {
                 setIsLoadingStats(true);
                 setIsLoadingOccupation(true);
                 setIsLoadingActivities(true);
+                setIsLoadingPeriodo(true);
 
                 // Fetch all data in parallel
                 const [
@@ -61,20 +65,28 @@ export function useDashboardHome() {
                     espaciosResponse, 
                     asignaturasResponse,
                     dashboardStats,
-                    ocupacionSemanalResponse
+                    ocupacionSemanalResponse,
+                    periodosResponse
                 ] = await Promise.all([
                     facultadService.list(),
                     programaService.listarProgramas(),
                     espacioService.list(),
                     asignaturaService.list(),
                     obtenerEstadisticasDashboard(),
-                    ocupacionSemanalService.getOcupacionSemanal(undefined, 0)
+                    ocupacionSemanalService.getOcupacionSemanal(undefined, 0),
+                    periodoService.listarPeriodos()
                 ]);
 
                 const facultades = facultadesResponse.facultades || [];
                 const programas = programasResponse.programas || [];
                 const espacios = espaciosResponse.espacios || [];
                 const asignaturas = asignaturasResponse.asignaturas || [];
+
+                // Obtener período activo
+                const periodos = periodosResponse.periodos || [];
+                const periodoActual = periodos.find(p => p.activo) || periodos[0] || null;
+                setPeriodoActivo(periodoActual);
+                setIsLoadingPeriodo(false);
 
                 // Update stats with real data
                 const updatedStats: DashboardStat[] = [
@@ -180,6 +192,7 @@ export function useDashboardHome() {
                 setIsLoadingStats(false);
                 setIsLoadingOccupation(false);
                 setIsLoadingActivities(false);
+                setIsLoadingPeriodo(false);
                 // Keep default stats if API fails
             }
         };
@@ -212,6 +225,7 @@ export function useDashboardHome() {
         occupationDetails,
         occupationStats,
         topEspaciosOcupados,
+        periodoActivo,
         state: {
             showReportModal,
             isGeneratingReport,
@@ -220,7 +234,8 @@ export function useDashboardHome() {
             showAllActivities,
             isLoadingStats,
             isLoadingOccupation,
-            isLoadingActivities
+            isLoadingActivities,
+            isLoadingPeriodo
         },
         setters: {
             setShowReportModal,

@@ -45,6 +45,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
     occupationDetails,
     occupationStats,
     topEspaciosOcupados,
+    periodoActivo,
     state,
     setters,
     handlers
@@ -58,7 +59,8 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
     showAllActivities,
     isLoadingStats,
     isLoadingOccupation,
-    isLoadingActivities
+    isLoadingActivities,
+    isLoadingPeriodo
   } = state;
 
   const {
@@ -88,9 +90,10 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
           <Button
             variant="outline"
             className="border-slate-300 hover:border-red-500 hover:text-red-600"
+            disabled={isLoadingPeriodo}
           >
             <Calendar className="w-4 h-4 mr-2" />
-            Período 2025-1
+            {isLoadingPeriodo ? 'Cargando...' : periodoActivo ? `Período ${periodoActivo.nombre}` : 'Sin período activo'}
           </Button>
 
         </div>
