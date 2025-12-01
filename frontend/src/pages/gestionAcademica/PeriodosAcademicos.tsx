@@ -90,7 +90,7 @@ export default function PeriodosAcademicos() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
-                      <span className="text-slate-700 dark:text-slate-300">342 Horarios registrados</span>
+                      <span className="text-slate-700 dark:text-slate-300">{periodoActivo.horariosRegistrados} Horarios registrados</span>
                     </div>
                   </div>
                 </div>

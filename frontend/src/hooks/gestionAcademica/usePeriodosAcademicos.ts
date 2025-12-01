@@ -10,6 +10,7 @@ export interface PeriodoUI {
     activo: boolean;
     estado: 'Activo' | 'Próximo' | 'Finalizado';
     programasActivos: number;
+    horariosRegistrados: number;
 }
 
 export function usePeriodosAcademicos() {
@@ -62,7 +63,8 @@ export function usePeriodosAcademicos() {
                     fecha_fin: p.fecha_fin,
                     activo: p.activo,
                     estado,
-                    programasActivos: p.programas_activos || 0
+                    programasActivos: p.programas_activos || 0,
+                    horariosRegistrados: p.horarios_registrados || 0
                 };
             });
             
