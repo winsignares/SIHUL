@@ -17,9 +17,11 @@ import {
   AlertCircle,
   CheckCircle2,
   BookOpen,
-  X
+  X,
+  GripVertical
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useState } from 'react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCrearHorarios } from '../../hooks/gestionAcademica/useCrearHorarios';
 
@@ -28,6 +30,9 @@ interface CrearHorariosProps {
 }
 
 export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = {}) {
+  const [draggedHorario, setDraggedHorario] = useState<any>(null);
+  const [dragSource, setDragSource] = useState<{ dia: string; hora: string } | null>(null);
+
   const {
     facultades,
     espacios,
@@ -54,6 +59,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     handleHoraChange,
     handleGuardarAsignacion,
     handleEliminarHorarioAsignado,
+    handleMoverHorario,
     limpiarFiltros,
     loadData,
     gruposSinHorarioFiltrados,
@@ -114,7 +120,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                     <SelectContent>
                       <SelectItem value="all">Todas las facultades</SelectItem>
                       {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>
+                        <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -122,14 +128,14 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
 
                 <div>
                   <Label>Programa</Label>
-                  <Select value={filtroPrograma} onValueChange={setFiltroPrograma}>
+                  <Select value={filtroPrograma.toString()} onValueChange={setFiltroPrograma}>
                     <SelectTrigger>
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos los programas</SelectItem>
                       {programasFiltrados.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                        <SelectItem key={p.id} value={p.id?.toString() || ''}>{p.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -307,19 +313,22 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
           </motion.div>
         ) : (
           <div className="space-y-6">
-            {/* Grid semanal */}
+            {/* Grid semanal mejorado */}
             <Card className="border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100">
-                <CardTitle className="text-slate-900">Vista Semanal</CardTitle>
+              <CardHeader className="bg-gradient-to-r from-red-50 via-slate-50 to-blue-50 border-b border-slate-200">
+                <CardTitle className="flex items-center gap-2 text-slate-900">
+                  <Calendar className="w-5 h-5 text-red-600" />
+                  Vista Semanal - Arrastra para reorganizar
+                </CardTitle>
               </CardHeader>
-              <CardContent className="p-4">
+              <CardContent className="p-6">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse min-w-[800px]">
+                  <table className="w-full border-collapse min-w-[900px]">
                     <thead>
                       <tr>
-                        <th className="border border-slate-200 bg-slate-50 p-2 w-20 sticky left-0 z-10">Hora</th>
+                        <th className="border-2 border-slate-300 bg-gradient-to-r from-slate-100 to-slate-50 p-3 w-24 sticky left-0 z-10 font-semibold text-slate-700">Hora</th>
                         {diasSemana.map(dia => (
-                          <th key={dia} className="border border-slate-200 bg-slate-50 p-2 text-slate-700">
+                          <th key={dia} className="border-2 border-slate-300 bg-gradient-to-b from-red-50 to-slate-50 p-3 text-slate-900 font-bold">
                             {dia}
                           </th>
                         ))}
@@ -328,17 +337,15 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                     <tbody>
                       {horas.map(hora => (
                         <tr key={hora}>
-                          <td className="border border-slate-200 bg-slate-50 p-2 text-slate-600 text-center sticky left-0 z-10">
+                          <td className="border-2 border-slate-300 bg-gradient-to-r from-slate-100 to-slate-50 p-3 text-slate-700 text-center font-semibold sticky left-0 z-10">
                             {hora}
                           </td>
                           {diasSemana.map(dia => {
                             const clase = obtenerClaseEnHora(dia, hora);
                             const horaActual = parseInt(hora.split(':')[0]);
                             
-                            // Solo mostrar la clase en la primera hora de su rango
                             const esInicioClase = clase && parseInt(clase.hora_inicio.split(':')[0]) === horaActual;
                             
-                            // Calcular rowspan si es el inicio de la clase
                             let rowspan = 1;
                             if (esInicioClase) {
                               const horaInicio = parseInt(clase.hora_inicio.split(':')[0]);
@@ -346,46 +353,66 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                               rowspan = horaFin - horaInicio;
                             }
                             
-                            // Si la celda está ocupada por una clase que empezó antes, no renderizar
                             const claseOcupante = obtenerClaseEnHora(dia, hora);
                             const estaOcupadaPorClaseAnterior = claseOcupante && 
                               parseInt(claseOcupante.hora_inicio.split(':')[0]) < horaActual;
                             
                             if (estaOcupadaPorClaseAnterior) {
-                              return null; // Esta celda está siendo ocupada por el rowspan
+                              return null;
                             }
                             
                             return (
                               <td 
                                 key={`${dia}-${hora}`} 
-                                className="border border-slate-200 p-1 align-top"
+                                className="border-2 border-slate-300 p-2 align-top bg-slate-50 hover:bg-slate-100 transition-colors"
                                 rowSpan={esInicioClase ? rowspan : 1}
-                                style={esInicioClase ? { height: `${rowspan * 4}rem` } : { height: '4rem' }}
+                                style={esInicioClase ? { height: `${rowspan * 5}rem` } : { height: '5rem' }}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  if (draggedHorario && dragSource) {
+                                    handleMoverHorario(draggedHorario.id, dia, hora);
+                                    setDraggedHorario(null);
+                                    setDragSource(null);
+                                  }
+                                }}
                               >
                                 {esInicioClase && (
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="bg-gradient-to-br from-red-100 to-yellow-50 border-l-4 border-red-600 rounded p-2 text-xs h-full relative group"
+                                    draggable
+                                    onDragStart={() => {
+                                      setDraggedHorario(clase);
+                                      setDragSource({ dia, hora });
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedHorario(null);
+                                      setDragSource(null);
+                                    }}
+                                    className="bg-gradient-to-br from-red-100 via-yellow-50 to-orange-50 border-l-4 border-red-600 rounded-lg p-3 text-xs h-full relative group shadow-md hover:shadow-lg transition-shadow cursor-move"
                                   >
-                                    <div className="flex items-start justify-between h-full">
+                                    <div className="flex items-start justify-between h-full gap-2">
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-slate-900 truncate font-medium">{clase.asignatura_nombre}</p>
-                                        <p className="text-slate-600 text-xs truncate mt-0.5">
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <GripVertical className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                          <p className="text-slate-900 truncate font-bold">{clase.asignatura_nombre}</p>
+                                        </div>
+                                        <p className="text-slate-600 text-xs truncate mt-1">
                                           <User className="w-3 h-3 inline mr-1" />
                                           {clase.docente_nombre}
                                         </p>
-                                        <p className="text-slate-500 text-xs truncate mt-0.5">
+                                        <p className="text-slate-600 text-xs truncate mt-1">
                                           📍 {clase.espacio_nombre}
                                         </p>
-                                        <p className="text-slate-500 text-xs truncate mt-0.5">
+                                        <p className="text-slate-600 text-xs truncate mt-1 font-semibold">
                                           <Clock className="w-3 h-3 inline mr-1" />
                                           {clase.hora_inicio} - {clase.hora_fin}
                                         </p>
                                       </div>
                                       <button
                                         onClick={() => handleEliminarHorarioAsignado(clase.id)}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-red-600 hover:text-red-800"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded"
                                       >
                                         <X className="w-4 h-4" />
                                       </button>
@@ -399,6 +426,9 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                  💡 Puedes arrastrar las asignaturas para reorganizar el horario
                 </div>
               </CardContent>
             </Card>

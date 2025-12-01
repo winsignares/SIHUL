@@ -494,6 +494,104 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         }
     };
 
+    const handleMoverHorario = async (horarioId: number, nuevodia: string, nuevaHoraInicio: string) => {
+        try {
+            setLoading(true);
+            
+            // Obtener el horario a mover
+            const horarioAMover = horariosAsignados.find(h => h.id === horarioId);
+            if (!horarioAMover) {
+                showNotification('Horario no encontrado', 'error');
+                return;
+            }
+
+            // Calcular la hora de fin basada en la duración original
+            const horaInicioOriginal = parseInt(horarioAMover.hora_inicio.split(':')[0]);
+            const horaFinOriginal = parseInt(horarioAMover.hora_fin.split(':')[0]);
+            const duracion = horaFinOriginal - horaInicioOriginal;
+            
+            const nuevaHoraFin = `${(parseInt(nuevaHoraInicio.split(':')[0]) + duracion).toString().padStart(2, '0')}:00`;
+
+            // Validar conflictos con la nueva posición
+            const diaLower = nuevodia.toLowerCase();
+            const normalizeTime = (time: string) => time.substring(0, 5);
+
+            // Verificar conflictos de docente
+            if (horarioAMover.docente_id) {
+                const horariosDocenteSuperpuestos = todosLosHorarios.filter(h =>
+                    h.id !== horarioId && // Excluir el horario que estamos moviendo
+                    h.docente_id === horarioAMover.docente_id &&
+                    h.dia_semana === diaLower &&
+                    (
+                        (nuevaHoraInicio >= h.hora_inicio && nuevaHoraInicio < h.hora_fin) ||
+                        (nuevaHoraFin > h.hora_inicio && nuevaHoraFin <= h.hora_fin) ||
+                        (nuevaHoraInicio < h.hora_inicio && nuevaHoraFin > h.hora_fin)
+                    )
+                );
+
+                if (horariosDocenteSuperpuestos.length > 0) {
+                    const conflicto = horariosDocenteSuperpuestos[0];
+                    showNotification(
+                        `El docente ya tiene una clase el ${nuevodia} de ${conflicto.hora_inicio} a ${conflicto.hora_fin}`,
+                        'error'
+                    );
+                    return;
+                }
+            }
+
+            // Verificar conflictos de espacio
+            const horariosEspacioSuperpuestos = todosLosHorarios.filter(h =>
+                h.id !== horarioId &&
+                h.espacio_id === horarioAMover.espacio_id &&
+                h.dia_semana === diaLower &&
+                (
+                    (nuevaHoraInicio >= h.hora_inicio && nuevaHoraInicio < h.hora_fin) ||
+                    (nuevaHoraFin > h.hora_inicio && nuevaHoraFin <= h.hora_fin) ||
+                    (nuevaHoraInicio < h.hora_inicio && nuevaHoraFin > h.hora_fin)
+                )
+            );
+
+            if (horariosEspacioSuperpuestos.length > 0) {
+                const conflicto = horariosEspacioSuperpuestos[0];
+                showNotification(
+                    `El espacio ya está ocupado el ${nuevodia} de ${conflicto.hora_inicio} a ${conflicto.hora_fin}`,
+                    'error'
+                );
+                return;
+            }
+
+            // Actualizar el horario
+            await horarioService.update({
+                id: horarioId,
+                dia_semana: diaLower,
+                hora_inicio: nuevaHoraInicio,
+                hora_fin: nuevaHoraFin
+            });
+
+            showNotification('✅ Horario actualizado correctamente', 'success');
+
+            // Recargar datos
+            await loadData();
+            
+            if (grupoSeleccionado?.id) {
+                const horariosResponse = await horarioService.listExtendidos();
+                const horariosDelGrupo = horariosResponse.horarios.filter(h => h.grupo_id === grupoSeleccionado.id);
+                setHorariosAsignados(horariosDelGrupo);
+            }
+
+            if (onHorarioCreado) {
+                onHorarioCreado();
+            }
+        } catch (error) {
+            showNotification(
+                `Error al mover horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                'error'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Generar horario visual tipo grid
     const generarHoras = () => {
         const horas = [];
@@ -545,6 +643,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         handleHoraChange,
         handleGuardarAsignacion,
         handleEliminarHorarioAsignado,
+        handleMoverHorario,
         limpiarFiltros,
         loadData,
         gruposSinHorarioFiltrados,
