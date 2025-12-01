@@ -80,8 +80,8 @@ import { useAuth } from '../../context/AuthContext';
 export function useReportes() {
     const { user, role } = useAuth();
     const [tipoReporte, setTipoReporte] = useState('ocupacion');
-    const [filtroDocente, setFiltroDocente] = useState('todos');
-    const [filtroPrograma, setFiltroPrograma] = useState('todos');
+    const [filtroDocente, setFiltroDocente] = useState('Todos');
+    const [filtroPrograma, setFiltroPrograma] = useState('Todos');
     const [periodoActual, setPeriodoActual] = useState(PERIODO_DEFAULT);
     const [datosOcupacion, setDatosOcupacion] = useState<DatoOcupacionJornada[]>(datosOcupacionDefault);
     const [espaciosMasUsados, setEspaciosMasUsados] = useState<EspacioMasUsado[]>(espaciosMasUsadosDefault);
@@ -262,13 +262,18 @@ export function useReportes() {
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
+                // Filtrar según el filtro de programa aplicado
+                const horariosAExportar = filtroPrograma === 'Todos' 
+                    ? todosLosHorarios
+                    : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
+                
                 const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: todosLosHorarios
+                        horarios: horariosAExportar
                     })
                 });
 
@@ -297,13 +302,18 @@ export function useReportes() {
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
+                // Filtrar según el filtro de docente aplicado
+                const horariosAExportar = filtroDocente === 'Todos' 
+                    ? todosLosHorarios
+                    : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
+                
                 const response = await fetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: todosLosHorarios
+                        horarios: horariosAExportar
                     })
                 });
 
@@ -430,13 +440,18 @@ export function useReportes() {
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
+                // Filtrar según el filtro de programa aplicado
+                const horariosAExportar = filtroPrograma === 'Todos' 
+                    ? todosLosHorarios
+                    : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
+                
                 const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: todosLosHorarios
+                        horarios: horariosAExportar
                     })
                 });
 
@@ -466,7 +481,12 @@ export function useReportes() {
                     const horariosResponse = await horarioService.listExtendidos();
                     const todosLosHorarios = horariosResponse.horarios;
                     
-                    console.log('Enviando horarios al endpoint:', todosLosHorarios.length);
+                    // Filtrar según el filtro de docente aplicado
+                    const horariosAExportar = filtroDocente === 'Todos' 
+                        ? todosLosHorarios
+                        : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
+                    
+                    console.log('Enviando horarios al endpoint:', horariosAExportar.length);
                     
                     const response = await fetch(`${apiUrl}/horario/exportar-excel-docente/`, {
                         method: 'POST',
@@ -474,7 +494,7 @@ export function useReportes() {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            horarios: todosLosHorarios
+                            horarios: horariosAExportar
                         })
                     });
 

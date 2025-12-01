@@ -140,8 +140,12 @@ export default function Reportes() {
         );
 
       case 'horarios-docente':
-        // Agrupar horarios por docente
+        // Agrupar horarios por docente y filtrar según el filtro aplicado
         const docentesAgrupados = horariosDocente
+          .filter(horario => 
+            filtroDocente === 'Todos' || 
+            horario.docente.toLowerCase() === filtroDocente.toLowerCase()
+          )
           .reduce((acc, horario) => {
             const key = horario.docente;
             if (!acc[key]) {
@@ -160,7 +164,19 @@ export default function Reportes() {
         return (
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <CardHeader>
-              <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Docente</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Docente</CardTitle>
+                <Select value={filtroDocente} onValueChange={setFiltroDocente}>
+                  <SelectTrigger className="w-[250px]">
+                    <SelectValue placeholder="Seleccionar docente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {docentes.map(doc => (
+                      <SelectItem key={doc} value={doc}>{doc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {docentesListaAgrupada.length === 0 ? (
@@ -211,7 +227,7 @@ export default function Reportes() {
         // Agrupar horarios por programa, grupo y semestre
         const horariosAgrupados = horariosPrograma
           .filter(horario => 
-            filtroPrograma === 'todos' || 
+            filtroPrograma === 'Todos' || 
             horario.programa?.toLowerCase() === filtroPrograma.toLowerCase()
           )
           .reduce((acc, horario) => {
@@ -240,7 +256,7 @@ export default function Reportes() {
                   </SelectTrigger>
                   <SelectContent>
                     {programas.map(prog => (
-                      <SelectItem key={prog} value={prog.toLowerCase()}>{prog}</SelectItem>
+                      <SelectItem key={prog} value={prog}>{prog}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
