@@ -1,7 +1,7 @@
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Download, Calendar, FileSpreadsheet } from 'lucide-react';
+import { Download, Calendar, FileSpreadsheet, Loader } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { Toaster } from '../../share/sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
@@ -27,7 +27,9 @@ export default function Reportes() {
     docentes,
     programas,
     exportarPDF,
-    exportarExcel
+    exportarExcel,
+    cargandoOcupacion,
+    errorOcupacion
   } = useReportes();
 
   const renderReporteContent = () => {
@@ -35,35 +37,48 @@ export default function Reportes() {
       case 'ocupacion':
         return (
           <div className="grid lg:grid-cols-2 gap-6">
+            {errorOcupacion && (
+              <div className="lg:col-span-2 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-red-800 dark:text-red-200">{errorOcupacion}</p>
+              </div>
+            )}
+            
             <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
               <CardHeader>
                 <CardTitle className="text-slate-900 dark:text-slate-100">Ocupación por Jornada - Semana Actual</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {datosOcupacion.map((dato, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <span className="text-slate-900 dark:text-slate-100">{dato.jornada}</span>
-                        <p className="text-slate-600 dark:text-slate-400">{dato.espacios} espacios</p>
+                {cargandoOcupacion ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="w-6 h-6 text-slate-400 animate-spin" />
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">Cargando datos...</span>
+                  </div>
+                ) : (
+                  datosOcupacion.map((dato, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <span className="text-slate-900 dark:text-slate-100">{dato.jornada}</span>
+                          <p className="text-slate-600 dark:text-slate-400">{dato.espacios} espacios</p>
+                        </div>
+                        <span className="text-slate-900 dark:text-slate-100">{dato.ocupacion}%</span>
                       </div>
-                      <span className="text-slate-900 dark:text-slate-100">{dato.ocupacion}%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <motion.div
-                        className={`${dato.color} h-3 rounded-full`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${dato.ocupacion}%` }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
-                      ></motion.div>
-                    </div>
-                  </motion.div>
-                ))}
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                        <motion.div
+                          className={`${dato.color} h-3 rounded-full`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${dato.ocupacion}%` }}
+                          transition={{ duration: 0.5, delay: index * 0.1 }}
+                        ></motion.div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -73,28 +88,35 @@ export default function Reportes() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {espaciosMasUsados.map((espacio, index) => (
-                    <motion.div
-                      key={index}
-                      className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700 last:border-0 last:pb-0"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
-                          <span className="text-white">{index + 1}</span>
+                  {cargandoOcupacion ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader className="w-6 h-6 text-slate-400 animate-spin" />
+                      <span className="ml-2 text-slate-600 dark:text-slate-400">Cargando datos...</span>
+                    </div>
+                  ) : (
+                    espaciosMasUsados.map((espacio, index) => (
+                      <motion.div
+                        key={index}
+                        className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700 last:border-0 last:pb-0"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                            <span className="text-white">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="text-slate-900 dark:text-slate-100">{espacio.espacio}</p>
+                            <p className="text-slate-600 dark:text-slate-400">{espacio.usos} clases/semana</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-slate-900 dark:text-slate-100">{espacio.espacio}</p>
-                          <p className="text-slate-600 dark:text-slate-400">{espacio.usos} clases/semana</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400">
-                        {espacio.ocupacion}%
-                      </Badge>
-                    </motion.div>
-                  ))}
+                        <Badge variant="outline" className="border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400">
+                          {espacio.ocupacion}%
+                        </Badge>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

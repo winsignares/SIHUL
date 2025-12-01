@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart3, User, Building, PieChart, TrendingUp } from 'lucide-react';
 import type {
     DatoOcupacionJornada,
@@ -9,16 +9,18 @@ import type {
     CapacidadUtilizada,
     ReporteDisponible
 } from '../../models';
+import { reporteOcupacionService } from '../../services/reporte/reporteOcupacionAPI';
 
 const PERIODO_TRABAJO = '2025-1';
 
-const datosOcupacion: DatoOcupacionJornada[] = [
+// Datos por defecto mientras se cargan los datos reales
+const datosOcupacionDefault: DatoOcupacionJornada[] = [
     { jornada: 'Mañana (07:00 - 12:00)', ocupacion: 85, espacios: 45, color: 'bg-blue-600' },
     { jornada: 'Tarde (14:00 - 18:00)', ocupacion: 92, espacios: 38, color: 'bg-red-600' },
     { jornada: 'Noche (18:00 - 21:00)', ocupacion: 68, espacios: 22, color: 'bg-yellow-600' }
 ];
 
-const espaciosMasUsados: EspacioMasUsado[] = [
+const espaciosMasUsadosDefault: EspacioMasUsado[] = [
     { espacio: 'Aula 101', usos: 28, ocupacion: 95 },
     { espacio: 'Laboratorio 301', usos: 24, ocupacion: 88 },
     { espacio: 'Aula 205', usos: 22, ocupacion: 82 },
@@ -75,6 +77,38 @@ export function useReportes() {
     const [tipoReporte, setTipoReporte] = useState('ocupacion');
     const [filtroDocente, setFiltroDocente] = useState('todos');
     const [filtroPrograma, setFiltroPrograma] = useState('todos');
+    const [datosOcupacion, setDatosOcupacion] = useState<DatoOcupacionJornada[]>(datosOcupacionDefault);
+    const [espaciosMasUsados, setEspaciosMasUsados] = useState<EspacioMasUsado[]>(espaciosMasUsadosDefault);
+    const [cargandoOcupacion, setCargandoOcupacion] = useState(false);
+    const [errorOcupacion, setErrorOcupacion] = useState<string | null>(null);
+
+    // Cargar datos de ocupación cuando el componente monta
+    useEffect(() => {
+        const cargarOcupacionReporte = async () => {
+            setCargandoOcupacion(true);
+            setErrorOcupacion(null);
+            try {
+                const response = await reporteOcupacionService.getOcupacionReporte(0);
+                
+                // Mapear datos con colores
+                const datosConColor = response.ocupacion_por_jornada.map((dato, index) => ({
+                    ...dato,
+                    color: index === 0 ? 'bg-blue-600' : index === 1 ? 'bg-red-600' : 'bg-yellow-600'
+                }));
+                
+                setDatosOcupacion(datosConColor);
+                setEspaciosMasUsados(response.espacios_mas_usados);
+            } catch (error) {
+                console.error('Error al cargar datos de ocupación:', error);
+                setErrorOcupacion('Error al cargar los datos de ocupación');
+                // Mantener datos por defecto en caso de error
+            } finally {
+                setCargandoOcupacion(false);
+            }
+        };
+
+        cargarOcupacionReporte();
+    }, []);
 
     // Filtrar programas según facultad del usuario
     let programasFiltrados = programas;
@@ -297,6 +331,8 @@ export function useReportes() {
         docentes,
         programas: programasFiltrados,
         exportarPDF,
-        exportarExcel
+        exportarExcel,
+        cargandoOcupacion,
+        errorOcupacion
     };
 }

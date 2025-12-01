@@ -12,6 +12,8 @@ import { programaService } from '../../services/programas/programaAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import { obtenerEstadisticasDashboard } from '../../services/dashboard/dashboardAPI';
+import { ocupacionSemanalService } from '../../services/reporte/ocupacionSemanalAPI';
+import type { EspacioOcupacion } from '../../models/index';
 import type { DashboardStat } from '../../models/dashboard/types';
 import {
     Clock,
@@ -39,6 +41,7 @@ export function useDashboardHome() {
     const [occupationDetails, setOccupationDetails] = useState(dashboardHomeOccupationDetails);
     const [isLoadingOccupation, setIsLoadingOccupation] = useState(true);
     const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+    const [topEspaciosOcupados, setTopEspaciosOcupados] = useState<EspacioOcupacion[]>([]);
 
     // Derived state
     const recentActivities = activities.slice(0, 4);
@@ -57,13 +60,15 @@ export function useDashboardHome() {
                     programasResponse, 
                     espaciosResponse, 
                     asignaturasResponse,
-                    dashboardStats
+                    dashboardStats,
+                    ocupacionSemanalResponse
                 ] = await Promise.all([
                     facultadService.list(),
                     programaService.listarProgramas(),
                     espacioService.list(),
                     asignaturaService.list(),
-                    obtenerEstadisticasDashboard() // Obtener usuario del contexto si está disponible
+                    obtenerEstadisticasDashboard(),
+                    ocupacionSemanalService.getOcupacionSemanal(undefined, 0)
                 ]);
 
                 const facultades = facultadesResponse.facultades || [];
@@ -117,6 +122,32 @@ export function useDashboardHome() {
 
                 setStats(updatedStats);
                 setIsLoadingStats(false);
+
+                // Procesar espacios más ocupados
+                if (ocupacionSemanalResponse?.ocupacion) {
+                    const espaciosMapeados: EspacioOcupacion[] = ocupacionSemanalResponse.ocupacion.map((espacio: any) => ({
+                        id: espacio.id.toString(),
+                        nombre: espacio.nombre,
+                        tipo: espacio.tipo,
+                        capacidad: espacio.capacidad,
+                        horasOcupadas: espacio.horasOcupadasSemana,
+                        horasDisponibles: espacio.horasDisponibles,
+                        porcentajeOcupacion: espacio.porcentajeOcupacion,
+                        edificio: espacio.edificio,
+                        jornada: {
+                            manana: Math.round(espacio.porcentajeManana),
+                            tarde: Math.round(espacio.porcentajeTarde),
+                            noche: Math.round(espacio.porcentajeNoche)
+                        }
+                    }));
+                    
+                    // Ordenar por porcentaje de ocupación y tomar los top 10
+                    const topEspacios = espaciosMapeados
+                        .sort((a, b) => b.porcentajeOcupacion - a.porcentajeOcupacion)
+                        .slice(0, 10);
+                    
+                    setTopEspaciosOcupados(topEspacios);
+                }
 
                 // Actualizar estadísticas de ocupación
                 if (dashboardStats.ocupacionSemanal.length > 0) {
@@ -180,6 +211,7 @@ export function useDashboardHome() {
         quickStats: dashboardHomeQuickStats,
         occupationDetails,
         occupationStats,
+        topEspaciosOcupados,
         state: {
             showReportModal,
             isGeneratingReport,
