@@ -513,7 +513,7 @@ export function useCentroHorarios() {
         showNotification('Preparando descarga...', 'info');
 
         try {
-            // Usar todos los horarios cargados
+            // Usar horarios filtrados según los filtros aplicados
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
                 method: 'POST',
@@ -521,7 +521,7 @@ export function useCentroHorarios() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    horarios: horarios
+                    horarios: horariosFiltrados
                 })
             });
 
@@ -550,7 +550,7 @@ export function useCentroHorarios() {
         showNotification('Preparando descarga...', 'info');
 
         try {
-            // Usar todos los horarios cargados
+            // Usar horarios filtrados según los filtros aplicados
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
                 method: 'POST',
@@ -558,7 +558,7 @@ export function useCentroHorarios() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    horarios: horarios
+                    horarios: horariosFiltrados
                 })
             });
 
