@@ -21,9 +21,9 @@ import {
   ChevronDown,
   List,
   Plus,
+  AlertTriangle,
   FileDown,
-  FileSpreadsheet,
-  AlertTriangle
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import CrearHorarios from './CrearHorarios';
@@ -220,27 +220,9 @@ export default function CentroHorarios() {
           {/* Resultados */}
           <Card className="border-slate-200 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between flex-wrap gap-4">
-                <span className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  Grupos Encontrados ({gruposAgrupados.length})
-                </span>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleDescargarPDF}
-                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-                  >
-                    <FileDown className="w-4 h-4 mr-2" />
-                    Descargar en PDF
-                  </Button>
-                  <Button
-                    onClick={handleDescargarExcel}
-                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-                  >
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Descargar en Excel
-                  </Button>
-                </div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Grupos Encontrados ({gruposAgrupados.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
