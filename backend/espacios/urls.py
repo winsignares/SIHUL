@@ -26,4 +26,9 @@ urlpatterns = [
     # Estado y Horario (Supervisor)
     path('<int:espacio_id>/estado/', views.get_estado_espacio, name='get_estado_espacio'),
     path('<int:espacio_id>/horario/', views.get_horario_espacio, name='get_horario_espacio'),
+    
+    # Ocupación Semanal y Reportes
+    path('ocupacion/semanal/', views.ocupacion_semanal, name='ocupacion_semanal'),
+    path('ocupacion/pdf/', views.generar_pdf_ocupacion_semanal, name='generar_pdf_ocupacion_semanal'),
+    path('debug/ocupacion/', views.debug_ocupacion, name='debug_ocupacion'),
 ]

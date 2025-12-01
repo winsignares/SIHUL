@@ -9,6 +9,7 @@ from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
+from django.db.models import Count
 
 # ---------- TipoEspacio CRUD ----------
 @csrf_exempt
@@ -720,3 +721,511 @@ def get_horario_espacio(request, espacio_id=None):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def ocupacion_semanal(request):
+    """
+    Calcula y retorna la ocupación semanal de espacios.
+    
+    Parámetros GET opcionales:
+    - tipo_espacio_id: ID del tipo de espacio para filtrar
+    - semana_offset: 0 (semana actual), 1 (próxima semana), -1 (semana pasada)
+    - espacio_id: ID del espacio específico (opcional)
+    
+    Retorna un array con la ocupación de cada espacio considerando:
+    - Horarios (clases)
+    - Préstamos de espacios
+    - Rango de trabajo: 6:00 - 22:00 (16 horas/día)
+    - Jornadas: Mañana (6-12), Tarde (12-18), Noche (18-22)
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        
+        # Obtener parámetros
+        tipo_espacio_id = request.GET.get('tipo_espacio_id')
+        espacio_id = request.GET.get('espacio_id')
+        semana_offset = int(request.GET.get('semana_offset', 0))
+        
+        # Calcular rango de fechas (Lunes a Sábado)
+        hoy = timezone.now().date()
+        dias_hasta_lunes = (hoy.weekday() - 0) % 7  # 0 = Monday
+        lunes = hoy - timedelta(days=dias_hasta_lunes)
+        lunes += timedelta(weeks=semana_offset)
+        sabado = lunes + timedelta(days=5)  # Lunes + 5 días = Sábado
+        
+        # Mapeo de nombres de días (inglés a español y variantes)
+        dias_nombre = {
+            'Monday': 'Lunes',
+            'Tuesday': 'Martes',
+            'Wednesday': 'Miércoles',
+            'Thursday': 'Jueves',
+            'Friday': 'Viernes',
+            'Saturday': 'Sábado',
+            'Sunday': 'Domingo'
+        }
+        
+        # Obtener espacios
+        espacios_query = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        
+        if tipo_espacio_id:
+            espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
+        
+        if espacio_id:
+            espacios_query = espacios_query.filter(id=espacio_id)
+        
+        ocupacion_list = []
+        
+        for espacio in espacios_query:
+            # Calcular horas ocupadas por cada jornada
+            horas_manana = 0.0      # 6-12 (6 horas máx)
+            horas_tarde = 0.0       # 12-18 (6 horas máx)
+            horas_noche = 0.0       # 18-22 (4 horas máx)
+            horas_totales = 0.0
+            
+            # Horas disponibles en la semana: 16 horas/día * 6 días = 96 horas
+            horas_disponibles = 16 * 6  # 96 horas
+            
+            # Recorrer cada día de la semana (Lunes a Sábado)
+            fecha_actual = lunes
+            while fecha_actual <= sabado:
+                dia_nombre_en = fecha_actual.strftime('%A')
+                dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
+                
+                # Obtener horarios (clases) para este día y espacio
+                # Buscar con variantes de dia_semana (en español, en inglés, etc.)
+                horarios_dia = Horario.objects.filter(
+                    espacio=espacio,
+                    dia_semana__iexact=dia_nombre_es  # Case-insensitive search
+                )
+                
+                # Si no encuentra con español, buscar con inglés
+                if not horarios_dia.exists():
+                    horarios_dia = Horario.objects.filter(
+                        espacio=espacio,
+                        dia_semana__iexact=dia_nombre_en
+                    )
+                
+                # Obtener préstamos aprobados para este día y espacio
+                prestamos_dia = PrestamoEspacio.objects.filter(
+                    espacio=espacio,
+                    fecha=fecha_actual,
+                    estado='Aprobado'
+                )
+                
+                # Calcular horas ocupadas por horarios
+                for horario in horarios_dia:
+                    duracion = _calcular_duracion_horas(horario.hora_inicio, horario.hora_fin)
+                    horas_ocupadas_en_jornadas = _distribuir_horas_en_jornadas(
+                        horario.hora_inicio, 
+                        horario.hora_fin
+                    )
+                    horas_manana += horas_ocupadas_en_jornadas['manana']
+                    horas_tarde += horas_ocupadas_en_jornadas['tarde']
+                    horas_noche += horas_ocupadas_en_jornadas['noche']
+                
+                # Calcular horas ocupadas por préstamos
+                for prestamo in prestamos_dia:
+                    duracion = _calcular_duracion_horas(prestamo.hora_inicio, prestamo.hora_fin)
+                    horas_ocupadas_en_jornadas = _distribuir_horas_en_jornadas(
+                        prestamo.hora_inicio,
+                        prestamo.hora_fin
+                    )
+                    horas_manana += horas_ocupadas_en_jornadas['manana']
+                    horas_tarde += horas_ocupadas_en_jornadas['tarde']
+                    horas_noche += horas_ocupadas_en_jornadas['noche']
+                
+                fecha_actual += timedelta(days=1)
+            
+            # Limitar horas máximas por jornada (para evitar duplicados)
+            # Máximo 6 horas mañana (lunes-sábado)
+            horas_manana = min(horas_manana, 36)  # 6 horas * 6 días
+            # Máximo 6 horas tarde (lunes-sábado)
+            horas_tarde = min(horas_tarde, 36)  # 6 horas * 6 días
+            # Máximo 4 horas noche (lunes-sábado)
+            horas_noche = min(horas_noche, 24)  # 4 horas * 6 días
+            
+            horas_totales = horas_manana + horas_tarde + horas_noche
+            
+            # Calcular porcentajes por jornada
+            porcentaje_manana = (horas_manana / 36) * 100 if horas_manana > 0 else 0
+            porcentaje_tarde = (horas_tarde / 36) * 100 if horas_tarde > 0 else 0
+            porcentaje_noche = (horas_noche / 24) * 100 if horas_noche > 0 else 0
+            
+            # Calcular porcentaje de ocupación semanal
+            porcentaje_ocupacion = (horas_totales / horas_disponibles) * 100 if horas_totales > 0 else 0
+            
+            ocupacion_list.append({
+                'id': espacio.id,
+                'nombre': espacio.nombre,
+                'tipo': espacio.tipo.nombre,
+                'ubicacion': espacio.ubicacion or 'Sin ubicación',
+                'capacidad': espacio.capacidad,
+                'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
+                'edificio': espacio.ubicacion.split('-')[0] if espacio.ubicacion and '-' in espacio.ubicacion else 'N/A',
+                'horasOcupadasSemana': round(horas_totales, 2),
+                'horasDisponibles': horas_disponibles,
+                'horasOcupadasManana': round(horas_manana, 2),
+                'horasOcupadasTarde': round(horas_tarde, 2),
+                'horasOcupadasNoche': round(horas_noche, 2),
+                'porcentajeOcupacion': round(porcentaje_ocupacion, 2),
+                'porcentajeManana': round(porcentaje_manana, 2),
+                'porcentajeTarde': round(porcentaje_tarde, 2),
+                'porcentajeNoche': round(porcentaje_noche, 2),
+                'jornada': {
+                    'manana': round(porcentaje_manana, 1),
+                    'tarde': round(porcentaje_tarde, 1),
+                    'noche': round(porcentaje_noche, 1)
+                },
+                'estado': espacio.estado
+            })
+        
+        return JsonResponse({
+            'semana_inicio': lunes.isoformat(),
+            'semana_fin': sabado.isoformat(),
+            'ocupacion': ocupacion_list
+        }, status=200)
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def _calcular_duracion_horas(hora_inicio, hora_fin):
+    """Calcula la duración en horas entre dos tiempos."""
+    from datetime import datetime, time
+    
+    # Convertir a datetime si son objetos time
+    if isinstance(hora_inicio, time):
+        inicio_dt = datetime.combine(datetime.today(), hora_inicio)
+    else:
+        inicio_dt = hora_inicio
+    
+    if isinstance(hora_fin, time):
+        fin_dt = datetime.combine(datetime.today(), hora_fin)
+    else:
+        fin_dt = hora_fin
+    
+    duracion = (fin_dt - inicio_dt).total_seconds() / 3600
+    return max(0, duracion)  # Asegurar que no sea negativo
+
+
+def _distribuir_horas_en_jornadas(hora_inicio, hora_fin):
+    """
+    Distribuye las horas ocupadas en las jornadas: Mañana (6-12), Tarde (12-18), Noche (18-22).
+    Retorna un diccionario con horas en cada jornada.
+    """
+    from datetime import time, datetime, timedelta
+    
+    # Definir horas de jornadas
+    hora_6 = time(6, 0)
+    hora_12 = time(12, 0)
+    hora_18 = time(18, 0)
+    hora_22 = time(22, 0)
+    
+    # Convertir a datetime para cálculos
+    if isinstance(hora_inicio, time):
+        inicio_dt = datetime.combine(datetime.today(), hora_inicio)
+    else:
+        inicio_dt = hora_inicio
+    
+    if isinstance(hora_fin, time):
+        fin_dt = datetime.combine(datetime.today(), hora_fin)
+    else:
+        fin_dt = hora_fin
+    
+    horas_manana = 0
+    horas_tarde = 0
+    horas_noche = 0
+    
+    # Calcular intersección en cada jornada
+    # MAÑANA (6:00 - 12:00)
+    manana_inicio = datetime.combine(datetime.today(), hora_6)
+    manana_fin = datetime.combine(datetime.today(), hora_12)
+    horas_manana = _calcular_interseccion_horas(inicio_dt, fin_dt, manana_inicio, manana_fin)
+    
+    # TARDE (12:00 - 18:00)
+    tarde_inicio = datetime.combine(datetime.today(), hora_12)
+    tarde_fin = datetime.combine(datetime.today(), hora_18)
+    horas_tarde = _calcular_interseccion_horas(inicio_dt, fin_dt, tarde_inicio, tarde_fin)
+    
+    # NOCHE (18:00 - 22:00)
+    noche_inicio = datetime.combine(datetime.today(), hora_18)
+    noche_fin = datetime.combine(datetime.today(), hora_22)
+    horas_noche = _calcular_interseccion_horas(inicio_dt, fin_dt, noche_inicio, noche_fin)
+    
+    return {
+        'manana': horas_manana,
+        'tarde': horas_tarde,
+        'noche': horas_noche
+    }
+
+
+def _calcular_interseccion_horas(inicio1, fin1, inicio2, fin2):
+    """
+    Calcula las horas de intersección entre dos rangos de tiempo.
+    """
+    inicio_interseccion = max(inicio1, inicio2)
+    fin_interseccion = min(fin1, fin2)
+    
+    if inicio_interseccion >= fin_interseccion:
+        return 0
+    
+    duracion = (fin_interseccion - inicio_interseccion).total_seconds() / 3600
+    return max(0, duracion)
+
+
+@csrf_exempt
+def debug_ocupacion(request):
+    """
+    Endpoint de debug para ver qué datos hay en la BD.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo GET"}, status=405)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        
+        hoy = timezone.now().date()
+        dias_hasta_lunes = (hoy.weekday() - 0) % 7
+        lunes = hoy - timedelta(days=dias_hasta_lunes)
+        sabado = lunes + timedelta(days=5)
+        
+        # Mapeo de nombres de días
+        dias_nombre_es = {
+            'Monday': 'Lunes',
+            'Tuesday': 'Martes',
+            'Wednesday': 'Miércoles',
+            'Thursday': 'Jueves',
+            'Friday': 'Viernes',
+            'Saturday': 'Sábado'
+        }
+        
+        debug_data = {
+            'semana': {
+                'lunes': lunes.isoformat(),
+                'sabado': sabado.isoformat(),
+            },
+            'totales': {
+                'horarios': Horario.objects.count(),
+                'prestamos': PrestamoEspacio.objects.count(),
+                'prestamos_aprobados': PrestamoEspacio.objects.filter(estado='Aprobado').count(),
+                'espacios': EspacioFisico.objects.count(),
+            },
+            'horarios_por_espacio': {},
+            'prestamos_por_espacio': {},
+        }
+        
+        # Ver horarios agrupados por espacio
+        horarios_por_espacio = Horario.objects.values('espacio__id', 'espacio__nombre', 'dia_semana').annotate(
+            count=Count('id')
+        ).order_by('espacio__nombre')
+        
+        for h in horarios_por_espacio[:10]:
+            key = f"{h['espacio__id']} - {h['espacio__nombre']}"
+            if key not in debug_data['horarios_por_espacio']:
+                debug_data['horarios_por_espacio'][key] = []
+            debug_data['horarios_por_espacio'][key].append({
+                'dia': h['dia_semana'],
+                'cantidad': h['count']
+            })
+        
+        # Ver préstamos agrupados por espacio
+        prestamos_por_espacio = PrestamoEspacio.objects.filter(
+            estado='Aprobado'
+        ).values('espacio__id', 'espacio__nombre').annotate(
+            count=Count('id')
+        ).order_by('espacio__nombre')
+        
+        for p in prestamos_por_espacio[:10]:
+            key = f"{p['espacio__id']} - {p['espacio__nombre']}"
+            debug_data['prestamos_por_espacio'][key] = p['count']
+        
+        # Mostrar detalles de algunos horarios específicos
+        debug_data['muestra_horarios_detallados'] = []
+        horarios_muestra = Horario.objects.select_related('espacio')[:5]
+        for h in horarios_muestra:
+            debug_data['muestra_horarios_detallados'].append({
+                'espacio_id': h.espacio.id,
+                'espacio': h.espacio.nombre,
+                'dia_semana': h.dia_semana,
+                'hora_inicio': str(h.hora_inicio),
+                'hora_fin': str(h.hora_fin),
+            })
+        
+        # Mostrar detalles de algunos préstamos
+        debug_data['muestra_prestamos_detallados'] = []
+        prestamos_muestra = PrestamoEspacio.objects.filter(estado='Aprobado').select_related('espacio')[:5]
+        for p in prestamos_muestra:
+            debug_data['muestra_prestamos_detallados'].append({
+                'espacio_id': p.espacio.id,
+                'espacio': p.espacio.nombre,
+                'fecha': p.fecha.isoformat(),
+                'hora_inicio': str(p.hora_inicio),
+                'hora_fin': str(p.hora_fin),
+            })
+        
+        # Ver valores únicos de dia_semana en BD
+        dias_en_bd = list(Horario.objects.values_list('dia_semana', flat=True).distinct())
+        debug_data['dias_semana_unicos_en_bd'] = dias_en_bd
+        
+        return JsonResponse(debug_data, status=200)
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+@csrf_exempt
+def generar_pdf_ocupacion_semanal(request):
+    """
+    Genera un PDF con el reporte de ocupación semanal.
+    
+    Parámetros POST:
+    - tipo_espacio_id: ID del tipo de espacio (opcional)
+    - semana_offset: 0 (semana actual), 1 (próxima semana), etc.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Solo se permite POST"}, status=405)
+    
+    try:
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from io import BytesIO
+        from django.http import FileResponse
+        
+        data = json.loads(request.body) if request.body else {}
+        tipo_espacio_id = data.get('tipo_espacio_id')
+        semana_offset = int(data.get('semana_offset', 0))
+        
+        # Calcular rango de fechas
+        hoy = timezone.now().date()
+        dias_hasta_lunes = (hoy.weekday() - 0) % 7
+        lunes = hoy - timedelta(days=dias_hasta_lunes)
+        lunes += timedelta(weeks=semana_offset)
+        sabado = lunes + timedelta(days=5)
+        
+        # Obtener espacios
+        espacios_query = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        
+        if tipo_espacio_id:
+            espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
+        
+        # Crear PDF en memoria
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Estilos personalizados
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#1e293b'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=12,
+            textColor=colors.HexColor('#475569'),
+            spaceAfter=12
+        )
+        
+        # Título
+        title = Paragraph('Reporte de Ocupación Semanal de Espacios', title_style)
+        elements.append(title)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Información de período
+        periodo_texto = f'<b>Período:</b> {lunes.strftime("%d/%m/%Y")} a {sabado.strftime("%d/%m/%Y")}'
+        elements.append(Paragraph(periodo_texto, styles['Normal']))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Tabla de datos
+        table_data = [['Espacio', 'Tipo', 'Ubicación', 'Horas Ocupadas', 'Ocupación %']]
+        
+        for espacio in espacios_query:
+            # Calcular ocupación (simplificado para el PDF)
+            horas_ocupadas = 0.0
+            
+            fecha_actual = lunes
+            while fecha_actual <= sabado:
+                horarios = Horario.objects.filter(espacio=espacio, dia_semana__iexact=_get_dia_nombre(fecha_actual))
+                for h in horarios:
+                    horas_ocupadas += _calcular_duracion_horas(h.hora_inicio, h.hora_fin)
+                
+                prestamos = PrestamoEspacio.objects.filter(
+                    espacio=espacio,
+                    fecha=fecha_actual,
+                    estado='Aprobado'
+                )
+                for p in prestamos:
+                    horas_ocupadas += _calcular_duracion_horas(p.hora_inicio, p.hora_fin)
+                
+                fecha_actual += timedelta(days=1)
+            
+            porcentaje = (horas_ocupadas / 96) * 100 if horas_ocupadas > 0 else 0
+            
+            table_data.append([
+                espacio.nombre,
+                espacio.tipo.nombre,
+                espacio.ubicacion or 'N/A',
+                f'{horas_ocupadas:.1f}h',
+                f'{porcentaje:.1f}%'
+            ])
+        
+        # Crear tabla
+        table = Table(table_data, colWidths=[2.2*inch, 1.2*inch, 1.5*inch, 1.2*inch, 1*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+        
+        # Construir PDF
+        doc.build(elements)
+        buffer.seek(0)
+        
+        # Retornar PDF como archivo
+        response = FileResponse(buffer, as_attachment=True, filename=f'ocupacion-semanal-{lunes.isoformat()}.pdf')
+        response['Content-Type'] = 'application/pdf'
+        return response
+    
+    except ImportError:
+        return JsonResponse({"error": "ReportLab no está instalado"}, status=500)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def _get_dia_nombre(fecha):
+    """Retorna el nombre del día en español."""
+    dias_nombre = {
+        0: 'Lunes',
+        1: 'Martes',
+        2: 'Miércoles',
+        3: 'Jueves',
+        4: 'Viernes',
+        5: 'Sábado'
+    }
+    return dias_nombre.get(fecha.weekday(), '')
