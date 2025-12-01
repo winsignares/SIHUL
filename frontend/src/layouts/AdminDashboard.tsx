@@ -244,34 +244,40 @@ export default function AdminDashboard(props: AdminDashboardProps) {
               })()
             }
 
-            {/* Ajustes */}
+
+
+            {/* Usuario - Clickable para ir a Ajustes */}
             {
               (() => {
                 const path = '/ajustes';
-                const isActive = location.pathname === path || location.pathname.startsWith(path + '/') || location.pathname.startsWith(path);
+                const isActive = location.pathname === path || location.pathname.startsWith(path + '/');
                 return (
-                  <Link to={path} className="block w-full" key="ajustes">
+                  <Link to={path} className="block w-full" key="perfil">
                     <motion.div
-                      className={`w-full flex items-center gap-3 rounded-xl transition-all ${shouldShowExpanded ? 'px-4 py-3' : 'justify-center px-3 py-3'
-                        } ${isActive
-                          ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 shadow-lg'
-                          : 'text-red-100 hover:bg-red-700/50'
+                      className={`flex items-center gap-3 rounded-xl cursor-pointer ${shouldShowExpanded ? 'px-4 py-3' : 'justify-center px-3 py-3'} ${isActive
+                          ? 'bg-gradient-to-r from-yellow-400 to-yellow-500'
+                          : 'bg-red-700/30 hover:bg-red-700/50'
                         }`}
                       whileHover={{ scale: shouldShowExpanded ? 1 : 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Settings className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-red-900' : 'text-red-300'}`} />
+                      <Avatar className={`w-8 h-8 flex-shrink-0 border-2 ${isActive ? 'border-red-900' : 'border-yellow-400'}`}>
+                        <AvatarFallback className={isActive ? 'bg-red-900 text-yellow-400' : 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-red-900'}>
+                          {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <AnimatePresence>
                         {shouldShowExpanded && (
-                          <motion.span
+                          <motion.div
                             initial={{ opacity: 0, width: 0 }}
                             animate={{ opacity: 1, width: 'auto' }}
                             exit={{ opacity: 0, width: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="flex-1 text-left whitespace-nowrap overflow-hidden"
+                            className="flex-1 min-w-0"
                           >
-                            Ajustes
-                          </motion.span>
+                            <p className={`text-sm truncate ${isActive ? 'text-red-900 font-semibold' : 'text-white'}`}>{userName}</p>
+                            <p className={`text-xs truncate ${isActive ? 'text-red-800' : 'text-red-300'}`}>{userRole === 'admin' ? 'Administrador' : userRole === 'planeacion_facultad' ? 'Planeación Facultad' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : userRole === 'autorizado' ? 'Autorizado' : 'Consultor'}</p>
+                          </motion.div>
                         )}
                       </AnimatePresence>
                     </motion.div>
@@ -279,29 +285,6 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                 );
               })()
             }
-
-            {/* Usuario - SIN dropdown de tres puntos */}
-            <div className={`flex items-center gap-3 rounded-xl bg-red-700/30 ${shouldShowExpanded ? 'px-4 py-3' : 'justify-center px-3 py-3'}`}>
-              <Avatar className="w-8 h-8 flex-shrink-0 border-2 border-yellow-400">
-                <AvatarFallback className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-red-900">
-                  {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <AnimatePresence>
-                {shouldShowExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 min-w-0"
-                  >
-                    <p className="text-white text-sm truncate">{userName}</p>
-                    <p className="text-red-300 text-xs truncate">{userRole === 'admin' ? 'Administrador' : userRole === 'planeacion_facultad' ? 'Planeación Facultad' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : userRole === 'autorizado' ? 'Autorizado' : 'Consultor'}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </div>
 
           {/* Footer: Cerrar Sesión */}
