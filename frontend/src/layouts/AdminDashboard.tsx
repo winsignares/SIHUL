@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Avatar, AvatarFallback } from '../share/avatar';
-import { Badge } from '../share/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../share/tooltip';
 import { Button } from '../share/button';
 
@@ -184,9 +183,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     >
                       <Bell className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-red-900' : 'text-red-300'}`} />
                       {notificacionesSinLeer > 0 && (
-                        <Badge className="absolute top-1 left-1 w-5 h-5 flex items-center justify-center p-0 bg-red-600 text-white border-2 border-red-900 text-xs">
-                          {notificacionesSinLeer}
-                        </Badge>
+                        <span className="absolute top-1 left-1 h-2.5 w-2.5 rounded-full bg-yellow-500 animate-pulse ring-2 ring-red-800"></span>
                       )}
                       <AnimatePresence>
                         {shouldShowExpanded && (

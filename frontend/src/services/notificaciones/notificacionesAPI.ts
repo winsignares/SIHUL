@@ -1,16 +1,10 @@
 import { apiClient } from '../../core/apiClient';
+import type { NotificacionBackend } from '../../models/users/notification.model';
 
 const API_URL = '/notificaciones';
 
-export interface Notificacion {
-  id: number;
-  id_usuario: number;
-  tipo_notificacion: string;
-  mensaje: string;
-  es_leida: boolean;
-  fecha_creacion: string;
-  prioridad: 'alta' | 'media' | 'baja';
-}
+// Usar la interfaz del modelo
+export type Notificacion = NotificacionBackend;
 
 export interface NotificacionCreate {
   id_usuario: number;

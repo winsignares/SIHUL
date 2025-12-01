@@ -1,152 +1,257 @@
-import { useState, useEffect } from 'react';
-import type { NotificacionUsuario } from '../../models/users/notification.model';
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import type { NotificacionUsuario, NotificacionBackend } from '../../models/users/notification.model';
+import { useAuth } from '../../context/AuthContext';
+import { useNotificacionesContext } from '../../context/NotificacionesContext';
+import {
+    obtenerMisNotificaciones,
+    obtenerEstadisticas,
+    marcarComoLeida,
+    marcarTodasComoLeidas,
+    eliminarNotificacion as eliminarNotificacionAPI,
+} from '../../services/notificaciones/notificacionesAPI';
+
+/**
+ * Mapea una notificación del backend al formato del frontend
+ */
+const mapearNotificacion = (notif: NotificacionBackend): NotificacionUsuario => {
+    // Extraer título y descripción del mensaje
+    // El mensaje puede venir en formato "Título: Descripción" o solo descripción
+    const partes = notif.mensaje.split(':');
+    const titulo = partes.length > 1 ? partes[0].trim() : obtenerTituloDefault(notif.tipo_notificacion);
+    const descripcion = partes.length > 1 ? partes.slice(1).join(':').trim() : notif.mensaje;
+
+    return {
+        id: notif.id,
+        tipo: notif.tipo_notificacion,
+        titulo,
+        descripcion,
+        fecha: formatearFecha(notif.fecha_creacion),
+        leida: notif.es_leida,
+        prioridad: notif.prioridad,
+    };
+};
+
+/**
+ * Obtiene un título por defecto según el tipo de notificación
+ */
+const obtenerTituloDefault = (tipo: string): string => {
+    const titulos: Record<string, string> = {
+        'horario': 'Actualización de Horario',
+        'prestamo': 'Solicitud de Préstamo',
+        'espacio': 'Cambio en Espacios',
+        'solicitud': 'Nueva Solicitud',
+        'mensaje': 'Nuevo Mensaje',
+        'alerta': 'Alerta del Sistema',
+        'sistema': 'Notificación del Sistema',
+        'exito': 'Operación Exitosa',
+        'error': 'Error en Operación',
+        'advertencia': 'Advertencia',
+        'facultad': 'Actualización de Facultad',
+    };
+    return titulos[tipo] || 'Notificación';
+};
+
+/**
+ * Formatea la fecha al formato deseado
+ */
+const formatearFecha = (fechaISO: string): string => {
+    const fecha = new Date(fechaISO);
+    const año = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const hora = String(fecha.getHours()).padStart(2, '0');
+    const minuto = String(fecha.getMinutes()).padStart(2, '0');
+    return `${año}-${mes}-${dia} ${hora}:${minuto}`;
+};
 
 export function useNotificaciones(onNotificacionesChange?: (count: number) => void) {
-    const [notificaciones, setNotificaciones] = useState<NotificacionUsuario[]>([
-        {
-            id: '1',
-            tipo: 'solicitud',
-            titulo: 'Solicitud de cambio de aula',
-            descripcion: 'El docente Juan Pérez solicita cambio del Aula 101 al Aula 205 para el horario del martes 14:00-16:00',
-            fecha: '2025-10-22 10:30',
-            leida: false,
-            eliminada: false,
-            prioridad: 'alta'
-        },
-        {
-            id: '2',
-            tipo: 'alerta',
-            titulo: 'Conflicto de horario detectado',
-            descripcion: 'Se detectó un conflicto en el Laboratorio 301 para el día miércoles entre las 08:00 y 10:00',
-            fecha: '2025-10-22 09:15',
-            leida: false,
-            eliminada: false,
-            prioridad: 'alta'
-        },
-        {
-            id: '3',
-            tipo: 'mensaje',
-            titulo: 'Mensaje de María González',
-            descripcion: 'Hola, necesito confirmar la disponibilidad del Auditorio Central para el evento del próximo mes',
-            fecha: '2025-10-22 08:45',
-            leida: false,
-            eliminada: false,
-            prioridad: 'media'
-        },
-        {
-            id: '4',
-            tipo: 'exito',
-            titulo: 'Horario guardado exitosamente',
-            descripcion: 'El horario del grupo 1A ha sido guardado correctamente en el sistema',
-            fecha: '2025-10-21 18:00',
-            leida: false,
-            eliminada: false,
-            prioridad: 'baja'
-        },
-        {
-            id: '5',
-            tipo: 'advertencia',
-            titulo: 'Mantenimiento programado',
-            descripcion: 'El Laboratorio 401 estará en mantenimiento del 25 al 27 de octubre',
-            fecha: '2025-10-21 16:20',
-            leida: true,
-            eliminada: false,
-            prioridad: 'media'
-        },
-        {
-            id: '6',
-            tipo: 'error',
-            titulo: 'Error al procesar solicitud',
-            descripcion: 'No se pudo procesar la solicitud de préstamo del Auditorio debido a un conflicto de horarios',
-            fecha: '2025-10-21 14:00',
-            leida: true,
-            eliminada: false,
-            prioridad: 'alta'
-        },
-        {
-            id: '7',
-            tipo: 'sistema',
-            titulo: 'Actualización del sistema completada',
-            descripcion: 'La actualización v2.3.1 se instaló correctamente. Revisa las nuevas funcionalidades en la sección de ayuda.',
-            fecha: '2025-10-21 11:30',
-            leida: true,
-            eliminada: false,
-            prioridad: 'baja'
-        },
-        {
-            id: '8',
-            tipo: 'exito',
-            titulo: 'Reporte mensual generado',
-            descripcion: 'El reporte de ocupación de octubre está disponible para descarga',
-            fecha: '2025-10-21 09:00',
-            leida: true,
-            eliminada: false,
-            prioridad: 'baja'
-        }
-    ]);
-
-    const [filterTab, setFilterTab] = useState('todas');
-
-    useEffect(() => {
-        const noLeidasCount = notificaciones.filter(n => !n.leida && !n.eliminada).length;
-        if (onNotificacionesChange) {
-            onNotificacionesChange(noLeidasCount);
-        }
-    }, [notificaciones, onNotificacionesChange]);
-
-    const marcarComoLeida = (id: string) => {
-        setNotificaciones(notificaciones.map(n =>
-            n.id === id ? { ...n, leida: true } : n
-        ));
-    };
-
-    const marcarTodasComoLeidas = () => {
-        setNotificaciones(notificaciones.map(n =>
-            n.eliminada ? n : { ...n, leida: true }
-        ));
-    };
-
-    const eliminarNotificacion = (id: string) => {
-        setNotificaciones(notificaciones.map(n =>
-            n.id === id ? { ...n, eliminada: true } : n
-        ));
-    };
-
-    const restaurarNotificacion = (id: string) => {
-        setNotificaciones(notificaciones.map(n =>
-            n.id === id ? { ...n, eliminada: false } : n
-        ));
-    };
-
-    const eliminarPermanentemente = (id: string) => {
-        setNotificaciones(notificaciones.filter(n => n.id !== id));
-    };
-
-    const filteredNotificaciones = notificaciones.filter(n => {
-        if (filterTab === 'todas') return !n.eliminada;
-        if (filterTab === 'pendientes') return !n.leida && !n.eliminada;
-        if (filterTab === 'leidas') return n.leida && !n.eliminada;
-        if (filterTab === 'eliminadas') return n.eliminada;
-        return n.tipo === filterTab && !n.eliminada;
+    const { user } = useAuth();
+    const { actualizarContador } = useNotificacionesContext();
+    const [notificaciones, setNotificaciones] = useState<NotificacionUsuario[]>([]);
+    const [filterTab, setFilterTab] = useState('importantes'); // Cambiado a 'importantes' por defecto
+    const [isLoading, setIsLoading] = useState(false);
+    const [stats, setStats] = useState({
+        total: 0,
+        pendientes: 0,
+        leidas: 0,
+        eliminadas: 0,
     });
 
-    const stats = {
-        total: notificaciones.filter(n => !n.eliminada).length,
-        pendientes: notificaciones.filter(n => !n.leida && !n.eliminada).length,
-        leidas: notificaciones.filter(n => n.leida && !n.eliminada).length,
-        eliminadas: notificaciones.filter(n => n.eliminada).length
+    /**
+     * Carga las notificaciones desde el backend
+     */
+    const cargarNotificaciones = useCallback(async () => {
+        if (!user?.id) return;
+
+        try {
+            setIsLoading(true);
+            const response = await obtenerMisNotificaciones({ id_usuario: user.id });
+            const notifsMapeadas = response.notificaciones.map(mapearNotificacion);
+            setNotificaciones(notifsMapeadas);
+        } catch (error: any) {
+            console.error('Error al cargar notificaciones:', error);
+            toast.error('Error al cargar las notificaciones');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user?.id]);
+
+    /**
+     * Carga las estadísticas desde el backend
+     */
+    const cargarEstadisticas = useCallback(async () => {
+        if (!user?.id) return;
+
+        try {
+            const estadisticas = await obtenerEstadisticas(user.id);
+            setStats({
+                total: estadisticas.total,
+                pendientes: estadisticas.no_leidas,
+                leidas: estadisticas.leidas,
+                eliminadas: 0, // El backend no maneja eliminadas, se eliminan permanentemente
+            });
+
+            // Notificar cambios en el contador (callback prop)
+            if (onNotificacionesChange) {
+                onNotificacionesChange(estadisticas.no_leidas);
+            }
+
+            // Actualizar el contexto global
+            actualizarContador();
+        } catch (error: any) {
+            console.error('Error al cargar estadísticas:', error);
+        }
+    }, [user?.id, onNotificacionesChange, actualizarContador]);
+
+    /**
+     * Carga inicial y polling
+     */
+    useEffect(() => {
+        cargarNotificaciones();
+        cargarEstadisticas();
+
+        // Polling cada 30 segundos
+        const interval = setInterval(() => {
+            cargarNotificaciones();
+            cargarEstadisticas();
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [cargarNotificaciones, cargarEstadisticas]);
+
+    /**
+     * Marca una notificación como leída
+     */
+    const marcarComoLeidaLocal = async (id: number) => {
+        try {
+            await marcarComoLeida(id);
+            
+            // Actualizar estado local
+            setNotificaciones(notificaciones.map(n =>
+                n.id === id ? { ...n, leida: true } : n
+            ));
+
+            // Actualizar estadísticas
+            await cargarEstadisticas();
+            
+            toast.success('Notificación marcada como leída');
+        } catch (error: any) {
+            console.error('Error al marcar como leída:', error);
+            toast.error('Error al marcar la notificación como leída');
+        }
     };
+
+    /**
+     * Marca todas las notificaciones como leídas
+     */
+    const marcarTodasComoLeidasLocal = async () => {
+        if (!user?.id) return;
+
+        try {
+            const result = await marcarTodasComoLeidas(user.id);
+            
+            // Actualizar estado local
+            setNotificaciones(notificaciones.map(n => ({ ...n, leida: true })));
+
+            // Actualizar estadísticas
+            await cargarEstadisticas();
+            
+            toast.success(`${result.cantidad} notificación(es) marcada(s) como leída(s)`);
+        } catch (error: any) {
+            console.error('Error al marcar todas como leídas:', error);
+            toast.error('Error al marcar las notificaciones como leídas');
+        }
+    };
+
+    /**
+     * Elimina una notificación permanentemente
+     */
+    const eliminarNotificacion = async (id: number) => {
+        try {
+            await eliminarNotificacionAPI(id);
+            
+            // Actualizar estado local
+            setNotificaciones(notificaciones.filter(n => n.id !== id));
+
+            // Actualizar estadísticas
+            await cargarEstadisticas();
+            
+            toast.success('Notificación eliminada');
+        } catch (error: any) {
+            console.error('Error al eliminar notificación:', error);
+            toast.error('Error al eliminar la notificación');
+        }
+    };
+
+    /**
+     * Filtra las notificaciones según la pestaña activa
+     */
+    const filteredNotificaciones = notificaciones.filter(n => {
+        const tipoLower = n.tipo.toLowerCase();
+        
+        // IMPORTANTES: Solo alta prioridad y no leídas
+        if (filterTab === 'importantes') {
+            return n.prioridad === 'alta' && !n.leida;
+        }
+        
+        // PENDIENTES: Todas las no leídas
+        if (filterTab === 'pendientes') return !n.leida;
+        
+        // LEÍDAS: Todas las leídas
+        if (filterTab === 'leidas') return n.leida;
+        
+        // HORARIOS: Agrupa horario y solicitudes relacionadas
+        if (filterTab === 'horarios') {
+            return tipoLower === 'horario' || tipoLower === 'solicitud';
+        }
+        
+        // ESPACIOS: Agrupa espacios, préstamos y facultades
+        if (filterTab === 'espacios') {
+            return tipoLower === 'espacio' || tipoLower === 'prestamo' || tipoLower === 'facultad';
+        }
+        
+        // SISTEMA: Agrupa sistema, mensajes, alertas, éxito, error, advertencia
+        if (filterTab === 'sistema') {
+            return tipoLower === 'sistema' || tipoLower === 'mensaje' || 
+                   tipoLower === 'alerta' || tipoLower === 'exito' || 
+                   tipoLower === 'error' || tipoLower === 'advertencia';
+        }
+        
+        // DEFAULT: Mostrar todo
+        return true;
+    });
 
     return {
         notificaciones,
         filterTab,
         setFilterTab,
-        marcarComoLeida,
-        marcarTodasComoLeidas,
+        marcarComoLeida: marcarComoLeidaLocal,
+        marcarTodasComoLeidas: marcarTodasComoLeidasLocal,
         eliminarNotificacion,
-        restaurarNotificacion,
-        eliminarPermanentemente,
         filteredNotificaciones,
-        stats
+        stats,
+        isLoading,
+        recargar: cargarNotificaciones,
     };
 }

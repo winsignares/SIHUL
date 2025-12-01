@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { UserProvider } from "./context/UserContext";
+import { NotificacionesProvider } from "./context/NotificacionesContext";
 import { Toaster } from "./share/sonner";
 import AppRouter from "./router/AppRouter";
 
@@ -14,10 +15,12 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <UserProvider>
-          <AppRouter />
-          <Toaster position="top-right" richColors expand />
-        </UserProvider>
+        <NotificacionesProvider>
+          <UserProvider>
+            <AppRouter />
+            <Toaster position="top-right" richColors expand />
+          </UserProvider>
+        </NotificacionesProvider>
       </AuthProvider>
     </ThemeProvider>
   );
