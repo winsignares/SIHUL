@@ -21,7 +21,9 @@ export default function OcupacionSemanal() {
     estadisticas,
     exportarReporte,
     getColorPorOcupacion,
-    getBarColor
+    getBarColor,
+    semanaInfo,
+    validacionPeriodo
   } = useOcupacionSemanal();
 
   const {
@@ -34,6 +36,13 @@ export default function OcupacionSemanal() {
 
   return (
     <div className="p-8 space-y-6">
+      {/* Validación de Período */}
+      {!validacionPeriodo.valido && (
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <p className="text-yellow-800 dark:text-yellow-200">{validacionPeriodo.mensaje}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -48,7 +57,7 @@ export default function OcupacionSemanal() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
             <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-blue-900 dark:text-blue-100"><strong>{periodoActual}</strong></span>
+            <span className="text-blue-900 dark:text-blue-100"><strong>Período: {periodoActual}</strong></span>
           </div>
           <Button
             onClick={exportarReporte}

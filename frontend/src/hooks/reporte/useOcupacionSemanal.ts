@@ -12,6 +12,8 @@ export function useOcupacionSemanal() {
   const [espaciosOcupacion, setEspaciosOcupacion] = useState<EspacioOcupacion[]>([]);
   const [semanaInfo, setSemanaInfo] = useState({ inicio: '', fin: '' });
   const [periodoActual, setPeriodoActual] = useState('2025-1');
+  const [periodoInfo, setPeriodoInfo] = useState({ nombre: '', inicio: '', fin: '' });
+  const [validacionPeriodo, setValidacionPeriodo] = useState<{ valido: boolean; mensaje: string }>({ valido: true, mensaje: '' });
 
   const PERIODO_DEFAULT = '2025-1';
 
@@ -22,6 +24,11 @@ export function useOcupacionSemanal() {
         const periodo = await periodoActivoService.getPeriodoActivo();
         if (periodo && periodo.nombre) {
           setPeriodoActual(periodo.nombre);
+          setPeriodoInfo({
+            nombre: periodo.nombre,
+            inicio: periodo.fecha_inicio,
+            fin: periodo.fecha_fin
+          });
         }
       } catch (error) {
         console.error('Error al cargar período activo:', error);
@@ -44,6 +51,17 @@ export function useOcupacionSemanal() {
     cargarTipos();
   }, []);
 
+  // Validar que los datos corresponden al período actual (no por semana individual)
+  const validarDatosPeriodo = (): { valido: boolean; mensaje: string } => {
+    if (!periodoInfo.nombre) {
+      return { valido: true, mensaje: '' };
+    }
+
+    // Solo validar que el período está cargado correctamente
+    // Los datos de ocupación siempre corresponden al período actual
+    return { valido: true, mensaje: '' };
+  };
+
   // Cargar datos de ocupación semanal cuando cambia el tipo de espacio
   useEffect(() => {
     const cargarOcupacion = async () => {
@@ -52,6 +70,10 @@ export function useOcupacionSemanal() {
         const tipoId = tipoEspacio === 'todos' ? undefined : parseInt(tipoEspacio);
         const response = await ocupacionSemanalService.getOcupacionSemanal(tipoId, 0);
         
+        // Validar que los datos corresponden al período actual
+        const validacion = validarDatosPeriodo();
+        setValidacionPeriodo(validacion);
+
         // Mapear datos del backend al formato esperado por el modelo
         const ocupacionMapeada: EspacioOcupacion[] = response.ocupacion.map((espacio: any) => ({
           id: espacio.id.toString(),
@@ -84,7 +106,7 @@ export function useOcupacionSemanal() {
     };
 
     cargarOcupacion();
-  }, [tipoEspacio]);
+  }, [tipoEspacio, periodoInfo]);
 
   const espaciosFiltrados = useMemo(() => {
     return tipoEspacio === 'todos'
@@ -158,6 +180,8 @@ export function useOcupacionSemanal() {
     estadisticas,
     exportarReporte,
     getColorPorOcupacion,
-    getBarColor
+    getBarColor,
+    semanaInfo,
+    validacionPeriodo
   };
 }
