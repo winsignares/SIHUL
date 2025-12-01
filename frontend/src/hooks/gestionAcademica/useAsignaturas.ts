@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTheme } from '../../context/ThemeContext';
+import { toast } from 'sonner';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { programaService } from '../../services/programas/programaAPI';
@@ -12,17 +12,6 @@ export const tiposAsignatura = [
 ];
 
 export function useAsignaturas() {
-    let showNotification: any;
-    try {
-        const theme = useTheme();
-        showNotification = theme.showNotification;
-    } catch (error) {
-        console.warn('ThemeContext no disponible, usando fallback', error);
-        showNotification = (notification: any) => {
-            console.log(`Notification: ${notification.type} - ${notification.message}`);
-        };
-    }
-    
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -64,10 +53,7 @@ export function useAsignaturas() {
             setAsignaturas(asignaturasRes.asignaturas);
             setProgramas(programasRes.programas);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -90,19 +76,19 @@ export function useAsignaturas() {
         // Validaciones
         if (!asignaturaForm.codigo.trim()) {
             console.warn('Código vacío');
-            showNotification({ message: 'El código es obligatorio', type: 'error' });
+            toast.error('El código es obligatorio');
             return;
         }
 
         if (!asignaturaForm.nombre.trim()) {
             console.warn('Nombre vacío');
-            showNotification({ message: 'El nombre es obligatorio', type: 'error' });
+            toast.error('El nombre es obligatorio');
             return;
         }
 
         if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
             console.warn('Créditos inválidos');
-            showNotification({ message: 'Los créditos deben ser mayor a 0', type: 'error' });
+            toast.error('Los créditos deben ser mayor a 0');
             return;
         }
 
@@ -129,13 +115,10 @@ export function useAsignaturas() {
             resetForm();
             setShowCreateDialog(false);
 
-            showNotification({ message: '✅ Asignatura registrada exitosamente', type: 'success' });
+            toast.success('Asignatura registrada exitosamente');
         } catch (error) {
             console.error('Error al crear asignatura:', error);
-            showNotification({
-                message: `Error al crear asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al crear asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -161,17 +144,17 @@ export function useAsignaturas() {
 
         // Validaciones
         if (!asignaturaForm.codigo.trim()) {
-            showNotification({ message: 'El código es obligatorio', type: 'error' });
+            toast.error('El código es obligatorio');
             return;
         }
 
         if (!asignaturaForm.nombre.trim()) {
-            showNotification({ message: 'El nombre es obligatorio', type: 'error' });
+            toast.error('El nombre es obligatorio');
             return;
         }
 
         if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
-            showNotification({ message: 'Los créditos deben ser mayor a 0', type: 'error' });
+            toast.error('Los créditos deben ser mayor a 0');
             return;
         }
 
@@ -191,12 +174,9 @@ export function useAsignaturas() {
             setSelectedAsignatura(null);
             resetForm();
 
-            showNotification({ message: '✅ Asignatura actualizada correctamente', type: 'success' });
+            toast.info('Asignatura actualizada correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -220,12 +200,9 @@ export function useAsignaturas() {
             setShowDeleteDialog(false);
             setSelectedAsignatura(null);
 
-            showNotification({ message: '✅ Asignatura eliminada correctamente', type: 'success' });
+            toast.error('Asignatura eliminada correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }

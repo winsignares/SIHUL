@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { showNotification } from '../../context/ThemeContext';
+import { toast } from 'sonner';
 import { grupoService } from '../../services/grupos/gruposAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
@@ -45,10 +45,7 @@ export function useGrupos() {
             const response = await grupoService.list();
             setGrupos(response.grupos);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar grupos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar grupos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -59,10 +56,7 @@ export function useGrupos() {
             const response = await programaService.listarProgramas();
             setProgramas(response.programas);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
@@ -71,10 +65,7 @@ export function useGrupos() {
             const response = await periodoService.listarPeriodos();
             setPeriodos(response.periodos);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
@@ -89,19 +80,19 @@ export function useGrupos() {
 
     const handleCreateGrupo = async () => {
         if (!grupoForm.nombre.trim()) {
-            showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
+            toast.error('El nombre del grupo es obligatorio');
             return;
         }
         if (!grupoForm.programa_id) {
-            showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
+            toast.error('Debe seleccionar un programa');
             return;
         }
         if (!grupoForm.periodo_id) {
-            showNotification({ message: 'Debe seleccionar un periodo', type: 'error' });
+            toast.error('Debe seleccionar un periodo');
             return;
         }
         if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
-            showNotification({ message: 'Debe especificar el semestre (mínimo 1)', type: 'error' });
+            toast.error('Debe especificar el semestre (mínimo 1)');
             return;
         }
 
@@ -119,12 +110,9 @@ export function useGrupos() {
             resetForm();
             setShowCreateGrupo(false);
 
-            showNotification({ message: '✅ Grupo creado exitosamente', type: 'success' });
+            toast.success('Grupo creado exitosamente');
         } catch (error) {
-            showNotification({
-                message: `Error al crear grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al crear grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -176,12 +164,9 @@ export function useGrupos() {
             setSelectedGrupo(null);
             resetForm();
 
-            showNotification({ message: '✅ Grupo actualizado exitosamente', type: 'success' });
+            toast.info('Grupo actualizado exitosamente');
         } catch (error) {
-            showNotification({
-                message: `Error al actualizar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al actualizar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -203,12 +188,9 @@ export function useGrupos() {
             setShowDeleteGrupo(false);
             setSelectedGrupo(null);
 
-            showNotification({ message: '✅ Grupo eliminado exitosamente', type: 'success' });
+            toast.error('Grupo eliminado exitosamente');
         } catch (error) {
-            showNotification({
-                message: `Error al eliminar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al eliminar grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -225,15 +207,9 @@ export function useGrupos() {
             });
 
             await loadGrupos();
-            showNotification({
-                message: grupo.activo ? '✅ Grupo inactivado correctamente' : '✅ Grupo activado correctamente',
-                type: 'success'
-            });
+            toast.warning(grupo.activo ? 'Grupo inactivado correctamente' : 'Grupo activado correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al cambiar estado del grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cambiar estado del grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }

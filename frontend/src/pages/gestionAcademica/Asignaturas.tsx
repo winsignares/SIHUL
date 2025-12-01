@@ -423,8 +423,6 @@ export default function Asignaturas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
     </div>
   );
 }

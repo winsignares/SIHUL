@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, Check, Package, X } from 'lucide-react';
-import { NotificationBanner } from '../../share/notificationBanner';
 import { useEspaciosFisicos } from '../../hooks/gestionAcademica/useEspaciosFisicos';
 
 export default function EspaciosFisicos() {
@@ -32,13 +31,11 @@ export default function EspaciosFisicos() {
     handleDeleteEspacio,
     resetForm,
     filteredEspacios,
-    getEstadoBadge,
-    notification
+    getEstadoBadge
   } = useEspaciosFisicos();
 
   return (
     <div className="p-8 space-y-6">
-      <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
