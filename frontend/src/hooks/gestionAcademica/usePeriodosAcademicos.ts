@@ -39,19 +39,35 @@ export function usePeriodosAcademicos() {
             const response = await periodoService.listarPeriodos();
             
             // Mapear de API a UI
-            const periodosUI: PeriodoUI[] = response.periodos.map(p => {
-                // Determinar estado basado en fechas y activo
-                let estado: 'Activo' | 'Próximo' | 'Finalizado' = 'Finalizado';
-                const now = new Date();
-                
-                // Parsear fechas como locales (no UTC) agregando 'T00:00:00'
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            
+            // Primero, encontrar cuál período debería estar activo (el que está en el rango actual)
+            let periodoActivoEnRango: PeriodoAcademico | null = null;
+            for (const p of response.periodos) {
                 const inicio = new Date(p.fecha_inicio + 'T00:00:00');
-                const fin = new Date(p.fecha_fin + 'T00:00:00');
+                const fin = new Date(p.fecha_fin + 'T23:59:59');
+                if (inicio <= now && fin >= now) {
+                    periodoActivoEnRango = p;
+                    break;
+                }
+            }
+            
+            const periodosUI: PeriodoUI[] = response.periodos.map(p => {
+                // Determinar estado basado en fechas
+                let estado: 'Activo' | 'Próximo' | 'Finalizado' = 'Finalizado';
+                
+                // Parsear fechas como locales (no UTC)
+                const inicio = new Date(p.fecha_inicio + 'T00:00:00');
+                const fin = new Date(p.fecha_fin + 'T23:59:59'); // Fin del día
 
-                if (p.activo) {
+                // Solo el período que está en el rango actual es Activo
+                if (periodoActivoEnRango && p.id === periodoActivoEnRango.id) {
                     estado = 'Activo';
                 } else if (inicio > now) {
                     estado = 'Próximo';
+                } else if (fin < now) {
+                    estado = 'Finalizado';
                 } else {
                     estado = 'Finalizado';
                 }
@@ -132,13 +148,48 @@ export function usePeriodosAcademicos() {
             return;
         }
 
+        // Validar que no haya períodos con fechas solapadas
+        const fechaInicio = new Date(periodoForm.fecha_inicio + 'T00:00:00');
+        const fechaFin = new Date(periodoForm.fecha_fin + 'T00:00:00');
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        // Validar solapamiento de fechas
+        const tieneSolapamiento = periodos.some(p => {
+            const pInicio = new Date(p.fecha_inicio + 'T00:00:00');
+            const pFin = new Date(p.fecha_fin + 'T00:00:00');
+            // Verificar que no haya solapamiento y que las fechas no sean iguales
+            return (fechaInicio <= pFin && fechaFin >= pInicio);
+        });
+
+        if (tieneSolapamiento) {
+            showNotification('Las fechas del período no se pueden mezclar con otro período existente', 'error');
+            return;
+        }
+
+        // Validar que si está dentro de la fecha actual, no haya otro activo
+        const estaEnFechaActual = fechaInicio <= now && fechaFin >= now;
+        if (estaEnFechaActual && periodos.some(p => p.estado === 'Activo')) {
+            showNotification('Ya existe un período activo. Solo puede haber uno activo. Modifica las fechas del período existente.', 'error');
+            return;
+        }
+
+        // Validar que no se cree un período completamente pasado
+        if (fechaFin < now) {
+            showNotification('No se puede crear un período completamente pasado', 'error');
+            return;
+        }
+
         try {
             setLoading(true);
+            // Determinar si debe ser activo basado en las fechas
+            const debeSerActivo = estaEnFechaActual;
+            
             await periodoService.crearPeriodo({
                 nombre: periodoForm.nombre.trim(),
                 fecha_inicio: periodoForm.fecha_inicio,
                 fecha_fin: periodoForm.fecha_fin,
-                activo: false // Por defecto no activo (Próximo)
+                activo: debeSerActivo
             });
 
             await loadPeriodos();
@@ -185,14 +236,36 @@ export function usePeriodosAcademicos() {
             return;
         }
 
+        const fechaInicio = new Date(periodoForm.fecha_inicio + 'T00:00:00');
+        const fechaFin = new Date(periodoForm.fecha_fin + 'T00:00:00');
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        // Validar solapamiento de fechas (excluyendo el período actual)
+        const tieneSolapamiento = periodos.some(p => {
+            if (p.id === periodoAEditar.id) return false; // Excluir el período que se está editando
+            const pInicio = new Date(p.fecha_inicio + 'T00:00:00');
+            const pFin = new Date(p.fecha_fin + 'T00:00:00');
+            return (fechaInicio <= pFin && fechaFin >= pInicio);
+        });
+
+        if (tieneSolapamiento) {
+            showNotification('Las fechas del período se solapan con otro período existente', 'error');
+            return;
+        }
+
         try {
             setLoading(true);
+            // Determinar si debe ser activo basado en las fechas
+            const estaEnFechaActual = fechaInicio <= now && fechaFin >= now;
+            const debeSerActivo = estaEnFechaActual;
+            
             await periodoService.actualizarPeriodo({
                 id: periodoAEditar.id,
                 nombre: periodoForm.nombre.trim(),
                 fecha_inicio: periodoForm.fecha_inicio,
                 fecha_fin: periodoForm.fecha_fin,
-                activo: periodoAEditar.activo
+                activo: debeSerActivo
             });
 
             await loadPeriodos();
@@ -246,14 +319,50 @@ export function usePeriodosAcademicos() {
             return;
         }
 
+        const fechaInicio = new Date(periodoForm.fecha_inicio + 'T00:00:00');
+        const fechaFin = new Date(periodoForm.fecha_fin + 'T00:00:00');
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        // Validar solapamiento de fechas
+        const tieneSolapamiento = periodos.some(p => {
+            const pInicio = new Date(p.fecha_inicio + 'T00:00:00');
+            const pFin = new Date(p.fecha_fin + 'T00:00:00');
+            return (fechaInicio <= pFin && fechaFin >= pInicio);
+        });
+
+        if (tieneSolapamiento) {
+            showNotification('Las fechas del período se solapan con otro período existente', 'error');
+            return;
+        }
+
+        // Validar que si está dentro de la fecha actual, no haya otro activo
+        const estaEnFechaActual = fechaInicio <= now && fechaFin >= now;
+        if (estaEnFechaActual && periodos.some(p => p.estado === 'Activo')) {
+            showNotification('Ya existe un período activo. Solo puede haber uno activo. Modifica las fechas del período existente.', 'error');
+            return;
+        }
+
+        // Validar que no se cree un período completamente pasado
+        if (fechaFin < now) {
+            showNotification('No se puede crear un período completamente pasado', 'error');
+            return;
+        }
+
         try {
             setLoading(true);
+            // Al copiar, NUNCA debe ser activo automáticamente
+            // Solo será activo si está en el rango de fechas actual Y no hay otro activo
+            // Pero como estamos copiando, asumimos que es futuro (Próximo)
+            const debeSerActivo = false; // Siempre false al copiar
+            
             const resultado = await periodoService.copiarPeriodo(
                 periodoACopiar.id,
                 {
                     nombre: periodoForm.nombre.trim(),
                     fecha_inicio: periodoForm.fecha_inicio,
-                    fecha_fin: periodoForm.fecha_fin
+                    fecha_fin: periodoForm.fecha_fin,
+                    activo: debeSerActivo
                 }
             );
 

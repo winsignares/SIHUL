@@ -66,13 +66,14 @@ export const periodoService = {
    */
   copiarPeriodo: async (
     periodoOrigenId: number,
-    nuevoPeriodo: Omit<PeriodoAcademico, 'id' | 'activo' | 'programas_activos' | 'horarios_registrados'>
+    nuevoPeriodo: Omit<PeriodoAcademico, 'id' | 'programas_activos' | 'horarios_registrados'>
   ): Promise<{ message: string; id: number; grupos_actualizados: number }> => {
     return apiClient.post('/periodos/copy/', {
       periodo_origen_id: periodoOrigenId,
       nombre: nuevoPeriodo.nombre,
       fecha_inicio: nuevoPeriodo.fecha_inicio,
-      fecha_fin: nuevoPeriodo.fecha_fin
+      fecha_fin: nuevoPeriodo.fecha_fin,
+      activo: nuevoPeriodo.activo
     });
   }
 };
