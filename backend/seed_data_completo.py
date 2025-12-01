@@ -35,41 +35,42 @@ for sede_data in sedes_data:
         print(f"  ⏭️  Sede ya existe: {sede.nombre}")
 
 # ========== FACULTADES ==========
-print("\n🏛️ Creando Facultades...")
-facultades_data = [
-    {"nombre": "Facultad de Ingeniería"},
-    {"nombre": "Facultad de Ciencias Básicas"},
-    {"nombre": "Facultad de Ciencias Económicas"},
-    {"nombre": "Facultad de Humanidades"},
-]
+print("\n🏛️ Obteniendo Facultades existentes...")
+# Las facultades se crean con: python manage.py seed_facultades
+# Obtenemos las facultades que ya existen en la base de datos
+facultades_existentes = Facultad.objects.all()
+if not facultades_existentes.exists():
+    print("  ⚠️  No hay facultades en la base de datos.")
+    print("  ⚠️  Por favor ejecuta: python manage.py seed_facultades")
+    exit(1)
 
 facultades = {}
-for fac_data in facultades_data:
-    facultad, created = Facultad.objects.get_or_create(
-        nombre=fac_data["nombre"],
-        defaults=fac_data
-    )
-    facultades[fac_data["nombre"]] = facultad
-    if created:
-        print(f"  ✅ Facultad creada: {facultad.nombre}")
-    else:
-        print(f"  ⏭️  Facultad ya existe: {facultad.nombre}")
+for facultad in facultades_existentes:
+    facultades[facultad.nombre] = facultad
+    print(f"  ✅ Facultad encontrada: {facultad.nombre}")
 
 # ========== PROGRAMAS ==========
 print("\n🎓 Creando Programas...")
 programas_data = [
-    {"nombre": "Ingeniería de Sistemas", "facultad": "Facultad de Ingeniería", "semestres": 10},
-    {"nombre": "Ingeniería Industrial", "facultad": "Facultad de Ingeniería", "semestres": 10},
-    {"nombre": "Ingeniería Civil", "facultad": "Facultad de Ingeniería", "semestres": 10},
-    {"nombre": "Matemáticas", "facultad": "Facultad de Ciencias Básicas", "semestres": 8},
-    {"nombre": "Física", "facultad": "Facultad de Ciencias Básicas", "semestres": 8},
-    {"nombre": "Administración de Empresas", "facultad": "Facultad de Ciencias Económicas", "semestres": 9},
-    {"nombre": "Contaduría Pública", "facultad": "Facultad de Ciencias Económicas", "semestres": 9},
+    {"nombre": "Ingeniería de Sistemas", "facultad": "Ingeniería", "semestres": 10},
+    {"nombre": "Ingeniería Industrial", "facultad": "Ingeniería", "semestres": 10},
+    {"nombre": "Ingeniería Civil", "facultad": "Ingeniería", "semestres": 10},
+    {"nombre": "Derecho", "facultad": "Derecho", "semestres": 10},
+    {"nombre": "Medicina", "facultad": "Ciencias de la Salud", "semestres": 12},
+    {"nombre": "Administración de Empresas", "facultad": "Ciencias Económicas", "semestres": 9},
+    {"nombre": "Contaduría Pública", "facultad": "Ciencias Económicas", "semestres": 9},
+    {"nombre": "Licenciatura en Educación Infantil", "facultad": "Ciencias de la Educación", "semestres": 8},
+    {"nombre": "Filosofía", "facultad": "Filosofía", "semestres": 8},
 ]
 
 programas = {}
 for prog_data in programas_data:
-    facultad = facultades[prog_data["facultad"]]
+    facultad_nombre = prog_data["facultad"]
+    if facultad_nombre not in facultades:
+        print(f"  ⚠️  Facultad '{facultad_nombre}' no encontrada, omitiendo programa {prog_data['nombre']}")
+        continue
+    
+    facultad = facultades[facultad_nombre]
     programa, created = Programa.objects.get_or_create(
         nombre=prog_data["nombre"],
         facultad=facultad,
