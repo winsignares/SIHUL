@@ -18,7 +18,7 @@ interface SupervisorGeneralHomeProps {
 
 export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralHomeProps = {}) {
   const navigate = useNavigate();
-  const { metricsCards, quickActions, activityLogs } = useSupervisorDashboard();
+  const { metricsCards, recursosCards, quickActions, activityLogs, loading, error } = useSupervisorDashboard();
 
   return (
     <div className="p-6 space-y-6">
@@ -36,30 +36,54 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metricsCards.map((metric, index) => (
-          <motion.div
-            key={metric.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.5 }}
-          >
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 rounded-xl ${metric.bgColor} flex items-center justify-center`}>
-                    <metric.icon className={`w-6 h-6 ${metric.textColor}`} />
+        {loading ? (
+          // Loading skeleton
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+              >
+                <Card className="border-0 shadow-lg">
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-12 bg-slate-200 rounded-xl mb-4 w-12"></div>
+                      <div className="h-4 bg-slate-200 rounded mb-3"></div>
+                      <div className="h-8 bg-slate-300 rounded w-16"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </>
+        ) : (
+          metricsCards.map((metric, index) => (
+            <motion.div
+              key={metric.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+            >
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`w-12 h-12 rounded-xl ${metric.bgColor} flex items-center justify-center`}>
+                      <metric.icon className={`w-6 h-6 ${metric.textColor}`} />
+                    </div>
+                    <div className={`flex items-center gap-1 text-sm ${metric.trendUp ? 'text-green-600' : 'text-orange-600'}`}>
+                      <TrendingUp className={`w-4 h-4 ${!metric.trendUp && 'rotate-180'}`} />
+                      <span>{metric.trend}</span>
+                    </div>
                   </div>
-                  <div className={`flex items-center gap-1 text-sm ${metric.trendUp ? 'text-green-600' : 'text-orange-600'}`}>
-                    <TrendingUp className={`w-4 h-4 ${!metric.trendUp && 'rotate-180'}`} />
-                    <span>{metric.trend}</span>
-                  </div>
-                </div>
-                <h3 className="text-slate-600 text-sm mb-1">{metric.label}</h3>
-                <p className="text-slate-900 text-3xl">{metric.value}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                  <h3 className="text-slate-600 text-sm mb-1">{metric.label}</h3>
+                  <p className="text-slate-900 text-3xl">{metric.value}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -155,59 +179,119 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
 
       {/* Estado de Recursos Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-        >
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                Recursos Operativos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 mb-2">Total de recursos operativos</p>
-                  <p className="text-slate-900 text-4xl">245</p>
-                  <p className="text-green-600 text-sm mt-2">85% del total</p>
-                </div>
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                  <CheckCircle2 className="w-12 h-12 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {recursosCards ? (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    Recursos Operativos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 mb-2">Total de recursos operativos</p>
+                      <p className="text-slate-900 text-4xl">{recursosCards.operativos.value}</p>
+                      <p className="text-green-600 text-sm mt-2">{recursosCards.operativos.trend}</p>
+                    </div>
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                      <CheckCircle2 className="w-12 h-12 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.5 }}
-        >
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
-                <AlertCircle className="w-5 h-5 text-orange-600" />
-                Recursos en Mantenimiento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 mb-2">Requieren atención</p>
-                  <p className="text-slate-900 text-4xl">43</p>
-                  <p className="text-orange-600 text-sm mt-2">15% del total</p>
-                </div>
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                  <AlertCircle className="w-12 h-12 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                    Recursos en Mantenimiento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 mb-2">Requieren atención</p>
+                      <p className="text-slate-900 text-4xl">{recursosCards.mantenimiento.value}</p>
+                      <p className="text-orange-600 text-sm mt-2">{recursosCards.mantenimiento.trend}</p>
+                    </div>
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                      <AlertCircle className="w-12 h-12 text-orange-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </>
+        ) : (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    Recursos Operativos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 mb-2">Total de recursos operativos</p>
+                      <p className="text-slate-900 text-4xl">245</p>
+                      <p className="text-green-600 text-sm mt-2">85% del total</p>
+                    </div>
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                      <CheckCircle2 className="w-12 h-12 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                    Recursos en Mantenimiento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 mb-2">Requieren atención</p>
+                      <p className="text-slate-900 text-4xl">43</p>
+                      <p className="text-orange-600 text-sm mt-2">15% del total</p>
+                    </div>
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                      <AlertCircle className="w-12 h-12 text-orange-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </>
+        )}
       </div>
 
       {/* Actividad Reciente */}
