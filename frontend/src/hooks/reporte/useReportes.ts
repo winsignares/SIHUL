@@ -10,6 +10,8 @@ import type {
     ReporteDisponible
 } from '../../models';
 import { reporteOcupacionService } from '../../services/reporte/reporteOcupacionAPI';
+import { disponibilidadService } from '../../services/reporte/disponibilidadAPI';
+import { capacidadService } from '../../services/reporte/capacidadAPI';
 
 const PERIODO_TRABAJO = '2025-1';
 
@@ -44,7 +46,7 @@ const horariosPrograma: HorarioPrograma[] = [
     { grupo: 'INSI-B', dia: 'Jueves', hora: '09:00-11:00', asignatura: 'Estructuras de Datos', docente: 'Ing. Ana Martínez', espacio: 'Aula 205' }
 ];
 
-const disponibilidadEspacios: DisponibilidadEspacio[] = [
+const disponibilidadEspaciosDefault: DisponibilidadEspacio[] = [
     { nombre: 'Aula 101', tipo: 'Aula', horasDisponibles: 12, horasOcupadas: 38, porcentajeOcupacion: 76 },
     { nombre: 'Lab 301', tipo: 'Laboratorio', horasDisponibles: 20, horasOcupadas: 30, porcentajeOcupacion: 60 },
     { nombre: 'Auditorio Central', tipo: 'Auditorio', horasDisponibles: 35, horasOcupadas: 15, porcentajeOcupacion: 30 },
@@ -52,7 +54,7 @@ const disponibilidadEspacios: DisponibilidadEspacio[] = [
     { nombre: 'Lab 401', tipo: 'Laboratorio', horasDisponibles: 25, horasOcupadas: 25, porcentajeOcupacion: 50 }
 ];
 
-const capacidadUtilizada: CapacidadUtilizada[] = [
+const capacidadUtilizadaDefault: CapacidadUtilizada[] = [
     { tipo: 'Aulas Estándar', capacidadTotal: 1500, capacidadUsada: 1230, porcentaje: 82 },
     { tipo: 'Laboratorios', capacidadTotal: 600, capacidadUsada: 420, porcentaje: 70 },
     { tipo: 'Auditorios', capacidadTotal: 800, capacidadUsada: 320, porcentaje: 40 },
@@ -81,6 +83,12 @@ export function useReportes() {
     const [espaciosMasUsados, setEspaciosMasUsados] = useState<EspacioMasUsado[]>(espaciosMasUsadosDefault);
     const [cargandoOcupacion, setCargandoOcupacion] = useState(false);
     const [errorOcupacion, setErrorOcupacion] = useState<string | null>(null);
+    const [disponibilidadEspacios, setDisponibilidadEspacios] = useState<DisponibilidadEspacio[]>(disponibilidadEspaciosDefault);
+    const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
+    const [errorDisponibilidad, setErrorDisponibilidad] = useState<string | null>(null);
+    const [capacidadUtilizada, setCapacidadUtilizada] = useState<CapacidadUtilizada[]>(capacidadUtilizadaDefault);
+    const [cargandoCapacidad, setCargandoCapacidad] = useState(false);
+    const [errorCapacidad, setErrorCapacidad] = useState<string | null>(null);
 
     // Cargar datos de ocupación cuando el componente monta
     useEffect(() => {
@@ -108,6 +116,44 @@ export function useReportes() {
         };
 
         cargarOcupacionReporte();
+    }, []);
+
+    // Cargar datos de disponibilidad cuando el componente monta
+    useEffect(() => {
+        const cargarDisponibilidadReporte = async () => {
+            setCargandoDisponibilidad(true);
+            setErrorDisponibilidad(null);
+            try {
+                const response = await disponibilidadService.getDisponibilidad(0);
+                setDisponibilidadEspacios(response.disponibilidad);
+            } catch (error) {
+                console.error('Error al cargar datos de disponibilidad:', error);
+                setErrorDisponibilidad('Error al cargar los datos de disponibilidad');
+            } finally {
+                setCargandoDisponibilidad(false);
+            }
+        };
+
+        cargarDisponibilidadReporte();
+    }, []);
+
+    // Cargar datos de capacidad cuando el componente monta
+    useEffect(() => {
+        const cargarCapacidadReporte = async () => {
+            setCargandoCapacidad(true);
+            setErrorCapacidad(null);
+            try {
+                const response = await capacidadService.getCapacidad(0);
+                setCapacidadUtilizada(response.capacidad);
+            } catch (error) {
+                console.error('Error al cargar datos de capacidad:', error);
+                setErrorCapacidad('Error al cargar los datos de capacidad');
+            } finally {
+                setCargandoCapacidad(false);
+            }
+        };
+
+        cargarCapacidadReporte();
     }, []);
 
     // Filtrar programas según facultad del usuario
@@ -333,6 +379,10 @@ export function useReportes() {
         exportarPDF,
         exportarExcel,
         cargandoOcupacion,
-        errorOcupacion
+        errorOcupacion,
+        cargandoDisponibilidad,
+        errorDisponibilidad,
+        cargandoCapacidad,
+        errorCapacidad
     };
 }
