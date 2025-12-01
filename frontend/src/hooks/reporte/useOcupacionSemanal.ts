@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { EspacioOcupacion } from '../../models/index';
 import { ocupacionSemanalService } from '../../services/reporte/ocupacionSemanalAPI';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { toast } from 'sonner';
 
 export function useOcupacionSemanal() {
@@ -10,8 +11,24 @@ export function useOcupacionSemanal() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState(new Date());
   const [espaciosOcupacion, setEspaciosOcupacion] = useState<EspacioOcupacion[]>([]);
   const [semanaInfo, setSemanaInfo] = useState({ inicio: '', fin: '' });
+  const [periodoActual, setPeriodoActual] = useState('2025-1');
 
-  const PERIODO_TRABAJO = '2025-1';
+  const PERIODO_DEFAULT = '2025-1';
+
+  // Cargar período activo
+  useEffect(() => {
+    const cargarPeriodo = async () => {
+      try {
+        const periodo = await periodoActivoService.getPeriodoActivo();
+        if (periodo && periodo.nombre) {
+          setPeriodoActual(periodo.nombre);
+        }
+      } catch (error) {
+        console.error('Error al cargar período activo:', error);
+      }
+    };
+    cargarPeriodo();
+  }, []);
 
   // Cargar tipos de espacio
   useEffect(() => {
@@ -131,7 +148,7 @@ export function useOcupacionSemanal() {
   ];
 
   return {
-    PERIODO_TRABAJO,
+    periodoActual,
     tipoEspacio,
     setTipoEspacio,
     tiposOptions,

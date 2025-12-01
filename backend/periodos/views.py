@@ -130,6 +130,28 @@ def list_periodos(request):
 
 
 @csrf_exempt
+def get_periodo_activo(request):
+    """Obtiene el período académico activo actual"""
+    if request.method == 'GET':
+        try:
+            periodo = PeriodoAcademico.objects.filter(activo=True).first()
+            if not periodo:
+                return JsonResponse({"error": "No hay período académico activo"}, status=404)
+            
+            return JsonResponse({
+                "id": periodo.id,
+                "nombre": periodo.nombre,
+                "fecha_inicio": str(periodo.fecha_inicio),
+                "fecha_fin": str(periodo.fecha_fin),
+                "activo": periodo.activo
+            }, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método no permitido. Use GET."}, status=405)
+
+
+@csrf_exempt
 def copy_periodo(request):
     """Copia un periodo académico junto con todos sus grupos"""
     if request.method == 'POST':

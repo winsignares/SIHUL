@@ -12,7 +12,7 @@ import type { HorarioPrograma, HorarioDocente } from '../../models/reporte/repor
 
 export default function Reportes() {
   const {
-    PERIODO_TRABAJO,
+    periodoActual,
     tipoReporte,
     setTipoReporte,
     filtroDocente,
@@ -461,7 +461,7 @@ export default function Reportes() {
         </div>
         <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
           <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span className="text-blue-900 dark:text-blue-100"><strong>{PERIODO_TRABAJO}</strong></span>
+          <span className="text-blue-900 dark:text-blue-100"><strong>{periodoActual}</strong></span>
         </div>
       </div>
 

@@ -14,8 +14,9 @@ import { disponibilidadService } from '../../services/reporte/disponibilidadAPI'
 import { capacidadService } from '../../services/reporte/capacidadAPI';
 import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 
-const PERIODO_TRABAJO = '2025-1';
+const PERIODO_DEFAULT = '2025-1';
 
 // Datos por defecto mientras se cargan los datos reales
 const datosOcupacionDefault: DatoOcupacionJornada[] = [
@@ -81,6 +82,7 @@ export function useReportes() {
     const [tipoReporte, setTipoReporte] = useState('ocupacion');
     const [filtroDocente, setFiltroDocente] = useState('todos');
     const [filtroPrograma, setFiltroPrograma] = useState('todos');
+    const [periodoActual, setPeriodoActual] = useState(PERIODO_DEFAULT);
     const [datosOcupacion, setDatosOcupacion] = useState<DatoOcupacionJornada[]>(datosOcupacionDefault);
     const [espaciosMasUsados, setEspaciosMasUsados] = useState<EspacioMasUsado[]>(espaciosMasUsadosDefault);
     const [cargandoOcupacion, setCargandoOcupacion] = useState(false);
@@ -99,6 +101,23 @@ export function useReportes() {
     const [docentes, setDocentes] = useState<string[]>([]);
     const [docenteSeleccionado, setDocenteSeleccionado] = useState<string | null>(null);
     const [showHorarioDocenteModal, setShowHorarioDocenteModal] = useState(false);
+
+    // Cargar período académico activo
+    useEffect(() => {
+        const cargarPeriodo = async () => {
+            try {
+                const periodo = await periodoActivoService.getPeriodoActivo();
+                if (periodo && periodo.nombre) {
+                    setPeriodoActual(periodo.nombre);
+                }
+            } catch (error) {
+                console.error('Error al cargar período activo:', error);
+                // Mantener período default en caso de error
+            }
+        };
+
+        cargarPeriodo();
+    }, []);
 
     // Cargar horarios del backend cuando el componente monta
     useEffect(() => {
@@ -314,7 +333,7 @@ export function useReportes() {
             doc.text(`Reporte: ${reportesDisponibles.find(r => r.id === tipoReporte)?.nombre || ''}`, 20, 20);
 
             doc.setFontSize(12);
-            doc.text(`Periodo: ${PERIODO_TRABAJO}`, 20, 30);
+            doc.text(`Periodo: ${periodoActual}`, 20, 30);
             doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`, 20, 37);
 
             doc.line(20, 42, 190, 42);
@@ -395,7 +414,7 @@ export function useReportes() {
             doc.setFontSize(9);
             doc.text('Sistema de Planeación y Gestión de Espacios Académicos Universitarios', 20, 285);
 
-            doc.save(`reporte-${tipoReporte}-${PERIODO_TRABAJO}.pdf`);
+            doc.save(`reporte-${tipoReporte}-${periodoActual}.pdf`);
         } catch (error) {
             console.error('Error al generar PDF:', error);
         }
@@ -538,7 +557,7 @@ export function useReportes() {
                 XLSX.utils.book_append_sheet(workbook, ws, 'Capacidad Utilizada');
             }
 
-            XLSX.writeFile(workbook, `reporte-${tipoReporte}-${PERIODO_TRABAJO}.xlsx`);
+            XLSX.writeFile(workbook, `reporte-${tipoReporte}-${periodoActual}.xlsx`);
         } catch (error) {
             console.error('Error al generar Excel:', error);
         }
@@ -563,7 +582,7 @@ export function useReportes() {
     };
 
     return {
-        PERIODO_TRABAJO,
+        periodoActual,
         tipoReporte,
         setTipoReporte,
         filtroDocente,
