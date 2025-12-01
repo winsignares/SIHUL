@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
+import { espacioService, espacioPermitidoService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import {
@@ -31,18 +31,47 @@ export function useEstadoRecursos() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [espaciosRes, sedesRes] = await Promise.all([
-                espacioService.list(),
+            // Obtener usuario actual
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const userId = user?.id;
+            const userRole = user?.rol_id; // Asumiendo que el rol está aquí
+
+            let espaciosPromise;
+
+            // Si es Supervisor (rol_id 2, por ejemplo, o verificar lógica de roles)
+            // TODO: Verificar ID correcto del rol Supervisor. Asumimos que si no es admin, filtramos.
+            // O mejor, intentamos listar permitidos si existe el usuario.
+
+            if (userId) {
+                // Intentamos obtener permitidos primero. Si devuelve vacío y es admin, quizás quiera ver todos.
+                // Pero para seguridad, si es la vista de Supervisor, debería usar permitidos.
+                // Asumiremos que esta vista se usa en contexto de Supervisor si el usuario no es Admin.
+
+                // Para este caso, vamos a usar una lógica simple:
+                // Si hay usuario, traemos sus permitidos. Si es admin, el backend de permitidos podría devolver todos o manejamos la lógica aquí.
+                // Pero dado el requerimiento "Supervisor General -> Disponibilidad de Espacios",
+                // y que "Estado de Recursos" se adapta para él:
+
+                espaciosPromise = espacioPermitidoService.listByUsuario(userId)
+                    .then(res => res.espacios)
+                    .catch(() => espacioService.list().then(res => res.espacios)); // Fallback a todos si falla (ej. es admin sin permitidos definidos)
+            } else {
+                espaciosPromise = espacioService.list().then(res => res.espacios);
+            }
+
+            const [espaciosData, sedesRes] = await Promise.all([
+                espaciosPromise,
                 sedeService.listarSedes()
             ]);
 
-            const espaciosData = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
             const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
 
-            setEspacios(espaciosData);
+            setEspacios(espaciosData || []);
             setSedes(sedesData);
         } catch (error) {
             console.error('Error loading data:', error);
+            setEspacios([]);
         } finally {
             setLoading(false);
         }

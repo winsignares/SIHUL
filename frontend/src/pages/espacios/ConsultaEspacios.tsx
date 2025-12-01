@@ -23,7 +23,7 @@ export default function ConsultaEspacios() {
     horas,
     filteredEspacios,
     estadisticas,
-    getOcupacionPorHora
+    horarios
   } = useConsultaEspacios();
 
   const getEstadoBadge = (estado: string) => {
@@ -39,78 +39,36 @@ export default function ConsultaEspacios() {
     }
   };
 
-  const getCeldaOcupacion = (espacioId: string, dia: string, hora: number) => {
-    const ocupacion = getOcupacionPorHora(espacioId, dia, hora);
-
-    if (!ocupacion) {
-      return (
-        <TooltipProvider key={`${espacioId}-${dia}-${hora}`}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="h-12 border border-slate-200 dark:border-slate-700 bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer rounded"></div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-green-700">Disponible</p>
-              <p className="text-xs text-slate-600">{hora}:00 - {hora + 1}:00</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    // Si es la hora de inicio del bloque
-    if (hora === ocupacion.horaInicio) {
-      const colorClass = ocupacion.estado === 'ocupado'
-        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-        : 'bg-yellow-600 hover:bg-yellow-700 text-white';
-
-      return (
-        <TooltipProvider key={`${espacioId}-${dia}-${hora}`}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`h-12 border border-white ${colorClass} transition-all cursor-pointer rounded flex items-center justify-center p-1`}
-                style={{
-                  gridRow: `span 1`,
-                }}
-              >
-                <span className="text-xs text-center truncate">{ocupacion.materia}</span>
-              </motion.div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="font-semibold">{ocupacion.materia}</p>
-              <p className="text-xs">{ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
-              <p className="text-xs">
-                {ocupacion.estado === 'ocupado' ? 'Ocupado' : 'Mantenimiento'}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    // Si está dentro del bloque pero no es la hora de inicio, no renderizar nada
-    // (el bloque de la hora de inicio ya ocupa el espacio)
-    return null;
+  const getDayColumnIndex = (dia: string) => {
+    const index = diasSemana.indexOf(dia);
+    console.log('getDayColumnIndex:', dia, 'index:', index, 'column:', index !== -1 ? index + 2 : 1);
+    return index !== -1 ? index + 2 : 1;
   };
+
+  const getHourRowIndex = (hora: number) => {
+    const row = hora - 5 + 1;
+    console.log('getHourRowIndex:', hora, 'row:', row);
+    return row;
+  };
+
+  console.log('Horarios data:', horarios);
+  console.log('Dias semana:', diasSemana);
+  console.log('Horas:', horas);
+
 
   return (
     <div className="p-8 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-slate-900 dark:text-slate-100 mb-2">Disponibilidad de Espacios</h1>
         <p className="text-slate-600 dark:text-slate-400">Consultas la disponibilidad de aulas, laboratorios y espacios</p>
       </div>
 
-      {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Total Espaciosss</p>
+                <p className="text-slate-600 dark:text-slate-400 mb-1">Total Espacios</p>
                 <p className="text-slate-900 dark:text-slate-100">{estadisticas.total}</p>
               </div>
               <Home className="w-10 h-10 text-blue-600" />
@@ -158,7 +116,6 @@ export default function ConsultaEspacios() {
         </Card>
       </div>
 
-      {/* View Selector */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
           <Button
@@ -186,7 +143,6 @@ export default function ConsultaEspacios() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="space-y-4">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px] relative">
@@ -223,9 +179,7 @@ export default function ConsultaEspacios() {
         </div>
       </div>
 
-      {/* Content Based on View */}
       {vistaActual === 'tarjetas' ? (
-        /* Espacios Grid */
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredEspacios.map(espacio => (
             <motion.div
@@ -267,9 +221,7 @@ export default function ConsultaEspacios() {
           ))}
         </div>
       ) : (
-        /* Cronograma View */
         <div className="space-y-6">
-          {/* Leyenda */}
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-6">
@@ -289,7 +241,6 @@ export default function ConsultaEspacios() {
             </CardContent>
           </Card>
 
-          {/* Cronograma por Espacio */}
           {filteredEspacios.map((espacio) => (
             <motion.div
               key={espacio.id}
@@ -318,30 +269,85 @@ export default function ConsultaEspacios() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <div className="min-w-[800px]">
-                      {/* Header de días */}
-                      <div className="grid grid-cols-6 gap-2 mb-2">
-                        <div className="text-sm text-slate-600 dark:text-slate-400 p-2"></div>
-                        {diasSemana.map((dia) => (
-                          <div key={dia} className="text-sm text-center text-slate-900 dark:text-slate-100 p-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded">
-                            {dia}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Grid de horarios */}
-                      {horas.map((hora) => (
-                        <div key={hora} className="grid grid-cols-6 gap-2 mb-1">
-                          <div className="text-sm text-slate-600 dark:text-slate-400 p-2 flex items-center">
-                            {hora}:00
-                          </div>
-                          {diasSemana.map((dia) => (
-                            <div key={`${dia}-${hora}`}>
-                              {getCeldaOcupacion(espacio.id, dia, hora)}
-                            </div>
-                          ))}
+                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1">
+                      <div className="p-2"></div>
+                      {diasSemana.map((dia) => (
+                        <div key={dia} className="text-sm text-center text-white font-semibold p-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded">
+                          {dia}
                         </div>
                       ))}
+
+                      {horas.map((hora, idx) => (
+                        <div
+                          key={`time-${hora}`}
+                          className="text-xs text-slate-500 flex items-center justify-end pr-2 h-10"
+                          style={{
+                            gridColumn: 1,
+                            gridRow: idx + 2
+                          }}
+                        >
+                          {hora}:00
+                        </div>
+                      ))}
+
+                      {horas.flatMap((hora, horaIdx) =>
+                        diasSemana.map((dia, diaIdx) => (
+                          <div
+                            key={`empty-${dia}-${hora}`}
+                            className="border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded h-10"
+                            style={{
+                              gridColumn: diaIdx + 2,
+                              gridRow: horaIdx + 2
+                            }}
+                          />
+                        ))
+                      )}
+
+                      {horarios
+                        .filter(h => h.espacioId === espacio.id)
+                        .map((ocupacion, idx) => {
+                          const colStart = getDayColumnIndex(ocupacion.dia);
+                          const rowStart = getHourRowIndex(ocupacion.horaInicio);
+                          const rowSpan = ocupacion.horaFin - ocupacion.horaInicio;
+
+                          if (rowStart < 2 || rowStart > 18) return null;
+
+                          const colorClass = ocupacion.estado === 'ocupado'
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'bg-yellow-600 hover:bg-yellow-700';
+
+                          return (
+                            <TooltipProvider key={`ocup-${idx}`}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className={`${colorClass} text-white rounded p-1 text-xs cursor-pointer shadow-sm flex flex-col justify-center overflow-hidden`}
+                                    style={{
+                                      gridColumn: `${colStart} / span 1`,
+                                      gridRow: `${rowStart} / span ${rowSpan}`,
+                                      zIndex: 10
+                                    }}
+                                  >
+                                    <p className="font-bold truncate">{ocupacion.materia}</p>
+                                    <p className="truncate opacity-90 text-[10px]">{ocupacion.docente}</p>
+                                    <p className="truncate opacity-75 text-[10px]">{ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                  </motion.div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="space-y-1">
+                                    <p className="font-semibold text-sm">{ocupacion.materia}</p>
+                                    <p className="text-xs">Docente: {ocupacion.docente || 'No asignado'}</p>
+                                    <p className="text-xs">Grupo: {ocupacion.grupo || 'N/A'}</p>
+                                    <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                    <p className="text-xs capitalize">Estado: {ocupacion.estado}</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
                     </div>
                   </div>
                 </CardContent>
