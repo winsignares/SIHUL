@@ -448,7 +448,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
               >
                 <Check className="w-10 h-10 text-emerald-600" />
               </motion.div>
-              <p className="text-slate-900 text-center">El reporte ha sido generado exitosamente</p>
+              <p className="text-slate-900 text-center">El reporte fue generado exitosamente</p>
             </motion.div>
           )}
 
