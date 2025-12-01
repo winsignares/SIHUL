@@ -30,6 +30,7 @@ export function useMiHorario() {
     const { showNotification } = useNotification();
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
     const [loading, setLoading] = useState(true);
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const esDocente = user?.rol?.nombre === 'docente';
@@ -89,73 +90,95 @@ export function useMiHorario() {
         });
     };
 
-    const handleDescargarPDF = async () => {
-        if (!user?.id) return;
+const handleDescargarPDF = async () => {
+    // Si no hay horarios cargados, mostrar mensaje y no llamar al backend
+    if (!horarios || horarios.length === 0) {
+        showNotification('No hay horarios registrados', 'error');
+        setNotification({ message: 'No hay horarios registrados', type: 'error' });
+        setTimeout(() => setNotification(null), 3000);
+        return;
+    }
 
-        showNotification('Preparando descarga...', 'info');
+    if (!user?.id) {
+        showNotification('Usuario no identificado', 'error');
+        return;
+    }
 
-        try {
-            const response = await fetch(`http://localhost:8000/horario/exportar-pdf/?usuario_id=${user.id}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/pdf',
-                },
-            });
+    showNotification('Preparando descarga...', 'info');
 
-            if (!response.ok) {
-                throw new Error('Error al generar PDF');
-            }
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const url = `${apiUrl}/horario/exportar-pdf-usuario/?usuario_id=${user.id}`;
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `mi_horario.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+        const response = await fetch(url, { method: 'GET' });
 
-            showNotification('¡Horario descargado exitosamente en PDF!', 'success');
-        } catch (error) {
-            console.error('Error al descargar PDF:', error);
-            showNotification('Error al descargar el PDF', 'error');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Error al generar PDF');
         }
-    };
 
-    const handleDescargarExcel = async () => {
-        if (!user?.id) return;
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = `mi_horario.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(objectUrl);
+        document.body.removeChild(a);
 
-        showNotification('Preparando descarga...', 'info');
+        showNotification('¡Horario descargado exitosamente en PDF!', 'success');
+    } catch (error) {
+        console.error('Error al descargar PDF:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error al descargar el PDF';
+        showNotification(errorMessage, 'error');
+    }
+};
 
-        try {
-            const response = await fetch(`http://localhost:8000/horario/exportar-excel/?usuario_id=${user.id}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                },
-            });
+const handleDescargarExcel = async () => {
+    // Si no hay horarios cargados, mostrar mensaje y no llamar al backend
+    if (!horarios || horarios.length === 0) {
+        showNotification('No hay horarios registrados', 'error');
+        setNotification({ message: 'No hay horarios registrados', type: 'error' });
+        setTimeout(() => setNotification(null), 3000);
+        return;
+    }
 
-            if (!response.ok) {
-                throw new Error('Error al generar Excel');
-            }
+    if (!user?.id) {
+        showNotification('Usuario no identificado', 'error');
+        return;
+    }
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `mi_horario.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+    showNotification('Preparando descarga...', 'info');
 
-            showNotification('¡Horario descargado exitosamente en Excel!', 'success');
-        } catch (error) {
-            console.error('Error al descargar Excel:', error);
-            showNotification('Error al descargar el Excel', 'error');
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const url = `${apiUrl}/horario/exportar-excel-usuario/?usuario_id=${user.id}`;
+
+        const response = await fetch(url, { method: 'GET' });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Error al generar Excel');
         }
-    };
+
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = `mi_horario.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(objectUrl);
+        document.body.removeChild(a);
+
+        showNotification('¡Horario descargado exitosamente en Excel!', 'success');
+    } catch (error) {
+        console.error('Error al descargar Excel:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error al descargar el Excel';
+        showNotification(errorMessage, 'error');
+    }
+};
 
     const horas = generarHoras();
 
@@ -168,6 +191,7 @@ export function useMiHorario() {
         obtenerClaseEnHora,
         handleDescargarPDF,
         handleDescargarExcel,
-        loading
+        loading,
+        notification
     };
 }

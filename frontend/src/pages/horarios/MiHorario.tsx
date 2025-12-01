@@ -15,11 +15,23 @@ export default function MiHorario() {
     obtenerClaseEnHora,
     handleDescargarPDF,
     handleDescargarExcel,
-    loading
+    loading,
+    notification
   } = useMiHorario();
 
   return (
     <div className="p-6 space-y-6">
+      {/* Notificación */}
+      {notification && (
+        <div className={`fixed top-4 right-4 px-4 py-3 rounded-lg text-white z-50 ${
+          notification.type === 'error' ? 'bg-red-500' :
+          notification.type === 'success' ? 'bg-green-500' :
+          'bg-blue-500'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
       {/* Encabezado */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
