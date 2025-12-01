@@ -12,6 +12,8 @@ import type {
 import { reporteOcupacionService } from '../../services/reporte/reporteOcupacionAPI';
 import { disponibilidadService } from '../../services/reporte/disponibilidadAPI';
 import { capacidadService } from '../../services/reporte/capacidadAPI';
+import { horarioService } from '../../services/horarios/horariosAPI';
+import { programaService } from '../../services/programas/programaAPI';
 
 const PERIODO_TRABAJO = '2025-1';
 
@@ -89,6 +91,44 @@ export function useReportes() {
     const [capacidadUtilizada, setCapacidadUtilizada] = useState<CapacidadUtilizada[]>(capacidadUtilizadaDefault);
     const [cargandoCapacidad, setCargandoCapacidad] = useState(false);
     const [errorCapacidad, setErrorCapacidad] = useState<string | null>(null);
+    const [showHorarioModal, setShowHorarioModal] = useState(false);
+    const [grupoSeleccionado, setGrupoSeleccionado] = useState<string | null>(null);
+    const [horariosPrograma, setHorariosPrograma] = useState<HorarioPrograma[]>([]);
+    const [programas, setProgramas] = useState<string[]>([]);
+
+    // Cargar horarios del backend cuando el componente monta
+    useEffect(() => {
+        const cargarHorarios = async () => {
+            try {
+                // Cargar horarios extendidos
+                const horariosResponse = await horarioService.listExtendidos();
+                const horariosExtendidos = horariosResponse.horarios;
+
+                // Cargar programas
+                const programasResponse = await programaService.listarProgramas();
+                const nombresProgramas = ['Todos', ...programasResponse.programas.map(p => p.nombre)];
+                setProgramas(nombresProgramas);
+
+                // Transformar horarios a formato HorarioPrograma
+                const horariosTransformados: HorarioPrograma[] = horariosExtendidos.map(h => ({
+                    grupo: h.grupo_nombre,
+                    dia: h.dia_semana.charAt(0).toUpperCase() + h.dia_semana.slice(1).toLowerCase(),
+                    hora: `${h.hora_inicio}-${h.hora_fin}`,
+                    asignatura: h.asignatura_nombre,
+                    docente: h.docente_nombre,
+                    espacio: h.espacio_nombre,
+                    programa: h.programa_nombre,
+                    semestre: h.semestre
+                }));
+
+                setHorariosPrograma(horariosTransformados);
+            } catch (error) {
+                console.error('Error al cargar horarios:', error);
+            }
+        };
+
+        cargarHorarios();
+    }, []);
 
     // Cargar datos de ocupación cuando el componente monta
     useEffect(() => {
@@ -173,6 +213,42 @@ export function useReportes() {
 
     const exportarPDF = async () => {
         try {
+            // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
+            if (tipoReporte === 'horarios-programa') {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                
+                // Cargar todos los horarios extendidos del backend
+                const horariosResponse = await horarioService.listExtendidos();
+                const todosLosHorarios = horariosResponse.horarios;
+                
+                const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        horarios: todosLosHorarios
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al generar PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `horarios_programa.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                return;
+            }
+
+            // Para otros reportes, generar PDF localmente
             const { jsPDF } = await import('jspdf');
             const doc = new jsPDF();
 
@@ -231,23 +307,6 @@ export function useReportes() {
                         yPos = 20;
                     }
                 });
-            } else if (tipoReporte === 'horarios-programa') {
-                doc.setFontSize(14);
-                doc.text('Horarios por Programa', 20, yPos);
-                yPos += 10;
-
-                doc.setFontSize(11);
-                horariosPrograma.forEach((horario) => {
-                    doc.text(`${horario.grupo}`, 25, yPos);
-                    doc.text(`${horario.dia} ${horario.hora}`, 60, yPos);
-                    doc.text(`${horario.asignatura}`, 110, yPos);
-                    doc.text(`${horario.docente}`, 150, yPos);
-                    yPos += 8;
-                    if (yPos > 270) {
-                        doc.addPage();
-                        yPos = 20;
-                    }
-                });
             } else if (tipoReporte === 'disponibilidad') {
                 doc.setFontSize(14);
                 doc.text('Disponibilidad General de Espacios', 20, yPos);
@@ -280,15 +339,49 @@ export function useReportes() {
             doc.text('Sistema de Planeación y Gestión de Espacios Académicos Universitarios', 20, 285);
 
             doc.save(`reporte-${tipoReporte}-${PERIODO_TRABAJO}.pdf`);
-            // Mostrar notificación: Reporte PDF descargado exitosamente
         } catch (error) {
             console.error('Error al generar PDF:', error);
-            // Mostrar notificación: Error al generar el PDF
         }
     };
 
     const exportarExcel = async () => {
         try {
+            // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
+            if (tipoReporte === 'horarios-programa') {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                
+                // Cargar todos los horarios extendidos del backend
+                const horariosResponse = await horarioService.listExtendidos();
+                const todosLosHorarios = horariosResponse.horarios;
+                
+                const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        horarios: todosLosHorarios
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al generar Excel');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `horarios_programa.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                return;
+            }
+
+            // Para otros reportes, generar Excel localmente
             const XLSX = await import('xlsx');
             const workbook = XLSX.utils.book_new();
 
@@ -319,17 +412,6 @@ export function useReportes() {
                 }));
                 const ws = XLSX.utils.json_to_sheet(datos);
                 XLSX.utils.book_append_sheet(workbook, ws, 'Horarios Docente');
-            } else if (tipoReporte === 'horarios-programa') {
-                const datos = horariosPrograma.map(h => ({
-                    'Grupo': h.grupo,
-                    'Día': h.dia,
-                    'Hora': h.hora,
-                    'Asignatura': h.asignatura,
-                    'Docente': h.docente,
-                    'Espacio': h.espacio
-                }));
-                const ws = XLSX.utils.json_to_sheet(datos);
-                XLSX.utils.book_append_sheet(workbook, ws, 'Horarios Programa');
             } else if (tipoReporte === 'disponibilidad') {
                 const datos = disponibilidadEspacios.map(e => ({
                     'Espacio': e.nombre,
@@ -352,11 +434,18 @@ export function useReportes() {
             }
 
             XLSX.writeFile(workbook, `reporte-${tipoReporte}-${PERIODO_TRABAJO}.xlsx`);
-            // Mostrar notificación: Reporte Excel descargado exitosamente
         } catch (error) {
             console.error('Error al generar Excel:', error);
-            // Mostrar notificación: Error al generar el Excel
         }
+    };
+
+    const handleVerHorarioGrupo = (grupo: string) => {
+        setGrupoSeleccionado(grupo);
+        setShowHorarioModal(true);
+    };
+
+    const obtenerHorariosGrupo = (grupo: string) => {
+        return horariosPrograma.filter(h => h.grupo === grupo);
     };
 
     return {
@@ -383,6 +472,12 @@ export function useReportes() {
         cargandoDisponibilidad,
         errorDisponibilidad,
         cargandoCapacidad,
-        errorCapacidad
+        errorCapacidad,
+        showHorarioModal,
+        setShowHorarioModal,
+        grupoSeleccionado,
+        setGrupoSeleccionado,
+        handleVerHorarioGrupo,
+        obtenerHorariosGrupo
     };
 }

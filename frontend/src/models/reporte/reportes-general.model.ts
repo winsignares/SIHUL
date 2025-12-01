@@ -14,6 +14,8 @@ export interface HorarioPrograma {
     asignatura: string;
     docente: string;
     espacio: string;
+    programa?: string;
+    semestre?: number;
 }
 
 export interface DisponibilidadEspacio {
