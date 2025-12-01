@@ -308,9 +308,15 @@ for programa_nombre, pensum in pensums.items():
         else:
             print(f"    ⏭️  {asignatura.nombre} - Semestre {semestre} (ya existe)")
 
-print(f"\n✨ ¡Proceso completado!")
+print(f"\n✨ ¡Fase 1 completada!")
 print(f"   - Sedes: {Sede.objects.count()}")
 print(f"   - Facultades: {Facultad.objects.count()}")
 print(f"   - Programas: {Programa.objects.count()}")
 print(f"   - Asignaturas: {Asignatura.objects.count()}")
 print(f"   - Relaciones Asignatura-Programa: {AsignaturaPrograma.objects.count()} ({contador} nuevas)")
+
+# Ejecutar script avanzado
+print("\n" + "="*60)
+print("Ejecutando Fase 2: Datos Avanzados...")
+print("="*60)
+exec(open('seed_data_avanzado.py').read())
