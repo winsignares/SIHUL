@@ -19,7 +19,7 @@ from horario.models import Horario, HorarioEstudiante
 from programas.models import Programa
 from asignaturas.models import AsignaturaPrograma
 from sedes.models import Sede
-from usuarios.models import Usuario
+from usuarios.models import Usuario, Rol
 import random
 
 print("🚀 Iniciando creación de datos avanzados (Fase 2)...")
@@ -229,13 +229,20 @@ print("\n📅 Creando Horarios...")
 # Crear/obtener docentes para diferentes áreas
 print("  👨‍🏫 Configurando docentes...")
 
+# Obtener el rol de docente
+rol_docente, _ = Rol.objects.get_or_create(
+    nombre='docente',
+    defaults={'descripcion': 'Docente'}
+)
+
 # Docentes de Matemáticas y Ciencias Básicas
 docente_matematicas, _ = Usuario.objects.get_or_create(
     correo="docente.matematicas@unilibre.edu.co",
     defaults={
         "nombre": "Dr. Carlos Rodríguez",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -244,7 +251,8 @@ docente_fisica, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Dra. María González",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -254,7 +262,8 @@ docente_programacion, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Ing. Luis Martínez",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -263,7 +272,8 @@ docente_bd, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Ing. Ana Pérez",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -273,7 +283,8 @@ docente_estadistica, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Dr. Jorge López",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -282,7 +293,8 @@ docente_industrial, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Ing. Patricia Ramírez",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -292,7 +304,8 @@ docente_civil, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Ing. Roberto Sánchez",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -302,7 +315,8 @@ docente_administracion, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Mg. Carmen Torres",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -311,7 +325,8 @@ docente_contabilidad, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Cont. Diana Vargas",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -321,7 +336,8 @@ docente_humanidades, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Lic. Alberto Castro",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -330,7 +346,8 @@ docente_ingles, _ = Usuario.objects.get_or_create(
     defaults={
         "nombre": "Lic. Sandra Morales",
         "activo": True,
-        "contrasena_hash": "doc123"
+        "contrasena_hash": "doc123",
+        "rol": rol_docente
     }
 )
 
@@ -488,6 +505,12 @@ for horario_data in horarios_data:
 # ========== ESTUDIANTES ==========
 print("\n👨‍🎓 Creando Estudiantes...")
 
+# Obtener el rol de estudiante
+rol_estudiante, _ = Rol.objects.get_or_create(
+    nombre='estudiante',
+    defaults={'descripcion': 'Estudiante'}
+)
+
 # Crear estudiantes para cada grupo
 estudiantes_data = []
 nombres_estudiantes = [
@@ -525,7 +548,8 @@ for grupo_nombre, grupo in grupos.items():
             defaults={
                 "nombre": nombre_completo,
                 "activo": True,
-                "contrasena_hash": "est123"
+                "contrasena_hash": "est123",
+                "rol": rol_estudiante
             }
         )
         
@@ -538,6 +562,27 @@ for grupo_nombre, grupo in grupos.items():
     print(f"  ✅ {len(estudiantes_grupo)} estudiantes para {grupo_nombre}")
 
 print(f"  ✅ Total estudiantes creados: {contador_estudiantes}")
+
+# ========== ACTUALIZAR ROLES DE USUARIOS EXISTENTES ==========
+print("\n🔄 Actualizando roles de usuarios existentes...")
+
+# Actualizar docentes que no tienen rol
+docentes_sin_rol = Usuario.objects.filter(
+    correo__startswith='docente.',
+    rol__isnull=True
+)
+docentes_actualizados = docentes_sin_rol.update(rol=rol_docente)
+if docentes_actualizados > 0:
+    print(f"  ✅ {docentes_actualizados} docentes actualizados con rol")
+
+# Actualizar estudiantes que no tienen rol
+estudiantes_sin_rol = Usuario.objects.filter(
+    correo__startswith='estudiante.',
+    rol__isnull=True
+)
+estudiantes_actualizados = estudiantes_sin_rol.update(rol=rol_estudiante)
+if estudiantes_actualizados > 0:
+    print(f"  ✅ {estudiantes_actualizados} estudiantes actualizados con rol")
 
 # ========== INSCRIPCIONES A HORARIOS ==========
 print("\n📝 Inscribiendo estudiantes a horarios...")
