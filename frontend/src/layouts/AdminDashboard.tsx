@@ -4,12 +4,10 @@ import { Link } from 'react-router-dom';
 import {
   GraduationCap,
   Bell,
-  Search,
   Settings,
   LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Input } from '../share/input';
 import { Avatar, AvatarFallback } from '../share/avatar';
 import { Badge } from '../share/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../share/tooltip';
@@ -28,6 +26,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
   const {
     userRole,
     userName,
+    userFacultyName,
     isSidebarHovered,
     setIsSidebarHovered,
     shouldShowExpanded,
@@ -67,47 +66,11 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     transition={{ duration: 0.3 }}
                   >
                     <h1 className="text-white whitespace-nowrap">SIHUL</h1>
-                    <p className="text-red-300 whitespace-nowrap text-xs">Administrador de Planeación</p>
+                    <p className="text-red-300 whitespace-nowrap text-xs">{userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
-          </div>
-
-          {/* Barra de Búsqueda */}
-          <div className="p-4 border-b border-red-700/50">
-            <AnimatePresence>
-              {shouldShowExpanded ? (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="relative"
-                >
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-300" />
-                  <Input
-                    placeholder="Buscar..."
-                    className="pl-9 pr-3 h-10 bg-red-800/50 border-red-700 text-white placeholder:text-red-300 focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500"
-                  />
-                </motion.div>
-              ) : (
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <motion.button
-                      className="w-full flex items-center justify-center p-2.5 rounded-xl bg-red-800/50 hover:bg-red-700/50 transition-colors"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Search className="w-5 h-5 text-red-300" />
-                    </motion.button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-red-900 text-white border-red-700">
-                    Buscar
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </AnimatePresence>
           </div>
 
           {/* Navigation */}
@@ -276,7 +239,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                             className="flex-1 min-w-0"
                           >
                             <p className={`text-sm truncate ${isActive ? 'text-red-900 font-semibold' : 'text-white'}`}>{userName}</p>
-                            <p className={`text-xs truncate ${isActive ? 'text-red-800' : 'text-red-300'}`}>{userRole === 'admin' ? 'Administrador' : userRole === 'planeacion_facultad' ? 'Planeación Facultad' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : userRole === 'autorizado' ? 'Autorizado' : 'Consultor'}</p>
+                            <p className={`text-xs truncate font-medium ${isActive ? 'text-red-900' : 'text-yellow-300'}`}>{userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
                           </motion.div>
                         )}
                       </AnimatePresence>

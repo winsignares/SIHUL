@@ -31,6 +31,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
 
     const userName = user?.nombre || propsUserName || 'Usuario';
     const userRole = role?.nombre || propsUserRole || 'Usuario';
+    const userFacultyName = user?.facultad?.nombre || '';
 
     const handleLogout = propsOnLogout || (() => {
         logout();
@@ -226,6 +227,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         role,
         userName,
         userRole,
+        userFacultyName,
         isSidebarCollapsed,
         isSidebarHovered,
         setIsSidebarHovered,
