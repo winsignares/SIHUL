@@ -142,6 +142,40 @@ export const espacioService = {
      */
     list: async (): Promise<ListEspaciosResponse> => {
         return apiClient.get<ListEspaciosResponse>('/espacios/list/');
+    },
+
+    /**
+     * Obtiene el estado actual y próxima clase de un espacio
+     */
+    getEstado: async (espacioId: number): Promise<{
+        estado: 'disponible' | 'ocupado' | 'mantenimiento';
+        texto_estado: string;
+        proxima_clase: {
+            asignatura: string;
+            docente: string;
+            hora_inicio: string;
+            hora_fin: string;
+            grupo: string;
+        } | null;
+    }> => {
+        return apiClient.get(`/espacios/${espacioId}/estado/`);
+    },
+
+    /**
+     * Obtiene el horario semanal de un espacio
+     */
+    getHorario: async (espacioId: number): Promise<{
+        horario: {
+            dia: string;
+            hora_inicio: number;
+            hora_fin: number;
+            materia: string;
+            docente: string;
+            grupo: string;
+            estado: string;
+        }[];
+    }> => {
+        return apiClient.get(`/espacios/${espacioId}/horario/`);
     }
 };
 

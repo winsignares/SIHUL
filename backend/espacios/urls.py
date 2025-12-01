@@ -22,4 +22,8 @@ urlpatterns = [
     
     # Apertura y cierre de salones
     path('apertura-cierre/proximos/', views.proximos_apertura_cierre, name='proximos_apertura_cierre'),
+    
+    # Estado y Horario (Supervisor)
+    path('<int:espacio_id>/estado/', views.get_estado_espacio, name='get_estado_espacio'),
+    path('<int:espacio_id>/horario/', views.get_horario_espacio, name='get_horario_espacio'),
 ]

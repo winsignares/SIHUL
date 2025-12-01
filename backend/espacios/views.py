@@ -591,3 +591,132 @@ def proximos_apertura_cierre(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
+# ========== ESTADO Y HORARIO DE ESPACIOS (SUPERVISOR) ==========
+
+@csrf_exempt
+def get_estado_espacio(request, espacio_id=None):
+    """
+    Obtiene el estado actual y la próxima clase de un espacio.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    if espacio_id is None:
+        return JsonResponse({"error": "El espacio_id es requerido"}, status=400)
+
+    try:
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+        
+        # 1. Verificar estado manual (Mantenimiento tiene prioridad)
+        if espacio.estado == 'Mantenimiento':
+            return JsonResponse({
+                "estado": "mantenimiento",
+                "texto_estado": "En Mantenimiento",
+                "proxima_clase": None
+            }, status=200)
+
+        # 2. Obtener hora y día actual
+        ahora = datetime.now()
+        hora_actual = ahora.time()
+        dia_actual = get_dia_semana_actual()
+        
+        # 3. Buscar clases de hoy para este espacio
+        clases_hoy = Horario.objects.filter(
+            espacio=espacio,
+            dia_semana=dia_actual
+        ).select_related('asignatura', 'docente', 'grupo').order_by('hora_inicio')
+        
+        estado_actual = "disponible"
+        texto_estado = "Disponible"
+        proxima_clase_data = None
+        
+        # 4. Determinar estado basado en clases
+        for clase in clases_hoy:
+            # Si hay una clase ocurriendo AHORA
+            if clase.hora_inicio <= hora_actual < clase.hora_fin:
+                estado_actual = "ocupado"
+                texto_estado = "Ocupado"
+                proxima_clase_data = {
+                    "asignatura": clase.asignatura.nombre,
+                    "docente": clase.docente.nombre if clase.docente else "Sin docente",
+                    "hora_inicio": clase.hora_inicio.strftime('%H:%M'),
+                    "hora_fin": clase.hora_fin.strftime('%H:%M'),
+                    "grupo": clase.grupo.nombre
+                }
+                break # Ya encontramos el estado actual, salimos
+            
+            # Si es una clase futura (la primera que encontremos será la próxima)
+            if clase.hora_inicio > hora_actual:
+                if proxima_clase_data is None: # Solo guardamos la primera futura
+                    proxima_clase_data = {
+                        "asignatura": clase.asignatura.nombre,
+                        "docente": clase.docente.nombre if clase.docente else "Sin docente",
+                        "hora_inicio": clase.hora_inicio.strftime('%H:%M'),
+                        "hora_fin": clase.hora_fin.strftime('%H:%M'),
+                        "grupo": clase.grupo.nombre
+                    }
+                    
+                    # Calcular si falta poco para esta clase (ej. 1 hora)
+                    inicio_dt = datetime.combine(ahora.date(), clase.hora_inicio)
+                    diff = inicio_dt - ahora
+                    if diff.total_seconds() <= 3600: # Menos de 1 hora
+                         texto_estado = f"Próxima clase a las {clase.hora_inicio.strftime('%H:%M')}"
+        
+        # Si no hay clase actual ni futura, y no está en mantenimiento
+        if estado_actual == "disponible" and proxima_clase_data is None:
+             texto_estado = "Sin clases pendientes hoy"
+        elif estado_actual == "disponible" and proxima_clase_data:
+             texto_estado = f"Próxima clase a las {proxima_clase_data['hora_inicio']}"
+
+        return JsonResponse({
+            "estado": estado_actual,
+            "texto_estado": texto_estado,
+            "proxima_clase": proxima_clase_data
+        }, status=200)
+
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({"error": "Espacio no encontrado"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def get_horario_espacio(request, espacio_id=None):
+    """
+    Obtiene el horario semanal completo de un espacio.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    if espacio_id is None:
+        return JsonResponse({"error": "El espacio_id es requerido"}, status=400)
+
+    try:
+        # Verificar que el espacio existe
+        if not EspacioFisico.objects.filter(id=espacio_id).exists():
+             return JsonResponse({"error": "Espacio no encontrado"}, status=404)
+
+        # Obtener todos los horarios del espacio
+        horarios = Horario.objects.filter(
+            espacio_id=espacio_id
+        ).select_related('asignatura', 'docente', 'grupo')
+        
+        lista_horarios = []
+        for h in horarios:
+            lista_horarios.append({
+                "dia": h.dia_semana,
+                "hora_inicio": h.hora_inicio.hour, # Frontend espera entero para el grid
+                "hora_fin": h.hora_fin.hour,       # Frontend espera entero
+                "materia": h.asignatura.nombre,
+                "docente": h.docente.nombre if h.docente else "Sin docente",
+                "grupo": h.grupo.nombre,
+                "estado": "ocupado" # Por defecto ocupado si hay clase
+            })
+            
+        return JsonResponse({
+            "horario": lista_horarios
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
