@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { BarChart3, TrendingUp, Calendar, Download, RefreshCw } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Download, Loader } from 'lucide-react';
 import { Button } from '../../share/button';
 import { Progress } from '../../share/progress';
 import { motion } from 'motion/react';
@@ -14,11 +14,11 @@ export default function OcupacionSemanal() {
     PERIODO_TRABAJO,
     tipoEspacio,
     setTipoEspacio,
-    calculando,
+    tiposOptions,
+    loading,
     ultimaActualizacion,
     espaciosFiltrados,
     estadisticas,
-    recalcularOcupacion,
     exportarReporte,
     getColorPorOcupacion,
     getBarColor
@@ -51,20 +51,16 @@ export default function OcupacionSemanal() {
             <span className="text-blue-900 dark:text-blue-100"><strong>{PERIODO_TRABAJO}</strong></span>
           </div>
           <Button
-            onClick={recalcularOcupacion}
-            disabled={calculando}
-            variant="outline"
-            className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${calculando ? 'animate-spin' : ''}`} />
-            {calculando ? 'Calculando...' : 'Recalcular'}
-          </Button>
-          <Button
             onClick={exportarReporte}
+            disabled={loading}
             className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Exportar PDF
+            {loading ? (
+              <Loader className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {loading ? 'Generando...' : 'Exportar PDF'}
           </Button>
         </div>
       </div>
@@ -76,12 +72,11 @@ export default function OcupacionSemanal() {
             <SelectValue placeholder="Tipo de espacio" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos los tipos</SelectItem>
-            <SelectItem value="Aula">Aulas</SelectItem>
-            <SelectItem value="Laboratorio">Laboratorios</SelectItem>
-            <SelectItem value="Auditorio">Auditorios</SelectItem>
-            <SelectItem value="Sala">Salas</SelectItem>
-            <SelectItem value="Cancha">Canchas</SelectItem>
+            {tiposOptions.map(option => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -150,82 +145,89 @@ export default function OcupacionSemanal() {
           <CardTitle className="text-slate-900 dark:text-slate-100">Ocupación Detallada por Espacio</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Espacio</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Edificio</TableHead>
-                <TableHead>Capacidad</TableHead>
-                <TableHead>Horas Ocupadas</TableHead>
-                <TableHead>Ocupación Mañana</TableHead>
-                <TableHead>Ocupación Tarde</TableHead>
-                <TableHead>Ocupación Noche</TableHead>
-                <TableHead>Total Semanal</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {espaciosFiltrados.map((espacio) => (
-                <TableRow key={espacio.id}>
-                  <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="border-blue-600 text-blue-600">
-                      {espacio.tipo}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">Edif. {espacio.edificio}</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} pers.</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">
-                    {espacio.horasOcupadas} / {espacio.horasDisponibles}h
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 w-20">
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div
-                            className={`${getBarColor(espacio.jornada.manana)} h-2 rounded-full transition-all`}
-                            style={{ width: `${espacio.jornada.manana}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.manana}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 w-20">
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div
-                            className={`${getBarColor(espacio.jornada.tarde)} h-2 rounded-full transition-all`}
-                            style={{ width: `${espacio.jornada.tarde}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.tarde}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 w-20">
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div
-                            className={`${getBarColor(espacio.jornada.noche)} h-2 rounded-full transition-all`}
-                            style={{ width: `${espacio.jornada.noche}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.noche}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getColorPorOcupacion(espacio.porcentajeOcupacion)}>
-                      {espacio.porcentajeOcupacion.toFixed(1)}%
-                    </Badge>
-                  </TableCell>
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
+              <p className="text-slate-600 dark:text-slate-400">Cargando datos de ocupación...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Espacio</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Edificio</TableHead>
+                  <TableHead>Capacidad</TableHead>
+                  <TableHead>Horas Ocupadas</TableHead>
+                  <TableHead>Ocupación Mañana</TableHead>
+                  <TableHead>Ocupación Tarde</TableHead>
+                  <TableHead>Ocupación Noche</TableHead>
+                  <TableHead>Total Semanal</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {espaciosFiltrados.map((espacio) => (
+                  <TableRow key={espacio.id}>
+                    <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-blue-600 text-blue-600">
+                        {espacio.tipo}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400">Edif. {espacio.edificio}</TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} pers.</TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400">
+                      {espacio.horasOcupadas} / {espacio.horasDisponibles}h
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 w-20">
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className={`${getBarColor(espacio.jornada.manana)} h-2 rounded-full transition-all`}
+                              style={{ width: `${espacio.jornada.manana}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.manana}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 w-20">
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className={`${getBarColor(espacio.jornada.tarde)} h-2 rounded-full transition-all`}
+                              style={{ width: `${espacio.jornada.tarde}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.tarde}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 w-20">
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className={`${getBarColor(espacio.jornada.noche)} h-2 rounded-full transition-all`}
+                              style={{ width: `${espacio.jornada.noche}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.noche}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getColorPorOcupacion(espacio.porcentajeOcupacion)}>
+                        {espacio.porcentajeOcupacion.toFixed(1)}%
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -268,6 +270,7 @@ export default function OcupacionSemanal() {
           </div>
         </CardContent>
       </Card>
+
       <Toaster />
     </div>
   );
