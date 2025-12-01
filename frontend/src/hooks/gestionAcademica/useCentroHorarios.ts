@@ -67,6 +67,12 @@ export function useCentroHorarios() {
     // Estado para acordeón de grupos expandidos
     const [gruposExpandidos, setGruposExpandidos] = useState<Set<string>>(new Set());
 
+    // Estados para modal de confirmación de eliminación de grupo
+    const [showDeleteGrupoModal, setShowDeleteGrupoModal] = useState(false);
+    const [grupoAEliminar, setGrupoAEliminar] = useState<GrupoAgrupado | null>(null);
+    const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
+    const [progresoEliminacion, setProgresoEliminacion] = useState(0);
+
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
     useEffect(() => {
@@ -373,6 +379,50 @@ export function useCentroHorarios() {
         }
     };
 
+    // Abrir modal de confirmación para eliminar grupo
+    const handleAbrirModalEliminarGrupo = (grupo: GrupoAgrupado) => {
+        setGrupoAEliminar(grupo);
+        setShowDeleteGrupoModal(true);
+        setProgresoEliminacion(0);
+    };
+
+    // Eliminar grupo completo con progreso
+    const handleEliminarGrupoCompleto = async () => {
+        if (!grupoAEliminar) return;
+
+        try {
+            setEliminandoGrupo(true);
+            const totalClases = grupoAEliminar.horarios.length;
+            let clasesEliminadas = 0;
+
+            for (const horario of grupoAEliminar.horarios) {
+                await horarioService.delete({ id: horario.id });
+                clasesEliminadas++;
+                setProgresoEliminacion(Math.round((clasesEliminadas / totalClases) * 100));
+                
+                // Pequeño delay para mostrar la animación
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
+            showNotification(`✅ Grupo ${grupoAEliminar.grupo} eliminado correctamente (${totalClases} clases)`, 'success');
+            
+            // Esperar un momento antes de cerrar para mostrar el 100%
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            setShowDeleteGrupoModal(false);
+            setGrupoAEliminar(null);
+            await loadData();
+        } catch (error) {
+            showNotification(
+                `Error al eliminar el grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                'error'
+            );
+        } finally {
+            setEliminandoGrupo(false);
+            setProgresoEliminacion(0);
+        }
+    };
+
     const limpiarFiltros = () => {
         setFiltroFacultad('all');
         setFiltroPrograma('all');
@@ -573,6 +623,12 @@ export function useCentroHorarios() {
         toggleGrupoExpandido,
         handleDescargarPDF,
         handleDescargarExcel,
+        showDeleteGrupoModal, setShowDeleteGrupoModal,
+        grupoAEliminar, setGrupoAEliminar,
+        eliminandoGrupo,
+        progresoEliminacion,
+        handleAbrirModalEliminarGrupo,
+        handleEliminarGrupoCompleto,
         dias,
         notification
     };

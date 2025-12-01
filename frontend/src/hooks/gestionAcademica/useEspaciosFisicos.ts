@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNotification } from '../../share/notificationBanner';
+import { toast } from 'sonner';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { tipoEspacioService, type TipoEspacio } from '../../services/espacios/tipoEspacioAPI';
 
 export function useEspaciosFisicos() {
-    const { notification, showNotification } = useNotification();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState<string>('all');
     const [filterSede, setFilterSede] = useState<string>('all');
@@ -67,7 +66,7 @@ export function useEspaciosFisicos() {
             setRecursosDisponibles(recursosData);
         } catch (error) {
             console.error('Error loading data:', error);
-            showNotification('Error al cargar los datos', 'error');
+            toast.error('Error al cargar los datos');
         } finally {
             setLoading(false);
         }
@@ -88,23 +87,23 @@ export function useEspaciosFisicos() {
     const handleCreateEspacio = async () => {
         // Validaciones
         if (!espacioForm.nombre.trim()) {
-            showNotification('El nombre es obligatorio', 'error');
+            toast.error('El nombre es obligatorio');
             return;
         }
         if (!espacioForm.tipo_id) {
-            showNotification('Debe seleccionar un tipo', 'error');
+            toast.error('Debe seleccionar un tipo');
             return;
         }
         if (!espacioForm.capacidad || Number(espacioForm.capacidad) < 1) {
-            showNotification('La capacidad debe ser mayor a 0', 'error');
+            toast.error('La capacidad debe ser mayor a 0');
             return;
         }
         if (!espacioForm.sede_id) {
-            showNotification('Debe seleccionar una sede', 'error');
+            toast.error('Debe seleccionar una sede');
             return;
         }
         if (!espacioForm.ubicacion.trim()) {
-            showNotification('La ubicación es obligatoria', 'error');
+            toast.error('La ubicación es obligatoria');
             return;
         }
 
@@ -135,10 +134,10 @@ export function useEspaciosFisicos() {
             setShowCreateDialog(false);
 
             // Notificación
-            showNotification('✅ Registro guardado exitosamente', 'success');
+            toast.success('Registro guardado exitosamente');
         } catch (error) {
             console.error('Error creating espacio:', error);
-            showNotification('Error al crear el espacio', 'error');
+            toast.error('Error al crear el espacio');
         }
     };
 
@@ -177,23 +176,23 @@ export function useEspaciosFisicos() {
         if (!selectedEspacio) return;
         // Validaciones
         if (!espacioForm.nombre.trim()) {
-            showNotification('El nombre es obligatorio', 'error');
+            toast.error('El nombre es obligatorio');
             return;
         }
         if (!espacioForm.tipo_id) {
-            showNotification('Debe seleccionar un tipo', 'error');
+            toast.error('Debe seleccionar un tipo');
             return;
         }
         if (!espacioForm.capacidad || Number(espacioForm.capacidad) < 1) {
-            showNotification('La capacidad debe ser mayor a 0', 'error');
+            toast.error('La capacidad debe ser mayor a 0');
             return;
         }
         if (!espacioForm.sede_id) {
-            showNotification('Debe seleccionar una sede', 'error');
+            toast.error('Debe seleccionar una sede');
             return;
         }
         if (!espacioForm.ubicacion.trim()) {
-            showNotification('La ubicación es obligatoria', 'error');
+            toast.error('La ubicación es obligatoria');
             return;
         }
 
@@ -226,10 +225,10 @@ export function useEspaciosFisicos() {
             resetForm();
 
             // Notificación
-            showNotification('✅ Actualización exitosa', 'success');
+            toast.info('Actualización exitosa');
         } catch (error) {
             console.error('Error updating espacio:', error);
-            showNotification('Error al actualizar el espacio', 'error');
+            toast.error('Error al actualizar el espacio');
         }
     };
 
@@ -253,10 +252,10 @@ export function useEspaciosFisicos() {
             setShowDeleteDialog(false);
             setSelectedEspacio(null);
 
-            showNotification('✅ Espacio eliminado correctamente', 'success');
+            toast.error('Espacio eliminado correctamente');
         } catch (error) {
             console.error('Error deleting espacio:', error);
-            showNotification('Error al eliminar el espacio', 'error');
+            toast.error('Error al eliminar el espacio');
         }
     };
 
@@ -334,8 +333,6 @@ export function useEspaciosFisicos() {
         resetForm,
         filteredEspacios,
         getEstadoBadge,
-        notification,
-        showNotification,
         loadEspacios
     };
 }

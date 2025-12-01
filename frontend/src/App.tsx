@@ -16,7 +16,7 @@ export default function App() {
       <AuthProvider>
         <UserProvider>
           <AppRouter />
-          <Toaster position="bottom-right" />
+          <Toaster position="top-right" richColors expand />
         </UserProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -426,7 +426,6 @@ export default function Grupos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </>
   );
 }
