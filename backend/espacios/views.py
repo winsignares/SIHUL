@@ -1572,3 +1572,358 @@ def _calcular_espacios_mas_usados_reporte(espacios, lunes, sabado, dias_nombre):
         print(f"Error en _calcular_espacios_mas_usados_reporte: {str(e)}")
         return []
 
+
+@csrf_exempt
+def reporte_disponibilidad(request):
+    """
+    Endpoint para obtener datos de reporte de disponibilidad de espacios.
+    
+    Parámetros GET opcionales:
+    - semana_offset: 0 (semana actual), 1 (próxima semana), -1 (semana pasada)
+    
+    Retorna:
+    {
+        "periodo": "2025-1",
+        "semana_inicio": "2025-01-XX",
+        "semana_fin": "2025-01-XX",
+        "disponibilidad": [
+            {
+                "nombre": "Aula 101",
+                "tipo": "Aula",
+                "horasDisponibles": 45,
+                "horasOcupadas": 51,
+                "porcentajeOcupacion": 53
+            },
+            ...
+        ],
+        "resumen": {
+            "total_disponible": 450,
+            "total_ocupado": 510,
+            "promedio_ocupacion": 53
+        }
+    }
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    try:
+        # Obtener parámetro de semana
+        semana_offset = int(request.GET.get('semana_offset', 0))
+        
+        # Calcular rango de fechas (Lunes a Sábado)
+        hoy = timezone.now().date()
+        dias_hasta_lunes = (hoy.weekday() - 0) % 7
+        lunes = hoy - timedelta(days=dias_hasta_lunes)
+        lunes += timedelta(weeks=semana_offset)
+        sabado = lunes + timedelta(days=5)
+        
+        # Mapeo de nombres de días
+        dias_nombre = {
+            'Monday': 'Lunes',
+            'Tuesday': 'Martes',
+            'Wednesday': 'Miércoles',
+            'Thursday': 'Jueves',
+            'Friday': 'Viernes',
+            'Saturday': 'Sábado',
+            'Sunday': 'Domingo'
+        }
+        
+        # Obtener todos los espacios
+        espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        
+        if not espacios.exists():
+            return JsonResponse({
+                "periodo": "2025-1",
+                "semana_inicio": lunes.isoformat(),
+                "semana_fin": sabado.isoformat(),
+                "disponibilidad": [],
+                "resumen": {
+                    "total_disponible": 0,
+                    "total_ocupado": 0,
+                    "promedio_ocupacion": 0
+                }
+            }, status=200)
+        
+        # ======== CÁLCULO DE DISPONIBILIDAD ========
+        disponibilidad, resumen = _calcular_disponibilidad_reporte(
+            espacios, lunes, sabado, dias_nombre
+        )
+        
+        # Construcción del periodo
+        periodo = "2025-1"  # TODO: Obtener del contexto actual
+        
+        return JsonResponse({
+            "periodo": periodo,
+            "semana_inicio": lunes.isoformat(),
+            "semana_fin": sabado.isoformat(),
+            "disponibilidad": disponibilidad,
+            "resumen": resumen
+        }, status=200)
+    
+    except ValueError as e:
+        return JsonResponse({"error": f"Error de valor: {str(e)}"}, status=400)
+    except Exception as e:
+        import traceback
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
+        print(f"Error en reporte_disponibilidad: {error_msg}")
+        return JsonResponse({"error": f"Error del servidor: {str(e)}"}, status=500)
+
+
+def _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre):
+    """
+    Calcula la disponibilidad (horas disponibles vs ocupadas) para cada espacio.
+    Retorna: tupla (lista con disponibilidad de cada espacio, dict con resumen)
+    """
+    try:
+        disponibilidad = []
+        total_horas_disponibles = 0
+        total_horas_ocupadas = 0
+        
+        for espacio in espacios:
+            horas_ocupadas_total = 0.0
+            
+            # Recorrer cada día de la semana
+            fecha_actual = lunes
+            while fecha_actual <= sabado:
+                dia_nombre_en = fecha_actual.strftime('%A')
+                dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
+                
+                # Obtener horarios
+                horarios_dia = Horario.objects.filter(
+                    espacio=espacio,
+                    dia_semana__iexact=dia_nombre_es
+                )
+                
+                if not horarios_dia.exists():
+                    horarios_dia = Horario.objects.filter(
+                        espacio=espacio,
+                        dia_semana__iexact=dia_nombre_en
+                    )
+                
+                # Sumar horas ocupadas por horarios
+                for horario in horarios_dia:
+                    duracion = _calcular_duracion_horas(horario.hora_inicio, horario.hora_fin)
+                    horas_ocupadas_total += duracion
+                
+                # Obtener préstamos aprobados
+                prestamos_dia = PrestamoEspacio.objects.filter(
+                    espacio=espacio,
+                    fecha=fecha_actual,
+                    estado='Aprobado'
+                )
+                
+                # Sumar horas ocupadas por préstamos
+                for prestamo in prestamos_dia:
+                    duracion = _calcular_duracion_horas(prestamo.hora_inicio, prestamo.hora_fin)
+                    horas_ocupadas_total += duracion
+                
+                fecha_actual += timedelta(days=1)
+            
+            # Calcular horas disponibles (16 horas/día * 6 días)
+            horas_disponibles = 16 * 6  # 96 horas
+            horas_libres = horas_disponibles - horas_ocupadas_total
+            
+            # Calcular porcentaje de ocupación
+            porcentaje_ocupacion = int((horas_ocupadas_total / horas_disponibles * 100)) if horas_disponibles > 0 else 0
+            
+            # Acumular totales para el resumen
+            total_horas_disponibles += horas_disponibles
+            total_horas_ocupadas += horas_ocupadas_total
+            
+            disponibilidad.append({
+                "nombre": espacio.nombre,
+                "tipo": espacio.tipo.nombre,
+                "horasDisponibles": max(0, int(horas_libres)),
+                "horasOcupadas": int(horas_ocupadas_total),
+                "porcentajeOcupacion": porcentaje_ocupacion
+            })
+        
+        # Calcular promedio de ocupación general
+        promedio_ocupacion = int((total_horas_ocupadas / total_horas_disponibles * 100)) if total_horas_disponibles > 0 else 0
+        
+        resumen = {
+            "total_disponible": int(total_horas_disponibles - total_horas_ocupadas),
+            "total_ocupado": int(total_horas_ocupadas),
+            "promedio_ocupacion": promedio_ocupacion
+        }
+        
+        return disponibilidad, resumen
+    except Exception as e:
+        print(f"Error en _calcular_disponibilidad_reporte: {str(e)}")
+        return [], {"total_disponible": 0, "total_ocupado": 0, "promedio_ocupacion": 0}
+
+
+@csrf_exempt
+def reporte_capacidad(request):
+    """
+    Endpoint para obtener datos de reporte de capacidad utilizada.
+    
+    Parámetros GET opcionales:
+    - semana_offset: 0 (semana actual), 1 (próxima semana), -1 (semana pasada)
+    
+    Retorna:
+    {
+        "periodo": "2025-1",
+        "semana_inicio": "2025-01-XX",
+        "semana_fin": "2025-01-XX",
+        "capacidad": [
+            {
+                "tipo": "Aula",
+                "capacidadTotal": 250,
+                "capacidadUsada": 180,
+                "porcentaje": 72
+            },
+            ...
+        ]
+    }
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    try:
+        # Obtener parámetro de semana
+        semana_offset = int(request.GET.get('semana_offset', 0))
+        
+        # Calcular rango de fechas (Lunes a Sábado)
+        hoy = timezone.now().date()
+        dias_hasta_lunes = (hoy.weekday() - 0) % 7
+        lunes = hoy - timedelta(days=dias_hasta_lunes)
+        lunes += timedelta(weeks=semana_offset)
+        sabado = lunes + timedelta(days=5)
+        
+        # Mapeo de nombres de días
+        dias_nombre = {
+            'Monday': 'Lunes',
+            'Tuesday': 'Martes',
+            'Wednesday': 'Miércoles',
+            'Thursday': 'Jueves',
+            'Friday': 'Viernes',
+            'Saturday': 'Sábado',
+            'Sunday': 'Domingo'
+        }
+        
+        # Obtener todos los espacios
+        espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        
+        if not espacios.exists():
+            return JsonResponse({
+                "periodo": "2025-1",
+                "semana_inicio": lunes.isoformat(),
+                "semana_fin": sabado.isoformat(),
+                "capacidad": []
+            }, status=200)
+        
+        # ======== CÁLCULO DE CAPACIDAD ========
+        capacidad = _calcular_capacidad_reporte(
+            espacios, lunes, sabado, dias_nombre
+        )
+        
+        # Construcción del periodo
+        periodo = "2025-1"  # TODO: Obtener del contexto actual
+        
+        return JsonResponse({
+            "periodo": periodo,
+            "semana_inicio": lunes.isoformat(),
+            "semana_fin": sabado.isoformat(),
+            "capacidad": capacidad
+        }, status=200)
+    
+    except ValueError as e:
+        return JsonResponse({"error": f"Error de valor: {str(e)}"}, status=400)
+    except Exception as e:
+        import traceback
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
+        print(f"Error en reporte_capacidad: {error_msg}")
+        return JsonResponse({"error": f"Error del servidor: {str(e)}"}, status=500)
+
+
+def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
+    """
+    Calcula la capacidad utilizada agrupada por tipo de espacio.
+    Retorna: lista con capacidad por tipo de espacio
+    """
+    try:
+        capacidad_por_tipo = {}
+        
+        for espacio in espacios:
+            tipo_nombre = espacio.tipo.nombre
+            
+            # Inicializar si es la primera vez que vemos este tipo
+            if tipo_nombre not in capacidad_por_tipo:
+                capacidad_por_tipo[tipo_nombre] = {
+                    "capacidad_total": 0,
+                    "capacidad_usada": 0,
+                    "cantidad_espacios": 0
+                }
+            
+            # Sumar la capacidad total de este espacio
+            capacidad_por_tipo[tipo_nombre]["capacidad_total"] += espacio.capacidad
+            capacidad_por_tipo[tipo_nombre]["cantidad_espacios"] += 1
+            
+            # Calcular la capacidad usada en este espacio
+            capacidad_usada_espacio = 0
+            
+            # Recorrer cada día de la semana
+            fecha_actual = lunes
+            while fecha_actual <= sabado:
+                dia_nombre_en = fecha_actual.strftime('%A')
+                dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
+                
+                # Obtener horarios (clases)
+                horarios_dia = Horario.objects.filter(
+                    espacio=espacio,
+                    dia_semana__iexact=dia_nombre_es
+                )
+                
+                if not horarios_dia.exists():
+                    horarios_dia = Horario.objects.filter(
+                        espacio=espacio,
+                        dia_semana__iexact=dia_nombre_en
+                    )
+                
+                # Sumar capacidad usada de horarios
+                for horario in horarios_dia:
+                    if horario.grupo:
+                        # Usar el tamaño del grupo como capacidad usada
+                        # Si el grupo no tiene un campo de estudiantes, contar registros
+                        from grupos.models import Grupo
+                        try:
+                            grupo = Grupo.objects.get(id=horario.grupo.id)
+                            capacidad_usada_espacio += grupo.estudiantes.count()
+                        except:
+                            capacidad_usada_espacio += 30  # Asumir 30 estudiantes por defecto
+                
+                # Obtener préstamos aprobados
+                prestamos_dia = PrestamoEspacio.objects.filter(
+                    espacio=espacio,
+                    fecha=fecha_actual,
+                    estado='Aprobado'
+                )
+                
+                # Sumar capacidad usada de préstamos (asumir ocupación promedio)
+                for prestamo in prestamos_dia:
+                    capacidad_usada_espacio += int(espacio.capacidad * 0.5)  # 50% de ocupación por préstamo
+                
+                fecha_actual += timedelta(days=1)
+            
+            capacidad_por_tipo[tipo_nombre]["capacidad_usada"] += capacidad_usada_espacio
+        
+        # Convertir a lista y calcular porcentajes
+        capacidad = []
+        for tipo_nombre, datos in capacidad_por_tipo.items():
+            porcentaje = int((datos["capacidad_usada"] / datos["capacidad_total"] * 100)) if datos["capacidad_total"] > 0 else 0
+            capacidad.append({
+                "tipo": tipo_nombre,
+                "capacidadTotal": datos["capacidad_total"],
+                "capacidadUsada": datos["capacidad_usada"],
+                "porcentaje": porcentaje
+            })
+        
+        # Ordenar por tipo alfabéticamente
+        capacidad.sort(key=lambda x: x["tipo"])
+        
+        return capacidad
+    except Exception as e:
+        print(f"Error en _calcular_capacidad_reporte: {str(e)}")
+        return []
+
