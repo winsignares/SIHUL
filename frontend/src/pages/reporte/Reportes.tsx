@@ -29,7 +29,11 @@ export default function Reportes() {
     exportarPDF,
     exportarExcel,
     cargandoOcupacion,
-    errorOcupacion
+    errorOcupacion,
+    cargandoDisponibilidad,
+    errorDisponibilidad,
+    cargandoCapacidad,
+    errorCapacidad
   } = useReportes();
 
   const renderReporteContent = () => {
@@ -226,39 +230,52 @@ export default function Reportes() {
       case 'disponibilidad':
         return (
           <div className="grid lg:grid-cols-2 gap-6">
+            {errorDisponibilidad && (
+              <div className="lg:col-span-2 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-red-800 dark:text-red-200">{errorDisponibilidad}</p>
+              </div>
+            )}
+            
             <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
               <CardHeader>
                 <CardTitle className="text-slate-900 dark:text-slate-100">Disponibilidad de Espacios</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Espacio</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Disponible</TableHead>
-                      <TableHead>Ocupado</TableHead>
-                      <TableHead>%</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {disponibilidadEspacios.map((espacio, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{espacio.tipo}</Badge>
-                        </TableCell>
-                        <TableCell className="text-green-600 dark:text-green-400">{espacio.horasDisponibles}h</TableCell>
-                        <TableCell className="text-slate-600 dark:text-slate-400">{espacio.horasOcupadas}h</TableCell>
-                        <TableCell>
-                          <Badge className={`${espacio.porcentajeOcupacion > 70 ? 'bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400' : 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400'}`}>
-                            {espacio.porcentajeOcupacion}%
-                          </Badge>
-                        </TableCell>
+                {cargandoDisponibilidad ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="w-6 h-6 text-slate-400 animate-spin" />
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">Cargando datos...</span>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Espacio</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Disponible</TableHead>
+                        <TableHead>Ocupado</TableHead>
+                        <TableHead>%</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {disponibilidadEspacios.map((espacio, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{espacio.tipo}</Badge>
+                          </TableCell>
+                          <TableCell className="text-green-600 dark:text-green-400">{espacio.horasDisponibles}h</TableCell>
+                          <TableCell className="text-slate-600 dark:text-slate-400">{espacio.horasOcupadas}h</TableCell>
+                          <TableCell>
+                            <Badge className={`${espacio.porcentajeOcupacion > 70 ? 'bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400' : 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400'}`}>
+                              {espacio.porcentajeOcupacion}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
 
@@ -267,25 +284,34 @@ export default function Reportes() {
                 <CardTitle className="text-slate-900 dark:text-slate-100">Resumen de Disponibilidad</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                    <p className="text-green-600 dark:text-green-400 mb-1">Total Disponible</p>
-                    <p className="text-green-900 dark:text-green-100">110 horas</p>
+                {cargandoDisponibilidad ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="w-6 h-6 text-slate-400 animate-spin" />
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">Cargando datos...</span>
                   </div>
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <p className="text-blue-600 dark:text-blue-400 mb-1">Total Ocupado</p>
-                    <p className="text-blue-900 dark:text-blue-100">135 horas</p>
-                  </div>
-                </div>
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <p className="text-slate-600 dark:text-slate-400 mb-2">Promedio de Ocupación</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full" style={{ width: '56%' }}></div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                        <p className="text-green-600 dark:text-green-400 mb-1">Total Disponible</p>
+                        <p className="text-green-900 dark:text-green-100">110 horas</p>
+                      </div>
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-blue-600 dark:text-blue-400 mb-1">Total Ocupado</p>
+                        <p className="text-blue-900 dark:text-blue-100">135 horas</p>
+                      </div>
                     </div>
-                    <span className="text-slate-900 dark:text-slate-100">56%</span>
-                  </div>
-                </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-slate-600 dark:text-slate-400 mb-2">Promedio de Ocupación</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                          <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full" style={{ width: '56%' }}></div>
+                        </div>
+                        <span className="text-slate-900 dark:text-slate-100">56%</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -298,37 +324,52 @@ export default function Reportes() {
               <CardTitle className="text-slate-900 dark:text-slate-100">Capacidad Utilizada por Tipo de Espacio</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {capacidadUtilizada.map((dato, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-900 dark:text-slate-100">{dato.tipo}</p>
-                      <p className="text-slate-600 dark:text-slate-400">
-                        {dato.capacidadUsada} de {dato.capacidadTotal} estudiantes
-                      </p>
-                    </div>
-                    <Badge className={`${dato.porcentaje > 75 ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400'}`}>
-                      {dato.porcentaje}%
-                    </Badge>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4">
+              {errorCapacidad && (
+                <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-red-800 dark:text-red-200">{errorCapacidad}</p>
+                </div>
+              )}
+              
+              {cargandoCapacidad ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-6 h-6 text-slate-400 animate-spin" />
+                  <span className="ml-2 text-slate-600 dark:text-slate-400">Cargando datos...</span>
+                </div>
+              ) : (
+                <>
+                  {capacidadUtilizada.map((dato, index) => (
                     <motion.div
-                      className="bg-gradient-to-r from-purple-600 to-purple-700 h-4 rounded-full flex items-center justify-end pr-2"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${dato.porcentaje}%` }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="space-y-2"
                     >
-                      <span className="text-white text-xs">{dato.porcentaje}%</span>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-slate-900 dark:text-slate-100">{dato.tipo}</p>
+                          <p className="text-slate-600 dark:text-slate-400">
+                            {dato.capacidadUsada} de {dato.capacidadTotal} estudiantes
+                          </p>
+                        </div>
+                        <Badge className={`${Math.min(dato.porcentaje, 100) > 75 ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400'}`}>
+                          {Math.min(dato.porcentaje, 100)}%
+                        </Badge>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                        <motion.div
+                          className="bg-gradient-to-r from-purple-600 to-purple-700 h-4 rounded-full flex items-center justify-end pr-2"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(dato.porcentaje, 100)}%` }}
+                          transition={{ duration: 0.5, delay: index * 0.1 }}
+                        >
+                          <span className="text-white text-xs">{Math.min(dato.porcentaje, 100)}%</span>
+                        </motion.div>
+                      </div>
                     </motion.div>
-                  </div>
-                </motion.div>
-              ))}
+                  ))}
+                </>
+              )}
             </CardContent>
           </Card>
         );
