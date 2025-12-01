@@ -15,11 +15,12 @@ from periodos.models import PeriodoAcademico
 from espacios.models import TipoEspacio, EspacioFisico
 from recursos.models import Recurso, EspacioRecurso
 from grupos.models import Grupo
-from horario.models import Horario
+from horario.models import Horario, HorarioEstudiante
 from programas.models import Programa
 from asignaturas.models import AsignaturaPrograma
 from sedes.models import Sede
 from usuarios.models import Usuario
+import random
 
 print("🚀 Iniciando creación de datos avanzados (Fase 2)...")
 
@@ -484,6 +485,79 @@ for horario_data in horarios_data:
         contador_actualizados += 1
         print(f"  🔄 Horario actualizado: {grupo.nombre} - {asignatura.nombre} - {horario_data['docente'].nombre}")
 
+# ========== ESTUDIANTES ==========
+print("\n👨‍🎓 Creando Estudiantes...")
+
+# Crear estudiantes para cada grupo
+estudiantes_data = []
+nombres_estudiantes = [
+    "Juan", "María", "Carlos", "Ana", "Luis", "Laura", "Pedro", "Sofía",
+    "Diego", "Valentina", "Andrés", "Camila", "Miguel", "Isabella", "Santiago",
+    "Daniela", "Sebastián", "Gabriela", "Alejandro", "Natalia", "David", "Paula",
+    "Felipe", "Carolina", "Jorge", "Andrea", "Daniel", "Juliana", "Ricardo", "Fernanda"
+]
+
+apellidos = [
+    "García", "Rodríguez", "Martínez", "López", "González", "Pérez", "Sánchez",
+    "Ramírez", "Torres", "Flores", "Rivera", "Gómez", "Díaz", "Hernández", "Morales"
+]
+
+# Crear estudiantes para cada grupo (basado en cantidad_estudiantes promedio)
+estudiantes_por_grupo = {}
+contador_estudiantes = 0
+
+for grupo_nombre, grupo in grupos.items():
+    # Determinar cantidad aproximada de estudiantes por grupo
+    cantidad = {
+        "Sistemas-A": 35, "Sistemas-B": 30, "Sistemas-2A": 30, "Sistemas-3A": 28,
+        "Sistemas-4A": 26, "Sistemas-5A": 24, "Industrial-A": 25, "Industrial-2A": 26,
+        "Industrial-3A": 22, "Industrial-4A": 20, "Civil-A": 28, "Civil-2A": 24,
+        "Admin-A": 32, "Admin-2A": 28
+    }.get(grupo_nombre, 25)
+    
+    estudiantes_grupo = []
+    for i in range(cantidad):
+        nombre_completo = f"{random.choice(nombres_estudiantes)} {random.choice(apellidos)} {random.choice(apellidos)}"
+        correo = f"estudiante.{grupo_nombre.lower()}.{i+1}@unilibre.edu.co"
+        
+        estudiante, created = Usuario.objects.get_or_create(
+            correo=correo,
+            defaults={
+                "nombre": nombre_completo,
+                "activo": True,
+                "contrasena_hash": "est123"
+            }
+        )
+        
+        if created:
+            contador_estudiantes += 1
+        
+        estudiantes_grupo.append(estudiante)
+    
+    estudiantes_por_grupo[grupo_nombre] = estudiantes_grupo
+    print(f"  ✅ {len(estudiantes_grupo)} estudiantes para {grupo_nombre}")
+
+print(f"  ✅ Total estudiantes creados: {contador_estudiantes}")
+
+# ========== INSCRIPCIONES A HORARIOS ==========
+print("\n📝 Inscribiendo estudiantes a horarios...")
+
+contador_inscripciones = 0
+for horario in Horario.objects.all():
+    grupo_nombre = horario.grupo.nombre
+    estudiantes = estudiantes_por_grupo.get(grupo_nombre, [])
+    
+    # Inscribir a todos los estudiantes del grupo en el horario
+    for estudiante in estudiantes:
+        inscripcion, created = HorarioEstudiante.objects.get_or_create(
+            horario=horario,
+            estudiante=estudiante
+        )
+        if created:
+            contador_inscripciones += 1
+
+print(f"  ✅ {contador_inscripciones} inscripciones creadas")
+
 print(f"\n✨ ¡Proceso completado!")
 print(f"   - Periodos: {PeriodoAcademico.objects.count()}")
 print(f"   - Tipos de Espacios: {TipoEspacio.objects.count()}")
@@ -491,4 +565,6 @@ print(f"   - Espacios Físicos: {EspacioFisico.objects.count()}")
 print(f"   - Recursos Asignados: {EspacioRecurso.objects.count()}")
 print(f"   - Grupos: {Grupo.objects.count()}")
 print(f"   - Docentes: {Usuario.objects.filter(activo=True).count()}")
+print(f"   - Estudiantes: {len([e for grupo_est in estudiantes_por_grupo.values() for e in grupo_est])}")
 print(f"   - Horarios: {Horario.objects.count()} ({contador_horarios} nuevos, {contador_actualizados} actualizados)")
+print(f"   - Inscripciones: {HorarioEstudiante.objects.count()}")
