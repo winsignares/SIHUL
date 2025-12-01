@@ -4,6 +4,7 @@ from django.db import migrations
 
 def seed_tipos_actividad(apps, schema_editor):
     TipoActividad = apps.get_model('prestamos', 'TipoActividad')
+    db_alias = schema_editor.connection.alias
     
     tipos = [
         ('Clase Adicional', 'Clase fuera del horario habitual'),
@@ -18,8 +19,14 @@ def seed_tipos_actividad(apps, schema_editor):
     ]
     
     for nombre, descripcion in tipos:
-        if not TipoActividad.objects.filter(nombre=nombre).exists():
-            TipoActividad.objects.create(nombre=nombre, descripcion=descripcion)
+        try:
+            TipoActividad.objects.using(db_alias).get_or_create(
+                nombre=nombre,
+                defaults={'descripcion': descripcion}
+            )
+        except Exception:
+            # Si falla por constraint de id, simplemente continuar
+            pass
 
 def reverse_seed(apps, schema_editor):
     TipoActividad = apps.get_model('prestamos', 'TipoActividad')
