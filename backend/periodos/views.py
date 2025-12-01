@@ -95,17 +95,35 @@ def get_periodo(request, id=None):
 @csrf_exempt
 def list_periodos(request):
     if request.method == 'GET':
-        items = PeriodoAcademico.objects.all()
-        lst = []
-        for i in items:
-            # Contar programas únicos que tienen grupos en este periodo
-            programas_count = i.grupos.values('programa').distinct().count()
-            lst.append({
-                "id": i.id,
-                "nombre": i.nombre,
-                "fecha_inicio": str(i.fecha_inicio),
-                "fecha_fin": str(i.fecha_fin),
-                "activo": i.activo,
-                "programas_activos": programas_count
-            })
-        return JsonResponse({"periodos": lst}, status=200)
+        try:
+            from horario.models import Horario
+            
+            items = PeriodoAcademico.objects.all()
+            lst = []
+            for i in items:
+                try:
+                    # Contar programas únicos que tienen grupos en este periodo
+                    programas_count = i.grupos.values('programa').distinct().count()
+                    
+                    # Contar horarios registrados en este periodo (a través de grupos)
+                    horarios_count = Horario.objects.filter(grupo__periodo=i).count()
+                except Exception as count_error:
+                    print(f"Error contando datos para periodo {i.id}: {str(count_error)}")
+                    programas_count = 0
+                    horarios_count = 0
+                
+                lst.append({
+                    "id": i.id,
+                    "nombre": i.nombre,
+                    "fecha_inicio": str(i.fecha_inicio),
+                    "fecha_fin": str(i.fecha_fin),
+                    "activo": i.activo,
+                    "programas_activos": programas_count,
+                    "horarios_registrados": horarios_count
+                })
+            return JsonResponse({"periodos": lst}, status=200)
+        except Exception as e:
+            print(f"Error en list_periodos: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
