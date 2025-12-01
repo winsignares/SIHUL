@@ -5,7 +5,7 @@ import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Copy, Calendar, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Copy, Calendar, CheckCircle2, Clock, TrendingUp, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { NotificationBanner } from '../../share/notificationBanner';
@@ -20,14 +20,18 @@ export default function PeriodosAcademicos() {
     showCreateDialog, setShowCreateDialog,
     showEditDialog, setShowEditDialog,
     showCopyDialog, setShowCopyDialog,
+    showDeleteDialog, setShowDeleteDialog,
     periodoForm, setPeriodoForm,
     periodoACopiar,
+    periodoAEliminar,
     handleOpenCreateDialog,
     handleCreatePeriodo,
     handleOpenEditDialog,
     handleEditPeriodo,
     handleOpenCopyDialog,
     handleCopyPeriodo,
+    handleOpenDeleteDialog,
+    handleDeletePeriodo,
     notification
   } = usePeriodosAcademicos();
 
@@ -146,13 +150,8 @@ export default function PeriodosAcademicos() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className={
-                          periodo.estado === 'Próximo'
-                            ? 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950'
-                            : 'border-slate-300 text-slate-400 cursor-not-allowed'
-                        }
+                        className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
                         onClick={() => handleOpenEditDialog(periodo)}
-                        disabled={periodo.estado !== 'Próximo'}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -163,6 +162,19 @@ export default function PeriodosAcademicos() {
                         onClick={() => handleOpenCopyDialog(periodo)}
                       >
                         <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={
+                          periodo.estado === 'Activo'
+                            ? 'border-slate-300 text-slate-400 cursor-not-allowed'
+                            : 'border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950'
+                        }
+                        onClick={() => handleOpenDeleteDialog(periodo)}
+                        disabled={periodo.estado === 'Activo'}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -268,9 +280,8 @@ export default function PeriodosAcademicos() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`h-8 ${periodo.estado !== 'Próximo' ? 'text-slate-400 cursor-not-allowed' : ''}`}
+                          className="h-8"
                           onClick={() => handleOpenEditDialog(periodo)}
-                          disabled={periodo.estado !== 'Próximo'}
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
@@ -281,6 +292,15 @@ export default function PeriodosAcademicos() {
                           onClick={() => handleOpenCopyDialog(periodo)}
                         >
                           <Copy className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 ${periodo.estado === 'Activo' ? 'text-slate-400 cursor-not-allowed' : 'text-red-600 hover:text-red-700'}`}
+                          onClick={() => handleOpenDeleteDialog(periodo)}
+                          disabled={periodo.estado === 'Activo'}
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
@@ -358,7 +378,7 @@ export default function PeriodosAcademicos() {
               Editar Periodo Académico
             </DialogTitle>
             <DialogDescription>
-              Solo se pueden editar periodos con estado "Próximo".
+              Modifique los datos del periodo académico según sea necesario.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -459,6 +479,51 @@ export default function PeriodosAcademicos() {
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
               Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Eliminar Periodo */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Eliminar Periodo Académico
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-slate-900 dark:text-slate-100 font-semibold mb-2">
+                ¿Está seguro de eliminar el periodo "{periodoAEliminar?.nombre}"?
+              </p>
+              <p className="text-slate-600 dark:text-slate-400 text-sm">
+                Se eliminarán todos los datos asociados a este periodo académico.
+              </p>
+            </div>
+            {periodoAEliminar?.programasActivos && periodoAEliminar.programasActivos > 0 && (
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <p className="text-yellow-800 dark:text-yellow-400 text-sm flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  Este periodo tiene {periodoAEliminar.programasActivos} programas asociados
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeletePeriodo}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Eliminar
             </Button>
           </DialogFooter>
         </DialogContent>

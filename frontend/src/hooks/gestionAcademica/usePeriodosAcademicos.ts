@@ -20,6 +20,7 @@ export function usePeriodosAcademicos() {
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [showCopyDialog, setShowCopyDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const [periodoForm, setPeriodoForm] = useState({
         nombre: '',
@@ -29,6 +30,7 @@ export function usePeriodosAcademicos() {
 
     const [periodoACopiar, setPeriodoACopiar] = useState<PeriodoUI | null>(null);
     const [periodoAEditar, setPeriodoAEditar] = useState<PeriodoUI | null>(null);
+    const [periodoAEliminar, setPeriodoAEliminar] = useState<PeriodoUI | null>(null);
 
     const loadPeriodos = async () => {
         try {
@@ -151,11 +153,6 @@ export function usePeriodosAcademicos() {
     };
 
     const handleOpenEditDialog = (periodo: PeriodoUI) => {
-        if (periodo.estado !== 'Próximo') {
-            showNotification('Solo se pueden editar periodos con estado "Próximo"', 'error');
-            return;
-        }
-
         setPeriodoAEditar(periodo);
         setPeriodoForm({
             nombre: periodo.nombre,
@@ -270,6 +267,36 @@ export function usePeriodosAcademicos() {
         }
     };
 
+    const handleOpenDeleteDialog = (periodo: PeriodoUI) => {
+        if (periodo.estado === 'Activo') {
+            showNotification('No se puede eliminar el periodo activo', 'error');
+            return;
+        }
+        setPeriodoAEliminar(periodo);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeletePeriodo = async () => {
+        if (!periodoAEliminar || !periodoAEliminar.id) return;
+
+        try {
+            setLoading(true);
+            await periodoService.eliminarPeriodo(periodoAEliminar.id);
+
+            await loadPeriodos();
+            setShowDeleteDialog(false);
+            setPeriodoAEliminar(null);
+            showNotification('✅ Periodo eliminado exitosamente', 'success');
+        } catch (error) {
+            showNotification(
+                `Error al eliminar periodo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                'error'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadPeriodos();
     }, []);
@@ -282,15 +309,19 @@ export function usePeriodosAcademicos() {
         showCreateDialog, setShowCreateDialog,
         showEditDialog, setShowEditDialog,
         showCopyDialog, setShowCopyDialog,
+        showDeleteDialog, setShowDeleteDialog,
         periodoForm, setPeriodoForm,
         periodoACopiar,
         periodoAEditar,
+        periodoAEliminar,
         handleOpenCreateDialog,
         handleCreatePeriodo,
         handleOpenEditDialog,
         handleEditPeriodo,
         handleOpenCopyDialog,
         handleCopyPeriodo,
+        handleOpenDeleteDialog,
+        handleDeletePeriodo,
         notification
     };
 }
