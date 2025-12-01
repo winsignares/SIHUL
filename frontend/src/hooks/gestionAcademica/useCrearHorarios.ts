@@ -256,6 +256,15 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         // Normalizar horas para comparación (quitar segundos si existen)
         const normalizeTime = (time: string) => time.substring(0, 5); // "07:00:00" -> "07:00"
 
+        // Convertir hora "HH:MM" a minutos desde medianoche para comparaciones numéricas
+        const timeToMinutes = (time: string) => {
+            const t = normalizeTime(time);
+            const parts = t.split(':');
+            const hh = parseInt(parts[0] || '0', 10);
+            const mm = parseInt(parts[1] || '0', 10);
+            return hh * 60 + mm;
+        };
+
         // Validar conflictos de docente (si se seleccionó uno)
         if (docenteSeleccionado) {
             for (const dia of diasSeleccionados) {
@@ -263,18 +272,21 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 const diaLower = dia.toLowerCase();
                 
                 // Buscar horarios del docente con superposición
-                const horariosDocenteSuperpuestos = todosLosHorarios.filter(h =>
-                    h.docente_id === docenteSeleccionado &&
-                    h.dia_semana === diaLower &&
-                    (
-                        // Nuevo inicio está dentro del horario existente (sin incluir el límite final)
-                        (horas.inicio >= h.hora_inicio && horas.inicio < h.hora_fin) ||
-                        // Nuevo fin está dentro del horario existente (sin incluir el límite inicial)
-                        (horas.fin > h.hora_inicio && horas.fin <= h.hora_fin) ||
-                        // El nuevo horario envuelve completamente el existente
-                        (horas.inicio < h.hora_inicio && horas.fin > h.hora_fin)
-                    )
-                );
+                const inicioNuevoMin = timeToMinutes(horas.inicio);
+                const finNuevoMin = timeToMinutes(horas.fin);
+
+                const horariosDocenteSuperpuestos = todosLosHorarios.filter(h => {
+                    if (h.docente_id !== docenteSeleccionado || h.dia_semana !== diaLower) return false;
+                    const inicioExistMin = timeToMinutes(h.hora_inicio);
+                    const finExistMin = timeToMinutes(h.hora_fin);
+
+                    // Comprobar superposición (intervalos [inicio, fin), fin exclusivo)
+                    return (
+                        (inicioNuevoMin >= inicioExistMin && inicioNuevoMin < finExistMin) ||
+                        (finNuevoMin > inicioExistMin && finNuevoMin <= finExistMin) ||
+                        (inicioNuevoMin < inicioExistMin && finNuevoMin > finExistMin)
+                    );
+                });
 
                 if (horariosDocenteSuperpuestos.length > 0) {
                     // Verificar si hay algún horario que NO sea exactamente la misma clase
@@ -326,18 +338,20 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             const diaLower = dia.toLowerCase();
             
             // Buscar todos los horarios que usan el mismo espacio y tienen superposición horaria
-            const horariosSuperpuestos = todosLosHorarios.filter(h =>
-                h.espacio_id === espacioSeleccionado &&
-                h.dia_semana === diaLower &&
-                (
-                    // Nuevo inicio está dentro del horario existente (sin incluir el límite final)
-                    (horas.inicio >= h.hora_inicio && horas.inicio < h.hora_fin) ||
-                    // Nuevo fin está dentro del horario existente (sin incluir el límite inicial)
-                    (horas.fin > h.hora_inicio && horas.fin <= h.hora_fin) ||
-                    // El nuevo horario envuelve completamente el existente
-                    (horas.inicio < h.hora_inicio && horas.fin > h.hora_fin)
-                )
-            );
+            const inicioNuevoMin = timeToMinutes(horas.inicio);
+            const finNuevoMin = timeToMinutes(horas.fin);
+
+            const horariosSuperpuestos = todosLosHorarios.filter(h => {
+                if (h.espacio_id !== espacioSeleccionado || h.dia_semana !== diaLower) return false;
+                const inicioExistMin = timeToMinutes(h.hora_inicio);
+                const finExistMin = timeToMinutes(h.hora_fin);
+
+                return (
+                    (inicioNuevoMin >= inicioExistMin && inicioNuevoMin < finExistMin) ||
+                    (finNuevoMin > inicioExistMin && finNuevoMin <= finExistMin) ||
+                    (inicioNuevoMin < inicioExistMin && finNuevoMin > finExistMin)
+                );
+            });
 
             if (horariosSuperpuestos.length > 0) {
                 // Verificar si comparten EXACTAMENTE la misma asignatura, docente, hora_inicio y hora_fin
@@ -514,20 +528,33 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
             // Validar conflictos con la nueva posición
             const diaLower = nuevodia.toLowerCase();
-            const normalizeTime = (time: string) => time.substring(0, 5);
+            const normalizeTimeLocal = (time: string) => time.substring(0, 5);
+            const timeToMinutesLocal = (time: string) => {
+                const t = normalizeTimeLocal(time);
+                const parts = t.split(':');
+                const hh = parseInt(parts[0] || '0', 10);
+                const mm = parseInt(parts[1] || '0', 10);
+                return hh * 60 + mm;
+            };
 
-            // Verificar conflictos de docente
+            // Calcular nuevos intervalos en minutos
+            const nuevaInicioMin = timeToMinutesLocal(nuevaHoraInicio);
+            const nuevaFinMin = timeToMinutesLocal(nuevaHoraFin);
+
+            // Verificar conflictos de docente (numéricamente)
             if (horarioAMover.docente_id) {
-                const horariosDocenteSuperpuestos = todosLosHorarios.filter(h =>
-                    h.id !== horarioId && // Excluir el horario que estamos moviendo
-                    h.docente_id === horarioAMover.docente_id &&
-                    h.dia_semana === diaLower &&
-                    (
-                        (nuevaHoraInicio >= h.hora_inicio && nuevaHoraInicio < h.hora_fin) ||
-                        (nuevaHoraFin > h.hora_inicio && nuevaHoraFin <= h.hora_fin) ||
-                        (nuevaHoraInicio < h.hora_inicio && nuevaHoraFin > h.hora_fin)
-                    )
-                );
+                const horariosDocenteSuperpuestos = todosLosHorarios.filter(h => {
+                    if (h.id === horarioId) return false;
+                    if (h.docente_id !== horarioAMover.docente_id || h.dia_semana !== diaLower) return false;
+                    const inicioExistMin = timeToMinutesLocal(h.hora_inicio);
+                    const finExistMin = timeToMinutesLocal(h.hora_fin);
+
+                    return (
+                        (nuevaInicioMin >= inicioExistMin && nuevaInicioMin < finExistMin) ||
+                        (nuevaFinMin > inicioExistMin && nuevaFinMin <= finExistMin) ||
+                        (nuevaInicioMin < inicioExistMin && nuevaFinMin > finExistMin)
+                    );
+                });
 
                 if (horariosDocenteSuperpuestos.length > 0) {
                     const conflicto = horariosDocenteSuperpuestos[0];
@@ -539,17 +566,19 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 }
             }
 
-            // Verificar conflictos de espacio
-            const horariosEspacioSuperpuestos = todosLosHorarios.filter(h =>
-                h.id !== horarioId &&
-                h.espacio_id === horarioAMover.espacio_id &&
-                h.dia_semana === diaLower &&
-                (
-                    (nuevaHoraInicio >= h.hora_inicio && nuevaHoraInicio < h.hora_fin) ||
-                    (nuevaHoraFin > h.hora_inicio && nuevaHoraFin <= h.hora_fin) ||
-                    (nuevaHoraInicio < h.hora_inicio && nuevaHoraFin > h.hora_fin)
-                )
-            );
+            // Verificar conflictos de espacio (numéricamente)
+            const horariosEspacioSuperpuestos = todosLosHorarios.filter(h => {
+                if (h.id === horarioId) return false;
+                if (h.espacio_id !== horarioAMover.espacio_id || h.dia_semana !== diaLower) return false;
+                const inicioExistMin = timeToMinutesLocal(h.hora_inicio);
+                const finExistMin = timeToMinutesLocal(h.hora_fin);
+
+                return (
+                    (nuevaInicioMin >= inicioExistMin && nuevaInicioMin < finExistMin) ||
+                    (nuevaFinMin > inicioExistMin && nuevaFinMin <= finExistMin) ||
+                    (nuevaInicioMin < inicioExistMin && nuevaFinMin > finExistMin)
+                );
+            });
 
             if (horariosEspacioSuperpuestos.length > 0) {
                 const conflicto = horariosEspacioSuperpuestos[0];
