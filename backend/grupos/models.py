@@ -19,3 +19,8 @@ class Grupo(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Guardar el programa original para detectar cambios
+        self._old_programa_id = self.programa_id if self.pk else None
