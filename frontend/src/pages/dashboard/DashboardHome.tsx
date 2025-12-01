@@ -11,7 +11,6 @@ import {
   Activity,
   ChevronRight,
   CheckCircle2,
-  Circle,
   FileText,
   Check,
   Loader2,
@@ -53,7 +52,10 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
     isGeneratingReport,
     reportGenerated,
     showOccupationDetails,
-    showAllActivities
+    showAllActivities,
+    isLoadingStats,
+    isLoadingOccupation,
+    isLoadingActivities
   } = state;
 
   const {
@@ -63,8 +65,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
   } = setters;
 
   const {
-    handleGenerateReport,
-    markActivityAsCompleted
+    handleGenerateReport
   } = handlers;
 
   return (
@@ -159,6 +160,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowOccupationDetails(true)}
+                  disabled={isLoadingOccupation}
                 >
                   Ver Detalles
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -166,35 +168,100 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {occupationStats.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.05 }}
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="text-slate-600 w-24">{item.day}</span>
-                      <div className="flex-1 bg-slate-100 rounded-full h-8 overflow-hidden relative">
-                        <motion.div
-                          className={`${item.color} h-8 rounded-full flex items-center justify-end pr-3 text-white relative overflow-hidden`}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${item.value}%` }}
-                          transition={{ delay: 0.7 + index * 0.05, duration: 0.8, ease: "easeOut" }}
-                        >
-                          <span className="relative z-10">{item.value}%</span>
+              {isLoadingOccupation ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                  <span className="ml-3 text-slate-600">Cargando estadísticas...</span>
+                </div>
+              ) : occupationStats.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  No hay datos de ocupación disponibles
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Diseño tipo gráfico de barras moderno */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {occupationStats.map((item, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + index * 0.05 }}
+                        className="flex flex-col items-center"
+                      >
+                        {/* Barra vertical */}
+                        <div className="w-full h-32 bg-slate-100 rounded-lg overflow-hidden relative flex flex-col justify-end">
                           <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                            animate={{ x: ['-100%', '200%'] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
-                          />
-                        </motion.div>
+                            className={`w-full bg-gradient-to-t ${item.color} relative overflow-hidden rounded-b-lg ${
+                              item.isToday ? 'ring-2 ring-red-500 ring-offset-2' : ''
+                            }`}
+                            initial={{ height: 0 }}
+                            animate={{ height: `${item.value}%` }}
+                            transition={{ delay: 0.7 + index * 0.05, duration: 0.8, ease: "easeOut" }}
+                          >
+                            <motion.div
+                              className="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-transparent"
+                              animate={{ y: ['-100%', '200%'] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                            />
+                          </motion.div>
+                          
+                          {/* Indicador de porcentaje */}
+                          <div className="absolute top-2 left-0 right-0 text-center">
+                            <span className={`text-xs font-bold ${item.value > 50 ? 'text-white' : 'text-slate-600'}`}>
+                              {item.value}%
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Información del día */}
+                        <div className="mt-2 text-center">
+                          <p className={`text-xs font-semibold ${item.isToday ? 'text-red-600' : 'text-slate-700'}`}>
+                            {item.dayShort}
+                          </p>
+                          {item.isToday && (
+                            <span className="text-[10px] text-red-500 font-bold">HOY</span>
+                          )}
+                        </div>
+                        
+                        {/* Tooltip con información detallada */}
+                        <div className="mt-1 text-center">
+                          <p className="text-[10px] text-slate-500">
+                            {item.espaciosOcupados}/{item.totalEspacios}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            espacios
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                  
+                  {/* Leyenda de colores */}
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-green-600 rounded"></div>
+                          <span className="text-slate-600">Baja (&lt;30%)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-blue-600 rounded"></div>
+                          <span className="text-slate-600">Media (30-50%)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-amber-600 rounded"></div>
+                          <span className="text-slate-600">Alta (50-70%)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gradient-to-r from-red-400 to-red-600 rounded"></div>
+                          <span className="text-slate-600">Crítica (&gt;70%)</span>
+                        </div>
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -214,51 +281,50 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                   size="sm"
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   onClick={() => setShowAllActivities(true)}
+                  disabled={isLoadingActivities}
                 >
                   Ver Todo
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map((activity, index) => {
-                  const Icon = activity.icon;
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.7 + index * 0.1 }}
-                      whileHover={{ x: 4, backgroundColor: 'rgba(248, 250, 252, 0.5)' }}
-                      className="flex items-start gap-4 p-3 rounded-xl cursor-pointer transition-all"
-                    >
-                      <div className={`${activity.color} w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-slate-900">{activity.title}</p>
-                        <p className="text-slate-600 truncate">{activity.description}</p>
-                        <p className="text-slate-500 mt-1">{activity.time}</p>
-                      </div>
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        {activity.status === 'completed' ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markActivityAsCompleted(activity.id);
-                            }}
-                            className="hover:bg-emerald-50 rounded-full p-1 transition-colors"
-                          >
-                            <Circle className="w-5 h-5 text-amber-600 hover:text-emerald-600" />
-                          </button>
-                        )}
-                      </motion.div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+              {isLoadingActivities ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                  <span className="ml-3 text-slate-600">Cargando actividades...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentActivities.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500">
+                      No hay actividades recientes
+                    </div>
+                  ) : (
+                    recentActivities.map((activity, index) => {
+                      const Icon = activity.icon;
+                      return (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.7 + index * 0.1 }}
+                          whileHover={{ x: 4, backgroundColor: 'rgba(248, 250, 252, 0.5)' }}
+                          className="flex items-start gap-4 p-3 rounded-xl transition-all"
+                        >
+                          <div className={`${activity.color} w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                            <Icon className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-slate-900">{activity.title}</p>
+                            <p className="text-slate-600 truncate">{activity.description}</p>
+                            <p className="text-slate-500 mt-1">{activity.time}</p>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -366,66 +432,208 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
 
       {/* Modal: Detalles de Ocupación */}
       <Dialog open={showOccupationDetails} onOpenChange={setShowOccupationDetails}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">Detalles de Ocupación Semanal</DialogTitle>
-            <DialogDescription>
-              Información detallada del uso de espacios por día y hora
-            </DialogDescription>
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
+                📊 Detalles de Ocupación Semanal
+              </DialogTitle>
+              <DialogDescription className="text-slate-600 mt-2">
+                Análisis completo del uso de espacios por día y franja horaria
+              </DialogDescription>
+            </motion.div>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Resumen General */}
-            <div className="grid grid-cols-3 gap-4">
-              {quickStats.map((stat, index) => (
-                <Card key={index} className="border-slate-200">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <p className="text-slate-600 mb-2">{stat.label}</p>
-                      <p className="text-slate-900">{stat.value}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* Resumen General con Tarjetas Mejoradas */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="grid grid-cols-3 gap-4"
+            >
+              {quickStats.map((stat, index) => {
+                const colors = [
+                  { gradient: 'from-violet-500 to-purple-600', bg: 'from-violet-500/10 to-purple-600/10', icon: 'bg-violet-500' },
+                  { gradient: 'from-blue-500 to-cyan-600', bg: 'from-blue-500/10 to-cyan-600/10', icon: 'bg-blue-500' },
+                  { gradient: 'from-emerald-500 to-teal-600', bg: 'from-emerald-500/10 to-teal-600/10', icon: 'bg-emerald-500' }
+                ];
+                const color = colors[index];
+                
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + index * 0.1, duration: 0.4 }}
+                    whileHover={{ scale: 1.05, y: -5 }}
+                  >
+                    <Card className={`border-0 shadow-xl bg-gradient-to-br ${color.bg} backdrop-blur-sm overflow-hidden relative group cursor-pointer`}>
+                      <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${color.gradient} opacity-20 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500`}></div>
+                      <CardContent className="pt-6 relative">
+                        <div className="text-center">
+                          <div className={`${color.icon} w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg`}>
+                            <TrendingUp className="w-6 h-6 text-white" />
+                          </div>
+                          <p className="text-slate-600 text-sm mb-2 font-medium">{stat.label}</p>
+                          <motion.p
+                            className={`text-3xl font-bold bg-gradient-to-r ${color.gradient} bg-clip-text text-transparent`}
+                            initial={{ scale: 0.5 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.3 + index * 0.1, type: "spring", stiffness: 200 }}
+                          >
+                            {stat.value}
+                          </motion.p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
 
-            {/* Gráfico Detallado por Día */}
-            <div className="space-y-4">
-              <h4 className="text-slate-900">Ocupación por Día y Franja Horaria</h4>
-              {occupationDetails.map((dia, idx) => (
-                <Card key={idx} className="border-slate-200">
-                  <CardContent className="pt-6">
-                    <h5 className="text-slate-900 mb-4">{dia.day}</h5>
-                    <div className="space-y-2">
-                      {dia.franjas.map((franja, fidx) => (
-                        <div key={fidx} className="flex items-center gap-3">
-                          <span className="text-slate-600 w-32">{franja.hora}</span>
-                          <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
+            {/* Mapa de Calor Mejorado */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-red-600" />
+                  Mapa de Calor - Ocupación por Franja Horaria
+                </h4>
+                <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white border-0">
+                  Semana Actual
+                </Badge>
+              </div>
+              
+              {occupationDetails.map((dia, idx) => {
+                // Colores diferentes para cada día
+                const dayColors = [
+                  { border: 'border-violet-200', header: 'from-violet-500 to-purple-600', headerBg: 'from-violet-50 to-purple-50' },
+                  { border: 'border-blue-200', header: 'from-blue-500 to-cyan-600', headerBg: 'from-blue-50 to-cyan-50' },
+                  { border: 'border-emerald-200', header: 'from-emerald-500 to-teal-600', headerBg: 'from-emerald-50 to-teal-50' },
+                  { border: 'border-amber-200', header: 'from-amber-500 to-orange-600', headerBg: 'from-amber-50 to-orange-50' },
+                  { border: 'border-rose-200', header: 'from-rose-500 to-pink-600', headerBg: 'from-rose-50 to-pink-50' },
+                  { border: 'border-indigo-200', header: 'from-indigo-500 to-purple-600', headerBg: 'from-indigo-50 to-purple-50' },
+                  { border: 'border-slate-200', header: 'from-slate-500 to-gray-600', headerBg: 'from-slate-50 to-gray-50' }
+                ];
+                const dayColor = dayColors[idx % 7];
+                
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + idx * 0.08, duration: 0.5 }}
+                  >
+                    <Card className={`border-2 ${dayColor.border} hover:shadow-2xl transition-all duration-300 overflow-hidden group`}>
+                      <div className={`bg-gradient-to-r ${dayColor.header} p-4`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                              <Calendar className="w-5 h-5 text-white" />
+                            </div>
+                            <h5 className="text-white text-lg font-bold">{dia.day}</h5>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 font-semibold">
+                              {dia.franjas.reduce((sum, f) => sum + (f.espaciosUsados || 0), 0)} espacios usados
+                            </Badge>
                             <motion.div
-                              className={`${franja.color} h-6 flex items-center justify-end pr-2 text-white`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${franja.ocupacion}%` }}
-                              transition={{ delay: idx * 0.1 + fidx * 0.05, duration: 0.5 }}
+                              whileHover={{ rotate: 360 }}
+                              transition={{ duration: 0.5 }}
                             >
-                              <span>{franja.ocupacion}%</span>
+                              <Activity className="w-5 h-5 text-white" />
                             </motion.div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      </div>
+                      
+                      <CardContent className={`pt-6 bg-gradient-to-br ${dayColor.headerBg}`}>
+                        <div className="space-y-3">
+                          {dia.franjas.map((franja, fidx) => (
+                            <motion.div
+                              key={fidx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.6 + idx * 0.05 + fidx * 0.03, duration: 0.4 }}
+                              className="flex items-center gap-3"
+                            >
+                              <div className="flex items-center gap-2 w-36">
+                                <Clock className="w-4 h-4 text-slate-500" />
+                                <span className="text-slate-700 text-sm font-semibold">{franja.hora}</span>
+                              </div>
+                              <div className="flex-1 bg-white rounded-xl h-12 overflow-hidden relative group/bar shadow-sm border border-slate-200">
+                                <motion.div
+                                  className={`bg-gradient-to-r ${franja.color} h-12 rounded-xl flex items-center justify-between px-4 text-white text-sm font-bold relative overflow-hidden shadow-lg`}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${franja.ocupacion}%` }}
+                                  transition={{ delay: 0.7 + idx * 0.05 + fidx * 0.03, duration: 0.8, ease: "easeOut" }}
+                                  whileHover={{ scale: 1.03 }}
+                                >
+                                  <span className="relative z-10 flex items-center gap-2">
+                                    <span className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">
+                                      {franja.ocupacion}%
+                                    </span>
+                                  </span>
+                                  <span className="relative z-10 flex items-center gap-2 bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">
+                                    <MapPin className="w-3 h-3" />
+                                    {franja.espaciosUsados}/{franja.totalEspacios}
+                                  </span>
+                                  
+                                  {/* Animación de brillo */}
+                                  <motion.div
+                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                                    animate={{ x: ['-100%', '200%'] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+                                  />
+                                  
+                                  {/* Patrón de fondo */}
+                                  <div className="absolute inset-0 opacity-10" style={{
+                                    backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+                                    backgroundSize: '10px 10px'
+                                  }}></div>
+                                </motion.div>
+                                
+                                {/* Tooltip mejorado */}
+                                <div className="absolute -top-14 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-lg text-xs opacity-0 group-hover/bar:opacity-100 transition-opacity shadow-xl whitespace-nowrap pointer-events-none z-20">
+                                  <div className="font-bold mb-1">📊 {franja.hora}</div>
+                                  <div>{franja.espaciosUsados} de {franja.totalEspacios} espacios ocupados</div>
+                                  <div className="text-[10px] text-slate-300 mt-1">Ocupación: {franja.ocupacion}%</div>
+                                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-slate-900"></div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
           </div>
 
-          <DialogFooter>
-            <Button
-              onClick={() => setShowOccupationDetails(false)}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+          <DialogFooter className="border-t border-slate-200 pt-4">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Cerrar
-            </Button>
+              <Button
+                onClick={() => setShowOccupationDetails(false)}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Cerrar
+              </Button>
+            </motion.div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -434,66 +642,55 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
       <Dialog open={showAllActivities} onOpenChange={setShowAllActivities}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">Todas las Actividades</DialogTitle>
+            <DialogTitle className="text-slate-900">Historial de Actividades del Sistema</DialogTitle>
             <DialogDescription>
-              Lista completa de actividades recientes del sistema
+              Registro completo de eventos y acciones realizadas en el sistema
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-4">
-            {activities.map((activity, index) => {
-              const Icon = activity.icon;
-              return (
-                <motion.div
-                  key={activity.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${activity.status === 'completed'
-                    ? 'bg-emerald-50 border-emerald-200'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                    }`}
-                >
-                  <div className={`${activity.color} w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className={`${activity.status === 'completed' ? 'line-through text-slate-500' : 'text-slate-900'}`}>
-                          {activity.title}
-                        </p>
-                        <p className="text-slate-600">{activity.description}</p>
-                        <div className="flex items-center gap-3 mt-2">
-                          <p className="text-slate-500">{activity.time}</p>
-                          <Badge variant="outline" className="text-slate-600">
-                            {activity.date}
-                          </Badge>
-                        </div>
-                      </div>
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        {activity.status === 'completed' ? (
-                          <div className="flex items-center gap-2 text-emerald-600">
-                            <CheckCircle2 className="w-5 h-5" />
-                            <span>Realizada</span>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => markActivityAsCompleted(activity.id)}
-                            className="hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-600"
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Marcar como realizada
-                          </Button>
-                        )}
-                      </motion.div>
+            {activities.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                No hay actividades registradas
+              </div>
+            ) : (
+              activities.map((activity, index) => {
+                const Icon = activity.icon;
+                return (
+                  <motion.div
+                    key={activity.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="flex items-start gap-4 p-4 rounded-xl border bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all"
+                  >
+                    <div className={`${activity.color} w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <Icon className="w-5 h-5 text-white" />
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-slate-900 font-medium">
+                            {activity.title}
+                          </p>
+                          <p className="text-slate-600 mt-1">{activity.description}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center gap-1 text-slate-500">
+                              <Clock className="w-3 h-3" />
+                              <span className="text-xs">{activity.time}</span>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {activity.date}
+                            </Badge>
+                          </div>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
           </div>
 
           <DialogFooter>

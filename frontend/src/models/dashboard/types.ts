@@ -60,13 +60,20 @@ export interface UpcomingEvent {
 
 export interface OccupancyData {
     day: string;
+    dayShort?: string;
     percentage?: number;
     value?: number;
     classes?: number;
+    espaciosOcupados?: number;
+    totalEspacios?: number;
+    prestamosActivos?: number;
     color?: string;
+    isToday?: boolean;
     franjas?: {
         hora: string;
         ocupacion: number;
+        espaciosUsados?: number;
+        totalEspacios?: number;
         color: string;
     }[];
 }
