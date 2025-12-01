@@ -22,7 +22,7 @@ import ConsultorEstudianteHome from '../pages/dashboard/ConsultorEstudianteHome'
 import Login from '../pages/users/Login';
 import AdminDashboard from '../layouts/AdminDashboard';
 import DocentePrestamos from '../pages/prestamos/DocentePrestamos';
-import AsignacionAutomatica from '../pages/gestionAcademica/AsignacionAutomatica';
+import EnConstruccion from '../pages/shared/EnConstruccion';
 
 // Componente Layout que usa AdminDashboard como base
 function AppLayout() {
@@ -114,7 +114,7 @@ export default function AppRouter() {
 
         <Route path="admin/asignacion" element={
           <ProtectedRoute requiredComponent="Asignación Automática">
-            <AsignacionAutomatica />
+            <EnConstruccion />
           </ProtectedRoute>
         } />
 
