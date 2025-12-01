@@ -1,5 +1,5 @@
 import { AlertCircle, Hammer, Calendar } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { Button } from '../../share/button';
 import { useNavigate } from 'react-router-dom';
 
 export default function EnConstruccion() {
@@ -53,7 +53,7 @@ export default function EnConstruccion() {
           {/* Botón de regreso */}
           <Button
             onClick={() => navigate(-1)}
-            className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900"
+            className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-lg"
           >
             Volver
           </Button>
