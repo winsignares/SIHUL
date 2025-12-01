@@ -13,7 +13,7 @@ class Recurso(models.Model):
 class EspacioRecurso(models.Model):
     espacio = models.ForeignKey('espacios.EspacioFisico', on_delete=models.CASCADE, related_name='espacio_recursos')
     recurso = models.ForeignKey(Recurso, on_delete=models.CASCADE, related_name='recurso_espacios')
-    disponible = models.BooleanField(default=True)
+    estado = models.CharField(max_length=50, choices=[('disponible', 'Disponible'), ('no_disponible', 'No Disponible'), ('en_mantenimiento', 'En Mantenimiento')], default='disponible')
 
     class Meta:
         unique_together = (('espacio', 'recurso'),)

@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'horario',
     'usuarios',
+    'componentes',
     'sedes',
     'facultades',
     'programas',
@@ -42,6 +43,9 @@ INSTALLED_APPS = [
     'espacios',
     'recursos',
     'prestamos',
+    'chatbot',
+    'notificaciones',
+    'rest_framework',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',

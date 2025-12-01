@@ -55,3 +55,16 @@ class HorarioFusionado(models.Model):
 
     def __str__(self):
         return f"Fusionado {self.asignatura} {self.dia_semana}"
+
+class HorarioEstudiante(models.Model):
+    id = models.AutoField(primary_key=True)
+    horario = models.ForeignKey(Horario, on_delete=models.CASCADE, related_name='estudiantes_inscritos')
+    estudiante = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='horarios_inscritos')
+
+    class Meta:
+        unique_together = ('horario', 'estudiante')
+        verbose_name = 'Horario de Estudiante'
+        verbose_name_plural = 'Horarios de Estudiantes'
+
+    def __str__(self):
+        return f"{self.estudiante.nombre} - {self.horario}"

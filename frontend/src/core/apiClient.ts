@@ -1,4 +1,3 @@
-import { tokenManager } from './tokenManager.ts';
 import { handleApiError } from './errorHandler.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -21,7 +20,8 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    const token = tokenManager.getToken();
+    // Agregar token de autenticación si existe
+    const token = localStorage.getItem('auth_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -57,8 +57,11 @@ class ApiClient {
 
       const data = await response.json();
       return data as T;
-    } catch (error) {
-      console.error('API Request Error:', error);
+    } catch (error: any) {
+      // Don't log 409 Conflict errors as they are expected validation errors
+      if (error.status !== 409) {
+        console.error('API Request Error:', error);
+      }
       throw error;
     }
   }

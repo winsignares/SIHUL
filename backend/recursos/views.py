@@ -92,12 +92,12 @@ def create_espacio_recurso(request):
             data = json.loads(request.body)
             espacio_id = data.get('espacio_id')
             recurso_id = data.get('recurso_id')
-            disponible = data.get('disponible', True)
+            estado = data.get('estado', 'disponible')
             if not espacio_id or not recurso_id:
                 return JsonResponse({"error": "espacio_id y recurso_id son requeridos"}, status=400)
             espacio = EspacioFisico.objects.get(id=espacio_id)
             recurso = Recurso.objects.get(id=recurso_id)
-            er = EspacioRecurso(espacio=espacio, recurso=recurso, disponible=bool(disponible))
+            er = EspacioRecurso(espacio=espacio, recurso=recurso, estado=estado)
             er.save()
             return JsonResponse({"message": "EspacioRecurso creado", "espacio_id": espacio.id, "recurso_id": recurso.id}, status=201)
         except EspacioFisico.DoesNotExist:
@@ -120,8 +120,8 @@ def update_espacio_recurso(request):
             if not espacio_id or not recurso_id:
                 return JsonResponse({"error": "espacio_id y recurso_id son requeridos"}, status=400)
             er = EspacioRecurso.objects.get(espacio_id=espacio_id, recurso_id=recurso_id)
-            if 'disponible' in data:
-                er.disponible = bool(data.get('disponible'))
+            if 'estado' in data:
+                er.estado = data.get('estado')
             er.save()
             return JsonResponse({"message": "EspacioRecurso actualizado"}, status=200)
         except EspacioRecurso.DoesNotExist:
@@ -158,7 +158,7 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
         return JsonResponse({"error": "espacio_id y recurso_id son requeridos en la URL"}, status=400)
     try:
         er = EspacioRecurso.objects.get(espacio_id=espacio_id, recurso_id=recurso_id)
-        return JsonResponse({"espacio_id": er.espacio.id, "recurso_id": er.recurso.id, "disponible": er.disponible}, status=200)
+        return JsonResponse({"espacio_id": er.espacio.id, "recurso_id": er.recurso.id, "estado": er.estado}, status=200)
     except EspacioRecurso.DoesNotExist:
         return JsonResponse({"error": "Relación Espacio-Recurso no encontrada."}, status=404)
     except Exception as e:
@@ -168,5 +168,5 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
 def list_espacio_recursos(request):
     if request.method == 'GET':
         items = EspacioRecurso.objects.all()
-        lst = [{"espacio_id": i.espacio.id, "recurso_id": i.recurso.id, "disponible": i.disponible} for i in items]
+        lst = [{"espacio_id": i.espacio.id, "recurso_id": i.recurso.id, "estado": i.estado} for i in items]
         return JsonResponse({"espacio_recursos": lst}, status=200)

@@ -13,11 +13,12 @@ def create_programa(request):
             data = json.loads(request.body)
             nombre = data.get('nombre')
             facultad_id = data.get('facultad_id')
+            semestres = data.get('semestres', 10)
             activo = data.get('activo', True)
             if not nombre or not facultad_id:
                 return JsonResponse({"error": "nombre y facultad_id son requeridos"}, status=400)
             facultad = Facultad.objects.get(id=facultad_id)
-            p = Programa(nombre=nombre, facultad=facultad, activo=bool(activo))
+            p = Programa(nombre=nombre, facultad=facultad, semestres=int(semestres), activo=bool(activo))
             p.save()
             return JsonResponse({"message": "Programa creado", "id": p.id}, status=201)
         except Facultad.DoesNotExist:
@@ -41,6 +42,8 @@ def update_programa(request):
                 p.nombre = data.get('nombre')
             if 'facultad_id' in data:
                 p.facultad = Facultad.objects.get(id=data.get('facultad_id'))
+            if 'semestres' in data:
+                p.semestres = int(data.get('semestres'))
             if 'activo' in data:
                 p.activo = bool(data.get('activo'))
             p.save()
@@ -80,7 +83,13 @@ def get_programa(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         p = Programa.objects.get(id=id)
-        return JsonResponse({"id": p.id, "nombre": p.nombre, "facultad": p.facultad.id, "activo": p.activo}, status=200)
+        return JsonResponse({
+            "id": p.id, 
+            "nombre": p.nombre, 
+            "facultad_id": p.facultad.id if p.facultad else None, 
+            "semestres": p.semestres,
+            "activo": p.activo
+        }, status=200)
     except Programa.DoesNotExist:
         return JsonResponse({"error": "Programa no encontrado."}, status=404)
     except Exception as e:
@@ -90,5 +99,11 @@ def get_programa(request, id=None):
 def list_programas(request):
     if request.method == 'GET':
         items = Programa.objects.all()
-        lst = [{"id": i.id, "nombre": i.nombre, "facultad_id": i.facultad.id, "activo": i.activo} for i in items]
+        lst = [{
+            "id": i.id, 
+            "nombre": i.nombre, 
+            "facultad_id": i.facultad.id if i.facultad else None,
+            "semestres": i.semestres,
+            "activo": i.activo
+        } for i in items]
         return JsonResponse({"programas": lst}, status=200)

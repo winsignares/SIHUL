@@ -1,105 +1,259 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from '../pages/Login';
-import DashboardHome from '../pages/AdminDashboardHome';
-import GestionUsuarios from '../pages/GestionUsuarios';
-import FacultadesPrograms from '../pages/FacultadesPrograms';
-import EspaciosFisicos from '../pages/EspaciosFisicos';
-import HorariosAcademicos from '../pages/HorariosAcademicos';
-import PrestamosEspacios from '../pages/PrestamosEspacios';
-import Asignaturas from '../pages/Asignaturas';
-import PeriodosAcademicos from '../pages/PeriodosAcademicos';
-import GruposFusion from '../pages/GruposFusion';
-import Reportes from '../pages/Reportes';
-import Ajustes from '../pages/Ajustes';
-import Mensajeria from '../pages/Mensajeria';
-import Notificaciones from '../pages/Notificaciones';
-import AudiovisualHome from '../pages/AudiovisualHome';
-import GestionRecursos from '../pages/GestionRecursos';
-import ConsultorDashboardHome from '../pages/ConsultorDashboardHome';
-import ConsultorDocenteHome from '../pages/ConsultorDocenteHome';
-import ConsultorEstudianteHome from '../pages/ConsultorEstudianteHome';
-import ConsultaEspacios from '../pages/ConsultaEspacios';
-import ConsultaHorarios from '../pages/ConsultaHorarios';
-import ConsultaPrestamos from '../pages/ConsultaPrestamos';
-import VisualizacionHorarios from '../pages/VisualizacionHorarios';
-import OcupacionSemanal from '../pages/OcupacionSemanal';
-import ChatInterno from '../pages/ChatInterno';
-import HorarioDocente from '../pages/HorarioDocente';
-import HorarioEstudiante from '../pages/HorarioEstudiante';
-import DocentePrestamos from '../pages/DocentePrestamos';
-import { DashboardLayout } from '../layouts/DashboardLayout';
-import { useUser } from '../context/UserContext';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+// Importa los componentes reales según existan
+import DashboardHome from '../pages/dashboard/DashboardHome';
+import FacultadesPrograms from '../pages/gestionAcademica/FacultadesPrograms';
+import ConsultaEspacios from '../pages/espacios/ConsultaEspacios';
+import CentroHorarios from '../pages/gestionAcademica/CentroHorarios';
+import PrestamosEspacios from '../pages/espacios/PrestamosEspacios';
+import PeriodosAcademicos from '../pages/gestionAcademica/PeriodosAcademicos';
+import AsistentesVirtuales from '../pages/chatbot/AsistentesVirtuales';
+import OcupacionSemanal from '../pages/reporte/OcupacionSemanal';
+import Reportes from '../pages/reporte/Reportes';
+import GestionUsuarios from '../pages/gestionAcademica/GestionUsuarios';
+import EstadoRecursos from '../pages/gestionAcademica/EstadoRecursos';
+import Notificaciones from '../pages/users/Notificaciones';
+import Ajustes from '../pages/users/Ajustes';
+import SupervisorGeneralHome from '../pages/dashboard/SupervisorGeneralHome';
+import SupervisorSalonHome from '../pages/espacios/SupervisorSalonHome';
+import ConsultorDocenteHome from '../pages/dashboard/ConsultorDocenteHome';
+import MiHorario from '../pages/horarios/MiHorario';
+import ConsultorEstudianteHome from '../pages/dashboard/ConsultorEstudianteHome';
+import Login from '../pages/users/Login';
+import AdminDashboard from '../layouts/AdminDashboard';
+import DocentePrestamos from '../pages/prestamos/DocentePrestamos';
+import AsignacionAutomatica from '../pages/gestionAcademica/AsignacionAutomatica';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { usuario } = useUser();
+// Componente Layout que usa AdminDashboard como base
+function AppLayout() {
+  return <AdminDashboard><Outlet /></AdminDashboard>;
+}
 
-  if (!usuario) {
+// Componente para proteger rutas por componentes del backend
+function ProtectedRoute({
+  children,
+  requiredComponent
+}: {
+  children: React.ReactNode;
+  requiredComponent?: string; // Nombre del componente requerido
+}) {
+  const { isAuthenticated, hasPermission } = useAuth();
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si no requiere componente específico, permitir acceso
+  if (!requiredComponent) {
+    return <>{children}</>;
+  }
+
+  // Verificar si el usuario tiene el componente
+  if (!hasPermission(requiredComponent)) {
+    console.warn('[ProtectedRoute] Acceso denegado a componente:', requiredComponent);
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Acceso Denegado</h2>
+        <p className="text-gray-600">No tienes permisos para acceder a esta sección.</p>
+        <p className="text-sm text-gray-500 mt-2">Componente requerido: {requiredComponent}</p>
+      </div>
+    );
   }
 
   return <>{children}</>;
 }
 
-export function AppRouter() {
-  return (
-    <BrowserRouter>
+export default function AppRouter() {
+  const { isAuthenticated, components } = useAuth();
+
+  // Si no está logueado, solo puede ver Login
+  if (!isAuthenticated) {
+    return (
       <Routes>
         <Route path="/login" element={<Login />} />
-        
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<DashboardHome />} />
-          
-          {/* Rutas Admin */}
-          <Route path="usuarios" element={<GestionUsuarios />} />
-          <Route path="facultades" element={<FacultadesPrograms />} />
-          <Route path="programas" element={<FacultadesPrograms />} />
-          <Route path="espacios" element={<EspaciosFisicos />} />
-          <Route path="horarios" element={<HorariosAcademicos />} />
-          <Route path="visualizacion" element={<VisualizacionHorarios />} />
-          <Route path="prestamos" element={<PrestamosEspacios />} />
-          <Route path="asignaturas" element={<Asignaturas />} />
-          <Route path="periodos" element={<PeriodosAcademicos />} />
-          <Route path="grupos" element={<GruposFusion />} />
-          <Route path="fusion" element={<GruposFusion />} />
-          <Route path="reportes" element={<Reportes />} />
-          <Route path="ocupacion" element={<OcupacionSemanal />} />
-          <Route path="mensajeria" element={<Mensajeria />} />
-          <Route path="chat" element={<ChatInterno />} />
-          <Route path="notificaciones" element={<Notificaciones />} />
-          
-          {/* Rutas Audiovisual */}
-          <Route path="audiovisual" element={<AudiovisualHome />} />
-          <Route path="recursos" element={<GestionRecursos />} />
-          
-          {/* Rutas Consultor */}
-          <Route path="consultor" element={<ConsultorDashboardHome />} />
-          <Route path="consulta-espacios" element={<ConsultaEspacios />} />
-          <Route path="consulta-horarios" element={<ConsultaHorarios />} />
-          <Route path="consulta-prestamos" element={<ConsultaPrestamos />} />
-          
-          {/* Rutas Profesor */}
-          <Route path="profesor" element={<ConsultorDocenteHome />} />
-          <Route path="horario-docente" element={<HorarioDocente />} />
-          <Route path="prestamos-docente" element={<DocentePrestamos />} />
-          
-          {/* Rutas Estudiante */}
-          <Route path="estudiante" element={<ConsultorEstudianteHome />} />
-          <Route path="horario-estudiante" element={<HorarioEstudiante />} />
-          
-          {/* Rutas Comunes */}
-          <Route path="ajustes" element={<Ajustes />} />
-        </Route>
-
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
-    </BrowserRouter>
+    );
+  }
+
+  // Obtener el primer componente dashboard para redirección inicial
+  const dashboardComponent = components.find(c => c.nombre.toLowerCase().includes('dashboard'));
+  const homeRoute = dashboardComponent ?
+    (dashboardComponent.nombre === 'Dashboard' ? '/admin/dashboard' :
+      dashboardComponent.nombre === 'Dashboard Supervisor' ? '/supervisor/dashboard' :
+        dashboardComponent.nombre === 'Dashboard Docente' ? '/docente/dashboard' :
+          dashboardComponent.nombre === 'Dashboard Estudiante' ? '/estudiante/dashboard' :
+            '/admin/dashboard') : '/admin/dashboard';
+
+  // Rutas protegidas con layout compartido
+  return (
+    <Routes>
+      {/* Todas las rutas protegidas usan el layout compartido */}
+      <Route path="/" element={<AppLayout />}>
+        {/* Ruta raíz - redirige al home del rol */}
+        <Route index element={<Navigate to={homeRoute} replace />} />
+
+        {/* Rutas de Admin - Planeación */}
+        <Route path="admin/dashboard" element={
+          <ProtectedRoute requiredComponent="Dashboard">
+            <DashboardHome />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/centro-institucional" element={
+          <ProtectedRoute requiredComponent="Centro Institucional">
+            <FacultadesPrograms />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/centro-horarios" element={
+          <ProtectedRoute requiredComponent="Centro de Horarios">
+            <CentroHorarios />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/asignacion" element={
+          <ProtectedRoute requiredComponent="Asignación Automática">
+            <AsignacionAutomatica />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/prestamos" element={
+          <ProtectedRoute requiredComponent="Préstamos de Espacios">
+            <PrestamosEspacios />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/periodos" element={
+          <ProtectedRoute requiredComponent="Periodos Académicos">
+            <PeriodosAcademicos />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/asistente-virtual" element={
+          <ProtectedRoute requiredComponent="Asistentes Virtuales">
+            <AsistentesVirtuales />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/ocupacion" element={
+          <ProtectedRoute requiredComponent="Ocupación Semanal">
+            <OcupacionSemanal />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/reportes" element={
+          <ProtectedRoute requiredComponent="Reportes Generales">
+            <Reportes />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/usuarios" element={
+          <ProtectedRoute requiredComponent="Gestión de Usuarios">
+            <GestionUsuarios />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/estado-recursos" element={
+          <ProtectedRoute requiredComponent="Estado de Recursos">
+            <EstadoRecursos />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Supervisor General */}
+        <Route path="supervisor/dashboard" element={
+          <ProtectedRoute requiredComponent="Dashboard Supervisor">
+            <SupervisorGeneralHome />
+          </ProtectedRoute>
+        } />
+
+        <Route path="supervisor/espacios" element={
+          <ProtectedRoute requiredComponent="Disponibilidad de Espacios">
+            <ConsultaEspacios />
+          </ProtectedRoute>
+        } />
+
+        <Route path="supervisor/prestamos" element={
+          <ProtectedRoute requiredComponent="Apertura y Cierre de Salones">
+            <SupervisorSalonHome />
+          </ProtectedRoute>
+        } />
+
+        <Route path="supervisor/recursos" element={
+          <ProtectedRoute requiredComponent="Estado de Recursos">
+            <EstadoRecursos />
+          </ProtectedRoute>
+        } />
+
+        <Route path="supervisor/asistente-virtual" element={
+          <ProtectedRoute requiredComponent="Asistentes Virtuales Supervisor">
+            <AsistentesVirtuales />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Consultor Docente */}
+        <Route path="docente/dashboard" element={
+          <ProtectedRoute requiredComponent="Dashboard Docente">
+            <ConsultorDocenteHome />
+          </ProtectedRoute>
+        } />
+
+        <Route path="docente/horario" element={
+          <ProtectedRoute requiredComponent="Mi Horario">
+            <MiHorario />
+          </ProtectedRoute>
+        } />
+
+        <Route path="docente/prestamos" element={
+          <ProtectedRoute requiredComponent="Préstamos Docente">
+            <DocentePrestamos />
+          </ProtectedRoute>
+        } />
+
+        <Route path="docente/asistente-virtual" element={
+          <ProtectedRoute requiredComponent="Asistentes Virtuales Docente">
+            <AsistentesVirtuales />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Consultor Estudiante */}
+        <Route path="estudiante/dashboard" element={
+          <ProtectedRoute requiredComponent="Dashboard Estudiante">
+            <ConsultorEstudianteHome />
+          </ProtectedRoute>
+        } />
+
+        <Route path="estudiante/mi-horario" element={
+          <ProtectedRoute requiredComponent="Mi Horario Estudiante">
+            <MiHorario />
+          </ProtectedRoute>
+        } />
+
+        <Route path="estudiante/asistente-virtual" element={
+          <ProtectedRoute requiredComponent="Asistentes Virtuales Estudiante">
+            <AsistentesVirtuales />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas compartidas - no requieren componente específico */}
+        <Route path="notificaciones" element={
+          <ProtectedRoute>
+            <Notificaciones />
+          </ProtectedRoute>
+        } />
+
+        <Route path="ajustes" element={
+          <ProtectedRoute>
+            <Ajustes />
+          </ProtectedRoute>
+        } />
+
+        {/* Ruta por defecto dentro del layout - redirige al home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+
+      {/* Login fuera del layout */}
+      <Route path="/login" element={<Login />} />
+    </Routes>
   );
 }

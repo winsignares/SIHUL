@@ -4,7 +4,7 @@ from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
-
+import secrets
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -95,14 +95,32 @@ def create_usuario(request):
         correo = data.get('correo')
         contrasena = data.get('contrasena') or data.get('contrasena_hash')
         rol_id = data.get('rol_id')
+        facultad_id = data.get('facultad_id')
         activo = data.get('activo', True)
+        espacios_permitidos = data.get('espacios_permitidos', []) # Lista de IDs de espacios
+
         if not nombre or not correo or not contrasena:
             return JsonResponse({"error": "nombre, correo y contrasena son requeridos"}, status=400)
         rol = None
         if rol_id:
             rol = Rol.objects.get(id=rol_id)
-        u = Usuario(nombre=nombre, correo=correo, contrasena_hash=contrasena, rol=rol, activo=bool(activo))
+        facultad = None
+        if facultad_id:
+            from facultades.models import Facultad
+            facultad = Facultad.objects.get(id=facultad_id)
+        u = Usuario(nombre=nombre, correo=correo, contrasena_hash=contrasena, rol=rol, facultad=facultad, activo=bool(activo))
         u.save()
+
+        # Manejar espacios permitidos
+        if espacios_permitidos and isinstance(espacios_permitidos, list):
+            from espacios.models import EspacioFisico, EspacioPermitido
+            for espacio_id in espacios_permitidos:
+                try:
+                    espacio = EspacioFisico.objects.get(id=espacio_id)
+                    EspacioPermitido.objects.create(usuario=u, espacio=espacio)
+                except EspacioFisico.DoesNotExist:
+                    pass # Ignorar si el espacio no existe
+
         return JsonResponse({"message": "Usuario creado", "id": u.id}, status=201)
     except Rol.DoesNotExist:
         return JsonResponse({"error": "Rol no encontrado."}, status=404)
@@ -129,14 +147,36 @@ def update_usuario(request):
             u.contrasena_hash = data.get('contrasena') or data.get('contrasena_hash')
         if 'rol_id' in data:
             u.rol = Rol.objects.get(id=data.get('rol_id')) if data.get('rol_id') else None
+        if 'facultad_id' in data:
+            from facultades.models import Facultad
+            u.facultad = Facultad.objects.get(id=data.get('facultad_id')) if data.get('facultad_id') else None
         if 'activo' in data:
             u.activo = bool(data.get('activo'))
         u.save()
+
+        # Manejar espacios permitidos (si se envía la clave en el JSON)
+        if 'espacios_permitidos' in data:
+            espacios_permitidos = data.get('espacios_permitidos')
+            if isinstance(espacios_permitidos, list):
+                from espacios.models import EspacioFisico, EspacioPermitido
+                # Eliminar permisos existentes
+                EspacioPermitido.objects.filter(usuario=u).delete()
+                # Crear nuevos permisos
+                for espacio_id in espacios_permitidos:
+                    try:
+                        espacio = EspacioFisico.objects.get(id=espacio_id)
+                        EspacioPermitido.objects.create(usuario=u, espacio=espacio)
+                    except EspacioFisico.DoesNotExist:
+                        pass
+
         return JsonResponse({"message": "Usuario actualizado", "id": u.id}, status=200)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
     except Rol.DoesNotExist:
         return JsonResponse({"error": "Rol no encontrado."}, status=404)
+    except Exception as e:
+        if 'Facultad' in str(type(e)):
+            return JsonResponse({"error": "Facultad no encontrada."}, status=404)
     except json.JSONDecodeError:
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
@@ -167,7 +207,7 @@ def get_usuario(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         u = Usuario.objects.get(id=id)
-        return JsonResponse({"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol_id": (u.rol.id if u.rol else None), "activo": u.activo}, status=200)
+        return JsonResponse({"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol_id": (u.rol.id if u.rol else None), "facultad_id": (u.facultad.id if u.facultad else None), "activo": u.activo}, status=200)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
     except Exception as e:
@@ -177,7 +217,7 @@ def get_usuario(request, id=None):
 def list_usuarios(request):
     if request.method == 'GET':
         items = Usuario.objects.all()
-        lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "activo": i.activo} for i in items]
+        lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
         return JsonResponse({"usuarios": lst}, status=200)
 
 @csrf_exempt
@@ -200,14 +240,67 @@ def login(request):
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         if u.contrasena_hash != contrasena:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
+        
+        # Obtener componentes del rol del usuario
+        componentes = []
+        if u.rol:
+            from componentes.models import ComponenteRol
+            componentes_rol = ComponenteRol.objects.filter(rol=u.rol).select_related('componente')
+            componentes = [
+                {
+                    "id": cr.componente.id,
+                    "nombre": cr.componente.nombre,
+                    "descripcion": cr.componente.descripcion,
+                    "permiso": cr.get_permiso_display()
+                }
+                for cr in componentes_rol
+            ]
+        
+        # Obtener espacios permitidos para el usuario
+        espacios_permitidos = []
+        try:
+            from espacios.models import EspacioPermitido
+            espacios_permisos = EspacioPermitido.objects.filter(usuario=u).select_related('espacio', 'espacio__sede')
+            espacios_permitidos = [
+                {
+                    "id": ep.espacio.id,
+                    "tipo": ep.espacio.tipo,
+                    "capacidad": ep.espacio.capacidad,
+                    "ubicacion": ep.espacio.ubicacion,
+                    "disponible": ep.espacio.disponible,
+                    "sede_id": ep.espacio.sede.id,
+                    "sede_nombre": ep.espacio.sede.nombre
+                }
+                for ep in espacios_permisos
+            ]
+        except Exception:
+            pass
+        
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo
         request.session['is_authenticated'] = True
+        token = secrets.token_urlsafe(32)
+        request.session['token'] = token
+        request.session['rol'] = u.rol.nombre if u.rol else None
+        request.session['id_rol'] = u.rol.id if u.rol else None
+        
         return JsonResponse({
             "message": "Login exitoso", 
             "id": u.id, 
             "nombre": u.nombre,
-            "rol": u.rol.nombre if u.rol else None
+            "correo": u.correo,
+            "rol": {
+                "id": u.rol.id,
+                "nombre": u.rol.nombre,
+                "descripcion": u.rol.descripcion
+            } if u.rol else None,
+            "facultad": {
+                "id": u.facultad.id,
+                "nombre": u.facultad.nombre
+            } if u.facultad else None,
+            "componentes": componentes,
+            "espacios_permitidos": espacios_permitidos,
+            "token": token
         }, status=200)
     except json.JSONDecodeError:
         return JsonResponse({"error": "JSON inválido."}, status=400)

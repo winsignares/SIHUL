@@ -41,5 +41,8 @@ CMD until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER}; do \
       sleep 2; \
     done && \
     echo "Database is ready!" && \
-    python manage.py migrate --noinput && \
+    python manage.py migrate --fake-initial --noinput && \
+    echo "Checking if seed data is needed..." && \
+    python manage.py shell -c "from sedes.models import Sede; exit(0 if Sede.objects.exists() else 1)" || \
+    (echo "Running seed data script..." && python manage.py shell -c "exec(open('seed_data_completo.py').read())") && \
     python manage.py runserver 0.0.0.0:8000
