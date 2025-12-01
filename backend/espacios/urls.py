@@ -31,4 +31,5 @@ urlpatterns = [
     path('ocupacion/semanal/', views.ocupacion_semanal, name='ocupacion_semanal'),
     path('ocupacion/pdf/', views.generar_pdf_ocupacion_semanal, name='generar_pdf_ocupacion_semanal'),
     path('debug/ocupacion/', views.debug_ocupacion, name='debug_ocupacion'),
+    path('reporte/ocupacion/', views.reporte_ocupacion, name='reporte_ocupacion'),
 ]
