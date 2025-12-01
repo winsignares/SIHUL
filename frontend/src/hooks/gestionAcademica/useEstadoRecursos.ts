@@ -31,33 +31,41 @@ export function useEstadoRecursos() {
     const loadData = async () => {
         setLoading(true);
         try {
-            // Obtener usuario actual
-            const userStr = localStorage.getItem('user');
+            // Obtener usuario y rol del localStorage (la clave correcta es 'auth_user')
+            const userStr = localStorage.getItem('auth_user');
             const user = userStr ? JSON.parse(userStr) : null;
             const userId = user?.id;
-            const userRole = user?.rol_id; // Asumiendo que el rol está aquí
+            const userRole = user?.rol?.nombre || ''; // El login response tiene rol.nombre
 
             let espaciosPromise;
 
-            // Si es Supervisor (rol_id 2, por ejemplo, o verificar lógica de roles)
-            // TODO: Verificar ID correcto del rol Supervisor. Asumimos que si no es admin, filtramos.
-            // O mejor, intentamos listar permitidos si existe el usuario.
+            // Verificar si el usuario no está autenticado
+            if (!userId) {
+                console.warn('No hay usuario autenticado');
+                setEspacios([]);
+                setSedes([]);
+                setLoading(false);
+                return;
+            }
 
-            if (userId) {
-                // Intentamos obtener permitidos primero. Si devuelve vacío y es admin, quizás quiera ver todos.
-                // Pero para seguridad, si es la vista de Supervisor, debería usar permitidos.
-                // Asumiremos que esta vista se usa en contexto de Supervisor si el usuario no es Admin.
+            // Detectar si es Admin basado en el nombre del rol
+            // Soporta variantes: "Admin", "Administrador", "ADMIN", etc.
+            const esAdmin = userRole.toLowerCase().includes('admin');
 
-                // Para este caso, vamos a usar una lógica simple:
-                // Si hay usuario, traemos sus permitidos. Si es admin, el backend de permitidos podría devolver todos o manejamos la lógica aquí.
-                // Pero dado el requerimiento "Supervisor General -> Disponibilidad de Espacios",
-                // y que "Estado de Recursos" se adapta para él:
+            console.log('Estado de Recursos - Usuario:', user?.nombre, '| Rol:', userRole, '| Es Admin:', esAdmin);
 
-                espaciosPromise = espacioPermitidoService.listByUsuario(userId)
-                    .then(res => res.espacios)
-                    .catch(() => espacioService.list().then(res => res.espacios)); // Fallback a todos si falla (ej. es admin sin permitidos definidos)
-            } else {
+            if (esAdmin) {
+                // Admin ve TODOS los espacios del sistema
+                console.log('Cargando TODOS los espacios (Admin)');
                 espaciosPromise = espacioService.list().then(res => res.espacios);
+            } else {
+                // Supervisor General (y otros roles) solo ven sus espacios permitidos
+                console.log('Cargando solo espacios permitidos (Supervisor General)');
+                espaciosPromise = espacioPermitidoService.listByUsuario(userId)
+                    .then(res => {
+                        console.log(`Espacios permitidos encontrados: ${res.espacios?.length || 0}`);
+                        return res.espacios;
+                    });
             }
 
             const [espaciosData, sedesRes] = await Promise.all([
