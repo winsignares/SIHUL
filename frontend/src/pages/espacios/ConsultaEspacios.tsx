@@ -40,8 +40,9 @@ export default function ConsultaEspacios() {
   };
 
   const getDayColumnIndex = (dia: string) => {
+    // El día ya viene normalizado del hook, así que solo buscamos el índice
     const index = diasSemana.indexOf(dia);
-    console.log('getDayColumnIndex:', dia, 'index:', index, 'column:', index !== -1 ? index + 2 : 1);
+    console.log('getDayColumnIndex:', dia, 'index:', index, 'diasSemana:', diasSemana, 'column:', index !== -1 ? index + 2 : 1);
     return index !== -1 ? index + 2 : 1;
   };
 
@@ -269,7 +270,7 @@ export default function ConsultaEspacios() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1">
+                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
                       {diasSemana.map((dia) => (
                         <div key={dia} className="text-sm text-center text-white font-semibold p-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded">
@@ -280,7 +281,7 @@ export default function ConsultaEspacios() {
                       {horas.map((hora, idx) => (
                         <div
                           key={`time-${hora}`}
-                          className="text-xs text-slate-500 flex items-center justify-end pr-2 h-10"
+                          className="text-xs text-slate-500 flex items-center justify-end pr-2"
                           style={{
                             gridColumn: 1,
                             gridRow: idx + 2
@@ -294,7 +295,7 @@ export default function ConsultaEspacios() {
                         diasSemana.map((dia, diaIdx) => (
                           <div
                             key={`empty-${dia}-${hora}`}
-                            className="border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded h-10"
+                            className="border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded"
                             style={{
                               gridColumn: diaIdx + 2,
                               gridRow: horaIdx + 2
@@ -323,16 +324,17 @@ export default function ConsultaEspacios() {
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className={`${colorClass} text-white rounded p-1 text-xs cursor-pointer shadow-sm flex flex-col justify-center overflow-hidden`}
+                                    className={`${colorClass} text-white rounded p-2 text-xs cursor-pointer shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center`}
                                     style={{
                                       gridColumn: `${colStart} / span 1`,
                                       gridRow: `${rowStart} / span ${rowSpan}`,
-                                      zIndex: 10
+                                      zIndex: 10,
+                                      minHeight: `${rowSpan * 60}px`
                                     }}
                                   >
-                                    <p className="font-bold truncate">{ocupacion.materia}</p>
-                                    <p className="truncate opacity-90 text-[10px]">{ocupacion.docente}</p>
-                                    <p className="truncate opacity-75 text-[10px]">{ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                    <p className="font-bold truncate text-xs leading-tight">{ocupacion.materia}</p>
+                                    <p className="truncate opacity-90 text-[9px] leading-tight">{ocupacion.docente}</p>
+                                    <p className="truncate opacity-75 text-[8px] leading-tight mt-1">{ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
                                   </motion.div>
                                 </TooltipTrigger>
                                 <TooltipContent>

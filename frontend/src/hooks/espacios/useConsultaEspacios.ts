@@ -38,6 +38,28 @@ export function useConsultaEspacios() {
     // Obtener usuario del contexto de autenticación
     const { user } = useAuth();
 
+    // Función para normalizar días
+    const normalizarDia = (dia: string): string => {
+        const diaLower = dia.toLowerCase().trim();
+        const mapeo: { [key: string]: string } = {
+            'lunes': 'Lunes',
+            'monday': 'Lunes',
+            'martes': 'Martes',
+            'tuesday': 'Martes',
+            'miércoles': 'Miércoles',
+            'wednesday': 'Miércoles',
+            'jueves': 'Jueves',
+            'thursday': 'Jueves',
+            'viernes': 'Viernes',
+            'friday': 'Viernes',
+            'sábado': 'Sábado',
+            'saturday': 'Sábado',
+            'domingo': 'Domingo',
+            'sunday': 'Domingo'
+        };
+        return mapeo[diaLower] || dia;
+    };
+
     // Cargar espacios permitidos y su estado
     useEffect(() => {
         const loadData = async () => {
@@ -96,7 +118,7 @@ export function useConsultaEspacios() {
                             horarioData.horario.forEach(h => {
                                 allHorarios.push({
                                     espacioId: e.id!.toString(),
-                                    dia: h.dia,
+                                    dia: normalizarDia(h.dia),
                                     horaInicio: h.hora_inicio,
                                     horaFin: h.hora_fin,
                                     materia: h.materia,
