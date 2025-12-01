@@ -88,13 +88,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
             <Calendar className="w-4 h-4 mr-2" />
             Período 2025-1
           </Button>
-          <Button
-            onClick={() => setShowReportModal(true)}
-            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
-          >
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Generar Reporte
-          </Button>
+
         </div>
       </motion.div>
 

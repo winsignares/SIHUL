@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import { Badge } from '../../share/badge';
-import { Toaster } from '../../share/sonner';
 import { useSedes } from '../../hooks/gestionAcademica/useSedes';
 
 export default function Sedes() {

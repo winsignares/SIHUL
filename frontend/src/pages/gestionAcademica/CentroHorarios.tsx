@@ -22,7 +22,8 @@ import {
   List,
   Plus,
   FileDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import CrearHorarios from './CrearHorarios';
@@ -59,6 +60,12 @@ export default function CentroHorarios() {
     toggleGrupoExpandido,
     handleDescargarPDF,
     handleDescargarExcel,
+    showDeleteGrupoModal, setShowDeleteGrupoModal,
+    grupoAEliminar, setGrupoAEliminar,
+    eliminandoGrupo,
+    progresoEliminacion,
+    handleAbrirModalEliminarGrupo,
+    handleEliminarGrupoCompleto,
     dias,
     notification
   } = useCentroHorarios();
@@ -464,13 +471,7 @@ export default function CentroHorarios() {
                                     size="sm"
                                     variant="outline"
                                     className="border-red-600 text-red-600 hover:bg-red-50"
-                                    onClick={async () => {
-                                      if (confirm(`¿Está seguro de eliminar todo el horario del grupo ${grupo.grupo}? Se eliminarán ${grupo.horarios.length} clases.`)) {
-                                        for (const horario of grupo.horarios) {
-                                          await handleEliminar(horario.id);
-                                        }
-                                      }
-                                    }}
+                                    onClick={() => handleAbrirModalEliminarGrupo(grupo)}
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
                                     Eliminar Grupo
@@ -802,6 +803,173 @@ export default function CentroHorarios() {
               Guardar Cambios
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmación de Eliminación de Grupo */}
+      <Dialog open={showDeleteGrupoModal} onOpenChange={setShowDeleteGrupoModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-red-600">
+              <motion.div
+                animate={{ rotate: eliminandoGrupo ? 360 : 0 }}
+                transition={{ duration: 2, repeat: eliminandoGrupo ? Infinity : 0, ease: "linear" }}
+              >
+                <Trash2 className="w-6 h-6" />
+              </motion.div>
+              {eliminandoGrupo ? 'Eliminando Grupo...' : '¿Eliminar Grupo Completo?'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {grupoAEliminar && (
+            <div className="space-y-6 py-4">
+              {!eliminandoGrupo ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  {/* Advertencia */}
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-red-100 rounded-full p-2 mt-0.5">
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-red-900 mb-2">Esta acción no se puede deshacer</h4>
+                        <p className="text-red-700 text-sm">
+                          Se eliminarán <strong>{grupoAEliminar.horarios.length} clases</strong> del grupo <strong>{grupoAEliminar.grupo}</strong>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Información del Grupo */}
+                  <Card className="border-slate-200">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-slate-500 text-xs mb-1">Programa</p>
+                          <p className="text-slate-900">{grupoAEliminar.horarios[0]?.programa_nombre}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 text-xs mb-1">Semestre</p>
+                          <Badge className="bg-slate-600">{grupoAEliminar.semestre}</Badge>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-xs mb-1">Grupo</p>
+                        <Badge className="bg-red-600 text-lg px-3 py-1">{grupoAEliminar.grupo}</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Lista de Asignaturas */}
+                  <div className="max-h-48 overflow-y-auto bg-slate-50 rounded-lg border border-slate-200 p-3">
+                    <p className="text-slate-600 text-xs mb-2">Asignaturas a eliminar:</p>
+                    <div className="space-y-1">
+                      {grupoAEliminar.horarios.map((horario, idx) => (
+                        <motion.div
+                          key={horario.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="flex items-center gap-2 text-sm text-slate-700 bg-white rounded px-2 py-1"
+                        >
+                          <CheckCircle2 className="w-3 h-3 text-slate-400" />
+                          <span>{horario.asignatura_nombre}</span>
+                          <span className="text-slate-400 text-xs ml-auto">
+                            {horario.dia_semana.charAt(0).toUpperCase() + horario.dia_semana.slice(1)} {horario.hora_inicio}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6"
+                >
+                  {/* Animación de Progreso */}
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        rotate: [0, 180, 360]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="mb-6"
+                    >
+                      <Trash2 className="w-16 h-16 text-red-600" />
+                    </motion.div>
+
+                    <h3 className="text-slate-900 mb-2">Eliminando clases...</h3>
+                    <p className="text-slate-500 text-sm mb-4">
+                      Por favor espera mientras se eliminan las {grupoAEliminar.horarios.length} clases
+                    </p>
+
+                    {/* Barra de Progreso */}
+                    <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progresoEliminacion}%` }}
+                        transition={{ duration: 0.3 }}
+                        className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-end"
+                      >
+                        <motion.div
+                          animate={{ opacity: [0.5, 1, 0.5] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                          className="w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                        />
+                      </motion.div>
+                    </div>
+
+                    {/* Porcentaje */}
+                    <motion.p
+                      key={progresoEliminacion}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-2xl mt-4 text-red-600"
+                    >
+                      {progresoEliminacion}%
+                    </motion.p>
+
+                    {/* Clases Eliminadas */}
+                    <p className="text-slate-500 text-sm mt-2">
+                      {Math.round((progresoEliminacion / 100) * grupoAEliminar.horarios.length)} de {grupoAEliminar.horarios.length} clases eliminadas
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
+
+          {!eliminandoGrupo && (
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteGrupoModal(false);
+                  setGrupoAEliminar(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEliminarGrupoCompleto}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Sí, Eliminar Grupo
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>

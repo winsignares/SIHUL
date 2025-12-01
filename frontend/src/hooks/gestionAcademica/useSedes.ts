@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { showNotification } from '../../context/ThemeContext';
+import { toast } from 'sonner';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
 
@@ -28,10 +28,7 @@ export function useSedes() {
             const response = await sedeService.listarSedes();
             setSedes(response.sedes);
         } catch (error) {
-            showNotification({ 
-                message: `Error al cargar sedes: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
-            });
+            toast.error(`Error al cargar sedes: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -40,7 +37,7 @@ export function useSedes() {
     // Crear sede
     const handleCreate = async () => {
         if (!sedeForm.nombre.trim()) {
-            showNotification({ message: 'El nombre de la sede es obligatorio', type: 'error' });
+            toast.error('El nombre de la sede es obligatorio');
             return;
         }
 
@@ -57,12 +54,9 @@ export function useSedes() {
             setSedeForm({ nombre: '', direccion: '', ciudad: '' });
             setShowCreate(false);
 
-            showNotification({ message: '✅ Sede registrada exitosamente', type: 'success' });
+            toast.success('Sede registrada exitosamente');
         } catch (error) {
-            showNotification({ 
-                message: `Error al crear sede: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
-            });
+            toast.error(`Error al crear sede: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -73,7 +67,7 @@ export function useSedes() {
         if (!selectedSede) return;
 
         if (!sedeForm.nombre.trim()) {
-            showNotification({ message: 'El nombre de la sede es obligatorio', type: 'error' });
+            toast.error('El nombre de la sede es obligatorio');
             return;
         }
 
@@ -92,12 +86,9 @@ export function useSedes() {
             setSelectedSede(null);
             setSedeForm({ nombre: '', direccion: '', ciudad: '' });
 
-            showNotification({ message: '✅ Sede actualizada correctamente', type: 'success' });
+            toast.info('Sede actualizada correctamente');
         } catch (error) {
-            showNotification({ 
-                message: `Error al actualizar sede: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
-            });
+            toast.error(`Error al actualizar sede: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -115,12 +106,9 @@ export function useSedes() {
             setShowDelete(false);
             setSelectedSede(null);
 
-            showNotification({ message: '✅ Sede eliminada correctamente', type: 'success' });
+            toast.error('Sede eliminada correctamente');
         } catch (error) {
-            showNotification({ 
-                message: `Error al eliminar sede: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
-            });
+            toast.error(`Error al eliminar sede: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -139,12 +127,9 @@ export function useSedes() {
             
             await loadSedes();
 
-            showNotification({ message: sede.activa ? '✅ Sede inactivada correctamente' : '✅ Sede activada correctamente', type: 'success' });
+            toast.warning(sede.activa ? 'Sede inactivada correctamente' : 'Sede activada correctamente');
         } catch (error) {
-            showNotification({ 
-                message: `Error al cambiar estado de sede: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
-                type: 'error' 
-            });
+            toast.error(`Error al cambiar estado de sede: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }

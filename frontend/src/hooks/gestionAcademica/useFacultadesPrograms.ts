@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
-import { showNotification } from '../../context/ThemeContext';
+import { toast } from 'sonner';
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import type { Facultad as FacultadAPI } from '../../services/facultades/facultadesAPI';
 import { programaService } from '../../services/programas/programaAPI';
@@ -86,10 +86,7 @@ export function useFacultadesPrograms() {
             const response = await facultadService.list();
             setFacultades(response.facultades);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar facultades: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar facultades: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -112,10 +109,7 @@ export function useFacultadesPrograms() {
                 }));
             setProgramas(mappedProgramas);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -126,10 +120,7 @@ export function useFacultadesPrograms() {
             const response = await asignaturaService.list();
             setAsignaturas(response.asignaturas);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar asignaturas: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar asignaturas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
@@ -139,10 +130,7 @@ export function useFacultadesPrograms() {
             const response = await asignaturaProgramaService.list(programaId);
             setAsignaturasPrograma(response.asignaturas_programa);
         } catch (error) {
-            showNotification({
-                message: `Error al cargar asignaturas del programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cargar asignaturas del programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -180,20 +168,17 @@ export function useFacultadesPrograms() {
 
         // Validaciones
         if (!asignaturaForm.asignaturaId) {
-            showNotification({ message: 'Debe seleccionar una asignatura', type: 'error' });
+            toast.error('Debe seleccionar una asignatura');
             return;
         }
 
         if (!asignaturaForm.semestre || Number(asignaturaForm.semestre) < 1) {
-            showNotification({ message: 'Debe especificar el semestre', type: 'error' });
+            toast.error('Debe especificar el semestre');
             return;
         }
 
         if (Number(asignaturaForm.semestre) > selectedProgramaForAsignaturas.semestres) {
-            showNotification({ 
-                message: `El semestre no puede ser mayor a ${selectedProgramaForAsignaturas.semestres}`, 
-                type: 'error' 
-            });
+            toast.error(`El semestre no puede ser mayor a ${selectedProgramaForAsignaturas.semestres}`);
             return;
         }
 
@@ -214,12 +199,9 @@ export function useFacultadesPrograms() {
                 componente_formativo: 'profesional'
             });
 
-            showNotification({ message: '✅ Asignatura agregada al programa exitosamente', type: 'success' });
+            toast.success('Asignatura agregada al programa exitosamente');
         } catch (error) {
-            showNotification({
-                message: `Error al agregar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al agregar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -238,12 +220,9 @@ export function useFacultadesPrograms() {
 
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
 
-            showNotification({ message: '✅ Asignatura eliminada del programa correctamente', type: 'success' });
+            toast.error('Asignatura eliminada del programa correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -261,12 +240,9 @@ export function useFacultadesPrograms() {
 
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
 
-            showNotification({ message: '✅ Asignatura actualizada correctamente', type: 'success' });
+            toast.info('Asignatura actualizada correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -277,7 +253,7 @@ export function useFacultadesPrograms() {
     const handleCreateFacultad = async () => {
         // Validación
         if (!facultadForm.nombre.trim()) {
-            showNotification({ message: 'El nombre de la facultad es obligatorio', type: 'error' });
+            toast.error('El nombre de la facultad es obligatorio');
             return;
         }
 
@@ -292,12 +268,9 @@ export function useFacultadesPrograms() {
             setFacultadForm({ nombre: '' });
             setShowCreateFacultad(false);
 
-            showNotification({ message: '✅ Facultad registrada exitosamente', type: 'success' });
+            toast.success('Facultad registrada exitosamente');
         } catch (error) {
-            showNotification({
-                message: `Error al crear facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al crear facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -308,7 +281,7 @@ export function useFacultadesPrograms() {
 
         // Validación
         if (!facultadForm.nombre.trim()) {
-            showNotification({ message: 'El nombre de la facultad es obligatorio', type: 'error' });
+            toast.error('El nombre de la facultad es obligatorio');
             return;
         }
 
@@ -327,12 +300,9 @@ export function useFacultadesPrograms() {
             setSelectedFacultad(null);
             setFacultadForm({ nombre: '' });
 
-            showNotification({ message: '✅ Facultad actualizada correctamente', type: 'success' });
+            toast.info('Facultad actualizada correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al actualizar facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al actualizar facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -351,12 +321,9 @@ export function useFacultadesPrograms() {
             setShowDeleteFacultad(false);
             setSelectedFacultad(null);
 
-            showNotification({ message: '✅ Facultad eliminada correctamente', type: 'success' });
+            toast.error('Facultad eliminada correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al eliminar facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al eliminar facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -386,12 +353,9 @@ export function useFacultadesPrograms() {
 
             await loadFacultades();
 
-            showNotification({ message: facultad.activa ? '✅ Facultad inactivada correctamente' : '✅ Facultad activada correctamente', type: 'success' });
+            toast.warning(facultad.activa ? 'Facultad inactivada correctamente' : 'Facultad activada correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al cambiar estado de facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cambiar estado de facultad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -402,17 +366,17 @@ export function useFacultadesPrograms() {
     const handleCreatePrograma = async () => {
         // Validaciones
         if (!programaForm.nombre.trim()) {
-            showNotification({ message: 'El nombre del programa es obligatorio', type: 'error' });
+            toast.error('El nombre del programa es obligatorio');
             return;
         }
 
         if (!programaForm.facultadId) {
-            showNotification({ message: 'Debe seleccionar una facultad', type: 'error' });
+            toast.error('Debe seleccionar una facultad');
             return;
         }
 
         if (!programaForm.semestres || Number(programaForm.semestres) < 1) {
-            showNotification({ message: 'Debe especificar el número de semestres (mínimo 1)', type: 'error' });
+            toast.error('Debe especificar el número de semestres (mínimo 1)');
             return;
         }
 
@@ -429,12 +393,9 @@ export function useFacultadesPrograms() {
             setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
             setShowCreatePrograma(false);
 
-            showNotification({ message: '✅ Programa registrado exitosamente', type: 'success' });
+            toast.success('Programa registrado exitosamente');
         } catch (error) {
-            showNotification({
-                message: `Error al crear programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al crear programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -445,17 +406,17 @@ export function useFacultadesPrograms() {
 
         // Validaciones
         if (!programaForm.nombre.trim()) {
-            showNotification({ message: 'El nombre del programa es obligatorio', type: 'error' });
+            toast.error('El nombre del programa es obligatorio');
             return;
         }
 
         if (!programaForm.facultadId) {
-            showNotification({ message: 'Debe seleccionar una facultad', type: 'error' });
+            toast.error('Debe seleccionar una facultad');
             return;
         }
 
         if (!programaForm.semestres || Number(programaForm.semestres) < 1) {
-            showNotification({ message: 'Debe especificar el número de semestres (mínimo 1)', type: 'error' });
+            toast.error('Debe especificar el número de semestres (mínimo 1)');
             return;
         }
 
@@ -474,12 +435,9 @@ export function useFacultadesPrograms() {
             setSelectedPrograma(null);
             setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
 
-            showNotification({ message: '✅ Programa actualizado correctamente', type: 'success' });
+            toast.info('Programa actualizado correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al actualizar programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al actualizar programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -496,12 +454,9 @@ export function useFacultadesPrograms() {
             setShowDeletePrograma(false);
             setSelectedPrograma(null);
 
-            showNotification({ message: '✅ Programa eliminado correctamente', type: 'success' });
+            toast.error('Programa eliminado correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al eliminar programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al eliminar programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -537,12 +492,9 @@ export function useFacultadesPrograms() {
 
             await loadProgramas();
 
-            showNotification({ message: programa.activo ? '✅ Programa inactivado correctamente' : '✅ Programa activado correctamente', type: 'success' });
+            toast.warning(programa.activo ? 'Programa inactivado correctamente' : 'Programa activado correctamente');
         } catch (error) {
-            showNotification({
-                message: `Error al cambiar estado de programa: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-                type: 'error'
-            });
+            toast.error(`Error al cambiar estado de programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
