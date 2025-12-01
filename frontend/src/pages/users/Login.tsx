@@ -3,7 +3,7 @@ import { Input } from '../../share/input';
 import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
-import universityImage from '../../assets/Image/UniversidadLibre.webp';
+import universityImage from '../../assets/Image/universidad_libre.jpg';
 import { useLogin } from '../../hooks/users/useLogin';
 
 export default function Login() {
@@ -64,24 +64,30 @@ export default function Login() {
       />
 
       {/* Floating Particles - Small Animated Particles */}
-      {[...Array(30)].map((_, i) => (
+      {[...Array(50)].map((_, i) => (
         <motion.div
           key={`particle-${i}`}
-          className="absolute w-1 h-1 bg-gradient-to-r from-red-400 to-blue-400 rounded-full opacity-30"
+          className={`absolute rounded-full opacity-40 ${
+            i % 3 === 0 ? 'bg-gradient-to-r from-red-400 to-red-500' :
+            i % 3 === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+            'bg-gradient-to-r from-blue-400 to-blue-500'
+          }`}
           style={{
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
+            width: `${2 + Math.random() * 4}px`,
+            height: `${2 + Math.random() * 4}px`,
           }}
           animate={{
-            y: [0, -100, 0],
-            x: [0, Math.random() * 50 - 25, 0],
-            opacity: [0.1, 0.5, 0.1],
-            scale: [0.5, 1, 0.5],
+            y: [0, -150, 0],
+            x: [0, Math.random() * 100 - 50, 0],
+            opacity: [0.1, 0.6, 0.1],
+            scale: [0.5, 1.2, 0.5],
           }}
           transition={{
-            duration: 4 + Math.random() * 4,
+            duration: 6 + Math.random() * 6,
             repeat: Infinity,
-            delay: Math.random() * 3,
+            delay: Math.random() * 4,
             ease: "easeInOut"
           }}
         />
@@ -94,24 +100,24 @@ export default function Login() {
         transition={{ duration: 0.6 }}
         className="relative z-10 w-full max-w-6xl mx-4"
       >
-        <div className="grid lg:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/20 backdrop-blur-xl max-w-5xl">
+        <div className="grid lg:grid-cols-2 bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200/30 max-w-5xl">
           {/* Glow Effect */}
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-red-500/10 via-transparent to-yellow-500/10 pointer-events-none" />
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-red-500/3 via-transparent to-transparent pointer-events-none" />
           {/* Left Side - Login Form */}
-          <div className="p-8 lg:p-12 flex flex-col justify-center bg-gradient-to-br from-white via-white to-slate-50/50 relative">
+          <div className="p-8 lg:p-14 flex flex-col justify-center bg-white relative">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
             >
-              <div className="mb-12">
+              <div className="mb-10">
                 <motion.p 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1, duration: 0.6 }}
-                  className="text-[rgb(23,25,27)] mb-4 text-[24px] text-center font-bold italic tracking-wide"
+                  className="text-slate-900 mb-3 text-2xl text-center font-bold tracking-tight"
                 >
-                  BIENVENIDOS A UNISPACE
+                  BIENVENIDO A UNISPACE
                 </motion.p>
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -125,8 +131,8 @@ export default function Login() {
                   >
                     <GraduationCap className="w-9 h-9 text-yellow-300" />
                   </motion.div>
-                  <h1 className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 bg-clip-text text-transparent text-[24px] font-bold leading-tight tracking-tight">
-                    SISTEMA DE GESTION UNIVERSITARIA
+                  <h1 className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent text-xl font-bold leading-tight tracking-tight">
+                    GESTIÓN UNIVERSITARIA
                   </h1>
                 </motion.div>
                 <motion.div
@@ -139,9 +145,9 @@ export default function Login() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.6 }}
-                  className="text-[rgb(6,7,7)] text-center text-sm leading-relaxed font-medium"
+                  className="text-slate-600 text-center text-sm leading-relaxed font-medium"
                 >
-                  Inicia sesión para acceder a la plataforma de gestión académica
+                  Accede a tu cuenta para gestionar horarios y espacios
                 </motion.p>
               </div>
 
@@ -152,15 +158,15 @@ export default function Login() {
                   transition={{ delay: 0.35, duration: 0.5 }}
                   className="space-y-2"
                 >
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Correo Institucional</label>
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Correo Institucional</label>
                   <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
                     <Input
                       type="email"
-                      placeholder="Correo Institucional"
+                      placeholder="correo@unilibre.edu.co"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-12 h-14 bg-gradient-to-r from-slate-50 to-blue-50/30 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/30 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
+                      className="pl-12 h-12 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
                       required
                     />
                   </div>
@@ -172,7 +178,7 @@ export default function Login() {
                   transition={{ delay: 0.45, duration: 0.5 }}
                   className="space-y-2"
                 >
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Contraseña</label>
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Contraseña</label>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
                     <Input
@@ -180,7 +186,7 @@ export default function Login() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-12 pr-12 h-14 bg-gradient-to-r from-slate-50 to-blue-50/30 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/30 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
+                      className="pl-12 pr-12 h-12 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
                       required
                     />
                     <motion.button
@@ -203,7 +209,7 @@ export default function Login() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl"
+                    className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg font-medium text-sm"
                   >
                     {error}
                   </motion.div>
@@ -220,17 +226,17 @@ export default function Login() {
                     disabled={isLoading}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
-                    className="w-full h-14 bg-gradient-to-r from-red-600 via-red-700 to-red-800 hover:from-red-700 hover:via-red-800 hover:to-red-900 text-white rounded-xl shadow-lg hover:shadow-2xl hover:shadow-red-600/50 transition-all duration-300 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg tracking-wide uppercase"
+                    className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg shadow-lg hover:shadow-xl hover:shadow-red-600/40 transition-all duration-300 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-base tracking-wide uppercase"
                   >
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-yellow-400/30 via-yellow-300/20 to-transparent"
+                      className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 via-yellow-300/10 to-transparent"
                       initial={{ x: '-100%' }}
                       animate={{ x: isHovered ? '100%' : '-100%' }}
-                      transition={{ duration: 0.6 }}
+                      transition={{ duration: 0.5 }}
                     />
                     <span className="relative flex items-center justify-center gap-2">
-                      {isLoading ? 'INICIANDO SESIÓN...' : 'INICIAR SESIÓN'}
-                      {!isLoading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                      {isLoading ? 'INICIANDO...' : 'INICIAR SESIÓN'}
+                      {!isLoading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                     </span>
                   </Button>
                 </motion.div>
@@ -248,9 +254,29 @@ export default function Login() {
             className="relative bg-gradient-to-br from-red-600 via-red-700 to-red-900 p-8 lg:p-12 flex flex-col justify-center items-center text-white overflow-hidden"
           >
             {/* Background Image with Overlay */}
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-40"
+            <motion.div
+              className="absolute inset-0 bg-cover bg-center opacity-50"
               style={{ backgroundImage: `url(${universityImage})` }}
+              animate={{
+                scale: [1, 1.05, 1],
+              }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            {/* Dark Overlay for Text Contrast */}
+            <motion.div 
+              className="absolute inset-0 bg-gradient-to-br from-red-900/50 via-red-800/40 to-red-900/60"
+              animate={{
+                opacity: [0.6, 0.7, 0.6],
+              }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
             />
 
             {/* Animated Geometric Shapes */}
