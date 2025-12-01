@@ -23,7 +23,8 @@ export default function ConsultaEspacios() {
     horas,
     filteredEspacios,
     estadisticas,
-    horarios
+    horarios,
+    calcularProximaClaseYEstado
   } = useConsultaEspacios();
 
   const getEstadoBadge = (estado: string) => {
@@ -182,7 +183,9 @@ export default function ConsultaEspacios() {
 
       {vistaActual === 'tarjetas' ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEspacios.map(espacio => (
+          {filteredEspacios.map(espacio => {
+            const { proximaClase, estado } = calcularProximaClaseYEstado(espacio.id);
+            return (
             <motion.div
               key={espacio.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -198,7 +201,7 @@ export default function ConsultaEspacios() {
                         {espacio.tipo}
                       </Badge>
                     </div>
-                    {getEstadoBadge(espacio.estado)}
+                    {getEstadoBadge(estado)}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -210,16 +213,17 @@ export default function ConsultaEspacios() {
                     <MapPin className="w-4 h-4" />
                     <span>{espacio.sede} - Edificio {espacio.edificio}</span>
                   </div>
-                  {espacio.proximaClase && (
+                  {proximaClase && (
                     <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
                       <p className="text-slate-600 dark:text-slate-400">Próxima clase:</p>
-                      <p className="text-blue-700 dark:text-blue-300">{espacio.proximaClase}</p>
+                      <p className="text-blue-700 dark:text-blue-300">{proximaClase}</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-6">

@@ -60,6 +60,64 @@ export function useConsultaEspacios() {
         return mapeo[diaLower] || dia;
     };
 
+    // Función para obtener el nombre del día actual en español
+    const getDiaDeSemana = (): string => {
+        const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        return dias[new Date().getDay()];
+    };
+
+    // Función para calcular próxima clase y estado
+    const calcularProximaClaseYEstado = (espacioId: string): { proximaClase: string; estado: 'disponible' | 'ocupado' | 'mantenimiento' } => {
+        const hoy = getDiaDeSemana();
+        const ahora = new Date();
+        const horaActual = ahora.getHours();
+        
+        // Obtener todas las clases de hoy para este espacio
+        const clasesHoy = horarios.filter(h => 
+            h.espacioId === espacioId && h.dia === hoy
+        ).sort((a, b) => a.horaInicio - b.horaInicio);
+
+        // Si no hay clases hoy
+        if (clasesHoy.length === 0) {
+            return {
+                proximaClase: 'Sin clases pendientes hoy',
+                estado: 'disponible'
+            };
+        }
+
+        // Buscar la próxima clase
+        const proximaClase = clasesHoy.find(c => c.horaFin > horaActual);
+
+        if (!proximaClase) {
+            // No hay más clases hoy
+            return {
+                proximaClase: 'Sin clases pendientes hoy',
+                estado: 'disponible'
+            };
+        }
+
+        // Calcular tiempo hasta la próxima clase
+        const tiempoHasta = proximaClase.horaInicio - horaActual;
+
+        // Determinar estado basado en tiempo disponible
+        let estado: 'disponible' | 'ocupado' | 'mantenimiento' = 'disponible';
+        if (tiempoHasta < 1) {
+            // Menos de 1 hora: no disponible
+            estado = 'ocupado';
+        } else if (tiempoHasta <= 2) {
+            // Entre 1 y 2 horas: ocupado
+            estado = 'ocupado';
+        } else {
+            // Más de 2 horas: disponible
+            estado = 'disponible';
+        }
+
+        return {
+            proximaClase: `${proximaClase.materia} - ${proximaClase.horaInicio}:00`,
+            estado
+        };
+    };
+
     // Cargar espacios permitidos y su estado
     useEffect(() => {
         const loadData = async () => {
@@ -109,30 +167,28 @@ export function useConsultaEspacios() {
 
                 setEspacios(espaciosConEstado);
 
-                // 4. Si estamos en vista cronograma, cargar horarios
-                if (vistaActual === 'cronograma') {
-                    const allHorarios: OcupacionView[] = [];
-                    await Promise.all(espaciosBase.map(async (e) => {
-                        try {
-                            const horarioData = await espacioService.getHorario(e.id!);
-                            horarioData.horario.forEach(h => {
-                                allHorarios.push({
-                                    espacioId: e.id!.toString(),
-                                    dia: normalizarDia(h.dia),
-                                    horaInicio: h.hora_inicio,
-                                    horaFin: h.hora_fin,
-                                    materia: h.materia,
-                                    docente: h.docente,
-                                    grupo: h.grupo,
-                                    estado: h.estado || 'ocupado'
-                                });
+                // 4. Cargar horarios (necesarios para ambas vistas)
+                const allHorarios: OcupacionView[] = [];
+                await Promise.all(espaciosBase.map(async (e) => {
+                    try {
+                        const horarioData = await espacioService.getHorario(e.id!);
+                        horarioData.horario.forEach(h => {
+                            allHorarios.push({
+                                espacioId: e.id!.toString(),
+                                dia: normalizarDia(h.dia),
+                                horaInicio: h.hora_inicio,
+                                horaFin: h.hora_fin,
+                                materia: h.materia,
+                                docente: h.docente,
+                                grupo: h.grupo,
+                                estado: h.estado || 'ocupado'
                             });
-                        } catch (error) {
-                            console.error(`Error fetching schedule for space ${e.id}`, error);
-                        }
-                    }));
-                    setHorarios(allHorarios);
-                }
+                        });
+                    } catch (error) {
+                        console.error(`Error fetching schedule for space ${e.id}`, error);
+                    }
+                }));
+                setHorarios(allHorarios);
 
             } catch (error) {
                 console.error("Error loading spaces", error);
@@ -142,7 +198,7 @@ export function useConsultaEspacios() {
         };
 
         loadData();
-    }, [vistaActual, user]); // Recargar si cambia la vista o el usuario
+    }, [user]); // Recargar si cambia el usuario
 
     const tiposEspacio = useMemo(() => [...new Set(espacios.map(e => e.tipo))], [espacios]);
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -205,6 +261,7 @@ export function useConsultaEspacios() {
         getOcupacionPorHora,
         getColorEstado,
         loading,
-        horarios // Exportamos horarios para uso directo en el grid si es necesario
+        horarios,
+        calcularProximaClaseYEstado
     };
 } 
