@@ -11,7 +11,8 @@ import datetime
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from io import BytesIO
@@ -727,3 +728,409 @@ def exportar_horario_excel(request):
     response['Content-Disposition'] = f'attachment; filename="horario_{usuario_id}.xlsx"'
     
     return response
+
+
+# -------- Endpoint para exportar PDF con array de horarios (POST) --------
+@csrf_exempt
+def exportar_horarios_pdf_post(request):
+    """Genera y descarga horarios en formato PDF desde un array de horarios"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        horarios_data = data.get('horarios', [])
+        
+        if not horarios_data:
+            return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
+        
+        
+        # Agrupar horarios por grupo
+        grupos_dict = {}
+        for h in horarios_data:
+            grupo_key = f"{h.get('grupo_nombre', 'N/A')} - {h.get('programa_nombre', 'N/A')}"
+            if grupo_key not in grupos_dict:
+                grupos_dict[grupo_key] = []
+            grupos_dict[grupo_key].append(h)
+        
+        # Crear PDF con múltiples tablas (una por grupo)
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
+                               rightMargin=30, leftMargin=30,
+                               topMargin=30, bottomMargin=30)
+        
+        elements = []
+        
+        for grupo_key, horarios_grupo in grupos_dict.items():
+            # Crear tabla para este grupo con TODAS las horas (6:00 a 21:00)
+            dias_dict = {}
+            
+            # Inicializar estructura de días (mapeo de nombres en español)
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_map = {
+                'lunes': 'lunes',
+                'martes': 'martes',
+                'miercoles': 'miercoles',
+                'miércoles': 'miercoles',
+                'jueves': 'jueves',
+                'viernes': 'viernes'
+            }
+            
+            for dia in dias_orden:
+                dias_dict[dia] = {}
+            
+            # Llenar con los horarios disponibles
+            for h in horarios_grupo:
+                dia_raw = h.get('dia_semana', '').lower().strip()
+                hora_inicio_raw = str(h.get('hora_inicio', '')).strip()
+                hora_fin_raw = str(h.get('hora_fin', '')).strip()
+                
+                # Normalizar horas (quitar segundos si los tiene: "10:00:00" -> "10:00")
+                def normalizar_hora(hora_str):
+                    if ':' in hora_str:
+                        partes = hora_str.split(':')
+                        return f"{partes[0]}:{partes[1]}"
+                    return hora_str
+                
+                hora_inicio = normalizar_hora(hora_inicio_raw)
+                hora_fin = normalizar_hora(hora_fin_raw)
+                
+                # Normalizar nombre del día
+                dia = dias_map.get(dia_raw, dia_raw)
+                
+                
+                if dia and hora_inicio and dia in dias_dict:
+                    # Crear contenido de la celda - formato especificado
+                    asignatura = str(h.get('asignatura_nombre', '')).strip() or ''
+                    docente = str(h.get('docente_nombre', '')).strip() or ''
+                    espacio = str(h.get('espacio_nombre', '')).strip() or ''
+                    
+                    # Formatear según especificación:
+                    # Asignatura (Mayúscula inicial) / DOCENTE (MAYÚSCULAS) - Salón
+                    if asignatura:
+                        # Capitalizar asignatura correctamente (incluyendo números romanos)
+                        # Ejemplo: "calculo i" -> "Cálculo I"
+                        asignatura_fmt = asignatura.strip()
+                        palabras = asignatura_fmt.split()
+                        palabras_fmt = []
+                        for palabra in palabras:
+                            # Si la palabra es un número romano, convertir a mayúsculas
+                            if palabra.lower() in ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x']:
+                                palabras_fmt.append(palabra.upper())
+                            else:
+                                palabras_fmt.append(palabra.capitalize())
+                        asignatura_fmt = ' '.join(palabras_fmt)
+                        
+                        # Docente en mayúsculas
+                        docente_fmt = docente.upper() if docente and docente != "Sin asignar" else ""
+                        
+                        # Salón tal cual
+                        espacio_fmt = espacio
+                        
+                        # Formato con saltos de línea para que no se cruce entre celdas
+                        # Asignatura en primera línea
+                        # Docente en segunda línea
+                        # Salón en tercera línea
+                        cell_content = f"{asignatura_fmt}"
+                        if docente_fmt:
+                            cell_content += f" / {docente_fmt}"
+                        if espacio_fmt:
+                            cell_content += f"\n{espacio_fmt}"
+                        
+                        # Agregar la asignatura en TODAS las horas que ocupa
+                        try:
+                            hora_inicio_h = int(hora_inicio.split(':')[0])
+                            hora_fin_h = int(hora_fin.split(':')[0])
+                            
+                            # Llenar todas las horas desde inicio hasta fin
+                            for h_actual in range(hora_inicio_h, hora_fin_h):
+                                hora_key = f"{h_actual:02d}:00"
+                                dias_dict[dia][hora_key] = cell_content
+                            
+                        except Exception as e:
+                            dias_dict[dia][hora_inicio] = cell_content
+            
+            # Generar intervalos de horas (6:00-7:00, 7:00-8:00, etc.)
+            horas_intervalos = []
+            for h in range(6, 21):
+                intervalo = f"{h:02d}:00-{h+1:02d}:00"
+                horas_intervalos.append((intervalo, f"{h:02d}:00"))  # (etiqueta, clave_busqueda)
+            
+            # Preparar datos para tabla
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            table_data = [['Hora'] + dias_nombres]
+            
+            for intervalo, hora_key in horas_intervalos:
+                row = [intervalo]
+                for dia in dias_orden:
+                    cell_text = dias_dict[dia].get(hora_key, '')
+                    row.append(cell_text)
+                table_data.append(row)
+            
+            # Crear tabla optimizada para una página
+            # Ancho: 1 col hora (0.8") + 5 cols días (2.0" c/u) = 10.8"
+            col_widths = [0.8 * inch] + [2.0 * inch] * 5
+            # Alto: ajustar según cantidad de filas
+            num_filas = len(table_data)
+            # Primera fila (header) más compacta, resto para 3 líneas de contenido
+            row_heights = [0.35 * inch] + [0.4 * inch] * (num_filas - 1)
+            table = Table(table_data, colWidths=col_widths, rowHeights=row_heights)
+            
+            # Estilo optimizado para una página
+            style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991B1B')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
+                ('BACKGROUND', (0, 1), (0, -1), colors.HexColor('#F3F4F6')),
+                ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 1), (0, -1), 5),
+                ('FONTSIZE', (1, 1), (-1, -1), 5),  
+                ('TOPPADDING', (1, 1), (-1, -1), 2),
+                ('BOTTOMPADDING', (1, 1), (-1, -1), 2),
+                ('LEFTPADDING', (0, 0), (-1, -1), 3),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ])
+            
+            # Colorear celdas con clases
+            for row_idx, (intervalo, hora_key) in enumerate(horas_intervalos, start=1):
+                for col_idx, dia in enumerate(dias_orden, start=1):
+                    if hora_key in dias_dict[dia]:
+                        style.add('BACKGROUND', (col_idx, row_idx), (col_idx, row_idx), colors.HexColor('#DBEAFE'))
+            
+            table.setStyle(style)
+            
+            # Agregar título y tabla a elementos
+            styles = getSampleStyleSheet()
+            title_style = styles['Heading3']
+            
+            elements.append(Paragraph(f"<b>Grupo: {grupo_key}</b>", title_style))
+            elements.append(Spacer(1, 0.1 * inch))
+            elements.append(table)
+            elements.append(PageBreak())  # Una página por grupo
+        
+        # Generar PDF
+        doc.build(elements)
+        
+        # Respuesta
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="horarios_centro.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        import traceback
+        print(f"ERROR en PDF: {str(e)}", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# -------- Endpoint para exportar Excel con array de horarios (POST) --------
+@csrf_exempt
+def exportar_horarios_excel_post(request):
+    """Genera y descarga horarios en formato Excel desde un array de horarios"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        horarios_data = data.get('horarios', [])
+        
+        if not horarios_data:
+            return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
+        
+        # Agrupar horarios por grupo
+        grupos_dict = {}
+        for h in horarios_data:
+            grupo_key = f"{h.get('grupo_nombre', 'N/A')} - {h.get('programa_nombre', 'N/A')}"
+            if grupo_key not in grupos_dict:
+                grupos_dict[grupo_key] = []
+            grupos_dict[grupo_key].append(h)
+        
+        
+        # Crear workbook con múltiples hojas (una por grupo)
+        wb = Workbook()
+        wb.remove(wb.active)  # Remover hoja por defecto
+        
+        # Estilos
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_fill = PatternFill(start_color="8B0000", end_color="8B0000", fill_type="solid")
+        class_fill = PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid")
+        center_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        for grupo_key, horarios_grupo in grupos_dict.items():
+            # Crear tabla para este grupo con TODAS las horas (6:00 a 21:00)
+            dias_dict = {}
+            
+            # Inicializar estructura de días (mapeo de nombres en español)
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_map = {
+                'lunes': 'lunes',
+                'martes': 'martes',
+                'miercoles': 'miercoles',
+                'miércoles': 'miercoles',
+                'jueves': 'jueves',
+                'viernes': 'viernes'
+            }
+            
+            for dia in dias_orden:
+                dias_dict[dia] = {}
+            
+            # Llenar con los horarios disponibles
+            for h in horarios_grupo:
+                dia_raw = h.get('dia_semana', '').lower().strip()
+                hora_inicio_raw = str(h.get('hora_inicio', '')).strip()
+                hora_fin_raw = str(h.get('hora_fin', '')).strip()
+                
+                # Normalizar horas (quitar segundos si los tiene: "10:00:00" -> "10:00")
+                def normalizar_hora(hora_str):
+                    if ':' in hora_str:
+                        partes = hora_str.split(':')
+                        return f"{partes[0]}:{partes[1]}"
+                    return hora_str
+                
+                hora_inicio = normalizar_hora(hora_inicio_raw)
+                hora_fin = normalizar_hora(hora_fin_raw)
+                
+                # Normalizar nombre del día
+                dia = dias_map.get(dia_raw, dia_raw)
+                
+                
+                if dia and hora_inicio and dia in dias_dict:
+                    # Crear contenido de la celda - formato especificado
+                    asignatura = str(h.get('asignatura_nombre', '')).strip() or ''
+                    docente = str(h.get('docente_nombre', '')).strip() or ''
+                    espacio = str(h.get('espacio_nombre', '')).strip() or ''
+                    
+                    # Formatear según especificación:
+                    # Asignatura (Mayúscula inicial) / DOCENTE (MAYÚSCULAS) - Salón
+                    if asignatura:
+                        # Capitalizar asignatura correctamente (incluyendo números romanos)
+                        # Ejemplo: "calculo i" -> "Cálculo I"
+                        asignatura_fmt = asignatura.strip()
+                        palabras = asignatura_fmt.split()
+                        palabras_fmt = []
+                        for palabra in palabras:
+                            # Si la palabra es un número romano, convertir a mayúsculas
+                            if palabra.lower() in ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x']:
+                                palabras_fmt.append(palabra.upper())
+                            else:
+                                palabras_fmt.append(palabra.capitalize())
+                        asignatura_fmt = ' '.join(palabras_fmt)
+                        
+                        # Docente en mayúsculas
+                        docente_fmt = docente.upper() if docente and docente != "Sin asignar" else ""
+                        
+                        # Salón tal cual
+                        espacio_fmt = espacio
+                        
+                        # Formato con saltos de línea para que no se cruce entre celdas
+                        # Asignatura / Docente en primera línea
+                        # Salón en segunda línea
+                        cell_content = f"{asignatura_fmt}"
+                        if docente_fmt:
+                            cell_content += f" / {docente_fmt}"
+                        if espacio_fmt:
+                            cell_content += f"\n{espacio_fmt}"
+                        
+                        # Agregar la asignatura en TODAS las horas que ocupa
+                        try:
+                            hora_inicio_h = int(hora_inicio.split(':')[0])
+                            hora_fin_h = int(hora_fin.split(':')[0])
+                            
+                            # Llenar todas las horas desde inicio hasta fin
+                            for h_actual in range(hora_inicio_h, hora_fin_h):
+                                hora_key = f"{h_actual:02d}:00"
+                                dias_dict[dia][hora_key] = cell_content
+                            
+                        except Exception as e:
+                            dias_dict[dia][hora_inicio] = cell_content
+            
+            # Generar intervalos de horas (6:00-7:00, 7:00-8:00, etc.)
+            horas_intervalos = []
+            for h in range(6, 21):
+                intervalo = f"{h:02d}:00-{h+1:02d}:00"
+                horas_intervalos.append((intervalo, f"{h:02d}:00"))  # (etiqueta, clave_busqueda)
+            
+            # Crear hoja para este grupo
+            ws = wb.create_sheet(title=grupo_key[:31])  # Excel limita nombre a 31 caracteres
+            
+            # Header con días
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            ws.append(['Hora'] + dias_nombres)
+            
+            for cell in ws[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = center_alignment
+                cell.border = border
+            
+            # Datos - intervalos de horas
+            for intervalo, hora_key in horas_intervalos:
+                row = [intervalo]
+                for dia in dias_orden:
+                    cell_text = dias_dict[dia].get(hora_key, '')
+                    row.append(cell_text)
+                ws.append(row)
+            
+            # Aplicar estilos a datos
+            for row_idx, (intervalo, hora_key) in enumerate(horas_intervalos, start=2):
+                for col_idx, dia in enumerate(dias_orden, start=2):
+                    cell = ws.cell(row=row_idx, column=col_idx)
+                    cell_text = dias_dict[dia].get(hora_key, '')
+                    
+                    cell.value = cell_text
+                    
+                    if cell_text:
+                        cell.fill = class_fill
+                    
+                    cell.alignment = center_alignment
+                    cell.border = border
+            
+            # Ajustar ancho de columnas
+            ws.column_dimensions['A'].width = 14
+            for col in 'BCDEF':
+                ws.column_dimensions[col].width = 25
+            
+            # Ajustar alto de filas para 3 líneas de contenido
+            for row in range(2, len(horas_intervalos) + 2):
+                ws.row_dimensions[row].height = 75
+        
+        # Validar que hay al menos una hoja
+        if len(wb.sheetnames) == 0:
+            print(f"ADVERTENCIA: No hay hojas en el workbook, creando hoja vacía", file=sys.stderr)
+            ws = wb.create_sheet(title="Vacío")
+            ws.append(['No hay horarios para mostrar'])
+        
+        # Guardar en buffer
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        # Respuesta
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="horarios_centro.xlsx"'
+        
+        return response
+    
+    except Exception as e:
+        import traceback
+        print(f"ERROR en Excel: {str(e)}", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        return JsonResponse({"error": str(e)}, status=500)

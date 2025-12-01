@@ -48,7 +48,7 @@ export function useCentroHorarios() {
 
     // Filtros
     const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
-    const [filtroPrograma, setFiltroPrograma] = useState<number | string>('all');
+    const [filtroPrograma, setFiltroPrograma] = useState<string>('all');
     const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
     const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
 
@@ -172,7 +172,7 @@ export function useCentroHorarios() {
         const programa = programas.find(p => p.id === horario.programa_id);
 
         const matchFacultad = filtroFacultad === 'all' || programa?.facultad_id === parseInt(filtroFacultad);
-        const matchPrograma = filtroPrograma === 'all' || horario.programa_id === filtroPrograma;
+        const matchPrograma = filtroPrograma === 'all' || horario.programa_id === parseInt(filtroPrograma);
         const matchGrupo = filtroGrupo === 'all' || horario.grupo_nombre === filtroGrupo;
         const matchSemestre = filtroSemestre === 'all' || horario.semestre?.toString() === filtroSemestre;
 
@@ -459,6 +459,80 @@ export function useCentroHorarios() {
         setGruposExpandidos(nuevosExpandidos);
     };
 
+    const handleDescargarPDF = async () => {
+        showNotification('Preparando descarga...', 'info');
+
+        try {
+            // Usar todos los horarios cargados
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    horarios: horarios
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al generar PDF');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `horarios_centro.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showNotification('¡Horarios descargados exitosamente en PDF!', 'success');
+        } catch (error) {
+            console.error('Error al descargar PDF:', error);
+            showNotification('Error al descargar el PDF', 'error');
+        }
+    };
+
+    const handleDescargarExcel = async () => {
+        showNotification('Preparando descarga...', 'info');
+
+        try {
+            // Usar todos los horarios cargados
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    horarios: horarios
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al generar Excel');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `horarios_centro.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showNotification('¡Horarios descargados exitosamente en Excel!', 'success');
+        } catch (error) {
+            console.error('Error al descargar Excel:', error);
+            showNotification('Error al descargar el Excel', 'error');
+        }
+    };
+
     return {
         activeTab, setActiveTab,
         loading,
@@ -497,6 +571,8 @@ export function useCentroHorarios() {
         getNombrePrograma,
         getNombreEspacio,
         toggleGrupoExpandido,
+        handleDescargarPDF,
+        handleDescargarExcel,
         dias,
         notification
     };

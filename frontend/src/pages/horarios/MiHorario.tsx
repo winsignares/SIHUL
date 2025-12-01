@@ -36,18 +36,16 @@ export default function MiHorario() {
         <div className="flex gap-3">
           <Button
             onClick={handleDescargarPDF}
-            variant="outline"
-            className="flex items-center gap-2 border-slate-300"
+            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           >
-            <FileDown className="w-4 h-4" />
+            <FileDown className="w-4 h-4 mr-2" />
             Descargar en PDF
           </Button>
           <Button
             onClick={handleDescargarExcel}
-            variant="outline"
-            className="flex items-center gap-2 border-slate-300"
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
             Descargar en Excel
           </Button>
         </div>
