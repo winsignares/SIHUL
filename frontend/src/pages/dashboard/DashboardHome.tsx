@@ -14,7 +14,9 @@ import {
   FileText,
   Check,
   Loader2,
-  Calendar
+  Calendar,
+  BarChart3,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Badge } from '../../share/badge';
@@ -42,6 +44,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
     quickStats,
     occupationDetails,
     occupationStats,
+    topEspaciosOcupados,
     state,
     setters,
     handlers
@@ -143,7 +146,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
 
       {/* Grid de 2 columnas - SIN panel de perfil */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Estadísticas de Ocupación */}
+        {/* Espacios Más Ocupados */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,14 +156,18 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-slate-900">Estadísticas de Ocupación</CardTitle>
-                  <p className="text-slate-600 mt-1">Resumen semanal de uso de espacios</p>
+                  <CardTitle className="text-slate-900 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-red-600" />
+                    Espacios Más Ocupados
+                  </CardTitle>
+                  <p className="text-slate-600 mt-1">Top 10 espacios con mayor ocupación semanal</p>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowOccupationDetails(true)}
                   disabled={isLoadingOccupation}
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
                 >
                   Ver Detalles
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -173,89 +180,123 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                   <Loader2 className="w-8 h-8 animate-spin text-red-600" />
                   <span className="ml-3 text-slate-600">Cargando estadísticas...</span>
                 </div>
-              ) : occupationStats.length === 0 ? (
+              ) : topEspaciosOcupados.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   No hay datos de ocupación disponibles
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Diseño tipo gráfico de barras moderno */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {occupationStats.map((item, index) => (
+                  {topEspaciosOcupados.map((espacio, index) => {
+                    const getBarColor = (porcentaje: number) => {
+                      if (porcentaje >= 85) return 'from-red-500 to-red-600';
+                      if (porcentaje >= 70) return 'from-orange-500 to-orange-600';
+                      if (porcentaje >= 50) return 'from-amber-500 to-amber-600';
+                      if (porcentaje >= 30) return 'from-blue-500 to-blue-600';
+                      return 'from-green-500 to-green-600';
+                    };
+
+                    const getBadgeColor = (porcentaje: number) => {
+                      if (porcentaje >= 85) return 'bg-red-100 text-red-700 border-red-300';
+                      if (porcentaje >= 70) return 'bg-orange-100 text-orange-700 border-orange-300';
+                      if (porcentaje >= 50) return 'bg-amber-100 text-amber-700 border-amber-300';
+                      if (porcentaje >= 30) return 'bg-blue-100 text-blue-700 border-blue-300';
+                      return 'bg-green-100 text-green-700 border-green-300';
+                    };
+
+                    return (
                       <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 + index * 0.05 }}
-                        className="flex flex-col items-center"
+                        key={espacio.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 + index * 0.05, duration: 0.5 }}
+                        className="group"
                       >
-                        {/* Barra vertical */}
-                        <div className="w-full h-32 bg-slate-100 rounded-lg overflow-hidden relative flex flex-col justify-end">
-                          <motion.div
-                            className={`w-full bg-gradient-to-t ${item.color} relative overflow-hidden rounded-b-lg ${
-                              item.isToday ? 'ring-2 ring-red-500 ring-offset-2' : ''
-                            }`}
-                            initial={{ height: 0 }}
-                            animate={{ height: `${item.value}%` }}
-                            transition={{ delay: 0.7 + index * 0.05, duration: 0.8, ease: "easeOut" }}
-                          >
-                            <motion.div
-                              className="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-transparent"
-                              animate={{ y: ['-100%', '200%'] }}
-                              transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
-                            />
-                          </motion.div>
-                          
-                          {/* Indicador de porcentaje */}
-                          <div className="absolute top-2 left-0 right-0 text-center">
-                            <span className={`text-xs font-bold ${item.value > 50 ? 'text-white' : 'text-slate-600'}`}>
-                              {item.value}%
-                            </span>
+                        <div className="flex items-center gap-3">
+                          {/* Ranking Badge */}
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                            index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-slate-700' :
+                            index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {index + 1}
+                          </div>
+
+                          {/* Nombre del espacio */}
+                          <div className="w-44">
+                            <p className="text-slate-900 font-medium truncate">{espacio.nombre}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
+                                {espacio.tipo}
+                              </Badge>
+                              <span className="text-xs text-slate-500">Edif. {espacio.edificio}</span>
+                            </div>
+                          </div>
+
+                          {/* Barra de progreso */}
+                          <div className="flex-1">
+                            <div className="w-full bg-slate-100 rounded-full h-8 overflow-hidden relative group-hover:shadow-md transition-shadow">
+                              <motion.div
+                                className={`h-full bg-gradient-to-r ${getBarColor(espacio.porcentajeOcupacion)} relative overflow-hidden flex items-center justify-end px-3`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${espacio.porcentajeOcupacion}%` }}
+                                transition={{ duration: 0.8, delay: 0.7 + index * 0.05, ease: "easeOut" }}
+                              >
+                                {/* Efecto shimmer */}
+                                <motion.div
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                                  animate={{ x: ['-100%', '200%'] }}
+                                  transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                                />
+                                <span className="text-white font-bold text-sm z-10">
+                                  {espacio.porcentajeOcupacion.toFixed(1)}%
+                                </span>
+                              </motion.div>
+                            </div>
+                          </div>
+
+                          {/* Información adicional */}
+                          <div className="flex items-center gap-3 w-40">
+                            <div className="text-right">
+                              <p className="text-xs text-slate-500">Horas</p>
+                              <p className="text-sm font-semibold text-slate-700">
+                                {espacio.horasOcupadas}/{espacio.horasDisponibles}h
+                              </p>
+                            </div>
+                            <Badge className={`${getBadgeColor(espacio.porcentajeOcupacion)} border font-semibold`}>
+                              {espacio.porcentajeOcupacion >= 85 ? 'Crítico' :
+                               espacio.porcentajeOcupacion >= 70 ? 'Alto' :
+                               espacio.porcentajeOcupacion >= 50 ? 'Medio' : 'Bajo'}
+                            </Badge>
                           </div>
                         </div>
-                        
-                        {/* Información del día */}
-                        <div className="mt-2 text-center">
-                          <p className={`text-xs font-semibold ${item.isToday ? 'text-red-600' : 'text-slate-700'}`}>
-                            {item.dayShort}
-                          </p>
-                          {item.isToday && (
-                            <span className="text-[10px] text-red-500 font-bold">HOY</span>
-                          )}
-                        </div>
-                        
-                        {/* Tooltip con información detallada */}
-                        <div className="mt-1 text-center">
-                          <p className="text-[10px] text-slate-500">
-                            {item.espaciosOcupados}/{item.totalEspacios}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            espacios
-                          </p>
-                        </div>
                       </motion.div>
-                    ))}
-                  </div>
+                    );
+                  })}
                   
-                  {/* Leyenda de colores */}
-                  <div className="pt-4 border-t border-slate-200">
+                  {/* Leyenda */}
+                  <div className="pt-4 border-t border-slate-200 mt-4">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-green-600 rounded"></div>
-                          <span className="text-slate-600">Baja (&lt;30%)</span>
+                          <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-green-600 rounded"></div>
+                          <span className="text-slate-600">&lt;30% - Bajo</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-blue-600 rounded"></div>
-                          <span className="text-slate-600">Media (30-50%)</span>
+                          <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded"></div>
+                          <span className="text-slate-600">30-50% - Medio-Bajo</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-amber-600 rounded"></div>
-                          <span className="text-slate-600">Alta (50-70%)</span>
+                          <div className="w-3 h-3 bg-gradient-to-r from-amber-500 to-amber-600 rounded"></div>
+                          <span className="text-slate-600">50-70% - Medio</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-gradient-to-r from-red-400 to-red-600 rounded"></div>
-                          <span className="text-slate-600">Crítica (&gt;70%)</span>
+                          <div className="w-3 h-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded"></div>
+                          <span className="text-slate-600">70-85% - Alto</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-red-600 rounded"></div>
+                          <span className="text-slate-600">&gt;85% - Crítico</span>
                         </div>
                       </div>
                     </div>
@@ -430,40 +471,64 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Detalles de Ocupación */}
+      {/* Modal: Detalles de Espacios Ocupados */}
       <Dialog open={showOccupationDetails} onOpenChange={setShowOccupationDetails}>
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100">
+        <DialogContent className="!max-w-[76vw] !w-[76vw] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100">
           <DialogHeader>
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
-                📊 Detalles de Ocupación Semanal
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent flex items-center gap-2">
+                <BarChart3 className="w-7 h-7" />
+                Análisis Detallado de Ocupación de Espacios
               </DialogTitle>
               <DialogDescription className="text-slate-600 mt-2">
-                Análisis completo del uso de espacios por día y franja horaria
+                Información completa sobre ocupación semanal, jornadas y distribución por tipo de espacio
               </DialogDescription>
             </motion.div>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Resumen General con Tarjetas Mejoradas */}
+            {/* Resumen Estadístico */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
-              className="grid grid-cols-3 gap-4"
+              className="grid grid-cols-4 gap-4"
             >
-              {quickStats.map((stat, index) => {
-                const colors = [
-                  { gradient: 'from-violet-500 to-purple-600', bg: 'from-violet-500/10 to-purple-600/10', icon: 'bg-violet-500' },
-                  { gradient: 'from-blue-500 to-cyan-600', bg: 'from-blue-500/10 to-cyan-600/10', icon: 'bg-blue-500' },
-                  { gradient: 'from-emerald-500 to-teal-600', bg: 'from-emerald-500/10 to-teal-600/10', icon: 'bg-emerald-500' }
-                ];
-                const color = colors[index];
-                
+              {[
+                { 
+                  label: 'Total Espacios', 
+                  value: topEspaciosOcupados.length.toString(), 
+                  gradient: 'from-violet-500 to-purple-600', 
+                  bg: 'from-violet-500/10 to-purple-600/10',
+                  icon: MapPin
+                },
+                { 
+                  label: 'Promedio Ocupación', 
+                  value: `${(topEspaciosOcupados.reduce((sum, e) => sum + e.porcentajeOcupacion, 0) / topEspaciosOcupados.length || 0).toFixed(1)}%`,
+                  gradient: 'from-blue-500 to-cyan-600', 
+                  bg: 'from-blue-500/10 to-cyan-600/10',
+                  icon: TrendingUp
+                },
+                { 
+                  label: 'Total Horas', 
+                  value: `${topEspaciosOcupados.reduce((sum, e) => sum + e.horasOcupadas, 0)}h`,
+                  gradient: 'from-emerald-500 to-teal-600', 
+                  bg: 'from-emerald-500/10 to-teal-600/10',
+                  icon: Clock
+                },
+                { 
+                  label: 'Sobreocupados', 
+                  value: topEspaciosOcupados.filter(e => e.porcentajeOcupacion > 85).length.toString(),
+                  gradient: 'from-red-500 to-orange-600', 
+                  bg: 'from-red-500/10 to-orange-600/10',
+                  icon: AlertCircle
+                }
+              ].map((stat, index) => {
+                const Icon = stat.icon;
                 return (
                   <motion.div
                     key={index}
@@ -472,16 +537,16 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                     transition={{ delay: 0.2 + index * 0.1, duration: 0.4 }}
                     whileHover={{ scale: 1.05, y: -5 }}
                   >
-                    <Card className={`border-0 shadow-xl bg-gradient-to-br ${color.bg} backdrop-blur-sm overflow-hidden relative group cursor-pointer`}>
-                      <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${color.gradient} opacity-20 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500`}></div>
+                    <Card className={`border-0 shadow-xl bg-gradient-to-br ${stat.bg} backdrop-blur-sm overflow-hidden relative group cursor-pointer`}>
+                      <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${stat.gradient} opacity-20 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500`}></div>
                       <CardContent className="pt-6 relative">
                         <div className="text-center">
-                          <div className={`${color.icon} w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg`}>
-                            <TrendingUp className="w-6 h-6 text-white" />
+                          <div className={`bg-gradient-to-br ${stat.gradient} w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg`}>
+                            <Icon className="w-6 h-6 text-white" />
                           </div>
                           <p className="text-slate-600 text-sm mb-2 font-medium">{stat.label}</p>
                           <motion.p
-                            className={`text-3xl font-bold bg-gradient-to-r ${color.gradient} bg-clip-text text-transparent`}
+                            className={`text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
                             initial={{ scale: 0.5 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.3 + index * 0.1, type: "spring", stiffness: 200 }}
@@ -496,7 +561,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
               })}
             </motion.div>
 
-            {/* Mapa de Calor Mejorado */}
+            {/* Lista Completa de Espacios con Detalles por Jornada */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -506,112 +571,172 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
               <div className="flex items-center justify-between">
                 <h4 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-red-600" />
-                  Mapa de Calor - Ocupación por Franja Horaria
+                  Detalle de Ocupación por Jornada
                 </h4>
                 <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white border-0">
-                  Semana Actual
+                  Top {topEspaciosOcupados.length} Espacios
                 </Badge>
               </div>
               
-              {occupationDetails.map((dia, idx) => {
-                // Colores diferentes para cada día
-                const dayColors = [
-                  { border: 'border-violet-200', header: 'from-violet-500 to-purple-600', headerBg: 'from-violet-50 to-purple-50' },
-                  { border: 'border-blue-200', header: 'from-blue-500 to-cyan-600', headerBg: 'from-blue-50 to-cyan-50' },
-                  { border: 'border-emerald-200', header: 'from-emerald-500 to-teal-600', headerBg: 'from-emerald-50 to-teal-50' },
-                  { border: 'border-amber-200', header: 'from-amber-500 to-orange-600', headerBg: 'from-amber-50 to-orange-50' },
-                  { border: 'border-rose-200', header: 'from-rose-500 to-pink-600', headerBg: 'from-rose-50 to-pink-50' },
-                  { border: 'border-indigo-200', header: 'from-indigo-500 to-purple-600', headerBg: 'from-indigo-50 to-purple-50' },
-                  { border: 'border-slate-200', header: 'from-slate-500 to-gray-600', headerBg: 'from-slate-50 to-gray-50' }
-                ];
-                const dayColor = dayColors[idx % 7];
+              {topEspaciosOcupados.map((espacio, idx) => {
+                const getBarColor = (porcentaje: number) => {
+                  if (porcentaje >= 85) return 'from-red-500 to-red-600';
+                  if (porcentaje >= 70) return 'from-orange-500 to-orange-600';
+                  if (porcentaje >= 50) return 'from-amber-500 to-amber-600';
+                  if (porcentaje >= 30) return 'from-blue-500 to-blue-600';
+                  return 'from-green-500 to-green-600';
+                };
+
+                const getBorderColor = (porcentaje: number) => {
+                  if (porcentaje >= 85) return 'border-red-200';
+                  if (porcentaje >= 70) return 'border-orange-200';
+                  if (porcentaje >= 50) return 'border-amber-200';
+                  if (porcentaje >= 30) return 'border-blue-200';
+                  return 'border-green-200';
+                };
                 
                 return (
                   <motion.div
-                    key={idx}
+                    key={espacio.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + idx * 0.08, duration: 0.5 }}
+                    transition={{ delay: 0.5 + idx * 0.05, duration: 0.5 }}
                   >
-                    <Card className={`border-2 ${dayColor.border} hover:shadow-2xl transition-all duration-300 overflow-hidden group`}>
-                      <div className={`bg-gradient-to-r ${dayColor.header} p-4`}>
+                    <Card className={`border-2 ${getBorderColor(espacio.porcentajeOcupacion)} hover:shadow-2xl transition-all duration-300 overflow-hidden group`}>
+                      <div className={`bg-gradient-to-r ${getBarColor(espacio.porcentajeOcupacion)} p-4`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
-                              <Calendar className="w-5 h-5 text-white" />
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${
+                              idx === 0 ? 'bg-yellow-400 text-yellow-900' :
+                              idx === 1 ? 'bg-slate-300 text-slate-700' :
+                              idx === 2 ? 'bg-orange-400 text-orange-900' :
+                              'bg-white/20 backdrop-blur-sm text-white'
+                            }`}>
+                              {idx + 1}
                             </div>
-                            <h5 className="text-white text-lg font-bold">{dia.day}</h5>
+                            <div>
+                              <h5 className="text-white text-lg font-bold">{espacio.nombre}</h5>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
+                                  {espacio.tipo}
+                                </Badge>
+                                <span className="text-white/90 text-xs">Edif. {espacio.edificio}</span>
+                                <span className="text-white/90 text-xs">• Cap: {espacio.capacidad} pers.</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 font-semibold">
-                              {dia.franjas.reduce((sum, f) => sum + (f.espaciosUsados || 0), 0)} espacios usados
-                            </Badge>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-white text-3xl font-bold">{espacio.porcentajeOcupacion.toFixed(1)}%</p>
+                              <p className="text-white/90 text-sm">{espacio.horasOcupadas}/{espacio.horasDisponibles}h ocupadas</p>
+                            </div>
                             <motion.div
                               whileHover={{ rotate: 360 }}
                               transition={{ duration: 0.5 }}
                             >
-                              <Activity className="w-5 h-5 text-white" />
+                              <Activity className="w-6 h-6 text-white" />
                             </motion.div>
                           </div>
                         </div>
                       </div>
                       
-                      <CardContent className={`pt-6 bg-gradient-to-br ${dayColor.headerBg}`}>
-                        <div className="space-y-3">
-                          {dia.franjas.map((franja, fidx) => (
-                            <motion.div
-                              key={fidx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.6 + idx * 0.05 + fidx * 0.03, duration: 0.4 }}
-                              className="flex items-center gap-3"
-                            >
-                              <div className="flex items-center gap-2 w-36">
-                                <Clock className="w-4 h-4 text-slate-500" />
-                                <span className="text-slate-700 text-sm font-semibold">{franja.hora}</span>
+                      <CardContent className="pt-6 bg-white">
+                        <div className="grid grid-cols-3 gap-4">
+                          {/* Jornada Mañana */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 + idx * 0.05, duration: 0.4 }}
+                            className="space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"></div>
+                                <span className="text-slate-700 font-semibold text-sm">☀️ Mañana</span>
                               </div>
-                              <div className="flex-1 bg-white rounded-xl h-12 overflow-hidden relative group/bar shadow-sm border border-slate-200">
+                              <Badge variant="outline" className="text-xs">
+                                {espacio.jornada.manana}%
+                              </Badge>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                              <motion.div
+                                className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 relative"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${espacio.jornada.manana}%` }}
+                                transition={{ duration: 0.8, delay: 0.7 + idx * 0.05 }}
+                              >
                                 <motion.div
-                                  className={`bg-gradient-to-r ${franja.color} h-12 rounded-xl flex items-center justify-between px-4 text-white text-sm font-bold relative overflow-hidden shadow-lg`}
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${franja.ocupacion}%` }}
-                                  transition={{ delay: 0.7 + idx * 0.05 + fidx * 0.03, duration: 0.8, ease: "easeOut" }}
-                                  whileHover={{ scale: 1.03 }}
-                                >
-                                  <span className="relative z-10 flex items-center gap-2">
-                                    <span className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">
-                                      {franja.ocupacion}%
-                                    </span>
-                                  </span>
-                                  <span className="relative z-10 flex items-center gap-2 bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">
-                                    <MapPin className="w-3 h-3" />
-                                    {franja.espaciosUsados}/{franja.totalEspacios}
-                                  </span>
-                                  
-                                  {/* Animación de brillo */}
-                                  <motion.div
-                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                                    animate={{ x: ['-100%', '200%'] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
-                                  />
-                                  
-                                  {/* Patrón de fondo */}
-                                  <div className="absolute inset-0 opacity-10" style={{
-                                    backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-                                    backgroundSize: '10px 10px'
-                                  }}></div>
-                                </motion.div>
-                                
-                                {/* Tooltip mejorado */}
-                                <div className="absolute -top-14 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-lg text-xs opacity-0 group-hover/bar:opacity-100 transition-opacity shadow-xl whitespace-nowrap pointer-events-none z-20">
-                                  <div className="font-bold mb-1">📊 {franja.hora}</div>
-                                  <div>{franja.espaciosUsados} de {franja.totalEspacios} espacios ocupados</div>
-                                  <div className="text-[10px] text-slate-300 mt-1">Ocupación: {franja.ocupacion}%</div>
-                                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-slate-900"></div>
-                                </div>
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                                  animate={{ x: ['-100%', '200%'] }}
+                                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                                />
+                              </motion.div>
+                            </div>
+                          </motion.div>
+
+                          {/* Jornada Tarde */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.65 + idx * 0.05, duration: 0.4 }}
+                            className="space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full"></div>
+                                <span className="text-slate-700 font-semibold text-sm">🌤️ Tarde</span>
                               </div>
-                            </motion.div>
-                          ))}
+                              <Badge variant="outline" className="text-xs">
+                                {espacio.jornada.tarde}%
+                              </Badge>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                              <motion.div
+                                className="h-full bg-gradient-to-r from-blue-400 to-cyan-500 relative"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${espacio.jornada.tarde}%` }}
+                                transition={{ duration: 0.8, delay: 0.75 + idx * 0.05 }}
+                              >
+                                <motion.div
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                                  animate={{ x: ['-100%', '200%'] }}
+                                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                                />
+                              </motion.div>
+                            </div>
+                          </motion.div>
+
+                          {/* Jornada Noche */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.7 + idx * 0.05, duration: 0.4 }}
+                            className="space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full"></div>
+                                <span className="text-slate-700 font-semibold text-sm">🌙 Noche</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {espacio.jornada.noche}%
+                              </Badge>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                              <motion.div
+                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 relative"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${espacio.jornada.noche}%` }}
+                                transition={{ duration: 0.8, delay: 0.8 + idx * 0.05 }}
+                              >
+                                <motion.div
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                                  animate={{ x: ['-100%', '200%'] }}
+                                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                                />
+                              </motion.div>
+                            </div>
+                          </motion.div>
                         </div>
                       </CardContent>
                     </Card>
