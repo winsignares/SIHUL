@@ -1840,6 +1840,7 @@ def reporte_capacidad(request):
 def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
     """
     Calcula la capacidad utilizada agrupada por tipo de espacio.
+    Usa el promedio de estudiantes simultáneos en cada franja horaria.
     Retorna: lista con capacidad por tipo de espacio
     """
     try:
@@ -1852,7 +1853,7 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
             if tipo_nombre not in capacidad_por_tipo:
                 capacidad_por_tipo[tipo_nombre] = {
                     "capacidad_total": 0,
-                    "capacidad_usada": 0,
+                    "ocupaciones": [],  # Lista de ocupaciones por espacio
                     "cantidad_espacios": 0
                 }
             
@@ -1860,8 +1861,8 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
             capacidad_por_tipo[tipo_nombre]["capacidad_total"] += espacio.capacidad
             capacidad_por_tipo[tipo_nombre]["cantidad_espacios"] += 1
             
-            # Calcular la capacidad usada en este espacio
-            capacidad_usada_espacio = 0
+            # Rastrear estudiantes únicos que usan este espacio
+            estudiantes_por_dia = {}
             
             # Recorrer cada día de la semana
             fecha_actual = lunes
@@ -1869,7 +1870,9 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios (clases)
+                estudiantes_este_dia = set()
+                
+                # Obtener horarios (clases) para este día
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
                     dia_semana__iexact=dia_nombre_es
@@ -1881,41 +1884,61 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
                         dia_semana__iexact=dia_nombre_en
                     )
                 
-                # Sumar capacidad usada de horarios
+                # Contar estudiantes en horarios
                 for horario in horarios_dia:
                     if horario.grupo:
-                        # Usar el tamaño del grupo como capacidad usada
-                        # Si el grupo no tiene un campo de estudiantes, contar registros
-                        from grupos.models import Grupo
                         try:
+                            from grupos.models import Grupo
                             grupo = Grupo.objects.get(id=horario.grupo.id)
-                            capacidad_usada_espacio += grupo.estudiantes.count()
+                            grupo_size = grupo.estudiantes.count()
+                            if grupo_size > 0:
+                                estudiantes_este_dia.add(f"horario_{horario.id}")
+                                estudiantes_por_dia[fecha_actual] = grupo_size
                         except:
-                            capacidad_usada_espacio += 30  # Asumir 30 estudiantes por defecto
+                            estudiantes_por_dia[fecha_actual] = 30  # Default
                 
-                # Obtener préstamos aprobados
+                # Obtener préstamos aprobados para este día
                 prestamos_dia = PrestamoEspacio.objects.filter(
                     espacio=espacio,
                     fecha=fecha_actual,
                     estado='Aprobado'
                 )
                 
-                # Sumar capacidad usada de préstamos (asumir ocupación promedio)
+                # Contar préstamos (cada préstamo = ocupación)
                 for prestamo in prestamos_dia:
-                    capacidad_usada_espacio += int(espacio.capacidad * 0.5)  # 50% de ocupación por préstamo
+                    estudiantes_este_dia.add(f"prestamo_{prestamo.id}")
+                    if fecha_actual not in estudiantes_por_dia:
+                        estudiantes_por_dia[fecha_actual] = int(espacio.capacidad * 0.3)  # 30% de ocupación
                 
                 fecha_actual += timedelta(days=1)
             
-            capacidad_por_tipo[tipo_nombre]["capacidad_usada"] += capacidad_usada_espacio
+            # Calcular ocupación promedio para este espacio
+            if estudiantes_por_dia:
+                ocupacion_promedio = sum(estudiantes_por_dia.values()) / len(estudiantes_por_dia)
+            else:
+                ocupacion_promedio = 0
+            
+            capacidad_por_tipo[tipo_nombre]["ocupaciones"].append(ocupacion_promedio)
         
         # Convertir a lista y calcular porcentajes
         capacidad = []
         for tipo_nombre, datos in capacidad_por_tipo.items():
-            porcentaje = int((datos["capacidad_usada"] / datos["capacidad_total"] * 100)) if datos["capacidad_total"] > 0 else 0
+            # Calcular capacidad usada como el promedio de ocupaciones
+            capacidad_usada_promedio = sum(datos["ocupaciones"]) if datos["ocupaciones"] else 0
+            capacidad_usada_promedio = int(capacidad_usada_promedio)
+            
+            # Asegurar que no supere la capacidad total
+            capacidad_usada_promedio = min(capacidad_usada_promedio, datos["capacidad_total"])
+            
+            porcentaje = int((capacidad_usada_promedio / datos["capacidad_total"] * 100)) if datos["capacidad_total"] > 0 else 0
+            
+            # Limitar porcentaje al 100%
+            porcentaje = min(porcentaje, 100)
+            
             capacidad.append({
                 "tipo": tipo_nombre,
                 "capacidadTotal": datos["capacidad_total"],
-                "capacidadUsada": datos["capacidad_usada"],
+                "capacidadUsada": capacidad_usada_promedio,
                 "porcentaje": porcentaje
             })
         
