@@ -14,6 +14,8 @@ urlpatterns = [
     path('inscribir-estudiante/', views.inscribir_estudiante, name='inscribir_estudiante'),
     path('exportar-pdf/', views.exportar_horarios_pdf_post, name='exportar_horario_pdf'),
     path('exportar-excel/', views.exportar_horarios_excel_post, name='exportar_horario_excel'),
+    path('exportar-pdf-docente/', views.exportar_horarios_pdf_docente, name='exportar_horario_pdf_docente'),
+    path('exportar-excel-docente/', views.exportar_horarios_excel_docente, name='exportar_horario_excel_docente'),
     path('exportar-pdf-usuario/', views.exportar_pdf_usuario, name='exportar_pdf_usuario'),
     path('exportar-excel-usuario/', views.exportar_excel_usuario, name='exportar_excel_usuario'),
     

@@ -95,6 +95,10 @@ export function useReportes() {
     const [grupoSeleccionado, setGrupoSeleccionado] = useState<string | null>(null);
     const [horariosPrograma, setHorariosPrograma] = useState<HorarioPrograma[]>([]);
     const [programas, setProgramas] = useState<string[]>([]);
+    const [horariosDocenteData, setHorariosDocenteData] = useState<HorarioDocente[]>([]);
+    const [docentes, setDocentes] = useState<string[]>([]);
+    const [docenteSeleccionado, setDocenteSeleccionado] = useState<string | null>(null);
+    const [showHorarioDocenteModal, setShowHorarioDocenteModal] = useState(false);
 
     // Cargar horarios del backend cuando el componente monta
     useEffect(() => {
@@ -122,6 +126,24 @@ export function useReportes() {
                 }));
 
                 setHorariosPrograma(horariosTransformados);
+
+                // Transformar horarios a formato HorarioDocente
+                const horariosDocenteTransformados: HorarioDocente[] = horariosExtendidos.map(h => ({
+                    dia: h.dia_semana.charAt(0).toUpperCase() + h.dia_semana.slice(1).toLowerCase(),
+                    hora: `${h.hora_inicio}-${h.hora_fin}`,
+                    asignatura: h.asignatura_nombre,
+                    grupo: h.grupo_nombre,
+                    espacio: h.espacio_nombre,
+                    docente: h.docente_nombre,
+                    docente_id: h.docente_id,
+                    facultad: h.programa_nombre // Usar nombre del programa como facultad por ahora
+                }));
+
+                setHorariosDocenteData(horariosDocenteTransformados);
+
+                // Obtener lista única de docentes
+                const docentesUnicos = ['Todos', ...new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))];
+                setDocentes(docentesUnicos);
             } catch (error) {
                 console.error('Error al cargar horarios:', error);
             }
@@ -240,6 +262,41 @@ export function useReportes() {
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `horarios_programa.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                return;
+            }
+
+            // Si es horarios-docente, usar el endpoint del backend para docentes
+            if (tipoReporte === 'horarios-docente') {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                
+                // Cargar todos los horarios extendidos del backend
+                const horariosResponse = await horarioService.listExtendidos();
+                const todosLosHorarios = horariosResponse.horarios;
+                
+                const response = await fetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        horarios: todosLosHorarios
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al generar PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `horarios_docente.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -381,6 +438,54 @@ export function useReportes() {
                 return;
             }
 
+            // Si es horarios-docente, usar el endpoint del backend para docentes
+            if (tipoReporte === 'horarios-docente') {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                
+                try {
+                    // Cargar todos los horarios extendidos del backend
+                    const horariosResponse = await horarioService.listExtendidos();
+                    const todosLosHorarios = horariosResponse.horarios;
+                    
+                    console.log('Enviando horarios al endpoint:', todosLosHorarios.length);
+                    
+                    const response = await fetch(`${apiUrl}/horario/exportar-excel-docente/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            horarios: todosLosHorarios
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Error response:', errorText);
+                        throw new Error(`Error al generar Excel: ${response.status}`);
+                    }
+
+                    const blob = await response.blob();
+                    console.log('Blob recibido:', blob.size, 'bytes');
+                    
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `horarios_docente.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    console.log('Excel descargado exitosamente');
+                } catch (error) {
+                    console.error('Error en exportarExcel (horarios-docente):', error);
+                    throw error;
+                }
+                
+                return;
+            }
+
             // Para otros reportes, generar Excel localmente
             const XLSX = await import('xlsx');
             const workbook = XLSX.utils.book_new();
@@ -448,6 +553,15 @@ export function useReportes() {
         return horariosPrograma.filter(h => h.grupo === grupo);
     };
 
+    const handleVerHorarioDocente = (docente: string) => {
+        setDocenteSeleccionado(docente);
+        setShowHorarioDocenteModal(true);
+    };
+
+    const obtenerHorariosDocente = (docente: string) => {
+        return horariosDocenteData.filter(h => h.docente === docente);
+    };
+
     return {
         PERIODO_TRABAJO,
         tipoReporte,
@@ -458,7 +572,7 @@ export function useReportes() {
         setFiltroPrograma,
         datosOcupacion,
         espaciosMasUsados,
-        horariosDocente,
+        horariosDocente: horariosDocenteData,
         horariosPrograma,
         disponibilidadEspacios,
         capacidadUtilizada,
@@ -478,6 +592,12 @@ export function useReportes() {
         grupoSeleccionado,
         setGrupoSeleccionado,
         handleVerHorarioGrupo,
-        obtenerHorariosGrupo
+        obtenerHorariosGrupo,
+        docenteSeleccionado,
+        setDocenteSeleccionado,
+        showHorarioDocenteModal,
+        setShowHorarioDocenteModal,
+        handleVerHorarioDocente,
+        obtenerHorariosDocente
     };
 }

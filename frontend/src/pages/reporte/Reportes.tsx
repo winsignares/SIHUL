@@ -8,7 +8,7 @@ import { Toaster } from '../../share/sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReportes } from '../../hooks/reporte/useReportes';
-import type { HorarioPrograma } from '../../models/reporte/reportes-general.model';
+import type { HorarioPrograma, HorarioDocente } from '../../models/reporte/reportes-general.model';
 
 export default function Reportes() {
   const {
@@ -40,7 +40,12 @@ export default function Reportes() {
     setShowHorarioModal,
     grupoSeleccionado,
     handleVerHorarioGrupo,
-    obtenerHorariosGrupo
+    obtenerHorariosGrupo,
+    docenteSeleccionado,
+    showHorarioDocenteModal,
+    setShowHorarioDocenteModal,
+    handleVerHorarioDocente,
+    obtenerHorariosDocente
   } = useReportes();
 
   const renderReporteContent = () => {
@@ -135,50 +140,69 @@ export default function Reportes() {
         );
 
       case 'horarios-docente':
+        // Agrupar horarios por docente
+        const docentesAgrupados = horariosDocente
+          .reduce((acc, horario) => {
+            const key = horario.docente;
+            if (!acc[key]) {
+              acc[key] = {
+                docente: horario.docente,
+                facultad: horario.facultad,
+                horarios: []
+              };
+            }
+            acc[key].horarios.push(horario);
+            return acc;
+          }, {} as Record<string, { docente: string; facultad?: string; horarios: HorarioDocente[] }>);
+
+        const docentesListaAgrupada = Object.values(docentesAgrupados);
+
         return (
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Docente</CardTitle>
-                <Select value={filtroDocente} onValueChange={setFiltroDocente}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Seleccionar docente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {docentes.map(doc => (
-                      <SelectItem key={doc} value={doc.toLowerCase()}>{doc}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Docente</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Día</TableHead>
-                    <TableHead>Horario</TableHead>
-                    <TableHead>Asignatura</TableHead>
-                    <TableHead>Grupo</TableHead>
-                    <TableHead>Espacio</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {horariosDocente.map((horario, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="text-slate-900 dark:text-slate-100">{horario.dia}</TableCell>
-                      <TableCell className="text-slate-900 dark:text-slate-100">{horario.hora}</TableCell>
-                      <TableCell className="text-slate-900 dark:text-slate-100">{horario.asignatura}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400">
-                          {horario.grupo}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">{horario.espacio}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {docentesListaAgrupada.length === 0 ? (
+                <div className="text-center py-12">
+                  <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-600 mb-2">No se encontraron docentes</p>
+                  <p className="text-slate-500">Intenta ajustar los filtros de búsqueda</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-100">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-slate-700">Facultad</th>
+                        <th className="px-4 py-3 text-left text-slate-700">Nombre Docente</th>
+                        <th className="px-4 py-3 text-center text-slate-700">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {docentesListaAgrupada.map((item) => (
+                        <tr key={item.docente} className="border-t border-slate-200 hover:bg-slate-50">
+                          <td className="px-4 py-3 text-slate-900">{item.facultad || 'N/A'}</td>
+                          <td className="px-4 py-3 text-slate-900">{item.docente}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                onClick={() => handleVerHorarioDocente(item.docente)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Horario
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         );
@@ -605,6 +629,136 @@ export default function Reportes() {
           )}
           <DialogFooter>
             <Button onClick={() => setShowHorarioModal(false)} className="bg-blue-600 hover:bg-blue-700">
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Horario por Docente */}
+      <Dialog open={showHorarioDocenteModal} onOpenChange={setShowHorarioDocenteModal}>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-blue-600" />
+              Horario Completo del Docente {docenteSeleccionado}
+            </DialogTitle>
+          </DialogHeader>
+          {docenteSeleccionado && (
+            <div className="space-y-6 py-4">
+              {/* Información del Docente */}
+              <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-slate-600 text-sm mb-1">Docente</p>
+                      <Badge className="bg-blue-600">{docenteSeleccionado}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 text-sm mb-1">Total de Clases</p>
+                      <p className="text-slate-900">{obtenerHorariosDocente(docenteSeleccionado).length} clases</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Grid Semanal */}
+              <div className="bg-white rounded-xl shadow-2xl overflow-hidden border-2 border-slate-200">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-slate-800 to-slate-900">
+                        <th className="border-2 border-slate-300 p-4 text-white w-24">
+                          <Clock className="w-5 h-5 mx-auto mb-1" />
+                          Hora
+                        </th>
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
+                          <th key={dia} className="border-2 border-slate-300 p-4 text-white">
+                            {dia}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'].map((hora) => (
+                        <tr key={hora} className="hover:bg-slate-50 transition-colors">
+                          <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center text-slate-700">
+                            {hora}
+                          </td>
+                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+                            const horariosDelDocente = obtenerHorariosDocente(docenteSeleccionado);
+                            const clase = horariosDelDocente.find(h => {
+                              const diaMatch = h.dia.toLowerCase() === dia;
+                              if (!diaMatch) return false;
+                              
+                              // Parsear el rango de horas (ej: "10:00-12:00")
+                              const [horaInicio, horaFin] = h.hora.split('-');
+                              const horaActual = parseInt(hora.split(':')[0]);
+                              const horaInicioNum = parseInt(horaInicio.split(':')[0]);
+                              const horaFinNum = parseInt(horaFin.split(':')[0]);
+                              
+                              // Verificar si la hora actual está dentro del rango
+                              return horaActual >= horaInicioNum && horaActual < horaFinNum;
+                            });
+                            
+                            return (
+                              <td
+                                key={dia}
+                                className={`border-2 border-slate-300 p-2 transition-all ${clase
+                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 cursor-pointer'
+                                  : 'bg-white hover:bg-slate-50'
+                                  }`}
+                              >
+                                {clase ? (
+                                  <motion.div
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="h-full min-h-[120px] flex flex-col justify-center items-center text-white p-3 rounded-lg"
+                                  >
+                                    <div className="text-center space-y-2 w-full">
+                                      <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm mb-2">
+                                        <p className="text-sm mb-1">{clase.asignatura}</p>
+                                        <p className="text-xs text-yellow-200">{clase.grupo}</p>
+                                      </div>
+                                      <div className="flex items-center justify-center gap-2 bg-white/10 rounded-md p-1.5">
+                                        <MapPin className="w-4 h-4 text-yellow-300" />
+                                        <span className="text-sm">{clase.espacio}</span>
+                                      </div>
+                                      <div className="text-xs text-yellow-100 mt-1">
+                                        {clase.hora}
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                ) : (
+                                  <div className="h-full min-h-[120px] flex items-center justify-center">
+                                    <span className="text-slate-300 text-xs">—</span>
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Leyenda */}
+              <div className="flex items-center justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded"></div>
+                  <span className="text-slate-600">Clase asignada</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-white border-2 border-slate-300 rounded"></div>
+                  <span className="text-slate-600">Hora libre</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShowHorarioDocenteModal(false)} className="bg-blue-600 hover:bg-blue-700">
               Cerrar
             </Button>
           </DialogFooter>

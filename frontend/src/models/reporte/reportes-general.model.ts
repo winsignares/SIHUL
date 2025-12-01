@@ -5,6 +5,8 @@ export interface HorarioDocente {
     grupo: string;
     espacio: string;
     docente: string;
+    facultad?: string;
+    docente_id?: number;
 }
 
 export interface HorarioPrograma {
