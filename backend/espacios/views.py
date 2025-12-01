@@ -3,9 +3,12 @@ from .models import EspacioFisico, EspacioPermitido, TipoEspacio
 from sedes.models import Sede
 from usuarios.models import Usuario
 from recursos.models import Recurso, EspacioRecurso
+from horario.models import Horario
+from prestamos.models import PrestamoEspacio
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime, timedelta
 
 # ---------- TipoEspacio CRUD ----------
 @csrf_exempt
@@ -378,3 +381,213 @@ def list_espacios_by_usuario(request, usuario_id=None):
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+# ========== APERTURA Y CIERRE DE SALONES ==========
+def get_dia_semana_actual():
+    """Retorna el día de la semana en español"""
+    dias = {
+        0: 'Lunes',
+        1: 'Martes', 
+        2: 'Miércoles',
+        3: 'Jueves',
+        4: 'Viernes',
+        5: 'Sábado',
+        6: 'Domingo'
+    }
+    return dias[datetime.now().weekday()]
+
+
+@csrf_exempt
+def proximos_apertura_cierre(request):
+    """
+    Endpoint para obtener las aperturas y cierres pendientes de salones
+    para el Supervisor General autenticado.
+    
+    Retorna:
+    - aperturasPendientes: Lista de espacios que están por abrir (15 min antes)
+    - cierresPendientes: Lista de espacios que están por cerrar (5 min antes)
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    try:
+        # Obtener usuario autenticado del contexto de auth
+        # El frontend envía el user_id en localStorage como 'user'
+        from usuarios.models import Usuario
+        
+        # Intentar obtener userId del token/header o del contexto de sesión
+        usuario_id = request.session.get('user_id')
+        
+        # Si no está en sesión, intentar del query param (para pruebas/desarrollo)
+        if not usuario_id:
+            # Buscar en cookies o headers
+            auth_user = request.COOKIES.get('user_id')
+            if auth_user:
+                usuario_id = auth_user
+        
+        # Si aún no encontramos el user, intentar extraerlo del contexto de React
+        # Para desarrollo, podemos usar query params temporalmente
+        if not usuario_id:
+            usuario_id = request.GET.get('user_id')
+        
+        if not usuario_id:
+            return JsonResponse({
+                "error": "Usuario no autenticado. Por favor inicia sesión.",
+                "aperturasPendientes": [],
+                "cierresPendientes": [],
+                "horaActual": datetime.now().strftime('%H:%M'),
+                "diaActual": get_dia_semana_actual(),
+                "fechaActual": datetime.now().date().strftime('%Y-%m-%d')
+            }, status=200)  # Cambiado a 200 para no bloquear la UI
+        
+        # Obtener hora actual del servidor
+        ahora = datetime.now()
+        hora_actual = ahora.time()
+        fecha_actual = ahora.date()
+        dia_actual = get_dia_semana_actual()
+        
+        # Obtener espacios permitidos para este usuario
+        espacios_permitidos = EspacioPermitido.objects.filter(
+            usuario_id=usuario_id
+        ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        
+        if not espacios_permitidos.exists():
+            return JsonResponse({
+                "aperturasPendientes": [],
+                "cierresPendientes": [],
+                "horaActual": hora_actual.strftime('%H:%M'),
+                "diaActual": dia_actual,
+                "fechaActual": fecha_actual.strftime('%Y-%m-%d')
+            }, status=200)
+        
+        # Extraer IDs de espacios
+        espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+        
+        # Crear un mapa de espacios para fácil acceso
+        espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
+        
+        # Listas para almacenar resultados
+        aperturas_pendientes = []
+        cierres_pendientes = []
+        
+        # ========== CONSULTAR HORARIOS ==========
+        # Buscar horarios del día actual en los espacios permitidos
+        horarios = Horario.objects.filter(
+            espacio_id__in=espacios_ids,
+            dia_semana=dia_actual
+        ).select_related('espacio', 'espacio__sede', 'espacio__tipo', 'asignatura', 'docente')
+        
+        for horario in horarios:
+            espacio = espacios_map.get(horario.espacio.id)
+            if not espacio:
+                continue
+            
+            # Calcular ventana de apertura (15 minutos antes)
+            hora_apertura_inicio = (
+                datetime.combine(fecha_actual, horario.hora_inicio) - timedelta(minutes=15)
+            ).time()
+            hora_apertura_fin = horario.hora_inicio
+            
+            # Calcular ventana de cierre (5 minutos antes)
+            hora_cierre_inicio = (
+                datetime.combine(fecha_actual, horario.hora_fin) - timedelta(minutes=5)
+            ).time()
+            hora_cierre_fin = horario.hora_fin
+            
+            # Verificar si está en ventana de apertura
+            if hora_apertura_inicio <= hora_actual < hora_apertura_fin:
+                aperturas_pendientes.append({
+                    "idEspacio": espacio.id,
+                    "nombreEspacio": espacio.nombre,
+                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                    "piso": espacio.ubicacion or "No especificado",
+                    "tipoUso": "Clase",
+                    "asignatura": horario.asignatura.nombre if horario.asignatura else "Sin asignatura",
+                    "docente": horario.docente.nombre if horario.docente else "Sin docente",
+                    "horaInicio": horario.hora_inicio.strftime('%H:%M'),
+                    "horaFin": horario.hora_fin.strftime('%H:%M'),
+                    "diaSemana": dia_actual
+                })
+            
+            # Verificar si está en ventana de cierre
+            if hora_cierre_inicio <= hora_actual < hora_cierre_fin:
+                cierres_pendientes.append({
+                    "idEspacio": espacio.id,
+                    "nombreEspacio": espacio.nombre,
+                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                    "piso": espacio.ubicacion or "No especificado",
+                    "tipoUso": "Clase",
+                    "asignatura": horario.asignatura.nombre if horario.asignatura else "Sin asignatura",
+                    "docente": horario.docente.nombre if horario.docente else "Sin docente",
+                    "horaInicio": horario.hora_inicio.strftime('%H:%M'),
+                    "horaFin": horario.hora_fin.strftime('%H:%M'),
+                    "diaSemana": dia_actual
+                })
+        
+        # ========== CONSULTAR PRÉSTAMOS ==========
+        # Buscar préstamos del día actual en los espacios permitidos
+        prestamos = PrestamoEspacio.objects.filter(
+            espacio_id__in=espacios_ids,
+            fecha=fecha_actual,
+            estado='Aprobado'  # Solo préstamos aprobados
+        ).select_related('espacio', 'espacio__sede', 'espacio__tipo', 'usuario', 'tipo_actividad')
+        
+        for prestamo in prestamos:
+            espacio = espacios_map.get(prestamo.espacio.id)
+            if not espacio:
+                continue
+            
+            # Calcular ventana de apertura (15 minutos antes)
+            hora_apertura_inicio = (
+                datetime.combine(fecha_actual, prestamo.hora_inicio) - timedelta(minutes=15)
+            ).time()
+            hora_apertura_fin = prestamo.hora_inicio
+            
+            # Calcular ventana de cierre (5 minutos antes)
+            hora_cierre_inicio = (
+                datetime.combine(fecha_actual, prestamo.hora_fin) - timedelta(minutes=5)
+            ).time()
+            hora_cierre_fin = prestamo.hora_fin
+            
+            # Verificar si está en ventana de apertura
+            if hora_apertura_inicio <= hora_actual < hora_apertura_fin:
+                aperturas_pendientes.append({
+                    "idEspacio": espacio.id,
+                    "nombreEspacio": espacio.nombre,
+                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                    "piso": espacio.ubicacion or "No especificado",
+                    "tipoUso": "Préstamo",
+                    "tipoActividad": prestamo.tipo_actividad.nombre if prestamo.tipo_actividad else "Sin especificar",
+                    "solicitante": prestamo.usuario.nombre if prestamo.usuario else "Sin solicitante",
+                    "horaInicio": prestamo.hora_inicio.strftime('%H:%M'),
+                    "horaFin": prestamo.hora_fin.strftime('%H:%M'),
+                    "fecha": prestamo.fecha.strftime('%Y-%m-%d')
+                })
+            
+            # Verificar si está en ventana de cierre
+            if hora_cierre_inicio <= hora_actual < hora_cierre_fin:
+                cierres_pendientes.append({
+                    "idEspacio": espacio.id,
+                    "nombreEspacio": espacio.nombre,
+                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                    "piso": espacio.ubicacion or "No especificado",
+                    "tipoUso": "Préstamo",
+                    "tipoActividad": prestamo.tipo_actividad.nombre if prestamo.tipo_actividad else "Sin especificar",
+                    "solicitante": prestamo.usuario.nombre if prestamo.usuario else "Sin solicitante",
+                    "horaInicio": prestamo.hora_inicio.strftime('%H:%M'),
+                    "horaFin": prestamo.hora_fin.strftime('%H:%M'),
+                    "fecha": prestamo.fecha.strftime('%Y-%m-%d')
+                })
+        
+        return JsonResponse({
+            "aperturasPendientes": aperturas_pendientes,
+            "cierresPendientes": cierres_pendientes,
+            "horaActual": hora_actual.strftime('%H:%M'),
+            "diaActual": dia_actual,
+            "fechaActual": fecha_actual.strftime('%Y-%m-%d')
+        }, status=200)
+        
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+

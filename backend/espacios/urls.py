@@ -19,4 +19,7 @@ urlpatterns = [
     path('permitido/<int:id>/', views.get_espacio_permitido, name='get_espacio_permitido'),
     path('permitido/delete/', views.delete_espacio_permitido, name='delete_espacio_permitido'),
     path('permitido/usuario/<int:usuario_id>/', views.list_espacios_by_usuario, name='list_espacios_by_usuario'),
+    
+    # Apertura y cierre de salones
+    path('apertura-cierre/proximos/', views.proximos_apertura_cierre, name='proximos_apertura_cierre'),
 ]

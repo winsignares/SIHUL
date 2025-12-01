@@ -184,3 +184,56 @@ export const espacioPermitidoService = {
         return apiClient.get<ListEspaciosByUsuarioResponse>(`/espacios/permitido/usuario/${usuario_id}/`);
     }
 };
+
+/**
+ * Interfaz para el modelo de apertura/cierre de salones
+ */
+export interface SalonAperturaCierre {
+    idEspacio: number;
+    nombreEspacio: string;
+    sede: string;
+    piso: string;
+    tipoUso: 'Clase' | 'Préstamo';
+    asignatura?: string;
+    docente?: string;
+    tipoActividad?: string;
+    solicitante?: string;
+    horaInicio: string;
+    horaFin: string;
+    diaSemana?: string;
+    fecha?: string;
+}
+
+/**
+ * Respuesta del endpoint de proximos apertura/cierre
+ */
+export interface ProximosAperturaCierreResponse {
+    aperturasPendientes: SalonAperturaCierre[];
+    cierresPendientes: SalonAperturaCierre[];
+    horaActual: string;
+    diaActual: string;
+    fechaActual: string;
+}
+
+/**
+ * Servicio para gestión de apertura y cierre de salones
+ */
+export const aperturaCierreService = {
+    /**
+     * Obtiene los salones próximos a abrir (15 min antes) y cerrar (5 min antes)
+     * para el usuario autenticado (Supervisor General)
+     */
+    getProximos: async (): Promise<ProximosAperturaCierreResponse> => {
+        // Obtener user_id del localStorage (AuthContext)
+        const userStr = localStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        const userId = user?.id;
+
+        // Si hay userId, enviarlo como query param
+        const endpoint = userId
+            ? `/espacios/apertura-cierre/proximos/?user_id=${userId}`
+            : '/espacios/apertura-cierre/proximos/';
+
+        return apiClient.get<ProximosAperturaCierreResponse>(endpoint);
+    }
+};
