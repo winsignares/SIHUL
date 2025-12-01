@@ -437,10 +437,16 @@ export default function PeriodosAcademicos() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-slate-600 dark:text-slate-400">
-                Se creará un nuevo periodo basado en la configuración del periodo seleccionado.
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <p className="text-slate-900 dark:text-slate-100 font-semibold mb-2">
+                ⚠️ Atención: Los grupos se moverán al nuevo periodo
               </p>
+              <ul className="text-slate-600 dark:text-slate-400 space-y-1 ml-4">
+                <li>• Se creará el nuevo periodo con las fechas especificadas</li>
+                <li>• Los grupos del periodo <strong>{periodoACopiar?.nombre}</strong> se trasladarán al nuevo periodo</li>
+                <li>• El periodo <strong>{periodoACopiar?.nombre}</strong> quedará sin grupos</li>
+                <li className="text-amber-700 dark:text-amber-400 font-medium">⚠ Los horarios asociados se mantendrán con los grupos</li>
+              </ul>
             </div>
             <div className="space-y-2">
               <Label>Nombre del Nuevo Periodo *</Label>

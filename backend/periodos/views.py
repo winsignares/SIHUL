@@ -127,3 +127,64 @@ def list_periodos(request):
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def copy_periodo(request):
+    """Copia un periodo académico junto con todos sus grupos"""
+    if request.method == 'POST':
+        try:
+            from grupos.models import Grupo
+            
+            data = json.loads(request.body)
+            periodo_origen_id = data.get('periodo_origen_id')
+            nombre = data.get('nombre')
+            fecha_inicio = data.get('fecha_inicio')
+            fecha_fin = data.get('fecha_fin')
+            
+            if not periodo_origen_id or not nombre or not fecha_inicio or not fecha_fin:
+                return JsonResponse({
+                    "error": "periodo_origen_id, nombre, fecha_inicio y fecha_fin son requeridos"
+                }, status=400)
+            
+            # Validar que el periodo origen existe
+            try:
+                periodo_origen = PeriodoAcademico.objects.get(id=periodo_origen_id)
+            except PeriodoAcademico.DoesNotExist:
+                return JsonResponse({"error": "Periodo origen no encontrado"}, status=404)
+            
+            # Desactivar el periodo origen
+            periodo_origen.activo = False
+            periodo_origen.save()
+            
+            # Crear el nuevo periodo como activo
+            fi = datetime.date.fromisoformat(fecha_inicio)
+            ff = datetime.date.fromisoformat(fecha_fin)
+            nuevo_periodo = PeriodoAcademico(
+                nombre=nombre,
+                fecha_inicio=fi,
+                fecha_fin=ff,
+                activo=True
+            )
+            nuevo_periodo.save()
+            
+            # Actualizar todos los grupos del periodo origen al nuevo periodo
+            grupos_actualizados = Grupo.objects.filter(periodo=periodo_origen).update(periodo=nuevo_periodo)
+            
+            return JsonResponse({
+                "message": "Periodo copiado exitosamente",
+                "id": nuevo_periodo.id,
+                "grupos_actualizados": grupos_actualizados
+            }, status=201)
+            
+        except ValueError:
+            return JsonResponse({"error": "Formato de fecha inválido. Use YYYY-MM-DD."}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "JSON inválido."}, status=400)
+        except Exception as e:
+            print(f"Error en copy_periodo: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método no permitido. Use POST."}, status=405)

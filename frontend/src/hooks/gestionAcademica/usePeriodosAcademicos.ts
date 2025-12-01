@@ -221,7 +221,7 @@ export function usePeriodosAcademicos() {
     };
 
     const handleCopyPeriodo = async () => {
-        if (!periodoACopiar) return;
+        if (!periodoACopiar || !periodoACopiar.id) return;
 
         if (!periodoForm.nombre.trim()) {
             showNotification('El nombre del periodo es obligatorio', 'error');
@@ -248,17 +248,22 @@ export function usePeriodosAcademicos() {
 
         try {
             setLoading(true);
-            await periodoService.crearPeriodo({
-                nombre: periodoForm.nombre.trim(),
-                fecha_inicio: periodoForm.fecha_inicio,
-                fecha_fin: periodoForm.fecha_fin,
-                activo: false
-            });
+            const resultado = await periodoService.copiarPeriodo(
+                periodoACopiar.id,
+                {
+                    nombre: periodoForm.nombre.trim(),
+                    fecha_inicio: periodoForm.fecha_inicio,
+                    fecha_fin: periodoForm.fecha_fin
+                }
+            );
 
             await loadPeriodos();
             setShowCopyDialog(false);
             setPeriodoACopiar(null);
-            showNotification('✅ Periodo copiado exitosamente', 'success');
+            showNotification(
+                `✅ Periodo creado exitosamente. ${resultado.grupos_actualizados} grupos trasladados`,
+                'success'
+            );
         } catch (error) {
             showNotification(
                 `Error al copiar periodo: ${error instanceof Error ? error.message : 'Error desconocido'}`,

@@ -7,4 +7,5 @@ urlpatterns = [
     path('delete/', views.delete_periodo, name='delete_periodo'),
     path('<int:id>/', views.get_periodo, name='get_periodo'),
     path('list/', views.list_periodos, name='list_periodos'),
+    path('copy/', views.copy_periodo, name='copy_periodo'),
 ]

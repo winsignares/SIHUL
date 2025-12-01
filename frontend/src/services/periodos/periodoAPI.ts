@@ -57,5 +57,22 @@ export const periodoService = {
    */
   eliminarPeriodo: async (id: number): Promise<{ message: string }> => {
     return apiClient.delete('/periodos/delete/', { id });
+  },
+
+  /**
+   * Copia un período académico y mueve todos sus grupos al nuevo periodo
+   * @param periodoOrigenId ID del período a copiar
+   * @param nuevoPeriodo Datos del nuevo período
+   */
+  copiarPeriodo: async (
+    periodoOrigenId: number,
+    nuevoPeriodo: Omit<PeriodoAcademico, 'id' | 'activo' | 'programas_activos' | 'horarios_registrados'>
+  ): Promise<{ message: string; id: number; grupos_actualizados: number }> => {
+    return apiClient.post('/periodos/copy/', {
+      periodo_origen_id: periodoOrigenId,
+      nombre: nuevoPeriodo.nombre,
+      fecha_inicio: nuevoPeriodo.fecha_inicio,
+      fecha_fin: nuevoPeriodo.fecha_fin
+    });
   }
 };
