@@ -23,8 +23,10 @@ import {
 } from '../../share/dialog';
 import { useAjustes } from '../../hooks/users/useAjustes';
 import { Toaster } from 'sonner';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function Ajustes() {
+  const isMobile = useIsMobile();
   const {
     usuario,
     espaciosPermitidos,
@@ -50,11 +52,11 @@ export default function Ajustes() {
   } = useAjustes();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Configuración de Perfil</h1>
-        <p className="text-slate-600">Administra tu información personal y seguridad</p>
+        <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-slate-900 mb-2`}>Configuración de Perfil</h1>
+        <p className={`${isMobile ? 'text-sm' : 'text-base'} text-slate-600`}>Administra tu información personal y seguridad</p>
       </div>
 
       {/* Perfil Card */}
@@ -107,7 +109,7 @@ export default function Ajustes() {
 
           <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre Completo</Label>
               <Input

@@ -5,8 +5,10 @@ import { DoorOpen, DoorClosed, Building2, Clock, MapPin, Users, RefreshCw, Alert
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 import { useAperturaCierre } from '../../hooks/espacios/useAperturaCierre';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function SupervisorSalonHome() {
+  const isMobile = useIsMobile();
   const {
     aperturasPendientes,
     cierresPendientes,
@@ -19,7 +21,7 @@ export default function SupervisorSalonHome() {
   } = useAperturaCierre();
 
   return (
-    <div className="p-8 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full`}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

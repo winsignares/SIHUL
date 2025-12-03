@@ -4,8 +4,10 @@ import { Badge } from '../../share/badge';
 import { motion } from 'motion/react';
 import { Calendar, Clock, BookOpen, MapPin, User, FileDown, FileSpreadsheet } from 'lucide-react';
 import { useMiHorario } from '../../hooks/horarios/useMiHorario';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function MiHorario() {
+  const isMobile = useIsMobile();
   const {
     horarios,
     diasSemana,
@@ -20,7 +22,7 @@ export default function MiHorario() {
   } = useMiHorario();
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       {/* Notificación */}
       {notification && (
         <div className={`fixed top-4 right-4 px-4 py-3 rounded-lg text-white z-50 ${
@@ -238,7 +240,7 @@ export default function MiHorario() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
               <Card className="border-0 shadow-lg">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">

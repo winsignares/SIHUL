@@ -8,8 +8,10 @@ import { Progress } from '../../share/progress';
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { useOcupacionSemanal } from '../../hooks/reporte/useOcupacionSemanal';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function OcupacionSemanal() {
+  const isMobile = useIsMobile();
   const {
     periodoActual,
     tipoEspacio,
@@ -35,7 +37,7 @@ export default function OcupacionSemanal() {
   } = estadisticas;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Validación de Período */}
       {!validacionPeriodo.valido && (
         <div className="p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -91,7 +93,7 @@ export default function OcupacionSemanal() {
       </div>
 
       {/* Estadísticas Generales */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-5'}`}>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-2">

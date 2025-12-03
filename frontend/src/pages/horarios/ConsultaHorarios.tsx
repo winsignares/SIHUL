@@ -6,8 +6,10 @@ import { Button } from '../../share/button';
 import { Search, Clock, MapPin, User, Calendar, BookOpen, Filter } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useConsultaHorarios } from '../../hooks/horarios/useConsultaHorarios';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaHorarios() {
+  const isMobile = useIsMobile();
   const {
     searchTerm,
     setSearchTerm,
@@ -31,7 +33,7 @@ export default function ConsultaHorarios() {
   } = useConsultaHorarios();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -71,7 +73,7 @@ export default function ConsultaHorarios() {
           </div>
 
           {/* Filtros específicos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
             <Select value={filterEspacio} onValueChange={setFilterEspacio}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por espacio" />

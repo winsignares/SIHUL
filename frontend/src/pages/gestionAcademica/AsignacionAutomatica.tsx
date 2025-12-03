@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from '../../share/alert';
 import { Badge } from '../../share/badge';
 import { Progress } from '../../share/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/dialog';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import {
   Upload,
   FileSpreadsheet,
@@ -37,6 +38,7 @@ import { NotificationBanner } from '../../share/notificationBanner';
 import { useAsignacionAutomatica } from '../../hooks/gestionAcademica/useAsignacionAutomatica';
 
 export default function AsignacionAutomatica() {
+  const isMobile = useIsMobile();
   const {
     horariosImportados,
     procesando,
@@ -70,7 +72,7 @@ export default function AsignacionAutomatica() {
   } = useAsignacionAutomatica();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between">

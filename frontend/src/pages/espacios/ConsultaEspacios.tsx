@@ -7,8 +7,10 @@ import { Search, MapPin, Users, Home, Grid3x3, CalendarDays } from 'lucide-react
 import { motion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaEspacios() {
+  const isMobile = useIsMobile();
   const {
     searchTerm,
     setSearchTerm,
@@ -30,18 +32,17 @@ export default function ConsultaEspacios() {
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'disponible':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">Disponible</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Disponible</Badge>;
       case 'ocupado':
-        return <Badge className="bg-red-100 text-red-800 border-red-300">Ocupado</Badge>;
+        return <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">Ocupado</Badge>;
       case 'mantenimiento':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Mantenimiento</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">Mantenimiento</Badge>;
       default:
         return null;
     }
   };
 
   const getDayColumnIndex = (dia: string) => {
-    // El día ya viene normalizado del hook, así que solo buscamos el índice
     const index = diasSemana.indexOf(dia);
     return index !== -1 ? index + 2 : 1;
   };
@@ -52,53 +53,53 @@ export default function ConsultaEspacios() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       <div>
-        <h1 className="text-slate-900 dark:text-slate-100 mb-2">Disponibilidad de Espacios</h1>
-        <p className="text-slate-600 dark:text-slate-400">Consultas la disponibilidad de aulas, laboratorios y espacios</p>
+        <h1 className={`text-slate-900 dark:text-slate-100 mb-2 ${isMobile ? 'text-xl' : ''}`}>Disponibilidad de Espacios</h1>
+        <p className={`text-slate-600 dark:text-slate-400 ${isMobile ? 'text-sm' : ''}`}>Consulta la disponibilidad de aulas, laboratorios y espacios</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Total Espacios</p>
-                <p className="text-slate-900 dark:text-slate-100">{estadisticas.total}</p>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Total Espacios</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.total}</p>
               </div>
-              <Home className="w-10 h-10 text-blue-600" />
+              <Home className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} text-blue-600 flex-shrink-0`} />
             </div>
           </CardContent>
         </Card>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Disponibles</p>
-                <p className="text-slate-900 dark:text-slate-100">{estadisticas.disponibles}</p>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Disponibles</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.disponibles}</p>
               </div>
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Ocupados</p>
-                <p className="text-slate-900 dark:text-slate-100">{estadisticas.ocupados}</p>
-              </div>
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-950 rounded-lg flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-red-600" />
+              <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <MapPin className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-green-600`} />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Ocupados</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.ocupados}</p>
+              </div>
+              <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-red-100 dark:bg-red-950 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <MapPin className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-red-600`} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-slate-600 dark:text-slate-400 mb-1">Mantenimiento</p>
                 <p className="text-slate-900 dark:text-slate-100">{estadisticas.mantenimiento}</p>
@@ -111,46 +112,46 @@ export default function ConsultaEspacios() {
         </Card>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             variant={vistaActual === 'tarjetas' ? 'default' : 'outline'}
             onClick={() => setVistaActual('tarjetas')}
-            className={vistaActual === 'tarjetas'
+            className={`flex-1 sm:flex-none ${vistaActual === 'tarjetas'
               ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
               : 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950'
-            }
+            } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
           >
-            <Grid3x3 className="w-4 h-4 mr-2" />
-            Vista Tarjetas
+            <Grid3x3 className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+            {isMobile ? 'Tarjetas' : 'Vista Tarjetas'}
           </Button>
           <Button
             variant={vistaActual === 'cronograma' ? 'default' : 'outline'}
             onClick={() => setVistaActual('cronograma')}
-            className={vistaActual === 'cronograma'
+            className={`flex-1 sm:flex-none ${vistaActual === 'cronograma'
               ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white'
               : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950'
-            }
+            } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
           >
-            <CalendarDays className="w-4 h-4 mr-2" />
-            Vista Cronograma
+            <CalendarDays className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+            {isMobile ? 'Cronograma' : 'Vista Cronograma'}
           </Button>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px] relative">
+        <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap'} gap-4`}>
+          <div className={`${isMobile ? 'w-full' : 'flex-1 min-w-[200px]'} relative`}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <Input
               placeholder="Buscar espacio..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className={`pl-10 ${isMobile ? 'text-sm' : ''}`}
             />
           </div>
           <Select value={filterTipo} onValueChange={setFilterTipo}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
@@ -161,7 +162,7 @@ export default function ConsultaEspacios() {
             </SelectContent>
           </Select>
           <Select value={filterEstado} onValueChange={setFilterEstado}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -175,7 +176,7 @@ export default function ConsultaEspacios() {
       </div>
 
       {vistaActual === 'tarjetas' ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
           {filteredEspacios.map(espacio => {
             const { proximaClase, estado } = calcularProximaClaseYEstado(espacio.id);
             return (

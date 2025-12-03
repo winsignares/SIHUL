@@ -8,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Search, MapPin, CheckCircle, XCircle, AlertTriangle, Users, Clock, Boxes, Filter, Building2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { usePlazasDisponibles } from '../../hooks/prestamos/usePlazasDisponibles';
 
 export default function PlazasDisponibles() {
+  const isMobile = useIsMobile();
   const {
     espaciosFiltrados,
     busqueda,
@@ -57,7 +59,7 @@ export default function PlazasDisponibles() {
   };
 
   return (
-    <div className="p-8 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full`}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -78,7 +80,7 @@ export default function PlazasDisponibles() {
       </motion.div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -171,7 +173,7 @@ export default function PlazasDisponibles() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-7'}`}>
             {/* Búsqueda */}
             <div className="md:col-span-2">
               <Label>Buscar Espacio</Label>

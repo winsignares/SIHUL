@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Calendar, Clock, MapPin, FileText, Search } from 'lucide-react';
 import { useConsultaPrestamos } from '../../hooks/prestamos/useConsultaPrestamos';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaPrestamos() {
+  const isMobile = useIsMobile();
   const {
     dialogOpen,
     setDialogOpen,
@@ -42,7 +44,7 @@ export default function ConsultaPrestamos() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -217,7 +219,7 @@ export default function ConsultaPrestamos() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">

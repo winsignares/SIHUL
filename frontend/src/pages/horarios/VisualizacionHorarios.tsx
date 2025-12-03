@@ -6,8 +6,10 @@ import { Badge } from '../../share/badge';
 import { Calendar, Clock, Search, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useVisualizacionHorarios } from '../../hooks/horarios/useVisualizacionHorarios';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function VisualizacionHorarios() {
+  const isMobile = useIsMobile();
   const {
     facultades,
     horarios,
@@ -36,7 +38,7 @@ export default function VisualizacionHorarios() {
   } = useVisualizacionHorarios();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       {/* Header con periodo actual */}
       <div className="flex items-center justify-between">
         <div>
@@ -71,7 +73,7 @@ export default function VisualizacionHorarios() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
             <div className="space-y-2">
               <Label>Facultad *</Label>
               <Select

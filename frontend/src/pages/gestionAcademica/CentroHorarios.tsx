@@ -29,8 +29,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import CrearHorarios from './CrearHorarios';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCentroHorarios } from '../../hooks/gestionAcademica/useCentroHorarios';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function CentroHorarios() {
+  const isMobile = useIsMobile();
   const {
     activeTab, setActiveTab,
     loading,
@@ -71,7 +73,7 @@ export default function CentroHorarios() {
   } = useCentroHorarios();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">

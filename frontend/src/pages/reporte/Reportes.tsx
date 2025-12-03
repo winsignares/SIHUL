@@ -8,9 +8,11 @@ import { Toaster } from '../../share/sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReportes } from '../../hooks/reporte/useReportes';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import type { HorarioPrograma, HorarioDocente } from '../../models/reporte/reportes-general.model';
 
 export default function Reportes() {
+  const isMobile = useIsMobile();
   const {
     periodoActual,
     tipoReporte,
@@ -52,7 +54,7 @@ export default function Reportes() {
     switch (tipoReporte) {
       case 'ocupacion':
         return (
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-2'}`}>
             {errorOcupacion && (
               <div className="lg:col-span-2 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-red-800 dark:text-red-200">{errorOcupacion}</p>
@@ -468,7 +470,7 @@ export default function Reportes() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

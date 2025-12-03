@@ -3,12 +3,14 @@ import { motion } from 'motion/react';
 import { Clock, BookOpen, Users, ChevronRight, Calendar, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useConsultorDocente } from '../../hooks/dashboard/useConsultorDocente';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface ConsultorDocenteHomeProps {
   onNavigate?: (menu: string) => void;
 }
 
 export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHomeProps) {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { stats } = useConsultorDocente();
 
@@ -22,23 +24,23 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       {/* Welcome Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-slate-900 dark:text-slate-100 mb-2">
+        <h1 className={`text-slate-900 dark:text-slate-100 mb-2 ${isMobile ? 'text-xl' : ''}`}>
           ¡Bienvenido al Portal del Docente!
         </h1>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className={`text-slate-600 dark:text-slate-400 ${isMobile ? 'text-sm' : ''}`}>
           Gestiona tu horario académico y consulta tu información docente
         </p>
       </motion.div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -49,14 +51,14 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
               transition={{ delay: (index + 1) * 0.1, duration: 0.5 }}
             >
               <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
+                <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${getGradient(stat.color || 'blue')} flex items-center justify-center shadow-lg`}>
-                      <Icon className="w-7 h-7 text-white" />
+                    <div className={`${isMobile ? 'w-12 h-12' : 'w-14 h-14'} rounded-xl bg-gradient-to-br ${getGradient(stat.color || 'blue')} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                      <Icon className={`${isMobile ? 'w-6 h-6' : 'w-7 h-7'} text-white`} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-slate-600 dark:text-slate-400 mb-1">{stat.label}</p>
-                      <h3 className="text-slate-900 dark:text-slate-100">{stat.value}</h3>
+                      <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : 'text-sm'}`}>{stat.label}</p>
+                      <h3 className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{stat.value}</h3>
                     </div>
                   </div>
                 </CardContent>
@@ -67,32 +69,32 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
       </div>
 
       {/* Main Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
         >
           <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-red-50 to-yellow-50 dark:from-slate-800 dark:to-slate-700 hover:shadow-lg transition-shadow h-full">
-            <CardContent className="p-6">
+            <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
               <div className="flex flex-col h-full">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center mb-4 shadow-lg">
-                  <Calendar className="w-6 h-6 text-white" />
+                <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center mb-4 shadow-lg flex-shrink-0`}>
+                  <Calendar className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-white`} />
                 </div>
-                <h2 className="text-slate-900 dark:text-slate-100 mb-2">
+                <h2 className={`text-slate-900 dark:text-slate-100 mb-2 ${isMobile ? 'text-base' : ''}`}>
                   Gestionar Horario
                 </h2>
-                <p className="text-slate-600 dark:text-slate-400 mb-4 flex-1">
+                <p className={`text-slate-600 dark:text-slate-400 mb-4 flex-1 ${isMobile ? 'text-sm' : ''}`}>
                   Visualiza tu horario semanal, exporta a PDF/Excel y solicita cambios al administrador.
                 </p>
                 <motion.button
                   onClick={() => navigate('/docente/horario')}
-                  className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full"
-                  whileHover={{ scale: 1.02 }}
+                  className={`px-4 ${isMobile ? 'py-2 text-sm' : 'py-2'} bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full`}
+                  whileHover={{ scale: isMobile ? 1 : 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <span>Ver Mi Horario</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
                 </motion.button>
               </div>
             </CardContent>
@@ -105,25 +107,25 @@ export default function ConsultorDocenteHome({ onNavigate }: ConsultorDocenteHom
           transition={{ delay: 0.5, duration: 0.5 }}
         >
           <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 hover:shadow-lg transition-shadow h-full">
-            <CardContent className="p-6">
+            <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
               <div className="flex flex-col h-full">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center mb-4 shadow-lg">
-                  <FileText className="w-6 h-6 text-white" />
+                <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center mb-4 shadow-lg flex-shrink-0`}>
+                  <FileText className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-white`} />
                 </div>
-                <h2 className="text-slate-900 dark:text-slate-100 mb-2">
+                <h2 className={`text-slate-900 dark:text-slate-100 mb-2 ${isMobile ? 'text-base' : ''}`}>
                   Pedir Préstamos
                 </h2>
-                <p className="text-slate-600 dark:text-slate-400 mb-4 flex-1">
+                <p className={`text-slate-600 dark:text-slate-400 mb-4 flex-1 ${isMobile ? 'text-sm' : ''}`}>
                   Solicita espacios para clases adicionales, tutorías, conferencias y eventos académicos.
                 </p>
                 <motion.button
                   onClick={() => navigate('/docente/prestamos')}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full"
-                  whileHover={{ scale: 1.02 }}
+                  className={`px-4 ${isMobile ? 'py-2 text-sm' : 'py-2'} bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full`}
+                  whileHover={{ scale: isMobile ? 1 : 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <span>Solicitar Préstamo</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
                 </motion.button>
               </div>
             </CardContent>

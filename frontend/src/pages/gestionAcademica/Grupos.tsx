@@ -8,8 +8,10 @@ import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import { useGrupos } from '../../hooks/gestionAcademica/useGrupos';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function Grupos() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     loading,
@@ -38,15 +40,15 @@ export default function Grupos() {
   } = useGrupos();
 
   return (
-    <>
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header con botón */}
-      <div className="flex items-center justify-between mb-6">
+      <div className={`flex ${isMobile ? 'flex-col gap-4' : 'items-center justify-between'} mb-6`}>
         <div>
-          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Grupos</h2>
+          <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-slate-900`}>Gestión de Grupos</h2>
         </div>
         <Button
           onClick={() => setShowCreateGrupo(true)}
-          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+          className={`bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white ${isMobile ? 'w-full' : ''}`}
         >
           <Plus className="w-4 h-4 mr-2" />
           Nuevo Grupo
@@ -56,7 +58,7 @@ export default function Grupos() {
       {/* Filtros en Card */}
       <Card className="mb-6 border-slate-200 shadow-sm">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
             <div className="relative">
               <Label className="text-slate-700 mb-2 block">Buscar</Label>
               <div className="relative">
@@ -426,6 +428,6 @@ export default function Grupos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import { AlertCircle, Hammer, Calendar } from 'lucide-react';
 import { Button } from '../../share/button';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function EnConstruccion() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">

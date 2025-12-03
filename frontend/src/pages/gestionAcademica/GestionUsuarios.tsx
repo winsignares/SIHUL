@@ -10,8 +10,10 @@ import { Switch } from '../../share/switch';
 import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function GestionUsuarios() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     filterRol, setFilterRol,
@@ -101,7 +103,7 @@ export default function GestionUsuarios() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       <NotificationBanner notification={notification} />
 
       {/* Header */}

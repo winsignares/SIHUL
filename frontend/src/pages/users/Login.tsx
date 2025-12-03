@@ -5,8 +5,10 @@ import { motion } from 'motion/react';
 import { useState } from 'react';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
 import { useLogin } from '../../hooks/users/useLogin';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function Login() {
+  const isMobile = useIsMobile();
   const [showPassword, setShowPassword] = useState(false);
   const {
     email,
@@ -22,7 +24,7 @@ export default function Login() {
   } = useLogin();
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
       {/* Animated Background Elements */}
       <motion.div
         className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-600 to-red-700 rounded-full opacity-20 blur-3xl"
@@ -101,7 +103,7 @@ export default function Login() {
         transition={{ duration: 0.6 }}
         className="relative z-10 w-full max-w-6xl mx-4"
       >
-        <div className="grid lg:grid-cols-2 bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200/30 max-w-5xl">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-2'} bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200/30 max-w-5xl`}>
           {/* Glow Effect */}
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-red-500/3 via-transparent to-transparent pointer-events-none" />
           {/* Left Side - Login Form */}

@@ -10,8 +10,10 @@ import { GitMerge, AlertCircle, CheckCircle2, Users, MapPin, BookOpen, Info } fr
 import { motion, AnimatePresence } from 'motion/react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGruposFusion } from '../../hooks/gestionAcademica/useGruposFusion';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function GruposFusion() {
+  const isMobile = useIsMobile();
   const {
     isFusionDialogOpen, setIsFusionDialogOpen,
     selectedGrupos,
@@ -31,16 +33,16 @@ export default function GruposFusion() {
   } = useGruposFusion();
 
   return (
-    <div className="space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       <NotificationBanner notification={notification} />
       {/* Header con botón */}
-      <div className="flex items-center justify-between mb-6">
+      <div className={`flex ${isMobile ? 'flex-col gap-4' : 'items-center justify-between'} mb-6`}>
         <div>
-          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Fusiones</h2>
+          <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-slate-900`}>Gestión de Fusiones</h2>
         </div>
         <Dialog open={isFusionDialogOpen} onOpenChange={setIsFusionDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white">
+            <Button className={`bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white ${isMobile ? 'w-full' : ''}`}>
               <GitMerge className="w-4 h-4 mr-2" />
               Nueva Fusión
             </Button>

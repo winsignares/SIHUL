@@ -6,12 +6,14 @@ import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, 
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { useNotificaciones } from '../../hooks/users/useNotificaciones';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface NotificacionesProps {
   onNotificacionesChange?: (count: number) => void;
 }
 
 export default function Notificaciones({ onNotificacionesChange }: NotificacionesProps) {
+  const isMobile = useIsMobile();
   const {
     filterTab,
     setFilterTab,

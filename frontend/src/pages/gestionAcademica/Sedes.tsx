@@ -7,8 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { useSedes } from '../../hooks/gestionAcademica/useSedes';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function Sedes() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     showCreate, setShowCreate,
@@ -26,15 +28,15 @@ export default function Sedes() {
   } = useSedes();
 
   return (
-    <>
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header con botón */}
-      <div className="flex items-center justify-between mb-6">
+      <div className={`flex ${isMobile ? 'flex-col gap-4' : 'items-center justify-between'} mb-6`}>
         <div>
-          <h2 className="text-slate-900 text-lg font-semibold">Gestión de Sedes</h2>
+          <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-slate-900`}>Gestión de Sedes</h2>
         </div>
         <Button
           onClick={() => setShowCreate(true)}
-          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+          className={`bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white ${isMobile ? 'w-full' : ''}`}
         >
           <Plus className="w-4 h-4 mr-2" />
           Nueva Sede
@@ -287,6 +289,6 @@ export default function Sedes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

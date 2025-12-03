@@ -8,8 +8,10 @@ import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, Check, Package, X } from 'lucide-react';
 import { useEspaciosFisicos } from '../../hooks/gestionAcademica/useEspaciosFisicos';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function EspaciosFisicos() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
@@ -35,7 +37,7 @@ export default function EspaciosFisicos() {
   } = useEspaciosFisicos();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -53,7 +55,7 @@ export default function EspaciosFisicos() {
       {/* Filtros */}
       <Card className="border-slate-200 dark:border-slate-700 shadow-lg bg-white dark:bg-slate-800">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
             {/* 1️⃣ Búsqueda (primero) */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

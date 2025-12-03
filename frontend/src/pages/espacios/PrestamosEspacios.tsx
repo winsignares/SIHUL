@@ -10,8 +10,10 @@ import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText,
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function PrestamosEspacios() {
+  const isMobile = useIsMobile();
   const {
     searchTerm,
     setSearchTerm,
@@ -56,7 +58,7 @@ export default function PrestamosEspacios() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div>
         <h1 className="text-slate-900 dark:text-slate-100 mb-2">Préstamos de Espacios</h1>

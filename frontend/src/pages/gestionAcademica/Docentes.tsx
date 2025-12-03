@@ -10,8 +10,10 @@ import { Plus, Edit, Trash2, Search, User, Check, X, Eye, Mail, Phone, Graduatio
 import { motion } from 'motion/react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useDocentes } from '../../hooks/gestionAcademica/useDocentes';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function Docentes() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     facultades,
@@ -49,14 +51,14 @@ export default function Docentes() {
   } = useDocentes();
 
   return (
-    <div className="space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       <NotificationBanner notification={notification} />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className={`flex ${isMobile ? 'flex-col gap-4' : 'items-center justify-between'}`}>
         <div>
-          <h2 className="text-slate-900 mb-1">Gestión de Docentes</h2>
+          <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-slate-900 mb-1`}>Gestión de Docentes</h2>
         </div>
-        <Button onClick={openCreateDialog} className="bg-red-600 hover:bg-red-700 text-white">
+        <Button onClick={openCreateDialog} className={`bg-red-600 hover:bg-red-700 text-white ${isMobile ? 'w-full' : ''}`}>
           <Plus className="w-4 h-4 mr-2" />
           Agregar Docente
         </Button>
@@ -65,7 +67,7 @@ export default function Docentes() {
       {/* Filtros */}
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
             {/* Búsqueda */}
             <div className="md:col-span-2">
               <Label className="text-slate-700 mb-2">Buscar Docente</Label>

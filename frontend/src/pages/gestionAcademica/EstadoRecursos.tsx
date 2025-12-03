@@ -15,8 +15,10 @@ import {
   Eye
 } from 'lucide-react';
 import { useEstadoRecursos } from '../../hooks/gestionAcademica/useEstadoRecursos';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function EstadoRecursos() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     filtroEstado, setFiltroEstado,
@@ -42,7 +44,7 @@ export default function EstadoRecursos() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

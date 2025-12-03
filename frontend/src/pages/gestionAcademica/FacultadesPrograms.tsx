@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff } from 'lucide-react';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 import { useFacultadesPrograms, type TabOption } from '../../hooks/gestionAcademica/useFacultadesPrograms';
 
@@ -17,6 +18,7 @@ import Grupos from './Grupos';
 import Sedes from './Sedes';
 
 export default function FacultadesPrograms() {
+  const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
     activeTab, setActiveTab,
@@ -66,7 +68,7 @@ export default function FacultadesPrograms() {
   } = useFacultadesPrograms();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -30,12 +30,14 @@ import {
 } from '../../share/dialog';
 import { useDashboardHome } from '../../hooks/dashboard/useDashboardHome';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface DashboardHomeProps {
   onNavigate?: (page: string) => void;
 }
 
 export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const {
     stats,
@@ -74,25 +76,25 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
   } = handlers;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <motion.div
-        className="flex items-center justify-between"
+        className={`${isMobile ? 'flex flex-col gap-4' : 'flex items-center justify-between'}`}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-slate-900 mb-2">Bienvenido de nuevo! 👋</h1>
-          <p className="text-slate-600">Aquí está el resumen de tu gestión académica</p>
+          <h1 className={`text-slate-900 mb-2 ${isMobile ? 'text-xl' : 'text-2xl'}`}>Bienvenido de nuevo! 👋</h1>
+          <p className={`text-slate-600 ${isMobile ? 'text-sm' : ''}`}>Aquí está el resumen de tu gestión académica</p>
         </div>
-        <div className="flex gap-3">
+        <div className={`flex gap-3 ${isMobile ? 'w-full' : ''}`}>
           <Button
             variant="outline"
-            className="border-slate-300 hover:border-red-500 hover:text-red-600"
+            className={`border-slate-300 hover:border-red-500 hover:text-red-600 ${isMobile ? 'flex-1 text-sm' : ''}`}
             disabled={isLoadingPeriodo}
           >
-            <Calendar className="w-4 h-4 mr-2" />
+            <Calendar className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
             {isLoadingPeriodo ? 'Cargando...' : periodoActivo ? `Período ${periodoActivo.nombre}` : 'Sin período activo'}
           </Button>
 
@@ -100,7 +102,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
       </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -109,16 +111,16 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
-              whileHover={{ y: -8, scale: 1.02 }}
+              whileHover={{ y: isMobile ? 0 : -8, scale: isMobile ? 1 : 1.02 }}
             >
               <Card className={`border-0 shadow-lg bg-gradient-to-br ${stat.bgGradient} backdrop-blur-sm overflow-hidden relative group cursor-pointer`}>
                 <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.gradient} opacity-20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500`}></div>
-                <CardContent className="p-6 relative">
+                <CardContent className={`${isMobile ? 'p-4' : 'p-6'} relative`}>
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <p className="text-slate-600 mb-2">{stat.label}</p>
+                      <p className={`text-slate-600 mb-2 ${isMobile ? 'text-xs' : ''}`}>{stat.label}</p>
                       <motion.h2
-                        className="text-slate-900"
+                        className={`text-slate-900 ${isMobile ? 'text-lg' : ''}`}
                         initial={{ scale: 0.5 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: index * 0.1 + 0.3, type: "spring", stiffness: 200 }}
@@ -126,18 +128,18 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                         {stat.value}
                       </motion.h2>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge className={`bg-gradient-to-r ${stat.gradient} text-white border-0`}>
+                        <Badge className={`bg-gradient-to-r ${stat.gradient} text-white border-0 text-xs`}>
                           {stat.change}
                         </Badge>
-                        <span className="text-slate-500">este mes</span>
+                        <span className={`text-slate-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>este mes</span>
                       </div>
                     </div>
                     <motion.div
-                      className={`${stat.iconBg} w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg`}
-                      whileHover={{ rotate: 360, scale: 1.1 }}
+                      className={`${stat.iconBg} ${isMobile ? 'w-12 h-12' : 'w-14 h-14'} rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0`}
+                      whileHover={{ rotate: isMobile ? 0 : 360, scale: isMobile ? 1 : 1.1 }}
                       transition={{ duration: 0.6 }}
                     >
-                      <Icon className="w-7 h-7 text-white" />
+                      <Icon className={`${isMobile ? 'w-6 h-6' : 'w-7 h-7'} text-white`} />
                     </motion.div>
                   </div>
                 </CardContent>
@@ -148,7 +150,7 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
       </div>
 
       {/* Grid de 2 columnas - SIN panel de perfil */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-2'}`}>
         {/* Espacios Más Ocupados */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

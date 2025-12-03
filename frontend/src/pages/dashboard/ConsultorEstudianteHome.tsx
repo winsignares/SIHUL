@@ -9,6 +9,7 @@ interface ConsultorEstudianteHomeProps {
 }
 
 export default function ConsultorEstudianteHome({ onNavigate }: ConsultorEstudianteHomeProps) {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { stats } = useConsultorEstudiante();
 
@@ -22,7 +23,7 @@ export default function ConsultorEstudianteHome({ onNavigate }: ConsultorEstudia
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       {/* Welcome Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

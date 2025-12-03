@@ -11,31 +11,33 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useSupervisorDashboard } from '../../hooks/dashboard/useSupervisorDashboard';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface SupervisorGeneralHomeProps {
   onNavigate?: (page: string) => void;
 }
 
 export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralHomeProps = {}) {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { metricsCards, recursosCards, quickActions, activityLogs, loading, error } = useSupervisorDashboard();
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-slate-900">Dashboard Supervisor General</h2>
-        <p className="text-slate-600 mt-1">
+        <h2 className={`text-slate-900 ${isMobile ? 'text-xl' : ''}`}>Dashboard Supervisor General</h2>
+        <p className={`text-slate-600 mt-1 ${isMobile ? 'text-sm' : ''}`}>
           Gestión y supervisión de espacios académicos y recursos institucionales
         </p>
       </motion.div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
         {loading ? (
           // Loading skeleton
           <>
@@ -47,7 +49,7 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
                 transition={{ delay: i * 0.1, duration: 0.5 }}
               >
                 <Card className="border-0 shadow-lg">
-                  <CardContent className="p-6">
+                  <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                     <div className="animate-pulse">
                       <div className="h-12 bg-slate-200 rounded-xl mb-4 w-12"></div>
                       <div className="h-4 bg-slate-200 rounded mb-3"></div>
@@ -67,18 +69,18 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
               transition={{ delay: index * 0.1, duration: 0.5 }}
             >
               <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6">
+                <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                   <div className="flex items-center justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-xl ${metric.bgColor} flex items-center justify-center`}>
+                    <div className={`w-12 h-12 rounded-xl ${metric.bgColor} flex items-center justify-center flex-shrink-0`}>
                       <metric.icon className={`w-6 h-6 ${metric.textColor}`} />
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${metric.trendUp ? 'text-green-600' : 'text-orange-600'}`}>
-                      <TrendingUp className={`w-4 h-4 ${!metric.trendUp && 'rotate-180'}`} />
+                      <TrendingUp className={`w-4 h-4 flex-shrink-0 ${!metric.trendUp && 'rotate-180'}`} />
                       <span>{metric.trend}</span>
                     </div>
                   </div>
-                  <h3 className="text-slate-600 text-sm mb-1">{metric.label}</h3>
-                  <p className="text-slate-900 text-3xl">{metric.value}</p>
+                  <h3 className={`text-slate-600 mb-1 ${isMobile ? 'text-xs' : 'text-sm'}`}>{metric.label}</h3>
+                  <p className={`text-slate-900 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>{metric.value}</p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -94,13 +96,13 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
       >
         <Card className="border-0 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-            <CardTitle className="flex items-center gap-2 text-slate-900">
-              <Building2 className="w-5 h-5 text-red-600" />
+            <CardTitle className={`flex items-center gap-2 text-slate-900 ${isMobile ? 'text-base' : ''}`}>
+              <Building2 className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-red-600`} />
               Accesos Rápidos
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
+            <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
               {quickActions.map((action, index) => {
                 const getRoute = (actionName: string) => {
                   switch (actionName) {
@@ -122,20 +124,20 @@ export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralH
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 + index * 0.1 }}
-                  whileHover={{ scale: 1.02, y: -4 }}
+                  whileHover={{ scale: isMobile ? 1 : 1.02, y: isMobile ? 0 : -4 }}
                   whileTap={{ scale: 0.98 }}
-                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-red-600 hover:shadow-lg transition-all text-left group"
+                  className={`p-4 rounded-xl border-2 border-slate-200 hover:border-red-600 hover:shadow-lg transition-all text-left group ${isMobile ? 'text-sm' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className={`w-12 h-12 rounded-xl ${action.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <action.icon className={`w-6 h-6 ${action.iconColor}`} />
+                    <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl ${action.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0`}>
+                      <action.icon className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} ${action.iconColor}`} />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-red-600 transition-colors" />
+                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-red-600 transition-colors flex-shrink-0" />
                   </div>
-                  <h4 className="text-slate-900 mb-1 group-hover:text-red-600 transition-colors">
+                  <h4 className={`text-slate-900 mb-1 group-hover:text-red-600 transition-colors ${isMobile ? 'text-sm' : ''}`}>
                     {action.title}
                   </h4>
-                  <p className="text-slate-600 text-sm">
+                  <p className={`text-slate-600 group-hover:text-slate-700 transition-colors ${isMobile ? 'text-xs' : 'text-sm'}`}>
                     {action.description}
                   </p>
                 </motion.button>

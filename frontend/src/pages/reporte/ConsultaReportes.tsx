@@ -5,8 +5,10 @@ import { Badge } from '../../share/badge';
 import { BarChart3, TrendingUp, Calendar, Download, FileSpreadsheet } from 'lucide-react';
 import { Toaster } from '../../share/sonner';
 import { useConsultaReportes } from '../../hooks/reporte/useConsultaReportes';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaReportes() {
+  const isMobile = useIsMobile();
   const {
     periodo,
     setPeriodo,
@@ -17,7 +19,7 @@ export default function ConsultaReportes() {
   } = useConsultaReportes();
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -52,7 +54,7 @@ export default function ConsultaReportes() {
       </div>
 
       {/* Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
         <Card className="border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -92,7 +94,7 @@ export default function ConsultaReportes() {
       </div>
 
       {/* Main Reports */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-2'}`}>
         {/* Ocupación por Jornada */}
         <Card className="border-slate-200">
           <CardHeader>

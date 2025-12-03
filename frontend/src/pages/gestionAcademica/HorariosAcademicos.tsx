@@ -10,8 +10,10 @@ import { Plus, Clock, AlertCircle, Trash2, CheckCircle, Calendar } from 'lucide-
 import { motion } from 'motion/react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useHorariosAcademicos, PERIODO_FIJO, dias } from '../../hooks/gestionAcademica/useHorariosAcademicos';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function HorariosAcademicos() {
+  const isMobile = useIsMobile();
   const {
     facultades,
     programas,
@@ -211,7 +213,7 @@ export default function HorariosAcademicos() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between">
