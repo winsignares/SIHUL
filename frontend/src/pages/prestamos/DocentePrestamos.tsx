@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
@@ -8,13 +8,18 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft } from 'lucide-react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../share/alert';
 import { useDocentePrestamos } from '../../hooks/prestamos/useDocentePrestamos';
+import { useAuth } from '../../context/AuthContext';
+import ConsultaEspacios from '../espacios/ConsultaEspacios';
 
 export default function DocentePrestamos() {
+  const { user } = useAuth();
+  const [mostrarConsulta, setMostrarConsulta] = useState(false);
+
   const {
     dialogOpen,
     setDialogOpen,
@@ -44,6 +49,27 @@ export default function DocentePrestamos() {
     }
   }, [error]);
 
+  // Si está mostrando consulta de espacios, renderizar ese componente
+  if (mostrarConsulta) {
+    return (
+      <div>
+        {String(user?.rol) !== 'supervisor_general' && (
+          <div className="p-6 pb-0">
+            <Button
+              variant="outline"
+              onClick={() => setMostrarConsulta(false)}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Mis Préstamos
+            </Button>
+          </div>
+        )}
+        <ConsultaEspacios />
+      </div>
+    );
+  }
+
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'pendiente':
@@ -65,14 +91,23 @@ export default function DocentePrestamos() {
           <h1 className="text-slate-900 dark:text-slate-100 mb-2">Préstamos de Espacios</h1>
           <p className="text-slate-600 dark:text-slate-400">Solicita espacios para clases adicionales, tutorías y eventos académicos</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Solicitud
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setMostrarConsulta(true)}
+            className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Consultar Disponibilidad
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Solicitud
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nueva Solicitud de Préstamo</DialogTitle>
             </DialogHeader>
@@ -259,6 +294,7 @@ export default function DocentePrestamos() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Statistics */}
