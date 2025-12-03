@@ -43,20 +43,13 @@ export default function ConsultaEspacios() {
   const getDayColumnIndex = (dia: string) => {
     // El día ya viene normalizado del hook, así que solo buscamos el índice
     const index = diasSemana.indexOf(dia);
-    console.log('getDayColumnIndex:', dia, 'index:', index, 'diasSemana:', diasSemana, 'column:', index !== -1 ? index + 2 : 1);
     return index !== -1 ? index + 2 : 1;
   };
 
   const getHourRowIndex = (hora: number) => {
     const row = hora - 5 + 1;
-    console.log('getHourRowIndex:', hora, 'row:', row);
     return row;
   };
-
-  console.log('Horarios data:', horarios);
-  console.log('Dias semana:', diasSemana);
-  console.log('Horas:', horas);
-
 
   return (
     <div className="p-8 space-y-6">
