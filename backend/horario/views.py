@@ -344,8 +344,8 @@ def list_horarios(request):
 def list_horarios_extendidos(request):
     """Lista horarios con información extendida (nombres de relaciones)"""
     if request.method == 'GET':
-        # Solo traer horarios aprobados
-        items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
+        # Traer todos los horarios (sin filtro de estado)
+        items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').all()
         lst = []
         for i in items:
             lst.append({
@@ -364,7 +364,8 @@ def list_horarios_extendidos(request):
                 "dia_semana": i.dia_semana,
                 "hora_inicio": str(i.hora_inicio),
                 "hora_fin": str(i.hora_fin),
-                "cantidad_estudiantes": i.cantidad_estudiantes
+                "cantidad_estudiantes": i.cantidad_estudiantes,
+                "estado": i.estado
             })
         return JsonResponse({"horarios": lst}, status=200)
 
