@@ -491,7 +491,8 @@ for horario_data in horarios_data:
         defaults={
             "docente": horario_data["docente"],
             "espacio": espacio,
-            "cantidad_estudiantes": horario_data["estudiantes"]
+            "cantidad_estudiantes": horario_data["estudiantes"],
+            "estado": "aprobado"
         }
     )
     
