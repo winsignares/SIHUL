@@ -713,3 +713,9 @@ print(f"   - Docentes: {Usuario.objects.filter(activo=True).count()}")
 print(f"   - Estudiantes: {len([e for grupo_est in estudiantes_por_grupo.values() for e in grupo_est])}")
 print(f"   - Horarios: {Horario.objects.count()} ({contador_horarios} nuevos, {contador_actualizados} actualizados)")
 print(f"   - Inscripciones: {HorarioEstudiante.objects.count()}")
+
+# Ejecutar script prestamos
+print("\n" + "="*60)
+print("Ejecutando Fase 3: Datos Préstamos...")
+print("="*60)
+exec(open('seed_prestamos.py').read())

@@ -118,7 +118,7 @@ export function useConsultaEspacios() {
         };
     };
 
-    // Cargar espacios permitidos y su estado
+    // Cargar espacios y su estado
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
@@ -130,9 +130,17 @@ export function useConsultaEspacios() {
                     return;
                 }
 
-                // 2. Obtener espacios permitidos
-                const response = await espacioPermitidoService.listByUsuario(user.id);
-                const espaciosBase = response.espacios;
+                // Obtener espacios según el rol del usuario
+                let espaciosBase;
+                if (String(user.rol) === 'supervisor_general') {
+                    // Supervisor general: solo espacios permitidos
+                    const response = await espacioPermitidoService.listByUsuario(user.id);
+                    espaciosBase = response.espacios;
+                } else {
+                    // Otros roles: todos los espacios
+                    const response = await espacioService.list();
+                    espaciosBase = response.espacios;
+                }
 
                 // 3. Obtener estado actual para cada espacio
                 const espaciosConEstado = await Promise.all(espaciosBase.map(async (e) => {
