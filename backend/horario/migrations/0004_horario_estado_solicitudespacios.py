@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.AddConstraint(
-            model_name='solicitudespacios',
+            model_name='solicitudespacio',
             constraint=models.CheckConstraint(check=models.Q(('hora_fin__gt', models.F('hora_inicio'))), name='chk_solicitud_horas'),
         ),
     ]
