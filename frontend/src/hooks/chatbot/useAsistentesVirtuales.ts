@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
 import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
+import { useAuth } from '../../context/AuthContext';
 
 // Mapeo de nombres de iconos a componentes de icono
 const iconMap: Record<string, any> = {
@@ -38,6 +39,7 @@ const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
 };
 
 export function useAsistentesVirtuales() {
+    const { user } = useAuth(); // Obtener usuario autenticado
     const [asistentes, setAsistentes] = useState<Asistente[]>([]);
     const [asistenteActivo, setAsistenteActivo] = useState<Asistente | null>(null);
     const [mensajes, setMensajes] = useState<{ [key: string]: Mensaje[] }>({});
@@ -46,6 +48,7 @@ export function useAsistentesVirtuales() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [preguntasRotadas, setPreguntasRotadas] = useState<string[]>([]);
+    const [chatIds, setChatIds] = useState<{ [key: string]: string }>({}); // Mapeo agente_id -> chat_id
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Cargar agentes desde el backend
@@ -117,10 +120,74 @@ export function useAsistentesVirtuales() {
         scrollToBottom();
     }, [mensajes, asistenteActivo]);
 
-    const abrirChat = (asistente: Asistente) => {
+    const abrirChat = async (asistente: Asistente) => {
         setAsistenteActivo(asistente);
 
-        if (!mensajes[asistente.id]) {
+        // Si ya hay mensajes cargados, no hacer nada más
+        if (mensajes[asistente.id] && mensajes[asistente.id].length > 0) {
+            return;
+        }
+
+        // Intentar cargar historial desde el backend
+        try {
+            if (!user?.id) {
+                // Sin usuario, mostrar mensaje de bienvenida
+                setMensajes(prev => ({
+                    ...prev,
+                    [asistente.id]: [{
+                        id: '1',
+                        tipo: 'bot',
+                        texto: asistente.mensajeBienvenida,
+                        timestamp: new Date(),
+                        leido: true
+                    }]
+                }));
+                return;
+            }
+
+            const response = await chatbotAPI.obtenerHistorial({
+                agente_id: asistente.id,
+                id_usuario: user.id
+            });
+
+            if (response.mensajes && response.mensajes.length > 0) {
+                // Hay historial, cargar los mensajes
+                const mensajesHistorial = response.mensajes.map((msg) => ({
+                    id: msg.id,
+                    tipo: msg.tipo,
+                    texto: msg.texto,
+                    timestamp: new Date(msg.timestamp),
+                    leido: true
+                }));
+
+                setMensajes(prev => ({
+                    ...prev,
+                    [asistente.id]: mensajesHistorial
+                }));
+
+                // Guardar el chat_id si existe
+                if (response.mensajes[0]?.chat_id) {
+                    setChatIds(prev => ({
+                        ...prev,
+                        [asistente.id]: response.mensajes[0].chat_id
+                    }));
+                }
+            } else {
+                // No hay historial, mostrar mensaje de bienvenida
+                setMensajes(prev => ({
+                    ...prev,
+                    [asistente.id]: [{
+                        id: '1',
+                        tipo: 'bot',
+                        texto: asistente.mensajeBienvenida,
+                        timestamp: new Date(),
+                        leido: true
+                    }]
+                }));
+            }
+        } catch (error) {
+            console.error('Error al cargar historial:', error);
+            // Si hay error, mostrar mensaje de bienvenida
             setMensajes(prev => ({
                 ...prev,
                 [asistente.id]: [{
@@ -137,49 +204,85 @@ export function useAsistentesVirtuales() {
     const enviarMensaje = async () => {
         if (!inputMensaje.trim() || !asistenteActivo) return;
 
-        const nuevoMensajeUser: Mensaje = {
-            id: Date.now().toString(),
+        const preguntaEnviada = inputMensaje;
+        setInputMensaje('');
+        setIsTyping(true);
+
+        // Mostrar mensaje del usuario inmediatamente (optimistic UI)
+        const mensajeUsuarioTemporal: Mensaje = {
+            id: `temp-${Date.now()}`,
             tipo: 'user',
-            texto: inputMensaje,
+            texto: preguntaEnviada,
             timestamp: new Date(),
             leido: true
         };
 
         setMensajes(prev => ({
             ...prev,
-            [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), nuevoMensajeUser]
+            [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeUsuarioTemporal]
         }));
 
-        const preguntaEnviada = inputMensaje;
-        setInputMensaje('');
-        setIsTyping(true);
-
         try {
-            // Enviar pregunta al backend (que llama al RAG)
+            // Validar que el usuario esté autenticado
+            if (!user?.id || !user?.nombre) {
+                throw new Error('Usuario no autenticado');
+            }
+
+            const currentChatId = chatIds[asistenteActivo.id];
+
+            // Enviar pregunta al backend (que llama al RAG y guarda en BD)
             const response = await chatbotAPI.enviarPregunta({
                 agente_id: Number(asistenteActivo.id),
-                pregunta: preguntaEnviada
+                pregunta: preguntaEnviada,
+                chat_id: currentChatId,
+                id_usuario: user.id,
+                nombre_usuario: user.nombre
             });
 
-            const nuevoMensajeBot: Mensaje = {
-                id: (Date.now() + 1).toString(),
+            // Guardar el chat_id para futuras conversaciones
+            if (response.chat_id && !chatIds[asistenteActivo.id]) {
+                setChatIds(prev => ({
+                    ...prev,
+                    [asistenteActivo.id]: response.chat_id
+                }));
+            }
+
+            // Reemplazar mensaje temporal con el mensaje real del backend
+            const mensajeUsuarioReal: Mensaje = {
+                id: `${response.id}-user`,
+                tipo: 'user',
+                texto: response.mensaje,
+                timestamp: new Date(response.fecha),
+                leido: true
+            };
+
+            const mensajeAgente: Mensaje = {
+                id: `${response.id}-bot`,
                 tipo: 'bot',
                 texto: response.respuesta,
-                timestamp: new Date(),
+                timestamp: new Date(response.fecha),
                 leido: false
             };
 
-            setMensajes(prev => ({
-                ...prev,
-                [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), nuevoMensajeBot]
-            }));
+            // Actualizar mensajes con los datos reales del backend
+            setMensajes(prev => {
+                const mensajesActuales = prev[asistenteActivo.id] || [];
+                // Eliminar mensaje temporal y agregar mensajes reales
+                const mensajesSinTemporal = mensajesActuales.filter(
+                    m => m.id !== mensajeUsuarioTemporal.id
+                );
+                return {
+                    ...prev,
+                    [asistenteActivo.id]: [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente]
+                };
+            });
 
             // Marcar como leído después de un momento
             setTimeout(() => {
                 setMensajes(prev => ({
                     ...prev,
                     [asistenteActivo.id]: prev[asistenteActivo.id].map(m =>
-                        m.id === nuevoMensajeBot.id ? { ...m, leido: true } : m
+                        m.id === mensajeAgente.id ? { ...m, leido: true } : m
                     )
                 }));
             }, 1000);
@@ -188,9 +291,9 @@ export function useAsistentesVirtuales() {
             console.error('Error al enviar pregunta:', error);
 
             const mensajeError: Mensaje = {
-                id: (Date.now() + 1).toString(),
+                id: `error-${Date.now()}`,
                 tipo: 'bot',
-                texto: 'Lo siento, hubo un error al procesar tu pregunta. Por favor, int intenta nuevamente.',
+                texto: 'Lo siento, hubo un error al procesar tu pregunta. Por favor, intenta nuevamente.',
                 timestamp: new Date(),
                 leido: true
             };

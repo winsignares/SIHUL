@@ -14,10 +14,11 @@ export interface Asistente {
     mensajeBienvenida: string;
     prompt: string;
     preguntasRapidas: string[];
+    chat_id?: string; // ID único de la conversación actual
 }
 
 export interface Mensaje {
-    id: string;
+    id: string | number;
     tipo: 'user' | 'bot';
     texto: string;
     timestamp: Date;
