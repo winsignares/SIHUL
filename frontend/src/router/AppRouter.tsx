@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 // Importa los componentes reales según existan
 import DashboardHome from '../pages/dashboard/DashboardHome';
 import PublicDashboard from '../pages/dashboard/PublicDashboard';
+import PublicConsultaHorario from '../pages/horarios/PublicConsultaHorario';
+import PublicPrestamo from '../pages/prestamos/PublicPrestamo';
 import FacultadesPrograms from '../pages/gestionAcademica/FacultadesPrograms';
 import ConsultaEspacios from '../pages/espacios/ConsultaEspacios';
 import CentroHorarios from '../pages/gestionAcademica/CentroHorarios';
@@ -80,6 +82,10 @@ export default function AppRouter() {
         <Route path="/public" element={<PublicLayout />}>
           <Route index element={<Navigate to="/public/dashboard" replace />} />
           <Route path="dashboard" element={<PublicDashboard />} />
+          <Route path="consulta-horario" element={<PublicConsultaHorario />} />
+          <Route path="disponibilidad-espacios" element={<ConsultaEspacios />} />
+          <Route path="prestamo" element={<PublicPrestamo />} />
+          <Route path="asistente-virtual" element={<AsistentesVirtuales />} />
           <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/public/dashboard" replace />} />
         </Route>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { espacioPermitidoService, espacioService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
+import { getEspaciosFromCache, setEspaciosInCache, getCacheKey } from '../../services/cache/cacheService';
 
 export interface EspacioView {
     id: string;
@@ -123,21 +124,34 @@ export function useConsultaEspacios() {
         const loadData = async () => {
             setLoading(true);
             try {
-                // Verificar que hay usuario autenticado
-                if (!user?.id) {
-                    console.error("No user ID found");
+                // Obtener clave de caché según el usuario
+                const cacheKey = getCacheKey(user);
+                
+                // Intentar obtener del caché primero
+                const cachedData = getEspaciosFromCache(cacheKey);
+                if (cachedData) {
+                    setEspacios(cachedData.espacios);
+                    setHorarios(cachedData.horarios);
                     setLoading(false);
                     return;
                 }
 
                 // Obtener espacios según el rol del usuario
                 let espaciosBase;
-                if (String(user.rol) === 'supervisor_general') {
-                    // Supervisor general: solo espacios permitidos
+                
+                // Acceso público sin autenticación
+                if (!user?.id) {
+                    // Si no hay usuario, listar todos los espacios (acceso público)
+                    const response = await espacioService.list();
+                    espaciosBase = response.espacios;
+                }
+                // Supervisor general: solo espacios permitidos
+                else if (String(user.rol) === 'supervisor_general') {
                     const response = await espacioPermitidoService.listByUsuario(user.id);
                     espaciosBase = response.espacios;
-                } else {
-                    // Otros roles: todos los espacios
+                }
+                // Otros roles autenticados: todos los espacios
+                else {
                     const response = await espacioService.list();
                     espaciosBase = response.espacios;
                 }
@@ -151,7 +165,7 @@ export function useConsultaEspacios() {
                             nombre: e.nombre,
                             tipo: e.tipo_espacio?.nombre || 'Sin Tipo',
                             capacidad: e.capacidad,
-                            sede: 'Sede Principal', // Ajustar si viene en el objeto
+                            sede: 'Sede Principal',
                             edificio: e.ubicacion || 'Sin Ubicación',
                             estado: estadoData.estado,
                             proximaClase: estadoData.texto_estado,
@@ -166,7 +180,7 @@ export function useConsultaEspacios() {
                             capacidad: e.capacidad,
                             sede: 'Sede Principal',
                             edificio: e.ubicacion || 'Sin Ubicación',
-                            estado: 'disponible', // Fallback
+                            estado: 'disponible',
                             proximaClase: 'Error cargando estado',
                             ubicacion: e.ubicacion
                         } as EspacioView;
@@ -175,7 +189,7 @@ export function useConsultaEspacios() {
 
                 setEspacios(espaciosConEstado);
 
-                // 4. Cargar horarios (necesarios para ambas vistas)
+                // 4. Cargar horarios
                 const allHorarios: OcupacionView[] = [];
                 await Promise.all(espaciosBase.map(async (e) => {
                     try {
@@ -196,7 +210,11 @@ export function useConsultaEspacios() {
                         console.error(`Error fetching schedule for space ${e.id}`, error);
                     }
                 }));
+                
                 setHorarios(allHorarios);
+
+                // Guardar en caché
+                setEspaciosInCache(cacheKey, espaciosConEstado, allHorarios);
 
             } catch (error) {
                 console.error("Error loading spaces", error);

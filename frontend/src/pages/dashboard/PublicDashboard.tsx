@@ -1,61 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import {
-  Clock,
-  MapPin,
-  Gift,
-  Bot,
   ChevronRight,
-  Calendar,
   Users,
   Building2,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Badge } from '../../share/badge';
 import { useDashboardHome } from '../../hooks/dashboard/useDashboardHome';
+import { usePublicDashboard } from '../../hooks/dashboard/usePublicDashboard';
 
 export default function PublicDashboard() {
   const { periodoActivo } = useDashboardHome();
-
-  const quickAccessItems = [
-    {
-      id: 'horario',
-      label: 'Consulta de Horario',
-      description: 'Visualiza horarios disponibles',
-      icon: Clock,
-      gradient: 'from-blue-500 to-cyan-600',
-      bgGradient: 'from-blue-50 to-cyan-50',
-      badge: 'Próximamente'
-    },
-    {
-      id: 'disponibilidad',
-      label: 'Disponibilidad de Espacios',
-      description: 'Espacios libres en tiempo real',
-      icon: MapPin,
-      gradient: 'from-emerald-500 to-teal-600',
-      bgGradient: 'from-emerald-50 to-teal-50',
-      badge: 'Próximamente'
-    },
-    {
-      id: 'prestamo',
-      label: 'Solicitud de Préstamo',
-      description: 'Solicita préstamo de recursos',
-      icon: Gift,
-      gradient: 'from-amber-500 to-orange-600',
-      bgGradient: 'from-amber-50 to-orange-50',
-      badge: 'Próximamente'
-    },
-    {
-      id: 'asistente',
-      label: 'Asistente Virtual',
-      description: 'Soporte automático disponible',
-      icon: Bot,
-      gradient: 'from-purple-500 to-pink-600',
-      bgGradient: 'from-purple-50 to-pink-50',
-      badge: 'Próximamente'
-    }
-  ];
+  const { quickAccessItems, handleNavigateToService } = usePublicDashboard();
 
   return (
     <div className="p-8 space-y-8">
@@ -125,8 +84,8 @@ export default function PublicDashboard() {
                       transition={{ duration: 0.2 }}
                     >
                       <Button
-                        disabled
-                        className={`w-full bg-gradient-to-r ${item.gradient} text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
+                        onClick={() => handleNavigateToService(item.route, item.id)}
+                        className={`w-full bg-gradient-to-r ${item.gradient} text-white hover:opacity-90`}
                       >
                         Acceder
                         <ChevronRight className="w-4 h-4 ml-2" />
