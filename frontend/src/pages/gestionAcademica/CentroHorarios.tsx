@@ -605,11 +605,11 @@ export default function CentroHorarios() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gradient-to-r from-slate-800 to-slate-900">
-                        <th className="border-2 border-slate-300 p-4 text-white w-24">
+                        <th className="border-2 border-slate-300 p-4 text-white w-32">
                           <Clock className="w-5 h-5 mx-auto mb-1" />
                           Hora
                         </th>
-                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((dia) => (
                           <th key={dia} className="border-2 border-slate-300 p-4 text-white">
                             {dia}
                           </th>
@@ -617,12 +617,18 @@ export default function CentroHorarios() {
                       </tr>
                     </thead>
                     <tbody>
-                      {generarHoras().map((hora) => (
+                      {generarHoras().map((hora) => {
+                        // Convertir hora a rango (ej: "6:00" -> "6:00 - 7:00")
+                        const horaNum = parseInt(hora.split(':')[0]);
+                        const horaFin = horaNum + 1;
+                        const horaRango = `${hora} - ${horaFin.toString().padStart(2, '0')}:00`;
+                        
+                        return (
                         <tr key={hora} className="hover:bg-slate-50 transition-colors">
-                          <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center text-slate-700">
-                            {hora}
+                          <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center text-slate-700 text-xs font-medium">
+                            <div>{horaRango}</div>
                           </td>
-                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'].map((dia) => {
                             const clase = obtenerClaseEnHora(dia, hora, grupoDetalles.horarios);
                             return (
                               <td
@@ -661,7 +667,8 @@ export default function CentroHorarios() {
                             );
                           })}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

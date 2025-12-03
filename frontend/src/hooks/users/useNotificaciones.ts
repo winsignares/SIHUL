@@ -16,10 +16,21 @@ import {
  */
 const mapearNotificacion = (notif: NotificacionBackend): NotificacionUsuario => {
     // Extraer título y descripción del mensaje
-    // El mensaje puede venir en formato "Título: Descripción" o solo descripción
-    const partes = notif.mensaje.split(':');
-    const titulo = partes.length > 1 ? partes[0].trim() : obtenerTituloDefault(notif.tipo_notificacion);
-    const descripcion = partes.length > 1 ? partes.slice(1).join(':').trim() : notif.mensaje;
+    let titulo = '';
+    let descripcion = notif.mensaje;
+
+    // Para notificaciones de rechazo, extraer la primera línea como título
+    if (notif.tipo_notificacion === 'solicitud_rechazada') {
+        const lineas = notif.mensaje.split('\n');
+        titulo = lineas[0].trim();
+        // Mantener solo el contenido después del título (sin la primera línea)
+        descripcion = lineas.slice(1).join('\n').trim();
+    } else {
+        // Para otras notificaciones, intentar dividir por ':'
+        const partes = notif.mensaje.split(':');
+        titulo = partes.length > 1 ? partes[0].trim() : obtenerTituloDefault(notif.tipo_notificacion);
+        descripcion = partes.length > 1 ? partes.slice(1).join(':').trim() : notif.mensaje;
+    }
 
     return {
         id: notif.id,
@@ -48,6 +59,9 @@ const obtenerTituloDefault = (tipo: string): string => {
         'error': 'Error en Operación',
         'advertencia': 'Advertencia',
         'facultad': 'Actualización de Facultad',
+        'solicitud_espacio': 'Nueva Solicitud de Espacio',
+        'solicitud_aprobada': 'Solicitud Aprobada',
+        'solicitud_rechazada': 'Solicitud Rechazada',
     };
     return titulos[tipo] || 'Notificación';
 };
@@ -226,9 +240,10 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             return tipoLower === 'horario' || tipoLower === 'solicitud';
         }
         
-        // ESPACIOS: Agrupa espacios, préstamos y facultades
+        // ESPACIOS: Agrupa espacios, préstamos, solicitudes de espacio y facultades
         if (filterTab === 'espacios') {
-            return tipoLower === 'espacio' || tipoLower === 'prestamo' || tipoLower === 'facultad';
+            return tipoLower === 'espacio' || tipoLower === 'prestamo' || tipoLower === 'facultad' || 
+                   tipoLower === 'solicitud_espacio' || tipoLower === 'solicitud_aprobada' || tipoLower === 'solicitud_rechazada';
         }
         
         // SISTEMA: Agrupa sistema, mensajes, alertas, éxito, error, advertencia

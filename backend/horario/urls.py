@@ -2,12 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # SolicitudEspacio endpoints (DEBEN IR PRIMERO - rutas más específicas)
+    path('solicitudes/aprobar/', views.aprobar_solicitud_espacio, name='aprobar_solicitud_espacio'),
+    path('solicitudes/rechazar/', views.rechazar_solicitud_espacio, name='rechazar_solicitud_espacio'),
+    path('solicitudes/', views.list_solicitudes_espacio, name='list_solicitudes_espacio'),
+    
     # Horario endpoints
-    path('', views.create_horario, name='create_horario'),
-    path('update/', views.update_horario, name='update_horario'),
-    path('delete/', views.delete_horario, name='delete_horario'),
-    path('<int:id>/', views.get_horario, name='get_horario'),
-    path('list/', views.list_horarios, name='list_horarios'),
     path('list/extendidos/', views.list_horarios_extendidos, name='list_horarios_extendidos'),
     path('mi-horario/', views.mi_horario_docente, name='mi_horario_docente'),
     path('mi-horario-estudiante/', views.mi_horario_estudiante, name='mi_horario_estudiante'),
@@ -18,11 +18,16 @@ urlpatterns = [
     path('exportar-excel-docente/', views.exportar_horarios_excel_docente, name='exportar_horario_excel_docente'),
     path('exportar-pdf-usuario/', views.exportar_pdf_usuario, name='exportar_pdf_usuario'),
     path('exportar-excel-usuario/', views.exportar_excel_usuario, name='exportar_excel_usuario'),
+    path('update/', views.update_horario, name='update_horario'),
+    path('delete/', views.delete_horario, name='delete_horario'),
+    path('list/', views.list_horarios, name='list_horarios'),
+    path('<int:id>/', views.get_horario, name='get_horario'),
+    path('', views.create_horario, name='create_horario'),
     
     # HorarioFusionado endpoints
-    path('fusionado/', views.create_horario_fusionado, name='create_horario_fusionado'),
     path('fusionado/update/', views.update_horario_fusionado, name='update_horario_fusionado'),
     path('fusionado/delete/', views.delete_horario_fusionado, name='delete_horario_fusionado'),
-    path('fusionado/<int:id>/', views.get_horario_fusionado, name='get_horario_fusionado'),
     path('fusionado/list/', views.list_horarios_fusionados, name='list_horarios_fusionados'),
+    path('fusionado/<int:id>/', views.get_horario_fusionado, name='get_horario_fusionado'),
+    path('fusionado/', views.create_horario_fusionado, name='create_horario_fusionado'),
 ]

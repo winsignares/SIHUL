@@ -27,6 +27,7 @@ export interface CreateHorarioPayload {
     hora_fin: string;
     docente_id?: number | null;
     cantidad_estudiantes?: number | null;
+    usuario_id?: number | null;
 }
 
 /**

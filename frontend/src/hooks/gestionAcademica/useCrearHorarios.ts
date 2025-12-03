@@ -451,11 +451,15 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                     dia_semana: dia.toLowerCase(),
                     hora_inicio: horas.inicio,
                     hora_fin: horas.fin,
-                    cantidad_estudiantes: cantidadEstudiantes as number
+                    cantidad_estudiantes: cantidadEstudiantes as number,
+                    usuario_id: user?.id
                 });
             }
 
-            showNotification(`✅ Asignatura ${asignatura?.nombre || ''} asignada correctamente`, 'success');
+            const mensaje = role?.nombre === 'admin' 
+              ? `✅ Espacio añadido exitosamente para ${asignatura?.nombre || 'la asignatura'}`
+              : `✅ Se ha enviado su solicitud para ${asignatura?.nombre || 'la asignatura'}. Se le hará revisión en breve.`;
+            showNotification(mensaje, 'success');
             setShowModalAsignar(false);
 
             // Recargar datos
@@ -683,6 +687,8 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         semestres,
         horas,
         obtenerClaseEnHora,
-        notification
+        notification,
+        user,
+        role
     };
 }

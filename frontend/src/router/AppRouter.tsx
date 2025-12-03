@@ -26,6 +26,7 @@ import Login from '../pages/users/Login';
 import AdminDashboard from '../layouts/AdminDashboard';
 import DocentePrestamos from '../pages/prestamos/DocentePrestamos';
 import EnConstruccion from '../pages/shared/EnConstruccion';
+import SolicitudesEspacio from '../pages/gestionAcademica/SolicitudesEspacio';
 
 // Componente Layout que usa AdminDashboard como base
 function AppLayout() {
@@ -175,6 +176,12 @@ export default function AppRouter() {
         <Route path="admin/estado-recursos" element={
           <ProtectedRoute requiredComponent="Estado de Recursos">
             <EstadoRecursos />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/solicitudes-espacio" element={
+          <ProtectedRoute>
+            <SolicitudesEspacio />
           </ProtectedRoute>
         } />
 

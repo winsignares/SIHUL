@@ -72,7 +72,9 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     semestres,
     horas,
     obtenerClaseEnHora,
-    notification
+    notification,
+    user,
+    role
   } = useCrearHorarios({ onHorarioCreado });
 
   // Obtener asignaturas filtradas por programa y semestre del grupo seleccionado
@@ -280,7 +282,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Asignar Asignatura
+              {role?.nombre === 'admin' ? 'Añadir Espacio' : 'Solicitar Espacio'}
             </Button>
             <Button
               variant="outline"
@@ -328,7 +330,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                   <table className="w-full border-collapse min-w-[900px]">
                     <thead>
                       <tr>
-                        <th className="border-2 border-slate-300 bg-gradient-to-r from-slate-100 to-slate-50 p-3 w-24 sticky left-0 z-10 font-semibold text-slate-700">Hora</th>
+                        <th className="border-2 border-slate-300 bg-gradient-to-r from-slate-100 to-slate-50 p-3 w-32 sticky left-0 z-10 font-semibold text-slate-700">Hora</th>
                         {diasSemana.map(dia => (
                           <th key={dia} className="border-2 border-slate-300 bg-gradient-to-b from-red-50 to-slate-50 p-3 text-slate-900 font-bold">
                             {dia}
@@ -337,10 +339,16 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                       </tr>
                     </thead>
                     <tbody>
-                      {horas.map(hora => (
+                      {horas.map(hora => {
+                        // Convertir hora a rango (ej: "6:00" -> "6:00 - 7:00")
+                        const horaNum = parseInt(hora.split(':')[0]);
+                        const horaFin = horaNum + 1;
+                        const horaRango = `${hora} - ${horaFin.toString().padStart(2, '0')}:00`;
+                        
+                        return (
                         <tr key={hora}>
                           <td className="border-2 border-slate-300 bg-gradient-to-r from-slate-100 to-slate-50 p-3 text-slate-700 text-center font-semibold sticky left-0 z-10">
-                            {hora}
+                            <div className="text-xs font-medium">{horaRango}</div>
                           </td>
                           {diasSemana.map(dia => {
                             const clase = obtenerClaseEnHora(dia, hora);
@@ -425,7 +433,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                             );
                           })}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -499,7 +508,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <BookOpen className="w-5 h-5 text-red-600" />
-              Asignar Asignatura al Grupo {grupoSeleccionado?.nombre}
+              {role?.nombre === 'admin' ? 'Añadir Espacio' : 'Asignar Asignatura'} al Grupo {grupoSeleccionado?.nombre}
             </DialogTitle>
           </DialogHeader>
 
@@ -702,7 +711,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
-              Guardar Asignación
+              {role?.nombre === 'admin' ? 'Añadir Espacio' : 'Realizar Solicitud'}
             </Button>
           </DialogFooter>
         </DialogContent>

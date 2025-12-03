@@ -38,4 +38,7 @@ export type TipoNotificacion =
     | 'horario'
     | 'prestamo'
     | 'espacio'
-    | 'facultad';
+    | 'facultad'
+    | 'solicitud_espacio'
+    | 'solicitud_aprobada'
+    | 'solicitud_rechazada';

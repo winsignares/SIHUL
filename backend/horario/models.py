@@ -6,6 +6,12 @@ from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
 class Horario(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aprobado', 'Aprobado'),
+        ('rechazado', 'Rechazado'),
+    ]
+    
     id = models.AutoField(primary_key=True)
     grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='horarios')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='horarios')
@@ -15,6 +21,7 @@ class Horario(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
     cantidad_estudiantes = models.IntegerField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
 
     class Meta:
         constraints = [
@@ -68,3 +75,38 @@ class HorarioEstudiante(models.Model):
 
     def __str__(self):
         return f"{self.estudiante.nombre} - {self.horario}"
+
+class SolicitudEspacio(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aprobada', 'Aprobada'),
+        ('rechazada', 'Rechazada'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='solicitudes_espacio')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='solicitudes_espacio')
+    docente = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes_docente')
+    espacio_solicitado = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='solicitudes_espacio')
+    planificador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes_creadas')
+    horario_generado = models.OneToOneField(Horario, on_delete=models.CASCADE, null=True, blank=True, related_name='solicitud')
+    dia_semana = models.CharField(max_length=15)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    cantidad_estudiantes = models.IntegerField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_aprobacion = models.DateTimeField(null=True, blank=True)
+    aprobado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes_aprobadas')
+    comentario = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(hora_fin__gt=F('hora_inicio')),
+                name='chk_solicitud_horas',
+            ),
+        ]
+    
+    def __str__(self):
+        return f"Solicitud {self.asignatura.nombre} - {self.estado}"
