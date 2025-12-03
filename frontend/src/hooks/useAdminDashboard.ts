@@ -29,8 +29,11 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
 
     const shouldShowExpanded = !isSidebarCollapsed || isSidebarHovered;
 
-    const userName = user?.nombre || propsUserName || 'Usuario';
-    const userRole = role?.nombre || propsUserRole || 'Usuario';
+    // Detectar si es acceso público por la ruta
+    const isPublicAccess = location.pathname.startsWith('/public');
+
+    const userName = user?.nombre || propsUserName || (isPublicAccess ? 'Usuario Público' : 'Usuario');
+    const userRole = role?.nombre || propsUserRole || (isPublicAccess ? 'Público' : 'Usuario');
     const userFacultyName = user?.facultad?.nombre || '';
 
     const handleLogout = propsOnLogout || (() => {
@@ -57,6 +60,11 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
      */
     const groupComponentsBySection = (): MenuSection[] => {
         const sections: MenuSection[] = [];
+
+        // Si es acceso público, no mostrar componentes en el sidebar
+        if (isPublicAccess) {
+            return [];
+        }
 
         // Sección Principal (Dashboards)
         const dashboardComponents = components.filter(c => c.nombre.toLowerCase().includes('dashboard'));
@@ -235,6 +243,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         notificacionesSinLeer,
         menuSections,
         handleLogout,
-        location
+        location,
+        isPublicAccess
     };
 }

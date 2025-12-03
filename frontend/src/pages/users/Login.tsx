@@ -17,7 +17,8 @@ export default function Login() {
     isHovered,
     setIsHovered,
     isLoading,
-    handleSubmit
+    handleSubmit,
+    handlePublicAccess
   } = useLogin();
 
   return (
@@ -238,6 +239,21 @@ export default function Login() {
                       {isLoading ? 'INICIANDO...' : 'INICIAR SESIÓN'}
                       {!isLoading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                     </span>
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.65, duration: 0.5 }}
+                  className="pt-2"
+                >
+                  <Button
+                    type="button"
+                    onClick={handlePublicAccess}
+                    className="w-full h-12 bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-base tracking-wide uppercase"
+                  >
+                    ACCESO PÚBLICO
                   </Button>
                 </motion.div>
               </form>

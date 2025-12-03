@@ -26,6 +26,11 @@ export function useLogin() {
         }
     };
 
+    const handlePublicAccess = () => {
+        console.log('[useLogin] Acceso público solicitado');
+        navigate('/public/dashboard', { replace: true });
+    };
+
     useEffect(() => {
         if (isAuthenticated && role && components.length > 0 && !hasNavigated) {
             console.log('[useLogin] Usuario autenticado, redirigiendo...', { role, components });
@@ -65,6 +70,7 @@ export function useLogin() {
         isHovered,
         setIsHovered,
         isLoading,
-        handleSubmit
+        handleSubmit,
+        handlePublicAccess
     };
 }

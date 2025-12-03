@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 // Importa los componentes reales según existan
 import DashboardHome from '../pages/dashboard/DashboardHome';
+import PublicDashboard from '../pages/dashboard/PublicDashboard';
 import FacultadesPrograms from '../pages/gestionAcademica/FacultadesPrograms';
 import ConsultaEspacios from '../pages/espacios/ConsultaEspacios';
 import CentroHorarios from '../pages/gestionAcademica/CentroHorarios';
@@ -26,6 +27,11 @@ import EnConstruccion from '../pages/shared/EnConstruccion';
 
 // Componente Layout que usa AdminDashboard como base
 function AppLayout() {
+  return <AdminDashboard><Outlet /></AdminDashboard>;
+}
+
+// Componente Layout para rutas públicas (sin componentes)
+function PublicLayout() {
   return <AdminDashboard><Outlet /></AdminDashboard>;
 }
 
@@ -66,11 +72,17 @@ function ProtectedRoute({
 export default function AppRouter() {
   const { isAuthenticated, components } = useAuth();
 
-  // Si no está logueado, solo puede ver Login
+  // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/public" element={<PublicLayout />}>
+          <Route index element={<Navigate to="/public/dashboard" replace />} />
+          <Route path="dashboard" element={<PublicDashboard />} />
+          <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/public/dashboard" replace />} />
+        </Route>
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     );

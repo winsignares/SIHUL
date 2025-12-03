@@ -32,7 +32,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     notificacionesSinLeer,
     menuSections,
     handleLogout,
-    location
+    location,
+    isPublicAccess
   } = useAdminDashboard(props.userName, props.userRole, props.onLogout);
 
   return (
@@ -65,7 +66,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     transition={{ duration: 0.3 }}
                   >
                     <h1 className="text-white whitespace-nowrap">SIHUL</h1>
-                    <p className="text-red-300 whitespace-nowrap text-xs">{userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
+                    <p className="text-red-300 whitespace-nowrap text-xs">{isPublicAccess ? 'Acceso Público' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -164,7 +165,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
           </nav>
 
           {/* Notificaciones, Ajustes, Usuario */}
-          <div className="border-t border-red-700/50 p-4 space-y-2">
+          {!isPublicAccess && (
+            <div className="border-t border-red-700/50 p-4 space-y-2">
             {/* Notificaciones */}
             {
               (() => {
@@ -245,7 +247,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                 );
               })()
             }
-          </div>
+            </div>
+          )}
 
           {/* Footer: Cerrar Sesión */}
           <div className="p-4 border-t border-red-700/50">
