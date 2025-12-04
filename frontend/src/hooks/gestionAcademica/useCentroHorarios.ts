@@ -123,8 +123,8 @@ export function useCentroHorarios() {
 
             // Cargar horarios fusionados
             const fusionadosResponse = await horarioFusionadoService.list();
-            const fusionadosConInfo = await Promise.all(
-                fusionadosResponse.horarios_fusionados.map(async (hf) => {
+            const fusionadosConInfo: HorarioFusionadoExtendido[] = await Promise.all(
+                fusionadosResponse.horarios_fusionados.map(async (hf): Promise<HorarioFusionadoExtendido> => {
                     // Obtener información de los grupos
                     const [grupo1, grupo2, grupo3] = await Promise.all([
                         grupoService.get(hf.grupo1_id),
@@ -136,13 +136,24 @@ export function useCentroHorarios() {
                     const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
                     
                     return {
-                        ...hf,
+                        id: hf.id as number,
+                        grupo1_id: hf.grupo1_id,
+                        grupo2_id: hf.grupo2_id,
+                        grupo3_id: hf.grupo3_id ?? null,
                         grupo1_nombre: grupo1.nombre,
                         grupo2_nombre: grupo2.nombre,
                         grupo3_nombre: grupo3?.nombre || null,
+                        asignatura_id: hf.asignatura_id,
                         asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
+                        docente_id: horario1?.docente_id ?? null,
                         docente_nombre: horario1?.docente_nombre || 'N/A',
-                        espacio_nombre: horario1?.espacio_nombre || 'N/A'
+                        espacio_id: horario1?.espacio_id ?? hf.espacio_id,
+                        espacio_nombre: horario1?.espacio_nombre || 'N/A',
+                        dia_semana: hf.dia_semana,
+                        hora_inicio: hf.hora_inicio,
+                        hora_fin: hf.hora_fin,
+                        cantidad_estudiantes: hf.cantidad_estudiantes ?? null,
+                        comentario: hf.comentario ?? null
                     };
                 })
             );
