@@ -298,15 +298,23 @@ Este proyecto es propiedad de la Universidad Libre.
 
 ## 👨‍💻 Autores
 
-**Lider de Proyecto: Willian Ignacio Insignares Vanegas**
-- GitHub: [@winsignares](https://github.com/winsignares) 
-
-** 💻👥 Desarrolladores**
-- GitHub: [@winsignares](https://github.com/winsignares) 
-- GitHub: [@winsignares](https://github.com/winsignares)
-- GitHub: [@winsignares](https://github.com/winsignares)
+### 🎯 Líder de Proyecto
+**Willian Ignacio Insignares Vanegas**
 - GitHub: [@winsignares](https://github.com/winsignares)
 
+### 💻 Equipo de Desarrollo
+
+**Desarrollador 1**
+- GitHub: [@Jfer178](https://github.com/Jfer178)
+
+**Desarrollador 2**
+- GitHub: [@winsignares](https://github.com/winsignares)
+
+**Desarrollador 3**
+- GitHub: [@winsignares](https://github.com/winsignares)
+
+**Desarrollador 4**
+- GitHub: [@winsignares](https://github.com/winsignares)
 
 ---
 
