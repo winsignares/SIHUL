@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../share/notificationBanner';
-import { horarioService } from '../../services/horarios/horariosAPI';
+import { horarioService, horarioFusionadoService } from '../../services/horarios/horariosAPI';
 import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
+import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 
 export interface HorarioExtendido {
@@ -33,15 +34,38 @@ export interface GrupoAgrupado {
     horarios: HorarioExtendido[];
 }
 
+export interface HorarioFusionadoExtendido {
+    id: number;
+    grupo1_id: number;
+    grupo2_id: number;
+    grupo3_id: number | null;
+    grupo1_nombre: string;
+    grupo2_nombre: string;
+    grupo3_nombre: string | null;
+    asignatura_id: number;
+    asignatura_nombre: string;
+    docente_id: number | null;
+    docente_nombre: string;
+    espacio_id: number;
+    espacio_nombre: string;
+    dia_semana: string;
+    hora_inicio: string;
+    hora_fin: string;
+    cantidad_estudiantes: number | null;
+    comentario: string | null;
+}
+
 export function useCentroHorarios() {
     const { user, role } = useAuth();
     const { notification, showNotification } = useNotification();
     const [searchParams] = useSearchParams();
     const modeParam = searchParams.get('mode');
     const initialMode = modeParam === 'consulta' ? 'consulta' : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
-    const [activeTab, setActiveTab] = useState<'consulta' | 'crear' | 'modificacion'>(initialMode);
+    const [activeTab, setActiveTab] = useState<'consulta' | 'crear' | 'modificacion' | 'fusionados'>(initialMode as any);
     const [loading, setLoading] = useState(false);
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
+    const [horariosFusionados, setHorariosFusionados] = useState<HorarioFusionadoExtendido[]>([]);
+    const [grupos, setGrupos] = useState<Grupo[]>([]);
     const [facultades, setFacultades] = useState<Facultad[]>([]);
     const [programas, setProgramas] = useState<Programa[]>([]);
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
@@ -96,6 +120,37 @@ export function useCentroHorarios() {
             // Cargar horarios extendidos
             const horariosResponse = await horarioService.listExtendidos();
             setHorarios(horariosResponse.horarios);
+
+            // Cargar horarios fusionados
+            const fusionadosResponse = await horarioFusionadoService.list();
+            const fusionadosConInfo = await Promise.all(
+                fusionadosResponse.horarios_fusionados.map(async (hf) => {
+                    // Obtener información de los grupos
+                    const [grupo1, grupo2, grupo3] = await Promise.all([
+                        grupoService.get(hf.grupo1_id),
+                        grupoService.get(hf.grupo2_id),
+                        hf.grupo3_id ? grupoService.get(hf.grupo3_id) : Promise.resolve(null)
+                    ]);
+
+                    // Buscar información adicional de horarios
+                    const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
+                    
+                    return {
+                        ...hf,
+                        grupo1_nombre: grupo1.nombre,
+                        grupo2_nombre: grupo2.nombre,
+                        grupo3_nombre: grupo3?.nombre || null,
+                        asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
+                        docente_nombre: horario1?.docente_nombre || 'N/A',
+                        espacio_nombre: horario1?.espacio_nombre || 'N/A'
+                    };
+                })
+            );
+            setHorariosFusionados(fusionadosConInfo);
+
+            // Cargar grupos
+            const gruposResponse = await grupoService.list();
+            setGrupos(gruposResponse.grupos);
 
             // Cargar facultades
             const facultadesResponse = await facultadService.list();
@@ -587,6 +642,8 @@ export function useCentroHorarios() {
         activeTab, setActiveTab,
         loading,
         horarios,
+        horariosFusionados,
+        grupos,
         facultades,
         programas,
         espacios,
