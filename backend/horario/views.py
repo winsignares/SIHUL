@@ -43,7 +43,8 @@ def mi_horario_docente(request):
         
         # Obtener horarios del docente con información extendida
         horarios = Horario.objects.filter(
-            docente=docente
+            docente=docente,
+            estado='aprobado'
         ).select_related('grupo', 'asignatura', 'espacio', 'grupo__programa').all()
         
         lst = []
@@ -326,7 +327,7 @@ def get_horario(request, id=None):
 @csrf_exempt
 def list_horarios(request):
     if request.method == 'GET':
-        items = Horario.objects.all()
+        items = Horario.objects.filter(estado='aprobado')
         lst = [{
             "id": i.id,
             "grupo_id": i.grupo.id,
@@ -342,10 +343,10 @@ def list_horarios(request):
 
 @csrf_exempt
 def list_horarios_extendidos(request):
-    """Lista horarios con información extendida (nombres de relaciones)"""
+    """Lista horarios con información extendida (nombres de relaciones) - Solo aprobados"""
     if request.method == 'GET':
-        # Traer todos los horarios (sin filtro de estado)
-        items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').all()
+        # Traer solo horarios aprobados
+        items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
         lst = []
         for i in items:
             lst.append({
@@ -541,7 +542,7 @@ def obtener_horarios_usuario(usuario_id):
             return horarios, rol_nombre
         else:
             # Asumir que es docente
-            horarios = Horario.objects.filter(docente=usuario).select_related(
+            horarios = Horario.objects.filter(docente=usuario, estado='aprobado').select_related(
                 'grupo', 'asignatura', 'espacio', 'docente'
             )
             return list(horarios), rol_nombre
@@ -806,6 +807,11 @@ def exportar_horarios_pdf_post(request):
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
+        # Filtrar solo horarios aprobados
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        
+        if not horarios_data:
+            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
         
         # Agrupar horarios por grupo
         grupos_dict = {}
@@ -1007,6 +1013,12 @@ def exportar_horarios_excel_post(request):
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
+        
+        # Filtrar solo horarios aprobados
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        
+        if not horarios_data:
+            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
         
         # Agrupar horarios por grupo
         grupos_dict = {}
@@ -1606,7 +1618,7 @@ def list_horarios_extendidos_usuario(usuario_id):
             from docentes.models import Docente
             try:
                 docente = Docente.objects.get(usuario=usuario)
-                items = Horario.objects.filter(docente=docente).select_related(
+                items = Horario.objects.filter(docente=docente, estado='aprobado').select_related(
                     'grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa'
                 )
             except Docente.DoesNotExist:
@@ -1617,7 +1629,7 @@ def list_horarios_extendidos_usuario(usuario_id):
             from estudiantes.models import Estudiante
             try:
                 estudiante = Estudiante.objects.get(usuario=usuario)
-                items = Horario.objects.filter(grupo=estudiante.grupo).select_related(
+                items = Horario.objects.filter(grupo=estudiante.grupo, estado='aprobado').select_related(
                     'grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa'
                 )
             except Estudiante.DoesNotExist:
@@ -1666,6 +1678,12 @@ def exportar_horarios_pdf_docente(request):
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
+        
+        # Filtrar solo horarios aprobados
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        
+        if not horarios_data:
+            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
         
         # Agrupar horarios por docente
         docentes_dict = {}
@@ -1857,6 +1875,12 @@ def exportar_horarios_excel_docente(request):
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
+        
+        # Filtrar solo horarios aprobados
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        
+        if not horarios_data:
+            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
         
         # Agrupar horarios por docente
         docentes_dict = {}

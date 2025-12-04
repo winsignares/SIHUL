@@ -625,7 +625,8 @@ def proximos_apertura_cierre(request):
         # Buscar horarios del día actual en los espacios permitidos
         horarios = Horario.objects.filter(
             espacio_id__in=espacios_ids,
-            dia_semana=dia_actual
+            dia_semana=dia_actual,
+            estado='aprobado'
         ).select_related('espacio', 'espacio__sede', 'espacio__tipo', 'asignatura', 'docente')
         
         for horario in horarios:
@@ -774,7 +775,8 @@ def get_estado_espacio(request, espacio_id=None):
         # 3. Buscar clases de hoy para este espacio
         clases_hoy = Horario.objects.filter(
             espacio=espacio,
-            dia_semana=dia_actual
+            dia_semana=dia_actual,
+            estado='aprobado'
         ).select_related('asignatura', 'docente', 'grupo').order_by('hora_inicio')
         
         estado_actual = "disponible"
@@ -849,7 +851,8 @@ def get_horario_espacio(request, espacio_id=None):
 
         # Obtener todos los horarios del espacio
         horarios = Horario.objects.filter(
-            espacio_id=espacio_id
+            espacio_id=espacio_id,
+            estado='aprobado'
         ).select_related('asignatura', 'docente', 'grupo')
         
         lista_horarios = []
@@ -945,18 +948,20 @@ def ocupacion_semanal(request):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios (clases) para este día y espacio
+                # Obtener horarios (clases) para este día y espacio - Solo aprobados
                 # Buscar con variantes de dia_semana (en español, en inglés, etc.)
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es  # Case-insensitive search
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'  # Solo horarios aprobados
                 )
                 
                 # Si no encuentra con español, buscar con inglés
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'  # Solo horarios aprobados
                     )
                 
                 # Obtener préstamos aprobados para este día y espacio
@@ -1313,7 +1318,7 @@ def generar_pdf_ocupacion_semanal(request):
             
             fecha_actual = lunes
             while fecha_actual <= sabado:
-                horarios = Horario.objects.filter(espacio=espacio, dia_semana__iexact=_get_dia_nombre(fecha_actual))
+                horarios = Horario.objects.filter(espacio=espacio, dia_semana__iexact=_get_dia_nombre(fecha_actual), estado='aprobado')
                 for h in horarios:
                     horas_ocupadas += _calcular_duracion_horas(h.hora_inicio, h.hora_fin)
                 
@@ -1503,16 +1508,18 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios para este día y espacio
+                # Obtener horarios para este día y espacio - Solo aprobados
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 # Obtener préstamos aprobados para este día y espacio
@@ -1577,12 +1584,14 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
                 
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 prestamos_dia = PrestamoEspacio.objects.filter(
@@ -1663,16 +1672,18 @@ def _calcular_espacios_mas_usados_reporte(espacios, lunes, sabado, dias_nombre):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios (clases)
+                # Obtener horarios (clases) - Solo aprobados
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 contador_usos += horarios_dia.count()
@@ -1839,13 +1850,15 @@ def _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre):
                 # Obtener horarios
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 # Sumar horas ocupadas por horarios
@@ -2023,13 +2036,15 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
                 # Obtener horarios (clases) para este día
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 # Contar estudiantes en horarios
