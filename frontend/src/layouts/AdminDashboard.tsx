@@ -181,8 +181,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             <div className="border-t border-red-700/50 p-4 space-y-2">
               {!isPublicAccess && (
                 <>
-                  {/* Notificaciones - Ocultar para supervisor_general, consultor_docente, consultor_estudiante */}
-                  {!['supervisor_general', 'consultor_docente', 'consultor_estudiante'].includes(userRole) && (
+                  {/* Notificaciones - Ocultar para supervisor_general, docente, estudiante */}
+                  {!['supervisor_general', 'docente', 'estudiante'].includes(userRole) && (
                     (() => {
                       const path = '/notificaciones';
                       const isActive = location.pathname === path || location.pathname.startsWith(path + '/');
@@ -385,8 +385,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
               <div className="border-t border-red-700/50 pt-4 space-y-2">
                 {!isPublicAccess && (
                   <>
-                    {/* Notificaciones - Ocultar para supervisor_general, consultor_docente, consultor_estudiante */}
-                    {!['supervisor_general', 'consultor_docente', 'consultor_estudiante'].includes(userRole) && (
+                    {/* Notificaciones - Ocultar para supervisor_general, docente, estudiante */}
+                    {!['supervisor_general', 'docente', 'estudiante'].includes(userRole) && (
                       <Link to="/notificaciones" className="block">
                         <motion.div className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-700/50 relative">
                           <Bell className="w-5 h-5 flex-shrink-0" />
