@@ -9,12 +9,16 @@ Script para crear datos de prueba completos:
 Ejecutar con: python manage.py shell < seed_data_completo.py
 """
 
+from django.db import transaction
 from sedes.models import Sede
 from facultades.models import Facultad
 from programas.models import Programa
 from asignaturas.models import Asignatura, AsignaturaPrograma
 
 print("🚀 Iniciando creación de datos de prueba...")
+
+# Usar savepoint para permitir rollback parcial en caso de error
+sid = transaction.savepoint()
 
 # ========== SEDES ==========
 print("\n📍 Creando Sedes...")
@@ -316,8 +320,22 @@ print(f"   - Programas: {Programa.objects.count()}")
 print(f"   - Asignaturas: {Asignatura.objects.count()}")
 print(f"   - Relaciones Asignatura-Programa: {AsignaturaPrograma.objects.count()} ({contador} nuevas)")
 
+# Commit del savepoint si todo salió bien
+try:
+    transaction.savepoint_commit(sid)
+    print("✅ Transacción fase 1 confirmada exitosamente")
+except Exception as e:
+    print(f"⚠️  Error al confirmar transacción: {e}")
+    transaction.savepoint_rollback(sid)
+    raise
+
 # Ejecutar script avanzado
 print("\n" + "="*60)
 print("Ejecutando Fase 2: Datos Avanzados...")
 print("="*60)
-exec(open('seed_data_avanzado.py').read())
+try:
+    exec(open('seed_data_avanzado.py').read())
+except Exception as e:
+    print(f"⚠️  Error ejecutando seed_data_avanzado.py: {e}")
+    import traceback
+    traceback.print_exc()

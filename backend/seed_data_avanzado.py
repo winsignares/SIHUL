@@ -10,6 +10,7 @@ Script para crear datos avanzados (Fase 2):
 Ejecutar DESPUÉS de seed_data_completo.py
 """
 
+from django.db import transaction
 from datetime import date, time
 from periodos.models import PeriodoAcademico
 from espacios.models import TipoEspacio, EspacioFisico
@@ -23,6 +24,9 @@ from usuarios.models import Usuario, Rol
 import random
 
 print("🚀 Iniciando creación de datos avanzados (Fase 2)...")
+
+# Usar savepoint para permitir rollback parcial en caso de error
+sid = transaction.savepoint()
 
 # ========== PERIODOS ACADÉMICOS ==========
 print("\n📅 Creando Periodos Académicos...")
@@ -236,120 +240,186 @@ rol_docente, _ = Rol.objects.get_or_create(
 )
 
 # Docentes de Matemáticas y Ciencias Básicas
-docente_matematicas, _ = Usuario.objects.get_or_create(
-    correo="docente.matematicas@unilibre.edu.co",
-    defaults={
-        "nombre": "Dr. Carlos Rodríguez",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_matematicas, _ = Usuario.objects.get_or_create(
+        correo="docente.matematicas@unilibre.edu.co",
+        defaults={
+            "nombre": "Dr. Carlos Rodríguez",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.matematicas@unilibre.edu.co: {e}")
+    docente_matematicas = Usuario.objects.filter(correo="docente.matematicas@unilibre.edu.co").first()
+    if not docente_matematicas:
+        raise
 
-docente_fisica, _ = Usuario.objects.get_or_create(
-    correo="docente.fisica@unilibre.edu.co",
-    defaults={
-        "nombre": "Dra. María González",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_fisica, _ = Usuario.objects.get_or_create(
+        correo="docente.fisica@unilibre.edu.co",
+        defaults={
+            "nombre": "Dra. María González",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.fisica@unilibre.edu.co: {e}")
+    docente_fisica = Usuario.objects.filter(correo="docente.fisica@unilibre.edu.co").first()
+    if not docente_fisica:
+        raise
 
 # Docentes de Ingeniería de Sistemas
-docente_programacion, _ = Usuario.objects.get_or_create(
-    correo="docente.programacion@unilibre.edu.co",
-    defaults={
-        "nombre": "Ing. Luis Martínez",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_programacion, _ = Usuario.objects.get_or_create(
+        correo="docente.programacion@unilibre.edu.co",
+        defaults={
+            "nombre": "Ing. Luis Martínez",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.programacion@unilibre.edu.co: {e}")
+    docente_programacion = Usuario.objects.filter(correo="docente.programacion@unilibre.edu.co").first()
+    if not docente_programacion:
+        raise
 
-docente_bd, _ = Usuario.objects.get_or_create(
-    correo="docente.bd@unilibre.edu.co",
-    defaults={
-        "nombre": "Ing. Ana Pérez",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_bd, _ = Usuario.objects.get_or_create(
+        correo="docente.bd@unilibre.edu.co",
+        defaults={
+            "nombre": "Ing. Ana Pérez",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.bd@unilibre.edu.co: {e}")
+    docente_bd = Usuario.objects.filter(correo="docente.bd@unilibre.edu.co").first()
+    if not docente_bd:
+        raise
 
 # Docentes de Ingeniería Industrial
-docente_estadistica, _ = Usuario.objects.get_or_create(
-    correo="docente.estadistica@unilibre.edu.co",
-    defaults={
-        "nombre": "Dr. Jorge López",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_estadistica, _ = Usuario.objects.get_or_create(
+        correo="docente.estadistica@unilibre.edu.co",
+        defaults={
+            "nombre": "Dr. Jorge López",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.estadistica@unilibre.edu.co: {e}")
+    docente_estadistica = Usuario.objects.filter(correo="docente.estadistica@unilibre.edu.co").first()
+    if not docente_estadistica:
+        raise
 
-docente_industrial, _ = Usuario.objects.get_or_create(
-    correo="docente.industrial@unilibre.edu.co",
-    defaults={
-        "nombre": "Ing. Patricia Ramírez",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_industrial, _ = Usuario.objects.get_or_create(
+        correo="docente.industrial@unilibre.edu.co",
+        defaults={
+            "nombre": "Ing. Patricia Ramírez",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.industrial@unilibre.edu.co: {e}")
+    docente_industrial = Usuario.objects.filter(correo="docente.industrial@unilibre.edu.co").first()
+    if not docente_industrial:
+        raise
 
 # Docentes de Ingeniería Civil
-docente_civil, _ = Usuario.objects.get_or_create(
-    correo="docente.civil@unilibre.edu.co",
-    defaults={
-        "nombre": "Ing. Roberto Sánchez",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_civil, _ = Usuario.objects.get_or_create(
+        correo="docente.civil@unilibre.edu.co",
+        defaults={
+            "nombre": "Ing. Roberto Sánchez",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.civil@unilibre.edu.co: {e}")
+    docente_civil = Usuario.objects.filter(correo="docente.civil@unilibre.edu.co").first()
+    if not docente_civil:
+        raise
 
 # Docentes de Ciencias Económicas
-docente_administracion, _ = Usuario.objects.get_or_create(
-    correo="docente.administracion@unilibre.edu.co",
-    defaults={
-        "nombre": "Mg. Carmen Torres",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_administracion, _ = Usuario.objects.get_or_create(
+        correo="docente.administracion@unilibre.edu.co",
+        defaults={
+            "nombre": "Mg. Carmen Torres",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.administracion@unilibre.edu.co: {e}")
+    docente_administracion = Usuario.objects.filter(correo="docente.administracion@unilibre.edu.co").first()
+    if not docente_administracion:
+        raise
 
-docente_contabilidad, _ = Usuario.objects.get_or_create(
-    correo="docente.contabilidad@unilibre.edu.co",
-    defaults={
-        "nombre": "Cont. Diana Vargas",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_contabilidad, _ = Usuario.objects.get_or_create(
+        correo="docente.contabilidad@unilibre.edu.co",
+        defaults={
+            "nombre": "Cont. Diana Vargas",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.contabilidad@unilibre.edu.co: {e}")
+    docente_contabilidad = Usuario.objects.filter(correo="docente.contabilidad@unilibre.edu.co").first()
+    if not docente_contabilidad:
+        raise
 
 # Docentes de Humanidades
-docente_humanidades, _ = Usuario.objects.get_or_create(
-    correo="docente.humanidades@unilibre.edu.co",
-    defaults={
-        "nombre": "Lic. Alberto Castro",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_humanidades, _ = Usuario.objects.get_or_create(
+        correo="docente.humanidades@unilibre.edu.co",
+        defaults={
+            "nombre": "Lic. Alberto Castro",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.humanidades@unilibre.edu.co: {e}")
+    docente_humanidades = Usuario.objects.filter(correo="docente.humanidades@unilibre.edu.co").first()
+    if not docente_humanidades:
+        raise
 
-docente_ingles, _ = Usuario.objects.get_or_create(
-    correo="docente.ingles@unilibre.edu.co",
-    defaults={
-        "nombre": "Lic. Sandra Morales",
-        "activo": True,
-        "contrasena_hash": "doc123",
-        "rol": rol_docente
-    }
-)
+try:
+    docente_ingles, _ = Usuario.objects.get_or_create(
+        correo="docente.ingles@unilibre.edu.co",
+        defaults={
+            "nombre": "Lic. Sandra Morales",
+            "activo": True,
+            "contrasena_hash": "doc123",
+            "rol": rol_docente
+        }
+    )
+except Exception as e:
+    print(f"  Error creating user docente.ingles@unilibre.edu.co: {e}")
+    docente_ingles = Usuario.objects.filter(correo="docente.ingles@unilibre.edu.co").first()
+    if not docente_ingles:
+        raise
 
 print(f"  ✅ {Usuario.objects.filter(activo=True).count()} docentes configurados")
 
@@ -544,20 +614,27 @@ for grupo_nombre, grupo in grupos.items():
         nombre_completo = f"{random.choice(nombres_estudiantes)} {random.choice(apellidos)} {random.choice(apellidos)}"
         correo = f"estudiante.{grupo_nombre.lower()}.{i+1}@unilibre.edu.co"
         
-        estudiante, created = Usuario.objects.get_or_create(
-            correo=correo,
-            defaults={
-                "nombre": nombre_completo,
-                "activo": True,
-                "contrasena_hash": "est123",
-                "rol": rol_estudiante
-            }
-        )
-        
-        if created:
-            contador_estudiantes += 1
-        
-        estudiantes_grupo.append(estudiante)
+        try:
+            estudiante, created = Usuario.objects.get_or_create(
+                correo=correo,
+                defaults={
+                    "nombre": nombre_completo,
+                    "activo": True,
+                    "contrasena_hash": "est123",
+                    "rol": rol_estudiante
+                }
+            )
+            
+            if created:
+                contador_estudiantes += 1
+            
+            estudiantes_grupo.append(estudiante)
+        except Exception as e:
+            print(f"  Error creating user {correo}: {e}")
+            # Intentar obtener el usuario si ya existe
+            estudiante = Usuario.objects.filter(correo=correo).first()
+            if estudiante:
+                estudiantes_grupo.append(estudiante)
     
     estudiantes_por_grupo[grupo_nombre] = estudiantes_grupo
     print(f"  ✅ {len(estudiantes_grupo)} estudiantes para {grupo_nombre}")
@@ -615,9 +692,22 @@ print(f"   - Estudiantes: {len([e for grupo_est in estudiantes_por_grupo.values(
 print(f"   - Horarios: {Horario.objects.count()} ({contador_horarios} nuevos, {contador_actualizados} actualizados)")
 print(f"   - Inscripciones: {HorarioEstudiante.objects.count()}")
 
+# Commit del savepoint si todo salió bien
+try:
+    transaction.savepoint_commit(sid)
+    print("✅ Transacción confirmada exitosamente")
+except Exception as e:
+    print(f"⚠️  Error al confirmar transacción: {e}")
+    transaction.savepoint_rollback(sid)
+    raise
 
 # Ejecutar script avanzado
 print("\n" + "="*60)
 print("Ejecutando Fase 3: Datos Prestamos...")
 print("="*60)
-exec(open('seed_prestamos.py').read())
+try:
+    exec(open('seed_prestamos.py').read())
+except FileNotFoundError:
+    print("⚠️  Archivo seed_prestamos.py no encontrado, omitiendo...")
+except Exception as e:
+    print(f"⚠️  Error ejecutando seed_prestamos.py: {e}")

@@ -5,6 +5,7 @@ from django.core.management import call_command
 def seed_initial_data(apps, schema_editor):
     """
     Carga todos los datos iniciales en el orden correcto
+    NOTA: Los usuarios se crean en la migración 0005 después de agregar el campo sede
     """
     # 1. Roles
     call_command('seed_roles')
@@ -15,8 +16,8 @@ def seed_initial_data(apps, schema_editor):
     # 3. Facultades
     call_command('seed_facultades')
     
-    # 4. Usuarios
-    call_command('seed_users')
+    # 4. Usuarios - MOVIDO A MIGRACIÓN 0005
+    # call_command('seed_users')  # Comentado temporalmente
 
 
 def reverse_seed(apps, schema_editor):
