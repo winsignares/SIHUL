@@ -6,7 +6,7 @@ import { espacioService, type EspacioFisico } from '../../services/espacios/espa
 import { asignaturaService, asignaturaProgramaService, type Asignatura, type AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
 import { userService, type Usuario } from '../../services/users/authService';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
-import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
+import { horarioService, horarioFusionadoService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
 import { useAuth } from '../../context/AuthContext';
 
 export interface GrupoConInfo extends Grupo {
@@ -454,6 +454,49 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                     cantidad_estudiantes: cantidadEstudiantes as number,
                     usuario_id: user?.id
                 });
+
+                // Verificar si hay grupos compartiendo la misma clase para crear HorarioFusionado
+                const normalizeTime = (time: string) => time.substring(0, 5);
+                const diaLower = dia.toLowerCase();
+                
+                const gruposCompartiendo = todosLosHorarios.filter(h =>
+                    h.dia_semana.toLowerCase() === diaLower &&
+                    h.asignatura_id === asignaturaSeleccionada &&
+                    h.docente_id === docenteSeleccionado &&
+                    normalizeTime(h.hora_inicio) === normalizeTime(horas.inicio) &&
+                    normalizeTime(h.hora_fin) === normalizeTime(horas.fin) &&
+                    h.grupo_id !== grupoSeleccionado.id // Excluir el grupo actual
+                );
+
+                if (gruposCompartiendo.length > 0) {
+                    // Hay al menos un grupo compartiendo la clase
+                    const gruposIds = [grupoSeleccionado.id, ...gruposCompartiendo.map(h => h.grupo_id)];
+                    
+                    // Crear HorarioFusionado con hasta 3 grupos
+                    const grupo1_id = gruposIds[0];
+                    const grupo2_id = gruposIds[1];
+                    const grupo3_id = gruposIds.length > 2 ? gruposIds[2] : null;
+
+                    try {
+                        await horarioFusionadoService.create({
+                            grupo1_id,
+                            grupo2_id,
+                            grupo3_id,
+                            asignatura_id: asignaturaSeleccionada as number,
+                            docente_id: docenteSeleccionado ? (docenteSeleccionado as number) : null,
+                            espacio_id: espacioSeleccionado as number,
+                            dia_semana: diaLower,
+                            hora_inicio: horas.inicio,
+                            hora_fin: horas.fin,
+                            cantidad_estudiantes: (cantidadEstudiantes as number) + gruposCompartiendo.reduce((sum, h) => sum + (h.cantidad_estudiantes || 0), 0),
+                            comentario: `Clase compartida entre ${gruposIds.length} grupos`
+                        });
+                        console.log(`✅ HorarioFusionado creado para ${gruposIds.length} grupos en ${dia}`);
+                    } catch (error) {
+                        console.warn('⚠️ Error al crear HorarioFusionado:', error);
+                        // No detener el flujo si falla, ya que el horario principal ya fue creado
+                    }
+                }
             }
 
             const mensaje = role?.nombre === 'admin' 
