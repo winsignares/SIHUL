@@ -51,17 +51,84 @@ export function useAsistentesVirtuales() {
     const [chatIds, setChatIds] = useState<{ [key: string]: string }>({}); // Mapeo agente_id -> chat_id
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Cargar agentes desde el backend
+    // Funciones para persistir chat_ids y mensajes en localStorage POR USUARIO
+    const obtenerClavesStorage = () => {
+        const userId = user?.id || 'guest';
+        return {
+            CHAT_IDS_KEY: `sihul_chat_ids_${userId}`,
+            MENSAJES_KEY: `sihul_mensajes_chat_${userId}`
+        };
+    };
+
+    const cargarChatIdsDesdeStorage = (): { [key: string]: string } => {
+        try {
+            const { CHAT_IDS_KEY } = obtenerClavesStorage();
+            const stored = localStorage.getItem(CHAT_IDS_KEY);
+            return stored ? JSON.parse(stored) : {};
+        } catch (error) {
+            console.error('Error al cargar chat_ids desde localStorage:', error);
+            return {};
+        }
+    };
+
+    const guardarChatIdsEnStorage = (chatIdsMap: { [key: string]: string }) => {
+        try {
+            const { CHAT_IDS_KEY } = obtenerClavesStorage();
+            localStorage.setItem(CHAT_IDS_KEY, JSON.stringify(chatIdsMap));
+        } catch (error) {
+            console.error('Error al guardar chat_ids en localStorage:', error);
+        }
+    };
+
+    const cargarMensajesDesdeStorage = (): { [key: string]: Mensaje[] } => {
+        try {
+            const { MENSAJES_KEY } = obtenerClavesStorage();
+            const stored = localStorage.getItem(MENSAJES_KEY);
+            if (!stored) return {};
+            
+            const parsed = JSON.parse(stored);
+            // Convertir las fechas de string a Date
+            const mensajesConvertidos: { [key: string]: Mensaje[] } = {};
+            for (const [key, mensajes] of Object.entries(parsed)) {
+                mensajesConvertidos[key] = (mensajes as any[]).map(msg => ({
+                    ...msg,
+                    timestamp: new Date(msg.timestamp)
+                }));
+            }
+            return mensajesConvertidos;
+        } catch (error) {
+            console.error('Error al cargar mensajes desde localStorage:', error);
+            return {};
+        }
+    };
+
+    const guardarMensajesEnStorage = (mensajesMap: { [key: string]: Mensaje[] }) => {
+        try {
+            const { MENSAJES_KEY } = obtenerClavesStorage();
+            localStorage.setItem(MENSAJES_KEY, JSON.stringify(mensajesMap));
+        } catch (error) {
+            console.error('Error al guardar mensajes en localStorage:', error);
+        }
+    };
+
+    // Cargar agentes y datos persistidos desde el backend
     useEffect(() => {
         const cargarAgentes = async () => {
             try {
                 setLoading(true);
+                // Cargar chat_ids y mensajes persistidos DEL USUARIO ACTUAL
+                const chatIdsGuardados = cargarChatIdsDesdeStorage();
+                setChatIds(chatIdsGuardados);
+                
+                const mensajesGuardados = cargarMensajesDesdeStorage();
+                setMensajes(mensajesGuardados);
+
                 const response = await chatbotAPI.listarAgentes();
                 const agentesUI = response.agentes.map(convertirAgenteAPI);
                 setAsistentes(agentesUI);
 
-                // Seleccionar el primer agente por defecto
-                if (agentesUI.length > 0) {
+                // Seleccionar el primer agente por defecto SI NO HAY MENSAJES GUARDADOS
+                if (agentesUI.length > 0 && Object.keys(mensajesGuardados).length === 0) {
                     const primerAgente = agentesUI[0];
                     setAsistenteActivo(primerAgente);
                     setMensajes({
@@ -73,6 +140,9 @@ export function useAsistentesVirtuales() {
                             leido: true
                         }]
                     });
+                } else if (agentesUI.length > 0) {
+                    // Si hay mensajes guardados, seleccionar el primer agente pero no sobrescribir mensajes
+                    setAsistenteActivo(agentesUI[0]);
                 }
             } catch (error) {
                 console.error('Error al cargar agentes:', error);
@@ -82,7 +152,14 @@ export function useAsistentesVirtuales() {
         };
 
         cargarAgentes();
-    }, []);
+    }, [user?.id]); // Recargar cuando cambie el usuario
+
+    // Guardar mensajes en localStorage cada vez que cambien
+    useEffect(() => {
+        if (Object.keys(mensajes).length > 0) {
+            guardarMensajesEnStorage(mensajes);
+        }
+    }, [mensajes]);
 
     // Rotación de preguntas sugeridas
     useEffect(() => {
@@ -123,15 +200,9 @@ export function useAsistentesVirtuales() {
     const abrirChat = async (asistente: Asistente) => {
         setAsistenteActivo(asistente);
 
-        // Si ya hay mensajes cargados, no hacer nada más
-        if (mensajes[asistente.id] && mensajes[asistente.id].length > 0) {
-            return;
-        }
-
-        // Intentar cargar historial desde el backend
-        try {
-            if (!user?.id) {
-                // Sin usuario, mostrar mensaje de bienvenida
+        // Si no hay usuario, mostrar solo mensaje de bienvenida
+        if (!user?.id) {
+            if (!mensajes[asistente.id]) {
                 setMensajes(prev => ({
                     ...prev,
                     [asistente.id]: [{
@@ -142,13 +213,25 @@ export function useAsistentesVirtuales() {
                         leido: true
                     }]
                 }));
-                return;
             }
+            return;
+        }
 
-            const response = await chatbotAPI.obtenerHistorial({
-                agente_id: asistente.id,
-                id_usuario: user.id
-            });
+        // Si ya hay mensajes locales, mostrarlos inmediatamente (UX optimista)
+        // pero aún así sincronizar en segundo plano
+        const tieneMensajesLocales = mensajes[asistente.id] && mensajes[asistente.id].length > 0;
+
+        // Siempre intentar sincronizar con el backend para obtener mensajes actualizados
+        try {
+            // Obtener chat_id si existe para esta conversación
+            const currentChatId = chatIds[asistente.id];
+
+            // Cargar historial usando chat_id si existe, o por agente_id + usuario si no
+            const response = await chatbotAPI.obtenerHistorial(
+                currentChatId 
+                    ? { chat_id: currentChatId, id_usuario: user.id }
+                    : { agente_id: asistente.id, id_usuario: user.id }
+            );
 
             if (response.mensajes && response.mensajes.length > 0) {
                 // Hay historial, cargar los mensajes
@@ -160,17 +243,23 @@ export function useAsistentesVirtuales() {
                     leido: true
                 }));
 
-                setMensajes(prev => ({
-                    ...prev,
-                    [asistente.id]: mensajesHistorial
-                }));
-
-                // Guardar el chat_id si existe
-                if (response.mensajes[0]?.chat_id) {
-                    setChatIds(prev => ({
+                // Solo actualizar si no tenemos mensajes locales o si el backend tiene más mensajes
+                const mensajesLocales = mensajes[asistente.id] || [];
+                if (!tieneMensajesLocales || mensajesHistorial.length > mensajesLocales.length) {
+                    setMensajes(prev => ({
                         ...prev,
-                        [asistente.id]: response.mensajes[0].chat_id
+                        [asistente.id]: mensajesHistorial
                     }));
+                }
+
+                // Guardar el chat_id si existe y persistir en localStorage
+                if (response.mensajes[0]?.chat_id) {
+                    const nuevoChatId = response.mensajes[0].chat_id;
+                    setChatIds(prev => {
+                        const updated = { ...prev, [asistente.id]: nuevoChatId };
+                        guardarChatIdsEnStorage(updated);
+                        return updated;
+                    });
                 }
             } else {
                 // No hay historial, mostrar mensaje de bienvenida
@@ -239,12 +328,13 @@ export function useAsistentesVirtuales() {
                 nombre_usuario: user.nombre
             });
 
-            // Guardar el chat_id para futuras conversaciones
-            if (response.chat_id && !chatIds[asistenteActivo.id]) {
-                setChatIds(prev => ({
-                    ...prev,
-                    [asistenteActivo.id]: response.chat_id
-                }));
+            // Guardar el chat_id para futuras conversaciones y persistir
+            if (response.chat_id) {
+                setChatIds(prev => {
+                    const updated = { ...prev, [asistenteActivo.id]: response.chat_id };
+                    guardarChatIdsEnStorage(updated);
+                    return updated;
+                });
             }
 
             // Reemplazar mensaje temporal con el mensaje real del backend
@@ -319,6 +409,99 @@ export function useAsistentesVirtuales() {
         }
     };
 
+    const [mostrarHistorial, setMostrarHistorial] = useState(false);
+    const [conversacionesHistorial, setConversacionesHistorial] = useState<any[]>([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
+    const cargarHistorialConversaciones = async () => {
+        if (!asistenteActivo || !user?.id) return;
+        
+        try {
+            setCargandoHistorial(true);
+            const response = await chatbotAPI.listarConversaciones({
+                agente_id: asistenteActivo.id,
+                id_usuario: user.id
+            });
+            setConversacionesHistorial(response.conversaciones || []);
+        } catch (error) {
+            console.error('Error al cargar historial de conversaciones:', error);
+        } finally {
+            setCargandoHistorial(false);
+        }
+    };
+
+    const cargarConversacionAnterior = async (chat_id: string) => {
+        if (!asistenteActivo || !user?.id) return;
+        
+        try {
+            const response = await chatbotAPI.obtenerHistorial({
+                chat_id: chat_id,
+                id_usuario: user.id
+            });
+
+            if (response.mensajes && response.mensajes.length > 0) {
+                const mensajesHistorial = response.mensajes.map((msg) => ({
+                    id: msg.id,
+                    tipo: msg.tipo,
+                    texto: msg.texto,
+                    timestamp: new Date(msg.timestamp),
+                    leido: true
+                }));
+
+                setMensajes(prev => ({
+                    ...prev,
+                    [asistenteActivo.id]: mensajesHistorial
+                }));
+
+                // Actualizar chat_id actual
+                setChatIds(prev => {
+                    const updated = { ...prev, [asistenteActivo.id]: chat_id };
+                    guardarChatIdsEnStorage(updated);
+                    return updated;
+                });
+
+                setMostrarHistorial(false);
+            }
+        } catch (error) {
+            console.error('Error al cargar conversación anterior:', error);
+        }
+    };
+
+    const limpiarConversacion = (asistenteId: string) => {
+        // Eliminar chat_id para iniciar conversación nueva
+        setChatIds(prev => {
+            const updated = { ...prev };
+            delete updated[asistenteId];
+            guardarChatIdsEnStorage(updated);
+            return updated;
+        });
+
+        // Limpiar mensajes locales y de localStorage
+        setMensajes(prev => {
+            const updated = { ...prev };
+            delete updated[asistenteId];
+            guardarMensajesEnStorage(updated);
+            return updated;
+        });
+
+        // Si es el asistente activo, mostrar mensaje de bienvenida
+        if (asistenteActivo?.id === asistenteId) {
+            const asistente = asistentes.find(a => a.id === asistenteId);
+            if (asistente) {
+                setMensajes(prev => ({
+                    ...prev,
+                    [asistenteId]: [{
+                        id: '1',
+                        tipo: 'bot',
+                        texto: asistente.mensajeBienvenida,
+                        timestamp: new Date(),
+                        leido: true
+                    }]
+                }));
+            }
+        }
+    };
+
     const mensajesActuales = asistenteActivo ? (mensajes[asistenteActivo.id] || []) : [];
     // Mostrar preguntas sugeridas siempre, excepto cuando el bot está escribiendo
     const mostrarPreguntasRapidas = !isTyping;
@@ -342,10 +525,17 @@ export function useAsistentesVirtuales() {
         enviarMensaje,
         enviarPreguntaRapida,
         handleKeyPress,
+        limpiarConversacion,
         mensajesActuales,
         mostrarPreguntasRapidas,
         filteredAsistentes,
         loading,
-        preguntasRotadas
+        preguntasRotadas,
+        mostrarHistorial,
+        setMostrarHistorial,
+        conversacionesHistorial,
+        cargandoHistorial,
+        cargarHistorialConversaciones,
+        cargarConversacionAnterior
     };
 }

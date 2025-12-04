@@ -9,7 +9,11 @@ import {
   Search,
   Zap,
   Star,
-  MessageCircle
+  MessageCircle,
+  RotateCcw,
+  History,
+  Clock,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAsistentesVirtuales } from '../../hooks/chatbot/useAsistentesVirtuales';
@@ -32,7 +36,14 @@ export default function AsistentesVirtuales() {
     filteredAsistentes,
     enviarPreguntaRapida,
     enviarMensaje,
-    preguntasRotadas
+    preguntasRotadas,
+    limpiarConversacion,
+    mostrarHistorial,
+    setMostrarHistorial,
+    conversacionesHistorial,
+    cargandoHistorial,
+    cargarHistorialConversaciones,
+    cargarConversacionAnterior
   } = useAsistentesVirtuales();
 
   return (
@@ -351,23 +362,130 @@ export default function AsistentesVirtuales() {
                   </div>
                 </div>
 
-                {/* Indicadores de actividad */}
+                {/* Botones de Acción */}
                 <div className="flex items-center gap-2">
+                  {/* Botón Historial */}
                   <motion.div
-                    whileHover={{ scale: 1.2, rotate: 10 }}
-                    className="cursor-pointer"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <MessageCircle className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMostrarHistorial(!mostrarHistorial);
+                        if (!mostrarHistorial) {
+                          cargarHistorialConversaciones();
+                        }
+                      }}
+                      className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/40 dark:hover:to-indigo-900/40 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                      title="Ver historial de conversaciones"
+                    >
+                      <History className="w-4 h-4" />
+                      <span className="text-xs font-medium">Historial</span>
+                    </Button>
                   </motion.div>
+
+                  {/* Botón Nueva Conversación */}
                   <motion.div
-                    whileHover={{ scale: 1.2, rotate: -10 }}
-                    className="cursor-pointer"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Star className="w-5 h-5 text-slate-400 hover:text-yellow-500" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => limpiarConversacion(asistenteActivo.id)}
+                      className="flex items-center gap-2 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-gradient-to-r hover:from-red-100 hover:to-rose-100 dark:hover:from-red-900/40 dark:hover:to-rose-900/40 hover:border-red-300 dark:hover:border-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                      title="Iniciar nueva conversación"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span className="text-xs font-medium">Nueva</span>
+                    </Button>
                   </motion.div>
                 </div>
               </div>
             </motion.div>
+
+            {/* Panel de Historial */}
+            <AnimatePresence>
+              {mostrarHistorial && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="relative z-10 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-hidden"
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Conversaciones Anteriores
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMostrarHistorial(false)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {cargandoHistorial ? (
+                      <div className="text-center py-4">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="inline-block"
+                        >
+                          <Bot className="w-6 h-6 text-blue-500" />
+                        </motion.div>
+                        <p className="text-sm text-slate-500 mt-2">Cargando historial...</p>
+                      </div>
+                    ) : conversacionesHistorial.length === 0 ? (
+                      <div className="text-center py-4">
+                        <History className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-sm text-slate-500">No hay conversaciones anteriores</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-hidden">
+                        {conversacionesHistorial.map((conv, index) => (
+                          <motion.button
+                            key={conv.chat_id}
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                            onClick={() => cargarConversacionAnterior(conv.chat_id)}
+                            className="w-full text-left p-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-md group"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                  {conv.primer_mensaje}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                  {new Date(conv.fecha_inicio).toLocaleDateString('es-ES', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">
+                                  {conv.total_interacciones} msg
+                                </span>
+                              </div>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Área de Mensajes */}
             <div
