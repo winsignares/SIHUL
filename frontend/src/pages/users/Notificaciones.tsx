@@ -3,9 +3,10 @@ import { Card, CardContent } from '../../share/card';
 import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
+import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
-import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Clock, Zap, Archive, Edit, XCircle } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Clock, Zap, Archive, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
@@ -34,7 +35,13 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     filteredNotificaciones,
     stats,
     isLoading,
-    recargar
+    recargar,
+    paginaActual,
+    totalPaginas,
+    totalNotificaciones,
+    cambiarPagina,
+    busqueda,
+    setBusqueda,
   } = useNotificaciones(onNotificacionesChange);
 
   const handleAprobarSolicitud = async (notificacion: any) => {
@@ -441,6 +448,40 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
           </motion.div>
         </div>
 
+      {/* Barra de búsqueda */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-slate-200/50 dark:border-slate-700/50"
+      >
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Buscar notificaciones por título o descripción..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
+          />
+          {busqueda && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setBusqueda('')}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+        {busqueda && (
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+            {totalNotificaciones} resultado(s) encontrado(s)
+          </p>
+        )}
+      </motion.div>
+
       {/* Tabs con diseño mejorado */}
       <Tabs value={filterTab} onValueChange={setFilterTab} className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg p-2 rounded-xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 gap-1">
@@ -711,6 +752,77 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
               ))
             )}
           </AnimatePresence>
+
+          {/* Controles de Paginación */}
+          {totalPaginas > 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-slate-200/50 dark:border-slate-700/50"
+            >
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando página <span className="font-bold text-blue-600 dark:text-blue-400">{paginaActual}</span> de <span className="font-bold text-blue-600 dark:text-blue-400">{totalPaginas}</span>
+                {' '}({totalNotificaciones} notificación{totalNotificaciones !== 1 ? 'es' : ''} en total)
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cambiarPagina(paginaActual - 1)}
+                  disabled={paginaActual === 1 || isLoading}
+                  className="border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                    let pageNum;
+                    if (totalPaginas <= 5) {
+                      pageNum = i + 1;
+                    } else if (paginaActual <= 3) {
+                      pageNum = i + 1;
+                    } else if (paginaActual >= totalPaginas - 2) {
+                      pageNum = totalPaginas - 4 + i;
+                    } else {
+                      pageNum = paginaActual - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={paginaActual === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => cambiarPagina(pageNum)}
+                        disabled={isLoading}
+                        className={`w-8 h-8 p-0 ${
+                          paginaActual === pageNum
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                            : 'border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cambiarPagina(paginaActual + 1)}
+                  disabled={paginaActual === totalPaginas || isLoading}
+                  className="border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
       </Tabs>
 

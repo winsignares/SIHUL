@@ -151,20 +151,71 @@ def list_notificaciones(request):
 
 @csrf_exempt
 def mis_notificaciones(request):
-    """Obtiene las notificaciones del usuario específico"""
+    """Obtiene las notificaciones del usuario específico con soporte para paginación y filtros"""
     if request.method == 'GET':
         id_usuario = request.GET.get('id_usuario')
         no_leidas = request.GET.get('no_leidas', 'false').lower() == 'true'
+        pagina = int(request.GET.get('pagina', 1))
+        limite = int(request.GET.get('limite', 10))
+        busqueda = request.GET.get('busqueda', '').strip()
+        tipo = request.GET.get('tipo', '').strip()
+        prioridad = request.GET.get('prioridad', '').strip()
         
         if not id_usuario:
             return JsonResponse({"error": "id_usuario es requerido"}, status=400)
         
+        # Validar parámetros de paginación
+        if pagina < 1:
+            pagina = 1
+        if limite < 1 or limite > 100:
+            limite = 10
+        
+        # Filtro base
         notificaciones = Notificacion.objects.filter(id_usuario=id_usuario)
         
+        # Filtro por leídas/no leídas
         if no_leidas:
             notificaciones = notificaciones.filter(es_leida=False)
         
+        # Filtro por búsqueda en mensaje
+        if busqueda:
+            from django.db.models import Q
+            notificaciones = notificaciones.filter(
+                Q(mensaje__icontains=busqueda) | Q(tipo_notificacion__icontains=busqueda)
+            )
+        
+        # Filtro por tipo
+        if tipo:
+            # Mapeo de tipos para incluir tipos relacionados
+            if tipo == 'horario':
+                notificaciones = notificaciones.filter(
+                    tipo_notificacion__in=['horario', 'solicitud']
+                )
+            elif tipo == 'espacio':
+                notificaciones = notificaciones.filter(
+                    tipo_notificacion__in=['espacio', 'prestamo', 'facultad', 'solicitud_espacio', 'solicitud_aprobada', 'solicitud_rechazada']
+                )
+            elif tipo == 'sistema':
+                notificaciones = notificaciones.filter(
+                    tipo_notificacion__in=['sistema', 'mensaje', 'alerta', 'exito', 'error', 'advertencia']
+                )
+            else:
+                notificaciones = notificaciones.filter(tipo_notificacion=tipo)
+        
+        # Filtro por prioridad
+        if prioridad and prioridad in ['alta', 'media', 'baja']:
+            notificaciones = notificaciones.filter(prioridad=prioridad)
+        
+        # Ordenar por fecha de creación (más recientes primero)
         notificaciones = notificaciones.order_by('-fecha_creacion')
+        
+        # Calcular totales antes de paginar
+        total = notificaciones.count()
+        
+        # Aplicar paginación
+        inicio = (pagina - 1) * limite
+        fin = inicio + limite
+        notificaciones_paginadas = notificaciones[inicio:fin]
         
         lst = [{
             "id": n.id,
@@ -174,9 +225,16 @@ def mis_notificaciones(request):
             "es_leida": n.es_leida,
             "fecha_creacion": n.fecha_creacion.isoformat(),
             "prioridad": n.prioridad
-        } for n in notificaciones]
+        } for n in notificaciones_paginadas]
         
-        return JsonResponse({"notificaciones": lst, "total": len(lst)}, status=200)
+        return JsonResponse({
+            "notificaciones": lst,
+            "total": total,
+            "pagina_actual": pagina,
+            "total_paginas": (total + limite - 1) // limite,  # Ceil division
+            "tiene_siguiente": fin < total,
+            "tiene_anterior": pagina > 1
+        }, status=200)
 
 
 @csrf_exempt

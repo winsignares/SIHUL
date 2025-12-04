@@ -1,5 +1,5 @@
 import { apiClient } from '../../core/apiClient';
-import type { NotificacionBackend } from '../../models/users/notification.model';
+import type { NotificacionBackend, NotificacionesPaginadas, NotificacionesPaginacionParams } from '../../models/users/notification.model';
 
 const API_URL = '/notificaciones';
 
@@ -92,18 +92,53 @@ export const listarNotificaciones = async (params?: {
 // ==================== ACCIONES PERSONALIZADAS ====================
 
 /**
- * Obtener las notificaciones de un usuario específico
- * GET /notificaciones/mis-notificaciones/?id_usuario={id}&no_leidas={true|false}
+ * Obtener las notificaciones de un usuario específico con paginación
+ * GET /notificaciones/mis-notificaciones/?id_usuario={id}&pagina={page}&limite={limit}&busqueda={search}
  */
 export const obtenerMisNotificaciones = async (params: {
   id_usuario: number;
   no_leidas?: boolean;
+  pagina?: number;
+  limite?: number;
+  busqueda?: string;
+  tipo?: string;
+  prioridad?: 'alta' | 'media' | 'baja';
 }): Promise<NotificacionesResponse> => {
   const queryParams = new URLSearchParams();
   queryParams.append('id_usuario', params.id_usuario.toString());
   if (params.no_leidas !== undefined) queryParams.append('no_leidas', params.no_leidas.toString());
+  if (params.pagina) queryParams.append('pagina', params.pagina.toString());
+  if (params.limite) queryParams.append('limite', params.limite.toString());
+  if (params.busqueda) queryParams.append('busqueda', params.busqueda);
+  if (params.tipo) queryParams.append('tipo', params.tipo);
+  if (params.prioridad) queryParams.append('prioridad', params.prioridad);
   
   return await apiClient.get<NotificacionesResponse>(`${API_URL}/mis-notificaciones/?${queryParams.toString()}`);
+};
+
+/**
+ * Obtener las notificaciones de un usuario específico con paginación completa
+ * GET /notificaciones/mis-notificaciones-paginadas/
+ */
+export const obtenerMisNotificacionesPaginadas = async (params: {
+  id_usuario: number;
+  pagina?: number;
+  limite?: number;
+  busqueda?: string;
+  tipo?: string;
+  prioridad?: 'alta' | 'media' | 'baja';
+  leidas?: boolean;
+}): Promise<NotificacionesPaginadas> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append('id_usuario', params.id_usuario.toString());
+  queryParams.append('pagina', (params.pagina || 1).toString());
+  queryParams.append('limite', (params.limite || 10).toString());
+  if (params.busqueda) queryParams.append('busqueda', params.busqueda);
+  if (params.tipo) queryParams.append('tipo', params.tipo);
+  if (params.prioridad) queryParams.append('prioridad', params.prioridad);
+  if (params.leidas !== undefined) queryParams.append('leidas', params.leidas.toString());
+  
+  return await apiClient.get<NotificacionesPaginadas>(`${API_URL}/mis-notificaciones-paginadas/?${queryParams.toString()}`);
 };
 
 /**
@@ -181,6 +216,7 @@ export default {
   obtenerNotificacion,
   listarNotificaciones,
   obtenerMisNotificaciones,
+  obtenerMisNotificacionesPaginadas,
   obtenerEstadisticas,
   marcarComoLeida,
   marcarTodasComoLeidas,

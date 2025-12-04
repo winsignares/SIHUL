@@ -92,24 +92,69 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
         eliminadas: 0,
     });
 
+    // Estados para paginación y búsqueda
+    const [paginaActual, setPaginaActual] = useState(1);
+    const [totalPaginas, setTotalPaginas] = useState(1);
+    const [totalNotificaciones, setTotalNotificaciones] = useState(0);
+    const [limite] = useState(10); // Máximo 10 notificaciones por página
+    const [busqueda, setBusqueda] = useState('');
+    const [busquedaActiva, setBusquedaActiva] = useState(''); // Para aplicar búsqueda con delay
+
     /**
-     * Carga las notificaciones desde el backend
+     * Carga las notificaciones desde el backend con paginación
      */
-    const cargarNotificaciones = useCallback(async () => {
+    const cargarNotificaciones = useCallback(async (pagina: number = paginaActual) => {
         if (!user?.id) return;
 
         try {
             setIsLoading(true);
-            const response = await obtenerMisNotificaciones({ id_usuario: user.id });
+            
+            // Preparar parámetros de filtrado según la pestaña activa
+            let filtroLeidas: boolean | undefined;
+            let filtroPrioridad: 'alta' | 'media' | 'baja' | undefined;
+            let filtroTipo: string | undefined;
+
+            // Aplicar filtros según la pestaña
+            if (filterTab === 'importantes') {
+                filtroLeidas = false;
+                filtroPrioridad = 'alta';
+            } else if (filterTab === 'pendientes') {
+                filtroLeidas = false;
+            } else if (filterTab === 'leidas') {
+                filtroLeidas = true;
+            } else if (filterTab === 'horarios') {
+                filtroTipo = 'horario';
+            } else if (filterTab === 'espacios') {
+                filtroTipo = 'espacio';
+            } else if (filterTab === 'sistema') {
+                filtroTipo = 'sistema';
+            }
+
+            const response = await obtenerMisNotificaciones({
+                id_usuario: user.id,
+                pagina,
+                limite,
+                busqueda: busquedaActiva,
+                prioridad: filtroPrioridad,
+                tipo: filtroTipo,
+                no_leidas: filtroLeidas === false ? true : (filtroLeidas === true ? false : undefined),
+            });
+
             const notifsMapeadas = response.notificaciones.map(mapearNotificacion);
             setNotificaciones(notifsMapeadas);
+            
+            // Actualizar información de paginación si está disponible
+            if (response.total !== undefined) {
+                setTotalNotificaciones(response.total);
+                setTotalPaginas(Math.ceil(response.total / limite));
+            }
         } catch (error: any) {
             console.error('Error al cargar notificaciones:', error);
             toast.error('Error al cargar las notificaciones');
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id]);
+    }, [user?.id, paginaActual, limite, busquedaActiva, filterTab]);
 
     /**
      * Carga las estadísticas desde el backend
@@ -139,20 +184,54 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
     }, [user?.id, onNotificacionesChange, actualizarContador]);
 
     /**
-     * Carga inicial y polling
+     * Efecto para manejar el debounce de búsqueda
      */
     useEffect(() => {
-        cargarNotificaciones();
+        const timer = setTimeout(() => {
+            setBusquedaActiva(busqueda);
+            setPaginaActual(1); // Resetear a la primera página al buscar
+        }, 500); // 500ms de delay
+
+        return () => clearTimeout(timer);
+    }, [busqueda]);
+
+    /**
+     * Efecto para recargar cuando cambia la búsqueda activa o la página
+     */
+    useEffect(() => {
+        cargarNotificaciones(paginaActual);
+    }, [busquedaActiva, paginaActual, filterTab]);
+
+    /**
+     * Carga inicial y polling de estadísticas
+     */
+    useEffect(() => {
         cargarEstadisticas();
 
-        // Polling cada 30 segundos
+        // Polling cada 30 segundos solo para estadísticas
         const interval = setInterval(() => {
-            cargarNotificaciones();
             cargarEstadisticas();
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [cargarNotificaciones, cargarEstadisticas]);
+    }, [cargarEstadisticas]);
+
+    /**
+     * Función para cambiar de página
+     */
+    const cambiarPagina = (nuevaPagina: number) => {
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+            setPaginaActual(nuevaPagina);
+        }
+    };
+
+    /**
+     * Función para cambiar de pestaña y resetear paginación
+     */
+    const cambiarTab = (nuevoTab: string) => {
+        setFilterTab(nuevoTab);
+        setPaginaActual(1);
+    };
 
     /**
      * Marca una notificación como leída
@@ -166,8 +245,9 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
                 n.id === id ? { ...n, leida: true } : n
             ));
 
-            // Actualizar estadísticas
+            // Actualizar estadísticas y recargar
             await cargarEstadisticas();
+            await cargarNotificaciones(paginaActual);
             
             toast.success('Notificación marcada como leída');
         } catch (error: any) {
@@ -188,8 +268,9 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             // Actualizar estado local
             setNotificaciones(notificaciones.map(n => ({ ...n, leida: true })));
 
-            // Actualizar estadísticas
+            // Actualizar estadísticas y recargar
             await cargarEstadisticas();
+            await cargarNotificaciones(paginaActual);
             
             toast.success(`${result.cantidad} notificación(es) marcada(s) como leída(s)`);
         } catch (error: any) {
@@ -208,8 +289,9 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             // Actualizar estado local
             setNotificaciones(notificaciones.filter(n => n.id !== id));
 
-            // Actualizar estadísticas
+            // Actualizar estadísticas y recargar
             await cargarEstadisticas();
+            await cargarNotificaciones(paginaActual);
             
             toast.success('Notificación eliminada');
         } catch (error: any) {
@@ -219,54 +301,28 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
     };
 
     /**
-     * Filtra las notificaciones según la pestaña activa
+     * Las notificaciones ya vienen filtradas del backend según la pestaña activa
+     * No necesitamos filtrado adicional en el frontend
      */
-    const filteredNotificaciones = notificaciones.filter(n => {
-        const tipoLower = n.tipo.toLowerCase();
-        
-        // IMPORTANTES: Solo alta prioridad y no leídas
-        if (filterTab === 'importantes') {
-            return n.prioridad === 'alta' && !n.leida;
-        }
-        
-        // PENDIENTES: Todas las no leídas
-        if (filterTab === 'pendientes') return !n.leida;
-        
-        // LEÍDAS: Todas las leídas
-        if (filterTab === 'leidas') return n.leida;
-        
-        // HORARIOS: Agrupa horario y solicitudes relacionadas
-        if (filterTab === 'horarios') {
-            return tipoLower === 'horario' || tipoLower === 'solicitud';
-        }
-        
-        // ESPACIOS: Agrupa espacios, préstamos, solicitudes de espacio y facultades
-        if (filterTab === 'espacios') {
-            return tipoLower === 'espacio' || tipoLower === 'prestamo' || tipoLower === 'facultad' || 
-                   tipoLower === 'solicitud_espacio' || tipoLower === 'solicitud_aprobada' || tipoLower === 'solicitud_rechazada';
-        }
-        
-        // SISTEMA: Agrupa sistema, mensajes, alertas, éxito, error, advertencia
-        if (filterTab === 'sistema') {
-            return tipoLower === 'sistema' || tipoLower === 'mensaje' || 
-                   tipoLower === 'alerta' || tipoLower === 'exito' || 
-                   tipoLower === 'error' || tipoLower === 'advertencia';
-        }
-        
-        // DEFAULT: Mostrar todo
-        return true;
-    });
+    const filteredNotificaciones = notificaciones;
 
     return {
         notificaciones,
         filterTab,
-        setFilterTab,
+        setFilterTab: cambiarTab,
         marcarComoLeida: marcarComoLeidaLocal,
         marcarTodasComoLeidas: marcarTodasComoLeidasLocal,
         eliminarNotificacion,
         filteredNotificaciones,
         stats,
         isLoading,
-        recargar: cargarNotificaciones,
+        recargar: () => cargarNotificaciones(paginaActual),
+        // Nuevas propiedades para paginación
+        paginaActual,
+        totalPaginas,
+        totalNotificaciones,
+        cambiarPagina,
+        busqueda,
+        setBusqueda,
     };
 }

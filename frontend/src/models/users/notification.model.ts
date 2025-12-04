@@ -42,3 +42,27 @@ export type TipoNotificacion =
     | 'solicitud_espacio'
     | 'solicitud_aprobada'
     | 'solicitud_rechazada';
+
+/**
+ * Parámetros para paginación y búsqueda
+ */
+export interface NotificacionesPaginacionParams {
+    pagina?: number;
+    limite?: number;
+    busqueda?: string;
+    tipo?: string;
+    prioridad?: 'alta' | 'media' | 'baja';
+    leidas?: boolean;
+}
+
+/**
+ * Respuesta paginada de notificaciones
+ */
+export interface NotificacionesPaginadas {
+    notificaciones: NotificacionBackend[];
+    total: number;
+    pagina_actual: number;
+    total_paginas: number;
+    tiene_siguiente: boolean;
+    tiene_anterior: boolean;
+}

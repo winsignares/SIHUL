@@ -14,6 +14,7 @@ urlpatterns = [
     
     # Acciones personalizadas
     path('mis-notificaciones/', views.mis_notificaciones, name='mis_notificaciones'),
+    path('mis-notificaciones-paginadas/', views.mis_notificaciones, name='mis_notificaciones_paginadas'),
     path('estadisticas/', views.estadisticas, name='estadisticas_notificaciones'),
     path('marcar-leida/<int:id>/', views.marcar_como_leida, name='marcar_notificacion_leida'),
     path('marcar-todas-leidas/', views.marcar_todas_como_leidas, name='marcar_todas_notificaciones_leidas'),
