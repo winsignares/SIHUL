@@ -7,6 +7,9 @@ export interface Facultad {
     id?: number;
     nombre: string;
     activa?: boolean;
+    sede_id?: number;
+    sede_nombre?: string;
+    sede_ciudad?: string;
 }
 
 /**

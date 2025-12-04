@@ -38,7 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 nombre: response.nombre,
                 correo: response.correo,
                 rol: response.rol,
-                facultad: response.facultad
+                facultad: response.facultad,
+                sede: response.sede
             };
 
             // Guardar en localStorage
@@ -49,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (response.facultad) {
                 localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
+            }
+
+            if (response.sede) {
+                localStorage.setItem('auth_sede', JSON.stringify(response.sede));
             }
 
             if (response.espacios_permitidos) {

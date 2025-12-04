@@ -203,7 +203,17 @@ def get_espacio(request, id=None):
 @csrf_exempt
 def list_espacios(request):
     if request.method == 'GET':
-        items = EspacioFisico.objects.all()
+        # Obtener sede del usuario desde middleware
+        user_sede = getattr(request, 'sede', None)
+        
+        # Filtrar espacios por la misma ciudad de la sede del usuario
+        if user_sede and user_sede.ciudad:
+            items = EspacioFisico.objects.select_related('sede').filter(
+                sede__ciudad=user_sede.ciudad
+            )
+        else:
+            items = EspacioFisico.objects.all()
+        
         lst = []
         for i in items:
             # Obtener recursos del espacio

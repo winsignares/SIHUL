@@ -40,6 +40,7 @@ class ApiClient {
     try {
       const response = await fetch(url, {
         ...fetchConfig,
+        credentials: 'include', // Incluir cookies de sesión
         headers: {
           ...this.getHeaders(fetchConfig.body instanceof FormData),
           ...(fetchConfig.headers as Record<string, string>),

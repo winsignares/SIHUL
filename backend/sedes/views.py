@@ -83,6 +83,10 @@ def get_sede(request, id=None):
 @csrf_exempt
 def list_sedes(request):
     if request.method == 'GET':
-        sedes = Sede.objects.all()
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            sedes = Sede.objects.filter(ciudad=user_sede.ciudad)
+        else:
+            sedes = Sede.objects.all()
         lst = [{"id": s.id, "nombre": s.nombre, "direccion": s.direccion, "ciudad": s.ciudad, "activa": s.activa} for s in sedes]
         return JsonResponse({"sedes": lst}, status=200)

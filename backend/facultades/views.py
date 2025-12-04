@@ -79,6 +79,22 @@ def get_facultad(request, id=None):
 @csrf_exempt
 def list_facultades(request):
     if request.method == 'GET':
-        items = Facultad.objects.all()
-        lst = [{"id": i.id, "nombre": i.nombre, "activa": i.activa} for i in items]
+        # Obtener la sede del usuario desde el middleware
+        user_sede = getattr(request, 'sede', None)
+        
+        if user_sede and user_sede.ciudad:
+            # Filtrar facultades de sedes en la misma ciudad que el usuario
+            items = Facultad.objects.filter(sede__ciudad=user_sede.ciudad).select_related('sede')
+        else:
+            # Si no hay sede asignada, mostrar todas las facultades
+            items = Facultad.objects.all().select_related('sede')
+        
+        lst = [{
+            "id": i.id,
+            "nombre": i.nombre,
+            "activa": i.activa,
+            "sede_id": i.sede_id,
+            "sede_nombre": i.sede.nombre if i.sede else None,
+            "sede_ciudad": i.sede.ciudad if i.sede else None
+        } for i in items]
         return JsonResponse({"facultades": lst}, status=200)

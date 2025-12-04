@@ -115,7 +115,18 @@ def list_notificaciones(request):
         id_usuario = request.GET.get('id_usuario')
         no_leidas = request.GET.get('no_leidas', 'false').lower() == 'true'
         
-        notificaciones = Notificacion.objects.all()
+        # Obtener sede del usuario desde middleware
+        user_sede = getattr(request, 'sede', None)
+        
+        # Filtrar notificaciones por usuarios de la misma ciudad
+        if user_sede and user_sede.ciudad:
+            from usuarios.models import Usuario
+            usuarios_misma_ciudad = Usuario.objects.filter(
+                sede__ciudad=user_sede.ciudad
+            ).values_list('id', flat=True)
+            notificaciones = Notificacion.objects.filter(id_usuario__in=usuarios_misma_ciudad)
+        else:
+            notificaciones = Notificacion.objects.all()
         
         if id_usuario:
             notificaciones = notificaciones.filter(id_usuario=id_usuario)

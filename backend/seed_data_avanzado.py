@@ -226,70 +226,6 @@ for grupo_data in grupos_data:
 # ========== HORARIOS ==========
 print("\n📅 Creando Horarios...")
 
-# Función de validación de conflictos
-def validar_horario(grupo, asignatura_codigo, docente, espacio, dia, hora_inicio, hora_fin, estudiantes, horarios_existentes):
-    """
-    Valida que no existan conflictos de horarios.
-    Retorna (valido, mensaje_error)
-    """
-    from collections import defaultdict
-    
-    # Convertir hora a minutos para comparación
-    def hora_a_minutos(hora):
-        return hora.hour * 60 + hora.minute
-    
-    inicio_nuevo = hora_a_minutos(hora_inicio)
-    fin_nuevo = hora_a_minutos(hora_fin)
-    
-    # 1. Validar que el profesor no tenga conflictos
-    for h_data in horarios_existentes:
-        if h_data['docente'] == docente and h_data['dia'] == dia:
-            inicio_exist = hora_a_minutos(h_data['hora_inicio'])
-            fin_exist = hora_a_minutos(h_data['hora_fin'])
-            
-            # Verificar superposición de horarios
-            if not (fin_nuevo <= inicio_exist or inicio_nuevo >= fin_exist):
-                # Hay superposición - verificar si es la misma clase
-                if h_data['asignatura_codigo'] != asignatura_codigo:
-                    return False, f"❌ Conflicto: {docente.nombre} ya tiene clase de {h_data['asignatura_codigo']} el {dia} de {h_data['hora_inicio']}-{h_data['hora_fin']}"
-    
-    # 2. Validar capacidad del espacio para clases compartidas
-    # Buscar todas las clases que comparten mismo espacio, docente, asignatura, día y hora
-    total_estudiantes = estudiantes
-    grupos_compartiendo = [grupo]
-    
-    for h_data in horarios_existentes:
-        if (h_data['espacio'] == espacio and 
-            h_data['docente'] == docente and
-            h_data['asignatura_codigo'] == asignatura_codigo and
-            h_data['dia'] == dia):
-            
-            inicio_exist = hora_a_minutos(h_data['hora_inicio'])
-            fin_exist = hora_a_minutos(h_data['hora_fin'])
-            
-            # Verificar si comparten el mismo horario exacto
-            if inicio_nuevo == inicio_exist and fin_nuevo == fin_exist:
-                total_estudiantes += h_data['estudiantes']
-                grupos_compartiendo.append(h_data['grupo'])
-    
-    if total_estudiantes > espacio.capacidad:
-        grupos_str = ', '.join([g.nombre if hasattr(g, 'nombre') else g for g in grupos_compartiendo])
-        return False, f"❌ Capacidad excedida: {total_estudiantes} estudiantes ({grupos_str}) exceden capacidad de {espacio.nombre} ({espacio.capacidad})"
-    
-    # 3. Validar que el espacio no esté ocupado por otra clase diferente
-    for h_data in horarios_existentes:
-        if h_data['espacio'] == espacio and h_data['dia'] == dia:
-            inicio_exist = hora_a_minutos(h_data['hora_inicio'])
-            fin_exist = hora_a_minutos(h_data['hora_fin'])
-            
-            # Verificar superposición
-            if not (fin_nuevo <= inicio_exist or inicio_nuevo >= fin_exist):
-                # Hay superposición - verificar si NO es la misma clase
-                if not (h_data['docente'] == docente and h_data['asignatura_codigo'] == asignatura_codigo):
-                    return False, f"❌ Conflicto: Espacio {espacio.nombre} ocupado el {dia} de {h_data['hora_inicio']}-{h_data['hora_fin']} por {h_data['grupo']}"
-    
-    return True, "✅ Horario válido"
-
 # Crear/obtener docentes para diferentes áreas
 print("  👨‍🏫 Configurando docentes...")
 
@@ -422,34 +358,34 @@ horarios_data = [
     # ==================== SEMESTRE 1 ====================
     
     # Sistemas-A (Semestre 1)
-    {"grupo": "Sistemas-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-203", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
+    {"grupo": "Sistemas-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
     {"grupo": "Sistemas-A", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-101", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
     {"grupo": "Sistemas-A", "asignatura_codigo": "SIS101", "docente": docente_programacion, "espacio": "COMP-101", "dia": "miércoles", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
     {"grupo": "Sistemas-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-101", "dia": "jueves", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 35},
     {"grupo": "Sistemas-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-102", "dia": "viernes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
     
-    # Sistemas-B (Semestre 1) - Cálculo I en horario diferente
-    {"grupo": "Sistemas-B", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-201", "dia": "lunes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
+    # Sistemas-B (Semestre 1) - Comparte Cálculo I con Sistemas-A
+    {"grupo": "Sistemas-B", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 30},
     {"grupo": "Sistemas-B", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-102", "dia": "martes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     {"grupo": "Sistemas-B", "asignatura_codigo": "SIS101", "docente": docente_programacion, "espacio": "COMP-102", "dia": "miércoles", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     {"grupo": "Sistemas-B", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-102", "dia": "jueves", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 30},
     {"grupo": "Sistemas-B", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-103", "dia": "viernes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     
-    # Industrial-A (Semestre 1) - Cálculo I en horario diferente
-    {"grupo": "Industrial-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-202", "dia": "lunes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 25},
+    # Industrial-A (Semestre 1) - Comparte Cálculo I
+    {"grupo": "Industrial-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-101", "dia": "miércoles", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-201", "dia": "jueves", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-202", "dia": "viernes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "ADM101", "docente": docente_administracion, "espacio": "A-201", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
     
     # Civil-A (Semestre 1)
-    {"grupo": "Civil-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 28},
+    {"grupo": "Civil-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-202", "dia": "lunes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 28},
     {"grupo": "Civil-A", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-201", "dia": "martes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 28},
     {"grupo": "Civil-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-103", "dia": "miércoles", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 28},
     {"grupo": "Civil-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-103", "dia": "jueves", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 28},
     
     # Admin-A (Semestre 1)
-    {"grupo": "Admin-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "miércoles", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
+    {"grupo": "Admin-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-203", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 32},
     {"grupo": "Admin-A", "asignatura_codigo": "CON101", "docente": docente_contabilidad, "espacio": "A-203", "dia": "miércoles", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
     {"grupo": "Admin-A", "asignatura_codigo": "ADM101", "docente": docente_administracion, "espacio": "A-203", "dia": "jueves", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
     {"grupo": "Admin-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-202", "dia": "viernes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
@@ -465,7 +401,7 @@ horarios_data = [
     {"grupo": "Sistemas-2A", "asignatura_codigo": "ING102", "docente": docente_ingles, "espacio": "A-101", "dia": "viernes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     
     # Industrial-2A (Semestre 2)
-    {"grupo": "Industrial-2A", "asignatura_codigo": "MAT102", "docente": docente_matematicas, "espacio": "A-203", "dia": "lunes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 26},
+    {"grupo": "Industrial-2A", "asignatura_codigo": "MAT102", "docente": docente_matematicas, "espacio": "A-201", "dia": "lunes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 26},
     {"grupo": "Industrial-2A", "asignatura_codigo": "FIS102", "docente": docente_fisica, "espacio": "LAB-201", "dia": "martes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 26},
     {"grupo": "Industrial-2A", "asignatura_codigo": "MAT104", "docente": docente_matematicas, "espacio": "A-202", "dia": "miércoles", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 26},
     {"grupo": "Industrial-2A", "asignatura_codigo": "ING102", "docente": docente_ingles, "espacio": "A-203", "dia": "jueves", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 26},
@@ -522,9 +458,6 @@ horarios_data = [
 
 contador_horarios = 0
 contador_actualizados = 0
-contador_rechazados = 0
-horarios_creados = []  # Para validación
-
 for horario_data in horarios_data:
     grupo = grupos.get(horario_data["grupo"])
     if not grupo:
@@ -548,24 +481,6 @@ for horario_data in horarios_data:
         print(f"  ⚠️  Espacio {horario_data['espacio']} no encontrado")
         continue
     
-    # VALIDAR CONFLICTOS ANTES DE CREAR
-    valido, mensaje = validar_horario(
-        grupo=grupo.nombre,
-        asignatura_codigo=horario_data["asignatura_codigo"],
-        docente=horario_data["docente"],
-        espacio=espacio,
-        dia=horario_data["dia"],
-        hora_inicio=horario_data["hora_inicio"],
-        hora_fin=horario_data["hora_fin"],
-        estudiantes=horario_data["estudiantes"],
-        horarios_existentes=horarios_creados
-    )
-    
-    if not valido:
-        contador_rechazados += 1
-        print(f"  {mensaje}")
-        continue
-    
     # Intentar actualizar horario existente o crear uno nuevo
     horario, created = Horario.objects.update_or_create(
         grupo=grupo,
@@ -581,27 +496,12 @@ for horario_data in horarios_data:
         }
     )
     
-    # Agregar a la lista de horarios creados para validaciones futuras
-    horarios_creados.append({
-        'grupo': grupo.nombre,
-        'asignatura_codigo': horario_data["asignatura_codigo"],
-        'docente': horario_data["docente"],
-        'espacio': espacio,
-        'dia': horario_data["dia"],
-        'hora_inicio': horario_data["hora_inicio"],
-        'hora_fin': horario_data["hora_fin"],
-        'estudiantes': horario_data["estudiantes"]
-    })
-    
     if created:
         contador_horarios += 1
         print(f"  ✅ Horario creado: {grupo.nombre} - {asignatura.nombre} - {horario_data['docente'].nombre} ({horario_data['dia']} {horario_data['hora_inicio']}-{horario_data['hora_fin']})")
     else:
         contador_actualizados += 1
         print(f"  🔄 Horario actualizado: {grupo.nombre} - {asignatura.nombre} - {horario_data['docente'].nombre}")
-
-if contador_rechazados > 0:
-    print(f"\n  ⚠️  {contador_rechazados} horarios rechazados por conflictos")
 
 # ========== ESTUDIANTES ==========
 print("\n👨‍🎓 Creando Estudiantes...")
@@ -715,8 +615,9 @@ print(f"   - Estudiantes: {len([e for grupo_est in estudiantes_por_grupo.values(
 print(f"   - Horarios: {Horario.objects.count()} ({contador_horarios} nuevos, {contador_actualizados} actualizados)")
 print(f"   - Inscripciones: {HorarioEstudiante.objects.count()}")
 
-# Ejecutar script prestamos
+
+# Ejecutar script avanzado
 print("\n" + "="*60)
-print("Ejecutando Fase 3: Datos Préstamos...")
+print("Ejecutando Fase 3: Datos Prestamos...")
 print("="*60)
 exec(open('seed_prestamos.py').read())
