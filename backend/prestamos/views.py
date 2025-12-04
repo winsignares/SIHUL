@@ -310,9 +310,20 @@ def get_prestamo(request, id=None):
     
 def list_prestamos(request):
     if request.method == 'GET':
-        items = PrestamoEspacio.objects.select_related(
-            'espacio', 'usuario', 'administrador', 'tipo_actividad'
-        ).prefetch_related('prestamo_recursos__recurso').all()
+        # Obtener sede del usuario desde middleware
+        user_sede = getattr(request, 'sede', None)
+        
+        # Filtrar prestamos por la misma ciudad de la sede del usuario (a través de espacio -> sede)
+        if user_sede and user_sede.ciudad:
+            items = PrestamoEspacio.objects.select_related(
+                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad'
+            ).prefetch_related('prestamo_recursos__recurso').filter(
+                espacio__sede__ciudad=user_sede.ciudad
+            )
+        else:
+            items = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad'
+            ).prefetch_related('prestamo_recursos__recurso').all()
         
         lst = []
         for i in items:

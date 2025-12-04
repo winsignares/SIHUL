@@ -101,6 +101,16 @@ def get_grupo(request, id=None):
 @csrf_exempt
 def list_grupos(request):
     if request.method == 'GET':
-        items = Grupo.objects.all()
+        # Obtener sede del usuario desde middleware
+        user_sede = getattr(request, 'sede', None)
+        
+        # Filtrar grupos por la misma ciudad de la sede del usuario (a través de programa -> facultad -> sede)
+        if user_sede and user_sede.ciudad:
+            items = Grupo.objects.select_related('programa__facultad__sede').filter(
+                programa__facultad__sede__ciudad=user_sede.ciudad
+            )
+        else:
+            items = Grupo.objects.all()
+        
         lst = [{"id": i.id, "nombre": i.nombre, "programa_id": i.programa.id, "periodo_id": i.periodo.id, "semestre": i.semestre, "activo": i.activo} for i in items]
         return JsonResponse({"grupos": lst}, status=200)

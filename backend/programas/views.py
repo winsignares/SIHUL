@@ -98,7 +98,13 @@ def get_programa(request, id=None):
 @csrf_exempt
 def list_programas(request):
     if request.method == 'GET':
-        items = Programa.objects.all()
+        user_sede = getattr(request, 'sede', None)
+        
+        if user_sede:
+            items = Programa.objects.filter(facultad__sede__ciudad=user_sede.ciudad)
+        else:
+            items = Programa.objects.all()
+            
         lst = [{
             "id": i.id, 
             "nombre": i.nombre, 
