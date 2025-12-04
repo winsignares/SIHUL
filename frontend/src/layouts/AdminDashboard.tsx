@@ -181,8 +181,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             <div className="border-t border-red-700/50 p-4 space-y-2">
               {!isPublicAccess && (
                 <>
-                  {/* Notificaciones */}
-                  {
+                  {/* Notificaciones - Ocultar para supervisor_general, consultor_docente, consultor_estudiante */}
+                  {!['supervisor_general', 'consultor_docente', 'consultor_estudiante'].includes(userRole) && (
                     (() => {
                       const path = '/notificaciones';
                       const isActive = location.pathname === path || location.pathname.startsWith(path + '/');
@@ -218,7 +218,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                         </Link>
                       );
                     })()
-                  }
+                  )}
 
                   {/* Usuario */}
                   {
@@ -284,30 +284,27 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                 </>
               )}
 
-              {/* Iniciar Sesión - Solo en acceso público */}
+              {/* Cerrar Sesión / Iniciar Sesión - Para acceso público */}
               {isPublicAccess && (
-                <Link to="/login" className="block w-full">
-                  <motion.div
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 shadow-lg hover:shadow-xl transition-all"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <LogOut className="w-5 h-5 flex-shrink-0 rotate-180" />
-                    <AnimatePresence>
-                      {shouldShowExpanded && (
-                        <motion.span
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: 'auto' }}
-                          exit={{ opacity: 0, width: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="flex-1 text-left whitespace-nowrap overflow-hidden text-sm font-semibold"
-                        >
-                          Iniciar Sesión
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                </Link>
+                <Button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 shadow-lg hover:shadow-xl transition-all border-0 hover:from-yellow-500 hover:to-yellow-600"
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0 rotate-180" />
+                  <AnimatePresence>
+                    {shouldShowExpanded && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-1 text-left whitespace-nowrap overflow-hidden text-sm font-semibold"
+                      >
+                        Iniciar Sesión
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Button>
               )}
             </div>
           </motion.aside>
@@ -388,15 +385,18 @@ export default function AdminDashboard(props: AdminDashboardProps) {
               <div className="border-t border-red-700/50 pt-4 space-y-2">
                 {!isPublicAccess && (
                   <>
-                    <Link to="/notificaciones" className="block">
-                      <motion.div className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-700/50 relative">
-                        <Bell className="w-5 h-5 flex-shrink-0" />
-                        <span className="flex-1 text-sm">Notificaciones</span>
-                        {notificacionesSinLeer > 0 && (
-                          <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
-                        )}
-                      </motion.div>
-                    </Link>
+                    {/* Notificaciones - Ocultar para supervisor_general, consultor_docente, consultor_estudiante */}
+                    {!['supervisor_general', 'consultor_docente', 'consultor_estudiante'].includes(userRole) && (
+                      <Link to="/notificaciones" className="block">
+                        <motion.div className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-700/50 relative">
+                          <Bell className="w-5 h-5 flex-shrink-0" />
+                          <span className="flex-1 text-sm">Notificaciones</span>
+                          {notificacionesSinLeer > 0 && (
+                            <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
+                          )}
+                        </motion.div>
+                      </Link>
+                    )}
                     <Link to="/ajustes" className="block">
                       <motion.div className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-700/50">
                         <Settings className="w-5 h-5 flex-shrink-0" />
@@ -416,14 +416,18 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                   </>
                 )}
 
-                {/* Iniciar Sesión - Solo en acceso público (Mobile) */}
+                {/* Cerrar Sesión / Iniciar Sesión - Para acceso público (Mobile) */}
                 {isPublicAccess && (
-                  <Link to="/login" className="block" onClick={() => setMobileMenuOpen(false)}>
-                    <motion.div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 font-semibold hover:shadow-lg transition-all">
-                      <LogOut className="w-5 h-5 flex-shrink-0 rotate-180" />
-                      <span className="flex-1 text-sm">Iniciar Sesión</span>
-                    </motion.div>
-                  </Link>
+                  <Button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-red-900 font-semibold hover:shadow-lg transition-all text-sm py-2 h-auto rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4 rotate-180" />
+                    Iniciar Sesión
+                  </Button>
                 )}
               </div>
             </div>

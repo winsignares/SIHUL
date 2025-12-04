@@ -59,31 +59,9 @@ export function usePublicDashboard() {
     }
   ];
 
-  const handleNavigateToService = async (route: string, serviceId: string) => {
-    try {
-      // Llamar al servicio correspondiente si es necesario
-      switch (serviceId) {
-        case 'horario':
-          await publicServices.consultaHorario();
-          break;
-        case 'disponibilidad':
-          await publicServices.disponibilidadEspacios();
-          break;
-        case 'prestamo':
-          await publicServices.prestamo();
-          break;
-        case 'asistente':
-          await publicServices.asistenteVirtual();
-          break;
-      }
-      
-      // Navegar a la ruta
-      navigate(route);
-    } catch (error) {
-      console.error('Error al acceder al servicio:', error);
-      // Aún así navegar a la ruta incluso si hay error
-      navigate(route);
-    }
+  const handleNavigateToService = (route: string, serviceId: string) => {
+    // Solo navegar directamente sin llamar servicios que no existen
+    navigate(route);
   };
 
   return {

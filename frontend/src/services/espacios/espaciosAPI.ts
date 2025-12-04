@@ -220,6 +220,47 @@ export const espacioPermitidoService = {
 };
 
 /**
+ * Servicio para obtener espacios con horarios (bulk endpoints)
+ */
+export const espacioHorariosService = {
+    /**
+     * Obtiene todos los espacios con sus horarios aprobados (para acceso público)
+     */
+    getAllWithHorarios: async (): Promise<{
+        espacios: (EspacioFisico & {
+            horarios: {
+                dia: string;
+                hora_inicio: number;
+                hora_fin: number;
+                materia: string;
+                docente: string;
+                grupo: string;
+            }[];
+        })[];
+    }> => {
+        return apiClient.get('/espacios/horarios/all/');
+    },
+
+    /**
+     * Obtiene espacios permitidos con horarios aprobados (para supervisor)
+     */
+    getSupervisorHorarios: async (usuarioId: number): Promise<{
+        espacios: (EspacioFisico & {
+            horarios: {
+                dia: string;
+                hora_inicio: number;
+                hora_fin: number;
+                materia: string;
+                docente: string;
+                grupo: string;
+            }[];
+        })[];
+    }> => {
+        return apiClient.get(`/espacios/horarios/supervisor/${usuarioId}/`);
+    }
+};
+
+/**
  * Interfaz para el modelo de apertura/cierre de salones
  */
 export interface SalonAperturaCierre {
