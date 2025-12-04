@@ -242,6 +242,144 @@ def list_espacios(request):
             })
         return JsonResponse({"espacios": lst}, status=200)
 
+
+@csrf_exempt
+def list_all_espacios_with_horarios(request):
+    """
+    Retorna todos los espacios con sus horarios completos en una sola petición.
+    Para acceso de usuarios públicos.
+    Solo muestra horarios con estado='aprobado'.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    try:
+        from horario.models import Horario
+        from django.db.models import Prefetch
+        
+        # Optimizar consulta con select_related y prefetch_related
+        # Solo mostrar horarios aprobados
+        espacios = EspacioFisico.objects.all().select_related(
+            'sede', 'tipo'
+        ).prefetch_related(
+            Prefetch('horarios',
+                queryset=Horario.objects.filter(
+                    estado='aprobado'
+                ).select_related(
+                    'asignatura', 'docente', 'grupo'
+                )
+            )
+        )
+        
+        lista = []
+        for espacio in espacios:
+            horarios = []
+            for h in espacio.horarios.all():
+                horarios.append({
+                    "dia": h.dia_semana,
+                    "hora_inicio": h.hora_inicio.hour,
+                    "hora_fin": h.hora_fin.hour,
+                    "materia": h.asignatura.nombre if h.asignatura else "Sin asignatura",
+                    "docente": h.docente.nombre if h.docente else "Sin docente",
+                    "grupo": h.grupo.nombre if h.grupo else "Sin grupo"
+                })
+            
+            lista.append({
+                "id": espacio.id,
+                "nombre": espacio.nombre,
+                "tipo": espacio.tipo.nombre if espacio.tipo else "Sin tipo",
+                "capacidad": espacio.capacidad,
+                "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                "edificio": espacio.ubicacion or "Sin ubicación",
+                "estado": espacio.estado,
+                "ubicacion": espacio.ubicacion or "Sin ubicación",
+                "horarios": horarios
+            })
+        
+        return JsonResponse({"espacios": lista}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def list_supervisor_espacios_with_horarios(request, usuario_id=None):
+    """
+    Retorna espacios permitidos para un supervisor con sus horarios completos.
+    Filtra por EspacioPermitido del supervisor.
+    Solo muestra horarios con estado='aprobado'.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    
+    if not usuario_id:
+        return JsonResponse({"error": "usuario_id es requerido"}, status=400)
+    
+    try:
+        from horario.models import Horario
+        from django.db.models import Prefetch
+        
+        # Verificar que el usuario existe
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({"error": "Usuario no encontrado"}, status=404)
+        
+        # Obtener espacios permitidos para este supervisor
+        espacios_permitidos = EspacioPermitido.objects.filter(
+            usuario=usuario
+        ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        
+        if not espacios_permitidos.exists():
+            return JsonResponse({"espacios": []}, status=200)
+        
+        # Extraer IDs de espacios
+        espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+        
+        # Obtener espacios con horarios aprobados
+        espacios = EspacioFisico.objects.filter(
+            id__in=espacios_ids
+        ).select_related(
+            'sede', 'tipo'
+        ).prefetch_related(
+            Prefetch('horarios',
+                queryset=Horario.objects.filter(
+                    estado='aprobado'
+                ).select_related(
+                    'asignatura', 'docente', 'grupo'
+                )
+            )
+        )
+        
+        lista = []
+        for espacio in espacios:
+            horarios = []
+            for h in espacio.horarios.all():
+                horarios.append({
+                    "dia": h.dia_semana,
+                    "hora_inicio": h.hora_inicio.hour,
+                    "hora_fin": h.hora_fin.hour,
+                    "materia": h.asignatura.nombre if h.asignatura else "Sin asignatura",
+                    "docente": h.docente.nombre if h.docente else "Sin docente",
+                    "grupo": h.grupo.nombre if h.grupo else "Sin grupo"
+                })
+            
+            lista.append({
+                "id": espacio.id,
+                "nombre": espacio.nombre,
+                "tipo": espacio.tipo.nombre if espacio.tipo else "Sin tipo",
+                "capacidad": espacio.capacidad,
+                "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                "edificio": espacio.ubicacion or "Sin ubicación",
+                "estado": espacio.estado,
+                "ubicacion": espacio.ubicacion or "Sin ubicación",
+                "horarios": horarios
+            })
+        
+        return JsonResponse({"espacios": lista}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 # ---------- EspacioPermitido CRUD ----------
 @csrf_exempt
 def create_espacio_permitido(request):
@@ -487,7 +625,8 @@ def proximos_apertura_cierre(request):
         # Buscar horarios del día actual en los espacios permitidos
         horarios = Horario.objects.filter(
             espacio_id__in=espacios_ids,
-            dia_semana=dia_actual
+            dia_semana=dia_actual,
+            estado='aprobado'
         ).select_related('espacio', 'espacio__sede', 'espacio__tipo', 'asignatura', 'docente')
         
         for horario in horarios:
@@ -636,7 +775,8 @@ def get_estado_espacio(request, espacio_id=None):
         # 3. Buscar clases de hoy para este espacio
         clases_hoy = Horario.objects.filter(
             espacio=espacio,
-            dia_semana=dia_actual
+            dia_semana=dia_actual,
+            estado='aprobado'
         ).select_related('asignatura', 'docente', 'grupo').order_by('hora_inicio')
         
         estado_actual = "disponible"
@@ -711,7 +851,8 @@ def get_horario_espacio(request, espacio_id=None):
 
         # Obtener todos los horarios del espacio
         horarios = Horario.objects.filter(
-            espacio_id=espacio_id
+            espacio_id=espacio_id,
+            estado='aprobado'
         ).select_related('asignatura', 'docente', 'grupo')
         
         lista_horarios = []
@@ -807,18 +948,20 @@ def ocupacion_semanal(request):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios (clases) para este día y espacio
+                # Obtener horarios (clases) para este día y espacio - Solo aprobados
                 # Buscar con variantes de dia_semana (en español, en inglés, etc.)
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es  # Case-insensitive search
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'  # Solo horarios aprobados
                 )
                 
                 # Si no encuentra con español, buscar con inglés
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'  # Solo horarios aprobados
                     )
                 
                 # Obtener préstamos aprobados para este día y espacio
@@ -1175,7 +1318,7 @@ def generar_pdf_ocupacion_semanal(request):
             
             fecha_actual = lunes
             while fecha_actual <= sabado:
-                horarios = Horario.objects.filter(espacio=espacio, dia_semana__iexact=_get_dia_nombre(fecha_actual))
+                horarios = Horario.objects.filter(espacio=espacio, dia_semana__iexact=_get_dia_nombre(fecha_actual), estado='aprobado')
                 for h in horarios:
                     horas_ocupadas += _calcular_duracion_horas(h.hora_inicio, h.hora_fin)
                 
@@ -1365,16 +1508,18 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios para este día y espacio
+                # Obtener horarios para este día y espacio - Solo aprobados
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 # Obtener préstamos aprobados para este día y espacio
@@ -1439,12 +1584,14 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
                 
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 prestamos_dia = PrestamoEspacio.objects.filter(
@@ -1525,16 +1672,18 @@ def _calcular_espacios_mas_usados_reporte(espacios, lunes, sabado, dias_nombre):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
-                # Obtener horarios (clases)
+                # Obtener horarios (clases) - Solo aprobados
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 contador_usos += horarios_dia.count()
@@ -1701,13 +1850,15 @@ def _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre):
                 # Obtener horarios
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 # Sumar horas ocupadas por horarios
@@ -1885,13 +2036,15 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
                 # Obtener horarios (clases) para este día
                 horarios_dia = Horario.objects.filter(
                     espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es
+                    dia_semana__iexact=dia_nombre_es,
+                    estado='aprobado'
                 )
                 
                 if not horarios_dia.exists():
                     horarios_dia = Horario.objects.filter(
                         espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en
+                        dia_semana__iexact=dia_nombre_en,
+                        estado='aprobado'
                     )
                 
                 # Contar estudiantes en horarios

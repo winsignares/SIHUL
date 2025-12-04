@@ -26,7 +26,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState(prev => ({ ...prev, isLoading: true }));
 
         try {
-            const response = await authService.login(payload);
+            // Limpiar cache de sesiones anteriores antes de hacer login
+            const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('cache_'));
+            cacheKeys.forEach(key => localStorage.removeItem(key));
+
+            const response: LoginResponse = await authService.login(payload);
 
             // Construir objeto usuario
             const user = {
@@ -77,14 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Llamar al service (por si hay endpoint de logout en backend)
         authService.logout().catch(console.error);
 
-        // Limpiar localStorage
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_role');
-        localStorage.removeItem('auth_components');
-        localStorage.removeItem('auth_faculties');
-        localStorage.removeItem('auth_sede');
-        localStorage.removeItem('auth_areas');
+        // Limpiar TODO el localStorage (incluye auth y cache)
+        localStorage.clear();
 
         // Limpiar estado
         setState({

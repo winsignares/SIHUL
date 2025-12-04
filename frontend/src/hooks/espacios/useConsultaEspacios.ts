@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { espacioPermitidoService, espacioService } from '../../services/espacios/espaciosAPI';
+import { espacioPermitidoService, espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getEspaciosFromCache, setEspaciosInCache, getCacheKey } from '../../services/cache/cacheService';
 
@@ -136,85 +136,64 @@ export function useConsultaEspacios() {
                     return;
                 }
 
-                // Obtener espacios según el rol del usuario
-                let espaciosBase;
+                // Usar los nuevos endpoints bulk para obtener espacios con horarios
+                let espaciosConHorarios;
                 
-                // Acceso público sin autenticación
-                if (!user?.id) {
-                    // Si no hay usuario, listar todos los espacios (acceso público)
-                    const response = await espacioService.list();
-                    espaciosBase = response.espacios;
-                }
                 // Supervisor general: solo espacios permitidos
-                else if (String(user.rol) === 'supervisor_general') {
-                    const response = await espacioPermitidoService.listByUsuario(user.id);
-                    espaciosBase = response.espacios;
+                if (user?.id && String(user.rol) === 'supervisor_general') {
+                    const response = await espacioHorariosService.getSupervisorHorarios(user.id);
+                    espaciosConHorarios = response.espacios;
                 }
-                // Otros roles autenticados: todos los espacios
+                // Acceso público o cualquier otro rol: todos los espacios
                 else {
-                    const response = await espacioService.list();
-                    espaciosBase = response.espacios;
+                    const response = await espacioHorariosService.getAllWithHorarios();
+                    espaciosConHorarios = response.espacios;
                 }
 
-                // 3. Obtener estado actual para cada espacio
-                const espaciosConEstado = await Promise.all(espaciosBase.map(async (e) => {
-                    try {
-                        const estadoData = await espacioService.getEstado(e.id!);
-                        return {
-                            id: e.id!.toString(),
-                            nombre: e.nombre,
-                            tipo: e.tipo_espacio?.nombre || 'Sin Tipo',
-                            capacidad: e.capacidad,
-                            sede: 'Sede Principal',
-                            edificio: e.ubicacion || 'Sin Ubicación',
-                            estado: estadoData.estado,
-                            proximaClase: estadoData.texto_estado,
-                            ubicacion: e.ubicacion
-                        } as EspacioView;
-                    } catch (error) {
-                        console.error(`Error fetching status for space ${e.id}`, error);
-                        return {
-                            id: e.id!.toString(),
-                            nombre: e.nombre,
-                            tipo: e.tipo_espacio?.nombre || 'Sin Tipo',
-                            capacidad: e.capacidad,
-                            sede: 'Sede Principal',
-                            edificio: e.ubicacion || 'Sin Ubicación',
-                            estado: 'disponible',
-                            proximaClase: 'Error cargando estado',
-                            ubicacion: e.ubicacion
-                        } as EspacioView;
-                    }
-                }));
-
-                setEspacios(espaciosConEstado);
-
-                // 4. Cargar horarios
+                // Procesar espacios y horarios
                 const allHorarios: OcupacionView[] = [];
-                await Promise.all(espaciosBase.map(async (e) => {
-                    try {
-                        const horarioData = await espacioService.getHorario(e.id!);
-                        horarioData.horario.forEach(h => {
-                            allHorarios.push({
-                                espacioId: e.id!.toString(),
-                                dia: normalizarDia(h.dia),
-                                horaInicio: h.hora_inicio,
-                                horaFin: h.hora_fin,
-                                materia: h.materia,
-                                docente: h.docente,
-                                grupo: h.grupo,
-                                estado: h.estado || 'ocupado'
-                            });
+                const espaciosView: EspacioView[] = [];
+
+                espaciosConHorarios.forEach(espacio => {
+                    // Agregar horarios
+                    espacio.horarios.forEach(h => {
+                        allHorarios.push({
+                            espacioId: espacio.id!.toString(),
+                            dia: normalizarDia(h.dia),
+                            horaInicio: h.hora_inicio,
+                            horaFin: h.hora_fin,
+                            materia: h.materia,
+                            docente: h.docente,
+                            grupo: h.grupo,
+                            estado: 'ocupado'
                         });
-                    } catch (error) {
-                        console.error(`Error fetching schedule for space ${e.id}`, error);
-                    }
-                }));
-                
+                    });
+
+                    // Calcular estado basado en horarios
+                    const { proximaClase, estado } = calcularProximaClaseYEstadoPrevio(
+                        espacio.id!.toString(),
+                        allHorarios
+                    );
+
+                    // Crear vista de espacio
+                    espaciosView.push({
+                        id: espacio.id!.toString(),
+                        nombre: espacio.nombre,
+                        tipo: espacio.tipo || 'Sin Tipo',
+                        capacidad: espacio.capacidad,
+                        sede: espacio.sede || 'Sede Principal',
+                        edificio: espacio.ubicacion || 'Sin Ubicación',
+                        estado: estado,
+                        proximaClase: proximaClase,
+                        ubicacion: espacio.ubicacion
+                    });
+                });
+
+                setEspacios(espaciosView);
                 setHorarios(allHorarios);
 
                 // Guardar en caché
-                setEspaciosInCache(cacheKey, espaciosConEstado, allHorarios);
+                setEspaciosInCache(cacheKey, espaciosView, allHorarios);
 
             } catch (error) {
                 console.error("Error loading spaces", error);
@@ -225,6 +204,52 @@ export function useConsultaEspacios() {
 
         loadData();
     }, [user]); // Recargar si cambia el usuario
+
+    // Función auxiliar para calcular próxima clase durante la carga inicial
+    const calcularProximaClaseYEstadoPrevio = (
+        espacioId: string, 
+        todosHorarios: OcupacionView[]
+    ): { proximaClase: string; estado: 'disponible' | 'ocupado' | 'mantenimiento' } => {
+        const hoy = getDiaDeSemana();
+        const ahora = new Date();
+        const horaActual = ahora.getHours();
+        
+        const clasesHoy = todosHorarios.filter(h => 
+            h.espacioId === espacioId && h.dia === hoy
+        ).sort((a, b) => a.horaInicio - b.horaInicio);
+
+        if (clasesHoy.length === 0) {
+            return {
+                proximaClase: 'Sin clases pendientes hoy',
+                estado: 'disponible'
+            };
+        }
+
+        const proximaClase = clasesHoy.find(c => c.horaFin > horaActual);
+
+        if (!proximaClase) {
+            return {
+                proximaClase: 'Sin clases pendientes hoy',
+                estado: 'disponible'
+            };
+        }
+
+        const tiempoHasta = proximaClase.horaInicio - horaActual;
+        let estado: 'disponible' | 'ocupado' | 'mantenimiento' = 'disponible';
+        
+        if (tiempoHasta < 1) {
+            estado = 'ocupado';
+        } else if (tiempoHasta <= 2) {
+            estado = 'ocupado';
+        } else {
+            estado = 'disponible';
+        }
+
+        return {
+            proximaClase: `${proximaClase.materia} - ${proximaClase.horaInicio}:00`,
+            estado
+        };
+    };
 
     const tiposEspacio = useMemo(() => [...new Set(espacios.map(e => e.tipo))], [espacios]);
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

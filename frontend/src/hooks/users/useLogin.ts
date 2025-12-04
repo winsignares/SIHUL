@@ -28,6 +28,13 @@ export function useLogin() {
 
     const handlePublicAccess = () => {
         console.log('[useLogin] Acceso público solicitado');
+        
+        // Limpiar cualquier data de autenticación y cache del localStorage
+        localStorage.clear();
+        
+        // Marcar que es acceso público
+        localStorage.setItem('auth_is_public', 'true');
+        
         navigate('/public/dashboard', { replace: true });
     };
 

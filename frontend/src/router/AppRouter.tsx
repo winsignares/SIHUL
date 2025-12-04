@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 // Importa los componentes reales según existan
 import DashboardHome from '../pages/dashboard/DashboardHome';
@@ -30,12 +30,28 @@ import SolicitudesEspacio from '../pages/gestionAcademica/SolicitudesEspacio';
 
 // Componente Layout que usa AdminDashboard como base
 function AppLayout() {
-  return <AdminDashboard><Outlet /></AdminDashboard>;
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
+  return <AdminDashboard onLogout={handleLogout}><Outlet /></AdminDashboard>;
 }
 
 // Componente Layout para rutas públicas (sin componentes)
 function PublicLayout() {
-  return <AdminDashboard><Outlet /></AdminDashboard>;
+  const navigate = useNavigate();
+  
+  const handlePublicLogout = () => {
+    // Solo limpiar localStorage sin llamar al backend
+    localStorage.clear();
+    navigate('/login');
+  };
+  
+  return <AdminDashboard onLogout={handlePublicLogout}><Outlet /></AdminDashboard>;
 }
 
 // Componente para proteger rutas por componentes del backend

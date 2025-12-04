@@ -13,6 +13,10 @@ urlpatterns = [
     path('<int:id>/', views.get_espacio, name='get_espacio'),
     path('list/', views.list_espacios, name='list_espacios'),
     
+    # Bulk endpoints para Disponibilidad de Espacios
+    path('horarios/all/', views.list_all_espacios_with_horarios, name='list_all_espacios_with_horarios'),
+    path('horarios/supervisor/<int:usuario_id>/', views.list_supervisor_espacios_with_horarios, name='list_supervisor_espacios_with_horarios'),
+    
     # EspacioPermitido routes
     path('permitido/', views.create_espacio_permitido, name='create_espacio_permitido'),
     path('permitido/list/', views.list_espacios_permitidos, name='list_espacios_permitidos'),
