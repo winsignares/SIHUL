@@ -42,6 +42,12 @@ export interface LoginResponse {
     id: number;
     nombre: string;
   } | null;
+  sede: {
+    id: number;
+    nombre: string;
+    ciudad: string;
+    direccion?: string;
+  } | null;
   componentes: Array<{
     id: number;
     nombre: string;

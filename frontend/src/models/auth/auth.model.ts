@@ -17,6 +17,16 @@ export interface Component {
 }
 
 /**
+ * Sede del usuario
+ */
+export interface Sede {
+    id: number;
+    nombre: string;
+    ciudad: string;
+    direccion?: string;
+}
+
+/**
  * Facultad asociada al usuario (solo para roles de planeación)
  */
 export interface Faculty {
@@ -55,6 +65,7 @@ export interface User {
     correo: string;
     rol: Role | null;
     facultad: Faculty | null;
+    sede: Sede | null;
 }
 
 /**

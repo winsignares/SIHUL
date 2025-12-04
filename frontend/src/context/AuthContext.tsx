@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState(prev => ({ ...prev, isLoading: true }));
 
         try {
-            const response: LoginResponse = await authService.login(payload);
+            const response = await authService.login(payload);
 
             // Construir objeto usuario
             const user = {
@@ -34,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 nombre: response.nombre,
                 correo: response.correo,
                 rol: response.rol,
-                facultad: response.facultad
+                facultad: response.facultad,
+                sede: response.sede
             };
 
             // Guardar en localStorage
@@ -45,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (response.facultad) {
                 localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
+            }
+
+            if (response.sede) {
+                localStorage.setItem('auth_sede', JSON.stringify(response.sede));
             }
 
             if (response.espacios_permitidos) {
@@ -78,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('auth_role');
         localStorage.removeItem('auth_components');
         localStorage.removeItem('auth_faculties');
+        localStorage.removeItem('auth_sede');
         localStorage.removeItem('auth_areas');
 
         // Limpiar estado

@@ -235,7 +235,7 @@ def login(request):
         if not correo or not contrasena:
             return JsonResponse({"error": "correo y contrasena son requeridos"}, status=400)
         try:
-            u = Usuario.objects.get(correo=correo)
+            u = Usuario.objects.select_related('sede', 'rol', 'facultad').get(correo=correo)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         if u.contrasena_hash != contrasena:
@@ -298,6 +298,12 @@ def login(request):
                 "id": u.facultad.id,
                 "nombre": u.facultad.nombre
             } if u.facultad else None,
+            "sede": {
+                "id": u.sede.id,
+                "nombre": u.sede.nombre,
+                "ciudad": u.sede.ciudad,
+                "direccion": u.sede.direccion
+            } if u.sede else None,
             "componentes": componentes,
             "espacios_permitidos": espacios_permitidos,
             "token": token
