@@ -235,3 +235,99 @@ def listar_conversaciones(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ========== ENDPOINTS PARA USUARIOS PÚBLICOS ==========
+
+@csrf_exempt
+def list_agentes_publico(request):
+    """Lista todos los agentes activos para usuarios públicos"""
+    if request.method == 'GET':
+        agentes = Agente.objects.filter(activo=True).prefetch_related('preguntas')
+        
+        lst = []
+        for agente in agentes:
+            preguntas = agente.preguntas.filter(activo=True).order_by('-contador_uso', 'orden')[:5]
+            
+            lst.append({
+                'id': agente.id,
+                'nombre': agente.nombre,
+                'subtitulo': agente.subtitulo,
+                'descripcion': agente.descripcion,
+                'icono': agente.icono,
+                'color': agente.color,
+                'bgGradient': agente.bg_gradient,
+                'activo': agente.activo,
+                'mensajeBienvenida': agente.mensaje_bienvenida,
+                'preguntasRapidas': [p.pregunta for p in preguntas]
+            })
+        
+        return JsonResponse({'agentes': lst}, status=200)
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@csrf_exempt
+def enviar_pregunta_publico(request):
+    """Envía pregunta al endpoint RAG sin guardar historial - Solo para usuarios públicos"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        agente_id = data.get('agente_id')
+        pregunta = data.get('pregunta')
+        pregunta_sugerida_id = data.get('pregunta_sugerida_id')
+        
+        # Validaciones mínimas
+        if not agente_id or not pregunta:
+            return JsonResponse({'error': 'agente_id y pregunta son requeridos'}, status=400)
+        
+        # Obtener agente
+        try:
+            agente = Agente.objects.get(id=agente_id, activo=True)
+        except Agente.DoesNotExist:
+            return JsonResponse({'error': 'Agente no encontrado o inactivo'}, status=404)
+        
+        # Generar chat_id temporal (no se guardará)
+        chat_id = str(uuid.uuid4())
+        
+        # Incrementar contador si es pregunta sugerida
+        if pregunta_sugerida_id:
+            try:
+                preg = PreguntaSugerida.objects.get(id=pregunta_sugerida_id, agente=agente)
+                preg.contador_uso += 1
+                preg.save()
+            except PreguntaSugerida.DoesNotExist:
+                pass
+        
+        # Enviar pregunta al endpoint RAG
+        respuesta_texto = ''
+        
+        try:
+            response = requests.post(
+                agente.endpoint_url,
+                json={'pregunta': pregunta},
+                headers={'Content-Type': 'application/json'},
+                timeout=30
+            )
+            response.raise_for_status()
+            
+            respuesta_data = response.json()
+            respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+            
+        except requests.exceptions.RequestException as e:
+            respuesta_texto = f'Lo siento, hubo un error al procesar tu pregunta: {str(e)}'
+        
+        # NO guardamos la conversación para usuarios públicos
+        # Retornamos directamente la respuesta
+        
+        return JsonResponse({
+            'chat_id': chat_id,
+            'respuesta': respuesta_texto,
+            'timestamp': timezone.now().isoformat()
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
