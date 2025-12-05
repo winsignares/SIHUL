@@ -71,7 +71,18 @@ export default function CentroHorarios() {
     handleAbrirModalEliminarGrupo,
     handleEliminarGrupoCompleto,
     dias,
-    notification
+    notification,
+    // Filtros de horarios fusionados
+    filtroFusionadoDia, setFiltroFusionadoDia,
+    filtroFusionadoAsignatura, setFiltroFusionadoAsignatura,
+    filtroFusionadoDocente, setFiltroFusionadoDocente,
+    filtroFusionadoEspacio, setFiltroFusionadoEspacio,
+    diasFusionadosUnicos,
+    asignaturasFusionadasUnicas,
+    docentesFusionadosUnicos,
+    espaciosFusionadosUnicos,
+    horariosFusionadosFiltrados,
+    limpiarFiltrosFusionados
   } = useCentroHorarios();
 
   return (
@@ -576,8 +587,21 @@ export default function CentroHorarios() {
         {/* Tab de Horarios Fusionados */}
         <TabsContent value="fusionados" className="space-y-4">
           <HorariosFusionados 
-            horariosFusionados={horariosFusionados}
+            horariosFusionados={horariosFusionadosFiltrados}
             loading={loading}
+            filtroFusionadoDia={filtroFusionadoDia}
+            setFiltroFusionadoDia={setFiltroFusionadoDia}
+            filtroFusionadoAsignatura={filtroFusionadoAsignatura}
+            setFiltroFusionadoAsignatura={setFiltroFusionadoAsignatura}
+            filtroFusionadoDocente={filtroFusionadoDocente}
+            setFiltroFusionadoDocente={setFiltroFusionadoDocente}
+            filtroFusionadoEspacio={filtroFusionadoEspacio}
+            setFiltroFusionadoEspacio={setFiltroFusionadoEspacio}
+            diasFusionadosUnicos={diasFusionadosUnicos}
+            asignaturasFusionadasUnicas={asignaturasFusionadasUnicas}
+            docentesFusionadosUnicos={docentesFusionadosUnicos}
+            espaciosFusionadosUnicos={espaciosFusionadosUnicos}
+            limpiarFiltrosFusionados={limpiarFiltrosFusionados}
           />
         </TabsContent>
       </Tabs>

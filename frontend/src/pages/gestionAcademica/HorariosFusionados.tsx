@@ -1,6 +1,9 @@
 import { Badge } from '../../share/badge';
+import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
-import { Clock, List, MapPin } from 'lucide-react';
+import { Label } from '../../share/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { Clock, List, MapPin, Filter, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface HorarioFusionadoExtendido {
@@ -13,25 +16,147 @@ interface HorarioFusionadoExtendido {
   grupo3_nombre: string | null;
   asignatura_id: number;
   asignatura_nombre: string;
-  docente_id: number;
+  docente_id: number | null;
   docente_nombre: string;
   espacio_id: number;
   espacio_nombre: string;
   dia_semana: string;
   hora_inicio: string;
   hora_fin: string;
-  cantidad_estudiantes: number;
+  cantidad_estudiantes: number | null;
 }
 
 interface HorariosFusionadosProps {
   horariosFusionados: HorarioFusionadoExtendido[];
   loading: boolean;
+  filtroFusionadoDia: string;
+  setFiltroFusionadoDia: (value: string) => void;
+  filtroFusionadoAsignatura: string;
+  setFiltroFusionadoAsignatura: (value: string) => void;
+  filtroFusionadoDocente: string;
+  setFiltroFusionadoDocente: (value: string) => void;
+  filtroFusionadoEspacio: string;
+  setFiltroFusionadoEspacio: (value: string) => void;
+  diasFusionadosUnicos: string[];
+  asignaturasFusionadasUnicas: string[];
+  docentesFusionadosUnicos: string[];
+  espaciosFusionadosUnicos: string[];
+  limpiarFiltrosFusionados: () => void;
 }
 
-export default function HorariosFusionados({ horariosFusionados, loading }: HorariosFusionadosProps) {
+export default function HorariosFusionados({ 
+  horariosFusionados, 
+  loading,
+  filtroFusionadoDia,
+  setFiltroFusionadoDia,
+  filtroFusionadoAsignatura,
+  setFiltroFusionadoAsignatura,
+  filtroFusionadoDocente,
+  setFiltroFusionadoDocente,
+  filtroFusionadoEspacio,
+  setFiltroFusionadoEspacio,
+  diasFusionadosUnicos,
+  asignaturasFusionadasUnicas,
+  docentesFusionadosUnicos,
+  espaciosFusionadosUnicos,
+  limpiarFiltrosFusionados
+}: HorariosFusionadosProps) {
   return (
-    <Card className="border-slate-200 shadow-xl overflow-hidden bg-gradient-to-br from-white to-slate-50">
-      <CardHeader className="bg-gradient-to-r from-red-600 to-yellow-500 text-white pb-6">
+    <>
+      {/* Card de Filtros */}
+      <Card className="border-slate-200 shadow-lg mb-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-red-600" />
+            Filtros de Búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Filtro Día */}
+            <div>
+              <Label>Día de la semana</Label>
+              <Select value={filtroFusionadoDia} onValueChange={setFiltroFusionadoDia}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {diasFusionadosUnicos.map(dia => (
+                    <SelectItem key={dia} value={dia}>
+                      {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Asignatura */}
+            <div>
+              <Label>Asignatura</Label>
+              <Select value={filtroFusionadoAsignatura} onValueChange={setFiltroFusionadoAsignatura}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {asignaturasFusionadasUnicas.map(asig => (
+                    <SelectItem key={asig} value={asig}>{asig}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Docente */}
+            <div>
+              <Label>Docente</Label>
+              <Select value={filtroFusionadoDocente} onValueChange={setFiltroFusionadoDocente}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {docentesFusionadosUnicos.map(doc => (
+                    <SelectItem key={doc} value={doc}>{doc}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Espacio */}
+            <div>
+              <Label>Espacio</Label>
+              <Select value={filtroFusionadoEspacio} onValueChange={setFiltroFusionadoEspacio}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {espaciosFusionadosUnicos.map(esp => (
+                    <SelectItem key={esp} value={esp}>{esp}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Botón Limpiar Filtros */}
+          <div className="flex justify-end">
+            <Button
+              onClick={limpiarFiltrosFusionados}
+              variant="outline"
+              className="border-red-600 text-red-600 hover:bg-red-50"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Limpiar Filtros
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card de Resultados */}
+      <Card className="border-slate-200 shadow-xl overflow-hidden bg-gradient-to-br from-white to-slate-50">
+        <CardHeader className="bg-gradient-to-r from-red-600 to-yellow-500 text-white pb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -143,5 +268,6 @@ export default function HorariosFusionados({ horariosFusionados, loading }: Hora
         )}
       </CardContent>
     </Card>
+    </>
   );
 }

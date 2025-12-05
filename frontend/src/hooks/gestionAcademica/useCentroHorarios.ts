@@ -76,6 +76,12 @@ export function useCentroHorarios() {
     const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
     const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
 
+    // Filtros para horarios fusionados
+    const [filtroFusionadoDia, setFiltroFusionadoDia] = useState<string>('all');
+    const [filtroFusionadoAsignatura, setFiltroFusionadoAsignatura] = useState<string>('all');
+    const [filtroFusionadoDocente, setFiltroFusionadoDocente] = useState<string>('all');
+    const [filtroFusionadoEspacio, setFiltroFusionadoEspacio] = useState<string>('all');
+
     // Modal de edición
     const [showEditModal, setShowEditModal] = useState(false);
     const [horarioEditar, setHorarioEditar] = useState<HorarioExtendido | null>(null);
@@ -260,6 +266,22 @@ export function useCentroHorarios() {
     const programasFiltrados = programas.filter(p =>
         filtroFacultad === 'all' || p.facultad_id === parseInt(filtroFacultad)
     );
+
+    // Listas únicas para filtros de horarios fusionados
+    const diasFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.dia_semana))].sort();
+    const asignaturasFusionadasUnicas = [...new Set(horariosFusionados.map(h => h.asignatura_nombre))].sort();
+    const docentesFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.docente_nombre))].sort();
+    const espaciosFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.espacio_nombre))].sort();
+
+    // Filtrar horarios fusionados
+    const horariosFusionadosFiltrados = horariosFusionados.filter(hf => {
+        const matchDia = filtroFusionadoDia === 'all' || hf.dia_semana.toLowerCase() === filtroFusionadoDia.toLowerCase();
+        const matchAsignatura = filtroFusionadoAsignatura === 'all' || hf.asignatura_nombre === filtroFusionadoAsignatura;
+        const matchDocente = filtroFusionadoDocente === 'all' || hf.docente_nombre === filtroFusionadoDocente;
+        const matchEspacio = filtroFusionadoEspacio === 'all' || hf.espacio_nombre === filtroFusionadoEspacio;
+
+        return matchDia && matchAsignatura && matchDocente && matchEspacio;
+    });
 
     // Handlers
     const handleVerDetalles = (grupo: GrupoAgrupado) => {
@@ -496,6 +518,13 @@ export function useCentroHorarios() {
         setFiltroSemestre('all');
     };
 
+    const limpiarFiltrosFusionados = () => {
+        setFiltroFusionadoDia('all');
+        setFiltroFusionadoAsignatura('all');
+        setFiltroFusionadoDocente('all');
+        setFiltroFusionadoEspacio('all');
+    };
+
     // Funciones para selección múltiple
     const toggleSeleccion = (id: number) => {
         const nuevaSeleccion = new Set(horariosSeleccionados);
@@ -698,6 +727,17 @@ export function useCentroHorarios() {
         handleAbrirModalEliminarGrupo,
         handleEliminarGrupoCompleto,
         dias,
-        notification
+        notification,
+        // Filtros de horarios fusionados
+        filtroFusionadoDia, setFiltroFusionadoDia,
+        filtroFusionadoAsignatura, setFiltroFusionadoAsignatura,
+        filtroFusionadoDocente, setFiltroFusionadoDocente,
+        filtroFusionadoEspacio, setFiltroFusionadoEspacio,
+        diasFusionadosUnicos,
+        asignaturasFusionadasUnicas,
+        docentesFusionadosUnicos,
+        espaciosFusionadosUnicos,
+        horariosFusionadosFiltrados,
+        limpiarFiltrosFusionados
     };
 }
