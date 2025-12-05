@@ -21,7 +21,7 @@ interface HorarioFusionadoExtendido {
   espacio_id: number;
   espacio_nombre: string;
   dia_semana: string;
-  hora_inicio: string;
+  hora_inicio: string; 
   hora_fin: string;
   cantidad_estudiantes: number | null;
 }
