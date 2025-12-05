@@ -15,18 +15,32 @@ def seed_tipos_actividad(apps, schema_editor):
         ('Asesoria de Proyecto', 'Asesoria para proyectos de grado o investigacion'),
         ('Examen Especial', 'Examen de validacion o supletorio'),
         ('Evento Cultural', 'Actividad cultural o artistica'),
-        ('Otro', 'Otras actividades academicas')
+        ('Otro', 'Otras actividades academicas')  # Siempre debe ser el último
     ]
     
+    # Si ya existen tipos, no hacer nada (migración ya ejecutada)
+    if TipoActividad.objects.using(db_alias).exists():
+        return
+    
+    # Crear los tipos en el orden definido
     for nombre, descripcion in tipos:
         try:
-            TipoActividad.objects.using(db_alias).get_or_create(
+            TipoActividad.objects.using(db_alias).create(
                 nombre=nombre,
-                defaults={'descripcion': descripcion}
+                descripcion=descripcion
             )
-        except Exception:
-            # Si falla por constraint de id, simplemente continuar
-            pass
+        except Exception as e:
+            # Si falla, continuar con el siguiente
+            print(f"Warning: No se pudo crear TipoActividad '{nombre}': {e}")
+            continue
+    
+    # Resetear la secuencia de PostgreSQL
+    if schema_editor.connection.vendor == 'postgresql':
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT setval(pg_get_serial_sequence('prestamos_tipoactividad', 'id'), "
+                "(SELECT MAX(id) FROM prestamos_tipoactividad), true);"
+            )
 
 def reverse_seed(apps, schema_editor):
     TipoActividad = apps.get_model('prestamos', 'TipoActividad')

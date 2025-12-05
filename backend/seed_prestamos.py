@@ -16,30 +16,20 @@ print("=" * 70)
 
 # ========== OBTENER TIPOS DE ACTIVIDAD EXISTENTES ==========
 print("\n📋 Obteniendo Tipos de Actividad existentes...")
-# Usar los tipos de actividad ya existentes en la BD (de migración 0003)
-tipos_actividad_nombres = [
-    'Tutoria Grupal', 
-    'Conferencia',
-    'Taller',
-    'Reunion Academica',
-    'Asesoria de Proyecto',
-    'Examen Especial',
-    'Evento Cultural',
-    'Otro'
-]
+# Obtener todos los tipos de actividad de la BD
+tipos_actividad_queryset = TipoActividad.objects.all()
 
-tipos_actividad = {}
-for nombre in tipos_actividad_nombres:
-    tipo = TipoActividad.objects.filter(nombre=nombre).first()
-    if tipo:
-        tipos_actividad[nombre] = tipo
-        print(f"  ✅ Encontrado: {tipo.nombre}")
-    else:
-        print(f"  ⚠️  No encontrado: {nombre}")
-
-if not tipos_actividad:
+if not tipos_actividad_queryset.exists():
     print("  ⚠️  No hay tipos de actividad. Ejecuta las migraciones primero.")
+    print("  💡 Ejecuta: docker exec -it sihul-backend python manage.py migrate prestamos")
     exit(1)
+
+# Crear diccionario con los tipos de actividad
+tipos_actividad = {tipo.nombre: tipo for tipo in tipos_actividad_queryset}
+
+print(f"  ✅ Tipos de actividad encontrados: {len(tipos_actividad)}")
+for nombre in sorted(tipos_actividad.keys()):
+    print(f"     • {nombre}")
 
 # ========== OBTENER DATOS NECESARIOS ==========
 print("\n🔍 Obteniendo datos existentes...")
@@ -83,6 +73,19 @@ manana = hoy + timedelta(days=1)
 proxima_semana = hoy + timedelta(days=7)
 mes_pasado = hoy - timedelta(days=30)
 
+# Función helper para obtener tipo de actividad con fallback
+def get_tipo_actividad(nombre_preferido, fallback='Otro'):
+    """Obtiene un tipo de actividad, usando fallback si no existe"""
+    tipo = tipos_actividad.get(nombre_preferido)
+    if tipo:
+        return tipo
+    # Intentar con el fallback
+    tipo_fallback = tipos_actividad.get(fallback)
+    if tipo_fallback:
+        return tipo_fallback
+    # Si ninguno existe, usar el primero disponible
+    return list(tipos_actividad.values())[0] if tipos_actividad else None
+
 # Préstamos de ejemplo
 prestamos_data = [
     # PRÉSTAMOS APROBADOS (pasados y actuales)
@@ -90,7 +93,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': random.choice(usuarios_solicitantes),
         'administrador': random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Tutoria Grupal'),
+        'tipo_actividad': get_tipo_actividad('Clase Adicional', 'Tutoria Grupal'),
         'fecha': mes_pasado,
         'hora_inicio': time(8, 0),
         'hora_fin': time(10, 0),
@@ -104,7 +107,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': docente if docente else random.choice(usuarios_solicitantes),
         'administrador': admin if admin else random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Conferencia'),
+        'tipo_actividad': get_tipo_actividad('Conferencia'),
         'fecha': ayer,
         'hora_inicio': time(14, 0),
         'hora_fin': time(16, 0),
@@ -118,7 +121,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': random.choice(usuarios_solicitantes),
         'administrador': planeacion_ing if planeacion_ing else random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Taller'),
+        'tipo_actividad': get_tipo_actividad('Taller'),
         'fecha': hoy,
         'hora_inicio': time(10, 0),
         'hora_fin': time(12, 0),
@@ -132,7 +135,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': estudiante if estudiante else random.choice(usuarios_solicitantes),
         'administrador': random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Reunion Academica'),
+        'tipo_actividad': get_tipo_actividad('Reunion Academica'),
         'fecha': hoy,
         'hora_inicio': time(15, 0),
         'hora_fin': time(17, 0),
@@ -146,7 +149,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': docente if docente else random.choice(usuarios_solicitantes),
         'administrador': admin if admin else random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Examen Especial'),
+        'tipo_actividad': get_tipo_actividad('Examen Especial'),
         'fecha': manana,
         'hora_inicio': time(8, 0),
         'hora_fin': time(10, 0),
@@ -160,7 +163,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': random.choice(usuarios_solicitantes),
         'administrador': random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Tutoria Grupal'),
+        'tipo_actividad': get_tipo_actividad('Tutoria Grupal'),
         'fecha': proxima_semana,
         'hora_inicio': time(9, 0),
         'hora_fin': time(12, 0),
@@ -176,7 +179,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': estudiante if estudiante else random.choice(usuarios_solicitantes),
         'administrador': None,
-        'tipo_actividad': tipos_actividad.get('Evento Cultural'),
+        'tipo_actividad': get_tipo_actividad('Evento Cultural'),
         'fecha': hoy + timedelta(days=3),
         'hora_inicio': time(18, 0),
         'hora_fin': time(21, 0),
@@ -190,7 +193,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': random.choice(usuarios_solicitantes),
         'administrador': None,
-        'tipo_actividad': tipos_actividad.get('Asesoria de Proyecto'),
+        'tipo_actividad': get_tipo_actividad('Asesoria de Proyecto'),
         'fecha': hoy + timedelta(days=5),
         'hora_inicio': time(14, 0),
         'hora_fin': time(16, 0),
@@ -204,7 +207,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': docente if docente else random.choice(usuarios_solicitantes),
         'administrador': None,
-        'tipo_actividad': tipos_actividad.get('Taller'),
+        'tipo_actividad': get_tipo_actividad('Taller'),
         'fecha': hoy + timedelta(days=2),
         'hora_inicio': time(7, 0),
         'hora_fin': time(11, 0),
@@ -220,7 +223,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': random.choice(usuarios_solicitantes),
         'administrador': admin if admin else random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Evento Cultural'),
+        'tipo_actividad': get_tipo_actividad('Evento Cultural'),
         'fecha': hoy - timedelta(days=2),
         'hora_inicio': time(20, 0),
         'hora_fin': time(23, 0),
@@ -234,7 +237,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': estudiante if estudiante else random.choice(usuarios_solicitantes),
         'administrador': planeacion_derecho if planeacion_derecho else random.choice(administradores),
-        'tipo_actividad': tipos_actividad.get('Reunion Academica'),
+        'tipo_actividad': get_tipo_actividad('Reunion Academica'),
         'fecha': ayer,
         'hora_inicio': time(22, 0),
         'hora_fin': time(23, 30),
@@ -250,7 +253,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': random.choice(usuarios_solicitantes),
         'administrador': None,
-        'tipo_actividad': tipos_actividad.get('Conferencia'),
+        'tipo_actividad': get_tipo_actividad('Conferencia'),
         'fecha': mes_pasado - timedelta(days=5),
         'hora_inicio': time(8, 0),
         'hora_fin': time(10, 0),
@@ -264,7 +267,7 @@ prestamos_data = [
         'espacio': random.choice(espacios),
         'usuario': docente if docente else random.choice(usuarios_solicitantes),
         'administrador': None,
-        'tipo_actividad': tipos_actividad.get('Taller'),
+        'tipo_actividad': get_tipo_actividad('Taller'),
         'fecha': mes_pasado - timedelta(days=10),
         'hora_inicio': time(14, 0),
         'hora_fin': time(17, 0),
@@ -279,10 +282,17 @@ prestamos_data = [
 # Crear los préstamos
 contador_creados = 0
 contador_existentes = 0
+contador_invalidos = 0
 
 for prestamo_data in prestamos_data:
     # Separar recursos de los datos del préstamo
     recursos_nombres = prestamo_data.pop('recursos', [])
+    
+    # Validar que tipo_actividad no sea None
+    if prestamo_data.get('tipo_actividad') is None:
+        print(f"  ⚠️  Préstamo inválido: tipo_actividad es None para {prestamo_data.get('motivo', 'Sin motivo')}")
+        contador_invalidos += 1
+        continue
     
     # Verificar si ya existe un préstamo similar
     existe = PrestamoEspacio.objects.filter(
@@ -319,6 +329,8 @@ print("=" * 70)
 
 print(f"\nPréstamos creados: {contador_creados}")
 print(f"Préstamos existentes: {contador_existentes}")
+if contador_invalidos > 0:
+    print(f"Préstamos inválidos (sin tipo): {contador_invalidos}")
 
 print("\nPréstamos por estado:")
 for estado_nombre, _ in PrestamoEspacio.ESTADO_CHOICES:
@@ -329,3 +341,10 @@ print(f"\nTipos de actividad: {TipoActividad.objects.count()}")
 print(f"Recursos asignados a préstamos: {PrestamoRecurso.objects.count()}")
 
 print("\n✨ ¡Préstamos creados exitosamente!")
+
+try:
+    exec(open('asignar_sedes_usuarios.py').read())
+except FileNotFoundError:
+    print("⚠️  Archivo asignar_sedes_usuarios.py no encontrado, omitiendo...")
+except Exception as e:
+    print(f"⚠️  Error ejecutando asignar_sedes_usuarios.py: {e}")

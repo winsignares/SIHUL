@@ -36,3 +36,10 @@ print(f'\n=== Resultado Final ===')
 print(f'Total usuarios: {total}')
 print(f'Con sede: {usuarios_con_sede}')
 print(f'Sin sede: {usuarios_sin_sede}')
+
+try:
+    exec(open('asignar_sedes_facultades.py').read())
+except FileNotFoundError:
+    print("⚠️  Archivo asignar_sedes_facultades.py no encontrado, omitiendo...")
+except Exception as e:
+    print(f"⚠️  Error ejecutando asignar_sedes_facultades.py: {e}")
