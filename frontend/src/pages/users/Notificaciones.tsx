@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Clock, Zap, Archive, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from '../../share/sonner';
@@ -42,6 +43,10 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     cambiarPagina,
     busqueda,
     setBusqueda,
+    filtroTiempo,
+    setFiltroTiempo,
+    filtroPrioridad,
+    setFiltroPrioridad,
   } = useNotificaciones(onNotificacionesChange);
 
   const handleAprobarSolicitud = async (notificacion: any) => {
@@ -250,6 +255,20 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
         return <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
       case 'solicitud_rechazada':
         return <X className="w-5 h-5 text-red-600 dark:text-red-400" />;
+      case 'grupo':
+        return <Bell className="w-5 h-5 text-teal-600 dark:text-teal-400" />;
+      case 'cambio_nombre':
+        return <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+      case 'cambio_contrasena':
+        return <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />;
+      case 'licencia':
+        return <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />;
+      case 'periodo_academico':
+        return <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />;
+      case 'profesor_sin_asignar':
+        return <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+      case 'grupo_sin_espacio':
+        return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />;
       default:
         return <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />;
     }
@@ -284,6 +303,20 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       case 'solicitud_aprobada':
         return 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-950/50 dark:to-green-900/50 border-l-4 border-green-500';
       case 'solicitud_rechazada':
+        return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
+      case 'grupo':
+        return 'bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-950/50 dark:to-teal-900/50 border-l-4 border-teal-500';
+      case 'cambio_nombre':
+        return 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 border-l-4 border-blue-500';
+      case 'cambio_contrasena':
+        return 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-950/50 dark:to-purple-900/50 border-l-4 border-purple-500';
+      case 'licencia':
+        return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
+      case 'periodo_academico':
+        return 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-950/50 dark:to-orange-900/50 border-l-4 border-orange-500';
+      case 'profesor_sin_asignar':
+        return 'bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-950/50 dark:to-yellow-900/50 border-l-4 border-yellow-500';
+      case 'grupo_sin_espacio':
         return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
       default:
         return 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900/50 dark:to-slate-800/50 border-l-4 border-slate-400';
@@ -386,21 +419,21 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
         </motion.div>
 
         {/* Statistics con diseño mejorado */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+            <Card className="border-0 bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 mb-1 font-medium">Total</p>
-                    <p className="text-4xl font-bold">{stats.total}</p>
+                    <p className="text-orange-100 mb-1 font-medium">Pendientes</p>
+                    <p className="text-4xl font-bold">{stats.pendientes}</p>
                   </div>
-                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
-                    <Archive className="w-10 h-10" />
+                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl animate-pulse">
+                    <Clock className="w-10 h-10" />
                   </div>
                 </div>
               </CardContent>
@@ -411,26 +444,6 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <Card className="border-0 bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-red-100 mb-1 font-medium">Pendientes</p>
-                    <p className="text-4xl font-bold">{stats.pendientes}</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl animate-pulse">
-                    <Zap className="w-10 h-10" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
           >
             <Card className="border-0 bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-6">
@@ -448,13 +461,14 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
           </motion.div>
         </div>
 
-      {/* Barra de búsqueda */}
+      {/* Barra de búsqueda y filtros */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-slate-200/50 dark:border-slate-700/50"
+        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-slate-200/50 dark:border-slate-700/50 space-y-4"
       >
+        {/* Búsqueda */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
           <Input
@@ -475,60 +489,89 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
             </Button>
           )}
         </div>
-        {busqueda && (
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-            {totalNotificaciones} resultado(s) encontrado(s)
-          </p>
+
+        {/* Filtros con Comboboxes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Filtro de Tiempo */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              ⏰ Período de Tiempo
+            </Label>
+            <Select value={filtroTiempo} onValueChange={(value) => setFiltroTiempo(value as any)}>
+              <SelectTrigger className="w-full border-2 border-slate-300 dark:border-slate-600">
+                <SelectValue placeholder="Seleccionar período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dia">📅 Hoy (últimas 24h)</SelectItem>
+                <SelectItem value="semana">📆 Esta Semana (7 días)</SelectItem>
+                <SelectItem value="mes">🗓️ Este Mes (30 días)</SelectItem>
+                <SelectItem value="todo">🌍 Todo el Tiempo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filtro de Prioridad */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              🎯 Prioridad
+            </Label>
+            <Select value={filtroPrioridad} onValueChange={(value) => setFiltroPrioridad(value as any)}>
+              <SelectTrigger className="w-full border-2 border-slate-300 dark:border-slate-600">
+                <SelectValue placeholder="Seleccionar prioridad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">⚪ Todas las Prioridades</SelectItem>
+                <SelectItem value="alta">🔴 Alta - Urgente</SelectItem>
+                <SelectItem value="media">🟡 Media - Importante</SelectItem>
+                <SelectItem value="baja">🟢 Baja - Informativa</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Indicador de resultados y botón limpiar */}
+        {(busqueda || filtroTiempo !== 'todo' || filtroPrioridad !== 'todas') && (
+          <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              📊 {totalNotificaciones} notificación(es) {busqueda && 'encontrada(s)'}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setBusqueda('');
+                setFiltroTiempo('todo');
+                setFiltroPrioridad('todas');
+              }}
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
+            >
+              ✨ Limpiar Filtros
+            </Button>
+          </div>
         )}
       </motion.div>
 
-      {/* Tabs con diseño mejorado */}
+      {/* Tabs simplificadas: SOLO 2 PESTAÑAS */}
       <Tabs value={filterTab} onValueChange={setFilterTab} className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg p-2 rounded-xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 gap-1">
-          <TabsTrigger 
-            value="importantes" 
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white transition-all duration-300"
-          >
-            <Zap className="w-4 h-4 mr-2" />
-            Importantes
-          </TabsTrigger>
-          <TabsTrigger 
+        <TabsList className="grid grid-cols-2 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg p-2 rounded-xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 gap-2">
+          <TabsTrigger
             value="pendientes"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white transition-all duration-300"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white transition-all duration-300 font-semibold"
           >
-            <Clock className="w-4 h-4 mr-2" />
-            Pendientes
+            <Clock className="w-5 h-5 mr-2" />
+            <span className="hidden sm:inline">⏳ Pendientes</span>
+            <span className="sm:hidden">⏰</span>
             {stats.pendientes > 0 && (
-              <Badge className="ml-2 bg-white text-orange-600 font-bold">{stats.pendientes}</Badge>
+              <Badge className="ml-2 bg-white text-orange-600 font-bold shadow-lg">{stats.pendientes}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger 
-            value="horarios"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white transition-all duration-300"
-          >
-            <Calendar className="w-4 h-4 mr-2" />
-            Horarios
-          </TabsTrigger>
-          <TabsTrigger 
-            value="espacios"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white transition-all duration-300"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Espacios
-          </TabsTrigger>
-          <TabsTrigger 
-            value="sistema"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-500 data-[state=active]:text-white transition-all duration-300"
-          >
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Sistema
-          </TabsTrigger>
-          <TabsTrigger 
             value="leidas"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-500 data-[state=active]:to-gray-600 data-[state=active]:text-white transition-all duration-300"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white transition-all duration-300 font-semibold"
           >
-            <CheckCheck className="w-4 h-4 mr-2" />
-            Leídas
+            <CheckCheck className="w-5 h-5 mr-2" />
+            <span className="hidden sm:inline">✅ Leídas</span>
+            <span className="sm:hidden">✓</span>
           </TabsTrigger>
         </TabsList>
 

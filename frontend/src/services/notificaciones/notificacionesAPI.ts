@@ -103,6 +103,8 @@ export const obtenerMisNotificaciones = async (params: {
   busqueda?: string;
   tipo?: string;
   prioridad?: 'alta' | 'media' | 'baja';
+  filtroTiempo?: 'dia' | 'semana' | 'mes' | 'todo';
+  categoria?: 'importantes' | 'pendientes' | 'leidas';
 }): Promise<NotificacionesResponse> => {
   const queryParams = new URLSearchParams();
   queryParams.append('id_usuario', params.id_usuario.toString());
@@ -112,6 +114,8 @@ export const obtenerMisNotificaciones = async (params: {
   if (params.busqueda) queryParams.append('busqueda', params.busqueda);
   if (params.tipo) queryParams.append('tipo', params.tipo);
   if (params.prioridad) queryParams.append('prioridad', params.prioridad);
+  if (params.filtroTiempo) queryParams.append('filtro_tiempo', params.filtroTiempo);
+  if (params.categoria) queryParams.append('categoria', params.categoria);
   
   return await apiClient.get<NotificacionesResponse>(`${API_URL}/mis-notificaciones/?${queryParams.toString()}`);
 };
@@ -128,6 +132,8 @@ export const obtenerMisNotificacionesPaginadas = async (params: {
   tipo?: string;
   prioridad?: 'alta' | 'media' | 'baja';
   leidas?: boolean;
+  filtroTiempo?: 'dia' | 'semana' | 'mes' | 'todo';
+  categoria?: 'importantes' | 'pendientes' | 'leidas';
 }): Promise<NotificacionesPaginadas> => {
   const queryParams = new URLSearchParams();
   queryParams.append('id_usuario', params.id_usuario.toString());
@@ -137,6 +143,8 @@ export const obtenerMisNotificacionesPaginadas = async (params: {
   if (params.tipo) queryParams.append('tipo', params.tipo);
   if (params.prioridad) queryParams.append('prioridad', params.prioridad);
   if (params.leidas !== undefined) queryParams.append('leidas', params.leidas.toString());
+  if (params.filtroTiempo) queryParams.append('filtro_tiempo', params.filtroTiempo);
+  if (params.categoria) queryParams.append('categoria', params.categoria);
   
   return await apiClient.get<NotificacionesPaginadas>(`${API_URL}/mis-notificaciones-paginadas/?${queryParams.toString()}`);
 };

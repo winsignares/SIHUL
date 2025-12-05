@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { NotificacionUsuario, NotificacionBackend } from '../../models/users/notification.model';
+import type { NotificacionUsuario, NotificacionBackend, FiltroTiempo, CategoriaNotificacion } from '../../models/users/notification.model';
+import { 
+    NOTIFICACIONES_IMPORTANTES
+} from '../../models/users/notification.model';
 import { useAuth } from '../../context/AuthContext';
 import { useNotificacionesContext } from '../../context/NotificacionesContext';
 import {
@@ -62,6 +65,13 @@ const obtenerTituloDefault = (tipo: string): string => {
         'solicitud_espacio': 'Nueva Solicitud de Espacio',
         'solicitud_aprobada': 'Solicitud Aprobada',
         'solicitud_rechazada': 'Solicitud Rechazada',
+        'grupo': 'Nuevo Grupo Creado',
+        'cambio_nombre': 'Cambio de Nombre',
+        'cambio_contrasena': 'Cambio de Contraseña',
+        'licencia': 'Aviso de Licencia',
+        'periodo_academico': 'Período Académico',
+        'profesor_sin_asignar': 'Profesor Sin Asignar',
+        'grupo_sin_espacio': 'Grupo Sin Espacio',
     };
     return titulos[tipo] || 'Notificación';
 };
@@ -83,7 +93,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
     const { user } = useAuth();
     const { actualizarContador } = useNotificacionesContext();
     const [notificaciones, setNotificaciones] = useState<NotificacionUsuario[]>([]);
-    const [filterTab, setFilterTab] = useState('importantes'); // Cambiado a 'importantes' por defecto
+    const [filterTab, setFilterTab] = useState<CategoriaNotificacion>('pendientes');
     const [isLoading, setIsLoading] = useState(false);
     const [stats, setStats] = useState({
         total: 0,
@@ -99,9 +109,14 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
     const [limite] = useState(10); // Máximo 10 notificaciones por página
     const [busqueda, setBusqueda] = useState('');
     const [busquedaActiva, setBusquedaActiva] = useState(''); // Para aplicar búsqueda con delay
+    
+    // Estados para filtros (comboboxes)
+    const [filtroTiempo, setFiltroTiempo] = useState<FiltroTiempo>('todo');
+    const [filtroPrioridad, setFiltroPrioridad] = useState<'alta' | 'media' | 'baja' | 'todas'>('todas');
 
     /**
      * Carga las notificaciones desde el backend con paginación
+     * Lógica simplificada para 3 pestañas: IMPORTANTES, PENDIENTES, LEIDAS
      */
     const cargarNotificaciones = useCallback(async (pagina: number = paginaActual) => {
         if (!user?.id) return;
@@ -109,25 +124,15 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
         try {
             setIsLoading(true);
             
-            // Preparar parámetros de filtrado según la pestaña activa
-            let filtroLeidas: boolean | undefined;
-            let filtroPrioridad: 'alta' | 'media' | 'baja' | undefined;
-            let filtroTipo: string | undefined;
+            // Determinar filtros según la pestaña activa
+            let filtroLeidas: boolean | undefined = undefined;
 
-            // Aplicar filtros según la pestaña
-            if (filterTab === 'importantes') {
-                filtroLeidas = false;
-                filtroPrioridad = 'alta';
-            } else if (filterTab === 'pendientes') {
+            if (filterTab === 'pendientes') {
+                // PENDIENTES: Todas las notificaciones NO LEÍDAS
                 filtroLeidas = false;
             } else if (filterTab === 'leidas') {
+                // LEIDAS: Solo notificaciones YA LEÍDAS
                 filtroLeidas = true;
-            } else if (filterTab === 'horarios') {
-                filtroTipo = 'horario';
-            } else if (filterTab === 'espacios') {
-                filtroTipo = 'espacio';
-            } else if (filterTab === 'sistema') {
-                filtroTipo = 'sistema';
             }
 
             const response = await obtenerMisNotificaciones({
@@ -135,15 +140,18 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
                 pagina,
                 limite,
                 busqueda: busquedaActiva,
-                prioridad: filtroPrioridad,
-                tipo: filtroTipo,
+                prioridad: filtroPrioridad !== 'todas' ? filtroPrioridad : undefined,
                 no_leidas: filtroLeidas === false ? true : (filtroLeidas === true ? false : undefined),
+                filtroTiempo: filtroTiempo !== 'todo' ? filtroTiempo : undefined,
+                categoria: filterTab,
             });
 
-            const notifsMapeadas = response.notificaciones.map(mapearNotificacion);
+            // El backend ya hace el filtrado correcto, solo mapeamos
+            let notifsMapeadas = response.notificaciones.map(mapearNotificacion);
+
             setNotificaciones(notifsMapeadas);
             
-            // Actualizar información de paginación si está disponible
+            // Actualizar información de paginación
             if (response.total !== undefined) {
                 setTotalNotificaciones(response.total);
                 setTotalPaginas(Math.ceil(response.total / limite));
@@ -154,7 +162,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id, paginaActual, limite, busquedaActiva, filterTab]);
+    }, [user?.id, paginaActual, limite, busquedaActiva, filterTab, filtroTiempo, filtroPrioridad]);
 
     /**
      * Carga las estadísticas desde el backend
@@ -200,7 +208,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
      */
     useEffect(() => {
         cargarNotificaciones(paginaActual);
-    }, [busquedaActiva, paginaActual, filterTab]);
+    }, [busquedaActiva, paginaActual, filterTab, filtroTiempo, filtroPrioridad]);
 
     /**
      * Carga inicial y polling de estadísticas
@@ -228,8 +236,24 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
     /**
      * Función para cambiar de pestaña y resetear paginación
      */
-    const cambiarTab = (nuevoTab: string) => {
+    const cambiarTab = (nuevoTab: CategoriaNotificacion) => {
         setFilterTab(nuevoTab);
+        setPaginaActual(1);
+    };
+
+    /**
+     * Función para cambiar el filtro de tiempo
+     */
+    const cambiarFiltroTiempo = (nuevoFiltro: FiltroTiempo) => {
+        setFiltroTiempo(nuevoFiltro);
+        setPaginaActual(1);
+    };
+
+    /**
+     * Función para cambiar el filtro de prioridad
+     */
+    const cambiarFiltroPrioridad = (nuevaPrioridad: 'alta' | 'media' | 'baja' | 'todas') => {
+        setFiltroPrioridad(nuevaPrioridad);
         setPaginaActual(1);
     };
 
@@ -317,12 +341,17 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
         stats,
         isLoading,
         recargar: () => cargarNotificaciones(paginaActual),
-        // Nuevas propiedades para paginación
+        // Propiedades para paginación
         paginaActual,
         totalPaginas,
         totalNotificaciones,
         cambiarPagina,
         busqueda,
         setBusqueda,
+        // Filtros (comboboxes)
+        filtroTiempo,
+        setFiltroTiempo: cambiarFiltroTiempo,
+        filtroPrioridad,
+        setFiltroPrioridad: cambiarFiltroPrioridad,
     };
 }

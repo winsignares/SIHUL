@@ -153,6 +153,9 @@ def list_notificaciones(request):
 def mis_notificaciones(request):
     """Obtiene las notificaciones del usuario específico con soporte para paginación y filtros"""
     if request.method == 'GET':
+        from datetime import timedelta
+        from django.utils import timezone
+        
         id_usuario = request.GET.get('id_usuario')
         no_leidas = request.GET.get('no_leidas', 'false').lower() == 'true'
         pagina = int(request.GET.get('pagina', 1))
@@ -160,6 +163,8 @@ def mis_notificaciones(request):
         busqueda = request.GET.get('busqueda', '').strip()
         tipo = request.GET.get('tipo', '').strip()
         prioridad = request.GET.get('prioridad', '').strip()
+        filtro_tiempo = request.GET.get('filtro_tiempo', '').strip()
+        categoria = request.GET.get('categoria', '').strip()
         
         if not id_usuario:
             return JsonResponse({"error": "id_usuario es requerido"}, status=400)
@@ -184,27 +189,44 @@ def mis_notificaciones(request):
                 Q(mensaje__icontains=busqueda) | Q(tipo_notificacion__icontains=busqueda)
             )
         
-        # Filtro por tipo
-        if tipo:
-            # Mapeo de tipos para incluir tipos relacionados
-            if tipo == 'horario':
+        # Filtro por categoría (SOLO 3 CATEGORÍAS PRINCIPALES)
+        if categoria:
+            TIPOS_IMPORTANTES = [
+                'solicitud', 'solicitud_espacio', 'solicitud_aprobada', 'solicitud_rechazada',
+                'horario', 'grupo', 'prestamo', 'profesor_sin_asignar', 'grupo_sin_espacio',
+                'licencia', 'periodo_academico'
+            ]
+            
+            if categoria == 'importantes':
+                # IMPORTANTES: Solo notificaciones NO LEÍDAS de tipos importantes
                 notificaciones = notificaciones.filter(
-                    tipo_notificacion__in=['horario', 'solicitud']
+                    tipo_notificacion__in=TIPOS_IMPORTANTES,
+                    es_leida=False
                 )
-            elif tipo == 'espacio':
-                notificaciones = notificaciones.filter(
-                    tipo_notificacion__in=['espacio', 'prestamo', 'facultad', 'solicitud_espacio', 'solicitud_aprobada', 'solicitud_rechazada']
-                )
-            elif tipo == 'sistema':
-                notificaciones = notificaciones.filter(
-                    tipo_notificacion__in=['sistema', 'mensaje', 'alerta', 'exito', 'error', 'advertencia']
-                )
-            else:
-                notificaciones = notificaciones.filter(tipo_notificacion=tipo)
+            elif categoria == 'pendientes':
+                # PENDIENTES: Todas las notificaciones NO LEÍDAS (sin importar tipo)
+                notificaciones = notificaciones.filter(es_leida=False)
+            elif categoria == 'leidas':
+                # LEIDAS: Solo notificaciones YA LEÍDAS
+                notificaciones = notificaciones.filter(es_leida=True)
         
         # Filtro por prioridad
         if prioridad and prioridad in ['alta', 'media', 'baja']:
             notificaciones = notificaciones.filter(prioridad=prioridad)
+        
+        # Filtro por tiempo
+        if filtro_tiempo:
+            now = timezone.now()
+            if filtro_tiempo == 'dia':
+                fecha_inicio = now - timedelta(days=1)
+                notificaciones = notificaciones.filter(fecha_creacion__gte=fecha_inicio)
+            elif filtro_tiempo == 'semana':
+                fecha_inicio = now - timedelta(weeks=1)
+                notificaciones = notificaciones.filter(fecha_creacion__gte=fecha_inicio)
+            elif filtro_tiempo == 'mes':
+                fecha_inicio = now - timedelta(days=30)
+                notificaciones = notificaciones.filter(fecha_creacion__gte=fecha_inicio)
+            # 'todo' no aplica ningún filtro de tiempo
         
         # Ordenar por fecha de creación (más recientes primero)
         notificaciones = notificaciones.order_by('-fecha_creacion')
