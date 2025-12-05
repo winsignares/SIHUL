@@ -7,12 +7,11 @@ import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Clock, Zap, Archive, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { useNotificaciones } from '../../hooks/users/useNotificaciones';
-import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
 import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
 
@@ -21,7 +20,6 @@ interface NotificacionesProps {
 }
 
 export default function Notificaciones({ onNotificacionesChange }: NotificacionesProps) {
-  const isMobile = useIsMobile();
   const { user } = useAuth();
   const [procesando, setProcesando] = React.useState(false);
   const [showModalRechazo, setShowModalRechazo] = React.useState(false);
@@ -36,7 +34,6 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     filteredNotificaciones,
     stats,
     isLoading,
-    recargar,
     paginaActual,
     totalPaginas,
     totalNotificaciones,
@@ -277,516 +274,328 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
   const getTipoColor = (tipo: string) => {
     switch (tipo.toLowerCase()) {
       case 'solicitud':
-        return 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 border-l-4 border-blue-500';
+        return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
       case 'mensaje':
-        return 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-950/50 dark:to-purple-900/50 border-l-4 border-purple-500';
+        return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800';
       case 'alerta':
-        return 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-950/50 dark:to-orange-900/50 border-l-4 border-orange-500';
+        return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800';
       case 'sistema':
-        return 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900/50 dark:to-slate-800/50 border-l-4 border-slate-500';
+        return 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-700';
       case 'exito':
-        return 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-950/50 dark:to-green-900/50 border-l-4 border-green-500';
+        return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800';
       case 'error':
-        return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
+        return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
       case 'advertencia':
-        return 'bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-950/50 dark:to-yellow-900/50 border-l-4 border-yellow-500';
+        return 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800';
       case 'horario':
-        return 'bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-950/50 dark:to-indigo-900/50 border-l-4 border-indigo-500';
+        return 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800';
       case 'prestamo':
-        return 'bg-gradient-to-br from-cyan-100 to-cyan-200 dark:from-cyan-950/50 dark:to-cyan-900/50 border-l-4 border-cyan-500';
+        return 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800';
       case 'espacio':
-        return 'bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-950/50 dark:to-emerald-900/50 border-l-4 border-emerald-500';
+        return 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
       case 'facultad':
-        return 'bg-gradient-to-br from-violet-100 to-violet-200 dark:from-violet-950/50 dark:to-violet-900/50 border-l-4 border-violet-500';
+        return 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800';
       case 'solicitud_espacio':
-        return 'bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-950/50 dark:to-amber-900/50 border-l-4 border-amber-500';
+        return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
       case 'solicitud_aprobada':
-        return 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-950/50 dark:to-green-900/50 border-l-4 border-green-500';
+        return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800';
       case 'solicitud_rechazada':
-        return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
+        return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
       case 'grupo':
-        return 'bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-950/50 dark:to-teal-900/50 border-l-4 border-teal-500';
+        return 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800';
       case 'cambio_nombre':
-        return 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 border-l-4 border-blue-500';
+        return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
       case 'cambio_contrasena':
-        return 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-950/50 dark:to-purple-900/50 border-l-4 border-purple-500';
+        return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800';
       case 'licencia':
-        return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
+        return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
       case 'periodo_academico':
-        return 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-950/50 dark:to-orange-900/50 border-l-4 border-orange-500';
+        return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800';
       case 'profesor_sin_asignar':
-        return 'bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-950/50 dark:to-yellow-900/50 border-l-4 border-yellow-500';
+        return 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800';
       case 'grupo_sin_espacio':
-        return 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-950/50 dark:to-red-900/50 border-l-4 border-red-500';
+        return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
       default:
-        return 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900/50 dark:to-slate-800/50 border-l-4 border-slate-400';
+        return 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-700';
     }
   };
 
   const getPrioridadBadge = (prioridad: string) => {
     switch (prioridad) {
       case 'alta':
-        return (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-          >
-            <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 shadow-lg font-bold">
-              🔥 Alta
-            </Badge>
-          </motion.div>
-        );
+        return <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800">Alta</Badge>;
       case 'media':
-        return (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-          >
-            <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 shadow-lg font-bold">
-              ⚡ Media
-            </Badge>
-          </motion.div>
-        );
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">Media</Badge>;
       case 'baja':
-        return (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-          >
-            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 shadow-lg font-bold">
-              💧 Baja
-            </Badge>
-          </motion.div>
-        );
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">Baja</Badge>;
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header con animación */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-2xl p-6 shadow-xl border border-slate-200/50 dark:border-slate-700/50"
-        >
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur-xl opacity-50 animate-pulse"></div>
-              <div className="relative bg-gradient-to-r from-blue-500 to-purple-500 p-4 rounded-2xl">
-                <Bell className="w-8 h-8 text-white" />
+    <div className="p-8 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-slate-900 dark:text-slate-100 mb-2">Centro de Notificaciones</h1>
+          <p className="text-slate-600 dark:text-slate-400">Gestiona tus notificaciones, solicitudes y alertas del sistema</p>
+        </div>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={marcarTodasComoLeidas}
+            className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950"
+            disabled={stats.pendientes === 0}
+          >
+            <CheckCheck className="w-4 h-4 mr-2" />
+            Marcar todas como leídas
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-600 dark:text-slate-400 mb-1">Total</p>
+                <p className="text-slate-900 dark:text-slate-100">{stats.total}</p>
               </div>
+              <Bell className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Centro de Notificaciones
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Gestiona tus notificaciones y mantente al día con el sistema
-              </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-600 dark:text-red-400 mb-1">Pendientes</p>
+                <p className="text-red-900 dark:text-red-100">{stats.pendientes}</p>
+              </div>
+              <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={recargar}
-              className="border-2 border-slate-300 hover:border-slate-400 dark:border-slate-600 dark:hover:border-slate-500 hover:shadow-lg transition-all duration-300"
-              disabled={isLoading}
-            >
-              <motion.div
-                animate={isLoading ? { rotate: 360 } : {}}
-                transition={{ duration: 1, repeat: isLoading ? Infinity : 0, ease: "linear" }}
-              >
-                <Bell className="w-4 h-4 mr-2" />
-              </motion.div>
-              {isLoading ? 'Cargando...' : 'Actualizar'}
-            </Button>
-            <Button
-              onClick={marcarTodasComoLeidas}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-              disabled={stats.pendientes === 0 || isLoading}
-            >
-              <CheckCheck className="w-4 h-4 mr-2" />
-              Marcar todas como leídas
-            </Button>
-          </div>
-        </motion.div>
+          </CardContent>
+        </Card>
 
-        {/* Statistics con diseño mejorado */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <Card className="border-0 bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-100 mb-1 font-medium">Pendientes</p>
-                    <p className="text-4xl font-bold">{stats.pendientes}</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl animate-pulse">
-                    <Clock className="w-10 h-10" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        <Card className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-600 dark:text-green-400 mb-1">Leídas</p>
+                <p className="text-green-900 dark:text-green-100">{stats.leidas}</p>
+              </div>
+              <CheckCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <Card className="border-0 bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-100 mb-1 font-medium">Leídas</p>
-                    <p className="text-4xl font-bold">{stats.leidas}</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
-                    <CheckCircle className="w-10 h-10" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+        <Card className="border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-600 dark:text-slate-400 mb-1">Eliminadas</p>
+                <p className="text-slate-900 dark:text-slate-100">{stats.eliminadas}</p>
+              </div>
+              <Trash2 className="w-8 h-8 text-slate-600 dark:text-slate-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Barra de búsqueda y filtros */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-slate-200/50 dark:border-slate-700/50 space-y-4"
-      >
-        {/* Búsqueda */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Buscar notificaciones por título o descripción..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
-          />
-          {busqueda && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setBusqueda('')}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* Filtros con Comboboxes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Filtro de Tiempo */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              ⏰ Período de Tiempo
-            </Label>
-            <Select value={filtroTiempo} onValueChange={(value) => setFiltroTiempo(value as any)}>
-              <SelectTrigger className="w-full border-2 border-slate-300 dark:border-slate-600">
-                <SelectValue placeholder="Seleccionar período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dia">📅 Hoy (últimas 24h)</SelectItem>
-                <SelectItem value="semana">📆 Esta Semana (7 días)</SelectItem>
-                <SelectItem value="mes">🗓️ Este Mes (30 días)</SelectItem>
-                <SelectItem value="todo">🌍 Todo el Tiempo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Filtro de Prioridad */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              🎯 Prioridad
-            </Label>
-            <Select value={filtroPrioridad} onValueChange={(value) => setFiltroPrioridad(value as any)}>
-              <SelectTrigger className="w-full border-2 border-slate-300 dark:border-slate-600">
-                <SelectValue placeholder="Seleccionar prioridad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">⚪ Todas las Prioridades</SelectItem>
-                <SelectItem value="alta">🔴 Alta - Urgente</SelectItem>
-                <SelectItem value="media">🟡 Media - Importante</SelectItem>
-                <SelectItem value="baja">🟢 Baja - Informativa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Indicador de resultados y botón limpiar */}
-        {(busqueda || filtroTiempo !== 'todo' || filtroPrioridad !== 'todas') && (
-          <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              📊 {totalNotificaciones} notificación(es) {busqueda && 'encontrada(s)'}
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setBusqueda('');
-                setFiltroTiempo('todo');
-                setFiltroPrioridad('todas');
-              }}
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
-            >
-              ✨ Limpiar Filtros
-            </Button>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Tabs simplificadas: SOLO 2 PESTAÑAS */}
+      {/* Tabs */}
       <Tabs value={filterTab} onValueChange={setFilterTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg p-2 rounded-xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 gap-2">
-          <TabsTrigger
-            value="pendientes"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white transition-all duration-300 font-semibold"
-          >
-            <Clock className="w-5 h-5 mr-2" />
-            <span className="hidden sm:inline">⏳ Pendientes</span>
-            <span className="sm:hidden">⏰</span>
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="pendientes">
+            Pendientes
             {stats.pendientes > 0 && (
-              <Badge className="ml-2 bg-white text-orange-600 font-bold shadow-lg">{stats.pendientes}</Badge>
+              <Badge className="ml-2 bg-red-600 text-white">{stats.pendientes}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger 
-            value="leidas"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white transition-all duration-300 font-semibold"
-          >
-            <CheckCheck className="w-5 h-5 mr-2" />
-            <span className="hidden sm:inline">✅ Leídas</span>
-            <span className="sm:hidden">✓</span>
-          </TabsTrigger>
+          <TabsTrigger value="leidas">Leídas</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={filterTab} className="mt-6 space-y-4">
+        {/* Filtros */}
+        <div className="mt-6 space-y-4 bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+          {/* Búsqueda */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Buscar notificaciones por título o descripción..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full border border-slate-300 dark:border-slate-600 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
+            />
+            {busqueda && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setBusqueda('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Filtros con Selects */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Filtro de Tiempo */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Período de Tiempo
+              </Label>
+              <Select value={filtroTiempo} onValueChange={(value) => setFiltroTiempo(value as any)}>
+                <SelectTrigger className="w-full border border-slate-300 dark:border-slate-600">
+                  <SelectValue placeholder="Seleccionar período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dia">Hoy (últimas 24h)</SelectItem>
+                  <SelectItem value="semana">Esta Semana (7 días)</SelectItem>
+                  <SelectItem value="mes">Este Mes (30 días)</SelectItem>
+                  <SelectItem value="todo">Todo el Tiempo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro de Prioridad */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Prioridad
+              </Label>
+              <Select value={filtroPrioridad} onValueChange={(value) => setFiltroPrioridad(value as any)}>
+                <SelectTrigger className="w-full border border-slate-300 dark:border-slate-600">
+                  <SelectValue placeholder="Seleccionar prioridad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las Prioridades</SelectItem>
+                  <SelectItem value="alta">Alta - Urgente</SelectItem>
+                  <SelectItem value="media">Media - Importante</SelectItem>
+                  <SelectItem value="baja">Baja - Informativa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <TabsContent value={filterTab} className="mt-6 space-y-3">
           <AnimatePresence mode="popLayout">
             {filteredNotificaciones.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-              >
-                <Card className="border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-xl">
-                  <CardContent className="p-12 text-center">
-                    <motion.div
-                      animate={{ 
-                        rotate: [0, 10, -10, 0],
-                        scale: [1, 1.1, 1]
-                      }}
-                      transition={{ 
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      <Bell className="w-20 h-20 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                    </motion.div>
-                    <p className="text-xl font-medium text-slate-600 dark:text-slate-400">
-                      No hay notificaciones en esta categoría
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
-                      ¡Estás al día! 🎉
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                <CardContent className="p-12 text-center">
+                  <Bell className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                  <p className="text-slate-500 dark:text-slate-400">
+                    No hay notificaciones en esta categoría
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
-              filteredNotificaciones.map((notif, index) => (
+              filteredNotificaciones.map((notif) => (
                 <motion.div
                   key={notif.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <Card
-                    className={`border-0 ${getTipoColor(notif.tipo)} ${
-                      !notif.leida
-                        ? 'shadow-xl ring-2 ring-offset-2 ring-offset-transparent'
-                        : 'shadow-md opacity-90'
-                    } hover:shadow-2xl transition-all duration-300 backdrop-blur-sm`}
+                  <Card 
+                    className={`border ${getTipoColor(notif.tipo)} ${
+                      !notif.leida && !notif.eliminada
+                        ? 'shadow-lg' 
+                        : 'opacity-70'
+                    } hover:shadow-xl transition-shadow`}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        {/* Ícono con animación */}
-                        <motion.div 
-                          className="flex-shrink-0 mt-1"
-                          whileHover={{ rotate: 360, scale: 1.2 }}
-                          transition={{ duration: 0.5 }}
-                        >
-                          <div className="p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm shadow-lg">
-                            {getIcono(notif.tipo)}
-                          </div>
-                        </motion.div>
-
+                        <div className="flex-shrink-0 mt-1">
+                          {getIcono(notif.tipo)}
+                        </div>
+                        
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex items-start justify-between gap-4 mb-2">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-slate-900 dark:text-slate-100">
                                   {notif.titulo}
                                 </h3>
                                 {getPrioridadBadge(notif.prioridad)}
-                                {!notif.leida && (
-                                  <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                                  >
-                                    <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-                                      ✨ Nueva
-                                    </Badge>
-                                  </motion.div>
+                                {!notif.leida && !notif.eliminada && (
+                                  <Badge className="bg-blue-600 text-white">Nueva</Badge>
                                 )}
                               </div>
-                              {/* Mostrar descripción con formato especial para solicitudes rechazadas */}
-                              {notif.tipo === 'solicitud_rechazada' ? (
-                                <div className="mb-3 space-y-3">
-                                  {notif.descripcion.split('\n\n').map((parrafo, idx) => {
-                                    const esMotivo = parrafo.includes('📋');
-                                    if (esMotivo) {
-                                      const lineas = parrafo.split('\n');
-                                      const titulo = lineas[0]; // "📋 Motivo:"
-                                      const contenido = lineas.slice(1).join('\n'); // El motivo real
-                                      return (
-                                        <div key={idx} className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-lg p-4 border-l-4 border-amber-500 shadow-sm">
-                                          <p className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-2 flex items-center gap-2">
-                                            <span className="text-lg">{titulo.split(' ')[0]}</span>
-                                            {titulo.split(' ').slice(1).join(' ')}
-                                          </p>
-                                          <p className="text-sm text-amber-800 dark:text-amber-100 leading-relaxed whitespace-pre-wrap">
-                                            {contenido}
-                                          </p>
-                                        </div>
-                                      );
-                                    } else {
-                                      return (
-                                        <p key={idx} className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                                          {parrafo}
-                                        </p>
-                                      );
-                                    }
-                                  })}
-                                </div>
-                              ) : (
-                                <p className="text-slate-700 dark:text-slate-300 mb-3 leading-relaxed whitespace-pre-wrap">
-                                  {notif.descripcion}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                                <Clock className="w-4 h-4" />
-                                <p>{notif.fecha}</p>
-                              </div>
+                              <p className="text-slate-600 dark:text-slate-400 mb-2">
+                                {notif.descripcion}
+                              </p>
+                              <p className="text-slate-500 dark:text-slate-500 text-sm">
+                                {notif.fecha}
+                              </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Botones de acción con animaciones */}
                         <div className="flex items-center gap-2">
                           {/* Botones para solicitudes de espacio */}
                           {notif.tipo === 'solicitud_espacio' && (
                             <>
-                              {/* Botones de aprobar/rechazar solo si no está leída (pendiente) */}
                               {!notif.leida && (
                                 <>
-                                  <motion.div
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                  >
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleAprobarSolicitud(notif)}
-                                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg"
-                                      title="Aprobar solicitud"
-                                      disabled={procesando || isLoading}
-                                    >
-                                      <CheckCircle className="w-4 h-4" />
-                                    </Button>
-                                  </motion.div>
-                                  <motion.div
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                  >
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleAbrirModalRechazo(notif)}
-                                      className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg"
-                                      title="Rechazar solicitud"
-                                      disabled={procesando || isLoading}
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </Button>
-                                  </motion.div>
-                                </>
-                              )}
-                              {/* Botón de editar si ya está leída (procesada) */}
-                              {notif.leida && (
-                                <motion.div
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                >
                                   <Button
                                     size="sm"
-                                    onClick={() => handleModificarSolicitud(notif)}
-                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg"
-                                    title="Modificar solicitud"
+                                    onClick={() => handleAprobarSolicitud(notif)}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    title="Aprobar solicitud"
                                     disabled={procesando || isLoading}
                                   >
-                                    <Edit className="w-4 h-4" />
+                                    <CheckCircle className="w-4 h-4" />
                                   </Button>
-                                </motion.div>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAbrirModalRechazo(notif)}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                    title="Rechazar solicitud"
+                                    disabled={procesando || isLoading}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                              {notif.leida && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleModificarSolicitud(notif)}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  title="Modificar solicitud"
+                                  disabled={procesando || isLoading}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
                               )}
                             </>
                           )}
+                          
                           {!notif.leida && (
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Button
-                                size="sm"
-                                onClick={() => marcarComoLeida(notif.id)}
-                                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg"
-                                title="Marcar como leída"
-                                disabled={isLoading}
-                              >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                            </motion.div>
-                          )}
-                          <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => eliminarNotificacion(notif.id)}
-                              className="hover:bg-red-100 dark:hover:bg-red-950 text-red-600 dark:text-red-400"
-                              title="Eliminar"
-                              disabled={isLoading}
+                              onClick={() => marcarComoLeida(notif.id)}
+                              className="text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                              title="Marcar como leída"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Check className="w-4 h-4" />
                             </Button>
-                          </motion.div>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => eliminarNotificacion(notif.id)}
+                            className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -795,79 +604,74 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
               ))
             )}
           </AnimatePresence>
-
-          {/* Controles de Paginación */}
-          {totalPaginas > 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-slate-200/50 dark:border-slate-700/50"
-            >
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Mostrando página <span className="font-bold text-blue-600 dark:text-blue-400">{paginaActual}</span> de <span className="font-bold text-blue-600 dark:text-blue-400">{totalPaginas}</span>
-                {' '}({totalNotificaciones} notificación{totalNotificaciones !== 1 ? 'es' : ''} en total)
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => cambiarPagina(paginaActual - 1)}
-                  disabled={paginaActual === 1 || isLoading}
-                  className="border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Anterior
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
-                    let pageNum;
-                    if (totalPaginas <= 5) {
-                      pageNum = i + 1;
-                    } else if (paginaActual <= 3) {
-                      pageNum = i + 1;
-                    } else if (paginaActual >= totalPaginas - 2) {
-                      pageNum = totalPaginas - 4 + i;
-                    } else {
-                      pageNum = paginaActual - 2 + i;
-                    }
-
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={paginaActual === pageNum ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => cambiarPagina(pageNum)}
-                        disabled={isLoading}
-                        className={`w-8 h-8 p-0 ${
-                          paginaActual === pageNum
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                            : 'border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => cambiarPagina(paginaActual + 1)}
-                  disabled={paginaActual === totalPaginas || isLoading}
-                  className="border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Siguiente
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </motion.div>
-          )}
         </TabsContent>
       </Tabs>
+
+      {/* Controles de Paginación */}
+      {totalPaginas > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700 shadow">
+          <div className="text-sm text-slate-600 dark:text-slate-400">
+            Mostrando página <span className="font-bold text-blue-600 dark:text-blue-400">{paginaActual}</span> de <span className="font-bold text-blue-600 dark:text-blue-400">{totalPaginas}</span>
+            {' '}({totalNotificaciones} notificación{totalNotificaciones !== 1 ? 'es' : ''} en total)
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => cambiarPagina(paginaActual - 1)}
+              disabled={paginaActual === 1 || isLoading}
+              className="border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Anterior
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                let pageNum;
+                if (totalPaginas <= 5) {
+                  pageNum = i + 1;
+                } else if (paginaActual <= 3) {
+                  pageNum = i + 1;
+                } else if (paginaActual >= totalPaginas - 2) {
+                  pageNum = totalPaginas - 4 + i;
+                } else {
+                  pageNum = paginaActual - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={paginaActual === pageNum ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => cambiarPagina(pageNum)}
+                    disabled={isLoading}
+                    className={`w-8 h-8 p-0 ${
+                      paginaActual === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => cambiarPagina(paginaActual + 1)}
+              disabled={paginaActual === totalPaginas || isLoading}
+              className="border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Rechazo */}
       <Dialog open={showModalRechazo} onOpenChange={setShowModalRechazo}>
@@ -928,9 +732,6 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      </div>
-      <Toaster />
     </div>
   );
 }
