@@ -7,7 +7,7 @@ import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Bell, Check, CheckCheck, Trash2, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, Check, CheckCheck, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
@@ -355,7 +355,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -388,18 +388,6 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
                 <p className="text-green-900 dark:text-green-100">{stats.leidas}</p>
               </div>
               <CheckCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/30">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Eliminadas</p>
-                <p className="text-slate-900 dark:text-slate-100">{stats.eliminadas}</p>
-              </div>
-              <Trash2 className="w-8 h-8 text-slate-600 dark:text-slate-400" />
             </div>
           </CardContent>
         </Card>
@@ -587,15 +575,6 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
                               <Check className="w-4 h-4" />
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => eliminarNotificacion(notif.id)}
-                            className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
                     </CardContent>
