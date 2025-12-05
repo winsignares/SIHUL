@@ -115,5 +115,25 @@ export const chatbotAPI = {
         if (params.id_usuario) queryParams.append('id_usuario', params.id_usuario.toString());
         
         return apiClient.get(`/chatbot/conversaciones/?${queryParams.toString()}`);
+    },
+
+    // ========== ENDPOINTS PÚBLICOS (Sin autenticación, sin historial) ==========
+
+    /**
+     * Lista agentes para usuarios públicos
+     */
+    listarAgentesPublico: async (): Promise<{ agentes: AgenteAPI[] }> => {
+        return apiClient.get('/chatbot/public/agentes/');
+    },
+
+    /**
+     * Envía pregunta sin guardar historial - Solo para usuarios públicos
+     */
+    enviarPreguntaPublico: async (data: {
+        agente_id: number;
+        pregunta: string;
+        pregunta_sugerida_id?: number;
+    }): Promise<{ chat_id: string; respuesta: string; timestamp: string }> => {
+        return apiClient.post('/chatbot/public/pregunta/', data);
     }
 };

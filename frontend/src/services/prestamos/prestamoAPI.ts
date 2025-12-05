@@ -14,6 +14,11 @@ export interface PrestamoEspacio {
   usuario_id: number | null;
   usuario_nombre?: string;
   usuario_correo?: string;
+  solicitante_publico_id?: number | null;
+  solicitante_publico_nombre?: string;
+  solicitante_publico_correo?: string;
+  solicitante_publico_telefono?: string;
+  solicitante_publico_identificacion?: string;
   administrador_id: number | null;
   administrador_nombre?: string;
   tipo_actividad_id: number;
@@ -37,6 +42,13 @@ export const prestamoService = {
    */
   listarPrestamos: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
     return apiClient.get('/prestamos/list/');
+  },
+
+  /**
+   * Obtiene la lista de TODOS los préstamos (autenticados + públicos) para admin
+   */
+  listarTodosPrestamosAdmin: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
+    return apiClient.get('/prestamos/list/todos/');
   },
 
   /**

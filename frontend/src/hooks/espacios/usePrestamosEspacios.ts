@@ -5,6 +5,17 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
+// Helper para extraer el ID numérico y el tipo de préstamo del ID único
+const parseUniqueId = (uniqueId: string): { tipo: 'autenticado' | 'publico', id: number } | null => {
+    const match = uniqueId.match(/^(auth|public)-(\d+)$/);
+    if (!match) return null;
+    
+    return {
+        tipo: match[1] === 'auth' ? 'autenticado' : 'publico',
+        id: parseInt(match[2])
+    };
+};
+
 export function usePrestamosEspacios() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
@@ -24,8 +35,8 @@ export function usePrestamosEspacios() {
         try {
             setLoading(true);
 
-            // Cargar préstamos desde la API (ahora incluye datos completos)
-            const prestamosResponse = await prestamoService.listarPrestamos();
+            // Cargar TODOS los préstamos (autenticados + públicos) desde la API combinada
+            const prestamosResponse = await prestamoService.listarTodosPrestamosAdmin();
 
             // Transformar datos del backend al formato UI
             const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
@@ -68,24 +79,72 @@ export function usePrestamosEspacios() {
                 throw new Error('Usuario no autenticado');
             }
 
+            // Extraer el ID numérico y el tipo de préstamo del ID único
+            const parsed = parseUniqueId(id);
+            if (!parsed) {
+                throw new Error('ID de préstamo inválido');
+            }
+
+            const { tipo, id: numericId } = parsed;
+
             // Obtener datos completos del préstamo desde el backend
-            const prestamoCompleto = await prestamoService.obtenerPrestamo(Number(id));
+            let prestamoCompleto;
+            if (tipo === 'publico') {
+                // Usar endpoint de préstamos públicos
+                const response = await fetch(`http://localhost:8000/prestamos/public/${numericId}/`);
+                if (!response.ok) throw new Error('Error al obtener préstamo público');
+                prestamoCompleto = await response.json();
+            } else {
+                // Usar endpoint de préstamos autenticados
+                prestamoCompleto = await prestamoService.obtenerPrestamo(numericId);
+            }
 
             // Actualizar el estado y registrar el administrador que aprobó
-            await prestamoService.actualizarPrestamo({
-                id: Number(id),
-                espacio_id: prestamoCompleto.espacio_id,
-                usuario_id: prestamoCompleto.usuario_id,
-                administrador_id: user.id, // Guardar el ID del administrador que aprueba
-                tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
-                fecha: prestamoCompleto.fecha,
-                hora_inicio: prestamoCompleto.hora_inicio,
-                hora_fin: prestamoCompleto.hora_fin,
-                motivo: prestamoCompleto.motivo,
-                asistentes: prestamoCompleto.asistentes,
-                telefono: prestamoCompleto.telefono,
-                estado: 'Aprobado'
-            });
+            if (tipo === 'publico') {
+                // Actualizar préstamo público
+                const response = await fetch(`http://localhost:8000/prestamos/public/update/`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: numericId,
+                        espacio_id: prestamoCompleto.espacio_id,
+                        nombre_solicitante: prestamoCompleto.usuario_nombre,
+                        correo_solicitante: prestamoCompleto.usuario_correo,
+                        telefono_solicitante: prestamoCompleto.telefono,
+                        administrador_id: user.id,
+                        tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
+                        fecha: prestamoCompleto.fecha,
+                        hora_inicio: prestamoCompleto.hora_inicio,
+                        hora_fin: prestamoCompleto.hora_fin,
+                        motivo: prestamoCompleto.motivo,
+                        asistentes: prestamoCompleto.asistentes,
+                        estado: 'Aprobado'
+                    })
+                });
+                if (!response.ok) throw new Error('Error al actualizar préstamo público');
+            } else {
+                // Actualizar préstamo autenticado
+                const updatePayload: any = {
+                    id: numericId,
+                    espacio_id: prestamoCompleto.espacio_id,
+                    administrador_id: user.id,
+                    tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
+                    fecha: prestamoCompleto.fecha,
+                    hora_inicio: prestamoCompleto.hora_inicio,
+                    hora_fin: prestamoCompleto.hora_fin,
+                    motivo: prestamoCompleto.motivo,
+                    asistentes: prestamoCompleto.asistentes,
+                    telefono: prestamoCompleto.telefono,
+                    estado: 'Aprobado'
+                };
+                
+                // Solo incluir usuario_id si existe
+                if (prestamoCompleto.usuario_id) {
+                    updatePayload.usuario_id = prestamoCompleto.usuario_id;
+                }
+                
+                await prestamoService.actualizarPrestamo(updatePayload);
+            }
 
             // Recargar datos para obtener el estado actualizado
             await loadData();
@@ -123,24 +182,72 @@ export function usePrestamosEspacios() {
                 throw new Error('Usuario no autenticado');
             }
 
+            // Extraer el ID numérico y el tipo de préstamo del ID único
+            const parsed = parseUniqueId(id);
+            if (!parsed) {
+                throw new Error('ID de préstamo inválido');
+            }
+
+            const { tipo, id: numericId } = parsed;
+
             // Obtener datos completos del préstamo desde el backend
-            const prestamoCompleto = await prestamoService.obtenerPrestamo(Number(id));
+            let prestamoCompleto;
+            if (tipo === 'publico') {
+                // Usar endpoint de préstamos públicos
+                const response = await fetch(`http://localhost:8000/prestamos/public/${numericId}/`);
+                if (!response.ok) throw new Error('Error al obtener préstamo público');
+                prestamoCompleto = await response.json();
+            } else {
+                // Usar endpoint de préstamos autenticados
+                prestamoCompleto = await prestamoService.obtenerPrestamo(numericId);
+            }
 
             // Actualizar el estado y registrar el administrador que rechazó
-            await prestamoService.actualizarPrestamo({
-                id: Number(id),
-                espacio_id: prestamoCompleto.espacio_id,
-                usuario_id: prestamoCompleto.usuario_id,
-                administrador_id: user.id, // Guardar el ID del administrador que rechaza
-                tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
-                fecha: prestamoCompleto.fecha,
-                hora_inicio: prestamoCompleto.hora_inicio,
-                hora_fin: prestamoCompleto.hora_fin,
-                motivo: prestamoCompleto.motivo,
-                asistentes: prestamoCompleto.asistentes,
-                telefono: prestamoCompleto.telefono,
-                estado: 'Rechazado'
-            });
+            if (tipo === 'publico') {
+                // Actualizar préstamo público
+                const response = await fetch(`http://localhost:8000/prestamos/public/update/`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: numericId,
+                        espacio_id: prestamoCompleto.espacio_id,
+                        nombre_solicitante: prestamoCompleto.usuario_nombre,
+                        correo_solicitante: prestamoCompleto.usuario_correo,
+                        telefono_solicitante: prestamoCompleto.telefono,
+                        administrador_id: user.id,
+                        tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
+                        fecha: prestamoCompleto.fecha,
+                        hora_inicio: prestamoCompleto.hora_inicio,
+                        hora_fin: prestamoCompleto.hora_fin,
+                        motivo: prestamoCompleto.motivo,
+                        asistentes: prestamoCompleto.asistentes,
+                        estado: 'Rechazado'
+                    })
+                });
+                if (!response.ok) throw new Error('Error al actualizar préstamo público');
+            } else {
+                // Actualizar préstamo autenticado
+                const updatePayload: any = {
+                    id: numericId,
+                    espacio_id: prestamoCompleto.espacio_id,
+                    administrador_id: user.id,
+                    tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
+                    fecha: prestamoCompleto.fecha,
+                    hora_inicio: prestamoCompleto.hora_inicio,
+                    hora_fin: prestamoCompleto.hora_fin,
+                    motivo: prestamoCompleto.motivo,
+                    asistentes: prestamoCompleto.asistentes,
+                    telefono: prestamoCompleto.telefono,
+                    estado: 'Rechazado'
+                };
+                
+                // Solo incluir usuario_id si existe
+                if (prestamoCompleto.usuario_id) {
+                    updatePayload.usuario_id = prestamoCompleto.usuario_id;
+                }
+                
+                await prestamoService.actualizarPrestamo(updatePayload);
+            }
 
             // Recargar datos para obtener el estado actualizado
             await loadData();

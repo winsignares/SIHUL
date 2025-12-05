@@ -3,8 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import { prestamoService, type PrestamoEspacio, type RecursoPrestamo } from '../../services/prestamos/prestamoAPI';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
-import { espacioService } from '../../services/espacios/espaciosAPI';
+import { sedeService } from '../../services/sedes/sedeAPI';
+import { prestamosPublicAPI, type EspacioDisponibleAPI } from '../../services/prestamos/prestamosPublicAPI';
 import type { Prestamo } from '../../models/index';
+import type { Sede } from '../../models/institucional/sede.model';
 
 // Helper function to map backend PrestamoEspacio to UI Prestamo model
 const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
@@ -12,14 +14,14 @@ const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
         id: prestamo.id?.toString() || '',
         solicitante: prestamo.usuario_nombre || '',
         email: prestamo.usuario_correo || '',
-        telefono: '', // No disponible en modelo backend
+        telefono: prestamo.telefono || '',
         espacio: prestamo.espacio_nombre || '',
         fecha: prestamo.fecha,
         horaInicio: prestamo.hora_inicio.substring(0, 5), // Remove seconds HH:MM:SS -> HH:MM
         horaFin: prestamo.hora_fin.substring(0, 5),
         motivo: prestamo.motivo || '',
         tipoEvento: prestamo.tipo_actividad_nombre || '',
-        asistentes: 0, // No disponible en modelo backend
+        asistentes: prestamo.asistentes || 0,
         recursosNecesarios: prestamo.recursos?.map(r => r.recurso_nombre || '') || [],
         estado: prestamo.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
         fechaSolicitud: '', // No disponible en modelo backend
@@ -39,7 +41,8 @@ export function useDocentePrestamos() {
     // Estado para datos dinámicos de la API
     const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
     const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
-    const [espaciosDisponibles, setEspaciosDisponibles] = useState<any[]>([]);
+    const [sedes, setSedes] = useState<Sede[]>([]);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioDisponibleAPI[]>([]);
 
     // Estado para recursos seleccionados (con cantidad)
     const [recursosSeleccionados, setRecursosSeleccionados] = useState<RecursoPrestamo[]>([]);
@@ -48,30 +51,55 @@ export function useDocentePrestamos() {
         solicitante: user?.nombre || '',
         email: user?.correo || '',
         telefono: '',
-        espacio_id: 0, // Changed from espacio string to ID
+        sede_id: 0,
+        espacio_id: 0,
         fecha: '',
         horaInicio: '',
         horaFin: '',
         motivo: '',
-        tipo_actividad_id: 0, // Changed from tipoEvento string to ID
+        tipo_actividad_id: 0,
         asistentes: ''
     });
 
-    // Fetch initial data (tipos de actividad, recursos, espacios)
+    // Fetch initial data (tipos de actividad, recursos, sedes)
     const fetchInitialData = async () => {
         try {
-            const [tiposResp, recursosResp, espaciosResp] = await Promise.all([
+            const [tiposResp, recursosResp, sedesResp] = await Promise.all([
                 tipoActividadService.listarTiposActividad(),
                 recursoService.listarRecursos(),
-                espacioService.list()
+                sedeService.listarSedes()
             ]);
 
             setTiposActividad(tiposResp.tipos_actividad);
             setRecursosDisponibles(recursosResp.recursos);
-            setEspaciosDisponibles(espaciosResp.espacios);
+            setSedes(sedesResp.sedes);
         } catch (err) {
             console.error('Error fetching initial data:', err);
             setError('Error al cargar datos iniciales');
+        }
+    };
+
+    // Fetch espacios disponibles según sede, fecha y horario
+    const fetchEspaciosDisponibles = async () => {
+        const { sede_id, fecha, horaInicio, horaFin } = nuevaSolicitud;
+        
+        // Solo buscar si tenemos todos los datos necesarios
+        if (!sede_id || !fecha || !horaInicio || !horaFin) {
+            setEspaciosDisponibles([]);
+            return;
+        }
+
+        try {
+            const response = await prestamosPublicAPI.listarEspaciosDisponibles(
+                fecha,
+                `${horaInicio}:00`,
+                `${horaFin}:00`,
+                sede_id
+            );
+            setEspaciosDisponibles(response.espacios || []);
+        } catch (err) {
+            console.error('Error fetching espacios disponibles:', err);
+            setEspaciosDisponibles([]);
         }
     };
 
@@ -104,6 +132,11 @@ export function useDocentePrestamos() {
             fetchPrestamos();
         }
     }, [user?.id, tiposActividad]);
+
+    // Fetch espacios cuando cambian sede, fecha o horarios
+    useEffect(() => {
+        fetchEspaciosDisponibles();
+    }, [nuevaSolicitud.sede_id, nuevaSolicitud.fecha, nuevaSolicitud.horaInicio, nuevaSolicitud.horaFin]);
 
     // Funciones para manejar recursos dinámicamente
     const agregarRecurso = (recurso_id: number, cantidad: number = 1) => {
@@ -154,6 +187,16 @@ export function useDocentePrestamos() {
             return;
         }
 
+        // Validar capacidad del espacio si se especificaron asistentes
+        const asistentesNum = parseInt(nuevaSolicitud.asistentes) || 0;
+        if (asistentesNum > 0) {
+            const espacioSeleccionado = espaciosDisponibles.find(e => e.id === nuevaSolicitud.espacio_id);
+            if (espacioSeleccionado && asistentesNum > espacioSeleccionado.capacidad) {
+                setError(`El número de asistentes (${asistentesNum}) excede la capacidad del espacio (${espacioSeleccionado.capacidad})`);
+                return;
+            }
+        }
+
         setLoading(true);
         setError(null);
 
@@ -167,6 +210,8 @@ export function useDocentePrestamos() {
                 hora_inicio: `${nuevaSolicitud.horaInicio}:00`, // Add seconds
                 hora_fin: `${nuevaSolicitud.horaFin}:00`,
                 motivo: nuevaSolicitud.motivo,
+                asistentes: asistentesNum,
+                telefono: nuevaSolicitud.telefono,
                 estado: 'Pendiente',
                 recursos: recursosSeleccionados.map(r => ({
                     recurso_id: r.recurso_id,
@@ -179,6 +224,7 @@ export function useDocentePrestamos() {
                 solicitante: user?.nombre || '',
                 email: user?.correo || '',
                 telefono: '',
+                sede_id: 0,
                 espacio_id: 0,
                 fecha: '',
                 horaInicio: '',
@@ -188,6 +234,7 @@ export function useDocentePrestamos() {
                 asistentes: ''
             });
             setRecursosSeleccionados([]);
+            setEspaciosDisponibles([]);
 
             setDialogOpen(false);
 
@@ -234,6 +281,7 @@ export function useDocentePrestamos() {
         nuevaSolicitud,
         setNuevaSolicitud,
         prestamos,
+        sedes,
         espaciosDisponibles,
         tiposActividad,
         recursosDisponibles,

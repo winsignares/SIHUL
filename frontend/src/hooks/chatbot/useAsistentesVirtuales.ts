@@ -123,7 +123,11 @@ export function useAsistentesVirtuales() {
                 const mensajesGuardados = cargarMensajesDesdeStorage();
                 setMensajes(mensajesGuardados);
 
-                const response = await chatbotAPI.listarAgentes();
+                // Usar endpoint público si no hay usuario autenticado
+                const response = user?.id 
+                    ? await chatbotAPI.listarAgentes()
+                    : await chatbotAPI.listarAgentesPublico();
+                    
                 const agentesUI = response.agentes.map(convertirAgenteAPI);
                 setAsistentes(agentesUI);
 
@@ -312,70 +316,122 @@ export function useAsistentesVirtuales() {
         }));
 
         try {
-            // Validar que el usuario esté autenticado
-            if (!user?.id || !user?.nombre) {
-                throw new Error('Usuario no autenticado');
-            }
-
             const currentChatId = chatIds[asistenteActivo.id];
 
-            // Enviar pregunta al backend (que llama al RAG y guarda en BD)
-            const response = await chatbotAPI.enviarPregunta({
-                agente_id: Number(asistenteActivo.id),
-                pregunta: preguntaEnviada,
-                chat_id: currentChatId,
-                id_usuario: user.id,
-                nombre_usuario: user.nombre
-            });
-
-            // Guardar el chat_id para futuras conversaciones y persistir
-            if (response.chat_id) {
-                setChatIds(prev => {
-                    const updated = { ...prev, [asistenteActivo.id]: response.chat_id };
-                    guardarChatIdsEnStorage(updated);
-                    return updated;
+            // Usar endpoint público o autenticado según el usuario
+            if (!user?.id) {
+                // Usuario público - No se guarda historial
+                const response = await chatbotAPI.enviarPreguntaPublico({
+                    agente_id: Number(asistenteActivo.id),
+                    pregunta: preguntaEnviada
                 });
-            }
 
-            // Reemplazar mensaje temporal con el mensaje real del backend
-            const mensajeUsuarioReal: Mensaje = {
-                id: `${response.id}-user`,
-                tipo: 'user',
-                texto: response.mensaje,
-                timestamp: new Date(response.fecha),
-                leido: true
-            };
+                // Guardar el chat_id temporal para la sesión actual
+                if (response.chat_id) {
+                    setChatIds(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: response.chat_id
+                    }));
+                }
 
-            const mensajeAgente: Mensaje = {
-                id: `${response.id}-bot`,
-                tipo: 'bot',
-                texto: response.respuesta,
-                timestamp: new Date(response.fecha),
-                leido: false
-            };
-
-            // Actualizar mensajes con los datos reales del backend
-            setMensajes(prev => {
-                const mensajesActuales = prev[asistenteActivo.id] || [];
-                // Eliminar mensaje temporal y agregar mensajes reales
-                const mensajesSinTemporal = mensajesActuales.filter(
-                    m => m.id !== mensajeUsuarioTemporal.id
-                );
-                return {
-                    ...prev,
-                    [asistenteActivo.id]: [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente]
+                // Mensaje del usuario
+                const mensajeUsuarioReal: Mensaje = {
+                    id: `user-${Date.now()}`,
+                    tipo: 'user',
+                    texto: preguntaEnviada,
+                    timestamp: new Date(response.timestamp),
+                    leido: true
                 };
-            });
 
-            // Marcar como leído después de un momento
-            setTimeout(() => {
-                setMensajes(prev => ({
-                    ...prev,
-                    [asistenteActivo.id]: prev[asistenteActivo.id].map(m =>
-                        m.id === mensajeAgente.id ? { ...m, leido: true } : m
-                    )
-                }));
-            }, 1000);
+                // Mensaje del bot
+                const mensajeAgente: Mensaje = {
+                    id: `bot-${Date.now()}`,
+                    tipo: 'bot',
+                    texto: response.respuesta,
+                    timestamp: new Date(response.timestamp),
+                    leido: false
+                };
+
+                // Actualizar mensajes
+                setMensajes(prev => {
+                    const mensajesActuales = prev[asistenteActivo.id] || [];
+                    const mensajesSinTemporal = mensajesActuales.filter(
+                        m => m.id !== mensajeUsuarioTemporal.id
+                    );
+                    return {
+                        ...prev,
+                        [asistenteActivo.id]: [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente]
+                    };
+                });
+
+                // Marcar como leído después de un momento
+                setTimeout(() => {
+                    setMensajes(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: prev[asistenteActivo.id].map(m =>
+                            m.id === mensajeAgente.id ? { ...m, leido: true } : m
+                        )
+                    }));
+                }, 1000);
+
+            } else {
+                // Usuario autenticado - Se guarda historial
+                const response = await chatbotAPI.enviarPregunta({
+                    agente_id: Number(asistenteActivo.id),
+                    pregunta: preguntaEnviada,
+                    chat_id: currentChatId,
+                    id_usuario: user.id,
+                    nombre_usuario: user.nombre
+                });
+
+                // Guardar el chat_id para futuras conversaciones y persistir
+                if (response.chat_id) {
+                    setChatIds(prev => {
+                        const updated = { ...prev, [asistenteActivo.id]: response.chat_id };
+                        guardarChatIdsEnStorage(updated);
+                        return updated;
+                    });
+                }
+
+                // Reemplazar mensaje temporal con el mensaje real del backend
+                const mensajeUsuarioReal: Mensaje = {
+                    id: `${response.id}-user`,
+                    tipo: 'user',
+                    texto: response.mensaje,
+                    timestamp: new Date(response.fecha),
+                    leido: true
+                };
+
+                const mensajeAgente: Mensaje = {
+                    id: `${response.id}-bot`,
+                    tipo: 'bot',
+                    texto: response.respuesta,
+                    timestamp: new Date(response.fecha),
+                    leido: false
+                };
+
+                // Actualizar mensajes con los datos reales del backend
+                setMensajes(prev => {
+                    const mensajesActuales = prev[asistenteActivo.id] || [];
+                    const mensajesSinTemporal = mensajesActuales.filter(
+                        m => m.id !== mensajeUsuarioTemporal.id
+                    );
+                    return {
+                        ...prev,
+                        [asistenteActivo.id]: [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente]
+                    };
+                });
+
+                // Marcar como leído después de un momento
+                setTimeout(() => {
+                    setMensajes(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: prev[asistenteActivo.id].map(m =>
+                            m.id === mensajeAgente.id ? { ...m, leido: true } : m
+                        )
+                    }));
+                }, 1000);
+            }
 
         } catch (error) {
             console.error('Error al enviar pregunta:', error);
