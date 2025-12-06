@@ -133,19 +133,19 @@ export function useGrupos() {
         if (!selectedGrupo || !selectedGrupo.id) return;
 
         if (!grupoForm.nombre.trim()) {
-            showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
+            toast.error('El nombre del grupo es obligatorio');
             return;
         }
         if (!grupoForm.programa_id) {
-            showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
+            toast.error('Debe seleccionar un programa');
             return;
         }
         if (!grupoForm.periodo_id) {
-            showNotification({ message: 'Debe seleccionar un periodo', type: 'error' });
+            toast.error('Debe seleccionar un periodo');
             return;
         }
         if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
-            showNotification({ message: 'Debe especificar el semestre (mínimo 1)', type: 'error' });
+            toast.error('Debe especificar el semestre (mínimo 1)');
             return;
         }
 
