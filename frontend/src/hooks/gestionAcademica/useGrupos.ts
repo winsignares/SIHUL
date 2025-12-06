@@ -32,12 +32,12 @@ export function useGrupos() {
     const [grupoForm, setGrupoForm] = useState({
         nombre: '',
         programa_id: '',
+        periodo_id: '',
         semestre: ''
     });
 
     // Estados de selección
     const [selectedGrupo, setSelectedGrupo] = useState<GrupoAcademico | null>(null);
-    const [periodoActivo, setPeriodoActivo] = useState<PeriodoAcademico | null>(null);
 
     const loadGrupos = async () => {
         try {
@@ -64,11 +64,6 @@ export function useGrupos() {
         try {
             const response = await periodoService.listarPeriodos();
             setPeriodos(response.periodos);
-            // Obtener el período activo
-            const activo = response.periodos.find(p => p.activo);
-            if (activo) {
-                setPeriodoActivo(activo);
-            }
         } catch (error) {
             toast.error(`Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
@@ -92,8 +87,8 @@ export function useGrupos() {
             toast.error('Debe seleccionar un programa');
             return;
         }
-        if (!periodoActivo) {
-            toast.error('No hay período académico activo');
+        if (!grupoForm.periodo_id) {
+            toast.error('Debe seleccionar un periodo');
             return;
         }
         if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
@@ -106,7 +101,7 @@ export function useGrupos() {
             await grupoService.create({
                 nombre: grupoForm.nombre.trim(),
                 programa_id: Number(grupoForm.programa_id),
-                periodo_id: periodoActivo.id!,
+                periodo_id: Number(grupoForm.periodo_id),
                 semestre: Number(grupoForm.semestre),
                 activo: true
             });
@@ -128,6 +123,7 @@ export function useGrupos() {
         setGrupoForm({
             nombre: grupo.nombre,
             programa_id: grupo.programa_id.toString(),
+            periodo_id: grupo.periodo_id.toString(),
             semestre: grupo.semestre.toString()
         });
         setShowEditGrupo(true);
@@ -137,15 +133,19 @@ export function useGrupos() {
         if (!selectedGrupo || !selectedGrupo.id) return;
 
         if (!grupoForm.nombre.trim()) {
-            toast.error('El nombre del grupo es obligatorio');
+            showNotification({ message: 'El nombre del grupo es obligatorio', type: 'error' });
             return;
         }
         if (!grupoForm.programa_id) {
-            toast.error('Debe seleccionar un programa');
+            showNotification({ message: 'Debe seleccionar un programa', type: 'error' });
+            return;
+        }
+        if (!grupoForm.periodo_id) {
+            showNotification({ message: 'Debe seleccionar un periodo', type: 'error' });
             return;
         }
         if (!grupoForm.semestre || Number(grupoForm.semestre) < 1) {
-            toast.error('Debe especificar el semestre (mínimo 1)');
+            showNotification({ message: 'Debe especificar el semestre (mínimo 1)', type: 'error' });
             return;
         }
 
@@ -155,6 +155,7 @@ export function useGrupos() {
                 id: selectedGrupo.id,
                 nombre: grupoForm.nombre.trim(),
                 programa_id: Number(grupoForm.programa_id),
+                periodo_id: Number(grupoForm.periodo_id),
                 semestre: Number(grupoForm.semestre)
             });
 
@@ -220,6 +221,7 @@ export function useGrupos() {
         setGrupoForm({
             nombre: '',
             programa_id: '',
+            periodo_id: '',
             semestre: ''
         });
     };
@@ -266,7 +268,6 @@ export function useGrupos() {
         grupos,
         programas,
         periodos,
-        periodoActivo,
         selectedProgramaFilter, setSelectedProgramaFilter,
         selectedSemestreFilter, setSelectedSemestreFilter,
         showCreateGrupo, setShowCreateGrupo,
