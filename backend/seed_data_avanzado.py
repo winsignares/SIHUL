@@ -13,7 +13,7 @@ Ejecutar DESPUÉS de seed_data_completo.py
 from django.db import transaction
 from datetime import date, time
 from periodos.models import PeriodoAcademico
-from espacios.models import TipoEspacio, EspacioFisico
+from espacios.models import TipoEspacio, EspacioFisico, EspacioPermitido
 from recursos.models import Recurso, EspacioRecurso
 from grupos.models import Grupo
 from horario.models import Horario, HorarioEstudiante
@@ -121,8 +121,24 @@ espacios_data = [
     # Sede Norte
     {"nombre": "N-101", "sede": sede_norte, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
     {"nombre": "N-102", "sede": sede_norte, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-103", "sede": sede_norte, "tipo": "Aula", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-201", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-202", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
     {"nombre": "N-LAB-101", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-LAB-102", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-LAB-201", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 2"},
     {"nombre": "N-COMP-101", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-COMP-102", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-TALLER-1", "sede": sede_norte, "tipo": "Taller", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-AUDIT-101", "sede": sede_norte, "tipo": "Auditorio", "capacidad": 150, "ubicacion": "Edificio Norte"},
+    
+    # Sede Principal - Salas de Reuniones
+    {"nombre": "SALA-REUNIONES-1", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Bloque A - Piso 3"},
+    {"nombre": "SALA-REUNIONES-2", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 12, "ubicacion": "Bloque A - Piso 3"},
+    {"nombre": "SALA-REUNIONES-3", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 10, "ubicacion": "Bloque B - Piso 3"},
+    
+    # Sede Norte - Salas de Reuniones
+    {"nombre": "N-SALA-REUNIONES-1", "sede": sede_norte, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Edificio Norte - Piso 3"},
 ]
 
 espacios = {}
@@ -682,6 +698,45 @@ for horario in Horario.objects.all():
 
 print(f"  ✅ {contador_inscripciones} inscripciones creadas")
 
+# ========== ESPACIOS PERMITIDOS ==========
+print("\n Creando Espacios Permitidos para Supervisor General...")
+
+# Obtener el usuario supervisor general
+try:
+    supervisor = Usuario.objects.get(correo="supervisor@unilibre.edu.co")
+    print(f"  ✅ Supervisor encontrado: {supervisor.nombre}")
+    
+    # Espacios a asignar al supervisor (7 registros)
+    espacios_supervisor = [
+        "A-101",  # Aula
+        "LAB-101",  # Laboratorio
+        "COMP-101",  # Sala de Cómputo
+        "AUDIT-PRINCIPAL",  # Auditorio
+        "TALLER-1",  # Taller
+        "SALA-REUNIONES-1",  # Sala de Reuniones
+        "N-LAB-101",  # Laboratorio en Sede Norte
+    ]
+    
+    contador_espacios_permitidos = 0
+    for espacio_nombre in espacios_supervisor:
+        try:
+            espacio = EspacioFisico.objects.get(nombre=espacio_nombre)
+            espacio_permitido, created = EspacioPermitido.objects.get_or_create(
+                usuario=supervisor,
+                espacio=espacio
+            )
+            if created:
+                contador_espacios_permitidos += 1
+                print(f"  ✅ Espacio permitido creado: {supervisor.nombre} -> {espacio.nombre}")
+            else:
+                print(f"  ⏭️  Espacio permitido ya existe: {supervisor.nombre} -> {espacio.nombre}")
+        except EspacioFisico.DoesNotExist:
+            print(f"  ⚠️  Espacio {espacio_nombre} no encontrado")
+    
+    print(f"  ✅ Total espacios permitidos creados: {contador_espacios_permitidos}")
+except Usuario.DoesNotExist:
+    print(f"  ⚠️  Usuario supervisor@unilibre.edu.co no encontrado")
+
 print(f"\n✨ ¡Proceso completado!")
 print(f"   - Periodos: {PeriodoAcademico.objects.count()}")
 print(f"   - Tipos de Espacios: {TipoEspacio.objects.count()}")
@@ -692,6 +747,7 @@ print(f"   - Docentes: {Usuario.objects.filter(activo=True).count()}")
 print(f"   - Estudiantes: {len([e for grupo_est in estudiantes_por_grupo.values() for e in grupo_est])}")
 print(f"   - Horarios: {Horario.objects.count()} ({contador_horarios} nuevos, {contador_actualizados} actualizados)")
 print(f"   - Inscripciones: {HorarioEstudiante.objects.count()}")
+print(f"   - Espacios Permitidos: {EspacioPermitido.objects.count()}")
 
 # Commit del savepoint si todo salió bien
 try:
