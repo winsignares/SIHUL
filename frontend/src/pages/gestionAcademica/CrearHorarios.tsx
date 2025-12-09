@@ -391,22 +391,35 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    draggable
+                                    draggable={clase.estado !== 'pendiente'}
                                     onDragStart={() => {
-                                      setDraggedHorario(clase);
-                                      setDragSource({ dia, hora });
+                                      if (clase.estado !== 'pendiente') {
+                                        setDraggedHorario(clase);
+                                        setDragSource({ dia, hora });
+                                      }
                                     }}
                                     onDragEnd={() => {
                                       setDraggedHorario(null);
                                       setDragSource(null);
                                     }}
-                                    className="bg-gradient-to-br from-red-100 via-yellow-50 to-orange-50 border-l-4 border-red-600 rounded-lg p-3 text-xs h-full relative group shadow-md hover:shadow-lg transition-shadow cursor-move"
+                                    className={`rounded-lg p-3 text-xs h-full relative group shadow-md hover:shadow-lg transition-shadow ${
+                                      clase.estado === 'pendiente' || clase.es_solicitud
+                                        ? 'bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 border-l-4 border-amber-500 cursor-default'
+                                        : 'bg-gradient-to-br from-red-100 via-yellow-50 to-orange-50 border-l-4 border-red-600 cursor-move'
+                                    }`}
                                   >
                                     <div className="flex items-start justify-between h-full gap-2">
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1 mb-1">
-                                          <GripVertical className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                        <div className="flex items-center gap-1 mb-1 flex-wrap">
+                                          {clase.estado !== 'pendiente' && !clase.es_solicitud && (
+                                            <GripVertical className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                          )}
                                           <p className="text-slate-900 truncate font-bold">{clase.asignatura_nombre}</p>
+                                          {(clase.estado === 'pendiente' || clase.es_solicitud) && (
+                                            <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 h-4">
+                                              Pendiente
+                                            </Badge>
+                                          )}
                                         </div>
                                         <p className="text-slate-600 text-xs truncate mt-1">
                                           <User className="w-3 h-3 inline mr-1" />
@@ -458,12 +471,23 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:shadow-md transition-shadow"
+                        className={`flex items-center justify-between p-4 rounded-lg border hover:shadow-md transition-shadow ${
+                          horario.estado === 'pendiente' || horario.es_solicitud
+                            ? 'bg-amber-50 border-amber-200'
+                            : 'bg-slate-50 border-slate-200'
+                        }`}
                       >
                         <div className="flex-1 grid grid-cols-5 gap-4">
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Asignatura</p>
-                            <p className="text-slate-900">{horario.asignatura_nombre}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-slate-900">{horario.asignatura_nombre}</p>
+                              {(horario.estado === 'pendiente' || horario.es_solicitud) && (
+                                <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5">
+                                  Pendiente
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           <div>
                             <p className="text-slate-500 text-xs mb-1">Docente</p>
