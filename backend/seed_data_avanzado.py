@@ -595,53 +595,55 @@ apellidos = [
     "Ramírez", "Torres", "Flores", "Rivera", "Gómez", "Díaz", "Hernández", "Morales"
 ]
 
-# Crear estudiantes para cada grupo (basado en cantidad_estudiantes promedio)
+# Crear solo 20 estudiantes en total
 estudiantes_por_grupo = {}
 contador_estudiantes = 0
+total_estudiantes_a_crear = 20
+estudiantes_creados = []
 
-for grupo_nombre, grupo in grupos.items():
-    # Determinar cantidad aproximada de estudiantes por grupo
-    cantidad = {
-        "Sistemas-A": 35, "Sistemas-B": 30, "Sistemas-2A": 30, "Sistemas-3A": 28,
-        "Sistemas-4A": 26, "Sistemas-5A": 24, "Industrial-A": 25, "Industrial-2A": 26,
-        "Industrial-3A": 22, "Industrial-4A": 20, "Civil-A": 28, "Civil-2A": 24,
-        "Admin-A": 32, "Admin-2A": 28
-    }.get(grupo_nombre, 25)
+# Crear 20 estudiantes
+for i in range(total_estudiantes_a_crear):
+    nombre_completo = f"{random.choice(nombres_estudiantes)} {random.choice(apellidos)} {random.choice(apellidos)}"
+    correo = f"estudiante.{i+1}@unilibre.edu.co"
     
-    estudiantes_grupo = []
-    for i in range(cantidad):
-        nombre_completo = f"{random.choice(nombres_estudiantes)} {random.choice(apellidos)} {random.choice(apellidos)}"
-        correo = f"estudiante.{grupo_nombre.lower()}.{i+1}@unilibre.edu.co"
+    try:
+        estudiante, created = Usuario.objects.get_or_create(
+            correo=correo,
+            defaults={
+                "nombre": nombre_completo,
+                "activo": True,
+                "contrasena_hash": "est123",
+                "rol": rol_estudiante
+            }
+        )
         
-        try:
-            estudiante, created = Usuario.objects.get_or_create(
-                correo=correo,
-                defaults={
-                    "nombre": nombre_completo,
-                    "activo": True,
-                    "contrasena_hash": "est123",
-                    "rol": rol_estudiante
-                }
-            )
-            
-            if created:
-                contador_estudiantes += 1
-            
-            estudiantes_grupo.append(estudiante)
-        except Exception as e:
-            print(f"  Error creating user {correo}: {e}")
-            # Intentar obtener el usuario si ya existe
-            estudiante = Usuario.objects.filter(correo=correo).first()
-            if estudiante:
-                estudiantes_grupo.append(estudiante)
-    
-    estudiantes_por_grupo[grupo_nombre] = estudiantes_grupo
-    print(f"  ✅ {len(estudiantes_grupo)} estudiantes para {grupo_nombre}")
+        if created:
+            contador_estudiantes += 1
+        
+        estudiantes_creados.append(estudiante)
+    except Exception as e:
+        print(f"  Error creating user {correo}: {e}")
+        # Intentar obtener el usuario si ya existe
+        estudiante = Usuario.objects.filter(correo=correo).first()
+        if estudiante:
+            estudiantes_creados.append(estudiante)
 
-print(f"  ✅ Total estudiantes creados: {contador_estudiantes}")
+# Distribuir los 20 estudiantes entre los grupos
+grupos_lista = list(grupos.items())
+estudiantes_por_grupo = {grupo_nombre: [] for grupo_nombre, _ in grupos_lista}
+
+for idx, estudiante in enumerate(estudiantes_creados):
+    grupo_idx = idx % len(grupos_lista)
+    grupo_nombre = grupos_lista[grupo_idx][0]
+    estudiantes_por_grupo[grupo_nombre].append(estudiante)
+
+for grupo_nombre, estudiantes in estudiantes_por_grupo.items():
+    print(f"  {len(estudiantes)} estudiantes para {grupo_nombre}")
+
+print(f"  Total estudiantes creados: {contador_estudiantes}")
 
 # ========== ACTUALIZAR ROLES DE USUARIOS EXISTENTES ==========
-print("\n🔄 Actualizando roles de usuarios existentes...")
+print("\n Actualizando roles de usuarios existentes...")
 
 # Actualizar docentes que no tienen rol
 docentes_sin_rol = Usuario.objects.filter(
