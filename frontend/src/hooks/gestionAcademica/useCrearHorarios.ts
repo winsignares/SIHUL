@@ -7,6 +7,7 @@ import { asignaturaService, asignaturaProgramaService, type Asignatura, type Asi
 import { userService, type Usuario } from '../../services/users/authService';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
+import { solicitudEspacioService, type SolicitudEspacio } from '../../services/horarios/solicitudEspacioAPI';
 import { useAuth } from '../../context/AuthContext';
 
 export interface GrupoConInfo extends Grupo {
@@ -74,7 +75,49 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             // Cargar horarios extendidos
             const horariosResponse = await horarioService.listExtendidos();
             console.log('📋 Horarios cargados:', horariosResponse.horarios.slice(0, 2)); // Mostrar primeros 2
-            setTodosLosHorarios(horariosResponse.horarios);
+            
+            // Si es planeacion_facultad, también cargar sus solicitudes pendientes
+            let todosHorarios = horariosResponse.horarios;
+            if (role?.nombre === 'planeacion_facultad' && user?.id) {
+                try {
+                    const solicitudesResponse = await solicitudEspacioService.list('pendiente');
+                    // Filtrar solo las solicitudes del usuario actual
+                    const misSolicitudes = solicitudesResponse.solicitudes.filter(
+                        s => s.planificador_id === user.id
+                    );
+                    
+                    // Convertir solicitudes a formato HorarioExtendido para mostrarlas en la cuadrícula
+                    const solicitudesComoHorarios: HorarioExtendido[] = misSolicitudes.map(s => ({
+                        id: s.id,
+                        grupo_id: s.grupo_id,
+                        grupo_nombre: s.grupo_nombre,
+                        programa_id: 0, // No disponible en SolicitudEspacio
+                        programa_nombre: '',
+                        semestre: 0,
+                        asignatura_id: s.asignatura_id,
+                        asignatura_nombre: s.asignatura_nombre,
+                        docente_id: s.docente_id,
+                        docente_nombre: s.docente_nombre || 'Sin asignar',
+                        espacio_id: s.espacio_solicitado_id,
+                        espacio_nombre: s.espacio_solicitado_nombre,
+                        dia_semana: s.dia_semana,
+                        hora_inicio: s.hora_inicio,
+                        hora_fin: s.hora_fin,
+                        cantidad_estudiantes: s.cantidad_estudiantes,
+                        estado: 'pendiente',
+                        es_solicitud: true
+                    }));
+                    
+                    // Combinar horarios aprobados con solicitudes pendientes
+                    todosHorarios = [...horariosResponse.horarios, ...solicitudesComoHorarios];
+                    console.log('📋 Solicitudes pendientes cargadas:', solicitudesComoHorarios.length);
+                } catch (error) {
+                    console.warn('Error al cargar solicitudes pendientes:', error);
+                    // Continuar sin solicitudes si hay error
+                }
+            }
+            
+            setTodosLosHorarios(todosHorarios);
 
             // Cargar facultades
             const facultadesResponse = await facultadService.list();
@@ -177,7 +220,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
     const handleAsignarHorario = async (grupo: GrupoConInfo) => {
         setGrupoSeleccionado(grupo);
-        // Cargar horarios existentes del grupo
+        // Cargar horarios existentes del grupo (incluye solicitudes pendientes si es planeacion_facultad)
         const horariosDelGrupo = todosLosHorarios.filter(h => h.grupo_id === grupo.id);
         setHorariosAsignados(horariosDelGrupo);
         setVistaActual('asignar');
@@ -464,13 +507,46 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             showNotification(mensaje, 'success');
             setShowModalAsignar(false);
 
-            // Recargar datos
-            await loadData();
-            
-            // Actualizar horarios del grupo
+            // Recargar horarios del grupo incluyendo solicitudes pendientes
             if (grupoSeleccionado.id) {
+                // Cargar horarios aprobados
                 const horariosResponse = await horarioService.listExtendidos();
-                const horariosDelGrupo = horariosResponse.horarios.filter(h => h.grupo_id === grupoSeleccionado.id);
+                let todosHorariosActualizados = horariosResponse.horarios;
+                
+                // Si es planeacion_facultad, también cargar sus solicitudes pendientes
+                if (role?.nombre === 'planeacion_facultad' && user?.id) {
+                    const solicitudesResponse = await solicitudEspacioService.list('pendiente');
+                    const misSolicitudes = solicitudesResponse.solicitudes.filter(
+                        s => s.planificador_id === user.id
+                    );
+                    
+                    const solicitudesComoHorarios: HorarioExtendido[] = misSolicitudes.map(s => ({
+                        id: s.id,
+                        grupo_id: s.grupo_id,
+                        grupo_nombre: s.grupo_nombre,
+                        programa_id: 0,
+                        programa_nombre: '',
+                        semestre: 0,
+                        asignatura_id: s.asignatura_id,
+                        asignatura_nombre: s.asignatura_nombre,
+                        docente_id: s.docente_id,
+                        docente_nombre: s.docente_nombre || 'Sin asignar',
+                        espacio_id: s.espacio_solicitado_id,
+                        espacio_nombre: s.espacio_solicitado_nombre,
+                        dia_semana: s.dia_semana,
+                        hora_inicio: s.hora_inicio,
+                        hora_fin: s.hora_fin,
+                        cantidad_estudiantes: s.cantidad_estudiantes,
+                        estado: 'pendiente',
+                        es_solicitud: true
+                    }));
+                    
+                    todosHorariosActualizados = [...horariosResponse.horarios, ...solicitudesComoHorarios];
+                }
+                
+                // Actualizar estado global y filtrar por grupo
+                setTodosLosHorarios(todosHorariosActualizados);
+                const horariosDelGrupo = todosHorariosActualizados.filter(h => h.grupo_id === grupoSeleccionado.id);
                 setHorariosAsignados(horariosDelGrupo);
             }
 
@@ -605,12 +681,11 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
             showNotification('✅ Horario actualizado correctamente', 'success');
 
-            // Recargar datos
+            // Recargar datos (incluye solicitudes pendientes)
             await loadData();
             
             if (grupoSeleccionado?.id) {
-                const horariosResponse = await horarioService.listExtendidos();
-                const horariosDelGrupo = horariosResponse.horarios.filter(h => h.grupo_id === grupoSeleccionado.id);
+                const horariosDelGrupo = todosLosHorarios.filter(h => h.grupo_id === grupoSeleccionado.id);
                 setHorariosAsignados(horariosDelGrupo);
             }
 

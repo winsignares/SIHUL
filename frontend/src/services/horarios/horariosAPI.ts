@@ -79,6 +79,8 @@ export interface HorarioExtendido {
     hora_inicio: string;
     hora_fin: string;
     cantidad_estudiantes: number | null;
+    estado?: 'pendiente' | 'aprobado' | 'rechazado';
+    es_solicitud?: boolean; // Para diferenciar solicitudes de horarios aprobados
 }
 
 /**

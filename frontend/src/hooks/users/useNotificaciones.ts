@@ -106,7 +106,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
     const [paginaActual, setPaginaActual] = useState(1);
     const [totalPaginas, setTotalPaginas] = useState(1);
     const [totalNotificaciones, setTotalNotificaciones] = useState(0);
-    const [limite] = useState(10); // Máximo 10 notificaciones por página
+    const [limite] = useState(5); // Máximo 5 notificaciones por página
     const [busqueda, setBusqueda] = useState('');
     const [busquedaActiva, setBusquedaActiva] = useState(''); // Para aplicar búsqueda con delay
     

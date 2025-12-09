@@ -428,24 +428,23 @@ horarios_data = [
     # ==================== SEMESTRE 1 ====================
     
     # Sistemas-A (Semestre 1)
-    {"grupo": "Sistemas-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
-    {"grupo": "Sistemas-A", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-101", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
-    {"grupo": "Sistemas-A", "asignatura_codigo": "SIS101", "docente": docente_programacion, "espacio": "COMP-101", "dia": "miércoles", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
-    {"grupo": "Sistemas-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-101", "dia": "jueves", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 35},
-    {"grupo": "Sistemas-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-102", "dia": "viernes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 35},
+    {"grupo": "Sistemas-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 30},
+    {"grupo": "Sistemas-A", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-101", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 30},
+    {"grupo": "Sistemas-A", "asignatura_codigo": "SIS101", "docente": docente_programacion, "espacio": "COMP-101", "dia": "miércoles", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 30},
+    {"grupo": "Sistemas-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-101", "dia": "jueves", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     
     # Sistemas-B (Semestre 1) - Comparte Cálculo I con Sistemas-A
-    {"grupo": "Sistemas-B", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 30},
+    {"grupo": "Sistemas-B", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 10},
     {"grupo": "Sistemas-B", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-102", "dia": "martes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     {"grupo": "Sistemas-B", "asignatura_codigo": "SIS101", "docente": docente_programacion, "espacio": "COMP-102", "dia": "miércoles", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
     {"grupo": "Sistemas-B", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-102", "dia": "jueves", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 30},
-    {"grupo": "Sistemas-B", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-103", "dia": "viernes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 30},
+    {"grupo": "Sistemas-B", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-103", "dia": "viernes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 30},
     
-    # Industrial-A (Semestre 1) - Comparte Cálculo I
-    {"grupo": "Industrial-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-101", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
+    # Industrial-A (Semestre 1) - Uses different space for MAT101
+    {"grupo": "Industrial-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-201", "dia": "lunes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "FIS101", "docente": docente_fisica, "espacio": "LAB-101", "dia": "miércoles", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-201", "dia": "jueves", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
-    {"grupo": "Industrial-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-202", "dia": "viernes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 25},
+    {"grupo": "Industrial-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-202", "dia": "viernes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 25},
     {"grupo": "Industrial-A", "asignatura_codigo": "ADM101", "docente": docente_administracion, "espacio": "A-201", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 25},
     
     # Civil-A (Semestre 1)
@@ -458,8 +457,8 @@ horarios_data = [
     {"grupo": "Admin-A", "asignatura_codigo": "MAT101", "docente": docente_matematicas, "espacio": "A-203", "dia": "martes", "hora_inicio": time(7, 0), "hora_fin": time(9, 0), "estudiantes": 32},
     {"grupo": "Admin-A", "asignatura_codigo": "CON101", "docente": docente_contabilidad, "espacio": "A-203", "dia": "miércoles", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
     {"grupo": "Admin-A", "asignatura_codigo": "ADM101", "docente": docente_administracion, "espacio": "A-203", "dia": "jueves", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
-    {"grupo": "Admin-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-202", "dia": "viernes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
-    {"grupo": "Admin-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-201", "dia": "lunes", "hora_inicio": time(9, 0), "hora_fin": time(11, 0), "estudiantes": 32},
+    {"grupo": "Admin-A", "asignatura_codigo": "HUM101", "docente": docente_humanidades, "espacio": "A-201", "dia": "viernes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 32},
+    {"grupo": "Admin-A", "asignatura_codigo": "ING101", "docente": docente_ingles, "espacio": "A-102", "dia": "lunes", "hora_inicio": time(11, 0), "hora_fin": time(13, 0), "estudiantes": 32},
     
     # ==================== SEMESTRE 2 ====================
     
