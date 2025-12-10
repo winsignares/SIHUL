@@ -34,6 +34,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     filteredNotificaciones,
     stats,
     isLoading,
+    recargar,
     paginaActual,
     totalPaginas,
     totalNotificaciones,
@@ -564,7 +565,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
                             </>
                           )}
                           
-                          {!notif.leida && (
+                          {!notif.leida && notif.tipo !== 'solicitud_espacio' && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -621,7 +622,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
 
                 return (
                   <Button
-                    key={pageNum}
+                    key={`page-${pageNum}`}
                     variant={paginaActual === pageNum ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => cambiarPagina(pageNum)}
