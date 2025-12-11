@@ -14,7 +14,7 @@ def seed_agente_biblioteca(apps, schema_editor):
         color='blue',
         bg_gradient='from-blue-500 via-blue-600 to-indigo-600',
         activo=True,
-        endpoint_url='https://unilibrerag.app.n8n.cloud/webhook/409ecf49-cd44-4b01-ac40-4cda200d96e8',
+        endpoint_url='https://unilibreproyecto.app.n8n.cloud/webhook/chatBiblioteca',
         mensaje_bienvenida='¡Hola! 👋 Soy tu asistente de biblioteca.\n\nPuedo ayudarte con:\n📚 Préstamos de libros\n⏰ Horarios de la biblioteca\n📖 Reservas de salas de estudio\n🔄 Renovaciones\n\n¿En qué puedo asistirte hoy?',
         orden=1
     )

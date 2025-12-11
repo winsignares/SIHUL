@@ -13,7 +13,7 @@ Ejecutar DESPUÉS de seed_data_completo.py
 from django.db import transaction
 from datetime import date, time
 from periodos.models import PeriodoAcademico
-from espacios.models import TipoEspacio, EspacioFisico
+from espacios.models import TipoEspacio, EspacioFisico, EspacioPermitido
 from recursos.models import Recurso, EspacioRecurso
 from grupos.models import Grupo
 from horario.models import Horario, HorarioEstudiante
@@ -121,8 +121,24 @@ espacios_data = [
     # Sede Norte
     {"nombre": "N-101", "sede": sede_norte, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
     {"nombre": "N-102", "sede": sede_norte, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-103", "sede": sede_norte, "tipo": "Aula", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-201", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-202", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
     {"nombre": "N-LAB-101", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-LAB-102", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-LAB-201", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 2"},
     {"nombre": "N-COMP-101", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-COMP-102", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-TALLER-1", "sede": sede_norte, "tipo": "Taller", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-AUDIT-101", "sede": sede_norte, "tipo": "Auditorio", "capacidad": 150, "ubicacion": "Edificio Norte"},
+    
+    # Sede Principal - Salas de Reuniones
+    {"nombre": "SALA-REUNIONES-1", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Bloque A - Piso 3"},
+    {"nombre": "SALA-REUNIONES-2", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 12, "ubicacion": "Bloque A - Piso 3"},
+    {"nombre": "SALA-REUNIONES-3", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 10, "ubicacion": "Bloque B - Piso 3"},
+    
+    # Sede Norte - Salas de Reuniones
+    {"nombre": "N-SALA-REUNIONES-1", "sede": sede_norte, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Edificio Norte - Piso 3"},
 ]
 
 espacios = {}
@@ -595,53 +611,55 @@ apellidos = [
     "Ramírez", "Torres", "Flores", "Rivera", "Gómez", "Díaz", "Hernández", "Morales"
 ]
 
-# Crear estudiantes para cada grupo (basado en cantidad_estudiantes promedio)
+# Crear solo 20 estudiantes en total
 estudiantes_por_grupo = {}
 contador_estudiantes = 0
+total_estudiantes_a_crear = 20
+estudiantes_creados = []
 
-for grupo_nombre, grupo in grupos.items():
-    # Determinar cantidad aproximada de estudiantes por grupo
-    cantidad = {
-        "Sistemas-A": 35, "Sistemas-B": 30, "Sistemas-2A": 30, "Sistemas-3A": 28,
-        "Sistemas-4A": 26, "Sistemas-5A": 24, "Industrial-A": 25, "Industrial-2A": 26,
-        "Industrial-3A": 22, "Industrial-4A": 20, "Civil-A": 28, "Civil-2A": 24,
-        "Admin-A": 32, "Admin-2A": 28
-    }.get(grupo_nombre, 25)
+# Crear 20 estudiantes
+for i in range(total_estudiantes_a_crear):
+    nombre_completo = f"{random.choice(nombres_estudiantes)} {random.choice(apellidos)} {random.choice(apellidos)}"
+    correo = f"estudiante.{i+1}@unilibre.edu.co"
     
-    estudiantes_grupo = []
-    for i in range(cantidad):
-        nombre_completo = f"{random.choice(nombres_estudiantes)} {random.choice(apellidos)} {random.choice(apellidos)}"
-        correo = f"estudiante.{grupo_nombre.lower()}.{i+1}@unilibre.edu.co"
+    try:
+        estudiante, created = Usuario.objects.get_or_create(
+            correo=correo,
+            defaults={
+                "nombre": nombre_completo,
+                "activo": True,
+                "contrasena_hash": "est123",
+                "rol": rol_estudiante
+            }
+        )
         
-        try:
-            estudiante, created = Usuario.objects.get_or_create(
-                correo=correo,
-                defaults={
-                    "nombre": nombre_completo,
-                    "activo": True,
-                    "contrasena_hash": "est123",
-                    "rol": rol_estudiante
-                }
-            )
-            
-            if created:
-                contador_estudiantes += 1
-            
-            estudiantes_grupo.append(estudiante)
-        except Exception as e:
-            print(f"  Error creating user {correo}: {e}")
-            # Intentar obtener el usuario si ya existe
-            estudiante = Usuario.objects.filter(correo=correo).first()
-            if estudiante:
-                estudiantes_grupo.append(estudiante)
-    
-    estudiantes_por_grupo[grupo_nombre] = estudiantes_grupo
-    print(f"  ✅ {len(estudiantes_grupo)} estudiantes para {grupo_nombre}")
+        if created:
+            contador_estudiantes += 1
+        
+        estudiantes_creados.append(estudiante)
+    except Exception as e:
+        print(f"  Error creating user {correo}: {e}")
+        # Intentar obtener el usuario si ya existe
+        estudiante = Usuario.objects.filter(correo=correo).first()
+        if estudiante:
+            estudiantes_creados.append(estudiante)
 
-print(f"  ✅ Total estudiantes creados: {contador_estudiantes}")
+# Distribuir los 20 estudiantes entre los grupos
+grupos_lista = list(grupos.items())
+estudiantes_por_grupo = {grupo_nombre: [] for grupo_nombre, _ in grupos_lista}
+
+for idx, estudiante in enumerate(estudiantes_creados):
+    grupo_idx = idx % len(grupos_lista)
+    grupo_nombre = grupos_lista[grupo_idx][0]
+    estudiantes_por_grupo[grupo_nombre].append(estudiante)
+
+for grupo_nombre, estudiantes in estudiantes_por_grupo.items():
+    print(f"  {len(estudiantes)} estudiantes para {grupo_nombre}")
+
+print(f"  Total estudiantes creados: {contador_estudiantes}")
 
 # ========== ACTUALIZAR ROLES DE USUARIOS EXISTENTES ==========
-print("\n🔄 Actualizando roles de usuarios existentes...")
+print("\n Actualizando roles de usuarios existentes...")
 
 # Actualizar docentes que no tienen rol
 docentes_sin_rol = Usuario.objects.filter(
@@ -680,6 +698,45 @@ for horario in Horario.objects.all():
 
 print(f"  ✅ {contador_inscripciones} inscripciones creadas")
 
+# ========== ESPACIOS PERMITIDOS ==========
+print("\n Creando Espacios Permitidos para Supervisor General...")
+
+# Obtener el usuario supervisor general
+try:
+    supervisor = Usuario.objects.get(correo="supervisor@unilibre.edu.co")
+    print(f"  ✅ Supervisor encontrado: {supervisor.nombre}")
+    
+    # Espacios a asignar al supervisor (7 registros)
+    espacios_supervisor = [
+        "A-101",  # Aula
+        "LAB-101",  # Laboratorio
+        "COMP-101",  # Sala de Cómputo
+        "AUDIT-PRINCIPAL",  # Auditorio
+        "TALLER-1",  # Taller
+        "SALA-REUNIONES-1",  # Sala de Reuniones
+        "N-LAB-101",  # Laboratorio en Sede Norte
+    ]
+    
+    contador_espacios_permitidos = 0
+    for espacio_nombre in espacios_supervisor:
+        try:
+            espacio = EspacioFisico.objects.get(nombre=espacio_nombre)
+            espacio_permitido, created = EspacioPermitido.objects.get_or_create(
+                usuario=supervisor,
+                espacio=espacio
+            )
+            if created:
+                contador_espacios_permitidos += 1
+                print(f"  ✅ Espacio permitido creado: {supervisor.nombre} -> {espacio.nombre}")
+            else:
+                print(f"  ⏭️  Espacio permitido ya existe: {supervisor.nombre} -> {espacio.nombre}")
+        except EspacioFisico.DoesNotExist:
+            print(f"  ⚠️  Espacio {espacio_nombre} no encontrado")
+    
+    print(f"  ✅ Total espacios permitidos creados: {contador_espacios_permitidos}")
+except Usuario.DoesNotExist:
+    print(f"  ⚠️  Usuario supervisor@unilibre.edu.co no encontrado")
+
 print(f"\n✨ ¡Proceso completado!")
 print(f"   - Periodos: {PeriodoAcademico.objects.count()}")
 print(f"   - Tipos de Espacios: {TipoEspacio.objects.count()}")
@@ -690,6 +747,7 @@ print(f"   - Docentes: {Usuario.objects.filter(activo=True).count()}")
 print(f"   - Estudiantes: {len([e for grupo_est in estudiantes_por_grupo.values() for e in grupo_est])}")
 print(f"   - Horarios: {Horario.objects.count()} ({contador_horarios} nuevos, {contador_actualizados} actualizados)")
 print(f"   - Inscripciones: {HorarioEstudiante.objects.count()}")
+print(f"   - Espacios Permitidos: {EspacioPermitido.objects.count()}")
 
 # Commit del savepoint si todo salió bien
 try:

@@ -83,17 +83,31 @@ def enviar_pregunta(request):
             response = requests.post(
                 agente.endpoint_url,
                 json={'pregunta': pregunta},
-                headers={'Content-Type': 'application/json'},
+                headers={'Content-Type': 'application/json',
+                         'x-header': '3f28b8db8d3951ad6d3a1p'},
                 timeout=30
             )
             response.raise_for_status()
             
-            respuesta_data = response.json()
-            respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+            # Verificar que la respuesta tenga contenido
+            if not response.text or response.text.strip() == '':
+                raise ValueError('El webhook devolvió una respuesta vacía')
+            
+            # Intentar parsear JSON
+            try:
+                respuesta_data = response.json()
+                respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+            except json.JSONDecodeError as je:
+                # Si no es JSON válido, mostrar lo que devolvió
+                error_ia = f'Respuesta inválida del webhook: {response.text[:200]}'
+                respuesta_texto = f'Lo siento, el servidor devolvió una respuesta inválida. Por favor verifica la configuración del webhook.'
             
         except requests.exceptions.RequestException as e:
             error_ia = str(e)
             respuesta_texto = f'Lo siento, hubo un error al procesar tu pregunta: {str(e)}'
+        except ValueError as ve:
+            error_ia = str(ve)
+            respuesta_texto = f'Lo siento, el webhook no respondió correctamente: {str(ve)}'
         
         # 2. Guardar conversación completa (pregunta + respuesta en un solo registro)
         conversacion = Conversacion.objects.create(
@@ -302,21 +316,37 @@ def enviar_pregunta_publico(request):
         
         # Enviar pregunta al endpoint RAG
         respuesta_texto = ''
+        error_ia = None
         
         try:
             response = requests.post(
                 agente.endpoint_url,
                 json={'pregunta': pregunta},
-                headers={'Content-Type': 'application/json'},
+                headers={'Content-Type': 'application/json',
+                         'x-header': '3f28b8db8d3951ad6d3a1p'},
                 timeout=30
             )
             response.raise_for_status()
             
-            respuesta_data = response.json()
-            respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+            # Verificar que la respuesta tenga contenido
+            if not response.text or response.text.strip() == '':
+                raise ValueError('El webhook devolvió una respuesta vacía')
+            
+            # Intentar parsear JSON
+            try:
+                respuesta_data = response.json()
+                respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+            except json.JSONDecodeError as je:
+                # Si no es JSON válido, mostrar lo que devolvió
+                error_ia = f'Respuesta inválida del webhook: {response.text[:200]}'
+                respuesta_texto = f'Lo siento, el servidor devolvió una respuesta inválida. Por favor verifica la configuración del webhook.'
             
         except requests.exceptions.RequestException as e:
+            error_ia = str(e)
             respuesta_texto = f'Lo siento, hubo un error al procesar tu pregunta: {str(e)}'
+        except ValueError as ve:
+            error_ia = str(ve)
+            respuesta_texto = f'Lo siento, el webhook no respondió correctamente: {str(ve)}'
         
         # NO guardamos la conversación para usuarios públicos
         # Retornamos directamente la respuesta
