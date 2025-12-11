@@ -24,7 +24,7 @@ export function usePublicDashboard() {
       icon: Clock,
       gradient: 'from-blue-500 to-cyan-600',
       bgGradient: 'from-blue-50 to-cyan-50',
-      badge: 'Próximamente',
+      badge: 'Disponible',
       route: '/public/consulta-horario'
     },
     {
@@ -34,7 +34,7 @@ export function usePublicDashboard() {
       icon: MapPin,
       gradient: 'from-emerald-500 to-teal-600',
       bgGradient: 'from-emerald-50 to-teal-50',
-      badge: 'Próximamente',
+      badge: 'Disponible',
       route: '/public/disponibilidad-espacios'
     },
     {
@@ -44,7 +44,7 @@ export function usePublicDashboard() {
       icon: Gift,
       gradient: 'from-amber-500 to-orange-600',
       bgGradient: 'from-amber-50 to-orange-50',
-      badge: 'Próximamente',
+      badge: 'Disponible',
       route: '/public/prestamo'
     },
     {
@@ -54,7 +54,7 @@ export function usePublicDashboard() {
       icon: Bot,
       gradient: 'from-purple-500 to-pink-600',
       bgGradient: 'from-purple-50 to-pink-50',
-      badge: 'Próximamente',
+      badge: 'Disponible',
       route: '/public/asistente-virtual'
     }
   ];

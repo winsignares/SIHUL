@@ -96,11 +96,11 @@ export const obtenerEstadisticasOcupacion = async (): Promise<{
     prestamos.forEach(prestamo => {
       const fechaPrestamo = new Date(prestamo.fecha);
       
-      // Solo considerar préstamos de la semana actual y con estado Aprobado o Pendiente
+      // Solo considerar préstamos de la semana actual y con estado Aprobado
       if (
         fechaPrestamo >= inicioSemana && 
         fechaPrestamo <= finSemana &&
-        (prestamo.estado === 'Aprobado' || prestamo.estado === 'Pendiente')
+        prestamo.estado === 'Aprobado'
       ) {
         const diaIndex = fechaPrestamo.getDay() === 0 ? 6 : fechaPrestamo.getDay() - 1; // Ajustar domingo
         const diaNombre = diasSemana[diaIndex];

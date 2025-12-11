@@ -200,6 +200,11 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                       return 'from-green-500 to-green-600';
                     };
 
+                    const getTextColor = (porcentaje: number) => {
+                      if (porcentaje >= 50) return 'text-white';
+                      return 'text-slate-900';
+                    };
+
                     const getBadgeColor = (porcentaje: number) => {
                       if (porcentaje >= 85) return 'bg-red-100 text-red-700 border-red-300';
                       if (porcentaje >= 70) return 'bg-orange-100 text-orange-700 border-orange-300';
@@ -240,9 +245,9 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
 
                           {/* Barra de progreso */}
                           <div className="flex-1">
-                            <div className="w-full bg-slate-100 rounded-full h-8 overflow-hidden relative group-hover:shadow-md transition-shadow">
+                            <div className="w-full bg-slate-100 rounded-full h-8 overflow-hidden relative group-hover:shadow-md transition-shadow flex items-center">
                               <motion.div
-                                className={`h-full bg-gradient-to-r ${getBarColor(espacio.porcentajeOcupacion)} relative overflow-hidden flex items-center justify-end px-3`}
+                                className={`h-full bg-gradient-to-r ${getBarColor(espacio.porcentajeOcupacion)} relative overflow-hidden`}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${espacio.porcentajeOcupacion}%` }}
                                 transition={{ duration: 0.8, delay: 0.7 + index * 0.05, ease: "easeOut" }}
@@ -253,10 +258,11 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
                                   animate={{ x: ['-100%', '200%'] }}
                                   transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
                                 />
-                                <span className="text-white font-bold text-sm z-10">
-                                  {espacio.porcentajeOcupacion.toFixed(1)}%
-                                </span>
                               </motion.div>
+                              {/* Texto centrado sobre la barra */}
+                              <span className={`absolute left-1/2 -translate-x-1/2 font-bold text-sm z-10 drop-shadow-md ${getTextColor(espacio.porcentajeOcupacion)}`}>
+                                {espacio.porcentajeOcupacion.toFixed(1)}%
+                              </span>
                             </div>
                           </div>
 

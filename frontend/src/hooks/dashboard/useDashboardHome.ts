@@ -153,10 +153,10 @@ export function useDashboardHome() {
                         }
                     }));
                     
-                    // Ordenar por porcentaje de ocupación y tomar los top 10
+                    // Ordenar por porcentaje de ocupación y tomar los top 5
                     const topEspacios = espaciosMapeados
                         .sort((a, b) => b.porcentajeOcupacion - a.porcentajeOcupacion)
-                        .slice(0, 10);
+                        .slice(0, 6);
                     
                     setTopEspaciosOcupados(topEspacios);
                 }
