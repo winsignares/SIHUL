@@ -308,13 +308,16 @@ Este proyecto es propiedad de la Universidad Libre.
 - GitHub: [@Jfer178](https://github.com/Jfer178)
 
 **Desarrollador 2**
-- GitHub: [@winsignares](https://github.com/winsignares)
+- GitHub: [@armandod-perezb](https://github.com/armandod-perezb)
 
 **Desarrollador 3**
-- GitHub: [@winsignares](https://github.com/winsignares)
+- GitHub: [@HarlemHM](https://github.com/HarlemHM)
 
 **Desarrollador 4**
-- GitHub: [@winsignares](https://github.com/winsignares)
+- GitHub: [@GabrielP1711](https://github.com/GabrielP1711)
+
+**Desarrollador 5**
+- GitHub: [@Andrewsy1004](https://github.com/Andrewsy1004)
 
 ---
 
