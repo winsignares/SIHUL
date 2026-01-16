@@ -91,7 +91,7 @@ export function usePrestamosEspacios() {
             let prestamoCompleto;
             if (tipo === 'publico') {
                 // Usar endpoint de préstamos públicos
-                const response = await fetch(`http://localhost:8000/prestamos/public/${numericId}/`);
+                const response = await fetch(`/api/prestamos/public/${numericId}/`);
                 if (!response.ok) throw new Error('Error al obtener préstamo público');
                 prestamoCompleto = await response.json();
             } else {
@@ -102,7 +102,7 @@ export function usePrestamosEspacios() {
             // Actualizar el estado y registrar el administrador que aprobó
             if (tipo === 'publico') {
                 // Actualizar préstamo público
-                const response = await fetch(`http://localhost:8000/prestamos/public/update/`, {
+                const response = await fetch(`/api/prestamos/public/update/`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -194,7 +194,7 @@ export function usePrestamosEspacios() {
             let prestamoCompleto;
             if (tipo === 'publico') {
                 // Usar endpoint de préstamos públicos
-                const response = await fetch(`http://localhost:8000/prestamos/public/${numericId}/`);
+                const response = await fetch(`/api/prestamos/public/${numericId}/`);
                 if (!response.ok) throw new Error('Error al obtener préstamo público');
                 prestamoCompleto = await response.json();
             } else {
@@ -205,7 +205,7 @@ export function usePrestamosEspacios() {
             // Actualizar el estado y registrar el administrador que rechazó
             if (tipo === 'publico') {
                 // Actualizar préstamo público
-                const response = await fetch(`http://localhost:8000/prestamos/public/update/`, {
+                const response = await fetch(`/api/prestamos/public/update/`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

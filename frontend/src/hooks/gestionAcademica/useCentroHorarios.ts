@@ -609,7 +609,7 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const apiUrl = import.meta.env.VITE_API_URL;
             const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
                 method: 'POST',
                 headers: {
@@ -646,7 +646,7 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const apiUrl = import.meta.env.VITE_API_URL;
             const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
                 method: 'POST',
                 headers: {

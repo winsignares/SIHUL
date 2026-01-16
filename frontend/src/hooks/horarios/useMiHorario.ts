@@ -107,7 +107,7 @@ const handleDescargarPDF = async () => {
     showNotification('Preparando descarga...', 'info');
 
     try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL;
         const url = `${apiUrl}/horario/exportar-pdf-usuario/?usuario_id=${user.id}`;
 
         const response = await fetch(url, { method: 'GET' });
@@ -152,7 +152,7 @@ const handleDescargarExcel = async () => {
     showNotification('Preparando descarga...', 'info');
 
     try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL;
         const url = `${apiUrl}/horario/exportar-excel-usuario/?usuario_id=${user.id}`;
 
         const response = await fetch(url, { method: 'GET' });

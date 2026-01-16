@@ -256,7 +256,7 @@ export function useReportes() {
         try {
             // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
             if (tipoReporte === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 // Cargar todos los horarios extendidos del backend
                 const horariosResponse = await horarioService.listExtendidos();
@@ -296,7 +296,7 @@ export function useReportes() {
 
             // Si es horarios-docente, usar el endpoint del backend para docentes
             if (tipoReporte === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 // Cargar todos los horarios extendidos del backend
                 const horariosResponse = await horarioService.listExtendidos();
@@ -434,7 +434,7 @@ export function useReportes() {
         try {
             // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
             if (tipoReporte === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 // Cargar todos los horarios extendidos del backend
                 const horariosResponse = await horarioService.listExtendidos();
@@ -474,7 +474,7 @@ export function useReportes() {
 
             // Si es horarios-docente, usar el endpoint del backend para docentes
             if (tipoReporte === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 try {
                     // Cargar todos los horarios extendidos del backend

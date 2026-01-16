@@ -10,6 +10,13 @@ export default defineConfig(() => {
       port: Number(process.env.VITE_PORT) || 5173,
       strictPort: true, // Falla si el puerto está ocupado para evitar confusión
       open: false,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
       hmr: {
         // En Docker puede necesitar clientPort si se hace port-forward distinto
         port: Number(process.env.VITE_HMR_PORT) || undefined,

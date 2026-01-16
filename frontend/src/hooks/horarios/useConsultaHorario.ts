@@ -91,7 +91,7 @@ export function useConsultaHorario() {
     const exportarPDF = async () => {
         try {
             if (tipoConsulta === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
@@ -128,7 +128,7 @@ export function useConsultaHorario() {
             }
 
             if (tipoConsulta === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
@@ -169,7 +169,7 @@ export function useConsultaHorario() {
     const exportarExcel = async () => {
         try {
             if (tipoConsulta === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
@@ -206,7 +206,7 @@ export function useConsultaHorario() {
             }
 
             if (tipoConsulta === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
