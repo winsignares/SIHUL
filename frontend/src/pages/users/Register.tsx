@@ -1,29 +1,27 @@
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
-import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff, Mail } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
-import { useLogin } from '../../hooks/users/useLogin';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useRegister } from '../../hooks/users/useRegister';
 
-export default function Login() {
+export default function Register() {
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const {
-    email,
-    setEmail,
-    password,
-    setPassword,
+    formData,
+    isLoading,
     error,
     isHovered,
     setIsHovered,
-    isLoading,
+    handleChange,
     handleSubmit,
-    handlePublicAccess
-  } = useLogin();
+    navigate
+  } = useRegister();
 
   return (
     <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
@@ -68,7 +66,7 @@ export default function Login() {
         }}
       />
 
-      {/* Floating Particles - Small Animated Particles */}
+      {/* Floating Particles */}
       {[...Array(50)].map((_, i) => (
         <motion.div
           key={`particle-${i}`}
@@ -98,7 +96,7 @@ export default function Login() {
         />
       ))}
 
-      {/* Main Login Card */}
+      {/* Main Register Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -108,27 +106,28 @@ export default function Login() {
         <div className={`grid ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-2'} bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200/30 max-w-5xl`}>
           {/* Glow Effect */}
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-red-500/3 via-transparent to-transparent pointer-events-none" />
-          {/* Left Side - Login Form */}
+          
+          {/* Left Side - Register Form */}
           <div className="p-8 lg:p-14 flex flex-col justify-center bg-white relative">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
             >
-              <div className="mb-10">
+              <div className="mb-8">
                 <motion.p 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1, duration: 0.6 }}
                   className="text-slate-900 mb-3 text-2xl text-center font-bold tracking-tight"
                 >
-                  BIENVENIDO A UNISPACE
+                  CREAR CUENTA
                 </motion.p>
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.15, duration: 0.6 }}
-                  className="flex items-center gap-3 mb-8 justify-center"
+                  className="flex items-center gap-3 mb-6 justify-center"
                 >
                   <motion.div 
                     className="w-16 h-16 bg-gradient-to-br from-red-600 via-red-700 to-red-800 rounded-2xl flex items-center justify-center shadow-lg hover:shadow-2xl transition-all hover:scale-110"
@@ -144,7 +143,7 @@ export default function Login() {
                   initial={{ width: 0 }}
                   animate={{ width: '100%' }}
                   transition={{ delay: 0.25, duration: 0.8 }}
-                  className="h-0.5 bg-gradient-to-r from-transparent via-red-600 to-transparent mb-6 rounded-full"
+                  className="h-0.5 bg-gradient-to-r from-transparent via-red-600 to-transparent mb-4 rounded-full"
                 />
                 <motion.p 
                   initial={{ opacity: 0, y: 10 }}
@@ -152,35 +151,79 @@ export default function Login() {
                   transition={{ delay: 0.3, duration: 0.6 }}
                   className="text-slate-600 text-center text-sm leading-relaxed font-medium"
                 >
-                  Accede a tu cuenta para gestionar horarios y espacios
+                  Regístrate para acceder a la plataforma
                 </motion.p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Nombre Completo */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35, duration: 0.5 }}
                   className="space-y-2"
                 >
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Correo Institucional</label>
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Nombre Completo</label>
                   <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
                     <Input
-                      type="email"
-                      placeholder="correo@unilibre.edu.co"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-12 h-12 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
-                      required
+                      type="text"
+                      name="nombreCompleto"
+                      placeholder="Juan Pérez García"
+                      value={formData.nombreCompleto}
+                      onChange={handleChange}
+                      className="pl-12 h-11 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
                     />
                   </div>
                 </motion.div>
 
+                {/* Correo */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.5 }}
+                  className="space-y-2"
+                >
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Correo Institucional</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
+                    <Input
+                      type="email"
+                      name="correo"
+                      placeholder="correo@unilibre.edu.co"
+                      value={formData.correo}
+                      onChange={handleChange}
+                      className="pl-12 h-11 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
+                    />
+                  </div>
+                </motion.div>
+
+                {/* Confirmar Correo */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.45, duration: 0.5 }}
+                  className="space-y-2"
+                >
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Confirmar Correo</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
+                    <Input
+                      type="email"
+                      name="confirmarCorreo"
+                      placeholder="correo@unilibre.edu.co"
+                      value={formData.confirmarCorreo}
+                      onChange={handleChange}
+                      className="pl-12 h-11 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
+                    />
+                  </div>
+                </motion.div>
+
+                {/* Contraseña */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
                   className="space-y-2"
                 >
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Contraseña</label>
@@ -188,11 +231,11 @@ export default function Login() {
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
                     <Input
                       type={showPassword ? "text" : "password"}
+                      name="password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-12 pr-12 h-12 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
-                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="pl-12 pr-12 h-11 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
                     />
                     <motion.button
                       type="button"
@@ -202,6 +245,40 @@ export default function Login() {
                       whileTap={{ scale: 0.95 }}
                     >
                       {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </motion.button>
+                  </div>
+                </motion.div>
+
+                {/* Confirmar Contraseña */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55, duration: 0.5 }}
+                  className="space-y-2"
+                >
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Confirmar Contraseña</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300" />
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirmarPassword"
+                      placeholder="••••••••"
+                      value={formData.confirmarPassword}
+                      onChange={handleChange}
+                      className="pl-12 pr-12 h-11 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
+                    />
+                    <motion.button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors duration-300"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {showConfirmPassword ? (
                         <EyeOff className="w-5 h-5" />
                       ) : (
                         <Eye className="w-5 h-5" />
@@ -223,7 +300,7 @@ export default function Login() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55, duration: 0.5 }}
+                  transition={{ delay: 0.6, duration: 0.5 }}
                   className="pt-4"
                 >
                   <Button
@@ -240,49 +317,31 @@ export default function Login() {
                       transition={{ duration: 0.5 }}
                     />
                     <span className="relative flex items-center justify-center gap-2">
-                      {isLoading ? 'INICIANDO...' : 'INICIAR SESIÓN'}
+                      {isLoading ? 'CREANDO CUENTA...' : 'REGISTRARSE'}
                       {!isLoading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                     </span>
                   </Button>
                 </motion.div>
 
-                {/* Acceso Público centrado */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 0.5 }}
-                  className="text-center pt-3"
-                >
-                  <button
-                    type="button"
-                    onClick={handlePublicAccess}
-                    className="text-slate-600 hover:text-red-600 font-semibold hover:underline transition-all duration-200"
-                  >
-                    Acceso Público
-                  </button>
-                </motion.div>
-
-                {/* Sign Up separado */}
+                {/* Ya tienes cuenta */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.65, duration: 0.5 }}
-                  className="text-left pt-10"
+                  className="text-center pt-4"
                 >
                   <button
                     type="button"
-                    onClick={() => navigate('/register')}
+                    onClick={() => navigate('/login')}
                     className="text-slate-600 hover:text-red-600 transition-colors duration-200 font-medium"
                   >
-                    ¿No tienes cuenta?{' '}
+                    ¿Ya tienes cuenta?{' '}
                     <span className="text-red-600 hover:text-red-700 font-semibold hover:underline">
-                      Sign Up
+                      Iniciar Sesión
                     </span>
                   </button>
                 </motion.div>
               </form>
-
-
             </motion.div>
           </div>
 
@@ -319,177 +378,71 @@ export default function Login() {
               }}
             />
 
-            {/* Animated Geometric Shapes */}
-            <motion.div
-              className="absolute top-10 right-10 w-32 h-32 border-4 border-yellow-400 rounded-full opacity-30 shadow-lg shadow-yellow-400/20"
-              animate={{
-                scale: [1, 1.2, 1],
-                rotate: [0, 180, 360],
-              }}
-              transition={{
-                duration: 20,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-            />
-            <motion.div
-              className="absolute bottom-10 left-10 w-24 h-24 border-4 border-blue-400 rounded-lg opacity-30 shadow-lg shadow-blue-400/20"
-              animate={{
-                scale: [1, 1.3, 1],
-                rotate: [0, -180, -360],
-              }}
-              transition={{
-                duration: 15,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-            />
-
             {/* Content */}
-            <div className="relative z-10 text-center">
+            <motion.div 
+              className="relative z-10 text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+            >
               <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                className="mb-12"
-              >
-                <motion.div 
-                  className="w-32 h-32 mx-auto mb-10 bg-gradient-to-br from-white/25 via-white/15 to-white/5 backdrop-blur-lg rounded-3xl flex items-center justify-center border-2 border-white/50 shadow-2xl shadow-yellow-400/30"
-                  animate={{
-                    scale: [1, 1.08, 1],
-                    boxShadow: ['0 0 20px rgba(250, 204, 21, 0.2)', '0 0 40px rgba(250, 204, 21, 0.4)', '0 0 20px rgba(250, 204, 21, 0.2)'],
-                  }}
-                  transition={{
-                    duration: 3.5,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  <GraduationCap className="w-18 h-18 text-yellow-200" />
-                </motion.div>
-                <motion.h2 
-                  initial={{ opacity: 0, scale: 0.7, y: 30 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 1 }}
-                  className="mb-8 text-white text-4xl font-bold bg-gradient-to-r from-yellow-100 via-yellow-300 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl tracking-tight leading-snug"
-                >
-                  SISTEMA DE<br />GESTIÓN
-                </motion.h2>
-                <motion.div 
-                  initial={{ width: 0, opacity: 0, scaleX: 0 }}
-                  animate={{ width: 140, opacity: 1, scaleX: 1 }}
-                  transition={{ delay: 1, duration: 1, ease: "easeOut" }}
-                  className="h-2 bg-gradient-to-r from-yellow-300 via-yellow-400 via-yellow-300 to-yellow-500 mx-auto rounded-full mb-10 shadow-lg shadow-yellow-400/70"
-                ></motion.div>
-              </motion.div>
-
-              <motion.div
-                initial={{ y: 30, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 1.1, duration: 0.7 }}
-                className="space-y-5 px-4"
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: '100%' }}
-                  transition={{ delay: 1.2, duration: 0.8 }}
-                  className="h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent mb-6"
-                />
-                <motion.p 
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.3, duration: 0.7 }}
-                  className="text-white/98 max-w-lg mx-auto leading-relaxed text-base font-semibold tracking-wide"
-                >
-                  Plataforma integral para la administración de espacios, horarios y programas académicos universitarios.
-                </motion.p>
-                <motion.p 
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.45, duration: 0.7 }}
-                  className="text-white/95 font-semibold text-base tracking-wide"
-                >
-                  Optimiza la gestión educativa con herramientas modernas y eficientes.
-                </motion.p>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: '100%' }}
-                  transition={{ delay: 1.6, duration: 0.8 }}
-                  className="h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent mt-6"
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
-                className="mt-14 grid grid-cols-3 gap-5"
-              >
-                {[
-                  { icon: '📚', label: 'Horarios' },
-                  { icon: '🏛️', label: 'Espacios' },
-                  { icon: '📊', label: 'Reportes' }
-                ].map((item, index) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ scale: 1, y: 0 }}
-                    animate={{ 
-                      scale: [1, 1.15, 1],
-                      y: [0, -8, 0],
-                    }}
-                    transition={{
-                      duration: 2.5,
-                      repeat: Infinity,
-                      delay: index * 0.35,
-                      ease: "easeInOut"
-                    }}
-                    whileHover={{ scale: 1.25, y: -12 }}
-                    className="bg-gradient-to-br from-white/20 via-white/10 to-white/5 backdrop-blur-lg p-5 rounded-2xl border-2 border-white/40 shadow-lg hover:shadow-2xl hover:shadow-yellow-400/40 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-                    <motion.div 
-                      className="text-5xl mb-3 group-hover:scale-125 transition-transform relative z-10"
-                      animate={{ 
-                        y: [0, -6, 0],
-                      }}
-                      transition={{
-                        duration: 2.5,
-                        repeat: Infinity,
-                        delay: index * 0.35,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      {item.icon}
-                    </motion.div>
-                    <p className="text-white/95 font-bold text-sm tracking-wide relative z-10">{item.label}</p>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Floating Particles - Right Side */}
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={`right-particle-${i}`}
-                className="absolute w-1 h-1 bg-gradient-to-r from-yellow-300 to-yellow-500 rounded-full opacity-40"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                }}
+                className="mb-8"
                 animate={{
-                  y: [0, -50, 0],
-                  x: [0, Math.random() * 30 - 15, 0],
-                  opacity: [0.2, 0.6, 0.2],
-                  scale: [0.5, 1.2, 0.5],
+                  scale: [1, 1.1, 1],
                 }}
                 transition={{
-                  duration: 5 + Math.random() * 3,
+                  duration: 3,
                   repeat: Infinity,
-                  delay: Math.random() * 2,
-                  ease: "easeInOut"
                 }}
-              />
-            ))}
+              >
+                <GraduationCap className="w-24 h-24 mx-auto text-yellow-300 drop-shadow-lg" />
+              </motion.div>
+              <h2 className="text-4xl font-bold mb-6 drop-shadow-lg">Únete a UNISPACE</h2>
+              <p className="text-lg text-white/90 drop-shadow-md leading-relaxed mb-8">
+                Crea tu cuenta y accede a todos los servicios de gestión universitaria
+              </p>
+              
+              <div className="space-y-4">
+                <motion.div 
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-lg"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <div className="w-12 h-12 bg-yellow-300 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-red-700 font-bold text-xl">✓</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-white">Gestión de Horarios</p>
+                    <p className="text-sm text-white/80">Consulta y administra tus horarios académicos</p>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-lg"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <div className="w-12 h-12 bg-yellow-300 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-red-700 font-bold text-xl">✓</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-white">Reserva de Espacios</p>
+                    <p className="text-sm text-white/80">Solicita y gestiona espacios universitarios</p>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-lg"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <div className="w-12 h-12 bg-yellow-300 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-red-700 font-bold text-xl">✓</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-white">Acceso a Recursos</p>
+                    <p className="text-sm text-white/80">Utiliza todos los recursos académicos disponibles</p>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </motion.div>

@@ -3,7 +3,7 @@ import { authService } from '../services/users/authService';
 import type { LoginPayload, LoginResponse, AuthState } from '../models/auth/auth.model';
 
 interface AuthContextType extends AuthState {
-    login: (payload: LoginPayload) => Promise<void>;
+    login: (payload: LoginPayload) => Promise<LoginResponse>;
     logout: () => void;
     hasPermission: (componentCode: string) => boolean;
 }
@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
     });
 
-    const login = async (payload: LoginPayload) => {
+    const login = async (payload: LoginPayload): Promise<LoginResponse> => {
         setState(prev => ({ ...prev, isLoading: true }));
 
         try {
@@ -71,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: true,
                 isLoading: false,
             });
+
+            return response;
         } catch (error: any) {
             setState(prev => ({ ...prev, isLoading: false }));
             throw error;

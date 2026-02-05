@@ -1,32 +1,47 @@
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
-// Importa los componentes reales según existan
-import DashboardHome from '../pages/dashboard/DashboardHome';
-import PublicDashboard from '../pages/dashboard/PublicDashboard';
-import PublicConsultaHorario from '../pages/horarios/PublicConsultaHorario';
-import PublicPrestamo from '../pages/prestamos/PublicPrestamo';
-import FacultadesPrograms from '../pages/gestionAcademica/FacultadesPrograms';
-import ConsultaEspacios from '../pages/espacios/ConsultaEspacios';
-import CentroHorarios from '../pages/gestionAcademica/CentroHorarios';
-import PrestamosEspacios from '../pages/espacios/PrestamosEspacios';
-import PeriodosAcademicos from '../pages/gestionAcademica/PeriodosAcademicos';
-import AsistentesVirtuales from '../pages/chatbot/AsistentesVirtuales';
-import OcupacionSemanal from '../pages/reporte/OcupacionSemanal';
-import Reportes from '../pages/reporte/Reportes';
-import GestionUsuarios from '../pages/gestionAcademica/GestionUsuarios';
-import EstadoRecursos from '../pages/gestionAcademica/EstadoRecursos';
-import Notificaciones from '../pages/users/Notificaciones';
-import Ajustes from '../pages/users/Ajustes';
-import SupervisorGeneralHome from '../pages/dashboard/SupervisorGeneralHome';
-import SupervisorSalonHome from '../pages/espacios/SupervisorSalonHome';
-import ConsultorDocenteHome from '../pages/dashboard/ConsultorDocenteHome';
-import MiHorario from '../pages/horarios/MiHorario';
-import ConsultorEstudianteHome from '../pages/dashboard/ConsultorEstudianteHome';
-import Login from '../pages/users/Login';
+
+// Lazy load de componentes para mejorar el rendimiento
+const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
+const PublicDashboard = lazy(() => import('../pages/dashboard/PublicDashboard'));
+const PublicConsultaHorario = lazy(() => import('../pages/horarios/PublicConsultaHorario'));
+const PublicPrestamo = lazy(() => import('../pages/prestamos/PublicPrestamo'));
+const FacultadesPrograms = lazy(() => import('../pages/gestionAcademica/FacultadesPrograms'));
+const ConsultaEspacios = lazy(() => import('../pages/espacios/ConsultaEspacios'));
+const CentroHorarios = lazy(() => import('../pages/gestionAcademica/CentroHorarios'));
+const PrestamosEspacios = lazy(() => import('../pages/espacios/PrestamosEspacios'));
+const PeriodosAcademicos = lazy(() => import('../pages/gestionAcademica/PeriodosAcademicos'));
+const AsistentesVirtuales = lazy(() => import('../pages/chatbot/AsistentesVirtuales'));
+const OcupacionSemanal = lazy(() => import('../pages/reporte/OcupacionSemanal'));
+const Reportes = lazy(() => import('../pages/reporte/Reportes'));
+const GestionUsuarios = lazy(() => import('../pages/gestionAcademica/GestionUsuarios'));
+const EstadoRecursos = lazy(() => import('../pages/gestionAcademica/EstadoRecursos'));
+const Notificaciones = lazy(() => import('../pages/users/Notificaciones'));
+const Ajustes = lazy(() => import('../pages/users/Ajustes'));
+const SupervisorGeneralHome = lazy(() => import('../pages/dashboard/SupervisorGeneralHome'));
+const SupervisorSalonHome = lazy(() => import('../pages/espacios/SupervisorSalonHome'));
+const ConsultorDocenteHome = lazy(() => import('../pages/dashboard/ConsultorDocenteHome'));
+const MiHorario = lazy(() => import('../pages/horarios/MiHorario'));
+const ConsultorEstudianteHome = lazy(() => import('../pages/dashboard/ConsultorEstudianteHome'));
+const Login = lazy(() => import('../pages/users/Login'));
+const Register = lazy(() => import('../pages/users/Register'));
+const DocentePrestamos = lazy(() => import('../pages/prestamos/DocentePrestamos'));
+const EnConstruccion = lazy(() => import('../pages/shared/EnConstruccion'));
+const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/SolicitudesEspacio'));
+
+// Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
-import DocentePrestamos from '../pages/prestamos/DocentePrestamos';
-import EnConstruccion from '../pages/shared/EnConstruccion';
-import SolicitudesEspacio from '../pages/gestionAcademica/SolicitudesEspacio';
+
+// Componente de Loading
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className="text-center">
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      <p className="mt-4 text-slate-600 font-medium">Cargando...</p>
+    </div>
+  </div>
+);
 
 // Componente Layout que usa AdminDashboard como base
 function AppLayout() {
@@ -94,20 +109,23 @@ export default function AppRouter() {
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
     return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/public" element={<PublicLayout />}>
-          <Route index element={<Navigate to="/public/dashboard" replace />} />
-          <Route path="dashboard" element={<PublicDashboard />} />
-          <Route path="consulta-horario" element={<PublicConsultaHorario />} />
-          <Route path="disponibilidad-espacios" element={<ConsultaEspacios />} />
-          <Route path="prestamo" element={<PublicPrestamo />} />
-          <Route path="asistente-virtual" element={<AsistentesVirtuales />} />
-          <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/public/dashboard" replace />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/public" element={<PublicLayout />}>
+            <Route index element={<Navigate to="/public/dashboard" replace />} />
+            <Route path="dashboard" element={<PublicDashboard />} />
+            <Route path="consulta-horario" element={<PublicConsultaHorario />} />
+            <Route path="disponibilidad-espacios" element={<ConsultaEspacios />} />
+            <Route path="prestamo" element={<PublicPrestamo />} />
+            <Route path="asistente-virtual" element={<AsistentesVirtuales />} />
+            <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/public/dashboard" replace />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -122,9 +140,10 @@ export default function AppRouter() {
 
   // Rutas protegidas con layout compartido
   return (
-    <Routes>
-      {/* Todas las rutas protegidas usan el layout compartido */}
-      <Route path="/" element={<AppLayout />}>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Todas las rutas protegidas usan el layout compartido */}
+        <Route path="/" element={<AppLayout />}>
         {/* Ruta raíz - redirige al home del rol */}
         <Route index element={<Navigate to={homeRoute} replace />} />
 
@@ -296,5 +315,6 @@ export default function AppRouter() {
       {/* Login fuera del layout */}
       <Route path="/login" element={<Login />} />
     </Routes>
+    </Suspense>
   );
 }

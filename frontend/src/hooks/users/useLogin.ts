@@ -17,7 +17,16 @@ export function useLogin() {
         setError('');
 
         try {
-            await login({ correo: email, contrasena: password });
+            const response = await login({ correo: email, contrasena: password });
+            
+            // Verificar si el usuario no tiene rol asignado
+            if (!response?.rol || response.rol === null) {
+                setError('Tu cuenta aún no tiene un rol asignado. Por favor, espera a que un administrador te asigne el rol correspondiente.');
+                // Hacer logout automático
+                localStorage.clear();
+                return;
+            }
+            
             // La redirección se maneja en el useEffect cuando isAuthenticated cambia
         } catch (err: any) {
             console.error('Error en login:', err);
