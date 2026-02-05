@@ -89,56 +89,56 @@ for tipo_data in tipos_espacio_data:
 # ========== ESPACIOS FÍSICOS ==========
 print("\n🚪 Creando Espacios Físicos...")
 sede_centro = Sede.objects.get(nombre="Sede Centro")
-sede_norte = Sede.objects.get(nombre="Sede Norte")
+sede_principal = Sede.objects.get(nombre="Sede Principal")
 
 espacios_data = [
     # Sede Centro - Aulas
     {"nombre": "A-101", "sede": sede_centro, "tipo": "Aula", "capacidad": 40, "ubicacion": "Bloque A - Piso 1"},
     {"nombre": "A-102", "sede": sede_centro, "tipo": "Aula", "capacidad": 40, "ubicacion": "Bloque A - Piso 1"},
     {"nombre": "A-103", "sede": sede_centro, "tipo": "Aula", "capacidad": 35, "ubicacion": "Bloque A - Piso 1"},
-    {"nombre": "A-201", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Bloque A - Piso 2"},
-    {"nombre": "A-202", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Bloque A - Piso 2"},
-    {"nombre": "A-203", "sede": sede_norte, "tipo": "Aula", "capacidad": 50, "ubicacion": "Bloque A - Piso 2"},
+    {"nombre": "A-201", "sede": sede_principal, "tipo": "Aula", "capacidad": 45, "ubicacion": "Bloque A - Piso 2"},
+    {"nombre": "A-202", "sede": sede_principal, "tipo": "Aula", "capacidad": 45, "ubicacion": "Bloque A - Piso 2"},
+    {"nombre": "A-203", "sede": sede_principal, "tipo": "Aula", "capacidad": 50, "ubicacion": "Bloque A - Piso 2"},
     
     # Sede Centro - Laboratorios
     {"nombre": "LAB-101", "sede": sede_centro, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Bloque B - Piso 1"},
-    {"nombre": "LAB-102", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Bloque B - Piso 1"},
+    {"nombre": "LAB-102", "sede": sede_principal, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Bloque B - Piso 1"},
     {"nombre": "LAB-201", "sede": sede_centro, "tipo": "Laboratorio", "capacidad": 25, "ubicacion": "Bloque B - Piso 2"},
     
     # Sede Centro - Salas de Cómputo
     {"nombre": "COMP-101", "sede": sede_centro, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Bloque C - Piso 1"},
-    {"nombre": "COMP-102", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Bloque C - Piso 1"},
+    {"nombre": "COMP-102", "sede": sede_principal, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Bloque C - Piso 1"},
     {"nombre": "COMP-201", "sede": sede_centro, "tipo": "Sala de Cómputo", "capacidad": 40, "ubicacion": "Bloque C - Piso 2"},
     
     # Sede Centro - Auditorios
     {"nombre": "AUDIT-PRINCIPAL", "sede": sede_centro, "tipo": "Auditorio", "capacidad": 200, "ubicacion": "Bloque D"},
-    {"nombre": "AUDIT-102", "sede": sede_norte, "tipo": "Auditorio", "capacidad": 100, "ubicacion": "Bloque D - Piso 1"},
+    {"nombre": "AUDIT-102", "sede": sede_principal, "tipo": "Auditorio", "capacidad": 100, "ubicacion": "Bloque D - Piso 1"},
     
     # Sede Centro - Talleres
     {"nombre": "TALLER-1", "sede": sede_centro, "tipo": "Taller", "capacidad": 25, "ubicacion": "Bloque E - Piso 1"},
-    {"nombre": "TALLER-2", "sede": sede_norte, "tipo": "Taller", "capacidad": 25, "ubicacion": "Bloque E - Piso 1"},
+    {"nombre": "TALLER-2", "sede": sede_principal, "tipo": "Taller", "capacidad": 25, "ubicacion": "Bloque E - Piso 1"},
     
-    # Sede Norte
-    {"nombre": "N-101", "sede": sede_norte, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
-    {"nombre": "N-102", "sede": sede_norte, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
-    {"nombre": "N-103", "sede": sede_norte, "tipo": "Aula", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 1"},
-    {"nombre": "N-201", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
-    {"nombre": "N-202", "sede": sede_norte, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
-    {"nombre": "N-LAB-101", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
-    {"nombre": "N-LAB-102", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
-    {"nombre": "N-LAB-201", "sede": sede_norte, "tipo": "Laboratorio", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 2"},
-    {"nombre": "N-COMP-101", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
-    {"nombre": "N-COMP-102", "sede": sede_norte, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
-    {"nombre": "N-TALLER-1", "sede": sede_norte, "tipo": "Taller", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 1"},
-    {"nombre": "N-AUDIT-101", "sede": sede_norte, "tipo": "Auditorio", "capacidad": 150, "ubicacion": "Edificio Norte"},
+    # Sede Principal
+    {"nombre": "N-101", "sede": sede_principal, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-102", "sede": sede_principal, "tipo": "Aula", "capacidad": 40, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-103", "sede": sede_principal, "tipo": "Aula", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-201", "sede": sede_principal, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-202", "sede": sede_principal, "tipo": "Aula", "capacidad": 45, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-LAB-101", "sede": sede_principal, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-LAB-102", "sede": sede_principal, "tipo": "Laboratorio", "capacidad": 30, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-LAB-201", "sede": sede_principal, "tipo": "Laboratorio", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-COMP-101", "sede": sede_principal, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-COMP-102", "sede": sede_principal, "tipo": "Sala de Cómputo", "capacidad": 35, "ubicacion": "Edificio Norte - Piso 2"},
+    {"nombre": "N-TALLER-1", "sede": sede_principal, "tipo": "Taller", "capacidad": 25, "ubicacion": "Edificio Norte - Piso 1"},
+    {"nombre": "N-AUDIT-101", "sede": sede_principal, "tipo": "Auditorio", "capacidad": 150, "ubicacion": "Edificio Norte"},
     
     # Sede Centro - Salas de Reuniones
     {"nombre": "SALA-REUNIONES-1", "sede": sede_centro, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Bloque A - Piso 3"},
-    {"nombre": "SALA-REUNIONES-2", "sede": sede_norte, "tipo": "Sala de Reuniones", "capacidad": 12, "ubicacion": "Bloque A - Piso 3"},
+    {"nombre": "SALA-REUNIONES-2", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 12, "ubicacion": "Bloque A - Piso 3"},
     {"nombre": "SALA-REUNIONES-3", "sede": sede_centro, "tipo": "Sala de Reuniones", "capacidad": 10, "ubicacion": "Bloque B - Piso 3"},
     
-    # Sede Norte - Salas de Reuniones
-    {"nombre": "N-SALA-REUNIONES-1", "sede": sede_norte, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Edificio Norte - Piso 3"},
+    # Sede Principal - Salas de Reuniones
+    {"nombre": "N-SALA-REUNIONES-1", "sede": sede_principal, "tipo": "Sala de Reuniones", "capacidad": 15, "ubicacion": "Edificio Norte - Piso 3"},
 ]
 
 espacios = {}

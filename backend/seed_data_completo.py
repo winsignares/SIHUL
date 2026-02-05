@@ -24,7 +24,7 @@ sid = transaction.savepoint()
 print("\n📍 Creando Sedes...")
 sedes_data = [
     {"nombre": "Sede Centro", "direccion": "Cra. 46 #48", "ciudad": "Barranquilla"},
-    {"nombre": "Sede Norte", "direccion": "Cra. 51B #135 -100", "ciudad": "Barranquilla"}
+    {"nombre": "Sede Principal", "direccion": "Cra. 51B #135 -100", "ciudad": "Barranquilla"}
     ]
 
 for sede_data in sedes_data:
