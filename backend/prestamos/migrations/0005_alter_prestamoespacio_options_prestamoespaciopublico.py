@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('espacios', '0005_tipoespacio_alter_espaciofisico_tipo'),
         ('prestamos', '0004_add_asistentes_telefono'),
-        ('usuarios', '0005_seed_users'),
+        ('usuarios', '0004_usuario_sede_usuario_idx_usuario_sede'),
     ]
 
     operations = [

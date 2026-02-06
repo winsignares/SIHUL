@@ -203,7 +203,6 @@ SIHUL/
 python manage.py migrate           # Aplicar migraciones
 python manage.py createsuperuser   # Crear superusuario
 python manage.py runserver         # Iniciar servidor desarrollo
-python seed_data_completo.py       # Cargar datos de prueba
 ```
 
 ### Frontend

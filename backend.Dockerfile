@@ -35,14 +35,13 @@ COPY backend/ .
 # Exponer puerto Django
 EXPOSE 8000
 
-# Script de inicio con espera de base de datos y migraciones
+# Script de inicio con espera de base de datos, migraciones y carga de datos
 CMD until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER}; do \
       echo "Waiting for database..."; \
       sleep 2; \
     done && \
     echo "Database is ready!" && \
     python manage.py migrate --fake-initial --noinput && \
-    echo "Checking if seed data is needed..." && \
-    python manage.py shell -c "from sedes.models import Sede; exit(0 if Sede.objects.exists() else 1)" || \
-    (echo "Running seed data script..." && python manage.py shell -c "exec(open('seed_data_completo.py').read())") && \
+    echo "Running initial data seed..." && \
+    python manage.py seed_initial_data && \
     python manage.py runserver 0.0.0.0:8000

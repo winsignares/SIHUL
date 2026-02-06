@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'mysite.apps.MysiteConfig',  # App principal del proyecto
     'horario',
     'usuarios',
     'componentes',

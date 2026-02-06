@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('facultades', '0002_facultad_sede'),
         ('sedes', '0001_initial'),
-        ('usuarios', '0003_seed_initial_data'),
+        ('usuarios', '0002_usuario_facultad_usuario_idx_usuario_facultad'),
     ]
 
     operations = [

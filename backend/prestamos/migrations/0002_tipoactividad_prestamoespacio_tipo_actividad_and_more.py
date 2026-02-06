@@ -18,7 +18,7 @@ def create_default_tipo_actividad(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('recursos', '0003_load_default_recursos'),
+        ('recursos', '0002_remove_espaciorecurso_disponible_and_more'),
         ('prestamos', '0001_initial'),
     ]
 
