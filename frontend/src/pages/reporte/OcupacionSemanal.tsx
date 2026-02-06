@@ -36,6 +36,18 @@ export default function OcupacionSemanal() {
     espaciosSubutilizados
   } = estadisticas;
 
+  const tableHeaders = [
+    { label: 'Espacio', className: 'text-[11px]' },
+    { label: 'Tipo', className: 'text-[10px] min-w-[70px] text-center' },
+    { label: 'Edificio', className: 'text-[11px]' },
+    { label: 'Capacidad', className: 'text-[11px]' },
+    { label: 'Horas Ocupadas', className: 'text-[11px]' },
+    { label: 'Ocupación Mañana', className: 'text-[11px]' },
+    { label: 'Ocupación Tarde', className: 'text-[11px]' },
+    { label: 'Ocupación Noche', className: 'text-[11px]' },
+    { label: 'Total Semanal', className: 'text-[11px]' }
+  ];
+
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
       {/* Validación de Período */}
@@ -165,71 +177,54 @@ export default function OcupacionSemanal() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Espacio</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Edificio</TableHead>
-                  <TableHead>Capacidad</TableHead>
-                  <TableHead>Horas Ocupadas</TableHead>
-                  <TableHead>Ocupación Mañana</TableHead>
-                  <TableHead>Ocupación Tarde</TableHead>
-                  <TableHead>Ocupación Noche</TableHead>
-                  <TableHead>Total Semanal</TableHead>
+                  {tableHeaders.map(({ label, className }) => (
+                    <TableHead
+                      key={label}
+                      className={`!px-3 !py-2 align-top break-words whitespace-normal text-slate-600 dark:text-slate-400 ${className}`}
+                    >
+                      {label}
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {espaciosFiltrados.map((espacio) => (
                   <TableRow key={espacio.id}>
-                    <TableCell className="text-slate-900 dark:text-slate-100">{espacio.nombre}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="border-blue-600 text-blue-600">
+                    <TableCell className="max-w-[150px] align-top break-words whitespace-normal pr-3 pb-3 text-slate-900 dark:text-slate-100">
+                      {espacio.nombre}
+                    </TableCell>
+                    <TableCell className="align-top pr-3 pb-3 text-[10px]">
+                      <Badge variant="outline" className="border-blue-600 text-blue-600 text-[10px]">
                         {espacio.tipo}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">Edif. {espacio.edificio}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">{espacio.capacidad} pers.</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
+                    <TableCell className="align-top break-words whitespace-normal pr-3 pb-3 text-slate-600 dark:text-slate-400">
+                      Edif. {espacio.edificio}
+                    </TableCell>
+                    <TableCell className="align-top break-words whitespace-normal pr-3 pb-3 text-slate-600 dark:text-slate-400">
+                      {espacio.capacidad} pers.
+                    </TableCell>
+                    <TableCell className="align-top break-words whitespace-normal pr-3 pb-3 text-slate-600 dark:text-slate-400">
                       {espacio.horasOcupadas} / {espacio.horasDisponibles}h
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 w-20">
-                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                            <div
-                              className={`${getBarColor(espacio.jornada.manana)} h-2 rounded-full transition-all`}
-                              style={{ width: `${espacio.jornada.manana}%` }}
-                            ></div>
+                    {[espacio.jornada.manana, espacio.jornada.tarde, espacio.jornada.noche].map((valor, index) => (
+                      <TableCell key={index} className="align-top pr-3 pb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-[65px]">
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                              <div
+                                className={`${getBarColor(valor)} h-2 rounded-full transition-all`}
+                                style={{ width: `${valor}%` }}
+                              ></div>
+                            </div>
                           </div>
+                          <span className="text-xs text-slate-600 dark:text-slate-400 w-10">
+                            {valor}%
+                          </span>
                         </div>
-                        <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.manana}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 w-20">
-                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                            <div
-                              className={`${getBarColor(espacio.jornada.tarde)} h-2 rounded-full transition-all`}
-                              style={{ width: `${espacio.jornada.tarde}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.tarde}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 w-20">
-                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                            <div
-                              className={`${getBarColor(espacio.jornada.noche)} h-2 rounded-full transition-all`}
-                              style={{ width: `${espacio.jornada.noche}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-slate-600 dark:text-slate-400 w-10">{espacio.jornada.noche}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
+                      </TableCell>
+                    ))}
+                    <TableCell className="align-top pr-3 pb-3">
                       <Badge className={getColorPorOcupacion(espacio.porcentajeOcupacion)}>
                         {espacio.porcentajeOcupacion.toFixed(1)}%
                       </Badge>
