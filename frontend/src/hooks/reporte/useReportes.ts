@@ -254,6 +254,99 @@ export function useReportes() {
 
     const exportarPDF = async () => {
         try {
+            // Reporte de ocupación (jornadas + espacios más usados) con diseño del backend
+            if (tipoReporte === 'ocupacion') {
+                const apiUrl = import.meta.env.VITE_API_URL;
+
+                const response = await fetch(`${apiUrl}/espacios/reporte/ocupacion/pdf/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        semana_offset: 0
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al generar PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reporte-ocupacion-${periodoActual}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                return;
+            }
+
+            // Reporte de disponibilidad (estilo backend)
+            if (tipoReporte === 'disponibilidad') {
+                const apiUrl = import.meta.env.VITE_API_URL;
+
+                const response = await fetch(`${apiUrl}/espacios/reporte/disponibilidad/pdf/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        semana_offset: 0
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al generar PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reporte-disponibilidad-${periodoActual}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                return;
+            }
+
+            // Reporte de capacidad (estilo backend)
+            if (tipoReporte === 'capacidad') {
+                const apiUrl = import.meta.env.VITE_API_URL;
+
+                const response = await fetch(`${apiUrl}/espacios/reporte/capacidad/pdf/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        semana_offset: 0
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al generar PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reporte-capacidad-${periodoActual}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                return;
+            }
+
             // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
             if (tipoReporte === 'horarios-programa') {
                 const apiUrl = import.meta.env.VITE_API_URL;
