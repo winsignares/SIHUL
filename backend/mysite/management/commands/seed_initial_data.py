@@ -227,7 +227,7 @@ class Command(BaseCommand):
             'Alejandra Zambrano', 'Andrea Coronado', 'Anderson Diaz', 'Aracelly García', 'Arnaldo Arce',
             'Aroldo Padilla', 'Astrid Barrios', 'Beatriz Tovar', 'Brenda Valero', 'Carlos Aníbal Espinel Benítez',
             'Carlos Barrera', 'Carlos Consuegra', 'Carlos Espinel', 'Carlos Jiménez', 'Carlos Newball',
-            'Claudia Vizcaíno', 'Cristóbal Arteta', 'Cristóbal Arteta Ripoll', 'Danna Betancourt', 'Danna Betancourt Espinosa',
+            'Claudia Vizcaíno', 'Cristóbal Arteta', 'Cristóbal Arteta Ripoll', 'Danna Betancourt',
             'David Guette', 'Deiber Puello', 'Diana Suárez', 'Diego Suero', 'Edgar Devia',
             'Edgardo Buelvas', 'Eduardo Cerra', 'Eduardo Espinosa', 'Eduardo Lascano', 'Elba Valle',
             'Elvis Ruiz', 'Elvira Crespo', 'Emeldo Caballero', 'Erick Jassir', 'Fabio Amorocho',
