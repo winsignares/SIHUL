@@ -261,7 +261,7 @@ class Command(BaseCommand):
                 correo=correo,
                 defaults={
                     'nombre': nombre_docente,
-                    'contrasena_hash': 'pbkdf2_sha256$600000$temp$hashdefault123456',
+                    'contrasena_hash': 'scrypt:32768:8:1$F4jAKI6EZtJNZKNu$ff979b1bd37c5b53c4d9801ed1b049b2d4bbcb771650be11c84e945c48553e5689de2edd2d5f13ceb19447d78583a6c4503f155cdfefa4474328f3485a763629',
                     'rol': rol_docente,
                     'activo': True
                 }
@@ -292,35 +292,35 @@ class Command(BaseCommand):
                 'nombre': 'Administrador del Sistema',
                 'correo': 'admin@unilibre.edu.co',
                 'rol': rol_admin,
-                'contrasena_hash': 'pbkdf2_sha256$600000$admin$hashdefault123456',
+                'contrasena_hash': 'scrypt:32768:8:1$kiG9tp2Zn62F5Y17$fe8d82d4b9fe0c16bec841eceff1639a964b1c4b5b1959c16ea2e06209cc61e865c605e19f7fb02729e95733238478246fd53f8d86aa501e5b14e0f0706fb702',
                 'activo': True
             },
             {
                 'nombre': 'Coordinador de Planeación',
                 'correo': 'planeacion@unilibre.edu.co',
                 'rol': rol_planeacion,
-                'contrasena_hash': 'pbkdf2_sha256$600000$planeacion$hashdefault123456',
+                'contrasena_hash': 'scrypt:32768:8:1$f7zwr2SiPijCgp45$62e2689fe954de05d5b03d9f736acfb1e8892962ccbb0989eb58174d6327d87b2d25455e0b17f6d165025a268cad789520ca2da815248d7a5bdcef524a0e28e8',
                 'activo': True
             },
             {
                 'nombre': 'Supervisor General',
                 'correo': 'supervisor@unilibre.edu.co',
                 'rol': rol_supervisor,
-                'contrasena_hash': 'pbkdf2_sha256$600000$supervisor$hashdefault123456',
+                'contrasena_hash': 'scrypt:32768:8:1$2AWn6L8RGMq1IiQQ$8b5b2ec45d8f847d4dbe150b91bdd386088357865909b17b54a62ba6f97c6aca84d169028ede4242a09edc526af530d3a7676e8d73531a7997c037f2aafe6c33',
                 'activo': True
             },
             {
                 'nombre': 'Docente de Prueba',
                 'correo': 'docente@unilibre.edu.co',
                 'rol': rol_docente,
-                'contrasena_hash': 'pbkdf2_sha256$600000$docente$hashdefault123456',
+                'contrasena_hash': 'scrypt:32768:8:1$F4jAKI6EZtJNZKNu$ff979b1bd37c5b53c4d9801ed1b049b2d4bbcb771650be11c84e945c48553e5689de2edd2d5f13ceb19447d78583a6c4503f155cdfefa4474328f3485a763629',
                 'activo': True
             },
             {
                 'nombre': 'Estudiante de Prueba',
                 'correo': 'estudiante@unilibre.edu.co',
                 'rol': rol_estudiante,
-                'contrasena_hash': 'pbkdf2_sha256$600000$estudiante$hashdefault123456',
+                'contrasena_hash': 'scrypt:32768:8:1$5m5hX0NN5IbauR4t$3001e275f7dac8863ae85331638f631020511422e40a3b8e8d050e21c9f4d0fe4438fa03753db4e3e8623345e68ef21360a09e09d038be25097be3948e5f8435',
                 'activo': True
             },
         ]
