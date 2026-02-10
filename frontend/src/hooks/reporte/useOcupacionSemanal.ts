@@ -67,7 +67,7 @@ export function useOcupacionSemanal() {
     const cargarOcupacion = async () => {
       setLoading(true);
       try {
-        const tipoId = tipoEspacio === 'todos' ? undefined : parseInt(tipoEspacio);
+        const tipoId = obtenerTipoIdSeleccionado();
         const response = await ocupacionSemanalService.getOcupacionSemanal(tipoId, 0);
         
         // Validar que los datos corresponden al período actual
@@ -82,12 +82,12 @@ export function useOcupacionSemanal() {
           capacidad: espacio.capacidad,
           horasOcupadas: espacio.horasOcupadasSemana,
           horasDisponibles: espacio.horasDisponibles,
-          porcentajeOcupacion: espacio.porcentajeOcupacion,
+          porcentajeOcupacion: Number(espacio.porcentajeOcupacion ?? 0),
           edificio: espacio.edificio,
           jornada: {
-            manana: Math.round(espacio.porcentajeManana),
-            tarde: Math.round(espacio.porcentajeTarde),
-            noche: Math.round(espacio.porcentajeNoche)
+            manana: normalizePercentage(espacio.porcentajeManana),
+            tarde: normalizePercentage(espacio.porcentajeTarde),
+            noche: normalizePercentage(espacio.porcentajeNoche)
           }
         }));
         
@@ -107,6 +107,18 @@ export function useOcupacionSemanal() {
 
     cargarOcupacion();
   }, [tipoEspacio, periodoInfo]);
+
+  const normalizePercentage = (value: number | string | undefined | null) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return 0;
+    return Number(parsed.toFixed(1));
+  };
+
+  const obtenerTipoIdSeleccionado = () => {
+    if (tipoEspacio === 'todos') return undefined;
+    const tipo = tiposEspacioOptions.find(option => option.nombre === tipoEspacio);
+    return tipo?.id;
+  };
 
   const espaciosFiltrados = useMemo(() => {
     return tipoEspacio === 'todos'
@@ -135,7 +147,7 @@ export function useOcupacionSemanal() {
   const exportarReporte = async () => {
     try {
       setLoading(true);
-      const tipoId = tipoEspacio === 'todos' ? undefined : parseInt(tipoEspacio);
+      const tipoId = obtenerTipoIdSeleccionado();
       await ocupacionSemanalService.generarPDFOcupacion(tipoId, 0);
       toast.success('PDF generado exitosamente');
     } catch (error) {
