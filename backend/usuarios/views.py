@@ -3,6 +3,7 @@ from .models import Rol, Usuario
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
+from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 import secrets
 # ---------- Rol CRUD ----------
@@ -108,7 +109,8 @@ def create_usuario(request):
         if facultad_id:
             from facultades.models import Facultad
             facultad = Facultad.objects.get(id=facultad_id)
-        u = Usuario(nombre=nombre, correo=correo, contrasena_hash=contrasena, rol=rol, facultad=facultad, activo=bool(activo))
+        hashed = generate_password_hash(contrasena)
+        u = Usuario(nombre=nombre, correo=correo, contrasena_hash=hashed, rol=rol, facultad=facultad, activo=bool(activo))
         u.save()
 
         # Manejar espacios permitidos
@@ -144,7 +146,8 @@ def update_usuario(request):
         if 'correo' in data:
             u.correo = data.get('correo')
         if 'contrasena' in data or 'contrasena_hash' in data:
-            u.contrasena_hash = data.get('contrasena') or data.get('contrasena_hash')
+            nueva_contrasena = data.get('contrasena') or data.get('contrasena_hash')
+            u.contrasena_hash = generate_password_hash(nueva_contrasena)
         if 'rol_id' in data:
             u.rol = Rol.objects.get(id=data.get('rol_id')) if data.get('rol_id') else None
         if 'facultad_id' in data:
@@ -238,7 +241,7 @@ def login(request):
             u = Usuario.objects.select_related('sede', 'rol', 'facultad').get(correo=correo)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
-        if u.contrasena_hash != contrasena:
+        if not check_password_hash(u.contrasena_hash, contrasena):
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         
         # Obtener componentes del rol del usuario
@@ -345,9 +348,9 @@ def change_password(request):
             u = Usuario.objects.get(correo=correo)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
-        if u.contrasena_hash != old_contrasena:
+        if not check_password_hash(u.contrasena_hash, old_contrasena):
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
-        u.contrasena_hash = new_contrasena
+        u.contrasena_hash = generate_password_hash(new_contrasena)
         u.save()
         return JsonResponse({"message": "Contraseña cambiada exitosamente"}, status=200)
     except json.JSONDecodeError:
