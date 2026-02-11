@@ -1,1 +1,17 @@
 .devcontainer/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Temporary files
+temp_*.py
+*_parsed.txt
