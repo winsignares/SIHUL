@@ -1754,7 +1754,8 @@ class Command(BaseCommand):
             'ING. SISTEMAS': 'Ingeniería de Sistemas',
             'ADM. NEGOCIOS': 'Administración de Negocios Internacionales',
             'CONTADURIA': 'Contaduría Pública',
-            'MEDICINA': 'Medicina'
+            'MEDICINA': 'Medicina',
+            'DERECHO': 'Derecho'
         }
         
         # Mapeo de números romanos a enteros
@@ -1864,6 +1865,8 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f'    ⚠ Semestre inválido: {semestre_romano}'))
                     skipped_count += 1
                     continue
+                # Colocar Número Romano al Inicio del nombre del grupo
+                nombre_grupo = f'{semestre_romano.strip()} {nombre_grupo}'
                 
                 # Crear o obtener el grupo
                 grupo, created = Grupo.objects.get_or_create(
