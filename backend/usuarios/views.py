@@ -97,6 +97,7 @@ def create_usuario(request):
         contrasena = data.get('contrasena') or data.get('contrasena_hash')
         rol_id = data.get('rol_id')
         facultad_id = data.get('facultad_id')
+        sede = data.get('sede')  # Agregar campo sede
         activo = data.get('activo', True)
         espacios_permitidos = data.get('espacios_permitidos', []) # Lista de IDs de espacios
 
@@ -109,8 +110,20 @@ def create_usuario(request):
         if facultad_id:
             from facultades.models import Facultad
             facultad = Facultad.objects.get(id=facultad_id)
+        
+        # Manejar campo sede
+        sede_obj = None
+        if sede:
+            from sedes.models import Sede
+            # Buscar sede por nombre o crear si no existe
+            try:
+                sede_obj = Sede.objects.get(nombre__icontains=sede)
+            except Sede.DoesNotExist:
+                # Crear nueva sede si no existe
+                sede_obj = Sede.objects.create(nombre=sede, direccion='', telefono='')
+        
         hashed = generate_password_hash(contrasena)
-        u = Usuario(nombre=nombre, correo=correo, contrasena_hash=hashed, rol=rol, facultad=facultad, activo=bool(activo))
+        u = Usuario(nombre=nombre, correo=correo, contrasena_hash=hashed, rol=rol, facultad=facultad, sede=sede_obj, activo=bool(activo))
         u.save()
 
         # Manejar espacios permitidos

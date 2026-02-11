@@ -16,6 +16,7 @@ export interface Usuario {
     activo: boolean;
     fechaCreacion: string;
     ultimoAcceso?: string;
+    sede?: string; // Sede universitaria del usuario
 }
 
 export interface Docente {

@@ -1,6 +1,7 @@
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
-import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff, Mail } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff, Mail, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
@@ -19,8 +20,11 @@ export default function Register() {
     isHovered,
     setIsHovered,
     handleChange,
+    handleSelectChange,
     handleSubmit,
-    navigate
+    navigate,
+    sedes,
+    isLoadingSedes
   } = useRegister();
 
   return (
@@ -177,11 +181,50 @@ export default function Register() {
                   </div>
                 </motion.div>
 
-                {/* Correo */}
+                {/* Sede Universitaria */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
+                  className="space-y-2"
+                >
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Sede Universitaria</label>
+                  <div className="relative group">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-600 transition-colors duration-300 z-10" />
+                    <Select
+                      value={formData.sedeUniversitaria}
+                      onValueChange={(value) => handleSelectChange('sedeUniversitaria', value)}
+                    >
+                      <SelectTrigger className="pl-12 h-11 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900">
+                        <SelectValue placeholder="Selecciona tu sede universitaria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="max-h-60 overflow-y-auto">
+                          <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider sticky top-0 bg-white">
+                            Sedes Principales (Seccionales)
+                          </div>
+                          {isLoadingSedes ? (
+                            <div className="px-2 py-4 text-center text-sm text-slate-500">
+                              Cargando sedes...
+                            </div>
+                          ) : (
+                            sedes.map((sede) => (
+                              <SelectItem key={sede.id} value={sede.nombre} className="text-slate-900">
+                                {sede.nombre}
+                              </SelectItem>
+                            ))
+                          )}
+                        </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </motion.div>
+
+                {/* Correo */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45, duration: 0.5 }}
                   className="space-y-2"
                 >
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Correo Institucional</label>
@@ -202,7 +245,7 @@ export default function Register() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45, duration: 0.5 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
                   className="space-y-2"
                 >
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Confirmar Correo</label>
@@ -223,7 +266,7 @@ export default function Register() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.5 }}
+                  transition={{ delay: 0.55, duration: 0.5 }}
                   className="space-y-2"
                 >
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Contraseña</label>
@@ -257,7 +300,7 @@ export default function Register() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55, duration: 0.5 }}
+                  transition={{ delay: 0.6, duration: 0.5 }}
                   className="space-y-2"
                 >
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Confirmar Contraseña</label>
@@ -300,7 +343,7 @@ export default function Register() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 0.5 }}
+                  transition={{ delay: 0.65, duration: 0.5 }}
                   className="pt-4"
                 >
                   <Button
@@ -327,7 +370,7 @@ export default function Register() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.65, duration: 0.5 }}
+                  transition={{ delay: 0.7, duration: 0.5 }}
                   className="text-center pt-4"
                 >
                   <button

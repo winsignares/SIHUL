@@ -121,6 +121,18 @@ class Command(BaseCommand):
         
         sedes_data = [
             {
+                'nombre': 'Sede Candelaria',
+                'direccion': 'Calle 8 n.º 5-80, La Candelaria, Bogotá, Cundinamarca',
+                'ciudad': 'Bogotá',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede El Bosque',
+                'direccion': 'Carrera 70 n.º 53-40, El Bosque Popular, Bogotá, Cundinamarca',
+                'ciudad': 'Bogotá',
+                'activa': True
+            },
+            {
                 'nombre': 'Sede Centro',
                 'direccion': 'Cra. 46 #48, Nte. Centro Historico, Barranquilla, Atlántico',
                 'ciudad': 'Barranquilla',
@@ -128,8 +140,62 @@ class Command(BaseCommand):
             },
             {
                 'nombre': 'Sede Principal',
-                'direccion': 'Cra. 51B #135 -100, Sabanilla Montecarmelo, Barranquilla, Atlántico',
+                'direccion': 'Cra. 51B #135 -100, Puerto Colombia, Barranquilla, Atlántico',
                 'ciudad': 'Barranquilla',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Santa Isabel',
+                'direccion': 'Cra. 46 #48, Nte. Santa Isabel, Cali, Valle del Cauca',
+                'ciudad': 'Cali',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Valle del Lili',
+                'direccion': 'Carrera 109 n.º 22 - 00, Valle de Lili, Cali, Valle del Cauca',
+                'ciudad': 'Cali',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Pereira Centro',
+                'direccion': 'Calle 40 # 7 - 30, Campus Centro, Pereira, Risaralda',
+                'ciudad': 'Pereira',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Cúcuta',
+                'direccion': 'Avenida 4ta n.º 12n-81 - Urbanización El Bosque, Cúcuta, Norte de Santander',
+                'ciudad': 'Cúcuta',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Cartagena',
+                'direccion': 'Calle Real n.º 20-177, Campus Pie de la Popa, Cartagena, Bolívar',
+                'ciudad': 'Cartagena',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede El Socorro',
+                'direccion': 'Carrera 15 n.º 16-58, Edificio Albornoz Rueda, El Socorro, Santander',
+                'ciudad': 'El Socorro',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Albornoz Rueda',
+                'direccion': 'Carrera 15 n.º 16-58, Edificio Albornoz Rueda, El Socorro, Santander',
+                'ciudad': 'El Socorro',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Majavita',
+                'direccion': 'Campus Universitario Hacienda Majavita, El Socorro, Santander',
+                'ciudad': 'El Socorro',
+                'activa': True
+            },
+            {
+                'nombre': 'Sede Belmonte',
+                'direccion': 'Avenida Las Américas Carrera 28 n.º 96-102, Campus Belmonte, Pereira, Risaralda',
+                'ciudad': 'Pereira',
                 'activa': True
             },
         ]
@@ -165,14 +231,14 @@ class Command(BaseCommand):
         """Crear facultades con sus sedes"""
         self.stdout.write('  → Creando facultades...')
         
+        sede_candelaria = Sede.objects.get(nombre='Sede Candelaria')
         sede_centro = Sede.objects.get(nombre='Sede Centro')
-        sede_principal = Sede.objects.get(nombre='Sede Principal')
         
         facultades_data = [
             {'nombre': 'Facultad de Ingeniería', 'sede': sede_centro, 'activa': True},
             {'nombre': 'Facultad de Ciencias Económicas, Administrativas y Contables', 'sede': sede_centro, 'activa': True},
             {'nombre': 'Facultad de Derecho, Ciencias Políticas y Sociales', 'sede': sede_centro, 'activa': True},
-            {'nombre': 'Facultad de Ciencias de la Salud', 'sede': sede_principal, 'activa': True},
+            {'nombre': 'Facultad de Ciencias de la Salud', 'sede': sede_candelaria, 'activa': True},
             {'nombre': 'Facultad de Ciencias de la Salud, Exactas y Naturales', 'sede': sede_centro, 'activa': True},
         ]
         
@@ -1470,7 +1536,7 @@ class Command(BaseCommand):
         self.stdout.write('  → Creando espacios físicos...')
         self.stdout.write('     Este proceso puede tomar unos segundos...')
         
-        sede_principal = Sede.objects.get(nombre='Sede Principal')
+        sede_candelaria = Sede.objects.get(nombre='Sede Candelaria')
         sede_centro = Sede.objects.get(nombre='Sede Centro')
         
         tipo_torreon = TipoEspacio.objects.get(nombre='TORREON')
@@ -1481,32 +1547,32 @@ class Command(BaseCommand):
         # Formato: (nombre, sede, tipo, capacidad, ubicacion)
         espacios_data = [
             # === SEDE PRINCIPAL ===
-            ('TORREON 1', sede_principal, tipo_torreon, 130, 'N/A'),
-            ('TORREON 2', sede_principal, tipo_torreon, 130, 'N/A'),
-            ('SALON 302A', sede_principal, tipo_salon, 100, 'N/A'),
-            ('SALON 303A', sede_principal, tipo_salon, 100, 'N/A'),
-            ('SALON 101B', sede_principal, tipo_salon, 100, 'N/A'),
-            ('SALON 102B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 103B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 104B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 105B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 106B', sede_principal, tipo_salon, 100, 'N/A'),
-            ('SALON 107B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALA COMPUTO 201B', sede_principal, tipo_sala_computo, 30, 'N/A'),
-            ('SALA COMPUTO 202B', sede_principal, tipo_sala_computo, 40, 'N/A'),
-            ('SALA COMPUTO 203B', sede_principal, tipo_sala_computo, 30, 'N/A'),
-            ('SALON 203A', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 204A', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 205B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 206B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 301B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 302B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 303B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 304B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 305B', sede_principal, tipo_salon, 50, 'N/A'),
-            ('SALON 306B', sede_principal, tipo_salon, 100, 'N/A'),
-            ('SALON 307B', sede_principal, tipo_salon, 100, 'N/A'),
-            ('SALON 308B', sede_principal, tipo_salon, 100, 'N/A'),
+            ('TORREON 1', sede_candelaria, tipo_torreon, 130, 'N/A'),
+            ('TORREON 2', sede_candelaria, tipo_torreon, 130, 'N/A'),
+            ('SALON 302A', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('SALON 303A', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('SALON 101B', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('SALON 102B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 103B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 104B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 105B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 106B', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('SALON 107B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALA COMPUTO 201B', sede_candelaria, tipo_sala_computo, 30, 'N/A'),
+            ('SALA COMPUTO 202B', sede_candelaria, tipo_sala_computo, 40, 'N/A'),
+            ('SALA COMPUTO 203B', sede_candelaria, tipo_sala_computo, 30, 'N/A'),
+            ('SALON 203A', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 204A', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 205B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 206B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 301B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 302B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 303B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 304B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 305B', sede_candelaria, tipo_salon, 50, 'N/A'),
+            ('SALON 306B', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('SALON 307B', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('SALON 308B', sede_candelaria, tipo_salon, 100, 'N/A'),
             
             # === SEDE CENTRO ===
             ('SALON 103B-CENTRO', sede_centro, tipo_salon, 60, 'N/A'),
