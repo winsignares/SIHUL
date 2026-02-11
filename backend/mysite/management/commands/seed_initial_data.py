@@ -19,6 +19,7 @@ correspondientes en cada método y ejecuta nuevamente el comando.
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from datetime import date
 from sedes.models import Sede
 from espacios.models import TipoEspacio, EspacioFisico
 from usuarios.models import Rol, Usuario
@@ -26,6 +27,7 @@ from facultades.models import Facultad
 from programas.models import Programa
 from asignaturas.models import Asignatura, AsignaturaPrograma
 from componentes.models import Componente, ComponenteRol
+from periodos.models import PeriodoAcademico
 
 
 class Command(BaseCommand):
@@ -48,6 +50,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS('\n[2/9] Estructura Académica'))
                 self.create_facultades()
                 self.create_programas()
+                self.create_periodos_academicos()
                 
                 # Paso 3: Asignaturas (tabla independiente)
                 self.stdout.write(self.style.SUCCESS('\n[3/9] Asignaturas'))
@@ -1632,6 +1635,40 @@ class Command(BaseCommand):
                 created_count += 1
         
         self.stdout.write(self.style.SUCCESS(f'    ✓ {created_count} componentes creados ({len(componentes_data)} totales)'))
+
+    def create_periodos_academicos(self):
+        """Crear periodos académicos"""
+        self.stdout.write('  → Creando periodos académicos...')
+        
+        periodos_data = [
+            {
+                'nombre': '2026-1',
+                'fecha_inicio': date(2026, 2, 2),
+                'fecha_fin': date(2026, 6, 22),
+                'activo': True
+            },
+            {
+                'nombre': '2026-2',
+                'fecha_inicio': date(2026, 7, 20),
+                'fecha_fin': date(2026, 11, 30),
+                'activo': False
+            },
+        ]
+        
+        created_count = 0
+        for periodo_data in periodos_data:
+            periodo, created = PeriodoAcademico.objects.get_or_create(
+                nombre=periodo_data['nombre'],
+                defaults={
+                    'fecha_inicio': periodo_data['fecha_inicio'],
+                    'fecha_fin': periodo_data['fecha_fin'],
+                    'activo': periodo_data['activo']
+                }
+            )
+            if created:
+                created_count += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'    ✓ {created_count} periodos académicos creados ({len(periodos_data)} totales)'))
 
     def create_componentes_rol(self):
         """Asignar componentes a roles con sus permisos"""
