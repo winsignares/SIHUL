@@ -19,7 +19,7 @@ correspondientes en cada método y ejecuta nuevamente el comando.
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from datetime import date
+from datetime import date, time
 from sedes.models import Sede
 from espacios.models import TipoEspacio, EspacioFisico
 from usuarios.models import Rol, Usuario
@@ -29,6 +29,7 @@ from asignaturas.models import Asignatura, AsignaturaPrograma
 from componentes.models import Componente, ComponenteRol
 from periodos.models import PeriodoAcademico
 from grupos.models import Grupo
+from horario.models import Horario
 
 
 class Command(BaseCommand):
@@ -82,8 +83,12 @@ class Command(BaseCommand):
                 self.create_componentes_rol()
                 
                 # Paso 10: Grupos académicos
-                self.stdout.write(self.style.SUCCESS('\n[10/10] Grupos Académicos'))
+                self.stdout.write(self.style.SUCCESS('\n[10/11] Grupos Académicos'))
                 self.create_grupos()
+                
+                # Paso 11: Horarios Sede Centro
+                self.stdout.write(self.style.SUCCESS('\n[11/11] Horarios Sede Centro'))
+                self.create_horarios_sede_centro()
                 
             self.stdout.write(self.style.SUCCESS('\n═══════════════════════════════════════'))
             self.stdout.write(self.style.SUCCESS('✓ DATOS CARGADOS EXITOSAMENTE'))
@@ -1992,3 +1997,725 @@ class Command(BaseCommand):
         
         total = len(grupos_data)
         self.stdout.write(self.style.SUCCESS(f'    ✓ {created_count} grupos creados, {skipped_count} omitidos ({total} totales)'))
+    
+    def create_horarios_sede_centro(self):
+        """Crear horarios para la sede centro"""
+        self.stdout.write('  → Creando horarios sede centro...')
+        
+        # Mapeo de días en español a formato consistente
+        dias_map = {
+            'LUNES': 'Lunes',
+            'MARTES': 'Martes',
+            'MIÉRCOLES': 'Miércoles',
+            'MIERCOLES': 'Miércoles',
+            'JUEVES': 'Jueves',
+            'VIERNES': 'Viernes',
+            'SÁBADO': 'Sábado',
+            'SABADO': 'Sábado',
+            'DOMINGO': 'Domingo'
+        }
+        
+        # Formato: (grupo, materia, profesor, dia, hora_inicio, hora_fin, espacio)
+        horarios_data = [
+            # ELECTIVA LAW AT THE EDGE
+            ('', 'ELECTIVA  LAW AT THE EDGE', 'ALEXANDER GONZÁLEZ', 'LUNES', '08:00:00', '09:00:00', 'SALON 501NB'),
+            
+            # Electiva: BASIC BUSSINESS ENGLISH
+            ('', 'Electiva: BASIC BUSSINESS ENGLISH', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '18:00:00', '19:00:00', 'I CONTADURIA AN'),
+            
+            # Electiva: INTERMEDIATE ACCOUNTING ENGLISH
+            ('', 'Electiva: INTERMEDIATE ACCOUNTING ENGLISH', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '20:00:00', '21:00:00', 'I CONTADURIA AN'),
+            
+            # /II CONTADURIA AN/II ADM. NEGOCIOS AN - Calculo
+            ('/II CONTADURIA AN/II ADM. NEGOCIOS AN', 'Calculo', 'Rocío Mercedes Duarte Angarita', 'MARTES', '20:00:00', '21:00:00', 'SALÓN 506NB'),
+            
+            # /II CONTADURIA AN/II ADM. NEGOCIOS AN - Epistemología y metodología de la investigación
+            ('/II CONTADURIA AN/II ADM. NEGOCIOS AN', 'Epistemología y metodología de la investigación', 'Milagros Del Carmen Villasmil Molero', 'MARTES', '18:00:00', '19:00:00', 'SALÓN 506NB'),
+            
+            # 1 Semestre grupo C - HISTORIA DE LA FILOSOFÍA
+            ('1 Semestre grupo C', 'HISTORIA DE LA FILOSOFÍA', 'CRISTÓBL ARTETA', 'LUNES', '10:00:00', '11:00:00', 'SALON 504NB'),
+            
+            # 1 Semestre grupo C - TEORÍA DEL ESTADO
+            ('1 Semestre grupo C', 'TEORÍA DEL ESTADO', 'LINDA NADER', 'LUNES', '08:00:00', '09:00:00', 'SALON 504NB'),
+            
+            # 1 Semestre grupo D - TEORÍA ECONÓMICA
+            ('1 Semestre grupo D', 'TEORÍA ECONÓMICA', 'GUILLERMO DE LA HOZ', 'VIERNES', '06:00:00', '07:00:00', 'SALON 504NB'),
+            
+            # 1 semestre E - HABILIDADES COMUNICATIVAS
+            ('1 semestre E', 'HABILIDADES COMUNICATIVAS', 'TATIANA POLO', 'MARTES', '08:00:00', '09:00:00', 'SALON 604NB'),
+            
+            # 1 semestre E - INTRODUCCIÓN AL DERECHO
+            ('1 semestre E', 'INTRODUCCIÓN AL DERECHO', 'GONZALO AGUILAR', 'LUNES', '11:00:00', '12:00:00', 'SALON 607NB'),
+            
+            # 1 semestre grupo AN - ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+            ('1 semestre grupo AN', 'ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA', 'YADIRA GARCÍA', 'LUNES', '08:00:00', '09:00:00', 'SALON 411NB'),
+            
+            # 1 semestre grupo AN - HABILIDADES COMUNICATIVAS
+            ('1 semestre grupo AN', 'HABILIDADES COMUNICATIVAS', 'ALEJANDRO BLANCO', 'MARTES', '18:00:00', '19:00:00', 'SALON 601NB'),
+            
+            # 1 semestre grupo AN - INTRODUCCIÓN AL DERECHO
+            ('1 semestre grupo AN', 'INTRODUCCIÓN AL DERECHO', 'OONA HERNÁNDEZ', 'LUNES', '10:00:00', '11:00:00', 'SALON 411NB'),
+            ('1 semestre grupo AN', 'INTRODUCCIÓN AL DERECHO', 'OONA HERNÁNDEZ', 'LUNES', '18:00:00', '19:00:00', 'SALON 601NB'),
+            
+            # 1 semestre grupo AN - TEORÍA ECONÓMICA
+            ('1 semestre grupo AN', 'TEORÍA ECONÓMICA', 'FRANCISCO POLO', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 601NB'),
+            
+            # 1 semestre grupo AN-1E - DERECHO ROMANO
+            ('1 semestre grupo AN-1E', 'DERECHO ROMANO', 'TATIANA POLO', 'LUNES', '07:00:00', '08:00:00', 'SALON 607NB'),
+            
+            # 1 semestre grupo AN-E - DERECHO ROMANO
+            ('1 semestre grupo AN-E', 'DERECHO ROMANO', 'TATIANA POLO', 'JUEVES', '06:00:00', '07:00:00', 'SALON 6121NB'),
+            
+            # 1 semestre grupo AN-E - TEORÍA DEL ESTADO
+            ('1 semestre grupo AN-E', 'TEORÍA DEL ESTADO', 'LINDA NADER', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 612NB'),
+            ('1 semestre grupo AN-E', 'TEORÍA DEL ESTADO', 'LINDA NADER', 'VIERNES', '06:00:00', '07:00:00', 'SALON 612NB'),
+            
+            # 1 semestre grupo B - DERECHO ROMANO
+            ('1 semestre grupo B', 'DERECHO ROMANO', 'TATIANA POLO', 'MIÉRCOLES', '07:00:00', '08:00:00', 'SALON 608NB'),
+            
+            # 1 semestre grupo B - TEORÍA DEL ESTADO
+            ('1 semestre grupo B', 'TEORÍA DEL ESTADO', 'LINDA NADER', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 608NB'),
+            
+            # 1 semestre grupo B - TEORÍA ECONÓMICA
+            ('1 semestre grupo B', 'TEORÍA ECONÓMICA', 'FRANCISCO POLO', 'VIERNES', '06:00:00', '07:00:00', 'SALON 411NB'),
+            
+            # 1 semestre grupo C - DERECHO ROMANO
+            ('1 semestre grupo C', 'DERECHO ROMANO', 'TATIANA POLO', 'VIERNES', '08:00:00', '09:00:00', 'SALON 503NB'),
+            
+            # 1 semestre grupo C - ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+            ('1 semestre grupo C', 'ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA', 'YADIRA GARCÍA', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 503NB'),
+            
+            # 1 semestre grupo C - TEORÍA DEL ESTADO
+            ('1 semestre grupo C', 'TEORÍA DEL ESTADO', 'LINDA NADER', 'MIÉRCOLES', '08:00:00', '09:00:00', 'SALON 503NB'),
+            
+            # 1 semestre grupo D - DERECHO ROMANO
+            ('1 semestre grupo D', 'DERECHO ROMANO', 'TATIANA POLO', 'LUNES', '10:00:00', '11:00:00', 'SALON 503NB'),
+            
+            # 1 semestre grupo D - INTRODUCCIÓN AL DERECHO
+            ('1 semestre grupo D', 'INTRODUCCIÓN AL DERECHO', 'OONA HERNÁNDEZ', 'LUNES', '08:00:00', '09:00:00', 'SALON 503NB'),
+            
+            # 1 semestre grupo E - ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+            ('1 semestre grupo E', 'ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA', 'GRETTY PÁVLOVICH', 'MARTES', '06:00:00', '07:00:00', 'SALÓN 612NB'),
+            
+            # 1 semestre grupo E - HISTORIA DE LA FILOSOFÍA
+            ('1 semestre grupo E', 'HISTORIA DE LA FILOSOFÍA', 'ALEXANDER GONZÁLEZ', 'VIERNES', '08:00:00', '09:00:00', 'SALON 6121NB'),
+            
+            # 1 semestre grupo E - INTRODUCCIÓN AL DERECHO
+            ('1 semestre grupo E', 'INTRODUCCIÓN AL DERECHO', 'GONZALO AGUILAR', 'JUEVES', '08:00:00', '09:00:00', 'SALON 6121NB'),
+            
+            # 10 Semestre Grupo A Diurno - DERECHO AMBIENTAL
+            ('10 Semestre Grupo A Diurno', 'DERECHO AMBIENTAL', 'JAIME BERMEJO', 'MIÉRCOLES', '08:00:00', '09:00:00', 'SALON 508NB'),
+            
+            # 10 Semestre Grupo A Diurno - ÉTICA II
+            ('10 Semestre Grupo A Diurno', 'ÉTICA II', 'OONA HERNÁNDEZ', 'VIERNES', '08:00:00', '09:00:00', 'SALÓN 416NB'),
+            
+            # 10 Semestre Grupo B Diurno - ÉTICA II
+            ('10 Semestre Grupo B Diurno', 'ÉTICA II', 'OONA HERNÁNDEZ', 'LUNES', '13:00:00', '14:00:00', 'SALON 611NB'),
+            
+            # 10 Semestre grupo B - RESPONSABILIDAD CIVIL
+            ('10 Semestre grupo B', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'VIERNES', '06:00:00', '07:00:00', 'SALON 404NB'),
+            
+            # 10 semestre Grupo A Diurno - FINANZAS PÚBLICAS
+            ('10 semestre Grupo A Diurno', 'FINANZAS PÚBLICAS', 'FELIPE HERAS', 'LUNES', '10:00:00', '11:00:00', 'SALON 516NB'),
+            ('10 semestre Grupo A Diurno', 'FINANZAS PÚBLICAS', 'FELIPE HERAS', 'MARTES', '10:00:00', '11:00:00', 'SALON 516NB'),
+            
+            # 10 semestre Grupo A Diurno - RESPONSABILIDAD CIVIL
+            ('10 semestre Grupo A Diurno', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'LUNES', '06:00:00', '07:00:00', 'SALON 516NB'),
+            ('10 semestre Grupo A Diurno', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'MARTES', '06:00:00', '07:00:00', 'SALON 516NB'),
+            
+            # 10 semestre grupo B - DERECHO AMBIENTAL
+            ('10 semestre grupo B', 'DERECHO AMBIENTAL', 'JAIME BERMEJO', 'MARTES', '10:00:00', '11:00:00', 'SALÓN 612NB'),
+            
+            # 10 semestre grupo B - FINANZAS PÚBLICAS
+            ('10 semestre grupo B', 'FINANZAS PÚBLICAS', 'FELIPE HERAS', 'MARTES', '08:00:00', '09:00:00', 'SALÓN 612NB'),
+            
+            # 10 semestre grupo B - RESPONSABILIDAD CIVIL
+            ('10 semestre grupo B', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 516NB'),
+            
+            # 10 semestre grupo B Diurno - FINANZAS PÚBLICAS
+            ('10 semestre grupo B Diurno', 'FINANZAS PÚBLICAS', 'FELIPE HERAS', 'LUNES', '08:00:00', '09:00:00', 'SALON 615NB'),
+            
+            # 2 Semestre grupo A - CIENCIA POLITICA
+            ('2 Semestre grupo A', 'CIENCIA POLITICA', 'ALEJANDRO BLANCO', 'LUNES', '15:00:00', '16:00:00', 'SALON 507NB'),
+            
+            # 2 Semestre grupo A - DERECHOS HUMANOS Y D.I.H.
+            ('2 Semestre grupo A', 'DERECHOS HUMANOS Y D.I.H.', 'MAGDA DJANON', 'LUNES', '10:00:00', '11:00:00', 'SALON 507NB'),
+            
+            # 2 Semestre grupo A - SOCIOLOGÍA GENERAL Y JURÍDICA
+            ('2 Semestre grupo A', 'SOCIOLOGÍA GENERAL Y JURÍDICA', 'YOLANDA FANDIÑO', 'VIERNES', '09:00:00', '10:00:00', 'SALON 504NB'),
+            
+            # 3 Semestre grupo B - CONSTITUCIONAL COLOMBIANO
+            ('3 Semestre grupo B', 'CONSTITUCIONAL COLOMBIANO', '', 'LUNES', '14:00:00', '15:00:00', 'SALON 508NB'),
+            
+            # 3 Semestre grupo B - LÓGICA JURÍDICA
+            ('3 Semestre grupo B', 'LÓGICA JURÍDICA', 'YADIRA GARCÍA', 'LUNES', '10:00:00', '11:00:00', 'SALON 508NB'),
+            
+            # 3 Semestre grupo C - CIVIL BIENES
+            ('3 Semestre grupo C', 'CIVIL BIENES', 'BRENDA VALERO', 'MIÉRCOLES', '13:00:00', '14:00:00', 'SALON 504NB'),
+            
+            # 3 Semestre grupo C - INVESTIGACIÓN I
+            ('3 Semestre grupo C', 'INVESTIGACIÓN I', 'ALEJANDRO BLANCO', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 504NB'),
+            
+            # 3 Semestre grupo C - LÓGICA JURÍDICA
+            ('3 Semestre grupo C', 'LÓGICA JURÍDICA', 'YADIRA GARCÍA', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 504NB'),
+            
+            # 3 Semestre grupo D - CIVIL BIENES
+            ('3 Semestre grupo D', 'CIVIL BIENES', 'BRENDA VALERO', 'LUNES', '13:00:00', '14:00:00', 'SALON 504NB'),
+            
+            # 3 semestre grupo A - CONSTITUCIONAL COLOMBIANO
+            ('3 semestre grupo A', 'CONSTITUCIONAL COLOMBIANO', 'JHONNY MENDOZA', 'MARTES', '18:00:00', '19:00:00', 'SALON 613NB'),
+            ('3 semestre grupo A', 'CONSTITUCIONAL COLOMBIANO', 'JHONNY MENDOZA', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 613NB'),
+            
+            # 3 semestre grupo A - LÓGICA JURÍDICA
+            ('3 semestre grupo A', 'LÓGICA JURÍDICA', 'YADIRA GARCÍA', 'LUNES', '18:00:00', '19:00:00', 'SALON 613NB'),
+            
+            # 3 semestre grupo A - TEORÍA DEL DELITO
+            ('3 semestre grupo A', 'TEORÍA DEL DELITO', 'CARLOS JIMÉNEZ', 'JUEVES', '18:00:00', '19:00:00', 'SALON 613NB'),
+            ('3 semestre grupo A', 'TEORÍA DEL DELITO', 'CARLOS JIMÉNEZ', 'VIERNES', '18:00:00', '19:00:00', 'SALON 514NB'),
+            
+            # 3 semestre grupo AB - CIVIL BIENES  3AB
+            ('3 semestre grupo AB', 'CIVIL BIENES  3AB', 'CARLOS ESPINEL', 'LUNES', '06:00:00', '07:00:00', 'SALON 503NB'),
+            ('3 semestre grupo AB', 'CIVIL BIENES  3AB', 'CARLOS ESPINEL', 'MARTES', '06:00:00', '07:00:00', 'SALON 503NB'),
+            
+            # 3 semestre grupo AD - INVESTIGACIÓN I 3AD
+            ('3 semestre grupo AD', 'INVESTIGACIÓN I 3AD', 'ALEJANDRO BLANCO', 'VIERNES', '06:00:00', '07:00:00', 'SALON 503NB'),
+            
+            # 3 semestre grupo B - INVESTIGACIÓN I
+            ('3 semestre grupo B', 'INVESTIGACIÓN I', 'PATRICIA MORRIS', 'MARTES', '08:00:00', '09:00:00', 'SALON 503NB'),
+            
+            # 3 semestre grupo C - CIVIL BIENES
+            ('3 semestre grupo C', 'CIVIL BIENES', 'BRENDA VALERO', 'VIERNES', '10:00:00', '11:00:00', 'SALON 507NB'),
+            
+            # 3 semestre grupo C - INVESTIGACIÓN I
+            ('3 semestre grupo C', 'INVESTIGACIÓN I', 'ALEJANDRO BLANCO', 'VIERNES', '08:00:00', '09:00:00', 'SALON 507NB'),
+            
+            # 3 semestre grupo D - CIVIL BIENES
+            ('3 semestre grupo D', 'CIVIL BIENES', 'BRENDA VALERO', 'VIERNES', '08:00:00', '09:00:00', 'SALON 415NB'),
+            
+            # 4 semestre grupo A - DERECHO INTERNACIONAL PÚBLICO
+            ('4 semestre grupo A', 'DERECHO INTERNACIONAL PÚBLICO', 'GRETTY PAVLOVICH', 'MARTES', '08:00:00', '09:00:00', 'SALON 511NB'),
+            
+            # 4 semestre grupo A - INVESTIGACIÓN II
+            ('4 semestre grupo A', 'INVESTIGACIÓN II', 'ALEJANDRO BLANCO', 'LUNES', '10:00:00', '11:00:00', 'SALON 511NB'),
+            ('4 semestre grupo A', 'INVESTIGACIÓN II', 'ALEJANDRO BLANCO', 'MIÉRCOLES', '08:00:00', '09:00:00', 'SALON 511NB'),
+            
+            # 4 semestre grupo A - LABORAL INDIVIDUAL Y PRESTACIONAL
+            ('4 semestre grupo A', 'LABORAL INDIVIDUAL Y PRESTACIONAL', 'LILIA CEDEÑO', 'MARTES', '13:00:00', '14:00:00', 'SALON 511NB'),
+            ('4 semestre grupo A', 'LABORAL INDIVIDUAL Y PRESTACIONAL', 'LILIA CEDEÑO', 'JUEVES', '10:00:00', '11:00:00', 'SALON 511NB'),
+            
+            # 4 semestre grupo A - SOLUCIÓN ALTERNATIVA DE CONFLICTOS
+            ('4 semestre grupo A', 'SOLUCIÓN ALTERNATIVA DE CONFLICTOS', 'TATIANA POLO', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 511NB'),
+            ('4 semestre grupo A', 'SOLUCIÓN ALTERNATIVA DE CONFLICTOS', 'TATIANA POLO', 'VIERNES', '06:00:00', '07:00:00', 'SALON 511NB'),
+            
+            # 4 semestre grupo A - TEORÍA GENERAL DEL PROCESO
+            ('4 semestre grupo A', 'TEORÍA GENERAL DEL PROCESO', 'INGRID PEREZ', 'MIÉRCOLES', '13:00:00', '14:00:00', 'SALON 511NB'),
+            ('4 semestre grupo A', 'TEORÍA GENERAL DEL PROCESO', 'INGRID PEREZ', 'VIERNES', '08:00:00', '09:00:00', 'SALON 511NB'),
+            
+            # 4 semestre grupo A - TUTELA PENAL DE LOS BIENES JURIDÍCOS I
+            ('4 semestre grupo A', 'TUTELA PENAL DE LOS BIENES JURIDÍCOS I', 'EDGAR DEVIA', 'JUEVES', '06:00:00', '07:00:00', 'SALON 511NB'),
+            
+            # 405NB - Electiva de profundización (B): Diagnóstico Forense
+            ('405NB', 'Electiva de profundización (B):', 'Miriam Linero', 'JUEVES', '16:00:00', '17:00:00', 'SALON 405NB'),
+            
+            # 5 Semestre Grupo B - ADMINISTRATIVO GENERAL
+            ('5 Semestre Grupo B', 'ADMINISTRATIVO GENERAL', 'EDUARDO CERRA', 'JUEVES', '14:00:00', '15:00:00', 'SALON 611NB'),
+            
+            # 5 Semestre Grupo B - INVESTIGACIÓN III
+            ('5 Semestre Grupo B', 'INVESTIGACIÓN III', 'YOLANDA FANDIÑO', 'MARTES', '11:00:00', '12:00:00', 'SALON 611NB'),
+            ('5 Semestre Grupo B', 'INVESTIGACIÓN III', 'YOLANDA FANDIÑO', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 611NB'),
+            
+            # 5 Semestre Grupo B - OBLIGACIONES
+            ('5 Semestre Grupo B', 'OBLIGACIONES', 'JAVIER CRESPO', 'MARTES', '06:00:00', '07:00:00', 'SALON 611NB'),
+            
+            # 5 Semestre Grupo B - PROCESAL PENAL I
+            ('5 Semestre Grupo B', 'PROCESAL PENAL I', 'EDGAR DEVIA', 'JUEVES', '09:00:00', '10:00:00', 'SALON 611NB'),
+            
+            # 5 Semestre Grupo D - ELECTIVA V CONFLICTOS CONTEMPORÁNEOS
+            ('5 Semestre Grupo D', 'ELECTIVA V CONFLICTOS CONTEMPORÁNEOS', 'RAFAEL RODRÍGUEZ', 'MARTES', '10:00:00', '11:00:00', 'SALON 508NB'),
+            
+            # 5 Semestre grupo A - HERMENÉUTICA JURÍDICA (Diurno)
+            ('5 Semestre grupo A', 'HERMENÉUTICA JURÍDICA', 'PATRICIA MORRIS', 'MARTES', '10:00:00', '11:00:00', 'SALON 504NB'),
+            
+            # 5 Semestre grupo C - ADMINISTRATIVO GENERAL
+            ('5 Semestre grupo C', 'ADMINISTRATIVO GENERAL', 'JAIME BERMEJO', 'LUNES', '14:00:00', '15:00:00', 'SALON 604NB'),
+            
+            # 5 Semestre grupo C - OBLIGACIONES
+            ('5 Semestre grupo C', 'OBLIGACIONES', 'CARLOS ESPINEL', 'VIERNES', '10:00:00', '11:00:00', 'SALON 604NB'),
+            
+            # 5 Semestre grupo C - PROCESAL PENAL I
+            ('5 Semestre grupo C', 'PROCESAL PENAL I', 'DAVID GÜETTE', 'VIERNES', '06:00:00', '07:00:00', 'SALON 604NB'),
+            
+            # 5 Semestre grupo D - INVESTIGACIÓN III
+            ('5 Semestre grupo D', 'INVESTIGACIÓN III', 'YOLANDA FANDIÑO', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 604NB'),
+            
+            # 5 Semestre grupo D - OBLIGACIONES
+            ('5 Semestre grupo D', 'OBLIGACIONES', 'CARLOS ESPINEL', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 604NB'),
+            
+            # 5 Semestre grupo D - PROCESAL PENAL I
+            ('5 Semestre grupo D', 'PROCESAL PENAL I', 'DAVID GÜETTE', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 604NB'),
+            
+            # 5 semestre GRUPO D - TUTELA PENAL DE LOS BIENES JURÍDICOS II
+            ('5 semestre GRUPO D', 'TUTELA PENAL DE LOS BIENES JURÍDICOS II', 'LUIS CASTILLO', 'LUNES', '14:00:00', '15:00:00', 'SALON 615NB'),
+            
+            # 5 semestre Grupo D - INVESTIGACIÓN III
+            ('5 semestre Grupo D', 'INVESTIGACIÓN III', 'YOLANDA FANDIÑO', 'MARTES', '14:00:00', '15:00:00', 'SALON 516NB'),
+            
+            # 5 semestre grupo A - ADMINISTRATIVO GENERAL
+            ('5 semestre grupo A', 'ADMINISTRATIVO GENERAL', 'JAIME BERMEJO', 'JUEVES', '18:00:00', '19:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo A - DERECHO INTERNACIONAL PRIVADO
+            ('5 semestre grupo A', 'DERECHO INTERNACIONAL PRIVADO', 'JUAN CARLOS DE LOS RÍOS', 'VIERNES', '18:00:00', '19:00:00', 'SALON 504NB'),
+            
+            # 5 semestre grupo A - HERMENÉUTICA JURÍDICA
+            ('5 semestre grupo A', 'HERMENÉUTICA JURÍDICA', 'PATRICIA MORRIS', 'MARTES', '06:00:00', '07:00:00', 'SALON 603NB'),
+            ('5 semestre grupo A', 'HERMENÉUTICA JURÍDICA', 'PATRICIA MORRIS', 'VIERNES', '07:00:00', '08:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo A - INVESTIGACIÓN III
+            ('5 semestre grupo A', 'INVESTIGACIÓN III', 'YOLANDA FANDIÑO', 'LUNES', '18:00:00', '19:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo A - OBLIGACIONES
+            ('5 semestre grupo A', 'OBLIGACIONES', 'CARLOS ESPINEL', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 603NB'),
+            ('5 semestre grupo A', 'OBLIGACIONES', 'CARLOS ESPINEL', 'JUEVES', '06:00:00', '07:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo A - PROCESAL PENAL I
+            ('5 semestre grupo A', 'PROCESAL PENAL I', 'DAVID GÜETTE', 'MARTES', '18:00:00', '19:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo A - TUTELA PENAL DE LOS BIENES JURÍDICOS II
+            ('5 semestre grupo A', 'TUTELA PENAL DE LOS BIENES JURÍDICOS II', 'JUAN CARLOS GUTIÉRREZ', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 103B'),
+            
+            # 5 semestre grupo B - ADMINISTRATIVO GENERAL
+            ('5 semestre grupo B', 'ADMINISTRATIVO GENERAL', 'EDUARDO CERRA', 'LUNES', '14:00:00', '15:00:00', 'SALON 608NB'),
+            
+            # 5 semestre grupo B - HERMENÉUTICA JURÍDICA
+            ('5 semestre grupo B', 'HERMENÉUTICA JURÍDICA', 'PATRICIA MORRIS', 'LUNES', '10:00:00', '11:00:00', 'SALON 608NB'),
+            
+            # 5 semestre grupo B - TUTELA PENAL DE LOS BIENES JURÍDICOS II
+            ('5 semestre grupo B', 'TUTELA PENAL DE LOS BIENES JURÍDICOS II', 'JUAN CARLOS GUTIÉRREZ', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 103B'),
+            
+            # 5 semestre grupo C - ELECTIVA V CONFLICTOS CONTEMPORÁNEOS
+            ('5 semestre grupo C', 'ELECTIVA V CONFLICTOS CONTEMPORÁNEOS', 'RAFAEL RODRÍGUEZ', 'LUNES', '08:00:00', '09:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo C - OBLIGACIONES
+            ('5 semestre grupo C', 'OBLIGACIONES', 'CARLOS ESPINEL', 'LUNES', '10:00:00', '11:00:00', 'SALON 603NB'),
+            
+            # 5 semestre grupo C - TUTELA PENAL DE LOS BIENES JURÍDICOS II
+            ('5 semestre grupo C', 'TUTELA PENAL DE LOS BIENES JURÍDICOS II', 'JUAN CARLOS GUTIÉRREZ', 'MARTES', '06:00:00', '07:00:00', 'SALON 103B'),
+            
+            # 5 semestre grupo D - DERECHO INTERNACIONAL PRIVADO
+            ('5 semestre grupo D', 'DERECHO INTERNACIONAL PRIVADO', 'JUAN CARLOS DE LOS RÍOS', 'MARTES', '06:00:00', '07:00:00', 'SALON 508NB'),
+            
+            # 5. Semestre grupo D - ADMINISTRATIVO GENERAL
+            ('5. Semestre grupo D', 'ADMINISTRATIVO GENERAL', 'JAIME BERMEJO', 'VIERNES', '10:00:00', '11:00:00', 'SALON 603NB'),
+            
+            # 5. Semestre grupo D - OBLIGACIONES
+            ('5. Semestre grupo D', 'OBLIGACIONES', 'CARLOS ESPINEL', 'VIERNES', '08:00:00', '09:00:00', 'SALON 603NB'),
+            
+            # 6 ADMIN NEGOCIOS CD - Finanzas internacionales
+            ('6 ADMIN NEGOCIOS CD', 'Finanzas internacionales', 'Winston Fontalvo Cerpa', 'LUNES', '18:00:00', '19:00:00', 'SALÓN 410 NB'),
+            ('6 ADMIN NEGOCIOS CD', 'Finanzas internacionales', 'Winston Fontalvo Cerpa', 'MARTES', '18:00:00', '19:00:00', 'SALÓN 514NB'),
+            
+            # 6 ADMIN NEGOCIOS CD - Formulación y gestión de proyectos
+            ('6 ADMIN NEGOCIOS CD', 'Formulación y gestión de proyectos', 'Danilo Enrique Torres Pimiento', 'VIERNES', '19:00:00', '20:00:00', 'SALÓN 103B'),
+            
+            # 6 ADMIN NEGOCIOS CD - Gestión de importaciones
+            ('6 ADMIN NEGOCIOS CD', 'Gestión de importaciones', 'Maribel Cerro Camera', 'MARTES', '20:00:00', '21:00:00', 'SALÓN 514NB'),
+            
+            # 6 ADMIN NEGOCIOS CD - Gestión del transporte internacional
+            ('6 ADMIN NEGOCIOS CD', 'Gestión del transporte internacional', 'Roberto Meisel Lanner', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALÓN 514NB'),
+            
+            # 6 ADMIN NEGOCIOS CD - Investigación de mercados
+            ('6 ADMIN NEGOCIOS CD', 'Investigación de mercados', 'José Rafael Simancas Trujillo', 'LUNES', '19:00:00', '20:00:00', 'SALÓN 410NB'),
+            ('6 ADMIN NEGOCIOS CD', 'Investigación de mercados', 'José Rafael Simancas Trujillo', 'MIÉRCOLES', '20:00:00', '21:00:00', 'SALÓN 514NB'),
+            
+            # 6 Semestre grupo A - PROCESAL CIVIL GENERAL (Diurno)
+            ('6 Semestre grupo A', 'PROCESAL CIVIL GENERAL', 'NUBIA MARRUGO', 'LUNES', '08:00:00', '09:00:00', 'SALÓN 616NB'),
+            
+            # 6 semestre grupo A - ADMINISTRATIVO COLOMBIANO
+            ('6 semestre grupo A', 'ADMINISTRATIVO COLOMBIANO', 'JHONNY MENDOZA', 'LUNES', '14:00:00', '15:00:00', 'SALON 616NB'),
+            ('6 semestre grupo A', 'ADMINISTRATIVO COLOMBIANO', 'JHONNY MENDOZA', 'MARTES', '11:00:00', '12:00:00', 'SALON 616NB'),
+            
+            # 6 semestre grupo A - ARGUMENTACIÓN JURÍDICA
+            ('6 semestre grupo A', 'ARGUMENTACIÓN JURÍDICA', 'PATRICIA MORRIS', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 616NB'),
+            
+            # 6 semestre grupo A - INVESTIGACIÓN IV
+            ('6 semestre grupo A', 'INVESTIGACIÓN IV', 'YOLANDA FANDIÑO', 'MARTES', '09:00:00', '10:00:00', 'SALON 616NB'),
+            
+            # 6 semestre grupo A - LABORAL COLECTIVO
+            ('6 semestre grupo A', 'LABORAL COLECTIVO', 'FRANCISCO BUSTAMANTE', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 616NB'),
+            
+            # 6 semestre grupo A - PROCESAL CIVIL GENERAL
+            ('6 semestre grupo A', 'PROCESAL CIVIL GENERAL', 'NUBIA MARRUGO', 'MARTES', '14:00:00', '15:00:00', 'SALON 616NB'),
+            
+            # 6 semestre grupo A - PROCESAL PENAL II
+            ('6 semestre grupo A', 'PROCESAL PENAL II', 'RICARDO MÉNDEZ', 'VIERNES', '06:00:00', '07:00:00', 'SALON 616NB'),
+            
+            # 6. Semestre grupo A - INVESTIGACIÓN IV
+            ('6. Semestre grupo A', 'INVESTIGACIÓN IV', 'YOLANDA FANDIÑO', 'LUNES', '10:00:00', '11:00:00', 'SALON 616NB'),
+            
+            # 7 ADMIN NEG FN - OPTATIVA II . INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES
+            ('7 ADMIN NEG FN', 'OPTATIVA II . INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES', 'Danilo Enrique Torres Pimiento', 'JUEVES', '07:00:00', '08:00:00', 'SALÓN 408NB'),
+            
+            # 7 Semestre Grupo C - CONTRATOS
+            ('7 Semestre Grupo C', 'CONTRATOS', 'RAFAEL FIERRO', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALON 611NB'),
+            
+            # 7 Semestre Grupo C - FAMILIA, INFANCIA Y ADOLESCENCIA
+            ('7 Semestre Grupo C', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'PEDRO ARIAS', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 611NB'),
+            
+            # 7 Semestre grupo A - CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+            ('7 Semestre grupo A', 'CRIMINOLOGÍA Y POLÍTICA CRIMINAL', 'RICARDO MÉNDEZ', 'VIERNES', '18:00:00', '19:00:00', 'SALÓN 411NB'),
+            
+            # 7 Semestre grupo A - FAMILIA, INFANCIA Y ADOLESCENCIA
+            ('7 Semestre grupo A', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'RICARDO JIMÉNEZ', 'MARTES', '06:00:00', '07:00:00', 'SALON 607NB'),
+            
+            # 7 Semestre grupo A - FILOSOFÍA DEL DERECHO
+            ('7 Semestre grupo A', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 607NB'),
+            ('7 Semestre grupo A', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'JUEVES', '06:00:00', '07:00:00', 'SALÓN 407NB'),
+            ('7 Semestre grupo A', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'VIERNES', '06:00:00', '07:00:00', 'SALÓN 407NB'),
+            
+            # 7 Semestre grupo B - CONTRATOS
+            ('7 Semestre grupo B', 'CONTRATOS', 'RAFAEL FIERRO', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 411NB'),
+            ('7 Semestre grupo B', 'CONTRATOS', 'RAFAEL FIERRO', 'JUEVES', '10:00:00', '11:00:00', 'SALÓN 411NB'),
+            
+            # 7 Semestre grupo B - FAMILIA, INFANCIA Y ADOLESCENCIA
+            ('7 Semestre grupo B', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'JUAN CARLOS DE LOS RÍOS', 'LUNES', '10:00:00', '11:00:00', 'SALÓN 412NB'),
+            ('7 Semestre grupo B', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'JUAN CARLOS DE LOS RÍOS', 'JUEVES', '06:00:00', '07:00:00', 'SALÓN 411NB'),
+            
+            # 7 Semestre grupo B - FILOSOFÍA DEL DERECHO
+            ('7 Semestre grupo B', 'FILOSOFÍA DEL DERECHO', 'CRISTÓBAL ARTETA', 'LUNES', '08:00:00', '09:00:00', 'SALÓN 412NB'),
+            
+            # 7 Semestre grupo B - PROBATORIO
+            ('7 Semestre grupo B', 'PROBATORIO', 'EDUARDO LASCANO', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 412NB'),
+            ('7 Semestre grupo B', 'PROBATORIO', 'EDUARDO LASCANO', 'MARTES', '15:00:00', '16:00:00', 'SALÓN 411NB'),
+            
+            # 7 Semestre grupo B - TÍTULOS VALORES
+            ('7 Semestre grupo B', 'TÍTULOS VALORES', 'MARLYS HERAZO', 'MARTES', '10:00:00', '11:00:00', 'SALÓN 4111NB'),
+            ('7 Semestre grupo B', 'TÍTULOS VALORES', 'MARLYS HERAZO', 'JUEVES', '08:00:00', '09:00:00', 'SALÓN 411NB'),
+            
+            # 7 Semestre grupo C - FILOSOFÍA DEL DERECHO
+            ('7 Semestre grupo C', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'LUNES', '06:00:00', '07:00:00', 'SALON 604NB'),
+            
+            # 7 Semestre grupo C - PROBATORIO
+            ('7 Semestre grupo C', 'PROBATORIO', 'EDUARDO LASCANO', 'LUNES', '09:00:00', '10:00:00', 'SALON 604NB'),
+            
+            # 7 semestre grupo A - CONTRATOS
+            ('7 semestre grupo A', 'CONTRATOS', 'CARLOS ESPINEL', 'JUEVES', '18:00:00', '19:00:00', 'SALON 516 NB'),
+            
+            # 7 semestre grupo A - FILOSOFÍA DEL DERECHO
+            ('7 semestre grupo A', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON  409 BN'),
+            
+            # 7 semestre grupo A - PROBATORIO
+            ('7 semestre grupo A', 'PROBATORIO', 'RAFAEL FIERRO', 'LUNES', '18:00:00', '19:00:00', 'SALON 516 NB'),
+            ('7 semestre grupo A', 'PROBATORIO', 'RAFAEL FIERRO', 'MARTES', '18:00:00', '19:00:00', 'SALON 516 NB'),
+            
+            # 7 semestre grupo C - CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+            ('7 semestre grupo C', 'CRIMINOLOGÍA Y POLÍTICA CRIMINAL', 'GONZALO AGUILAR', 'MARTES', '11:00:00', '12:00:00', 'SALON 608NB'),
+            
+            # 7 semestre grupo C - FAMILIA, INFANCIA Y ADOLESCENCIA
+            ('7 semestre grupo C', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'PEDRO ARIAS', 'JUEVES', '14:00:00', '15:00:00', 'SALON 512 NB'),
+            
+            # 7 semestre grupo C - FILOSOFÍA DEL DERECHO
+            ('7 semestre grupo C', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'MARTES', '08:00:00', '09:00:00', 'SALON 608NB'),
+            
+            # 7 semestre grupo C - PROBATORIO
+            ('7 semestre grupo C', 'PROBATORIO', 'EDUARDO LASCANO', 'MIÉRCOLES', '09:00:00', '10:00:00', 'SALON 516 NB'),
+            
+            # 7 semestre grupo C - TÍTULOS VALORES
+            ('7 semestre grupo C', 'TÍTULOS VALORES', 'MARLYS HERAZO', 'MARTES', '06:00:00', '07:00:00', 'SALON 608NB'),
+            ('7 semestre grupo C', 'TÍTULOS VALORES', 'MARLYS HERAZO', 'JUEVES', '10:00:00', '11:00:00', 'SALON 512NB'),
+            
+            # 7 semestre grupo D - CONTRATOS
+            ('7 semestre grupo D', 'CONTRATOS', 'RAFAEL FIERRO', 'LUNES', '08:00:00', '09:00:00', 'SALON 515NB'),
+            ('7 semestre grupo D', 'CONTRATOS', 'RAFAEL FIERRO', 'MIÉRCOLES', '08:00:00', '09:00:00', 'SALON 515NB'),
+            
+            # 7 semestre grupo D - CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+            ('7 semestre grupo D', 'CRIMINOLOGÍA Y POLÍTICA CRIMINAL', 'GONZALO AGUILAR', 'LUNES', '13:00:00', '14:00:00', 'SALON 515NB'),
+            
+            # 7 semestre grupo D - FAMILIA, INFANCIA Y ADOLESCENCIA
+            ('7 semestre grupo D', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'PEDRO ARIAS', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 515NB'),
+            ('7 semestre grupo D', 'FAMILIA, INFANCIA Y ADOLESCENCIA', 'PEDRO ARIAS', 'JUEVES', '06:00:00', '07:00:00', 'SALON 516 NB'),
+            
+            # 7 semestre grupo D - FILOSOFÍA DEL DERECHO
+            ('7 semestre grupo D', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'LUNES', '10:00:00', '11:00:00', 'SALON 515NB'),
+            ('7 semestre grupo D', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'MIÉRCOLES', '10:00:00', '11:00:00', 'SALON 515NB'),
+            
+            # 7 semestre grupo D - PROBATORIO
+            ('7 semestre grupo D', 'PROBATORIO', 'EDUARDO LASCANO', 'MARTES', '10:00:00', '11:00:00', 'SALON 515NB'),
+            ('7 semestre grupo D', 'PROBATORIO', 'EDUARDO LASCANO', 'JUEVES', '09:00:00', '10:00:00', 'SALON 516 NB'),
+            
+            # 7 semestre grupo D - TÍTULOS VALORES
+            ('7 semestre grupo D', 'TÍTULOS VALORES', 'MARLYS HERAZO', 'MARTES', '08:00:00', '09:00:00', 'SALON 515NB'),
+            ('7 semestre grupo D', 'TÍTULOS VALORES', 'MARLYS HERAZO', 'JUEVES', '14:00:00', '15:00:00', 'SALON 516 NB'),
+            
+            # 8 Semestre grupo A - CRIMINALÍSTICA Y CIENCIA FORENSE
+            ('8 Semestre grupo A', 'CRIMINALÍSTICA Y CIENCIA FORENSE', 'CARLOS NEWBALL', 'JUEVES', '06:00:00', '07:00:00', 'SALON 504NB'),
+            
+            # 8 Semestre grupo A - LABORAL ADMINISTRATIVO
+            ('8 Semestre grupo A', 'LABORAL ADMINISTRATIVO', 'FRANCISCO BUSTAMANTE', 'MARTES', '06:00:00', '07:00:00', 'SALÓN 412NB'),
+            
+            # 8 Semestre grupo A - PROCESAL CIVIL ESPECIAL Y DE FAMILIA
+            ('8 Semestre grupo A', 'PROCESAL CIVIL ESPECIAL Y DE FAMILIA', 'NUBIA MARRUGO', 'LUNES', '10:00:00', '11:00:00', 'SALÓN 404NB'),
+            ('8 Semestre grupo A', 'PROCESAL CIVIL ESPECIAL Y DE FAMILIA', 'NUBIA MARRUGO', 'JUEVES', '12:00:00', '13:00:00', 'SALON 504NB'),
+            
+            # 8 Semestre grupo A - PROCESAL LABORAL
+            ('8 Semestre grupo A', 'PROCESAL LABORAL', 'LILIA CEDEÑO', 'MARTES', '10:00:00', '11:00:00', 'SALÓN 412NB'),
+            ('8 Semestre grupo A', 'PROCESAL LABORAL', 'LILIA CEDEÑO', 'MIÉRCOLES', '13:00:00', '14:00:00', 'SALÓN 415NB'),
+            
+            # 8 Semestre grupo A - SEGURIDAD SOCIAL
+            ('8 Semestre grupo A', 'SEGURIDAD SOCIAL', 'RAFAEL RODRÍGUEZ', 'LUNES', '13:00:00', '14:00:00', 'SALÓN 404NB'),
+            ('8 Semestre grupo A', 'SEGURIDAD SOCIAL', 'RAFAEL RODRÍGUEZ', 'MIÉRCOLES', '08:00:00', '09:00:00', 'SALÓN 415NB'),
+            
+            # 8 Semestre grupo B - LABORAL ADMINISTRATIVO
+            ('8 Semestre grupo B', 'LABORAL ADMINISTRATIVO', 'FRANCISCO BUSTAMANTE', 'VIERNES', '06:00:00', '07:00:00', 'SALÓN 403NB'),
+            
+            # 8 semestre grupo A - PROCESAL ADMINISTRATIVO I
+            ('8 semestre grupo A', 'PROCESAL ADMINISTRATIVO I', 'LUIS CERRA', 'VIERNES', '06:00:00', '07:00:00', 'SALON 508NB'),
+            
+            # 8 semestre grupo B - CRIMINALÍSTICA Y CIENCIA FORENSE
+            ('8 semestre grupo B', 'CRIMINALÍSTICA Y CIENCIA FORENSE', 'CARLOS NEWBALL', 'MIÉRCOLES', '07:00:00', '08:00:00', 'SALON 512NB'),
+            
+            # 8 semestre grupo B - PROCESAL ADMINISTRATIVO I
+            ('8 semestre grupo B', 'PROCESAL ADMINISTRATIVO I', 'LUIS CERRA', 'JUEVES', '06:00:00', '07:00:00', 'SALON 515NB'),
+            
+            # 8 semestre grupo B - PROCESAL CIVIL ESPECIAL Y DE FAMILIA
+            ('8 semestre grupo B', 'PROCESAL CIVIL ESPECIAL Y DE FAMILIA', 'NUBIA MARRUGO', 'LUNES', '12:00:00', '13:00:00', 'SALON 512NB'),
+            ('8 semestre grupo B', 'PROCESAL CIVIL ESPECIAL Y DE FAMILIA', 'NUBIA MARRUGO', 'MARTES', '12:00:00', '13:00:00', 'SALON 512NB'),
+            
+            # 8 semestre grupo B - PROCESAL LABORAL
+            ('8 semestre grupo B', 'PROCESAL LABORAL', 'DAVID GUETTE', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALON 512NB'),
+            
+            # 8 semestre grupo B - SEGURIDAD SOCIAL
+            ('8 semestre grupo B', 'SEGURIDAD SOCIAL', 'RAFAEL RODRÍGUEZ', 'MARTES', '07:00:00', '08:00:00', 'SALON 512NB'),
+            ('8 semestre grupo B', 'SEGURIDAD SOCIAL', 'RAFAEL RODRÍGUEZ', 'JUEVES', '11:00:00', '12:00:00', 'SALON 515NB'),
+            
+            # 9 Semestre Diurno - OPTATIVA II GESTIÓN DEL CONFLICO EN LO PÚBLICO
+            ('9 Semestre Diurno', 'OPTATIVA II GESTIÓN DEL CONFLICO EN LO PÚBLICO', 'LINDA NADER', 'VIERNES', '10:00:00', '11:00:00', 'SALON 611NB'),
+            
+            # 9 Semestre Grupo A Nocturno - JURISPRUDENCIA CONSTITUCIONAL
+            ('9 Semestre Grupo A Nocturno', 'JURISPRUDENCIA CONSTITUCIONAL', 'GRETTY PÁVLOVICH', 'LUNES', '06:00:00', '07:00:00', 'SALON 511NB'),
+            ('9 Semestre Grupo A Nocturno', 'JURISPRUDENCIA CONSTITUCIONAL', 'GRETTY PÁVLOVICH', 'MARTES', '06:00:00', '07:00:00', 'SALON 511NB'),
+            
+            # 9 Semestre Grupo C - JURISPRUDENCIA CONSTITUCIONAL
+            ('9 Semestre Grupo C', 'JURISPRUDENCIA CONSTITUCIONAL', 'MAGDA DJANON', 'MIÉRCOLES', '06:00:00', '07:00:00', 'SALON 611NB'),
+            
+            # 9 Semestre Grupo C - PROCESAL ADMINISTRATIVO II
+            ('9 Semestre Grupo C', 'PROCESAL ADMINISTRATIVO II', 'GUILLERMO ARÉVALO', 'JUEVES', '06:00:00', '07:00:00', 'SALON 611NB'),
+            
+            # 9 Semestre Grupo C - SUCESIONES
+            ('9 Semestre Grupo C', 'SUCESIONES', 'FABIO AMOROCHO', 'VIERNES', '06:00:00', '07:00:00', 'SALON 611NB'),
+            
+            # 9 Semestre grupo B - PROCESAL ADMINISTRATIVO II
+            ('9 Semestre grupo B', 'PROCESAL ADMINISTRATIVO II', 'GUILLERMO ARÉVALO', 'MARTES', '06:00:00', '07:00:00', 'SALON 507NB'),
+            
+            # 9 Semestre grupo B - SUCESIONES
+            ('9 Semestre grupo B', 'SUCESIONES', 'RICARDO JIMÉNEZ', 'MIÉRCOLES', '06:00:00', '07:00:00', 'ALON 507NB'),
+            ('9 Semestre grupo B', 'SUCESIONES', 'RICARDO JIMÉNEZ', 'JUEVES', '06:00:00', '07:00:00', 'ALON 507NB'),
+            
+            # 9 semestre Diurno - OPTATIVA II PAZ Y MODELOS DE JUSTICIA
+            ('9 semestre Diurno', 'OPTATIVA II PAZ Y MODELOS DE JUSTICIA', 'JOHN FABER BUITRAGO', 'VIERNES', '10:00:00', '11:00:00', 'SALON 608NB'),
+            
+            # 9 semestre Diurno - OPTATIVA III GESTIÓN DEL TALENTO HUMANO
+            ('9 semestre Diurno', 'OPTATIVA III GESTIÓN DEL TALENTO HUMANO', 'LILIA CEDEÑO', 'LUNES', '10:00:00', '11:00:00', 'SALON 615NB'),
+            ('9 semestre Diurno', 'OPTATIVA III GESTIÓN DEL TALENTO HUMANO', 'LILIA CEDEÑO', 'JUEVES', '13:00:00', '14:00:00', 'SALON 615NB'),
+            
+            # 9 semestre Diurno - OPTATIVA III SISTEMA DE RESPONSABILIDAD PENAL PARA ADOLESCENTES
+            ('9 semestre Diurno', 'OPTATIVA III SISTEMA DE RESPONSABILIDAD PENAL PARA ADOLESCENTES', 'EDGAR DEVIA', 'MARTES', '10:00:00', '11:00:00', 'SALON 615NB'),
+            
+            # 9 semestre grupo A Nocturno - OPTATIVA II DIPLOMACIA Y RELACIONES INTERNACIONALES
+            ('9 semestre grupo A Nocturno', 'OPTATIVA II DIPLOMACIA Y RELACIONES INTERNACIONALES', 'ALEJANDRO BLANCO', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 512 NB'),
+            
+            # Horarios detallados adicionales de la data completa
+            # DERECHO COMERCIAL I - UN CONTRATO (grupos varios)
+            ('', 'DERECHO COMERCIAL I - UN CONTRATO', 'MARLYS HERAZO', 'LUNES', '11:00:00', '12:00:00', 'SALÓN 410NB'),
+            ('', 'DERECHO COMERCIAL I - UN CONTRATO', 'MARLYS HERAZO', 'MARTES', '11:00:00', '12:00:00', 'SALÓN 410NB'),
+            ('', 'DERECHO COMERCIAL I - UN CONTRATO', 'MARLYS HERAZO', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALÓN 410NB'),
+            
+            # DERECHO COMERCIAL II - SOCIEDADES (varios grupos)
+            ('', 'DERECHO COMERCIAL II - SOCIEDADES', 'MARLYS HERAZO', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 410 NB'),
+            ('', 'DERECHO COMERCIAL II - SOCIEDADES', 'MARLYS HERAZO', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 410 NB'),
+            
+            # DERECHO PROCESAL CONSTITUCIONAL
+            ('', 'DERECHO PROCESAL CONSTITUCIONAL', 'PABLO RAFAEL BULA GONZALEZ', 'JUEVES', '16:00:00', '17:00:00', 'SALON 603NB'),
+            
+            # DERECHO TRIBUTARIO
+            ('', 'DERECHO TRIBUTARIO', 'JORGE MARIO MOLINA HERNÁNDEZ', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 612NB'),
+            
+            # ELECTIVA I
+            ('', 'ELECTIVA I', 'YADIRA PATRICIA GARCÍA NAVARRO', 'VIERNES', '14:00:00', '15:00:00', 'SALON 608NB'),
+            
+            # ELECTIVA V: CONFLICTOS CONTEMPORÁNEOS
+            ('', 'ELECTIVA V: CONFLICTOS CONTEMPORÁNEOS', 'RAFAEL RODRÍGUEZ', 'VIERNES', '14:00:00', '15:00:00', 'SALON 607NB'),
+            
+            # ELECTIVA V: TRIBUTARIO I
+            ('', 'ELECTIVA V: TRIBUTARIO I', 'JORGE MARIO MOLINA HERNÁNDEZ', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 612NB'),
+            
+            # Electiva 2 Derecho a la prueba
+            ('', 'Electiva 2 Derecho a la prueba', 'Eduardo Lascano', 'JUEVES', '16:00:00', '17:00:00', 'SALΌN 611 NB'),
+            
+            # Electiva 2 Sistemas de Información Geográfica
+            ('', 'Electiva 2 Sistemas de Información Geográfica', 'Camilo Madariaga', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 515NB'),
+            
+            # Electiva de profundización A: COMERCIO EXTERIOR (varios semestres)
+            ('', 'Electiva de profundización A: COMERCIO EXTERIOR', 'ROBERTO CARLOS MEISEL LANER', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 510NB'),
+            
+            # Electiva de profundización B: DERECHO ADUANERO
+            ('', 'Electiva de profundización B: DERECHO ADUANERO', 'ROBERTO CARLOS MEISEL LANER', 'VIERNES', '14:00:00', '15:00:00', 'SALÓN 507NB'),
+            
+            # Electiva de profundización C: DERECHO DE LOS TRATADOS Internacionales
+            ('', 'Electiva de profundización C: DERECHO DE LOS TRATADOS Internacionales', 'GRETTY PAVLOVICH', 'MARTES', '16:00:00', '17:00:00', 'SALÓN 516 NB'),
+            
+            # Electiva de profundización D: DERECHO SOCIETARIO
+            ('', 'Electiva de profundización D: DERECHO SOCIETARIO', 'MARLYS HERAZO', 'VIERNES', '14:00:00', '15:00:00', 'SALÓN 516 NB'),
+            
+            # Electiva de profundización E: LITIGIO ESTRATÉGICO
+            ('', 'Electiva de profundización E: LITIGIO ESTRATÉGICO', 'PABLO RAFAEL BULA GONZALEZ', 'VIERNES', '14:00:00', '15:00:00', 'SALÓN 511 NB'),
+            
+            # Electiva de profundización F: Derecho y sociedad
+            ('', 'Electiva de profundización F: Derecho y sociedad', 'YOLANDA FANDIÑO', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 513NB'),
+            
+            # Electiva de profundización G: Economía y medio ambiente
+            ('', 'Electiva de profundización G: Economía y medio ambiente', 'Esperanza Castro', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 514 NB'),
+            
+            # Electiva II
+            ('', 'Electiva II', 'GRETTY PAVLOVICH', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 612 NB'),
+            
+            # Lenguas Extranjeras: Inglés I
+            ('', 'Lenguas Extranjeras: Inglés I', 'LUIS FERNANDO GÓMEZ', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 607NB'),
+            ('', 'Lenguas Extranjeras: Inglés I', 'LUIS FERNANDO GÓMEZ', 'MARTES', '16:00:00', '17:00:00', 'SALÓN 607NB'),
+            
+            # Lenguas Extranjeras: Inglés II
+            ('', 'Lenguas Extranjeras: Inglés II', 'LUIS FERNANDO GÓMEZ', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALÓN 604 NB'),
+            
+            # OPTATIVA I: CONTRATOS COMERCIALES INTERNACIONALES
+            ('', 'OPTATIVA I: CONTRATOS COMERCIALES INTERNACIONALES', 'MARLYS HERAZO', 'LUNES', '14:00:00', '15:00:00', 'SALON 608NB'),
+            
+            # OPTATIVA II DERECHO MIGRATORIO
+            ('', 'OPTATIVA II DERECHO MIGRATORIO', 'JUAN CARLOS DE LOS RIOS', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 612 NB'),
+            
+            # OPTATIVA II GESTIÓN DEL CONFLICTO EN LO PÚBLICO
+            ('', 'OPTATIVA II GESTIÓN DEL CONFLICTO EN LO PÚBLICO', 'LINDA NADER', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 516 NB'),
+            
+            # OPTATIVA II PAZ Y MODELOS DE JUSTICIA
+            ('', 'OPTATIVA II PAZ Y MODELOS DE JUSTICIA', 'JOHN FABER BUITRAGO', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 611 NB'),
+            
+            # OPTATIVA III DERECHO CONTENCIOSO ADMINISTRATIVO
+            ('', 'OPTATIVA III DERECHO CONTENCIOSO ADMINISTRATIVO', 'EDUARDO CERRA', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 612 NB'),
+            
+            # OPTATIVA III GESTIÓN DEL TALENTO HUMANO
+            ('', 'OPTATIVA III GESTIÓN DEL TALENTO HUMANO', 'FRANCISCO BUSTAMANTE', 'LUNES', '14:00:00', '15:00:00', 'SALON 612NB'),
+            
+            # OPTATIVA III LITIGIO ORAL
+            ('', 'OPTATIVA III LITIGIO ORAL', 'INGRID PÉREZ', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 612 NB'),
+            
+            # OPTATIVA III PRÁCTICA JUDICIAL
+            ('', 'OPTATIVA III PRÁCTICA JUDICIAL', 'LUIS CERRA', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 516 NB'),
+            
+            # OPTATIVA III SISTEMA DE RESPONSABILIDAD PENAL PARA ADOLESCENTES
+            ('', 'OPTATIVA III SISTEMA DE RESPONSABILIDAD PENAL PARA ADOLESCENTES', 'RICARDO MÉNDEZ', 'MARTES', '13:00:00', '14:00:00', 'SALÓN 515 NB'),
+            
+            # RAZONAMIENTO CUANTITATIVO
+            ('', 'RAZONAMIENTO CUANTITATIVO', 'FRANCISCO DE LA HOZ', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 611NB'),
+            
+            # Teoría del estado (grupos varios)
+            ('', 'Teoría del estado', 'LINDA NADER', 'JUEVES', '10:00:00', '11:00:00', 'SALON 504NB'),
+            
+        ]
+        
+        created_count = 0
+        skipped_count = 0
+        errors = []
+        
+        try:
+            periodo = PeriodoAcademico.objects.get(nombre='2026-1')
+            sede_centro = Sede.objects.get(nombre='Sede Centro')
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'    ✗ Error obteniendo periodo o sede: {str(e)}'))
+            return
+        
+        for grupo_nombre, materia_nombre, profesor_nombre, dia, hora_inicio_str, hora_fin_str, espacio_nombre in horarios_data:
+            try:
+                # Buscar el grupo (si tiene nombre)
+                grupo = None
+                if grupo_nombre.strip():
+                    # Intentar buscar el grupo por nombre exacto
+                    grupos = Grupo.objects.filter(
+                        periodo=periodo,
+                        nombre__icontains=grupo_nombre.strip()
+                    ).first()
+                    
+                    if not grupos:
+                        # Si no se encuentra, intentar crear un grupo temporal
+                        # Por ahora, saltamos si no existe
+                        errors.append(f'Grupo no encontrado: {grupo_nombre}')
+                        skipped_count += 1
+                        continue
+                    grupo = grupos
+                
+                # Buscar la asignatura
+                asignatura = Asignatura.objects.filter(nombre__icontains=materia_nombre.strip()).first()
+                if not asignatura:
+                    errors.append(f'Asignatura no encontrada: {materia_nombre}')
+                    skipped_count += 1
+                    continue
+                
+                # Buscar el docente (puede ser null)
+                docente = None
+                if profesor_nombre.strip():
+                    # Intentar buscar por nombre completo o partes del nombre
+                    docente = Usuario.objects.filter(
+                        nombre__icontains=profesor_nombre.strip()
+                    ).first()
+                
+                # Buscar el espacio físico
+                espacio = EspacioFisico.objects.filter(
+                    nombre__icontains=espacio_nombre.strip(),
+                    sede=sede_centro
+                ).first()
+                
+                if not espacio:
+                    errors.append(f'Espacio no encontrado: {espacio_nombre}')
+                    skipped_count += 1
+                    continue
+                
+                # Normalizar día
+                dia_normalizado = dias_map.get(dia.upper().strip(), dia.strip())
+                
+                # Convertir horas
+                hora_inicio = time.fromisoformat(hora_inicio_str)
+                hora_fin = time.fromisoformat(hora_fin_str)
+                
+                # Crear el horario
+                if grupo:  # Solo crear si tenemos un grupo válido
+                    horario, created = Horario.objects.get_or_create(
+                        grupo=grupo,
+                        asignatura=asignatura,
+                        dia_semana=dia_normalizado,
+                        hora_inicio=hora_inicio,
+                        hora_fin=hora_fin,
+                        espacio=espacio,
+                        defaults={
+                            'docente': docente,
+                            'estado': 'pendiente'
+                        }
+                    )
+                    
+                    if created:
+                        created_count += 1
+                    else:
+                        skipped_count += 1
+                else:
+                    errors.append(f'No se pudo crear horario sin grupo para: {materia_nombre}')
+                    skipped_count += 1
+                    
+            except Exception as e:
+                errors.append(f'Error en {materia_nombre}: {str(e)}')
+                skipped_count += 1
+        
+        total = len(horarios_data)
+        self.stdout.write(self.style.SUCCESS(f'    ✓ {created_count} horarios creados, {skipped_count} omitidos ({total} totales)'))
+        
+        if errors:
+            self.stdout.write(self.style.WARNING(f'\n    Errores encontrados ({len(errors)}):'))
+            for error in errors[:10]:  # Mostrar solo los primeros 10 errores
+                self.stdout.write(self.style.WARNING(f'      • {error}'))
+            if len(errors) > 10:
+                self.stdout.write(self.style.WARNING(f'      ... y {len(errors) - 10} errores más'))
