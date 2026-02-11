@@ -1,0 +1,3965 @@
+
+================================================================================
+GRUPO: 
+MATERIA: ELECTIVA  LAW AT THE EDGE
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 501NB)
+
+================================================================================
+GRUPO: 
+MATERIA: Electiva: BASIC BUSSINESS ENGLISH
+PROFESOR: RICHARD ANDRES PALACIO MATTA SALÓN 507BN
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (I CONTADURIA AN)
+
+================================================================================
+GRUPO: 
+MATERIA: Electiva: INTERMEDIATE ACCOUNTING ENGLISH
+PROFESOR: RICHARD ANDRES PALACIO MATTASALÓN 507 BN
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (I CONTADURIA AN/ V CONTADURIA AN)
+
+================================================================================
+GRUPO: /II CONTADURIA AN/II ADM. NEGOCIOS AN
+MATERIA: Calculo
+PROFESOR: Rocío Mercedes Duarte Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: /II CONTADURIA AN/II ADM. NEGOCIOS AN
+MATERIA: Epistemología y metodología de la investigación
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: 1 Semestre grupo C
+MATERIA: HISTORIA DE LA FILOSOFÍA
+PROFESOR: CRISTÓBL ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 1 Semestre grupo C
+MATERIA: TEORÍA DEL ESTADO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 1 Semestre grupo D
+MATERIA: TEORÍA ECONÓMICA
+PROFESOR: GUILLERMO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 1 semestre E
+MATERIA: HABILIDADES COMUNICATIVAS
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 1 semestre E
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: GONZALO AGUILAR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALON 607NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN
+MATERIA: ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 411NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN
+MATERIA: HABILIDADES COMUNICATIVAS
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALON 601NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 411NB)
+  • LUNES: 18:00:00 - 19:00:00 (SALON 601NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN
+MATERIA: TEORÍA ECONÓMICA
+PROFESOR: FRANCISCO POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALON 601NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN-1E
+MATERIA: DERECHO ROMANO
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALON 607NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN-E
+MATERIA: DERECHO ROMANO
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 6121NB)
+
+================================================================================
+GRUPO: 1 semestre grupo AN-E
+MATERIA: TEORÍA DEL ESTADO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 612NB)
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 612NB)
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: DERECHO ROMANO
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: TEORÍA DEL ESTADO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: TEORÍA ECONÓMICA
+PROFESOR: FRANCISCO POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 411NB)
+
+================================================================================
+GRUPO: 1 semestre grupo C
+MATERIA: DERECHO ROMANO
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 1 semestre grupo C
+MATERIA: ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 1 semestre grupo C
+MATERIA: TEORÍA DEL ESTADO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: DERECHO ROMANO
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 1 semestre grupo E
+MATERIA: ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+PROFESOR: GRETTY PÁVLOVICH
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 612NB)
+
+================================================================================
+GRUPO: 1 semestre grupo E
+MATERIA: HISTORIA DE LA FILOSOFÍA
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 6121NB)
+
+================================================================================
+GRUPO: 1 semestre grupo E
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: GONZALO AGUILAR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 08:00:00 - 09:00:00 (SALON 6121NB)
+
+================================================================================
+GRUPO: 10 Semestre Grupo A Diurno
+MATERIA: DERECHO AMBIENTAL
+PROFESOR: JAIME BERMEJO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALON 508NB)
+
+================================================================================
+GRUPO: 10 Semestre Grupo A Diurno
+MATERIA: ÉTICA II
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: 10 Semestre Grupo B Diurno
+MATERIA: ÉTICA II
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 10 Semestre grupo B
+MATERIA: RESPONSABILIDAD CIVIL
+PROFESOR: EDUARDO CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 404NB)
+
+================================================================================
+GRUPO: 10 semestre Grupo A Diurno
+MATERIA: FINANZAS PÚBLICAS
+PROFESOR: FELIPE HERAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 516NB)
+  • MARTES: 10:00:00 - 11:00:00 (SALON 516NB)
+
+================================================================================
+GRUPO: 10 semestre Grupo A Diurno
+MATERIA: RESPONSABILIDAD CIVIL
+PROFESOR: EDUARDO CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALON 516NB)
+  • MARTES: 06:00:00 - 07:00:00 (SALON 516NB)
+
+================================================================================
+GRUPO: 10 semestre grupo B
+MATERIA: DERECHO AMBIENTAL
+PROFESOR: JAIME BERMEJO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 612NB)
+
+================================================================================
+GRUPO: 10 semestre grupo B
+MATERIA: FINANZAS PÚBLICAS
+PROFESOR: FELIPE HERAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 612NB)
+
+================================================================================
+GRUPO: 10 semestre grupo B
+MATERIA: RESPONSABILIDAD CIVIL
+PROFESOR: EDUARDO CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 516NB)
+
+================================================================================
+GRUPO: 10 semestre grupo B Diurno
+MATERIA: FINANZAS PÚBLICAS
+PROFESOR: FELIPE HERAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 615NB)
+
+================================================================================
+GRUPO: 2 Semestre grupo A
+MATERIA: CIENCIA POLITICA
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 15:00:00 - 16:00:00 (SALON 507NB)
+
+================================================================================
+GRUPO: 2 Semestre grupo A
+MATERIA: DERECHOS HUMANOS Y D.I.H.
+PROFESOR: MAGDA DJANON
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 507NB)
+
+================================================================================
+GRUPO: 2 Semestre grupo A
+MATERIA: SOCIOLOGÍA GENERAL Y JURÍDICA
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 3 Semestre grupo B
+MATERIA: CONSTITUCIONAL COLOMBIANO
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 508NB)
+
+================================================================================
+GRUPO: 3 Semestre grupo B
+MATERIA: LÓGICA JURÍDICA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 508NB)
+
+================================================================================
+GRUPO: 3 Semestre grupo C
+MATERIA: CIVIL BIENES
+PROFESOR: BRENDA VALERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 3 Semestre grupo C
+MATERIA: INVESTIGACIÓN I
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 3 Semestre grupo C
+MATERIA: LÓGICA JURÍDICA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 3 Semestre grupo D
+MATERIA: CIVIL BIENES
+PROFESOR: BRENDA VALERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 3 semestre grupo A
+MATERIA: CONSTITUCIONAL COLOMBIANO
+PROFESOR: JHONNY MENDOZA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALON 613NB)
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALON 613NB)
+
+================================================================================
+GRUPO: 3 semestre grupo A
+MATERIA: LÓGICA JURÍDICA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALON 613NB)
+
+================================================================================
+GRUPO: 3 semestre grupo A
+MATERIA: TEORÍA DEL DELITO
+PROFESOR: CARLOS JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALON 613NB)
+  • VIERNES: 18:00:00 - 19:00:00 (SALON 514NB)
+
+================================================================================
+GRUPO: 3 semestre grupo AB
+MATERIA: CIVIL BIENES  3AB
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALON 503NB)
+  • MARTES: 06:00:00 - 07:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 3 semestre grupo AD
+MATERIA: INVESTIGACIÓN I 3AD
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 3 semestre grupo B
+MATERIA: INVESTIGACIÓN I
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALON 503NB)
+
+================================================================================
+GRUPO: 3 semestre grupo C
+MATERIA: CIVIL BIENES
+PROFESOR: BRENDA VALERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALON 507NB)
+
+================================================================================
+GRUPO: 3 semestre grupo C
+MATERIA: INVESTIGACIÓN I
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 507NB)
+
+================================================================================
+GRUPO: 3 semestre grupo D
+MATERIA: CIVIL BIENES
+PROFESOR: BRENDA VALERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 415NB)
+
+================================================================================
+GRUPO: 4 semestre grupo A
+MATERIA: DERECHO INTERNACIONAL PÚBLICO
+PROFESOR: GRETTY PAVLOVICH
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 4 semestre grupo A
+MATERIA: INVESTIGACIÓN II
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 511NB)
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 4 semestre grupo A
+MATERIA: LABORAL INDIVIDUAL Y PRESTACIONAL
+PROFESOR: LILIA CEDEÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALON 511NB)
+  • JUEVES: 10:00:00 - 11:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 4 semestre grupo A
+MATERIA: SOLUCIÓN ALTERNATIVA DE CONFLICTOS
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 511NB)
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 4 semestre grupo A
+MATERIA: TEORÍA GENERAL DEL PROCESO
+PROFESOR: INGRID PEREZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALON 511NB)
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 4 semestre grupo A
+MATERIA: TUTELA PENAL DE LOS BIENES JURIDÍCOS I
+PROFESOR: EDGAR DEVIA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 405NB
+MATERIA: Electiva de profundización (B):
+PROFESOR: Diagnóstico Forense
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (Miriam Linero)
+
+================================================================================
+GRUPO: 5 Semestre Grupo B
+MATERIA: ADMINISTRATIVO GENERAL
+PROFESOR: EDUARDO CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 5 Semestre Grupo B
+MATERIA: INVESTIGACIÓN III
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALON 611NB)
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 5 Semestre Grupo B
+MATERIA: OBLIGACIONES
+PROFESOR: JAVIER CRESPO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 5 Semestre Grupo B
+MATERIA: PROCESAL PENAL I
+PROFESOR: EDGAR DEVIA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 5 Semestre Grupo D
+MATERIA: ELECTIVA V CONFLICTOS CONTEMPORÁNEOS
+PROFESOR: RAFAEL RODRÍGUEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALON 508NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo A
+MATERIA: HERMENÉUTICA JURÍDICA
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo C
+MATERIA: ADMINISTRATIVO GENERAL
+PROFESOR: JAIME BERMEJO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo C
+MATERIA: OBLIGACIONES
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo C
+MATERIA: PROCESAL PENAL I
+PROFESOR: DAVID GÜETTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo D
+MATERIA: INVESTIGACIÓN III
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo D
+MATERIA: OBLIGACIONES
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 5 Semestre grupo D
+MATERIA: PROCESAL PENAL I
+PROFESOR: DAVID GÜETTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 5 semestre GRUPO D
+MATERIA: TUTELA PENAL DE LOS BIENES JURÍDICOS II
+PROFESOR: LUIS CASTILLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 615NB)
+
+================================================================================
+GRUPO: 5 semestre Grupo D
+MATERIA: INVESTIGACIÓN III
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALON 516NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: ADMINISTRATIVO GENERAL
+PROFESOR: JAIME BERMEJO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: DERECHO INTERNACIONAL PRIVADO
+PROFESOR: JUAN CARLOS DE LOS RÍOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: HERMENÉUTICA JURÍDICA
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 603NB)
+  • VIERNES: 07:00:00 - 08:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: INVESTIGACIÓN III
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: OBLIGACIONES
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 603NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: PROCESAL PENAL I
+PROFESOR: DAVID GÜETTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo A
+MATERIA: TUTELA PENAL DE LOS BIENES JURÍDICOS II
+PROFESOR: JUAN CARLOS GUTIÉRREZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALON 103B)
+
+================================================================================
+GRUPO: 5 semestre grupo B
+MATERIA: ADMINISTRATIVO GENERAL
+PROFESOR: EDUARDO CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 5 semestre grupo B
+MATERIA: HERMENÉUTICA JURÍDICA
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 5 semestre grupo B
+MATERIA: TUTELA PENAL DE LOS BIENES JURÍDICOS II
+PROFESOR: JUAN CARLOS GUTIÉRREZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 103B)
+
+================================================================================
+GRUPO: 5 semestre grupo C
+MATERIA: ELECTIVA V CONFLICTOS CONTEMPORÁNEOS
+PROFESOR: RAFAEL RODRÍGUEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo C
+MATERIA: OBLIGACIONES
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5 semestre grupo C
+MATERIA: TUTELA PENAL DE LOS BIENES JURÍDICOS II
+PROFESOR: JUAN CARLOS GUTIÉRREZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 103B)
+
+================================================================================
+GRUPO: 5 semestre grupo D
+MATERIA: DERECHO INTERNACIONAL PRIVADO
+PROFESOR: JUAN CARLOS DE LOS RÍOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 508NB)
+
+================================================================================
+GRUPO: 5. Semestre grupo D
+MATERIA: ADMINISTRATIVO GENERAL
+PROFESOR: JAIME BERMEJO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 5. Semestre grupo D
+MATERIA: OBLIGACIONES
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: 6 ADMIN NEGOCIOS CD
+MATERIA: Finanzas internacionales
+PROFESOR: Winston Fontalvo Cerpa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 410 NB)
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 514NB)
+
+================================================================================
+GRUPO: 6 ADMIN NEGOCIOS CD
+MATERIA: Formulación y gestión de proyectos
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 19:00:00 - 20:00:00 (SALÓN 103B)
+
+================================================================================
+GRUPO: 6 ADMIN NEGOCIOS CD
+MATERIA: Gestión de importaciones
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 514NB)
+
+================================================================================
+GRUPO: 6 ADMIN NEGOCIOS CD
+MATERIA: Gestión del transporte internacional
+PROFESOR: Roberto Meisel Lanner
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 514NB)
+
+================================================================================
+GRUPO: 6 ADMIN NEGOCIOS CD
+MATERIA: Investigación de mercados
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 19:00:00 - 20:00:00 (SALÓN 410NB)
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 514NB)
+
+================================================================================
+GRUPO: 6 Semestre grupo A
+MATERIA: PROCESAL CIVIL GENERAL
+PROFESOR: NUBIA MARRUGO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 616NB)
+
+================================================================================
+GRUPO: 6 semestre grupo A
+MATERIA: ADMINISTRATIVO COLOMBIANO
+PROFESOR: JHONNY MENDOZA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 616NB)
+  • MARTES: 11:00:00 - 12:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 6 semestre grupo A
+MATERIA: ARGUMENTACIÓN JURÍDICA
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 6 semestre grupo A
+MATERIA: INVESTIGACIÓN IV
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 6 semestre grupo A
+MATERIA: LABORAL COLECTIVO
+PROFESOR: FRANCISCO BUSTAMANTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 6 semestre grupo A
+MATERIA: PROCESAL CIVIL GENERAL
+PROFESOR: NUBIA MARRUGO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 6 semestre grupo A
+MATERIA: PROCESAL PENAL II
+PROFESOR: RICARDO MÉNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 6. Semestre grupo A
+MATERIA: INVESTIGACIÓN IV
+PROFESOR: YOLANDA FANDIÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 616NB)
+
+================================================================================
+GRUPO: 7 ADMIN NEG FN
+MATERIA: OPTATIVA II . INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: 7 Semestre Grupo C
+MATERIA: CONTRATOS
+PROFESOR: RAFAEL FIERRO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 7 Semestre Grupo C
+MATERIA: FAMILIA, INFANCIA Y ADOLESCENCIA
+PROFESOR: PEDRO ARIAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo A
+MATERIA: CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+PROFESOR: RICARDO MÉNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo A
+MATERIA: FAMILIA, INFANCIA Y ADOLESCENCIA
+PROFESOR: RICARDO JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 607NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo A
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 607NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 407NB)
+  • VIERNES: 06:00:00 - 07:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo B
+MATERIA: CONTRATOS
+PROFESOR: RAFAEL FIERRO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 411NB)
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo B
+MATERIA: FAMILIA, INFANCIA Y ADOLESCENCIA
+PROFESOR: JUAN CARLOS DE LOS RÍOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 412NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo B
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: CRISTÓBAL ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo B
+MATERIA: PROBATORIO
+PROFESOR: EDUARDO LASCANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 412NB)
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo B
+MATERIA: TÍTULOS VALORES
+PROFESOR: MARLYS HERAZO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 4111NB)
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo C
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 7 Semestre grupo C
+MATERIA: PROBATORIO
+PROFESOR: EDUARDO LASCANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: 7 semestre grupo A
+MATERIA: CONTRATOS
+PROFESOR: CARLOS ESPINEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 7 semestre grupo A
+MATERIA: FILOSOFÍA DEL DERECHOALEXANDER GONZÁLEZ
+PROFESOR: SEDE CENTRO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON  409 BN)
+
+================================================================================
+GRUPO: 7 semestre grupo A
+MATERIA: PROBATORIO
+PROFESOR: RAFAEL FIERRO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALON 516 NB)
+  • MARTES: 18:00:00 - 19:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 7 semestre grupo C
+MATERIA: CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+PROFESOR: GONZALO AGUILAR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 7 semestre grupo C
+MATERIA: FAMILIA, INFANCIA Y ADOLESCENCIA
+PROFESOR: PEDRO ARIAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALON 512 NB)
+
+================================================================================
+GRUPO: 7 semestre grupo C
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 7 semestre grupo C
+MATERIA: PROBATORIO
+PROFESOR: EDUARDO LASCANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 7 semestre grupo C
+MATERIA: TÍTULOS VALORES
+PROFESOR: MARLYS HERAZO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 608NB)
+  • JUEVES: 10:00:00 - 11:00:00 (SALON 512NB)
+
+================================================================================
+GRUPO: 7 semestre grupo D
+MATERIA: CONTRATOS
+PROFESOR: RAFAEL FIERRO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALON 515NB)
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALON 515NB)
+
+================================================================================
+GRUPO: 7 semestre grupo D
+MATERIA: CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+PROFESOR: GONZALO AGUILAR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALON 515NB)
+
+================================================================================
+GRUPO: 7 semestre grupo D
+MATERIA: FAMILIA, INFANCIA Y ADOLESCENCIA
+PROFESOR: PEDRO ARIAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 515NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 7 semestre grupo D
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 515NB)
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 515NB)
+
+================================================================================
+GRUPO: 7 semestre grupo D
+MATERIA: PROBATORIO
+PROFESOR: EDUARDO LASCANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALON 515NB)
+  • JUEVES: 09:00:00 - 10:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 7 semestre grupo D
+MATERIA: TÍTULOS VALORES
+PROFESOR: MARLYS HERAZO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALON 515NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 8 Semestre grupo A
+MATERIA: CRIMINALÍSTICA Y CIENCIA FORENSE
+PROFESOR: CARLOS NEWBALL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 8 Semestre grupo A
+MATERIA: LABORAL ADMINISTRATIVO
+PROFESOR: FRANCISCO BUSTAMANTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: 8 Semestre grupo A
+MATERIA: PROCESAL CIVIL ESPECIAL Y DE FAMILIA
+PROFESOR: NUBIA MARRUGO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 404NB)
+  • JUEVES: 12:00:00 - 13:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: 8 Semestre grupo A
+MATERIA: PROCESAL LABORAL
+PROFESOR: LILIA CEDEÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 412NB)
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: 8 Semestre grupo A
+MATERIA: SEGURIDAD SOCIAL
+PROFESOR: RAFAEL RODRÍGUEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALÓN 404NB)
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: 8 Semestre grupo B
+MATERIA: LABORAL ADMINISTRATIVO
+PROFESOR: FRANCISCO BUSTAMANTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: 8 semestre grupo A
+MATERIA: PROCESAL ADMINISTRATIVO I
+PROFESOR: LUIS CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 508NB)
+
+================================================================================
+GRUPO: 8 semestre grupo B
+MATERIA: CRIMINALÍSTICA Y CIENCIA FORENSE
+PROFESOR: CARLOS NEWBALL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALON 512NB)
+
+================================================================================
+GRUPO: 8 semestre grupo B
+MATERIA: PROCESAL ADMINISTRATIVO I
+PROFESOR: LUIS CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 515NB)
+
+================================================================================
+GRUPO: 8 semestre grupo B
+MATERIA: PROCESAL CIVIL ESPECIAL Y DE FAMILIA
+PROFESOR: NUBIA MARRUGO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALON 512NB)
+  • MARTES: 12:00:00 - 13:00:00 (SALON 512NB)
+
+================================================================================
+GRUPO: 8 semestre grupo B
+MATERIA: PROCESAL LABORAL
+PROFESOR: DAVID GUETTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALON 512NB)
+
+================================================================================
+GRUPO: 8 semestre grupo B
+MATERIA: SEGURIDAD SOCIAL
+PROFESOR: RAFAEL RODRÍGUEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALON 512NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALON 515NB)
+
+================================================================================
+GRUPO: 9 Semestre Diurno
+MATERIA: OPTATIVA II GESTIÓN DEL CONFLICO EN LO PÚBLICO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 9 Semestre Grupo A Nocturno
+MATERIA: JURISPRUDENCIA CONSTITUCIONAL
+PROFESOR: GRETTY PÁVLOVICH
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALON 511NB)
+  • MARTES: 06:00:00 - 07:00:00 (SALON 511NB)
+
+================================================================================
+GRUPO: 9 Semestre Grupo C
+MATERIA: JURISPRUDENCIA CONSTITUCIONAL
+PROFESOR: MAGDA DJANON
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 9 Semestre Grupo C
+MATERIA: PROCESAL ADMINISTRATIVO II
+PROFESOR: GUILLERMO ARÉVALO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 9 Semestre Grupo C
+MATERIA: SUCESIONES
+PROFESOR: FABIO AMOROCHO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: 9 Semestre grupo B
+MATERIA: PROCESAL ADMINISTRATIVO II
+PROFESOR: GUILLERMO ARÉVALO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 507NB)
+
+================================================================================
+GRUPO: 9 Semestre grupo B
+MATERIA: SUCESIONES
+PROFESOR: RICARDO JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (ALON 507NB)
+  • JUEVES: 06:00:00 - 07:00:00 (ALON 507NB)
+
+================================================================================
+GRUPO: 9 semestre Diurno
+MATERIA: OPTATIVA II PAZ Y MODELOS DE JUSTICIA
+PROFESOR: JOHN FABER BUITRAGO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 9 semestre Diurno
+MATERIA: OPTATIVA III GESTIÓN DEL TALENTO HUMANO
+PROFESOR: LILIA CEDEÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 615NB)
+  • JUEVES: 13:00:00 - 14:00:00 (SALON 615NB)
+
+================================================================================
+GRUPO: 9 semestre Diurno
+MATERIA: OPTATIVA III SISTEMA DE RESPONSABILIDAD PENAL PARA ADOLESCENTES
+PROFESOR: EDGAR DEVIA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALON 615NB)
+
+================================================================================
+GRUPO: 9 semestre grupo A Nocturno
+MATERIA: OPTATIVA II DIPLOMACIA Y RELACIONES INTERNACIONALES
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALON 512 NB)
+
+================================================================================
+GRUPO: 9 semestre grupo A Nocturno
+MATERIA: OPTATIVA II MULTICULTURALISMO LATINOAMERICANO
+PROFESOR: JUAN CARLOS DE LOS RÍOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALON 511 NB)
+
+================================================================================
+GRUPO: 9 semestre grupo A Nocturno
+MATERIA: OPTATIVA III DERECHO DISCIPLINARIO
+PROFESOR: JHONNY MENDOZA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALON 511 NB)
+
+================================================================================
+GRUPO: 9 semestre grupo A Nocturno
+MATERIA: OPTATIVA III REGÍMENES, SISTEMAS Y TIPOLOGÍAS DE SERVIDORES Y DE LOS EMPLEOS PÚBLICOS EN COLOMBIA
+PROFESOR: FRANCISCO BUSTAMANTE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALON 512 NB)
+
+================================================================================
+GRUPO: 9 semestre grupo A Nocturno
+MATERIA: PROCESAL ADMINISTRATIVO II
+PROFESOR: GUILLERMO ARÉVALO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALON 512 NB)
+
+================================================================================
+GRUPO: 9 semestre grupo A Nocturno
+MATERIA: SUCESIONES
+PROFESOR: RICARDO JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (ALON 512 NB)
+
+================================================================================
+GRUPO: 9 semestre grupo B
+MATERIA: JURISPRUDENCIA CONSTITUCIONAL
+PROFESOR: GRETTY PLÁVLOVICH
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 512NB)
+
+================================================================================
+GRUPO: 9 semestre grupo D
+MATERIA: JURISPRUDENCIA CONSTITUCIONAL
+PROFESOR: MAGDA DJANON
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 609NB)
+
+================================================================================
+GRUPO: 9 semestre grupo D
+MATERIA: PROCESAL ADMINISTRATIVO II
+PROFESOR: LUIS CERRA JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 609NB)
+
+================================================================================
+GRUPO: 9 semestre grupo D
+MATERIA: SUCESIONES
+PROFESOR: FABIO AMOROCHO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 609NB)
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: 9. Semestre grupo C
+MATERIA: SUCESIONES
+PROFESOR: FABIO AMOROCHO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 604NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Intensivo
+PROFESOR: Step 7
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 406NB)
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 501NB)
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 502NB)
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 505NB)
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 506NB)
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 406NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 501NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 502NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 505NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 506NB)
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 406NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 501NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 502NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 505NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 506NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 406NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 501NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 502NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 505NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: SEMESTRAL
+PROFESOR: Step 4
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 413NB)
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 414NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 413NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Sabatino
+PROFESOR: Step 2
+--------------------------------------------------------------------------------
+HORARIOS:
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 409NB)
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 410NB)
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 411NB)
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 412NB)
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 413NB)
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Semestral
+PROFESOR: Step 2
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 505NB)
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 506NB)
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 509NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 509NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 509NB)
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 510NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 510NB)
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 513NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 505NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 506NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 509NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 510NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 510NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 513NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Semi-Intensiva
+PROFESOR: Step 5
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 509NB)
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 509NB)
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 509NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 509NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Semi-Intensivo
+PROFESOR: Step 7
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 414NB)
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 414NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 414NB)
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 414NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 414NB)
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 414NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 414NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Semi-intensiva
+PROFESOR: Step 6
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 510NB)
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 510NB)
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 510NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad: Semi-intensivo
+PROFESOR: Step 4
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 406NB)
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 410NB)
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 413NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 406NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 410NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 413NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 406NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 410NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 413NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 406NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 410NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE
+MATERIA: Modalidad:Sabatino
+PROFESOR: Step 7
+--------------------------------------------------------------------------------
+HORARIOS:
+  • SÁBADO: 08:00:00 - 09:00:00 (SALÓN 502NB)
+
+================================================================================
+GRUPO: ALIANZA CANADIENSE"
+MATERIA: "Modalidad: SEMESTRAL
+PROFESOR: Step 1
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 405NB)
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: ELECTIVA V SALUD, PROTECCIÓN Y BIENESTAR ANIMAL
+MATERIA: ELECTIVA V SALUD, BIENESTAR Y PROTECCIÓN ANIMAL
+PROFESOR: TATIANA POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (QUINTO SEMESTRE GRUPO BCD)
+
+================================================================================
+GRUPO: ESP. MEDICO-QUIRURGICA
+MATERIA: CIRUGIA GENERAL
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 610NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 610NB)
+
+================================================================================
+GRUPO: ESP. MEDICO-QUIRURGICA
+MATERIA: ESPECIALIZACION EN GINECOLOGIA
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALON 610NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN
+MATERIA: Fundamentos de administración
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 503NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/ I CONTADURIA AN
+MATERIA: Fundamentos de matemáticas
+PROFESOR: Antonio Julio Castilla Romero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/CONTADURIA GN
+MATERIA: Presupuestos empresariales
+PROFESOR: Rocío Mercedes Duarte Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/I CONTADURIA AN
+MATERIA: Expresión verbal y escrita
+PROFESOR: MONICA PATRICIA DE LA HOZ SILVA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/I CONTADURIA AN
+MATERIA: Fundamentos de economía
+PROFESOR: Marco Antonio Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/I CONTADURIA AN
+MATERIA: Fundamentos de matemáticas
+PROFESOR: Antonio Julio Castilla Romero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/I CONTADURIA AN
+MATERIA: Principios de derecho y constitución política
+PROFESOR: Eduardo De Jesus Pérez Ramirez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS AN/III CONTADURIA AN
+MATERIA: Emprendimiento e innovación
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS CD
+MATERIA: Fundamentos de negocios internacionales
+PROFESOR: Yesenia Judith Barandica Angulo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS CD /  I CONTADURIA CD
+MATERIA: Fundamentos de matemáticas
+PROFESOR: Boanerge José Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (Salón: 505NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS CD/ I CONTADURIA CD
+MATERIA: Fundamentos de economía
+PROFESOR: Marco Antonio Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS CD/ I CONTADURIA CD
+MATERIA: Principios de derecho y constitución política
+PROFESOR: Eduardo De Jesus Pérez Ramirez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS CD/I CONTADURIA CD
+MATERIA: Expresión verbal y escrita
+PROFESOR: MONICA PATRICIA DE LA HOZ SILVA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS DD
+MATERIA: Emprendimiento e innovación
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 502NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS DD
+MATERIA: Expresión verbal y escrita
+PROFESOR: MONICA PATRICIA DE LA HOZ SILVA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS DD
+MATERIA: Fundamentos de administración
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS DD
+MATERIA: Fundamentos de economía
+PROFESOR: Marco Antonio Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS DD
+MATERIA: Fundamentos de matemáticas
+PROFESOR: Boanerge José Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 502NB)
+
+================================================================================
+GRUPO: I ADM. NEGOCIOS DD
+MATERIA: Fundamentos de negocios internacionales
+PROFESOR: Yesenia Judith Barandica Angulo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: I ADMI NEG DD
+MATERIA: Fundamentos de matemáticas
+PROFESOR: Boanerge José Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (Salón: 509NB)
+
+================================================================================
+GRUPO: I ADMI NEG DD
+MATERIA: Principios de derecho y constitución política
+PROFESOR: Eduardo De Jesus Pérez Ramirez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (Salón: 509NB)
+
+================================================================================
+GRUPO: I CONTADURIA AN
+MATERIA: Ciclo básico contable
+PROFESOR: Jesús Maria Rodríguez Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALON 511 NB)
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: I CONTADURIA AN
+MATERIA: Ciclo de ingresos
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: I CONTADURIA CD
+MATERIA: Ciclo básico contable
+PROFESOR: Jesús Maria Rodríguez Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALON 605NB)
+
+================================================================================
+GRUPO: I CONTADURIA CD
+MATERIA: Electiva: BASIC ACCOUNTING ENGLISH
+PROFESOR: Sandra Milena Castillo Balmaceda
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALON 605NB)
+
+================================================================================
+GRUPO: I CONTADURIA CD
+MATERIA: Electiva: INTERMEDIATE BUSINESS ENGLISH
+PROFESOR: RICHARD ANDRES PALACIO MATTA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALON 605NB)
+
+================================================================================
+GRUPO: I CONTADURIA CD/ I ADMI NEG CD
+MATERIA: Fundamentos de matemáticas
+PROFESOR: Boanerge José Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (Salón: 404NB)
+
+================================================================================
+GRUPO: I DERECHO AN
+MATERIA: ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+PROFESOR: PEDRO ARIAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALON 502NB)
+
+================================================================================
+GRUPO: I DERECHO AN
+MATERIA: HISTORIA DE LA FILOSOFÍA
+PROFESOR: ALEXANDER GONZÁLEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALON 502NB)
+
+================================================================================
+GRUPO: I ING. INDUSTRIAL GA
+MATERIA: Competencias de Aprendizaje y Com. GA
+PROFESOR: YESSY CORONEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: I ING. INDUSTRIAL GA
+MATERIA: Cálculo Diferencial GA
+PROFESOR: DANNA BETANCOURT ESPINOSA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 405NB)
+  • VIERNES: 15:00:00 - 16:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: I ING. INDUSTRIAL GA
+MATERIA: Lógica & Algoritmo GA
+PROFESOR: EDGARDO BUELVAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 17:00:00 - 18:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: I ING. INDUSTRIAL GA
+MATERIA: Química General y Lab. GA
+PROFESOR: EDUARDO ESPINOSA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 405NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: I ING. INDUSTRIAL GB
+MATERIA: Química General y Lab. GB
+PROFESOR: EDUARDO ESPINOSA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • SÁBADO: 06:00:00 - 07:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GA
+MATERIA: Competencias de Aprendizaje y Com. GA
+PROFESOR: YESSY CORONEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GA
+MATERIA: Cálculo Diferencial GA
+PROFESOR: SAUL OLIVOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 408NB)
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GA
+MATERIA: Física Mecánica y Lab. GA
+PROFESOR: INGRID STEFANELL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 408NB)
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GA
+MATERIA: Introducción a la Ingeniería GA
+PROFESOR: JANETH ROZO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALÓN 408NB)
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GB
+MATERIA: Competencias de Aprendizaje y Com. GB
+PROFESOR: YESSY CORONEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GB
+MATERIA: Cálculo Diferencial GB
+PROFESOR: DANNA BETANCOURT
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 408NB)
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: I ING. SISTEMAS GB
+MATERIA: Lógica & Algoritmo GB
+PROFESOR: MARVIN MOLINA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: II ADM. NEGOCIOS CD
+MATERIA: Gestion de la planeación y organización
+PROFESOR: Jessica Paola Muñoz Sánchez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: II ADM. NEGOCIOS CD/ II CONTADURIA CD
+MATERIA: Derecho comercial
+PROFESOR: Eduardo De Jesus Pérez Ramirez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: II ADMI NEG CD
+MATERIA: Gestion de la planeación y organización
+PROFESOR: Jessica Paola Muñoz Sánchez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (Salón: 509NB)
+
+================================================================================
+GRUPO: II ADMIN NEG AN
+MATERIA: Contabilidad financiera
+PROFESOR: Jesús Maria Rodríguez Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 19:00:00 - 20:00:00 (SALON 602NB)
+
+================================================================================
+GRUPO: II ADMIN NEGOCIOS CD
+MATERIA: Contabilidad financiera
+PROFESOR: Jesús Maria Rodríguez Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: II CONTADURIA AN
+MATERIA: Ciclo de ingresos
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: II CONTADURIA AN/II ADM. NEGOCIOS AN
+MATERIA: Derecho comercial
+PROFESOR: Eduardo De Jesus Pérez Ramirez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: II CONTADURIA AN/II ANI AN
+MATERIA: Cálculo
+PROFESOR: Rocío Mercedes Duarte Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: II CONTADURIA CD
+MATERIA: Ciclo de ingresos
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 505NB)
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: II CONTADURIA CD/ I ADM. NEGOCIOS CD
+MATERIA: Fundamentos de administración
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: II CONTADURIA CD/II ADM. NEGOCIOS CD
+MATERIA: Cálculo
+PROFESOR: Antonio Julio Castilla Romero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALÓN 412NB)
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: II CONTADURIA CD/II ADM. NEGOCIOS CD
+MATERIA: Economía de empresa
+PROFESOR: Yesenia Judith Barandica Angulo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: II CONTADURIA CD/II ADM. NEGOCIOS CD
+MATERIA: Epistemología y metodología de la investigación
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: II CONTADURIA N/II ANI N
+MATERIA: Economía de empresa
+PROFESOR: Yesenia Barandica Angulo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: II ING. INDUSTRIAL GA
+MATERIA: Ciencia de los materiales
+PROFESOR: JUAN CARLOS CARRASCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: II ING. INDUSTRIAL GA
+MATERIA: Contabilidad y Presupuesto GA
+PROFESOR: DEIBER PUELLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: II ING. INDUSTRIAL GA
+MATERIA: Cálculo Integral GN
+PROFESOR: SAUL OLIVOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 409NB)
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: II ING. INDUSTRIAL GA
+MATERIA: Álgebra Lineal GN
+PROFESOR: ROBERTO OSIO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 409NB)
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: II ING. SISTEMAS GA
+MATERIA: Electricidad y Magnetismo & Lab. GA
+PROFESOR: INGRID STEFFANELL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 405NB)
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: II ING. SISTEMAS GA
+MATERIA: Pensamiento Sistémico GA
+PROFESOR: PAUL SANMARTIN
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: II ING. SISTEMAS GA/II ING. INDUSTRIAL GA
+MATERIA: Cálculo Integral GA
+PROFESOR: SAUL OLIVOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 408NB)
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: II ING. SISTEMAS GA/II ING. INDUSTRIAL GA
+MATERIA: Álgebra Lineal GA
+PROFESOR: ROBERTO OSIO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 407NB)
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS AN
+MATERIA: Dirección y liderazgol
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS AN
+MATERIA: Presupuestos empresariales
+PROFESOR: Rocío Mercedes Duarte Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS AN
+MATERIA: Sistemas de costeo
+PROFESOR: GLORIA QUIJANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 19:00:00 - 20:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS AN/ III CONTADURIA AN
+MATERIA: Coyuntura economica nacional
+PROFESOR: Yesenia Judith Barandica Angulo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS AN/ III CONTADURIA AN
+MATERIA: Derecho laboral y seguridad social
+PROFESOR: Farid Elias Amín De La Hoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS AN/ III CONTADURIA AN
+MATERIA: Matemáticas financieras
+PROFESOR: Ricardo Mena Torres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 19:00:00 - 20:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS CD
+MATERIA: Estadística descriptiva
+PROFESOR: Antonio Julio Castilla Romero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 502NB)
+
+================================================================================
+GRUPO: III ADM. NEGOCIOS CD
+MATERIA: Presupuestos empresariales
+PROFESOR: Arnulfo Rico Camacho
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 502NB)
+
+================================================================================
+GRUPO: III ADMIN NEG CD
+MATERIA: Dirección y liderazgo
+PROFESOR: Lilia Mercedes Mendoza Vega
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: III ADMIN NEG CD/III CONTADURIA CD
+MATERIA: Matemáticas financieras
+PROFESOR: Ricardo Mena Torres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: III ADMIN NEGOC CD
+MATERIA: Coyuntura economica nacional
+PROFESOR: Yesenia Judith Barandica Angulo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALON 410NB)
+
+================================================================================
+GRUPO: III ADMIN NEGOC CD
+MATERIA: Sistemas de costeo
+PROFESOR: JESUS RODRÍGUEZ POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALON 410NB)
+
+================================================================================
+GRUPO: III ADMIN NEGOCIOS AN/ III CONTADURÍA AN
+MATERIA: ESTADISTICA DESCRIPTIVA
+PROFESOR: ROCIO MERCEDES DUARTE ANGARITA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: III CONTADURIA AN
+MATERIA: Ciclo de egresos y administración de inventarios
+PROFESOR: Rafael Francisco Nuñez Suarez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: III CONTADURIA AN
+MATERIA: Teorías contables
+PROFESOR: Jose Barros
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 19:00:00 - 20:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: III CONTADURIA CD
+MATERIA: Ciclo de egresos y administración de inventarios
+PROFESOR: Rafael Francisco Nuñez Suarez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 406NB)
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 502NB)
+
+================================================================================
+GRUPO: III CONTADURIA CD
+MATERIA: Coyuntura economica nacional
+PROFESOR: Marco Antonio Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: III CONTADURIA CD
+MATERIA: Teorías contables
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: III CONTADURIA CD/ I ADMI NEG CD
+MATERIA: Emprendimiento e innovación
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (Salón: 509NB)
+
+================================================================================
+GRUPO: III Contaduría CD
+MATERIA: Ciclo de egresos y administración de inventarios
+PROFESOR: Rafael Francisco Nuñez Suarez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: III Contaduría CD
+MATERIA: Teorías contables
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: III ING. INDUSTRIAL GA
+MATERIA: Cálculo Multivariado y Vectorial GA
+PROFESOR: MARTHA ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 407NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 403NB)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 403NB)
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: III ING. INDUSTRIAL GA
+MATERIA: Electricidad, Magnetismo y Laboratorio GA
+PROFESOR: MARVIN MOLINA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 403NB)
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: III ING. INDUSTRIAL GA
+MATERIA: Fundamentos de Economía GA
+PROFESOR: ARNALDO ARCE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: III ING. INDUSTRIAL GB
+MATERIA: Cálculo Multivariado y Vectorial GB
+PROFESOR: EMELDO CABALLEROL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 407NB)
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: III ING. INDUSTRIAL GB
+MATERIA: Electiva II (Emprendimiento y Liderazgo) GB
+PROFESOR: CARLOS CONSUEGRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: III ING. INDUSTRIAL GB
+MATERIA: Electricidad, Magnetismo y Laboratorio GB
+PROFESOR: EMELDO CABALLERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 19:00:00 - 20:00:00 (SALÓN 407NB)
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: IV ADM. NEGOCIOS CD
+MATERIA: Coyuntura economica internacional
+PROFESOR: Marco Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: IV ADM. NEGOCIOS CD
+MATERIA: Estadística inferencial
+PROFESOR: Arnulfo Rico Camacho
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: IV ADM. NEGOCIOS CD
+MATERIA: Fundamentos de mercadeo
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: IV ADM. NEGOCIOS CD
+MATERIA: Geopolítica
+PROFESOR: Roberto Antonio Morales Espinosa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: IV ADM. NEGOCIOS CD
+MATERIA: Gestion de talento humano
+PROFESOR: Luis Alfonso Grisales Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: IV ADM. NEGOCIOS CD
+MATERIA: Legislación aduanera
+PROFESOR: Roberto Meisel Lanner
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: IV ADMIN NEGOC AN
+MATERIA: Coyuntura economica internacional
+PROFESOR: Marco Antonio Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: IV ADMIN NEGOC AN
+MATERIA: Fundamentos de mercadeo
+PROFESOR: Luis Alfonso Grisales Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: IV ADMIN NEGOC AN
+MATERIA: Gestion de talento humano
+PROFESOR: Julie Samanta Arévalo Coral
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 505NB)
+
+================================================================================
+GRUPO: IV ADMIN NEGOCIOS AN
+MATERIA: Geopolítica
+PROFESOR: Roberto Antonio Morales Espinosa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (Salón: 406NB)
+
+================================================================================
+GRUPO: IV ADMIN NEGOCIOS AN
+MATERIA: Legislación aduanera
+PROFESOR: Roberto Meisel Lanner
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (Salón: 406NB)
+
+================================================================================
+GRUPO: IV ADMIN NEGOCIOS AN/ IV CONTADURIA AN
+MATERIA: Estadística inferencial
+PROFESOR: Rocío Mercedes Duarte Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (Salón: 406NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN
+MATERIA: Ciclo de inversiones y financiación
+PROFESOR: José Barros Padilla
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 510NB)
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN
+MATERIA: Contabilidad ambiental
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN
+MATERIA: Gerencia estratégica organizacional
+PROFESOR: Lilia Mercedes Mendoza Vega
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN
+MATERIA: Modelos de investigación
+PROFESOR: Gustavo Rafael Henriquez Fuentes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN
+MATERIA: Sistemas de costeo
+PROFESOR: Yuleida Ariza Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 19:00:00 - 20:00:00 (SALÓN 510NB)
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN/IV ADM. NEGOCIOS AN
+MATERIA: Estadística inferencial
+PROFESOR: Rocío Mercedes Duarte Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: IV CONTADURIA AN/IV ADM. NEGOCIOS AN
+MATERIA: Fundamentos de mercadeo
+PROFESOR: Luis Alfonso Grisales Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: IV CONTADURIA CD
+MATERIA: Ciclo de inversiones y financiación
+PROFESOR: Hernán José Hernández Belaides
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 510NB)
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA CD
+MATERIA: Contabilidad ambiental
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA CD
+MATERIA: Fundamentos de mercadeo
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA CD
+MATERIA: Gerencia estratégica organizacional
+PROFESOR: Julie Samanta Arévalo Coral
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA CD
+MATERIA: Modelos de investigación
+PROFESOR: Gustavo Rafael Henriquez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV CONTADURIA CD
+MATERIA: Sistemas de costeo
+PROFESOR: Yuleida Ariza Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 510NB)
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 510NB)
+
+================================================================================
+GRUPO: IV ING. INDUSTRIAL GA
+MATERIA: Costos de Operación GA
+PROFESOR: MEDARDO GONZALEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: IV ING. INDUSTRIAL GA
+MATERIA: Cátedra de Sostenibilidad GA
+PROFESOR: RICARDO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: IV ING. INDUSTRIAL GA
+MATERIA: Ecuaciones Diferenciales GA
+PROFESOR: INGRID STEFFANELL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 409NB)
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: IV ING. INDUSTRIAL GA
+MATERIA: Procesos Industriales GA
+PROFESOR: DIEGO SUERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALÓN 409NB)
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: IV ING. INDUSTRIAL GA
+MATERIA: Termodinámica GA
+PROFESOR: JUAN CARLOS CARRASCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 409NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: IV ING. INDUSTRIAL GB
+MATERIA: Cátedra de Sostenibilidad GB
+PROFESOR: RICARDO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: IV ING. SISTEMAS GA
+MATERIA: Constitución Política GA
+PROFESOR: ELVIS RUIZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: IV ING. SISTEMAS GA
+MATERIA: Ecuaciones Diferenciales GA
+PROFESOR: MARTHA ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 408NB)
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: IV ING. SISTEMAS GB
+MATERIA: Ecuaciones Diferenciales GB
+PROFESOR: MARTHA ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 407NB)
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: IX ING. INDUSTRIAL GA
+MATERIA: Investigación Aplicada IV GA
+PROFESOR: ASTRID BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: IX ING. INDUSTRIAL GA
+MATERIA: Psicología Industrial GA
+PROFESOR: GUSTAVO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 404NB)
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Administración en Salud -G1 Teoria
+PROFESOR: Anyely Ballestas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALON 603NB)
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Administración en Salud -G2 Teoria
+PROFESOR: Anyely Ballestas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Administración en Salud I- Practica
+PROFESOR: Anyely Ballestas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALON 602NB)
+  • MARTES: 18:00:00 - 19:00:00 (SALON 602NB)
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Administración en Salud-Practica
+PROFESOR: Anyely Ballestas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALON 605NB)
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Electiva Enfermedades Inmunoprevenibles de interes en  Salud Public
+PROFESOR: Jaime Lorduy
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALON 601NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 513NB)
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Electiva II: Atencion al adulto mayor
+PROFESOR: Fanny Lambraño
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALON 602NB)
+  • VIERNES: 14:00:00 - 15:00:00 (SALON 502NB)
+
+================================================================================
+GRUPO: OPTATIVA IV DECIMO SEMESTRE DIURNO
+MATERIA: OPTATIVA IV DERECHO TRIBUTARIO
+PROFESOR: FELIPE HERAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: OPTATIVA IV DECIMO SEMESTRE DIURNO
+MATERIA: OPTATIVA IV GESTIÓN Y RESPONSABILIDAD FISCAL
+PROFESOR: EDUARDO CERRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: PREGRADO - INTERNOS
+MATERIA: MEDICINA INTERNA
+PROFESOR: CARLOS BARRERA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 610NB)
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 610NB)
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 610NB)
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 610NB)
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 610NB)
+
+================================================================================
+GRUPO: PREGRADO - INTERNOS
+MATERIA: OFTALMOLOGIA
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 610NB)
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 610NB)
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 610NB)
+
+================================================================================
+GRUPO: SALON 511NB
+MATERIA: ELECTIVA IV
+PROFESOR: RESPONSABILIDAD SOCIAL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (YOLANDA FANDIÑO)
+
+================================================================================
+GRUPO: SALON 512NB
+MATERIA: Epidemiología Clínica
+PROFESOR: Practica
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (Fabian Yance)
+  • JUEVES: 15:00:00 - 16:00:00 (Fabian Yance)
+
+================================================================================
+GRUPO: SALON 516 NB
+MATERIA: FAMILIA, INFANCIA Y ADOLESCENCIA
+PROFESOR: RICARDO JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SEDE CENTRO)
+
+================================================================================
+GRUPO: SALON 603NB
+MATERIA: ELECTIVA V
+PROFESOR: CONFLICTOS CONTEMPORÁNEOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (RAFAEL RODRÍGUEZ)
+
+================================================================================
+GRUPO: SALON 603NB
+MATERIA: Epidemiología Clínica
+PROFESOR: Practica
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (Eloina Goenaga)
+  • MARTES: 15:00:00 - 16:00:00 (Eloina Goenaga)
+  • JUEVES: 13:00:00 - 14:00:00 (Eloina Goenaga)
+  • JUEVES: 15:00:00 - 16:00:00 (Eloina Goenaga)
+
+================================================================================
+GRUPO: SALON 607NB
+MATERIA: TEORÍA ECONÓMICA
+PROFESOR: FRANCISCO POLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SEDE CENTRO)
+
+================================================================================
+GRUPO: SALON 612NB
+MATERIA: Epidemiología Clínica
+PROFESOR: Practica
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (Fabian Yance)
+  • MARTES: 15:00:00 - 16:00:00 (Fabian Yance)
+
+================================================================================
+GRUPO: SALÓN 411NB
+MATERIA: 
+PROFESOR: OPTATIVA IV ESTRUCTURA ORGÁNICA DEL ESTADO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (JHONNY MENDOZA)
+
+================================================================================
+GRUPO: SEMESTRES 2,3,4 Y 5
+MATERIA: ELECTIVA ORATORIA Y LIDERAZGO
+PROFESOR: LILIA CEDEÑO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (ELECTIVA ORATORIA Y LIDERAZGO)
+  • LUNES: 08:00:00 - 09:00:00 (ELECTIVA ORATORIA Y LIDERAZGO)
+
+================================================================================
+GRUPO: Sexto semestre Grupo A
+MATERIA: DERECHO COMERCIAL GENERAL
+PROFESOR: JAVIER CRESPO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 404NB)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Administración en Salud II Práctica  Anyely Ballestas
+PROFESOR: SALON 615NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (X MEDICINA)
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (X MEDICINA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Auditoría aplicada
+PROFESOR: SALÓN 501NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (VI CONTADURIA AN)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: CENTRO DE APOYO A LA SUPERACION ACADEMICA
+PROFESOR: C.A.S.A.
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (FACULTAD INGENIERIA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ciclo básico contable
+PROFESOR: SALÓN 501NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (I ADM. NEGOCIOS DD)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Constitución Política GA / MARILUZ BARROS
+PROFESOR: 7A Ing Industrial
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (718 NB)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Derecho laboral y seguridad social
+PROFESOR: SALÓN 414NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (III ADM. NEGOCIOS CD/ III CONTADURIA CD)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: ESPECIALIZACION EN PEDIATRÍA
+PROFESOR: SALON 609NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (ESP. MEDICO-QUIRURGICA)
+  • VIERNES: 14:00:00 - 15:00:00 (ESP. MEDICO-QUIRURGICA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva Imagenologia en clinicas y hospitales
+PROFESOR: SALON 501NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (IX MEDICINA)
+  • VIERNES: 13:00:00 - 14:00:00 (IX MEDICINA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Estadística inferencial
+PROFESOR: SALÓN 510NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (IV CONTADURIA CD)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fundamentos de negocios internacionales
+PROFESOR: SALÓN 505NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (I ADM. NEGOCIOS AN)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Física Mecánica y Lab. GB EMELDO CABALLERO
+PROFESOR: SALÓN 408NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (I ING. SISTEMAS GB/I ING. INDUSTRIAL GA)
+  • JUEVES: 18:00:00 - 19:00:00 (I ING. SISTEMAS GB/I ING. INDUSTRIAL GA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Gerencia Estratégica GA / ANDREA CORONADO -
+PROFESOR: 4A Ing Industrial
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (717NB)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Gestión Organizacional GA / RICARDO DE LA HOZ
+PROFESOR: SALÓN 403NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (III ING. INDUSTRIAL GA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Introducción a la Ingeniería GA / SAUL OLIVOS
+PROFESOR: SALÓN 405NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (I ING. INDUSTRIAL GA)
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (I ING. INDUSTRIAL GA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Introducción a la Ingeniería GB OBETH ROMERO
+PROFESOR: SALÓN 408NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (I ING. SISTEMAS GB)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Lógica & Algoritmo GA / EDGARDO BUELVAS
+PROFESOR: SALÓN 408NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 15:00:00 - 16:00:00 (I ING. SISTEMAS GA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Lógica Matemática GA EMELDO CABALLERO
+PROFESOR: SALÓN 408NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (I ING. SISTEMAS GA)
+  • SÁBADO: 06:00:00 - 07:00:00 (I ING. SISTEMAS GA)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: OPTATIVA II CONTRATACIÓN ESTATAL
+PROFESOR: JHONNY MENDOZA ALON 615NB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (9 semestre Diurno)
+
+================================================================================
+GRUPO: V ADM. NEGOCIOS CD
+MATERIA: Desarrollo e innovaciones de las organizaciones
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: V ADM. NEGOCIOS CD
+MATERIA: Investigación de operaciones
+PROFESOR: Boanerge Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: V ADMI NEG AN
+MATERIA: Derecho comercial internacional
+PROFESOR: CARLOS ANIBAL ESPINEL BENITEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 19:00:00 - 20:00:00 (SALÓN 509NB)
+
+================================================================================
+GRUPO: V ADMI NEG AN
+MATERIA: Desarrollo e innovaciones de las organizaciones
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: V ADMI NEG AN
+MATERIA: Modelos de investigación
+PROFESOR: Gustavo Rafael Henriquez Fuentes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 509NB)
+
+================================================================================
+GRUPO: V ADMI NEG AN/ V CONTADURIA AN
+MATERIA: Investigación de operaciones
+PROFESOR: Boanerge Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 509NB)
+
+================================================================================
+GRUPO: V ADMIN NEG CD
+MATERIA: Logística y distribución fisica internacional
+PROFESOR: Roberto Antonio Morales Espinosa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: V ADMIN NEG CD
+MATERIA: Modelos de investigación
+PROFESOR: Gustavo Rafael Henriquez Fuentes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: V ADMIN NEGOCIOS CD
+MATERIA: Comercio y negocios globales
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 506NB)
+
+================================================================================
+GRUPO: V ADMIN NEGOCIOS CD
+MATERIA: Derecho comercial internacional
+PROFESOR: Roberto Meisel Lanner
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: V CONTADURIA AN
+MATERIA: Aseguramiento y fundamentos de control
+PROFESOR: Freddy Alberto Mejía Torres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 19:00:00 - 20:00:00 (SALÓN 513NB)
+
+================================================================================
+GRUPO: V CONTADURIA AN
+MATERIA: Ciclo de estados financieros
+PROFESOR: Jesús Maria Rodríguez Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 19:00:00 - 20:00:00 (SALÓN 513NB)
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 711NB)
+
+================================================================================
+GRUPO: V CONTADURIA AN
+MATERIA: Costos gerenciales
+PROFESOR: Yuleida Ariza Angarita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 513NB)
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 711NB)
+
+================================================================================
+GRUPO: V CONTADURIA AN
+MATERIA: Fundamentos y normatividad tributaria
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 513NB)
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 513NB)
+
+================================================================================
+GRUPO: V CONTADURIA AN/V ADM. NEGOCIOS AN
+MATERIA: Investigación de operaciones
+PROFESOR: Boanerge Salas Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Cátedra de Sotenibilidad GA
+PROFESOR: RICARDO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Diseño de productos y servicios GA
+PROFESOR: ERICK JASSIR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 17:00:00 - 18:00:00 (SALÓN 415NB)
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Electiva III (Competencias Ciudadanas) GA
+PROFESOR: AGUSTIN VIDAL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Electiva III (Habilidades Blandas) GB
+PROFESOR: YESSY CORONEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Ingeniería Económica GA
+PROFESOR: SAUL OLIVOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Métodos GA
+PROFESOR: RICARDO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 407NB)
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GA
+MATERIA: Sistemas Integrados de Gestión GA
+PROFESOR: ARNALDO ARCE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: V ING. INDUSTRIAL GB
+MATERIA: Fundamentos de Economía GB
+PROFESOR: DEIBER PUELLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 17:00:00 - 18:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: V ING. SISTEMAS GA
+MATERIA: Fundamentos de Economía GA
+PROFESOR: DEIBER PUELLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: V ING. SISTEMAS GA
+MATERIA: Matemáticas Discretas GA
+PROFESOR: EDGARDO BUELVAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: V ING. SISTEMAS GB
+MATERIA: Matemáticas Discretas GB
+PROFESOR: EDGARDO BUELVAS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VI ADM. NEGOCIOS CD/VII ADM. NEGOCIOS CD
+MATERIA: ELECTIVA: ADVANCED BUSINESS ENGLISH
+PROFESOR: RICHARD ANDRES PALACIO MATTA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: VI ADM. NEGOCIOS CD/VII ADM. NEGOCIOS CD
+MATERIA: Electiva I: ENGLISH SABER-PRO-TRAINING WORKSHOP
+PROFESOR: Sandra Milena Castillo Balmaceda
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: VI CONTADURIA AN
+MATERIA: Auditoría aplicada
+PROFESOR: Juan Torres Palacio
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: VI CONTADURIA AN
+MATERIA: Comercio y negocios globales
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: VI CONTADURIA AN
+MATERIA: Impuesto sobre la renta y complementarios
+PROFESOR: Cástulo Antonio Maza Cabrera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 19:00:00 - 20:00:00 (SALÓN 413NB)
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: VI CONTADURIA AN
+MATERIA: Presupuestos empresariales
+PROFESOR: Freddy Alberto Mejía Torres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: VI ING. INDUSTRIAL GA
+MATERIA: Gestión de Tecnología GA
+PROFESOR: JOSE W. PENAGOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 410NB)
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: VI ING. INDUSTRIAL GA
+MATERIA: Mercadeo GA
+PROFESOR: ERICK JASSIR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: VI ING. INDUSTRIAL GA
+MATERIA: Optativa I (Gerencia de Restricciones) GA
+PROFESOR: MEDARDO GONZALEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 410NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: VI ING. INDUSTRIAL GA
+MATERIA: Planeación y Control de la Producción y Operaciones GA
+PROFESOR: ROBERTO OSIO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 410NB)
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: VI ING. SISTEMAS GA
+MATERIA: Electiva de Formación Int. III (Habilidades Blandas) GA
+PROFESOR: YESSY CORONEL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: VI ING. SISTEMAS GB
+MATERIA: Formulación & Evaluación de Proyectos GB
+PROFESOR: FRANKLIN BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS AN
+MATERIA: FGerencia de comercio exterior
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS AN
+MATERIA: Gestión de Exportaciones
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS AN
+MATERIA: International Agreement
+PROFESOR: Jeimmy Maritza Bernal Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS AN
+MATERIA: International Marketing
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS AN
+MATERIA: Optativa II. INNOVACION Y SOSTENIBILIDAD ESTRATEGICA
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 412NB)
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS AN/VIII ADM. NEGOCIOS EN
+MATERIA: Electiva: PRINCIPLES OF PUBLIC SPEAKING
+PROFESOR: Sandra Milena Castillo Balmaceda
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 412NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS BN
+MATERIA: Gerencia de comercio exterior
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS BN
+MATERIA: Gestión de Exportaciones
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS BN
+MATERIA: International Agreement
+PROFESOR: Roberto Antonio Morales Espinosa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS BN
+MATERIA: Proyecto de Investigación
+PROFESOR: Lilia Mercedes Mendoza Vega
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS BN
+MATERIA: Seminario de negociacion y concertacion
+PROFESOR: Winston Fontalvo Cerpa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS CD
+MATERIA: Gestión de Exportaciones
+PROFESOR: Maribel Cerro Camera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS CD
+MATERIA: Optativa II. ADMINISTRACION ESTRATEGICA
+PROFESOR: Luis Alfonso Grisales Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS CD
+MATERIA: Proyecto de Investigación
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS CD
+MATERIA: Seminario de negociacion y concertacion
+PROFESOR: Farid Elias Amín De La Hoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 413NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS EN
+MATERIA: Optativa II. TRANSFORMACION SOSTENIBLE DE EMPRESA
+PROFESOR: Gustavo Rafael Henriquez Fuentes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 416NB)
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: VII ADM. NEGOCIOS FN
+MATERIA: OPTATIVA II . INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 503NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOC CD
+MATERIA: Gerencia de comercio exterior
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS AN
+MATERIA: Proyecto de Investigación
+PROFESOR: Lilia Mercedes Mendoza Vega
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS AN
+MATERIA: Seminario de negociacion y concertacion
+PROFESOR: Winston Fontalvo Cerpa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS BN
+MATERIA: Gerencia de comercio exterior
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS BN
+MATERIA: International Marketing
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS CD
+MATERIA: International Agreement
+PROFESOR: Jeimmy Maritza Bernal Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 513NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS CD
+MATERIA: International Marketing
+PROFESOR: José Rafael Simancas Trujillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 513NB)
+
+================================================================================
+GRUPO: VII ADMIN NEGOCIOS FN
+MATERIA: OPTATIVA II . INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: VII CONTADURIA AN
+MATERIA: Contabilidad y finanzas publicas
+PROFESOR: Julio Cesar Padilla Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 504NB)
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 504NB)
+
+================================================================================
+GRUPO: VII CONTADURIA AN
+MATERIA: Formulación y Gestión de Proyectos
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 504NB)
+
+================================================================================
+GRUPO: VII CONTADURIA AN
+MATERIA: Impuesto a la ventas y retención en la fuente
+PROFESOR: Cástulo Antonio Maza Cabrera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALON 504NB)
+  • JUEVES: 20:00:00 - 21:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: VII CONTADURIA AN
+MATERIA: Optativa II (Línea de Auditoría)
+PROFESOR: Rafael Francisco Nuñez Suarez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 504NB)
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 504NB)
+
+================================================================================
+GRUPO: VII CONTADURIA AN
+MATERIA: Revisoría fiscal
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALON 504NB)
+  • MIÉRCOLES: 19:00:00 - 20:00:00 (SALON 504NB)
+
+================================================================================
+GRUPO: VII CONTADURIA AN/5 ADMIN NEGOCIOS AN
+MATERIA: Finanzas corporativas
+PROFESOR: Ricardo Mena Torres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 19:00:00 - 20:00:00 (SALÓN 410NB)
+
+================================================================================
+GRUPO: VII ING. INDUSTRIAL GA
+MATERIA: Metodología de la Investigación GA
+PROFESOR: AGUSTIN VIDAL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: VII ING. INDUSTRIAL GA
+MATERIA: Modelos Estocásticos Matemáticos GA
+PROFESOR: LUIS CARLOS ACOSTA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 409NB)
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: VII ING. INDUSTRIAL GA
+MATERIA: Seguridad y Salud en el trabajo GA
+PROFESOR: RICARDO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 15:00:00 - 16:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: VII ING. INDUSTRIAL GA
+MATERIA: Ética GA
+PROFESOR: MARILUZ BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 414NB)
+
+================================================================================
+GRUPO: VII ING. INDUSTRIAL GB
+MATERIA: Modelos Estocásticos Matemáticos GB
+PROFESOR: LUIS CARLOS ACOSTA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 414NB)
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: VII ING. SISTEMAS GA
+MATERIA: Metodología de la Investigación GA
+PROFESOR: AGUSTIN VIDAL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 17:00:00 - 18:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VII ING. SISTEMAS GA
+MATERIA: Ética GA
+PROFESOR: MARILUZ BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VII ING. SISTEMAS GB
+MATERIA: Metodología de la Investigación GB
+PROFESOR: ASTRID BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: VII ING. SISTEMAS GB
+MATERIA: Ética GB
+PROFESOR: OONA HERNANDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VII MEDICINA - GA
+MATERIA: CONSTITUCIÓN POLÍTICA
+PROFESOR: Bibiana Sierra
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALON 607NB)
+
+================================================================================
+GRUPO: VII MEDICINA - GB
+MATERIA: CONSTITUCIÓN POLÍTICA
+PROFESOR: Bibiana Sierra
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALON 608NB)
+
+================================================================================
+GRUPO: VII MEDICINA
+MATERIA: Medicina Interna Teoría
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 17:00:00 - 18:00:00 (SALON 711NB)
+  • JUEVES: 19:00:00 - 20:00:00 (SALON 711NB)
+
+================================================================================
+GRUPO: VII MEDICINA
+MATERIA: Psiquiatría Teoría
+PROFESOR: MILENA RUBIO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 17:00:00 - 18:00:00 (SALON 711NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS AN
+MATERIA: Globalización
+PROFESOR: Marco Antonio Ariza Dau
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 507NB)
+  • MIÉRCOLES: 20:00:00 - 21:00:00 (SALÓN 507NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS AN
+MATERIA: Mercado de capitales
+PROFESOR: Winston Fontalvo Cerpa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 503NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS AN
+MATERIA: Optativa III. PLAN DE INTERNACIONALIZACIÓN DE LA EMPRESA
+PROFESOR: Roberto Antonio Morales Espinosa
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 507NB)
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 507NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS AN
+MATERIA: Ética profesional y responsabilidad social empresarial
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 503NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS AN / VIIICONTADURIA AN
+MATERIA: Eelctiva: ENGLISH SABER-PRO-TRAINING WORKSHOP
+PROFESOR: Sandra Milena Castillo Balmaceda
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS BN
+MATERIA: Optativa III. DESARROLLO DEL FACTOR HUMANO
+PROFESOR: Julie Samanta Arévalo Coral
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: VIII ADM. NEGOCIOS EN
+MATERIA: Optativa III. GESTION MARITIMA Y PORTUARIA
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 416NB)
+
+================================================================================
+GRUPO: VIII ADMIN NEGOCIOS BN
+MATERIA: Optativa III. DESARROLLO DEL FACTOR HUMANO
+PROFESOR: Julie Samanta Arévalo Coral
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALON 511 NB)
+
+================================================================================
+GRUPO: VIII ADMIN NEGOCIOS BN
+MATERIA: Régimen cambiario y aduanero
+PROFESOR: Roberto Meisel Lanner
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: VIII ADMIN NEGOCIOS EN
+MATERIA: Optativa III. GESTION MARITIMA Y PORTUARIA
+PROFESOR: Cecilia Ibeth Sierra Martinez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 403NB)
+
+================================================================================
+GRUPO: VIII CONTADURIA AN
+MATERIA: Formulación y gestión de proyectos
+PROFESOR: Danilo Enrique Torres Pimiento
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 18:00:00 - 19:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VIII CONTADURIA AN
+MATERIA: Impuestos territoriales y procedimiento tributario
+PROFESOR: Cástulo Antonio Maza Cabrera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 19:00:00 - 20:00:00 (SALÓN 503NB)
+
+================================================================================
+GRUPO: VIII CONTADURIA AN
+MATERIA: Optativa III
+PROFESOR: Juan Torres Palacio
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 414NB)
+  • VIERNES: 20:00:00 - 21:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VIII CONTADURIA AN
+MATERIA: Ética profesional
+PROFESOR: Milagros Del Carmen Villasmil Molero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALON 503 NB)
+
+================================================================================
+GRUPO: VIII ING. INDUSTRIAL GA
+MATERIA: Diseño de Instalaciones Industriales y de Servicios GA
+PROFESOR: LUIS CARLOS ACOSTA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 411NB)
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: VIII ING. INDUSTRIAL GA
+MATERIA: Elec. de Formación Int. III (Comp. Ciudadanas) GA
+PROFESOR: AGUSTIN VIDAL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: VIII ING. INDUSTRIAL GA
+MATERIA: Ingeniería Aplicada GA
+PROFESOR: ASTRID BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 20:00:00 - 21:00:00 (SALÓN 411NB)
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: VIII ING. INDUSTRIAL GA
+MATERIA: Investigación Aplicada V GA
+PROFESOR: ASTRID BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: VIII ING. INDUSTRIAL GA
+MATERIA: Logística y Cadena de Suministro GA
+PROFESOR: CARLOS CONSUEGRA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: VIII ING. INDUSTRIAL GA
+MATERIA: Optativa III (Gestión de Procesos) GA
+PROFESOR: MEDARDO GONZALEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 411NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GA
+MATERIA: Gerencia Estratégica GA
+PROFESOR: ANDREA CORONADO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GA
+MATERIA: Ingeniería Aplicada GA
+PROFESOR: IVAN QUINTERO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 17:00:00 - 18:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GA
+MATERIA: Práctica Empresarial GA
+PROFESOR: ERICK JASSIR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 509NB)
+  • VIERNES: 06:00:00 - 07:00:00 (SALÓN 501NB)
+  • SÁBADO: 06:00:00 - 07:00:00 (SALÓN 501NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GA
+MATERIA: Sistemas Integrados de Gestión GA
+PROFESOR: ARNALDO ARCE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 405NB)
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 408NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GB
+MATERIA: Gerencia Estratégica GB
+PROFESOR: JOSE PENAGOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GB
+MATERIA: Ingeniería Aplicada GB
+PROFESOR: SAUL OLIVOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 406NB)
+
+================================================================================
+GRUPO: VIII ING. SISTEMAS GB
+MATERIA: Sistemas Integrados de Gestión GB
+PROFESOR: ARNALDO ARCE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 407NB)
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 407NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Cirugía Teoría
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 711NB)
+  • VIERNES: 13:00:00 - 14:00:00 (SALON 711NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Electiva: Atencion  a la infancia y adolescencia
+PROFESOR: Fanny Lambraño
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALON 601NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 514NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Electiva: Atencion Primaria en Salud
+PROFESOR: Elvira Crespo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALON 613NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 613NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Electiva: Medicina Alternativa
+PROFESOR: Sara Romero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALON 605NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 605NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Electiva: Medicina Aplicada a la actividad fisica y del deporte
+PROFESOR: Lucy Bula
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALON 602NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 602NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Especialidades Quirúrgicas
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALON 711NB)
+
+================================================================================
+GRUPO: VIII MEDICINA
+MATERIA: Salud Ocupacional Teoría
+PROFESOR: JORGE RIVERA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALON 711NB)
+  • JUEVES: 13:00:00 - 14:00:00 (SALON 711NB)
+
+================================================================================
+GRUPO: X ING. INDUSTRIAL GA
+MATERIA: Elec. Prof. III (Gestión del Conocimiento) GN
+PROFESOR: HERNANDO PEÑA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: X ING. INDUSTRIAL GA
+MATERIA: Electiva Profesional II (SIG) GA
+PROFESOR: HERNANDO PEÑA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: X ING. INDUSTRIAL GA
+MATERIA: Investigación Aplicada V GN
+PROFESOR: AGUSTIN VIDAL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 20:00:00 - 21:00:00 (SALÓN 404NB)
+
+================================================================================
+GRUPO: X ING. INDUSTRIAL GA
+MATERIA: Logística Interna & Externa GA
+PROFESOR: FRANKLIN BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 18:00:00 - 19:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: X ING. INDUSTRIAL GA
+MATERIA: Práctica Empresarial GA
+PROFESOR: ERICK JASSIR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALÓN 415NB)
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: X ING. INDUSTRIAL GA2
+MATERIA: Elec. Profesional IV (Creación de Empresas) GA
+PROFESOR: JOSE PENAGOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 415NB)
+
+================================================================================
+GRUPO: X ING. SISTEMAS GA
+MATERIA: Elect. Básica de Ingeniería III (Inv. De Operaciones) GA
+PROFESOR: ALEXANDER PARODY
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 20:00:00 - 21:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: X ING. SISTEMAS GA
+MATERIA: Gestión de Proyectos Informaticos GA
+PROFESOR: PATTY PEDROZA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 18:00:00 - 19:00:00 (SALÓN 409NB)
+
+================================================================================
+GRUPO: X ING. SISTEMAS GA
+MATERIA: Investigación Aplicada V GA
+PROFESOR: DIANA SUAREZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 18:00:00 - 19:00:00 (SALÓN 405NB)
+
+================================================================================
+GRUPO: X MEDICINA
+MATERIA: Administración en Salud II  Teoria
+PROFESOR: Fanny Lambraño
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALON 612NB)
+  • MARTES: 14:00:00 - 15:00:00 (SALON 611NB)
+
+================================================================================
+GRUPO: X MEDICINA
+MATERIA: Gineco-Obstetricia Teórico
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALON 410NB)
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALON 410NB)
+  • VIERNES: 06:00:00 - 07:00:00 (SALON 414NB)
+
+================================================================================
+GRUPO: X MEDICINA
+MATERIA: Medicina Legal Teoría
+PROFESOR: 
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALON 615NB)
+  • MARTES: 16:00:00 - 17:00:00 (SALON 616NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 516NB)
+  • JUEVES: 16:00:00 - 17:00:00 (SALON 612NB)
