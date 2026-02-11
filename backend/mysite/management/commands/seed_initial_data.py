@@ -2002,6 +2002,11 @@ class Command(BaseCommand):
         """Crear horarios para la sede centro"""
         self.stdout.write('  → Creando horarios sede centro...')
         
+        # Desconectar temporalmente la validación de horarios durante el seed
+        from django.db.models.signals import pre_save
+        from horario.signals import validar_horario
+        pre_save.disconnect(validar_horario, sender=Horario)
+        
         # Mapeo de días en español a formato consistente
         dias_map = {
             'LUNES': 'Lunes',
@@ -2627,54 +2632,168 @@ class Command(BaseCommand):
         try:
             periodo = PeriodoAcademico.objects.get(nombre='2026-1')
             sede_centro = Sede.objects.get(nombre='Sede Centro')
+            programa_derecho = Programa.objects.get(nombre='Derecho')
+            programa_admin = Programa.objects.get(nombre='Administración de Negocios Internacionales')
+            programa_contaduria = Programa.objects.get(nombre='Contaduría Pública')
+            tipo_aula = TipoEspacio.objects.get(nombre='Aula')
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'    ✗ Error obteniendo periodo o sede: {str(e)}'))
+            self.stdout.write(self.style.ERROR(f'    ✗ Error obteniendo entidades base: {str(e)}'))
             return
+        
+        # Helper function para extraer número de semestre de un nombre de grupo
+        def extraer_semestre(grupo_nombre):
+            import re
+            # Buscar patrones como "1 Semestre", "10 semestre", "I ", "X ", etc.
+            romanos_map = {
+                'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+                'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
+            }
+            
+            # Intentar encontrar número romano al inicio
+            for romano, numero in romanos_map.items():
+                if grupo_nombre.strip().startswith(romano + ' '):
+                    return numero
+            
+            # Intentar encontrar "X Semestre" o "X semestre"
+            match = re.search(r'(\d+)\s*[Ss]emestre', grupo_nombre)
+            if match:
+                return int(match.group(1))
+            
+            # Intentar encontrar en el texto "II CONTADURIA", "III ADM", etc
+            for romano, numero in romanos_map.items():
+                if f'/{romano} ' in grupo_nombre or grupo_nombre.startswith(romano + ' '):
+                    return numero
+            
+            return None
+        
+        # Determinar programa basado en el nombre del grupo
+        def determinar_programa(grupo_nombre):
+            grupo_upper = grupo_nombre.upper()
+            if 'CONTADURIA' in grupo_upper or 'CONTADURÍA' in grupo_upper:
+                return programa_contaduria
+            elif 'ADM' in grupo_upper or 'NEGOCIOS' in grupo_upper:
+                return programa_admin
+            else:
+                return programa_derecho
         
         for grupo_nombre, materia_nombre, profesor_nombre, dia, hora_inicio_str, hora_fin_str, espacio_nombre in horarios_data:
             try:
-                # Buscar el grupo (si tiene nombre)
+                # Buscar la asignatura - si no existe, crearla
+                asignatura = Asignatura.objects.filter(nombre__iexact=materia_nombre.strip()).first()
+                if not asignatura:
+                    # Crear la asignatura automáticamente con código único
+                    import hashlib
+                    codigo_base = materia_nombre.strip()[:15].upper().replace(' ', '-').replace(':', '')
+                    codigo_hash = hashlib.md5(materia_nombre.encode()).hexdigest()[:6].upper()
+                    codigo_unico = f'{codigo_hash}'
+                    
+                    # Asegurar que el código sea único
+                    contador = 1
+                    codigo_final = codigo_unico
+                    while Asignatura.objects.filter(codigo=codigo_final).exists():
+                        codigo_final = f'{codigo_unico}{contador}'
+                        contador += 1
+                    
+                    asignatura = Asignatura.objects.create(
+                        nombre=materia_nombre.strip(),
+                        codigo=codigo_final,
+                        creditos=3,
+                        horas=3,
+                        tipo='mixta'
+                    )
+                
+                # Buscar o crear el grupo
                 grupo = None
+                programa_detectado = determinar_programa(grupo_nombre) if grupo_nombre.strip() else programa_derecho
+                
                 if grupo_nombre.strip():
-                    # Intentar buscar el grupo por nombre exacto
-                    grupos = Grupo.objects.filter(
+                    # Extraer semestre del nombre del grupo
+                    semestre = extraer_semestre(grupo_nombre)
+                    
+                    if not semestre:
+                        semestre = 1  # Default a primer semestre
+                    
+                    # Buscar grupo existente
+                    grupo = Grupo.objects.filter(
                         periodo=periodo,
-                        nombre__icontains=grupo_nombre.strip()
+                        programa=programa_detectado,
+                        semestre=semestre
                     ).first()
                     
-                    if not grupos:
-                        # Si no se encuentra, intentar crear un grupo temporal
-                        # Por ahora, saltamos si no existe
-                        errors.append(f'Grupo no encontrado: {grupo_nombre}')
-                        skipped_count += 1
-                        continue
-                    grupo = grupos
+                    if not grupo:
+                        # Crear grupo
+                        romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+                        nombre_grupo = f'{romanos[semestre-1]} {programa_detectado.nombre[:20]} Centro'
+                        grupo, created = Grupo.objects.get_or_create(
+                            programa=programa_detectado,
+                            periodo=periodo,
+                            semestre=semestre,
+                            nombre=nombre_grupo,
+                            defaults={'activo': True}
+                        )
+                else:
+                    # Para horarios sin grupo específico, crear/usar un grupo general
+                    grupo, created = Grupo.objects.get_or_create(
+                        programa=programa_derecho,
+                        periodo=periodo,
+                        semestre=1,
+                        nombre='I DERECHO GENERAL',
+                        defaults={'activo': True}
+                    )
                 
-                # Buscar la asignatura
-                asignatura = Asignatura.objects.filter(nombre__icontains=materia_nombre.strip()).first()
-                if not asignatura:
-                    errors.append(f'Asignatura no encontrada: {materia_nombre}')
+                if not grupo:
+                    errors.append(f'Grupo no creado: {grupo_nombre}')
                     skipped_count += 1
                     continue
                 
                 # Buscar el docente (puede ser null)
                 docente = None
                 if profesor_nombre.strip():
-                    # Intentar buscar por nombre completo o partes del nombre
+                    # Normalizar nombre para búsqueda
+                    nombre_busqueda = profesor_nombre.strip().upper()
+                    # Intentar búsqueda flexible
                     docente = Usuario.objects.filter(
-                        nombre__icontains=profesor_nombre.strip()
+                        nombre__icontains=nombre_busqueda
                     ).first()
+                    
+                    if not docente:
+                        # Intentar con partes del nombre
+                        partes = nombre_busqueda.split()
+                        if len(partes) >= 2:
+                            docente = Usuario.objects.filter(
+                                nombre__icontains=partes[0]
+                            ).filter(
+                                nombre__icontains=partes[-1]
+                            ).first()
                 
-                # Buscar el espacio físico
+                # Buscar o crear el espacio físico
+                espacio_normalizado = espacio_nombre.strip()
                 espacio = EspacioFisico.objects.filter(
-                    nombre__icontains=espacio_nombre.strip(),
+                    nombre__iexact=espacio_normalizado,
                     sede=sede_centro
                 ).first()
                 
                 if not espacio:
-                    errors.append(f'Espacio no encontrado: {espacio_nombre}')
-                    skipped_count += 1
-                    continue
+                    # Intentar búsqueda parcial
+                    espacio = EspacioFisico.objects.filter(
+                        nombre__icontains=espacio_normalizado.split()[0],
+                        sede=sede_centro
+                    ).first()
+                    
+                if not espacio:
+                    # Crear el espacio si no existe
+                    try:
+                        espacio = EspacioFisico.objects.create(
+                            nombre=espacio_normalizado,
+                            sede=sede_centro,
+                            tipo=tipo_aula,
+                            capacidad=30,  # Capacidad por defecto
+                            estado='Disponible'
+                        )
+                    except Exception as e:
+                        errors.append(f'No se pudo crear espacio {espacio_nombre}: {str(e)}')
+                        skipped_count += 1
+                        continue
                 
                 # Normalizar día
                 dia_normalizado = dias_map.get(dia.upper().strip(), dia.strip())
@@ -2683,27 +2802,28 @@ class Command(BaseCommand):
                 hora_inicio = time.fromisoformat(hora_inicio_str)
                 hora_fin = time.fromisoformat(hora_fin_str)
                 
-                # Crear el horario
-                if grupo:  # Solo crear si tenemos un grupo válido
-                    horario, created = Horario.objects.get_or_create(
-                        grupo=grupo,
-                        asignatura=asignatura,
-                        dia_semana=dia_normalizado,
-                        hora_inicio=hora_inicio,
-                        hora_fin=hora_fin,
-                        espacio=espacio,
-                        defaults={
-                            'docente': docente,
-                            'estado': 'pendiente'
-                        }
-                    )
-                    
-                    if created:
-                        created_count += 1
-                    else:
-                        skipped_count += 1
+                # Crear el horario (sin validación de conflictos durante seed)
+                horario, created = Horario.objects.get_or_create(
+                    grupo=grupo,
+                    asignatura=asignatura,
+                    dia_semana=dia_normalizado,
+                    hora_inicio=hora_inicio,
+                    hora_fin=hora_fin,
+                    espacio=espacio,
+                    defaults={
+                        'docente': docente,
+                        'estado': 'aprobado'
+                    }
+                )
+                
+                # Si ya existía pero está pendiente, actualizarlo a aprobado
+                if not created and horario.estado == 'pendiente':
+                    horario.estado = 'aprobado'
+                    horario.save()
+                
+                if created:
+                    created_count += 1
                 else:
-                    errors.append(f'No se pudo crear horario sin grupo para: {materia_nombre}')
                     skipped_count += 1
                     
             except Exception as e:
@@ -2715,7 +2835,10 @@ class Command(BaseCommand):
         
         if errors:
             self.stdout.write(self.style.WARNING(f'\n    Errores encontrados ({len(errors)}):'))
-            for error in errors[:10]:  # Mostrar solo los primeros 10 errores
+            for error in errors[:20]:  # Mostrar los primeros 20 errores
                 self.stdout.write(self.style.WARNING(f'      • {error}'))
-            if len(errors) > 10:
-                self.stdout.write(self.style.WARNING(f'      ... y {len(errors) - 10} errores más'))
+            if len(errors) > 20:
+                self.stdout.write(self.style.WARNING(f'      ... y {len(errors) - 20} errores más'))
+        
+        # Reconectar la validación de horarios
+        pre_save.connect(validar_horario, sender=Horario)
