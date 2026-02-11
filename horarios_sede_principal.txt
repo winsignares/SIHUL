@@ -1,0 +1,2963 @@
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: CRISTÓBAL ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 10:00:00 - 11:00:00 (SALON TORREON 2)
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: HABILIDADES COMUNICATIVAS
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 1 semestre grupo B
+MATERIA: TEORÍA DEL ESTADO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 08:00:00 - 09:00:00 (SALON TORREON 2)
+
+================================================================================
+GRUPO: 1 semestre grupo C
+MATERIA: HABILIDADES COMUNICATIVAS
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 1 semestre grupo C
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 106B (100))
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 1 semestre grupo C
+MATERIA: TEORÍA ECONÓMICA
+PROFESOR: GUILLERMO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: HABILIDADES COMUNICATIVAS
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: HISTORIA DE LA FILOSOFÍA
+PROFESOR: CRISTÓBAL ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: INTRODUCCIÓN AL DERECHO
+PROFESOR: OONA HERNÁNDEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: 1 semestre grupo D
+MATERIA: TEORÍA DEL ESTADO
+PROFESOR: LINDA NADER
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 302B (50))
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: 2 semestre grupo A
+MATERIA: ECONOMÍA COLOMBIANA
+PROFESOR: GUILLERMO DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: 2 semestre grupo A
+MATERIA: ELECTIVA II ESTRUCTURA COMUNICATIVA DEL TEXO ESCRITO
+PROFESOR: SANDRA VILLA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: 2 semestre grupo A
+MATERIA: TEORÍA DE LA CONSTITUCIÓN
+PROFESOR: GRETTY PAVLOVICH
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALÓN 308B (100))
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: 2 semestre grupo A
+MATERIA: ÉTICA I
+PROFESOR: CRISTÓBAL ARTETA RIPOLL
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 2. Semestre grupo B
+MATERIA: CIVIL GENERAL Y PERSONAS
+PROFESOR: BEATRIZ TOVAR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN TORREON 1)
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN TORREON 1)
+
+================================================================================
+GRUPO: 3 Semestre grupo B
+MATERIA: CONSTITUCIONAL COLOMBIANO
+PROFESOR: Sin profesor especificado
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 3 Semestre grupo B
+MATERIA: INVESTIGACIÓN I
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN TORREON 2)
+
+================================================================================
+GRUPO: 3 Semestre grupo B
+MATERIA: TEORÍA DEL DELITO
+PROFESOR: JOHN BUITRAGO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN TORREON 1)
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN TORREON 1)
+
+================================================================================
+GRUPO: 3 Semestre grupo C
+MATERIA: CONSTITUCIONAL COLOMBIANO
+PROFESOR: Sin profesor especificado
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALÓN TORREON 1)
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN TORREON 1)
+
+================================================================================
+GRUPO: 3 Semestre grupo C
+MATERIA: ELECTIVA III COMPRENSIÓN LECTORA
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: 3 Semestre grupo C
+MATERIA: TEORÍA DEL DELITO
+PROFESOR: CARLOS JIMÉNEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN TORREON 1)
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: 3 semestre grupo AB
+MATERIA: ELECTIVA III  3AB
+PROFESOR: COMPRENSIÓN LECTORA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 06:00:00 - 07:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: 3 semestre grupo AD
+MATERIA: INVESTIGACIÓN I 3AD
+PROFESOR: ALEJANDRO BLANCO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALON 205NB)
+
+================================================================================
+GRUPO: 3 semestre grupo B
+MATERIA: INVESTIGACIÓN I
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: 3 semestre grupo D
+MATERIA: CONSTITUCIONAL COLOMBIANO
+PROFESOR: GRETTY PÁVLOVICH
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 101B (100))
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: 3 semestre grupo D
+MATERIA: ELECTIVA III COMPRENSIÓN LECTORA
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALON 101B)
+
+================================================================================
+GRUPO: 3 semestre grupo D
+MATERIA: LÓGICA JURÍDICA
+PROFESOR: YADIRA GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALON 302A)
+
+================================================================================
+GRUPO: 3 semestre grupo D
+MATERIA: TEORÍA DEL DELITO
+PROFESOR: LUIS CASTILLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALON TORREON 2)
+  • JUEVES: 13:00:00 - 14:00:00 (SALON TORREON 2)
+
+================================================================================
+GRUPO: 302A / V MEDICINA - GB
+MATERIA: Parasitología  Teoría
+PROFESOR: TULIO DÍAZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 12:00:00 - 13:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: 303A / V MEDICINA - GA
+MATERIA: Parasitología  Teoría
+PROFESOR: TULIO DÍAZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 17:00:00 - 18:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: 5 Semestre Grupo C
+MATERIA: INVESTIGACIÓN III
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: 5 Semestre grupo B
+MATERIA: ELECTIVA V CONFLICTOS CONTEMPORÁNEOS
+PROFESOR: RAFAEL RODRÍGUEZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 06:00:00 - 07:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: 5 Semestre grupo C
+MATERIA: DERECHO INTERNACIONAL PRIVADO
+PROFESOR: JUAN CARLOS DE LOS RÍOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 102B)
+
+================================================================================
+GRUPO: 5 Semestre grupo C
+MATERIA: INVESTIGACIÓN III
+PROFESOR: CLAUDIA VIZCAÍNO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALON 102B)
+
+================================================================================
+GRUPO: 5 semestre grupo B
+MATERIA: DERECHO INTERNACIONAL PRIVADO
+PROFESOR: JUAN CARLOS DE LOS RÍOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALON 516 NB)
+
+================================================================================
+GRUPO: 5 semestre grupo C
+MATERIA: ADMINISTRATIVO GENERAL
+PROFESOR: JAIME BERMEJO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: 7 semestre grupo A
+MATERIA: TITULOS VALORES
+PROFESOR: SANDRA VILLA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 06:00:00 - 07:00:00 (SALÓN 308B (100))
+  • JUEVES: 06:00:00 - 07:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: 7 semestre grupo B
+MATERIA: CRIMINOLOGÍA Y POLÍTICA CRIMINAL
+PROFESOR: GONZALO AGUILAR
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 10:00:00 - 11:00:00 (SALON 107B)
+
+================================================================================
+GRUPO: 7 semestre grupo B
+MATERIA: FILOSOFÍA DEL DERECHO
+PROFESOR: CRISTÓBAL ARTETA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALON 107B)
+
+================================================================================
+GRUPO: I MEDICINA  - GA
+MATERIA: Biologia Teoria
+PROFESOR: Yosed Anaya
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: I MEDICINA - B
+MATERIA: Biologia Teoria
+PROFESOR: Yosed Anaya
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: I MEDICINA - GA
+MATERIA: Bioestadística y Demografía
+PROFESOR: Sergio Nieves Vanegas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: I MEDICINA - GA
+MATERIA: Biología Teoría
+PROFESOR: Juan David Rodriguez/Yosed Anaya
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: I MEDICINA - GA
+MATERIA: Historia de la Medicina
+PROFESOR: Enrique Fonseca
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: I MEDICINA - GA
+MATERIA: Integracion basico
+PROFESOR: clinica. Quimica-Bioquimica
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALON 205B)
+
+================================================================================
+GRUPO: I MEDICINA - GA
+MATERIA: Química Teoría
+PROFESOR: ALEJANDRA ZAMBRANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: I MEDICINA - GA
+MATERIA: Socio-Antropología
+PROFESOR: VIRGINIA SIRTORI
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Bioestadística y Demografía
+PROFESOR: Adalgisa Alcocer
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Biologia Teoria
+PROFESOR: Juan David Rodriguez/Alberto Moreno
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALON TORREON 2)
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Biología Teoría
+PROFESOR: Juan David Rodriguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (TORREON 2)
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Electiva de formación integral:
+PROFESOR: Expresión Oral y Escrita
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Historia de la Medicina
+PROFESOR: Enrique Fonseca
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (TORREON 2)
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Integracion basico-clinica. Quimica-Bioquimica
+PROFESOR: ALEJANDRA ZAMBRANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 12:00:00 - 13:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Química Teoría
+PROFESOR: ALEJANDRA ZAMBRANO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: I MEDICINA - GB
+MATERIA: Socio-Antropología
+PROFESOR: VIRGINIA SIRTORI
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: I MEDICINA GA
+MATERIA: BIOFISICA TEORIA
+PROFESOR: Ismael Piñeres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: I MEDICINA GB
+MATERIA: BIOFISICA TEORIA
+PROFESOR: Ismael Piñeres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: I MEDICINA-GA
+MATERIA: Expresión Oral y Escrita
+PROFESOR: Marina Hernandez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALON 308B)
+
+================================================================================
+GRUPO: II MEDICINA
+MATERIA: ELECTIVA INSTITUCIONAL COMPLEMENTARIA
+PROFESOR: Comunicación escrita 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: II MEDICINA
+MATERIA: Electiva  complementaria 1 : Inteligencia emocional
+PROFESOR: 104B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: BIOQUIMICA
+PROFESOR: Alejandra Zambrano
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 12:00:00 - 13:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: Bioquimica
+PROFESOR: ISMAEL LIZARAZU
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 17:00:00 - 18:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: Bioquimica ISMAEL LIZARAZU, ALEJANDRA ZAMBRANO
+PROFESOR: Sin profesor especificado
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (TORREON 1)
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: Bioquimica _x000D_
+PROFESOR: ISMAEL LIZARAZU_x000D_
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (TORREON 2)
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: Metodología de la Investigación
+PROFESOR: G. DE LA HOZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: Morfología I: Anatomia
+PROFESOR: Dr. Aroldo Padillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: II MEDICINA - GA
+MATERIA: Morfología I: Histología Teoría
+PROFESOR: Waldy  Ahumada
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: II MEDICINA - GA y GB
+MATERIA: Morfología I: Embriología
+PROFESOR: Jaime Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: II MEDICINA - GB
+MATERIA: Bioquimica
+PROFESOR: ISMAEL LIZARAZU
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 18:00:00 - 19:00:00 (SALÓN 302A (100))
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (TORREON 1)
+  • JUEVES: 13:00:00 - 14:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: II MEDICINA - GB
+MATERIA: Metodología de la Investigación
+PROFESOR: ELVIRA CRESPO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: II MEDICINA - GB
+MATERIA: Metodología de la Investigación ELVIRA CRESPO
+PROFESOR: 302A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 306B (100))
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: II MEDICINA - GB
+MATERIA: Morfología I: Anatomia
+PROFESOR: GILBERTO BARRIOS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: II MEDICINA - GB
+MATERIA: Morfología I: Histología Teoría
+PROFESOR: Waldy  Ahumada
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: II MEDICINA GA
+MATERIA: Metodología de la Investigación
+PROFESOR: Ronald Maestre
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: II MEDICINA/I Y II MICROBIOLOGIA//II BACTERIOLOGIA
+MATERIA: Electiva de formación integral:
+PROFESOR: Redacción de Textos Científicos
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (TORREON 2)
+
+================================================================================
+GRUPO: II MEDICINA/II FISIOTERAPIA/II MICROBIOLOGIA/III INSTRUMENTACION
+MATERIA: Electiva de formación integral:
+PROFESOR: Comunicación No verbal
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: II Medicina
+MATERIA: Electiva Cuidados Basicos
+PROFESOR: Salón  104B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: III MEDICINA
+MATERIA: Electiva  complementaria 2: Inteligencia emocional
+PROFESOR: Gustavo De La Hoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 13:00:00 - 14:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: III MEDICINA
+MATERIA: Electiva:  Ingles I
+PROFESOR: Yesenia Valarezo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Biología Molecular  Teoría
+PROFESOR: Christian Cadena
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Biología molecular
+PROFESOR: Christian Cadena
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Morfología II: Anatomia AROLDO PADILLA
+PROFESOR: 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Morfología II: Histología Teoría
+PROFESOR: Waldy Ahumada
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 17:00:00 - 18:00:00 (SALÓN 307B (100))
+  • VIERNES: 15:00:00 - 16:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Psicología del Desarrollo
+PROFESOR: Mily Ardila
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 307B (100))
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Salud Familiar  Teoría
+PROFESOR: Sin profesor especificado
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALON 303A)
+
+================================================================================
+GRUPO: III MEDICINA - GA
+MATERIA: Salud Familiar  Teoría
+PROFESOR: 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: III MEDICINA - GA y GB
+MATERIA: Modulo basico- clinica Embiologia .
+PROFESOR: Jaime Navarro JLM
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: III MEDICINA - GB
+MATERIA: Biología molecular
+PROFESOR: Christian Cadena
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 304B (50))
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: III MEDICINA - GB
+MATERIA: Morfología II: Teoría
+PROFESOR: AROLDO PADILLA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: III MEDICINA - GB
+MATERIA: Psicología del Desarrollo                                                                                      Virginia Sirtori
+PROFESOR: 107B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: III MEDICINA - GB
+MATERIA: Salud Familiar  Teoría
+PROFESOR: 308B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: III MEDICINA - GB
+MATERIA: Salud Familiar  Teoría
+PROFESOR: 306B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: III MEDICINA/I Y III MICROBIOLOGIA /BACTERIOLOGIA III/instrumentacion III/VIII FISIOTERAPIA
+MATERIA: Emprendimiento e Innovacion
+PROFESOR: Luis Carlos Rodriguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 17:00:00 - 18:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: III MEDICINA/III BACTERIOLOGIA
+MATERIA: Electiva de formación integral:    Lectura Critica
+PROFESOR: Marina Hernandez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: III MEDICINA/III INSTRUMENTACION/III BACTERIOLOGIA/III MICROBIOLOGIA
+MATERIA: Electiva de formación integral: Texto y Cultura
+PROFESOR: LUZ M. SILVERA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 13:00:00 - 14:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: III MEDICINA/III MICROBIOLOGIA
+MATERIA: Electiva de formación integral: Lectura Critica
+PROFESOR: Luz Marina Silvera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: III MEDICINA/III Y IV MICROBIOLOGIA/III BACTERIOLOGIA/III INSTRUMENTACIÓN
+MATERIA: Electiva:  Ingles II
+PROFESOR: 102B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 13:00:00 - 14:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: III MEDICINA/IV FISIOTERAPIA/III INSTRUMENTACION/III MICROBIOLOGIA/III Y IV BACTERIOLOGIA
+MATERIA: Electiva de formación integral:
+PROFESOR: Innovacion Social
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: III Semestre Bacterioplogía y MICROBIOLOGÍA
+MATERIA: Genética
+PROFESOR: Teoría/Genética Básica y
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: IV MEDICINA
+MATERIA: Electiva :  Comunicación, Liderazgo y Trabajo en Equipo
+PROFESOR: Cecilia Arciniegas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: IV MEDICINA
+MATERIA: Electiva de Formación Integral: Responsabilidad Social y Empresarial
+PROFESOR: 306B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: IV MEDICINA
+MATERIA: Electiva:  Ingles III
+PROFESOR: YESENIA VALAREZO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Epidemiología Básica
+PROFESOR: Eduardo Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Epidemiología Básica.
+PROFESOR: Eduardo Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Fisiología Taller
+PROFESOR: 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Fisiología Teoría
+PROFESOR: Simon Bolivar
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 306B (100))
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 306B (100))
+  • JUEVES: 12:00:00 - 13:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Inmunología Teoría
+PROFESOR: FRANKLIN TORRES
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Salud Familiar II
+PROFESOR: 302A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GA
+MATERIA: Salud Familiar II Teoría
+PROFESOR: 308B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: Epidemiología Básica
+PROFESOR: Eduardo Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 16:00:00 - 17:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: Epidemiología Básica.
+PROFESOR: Eduardo Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: Fisiología Taller
+PROFESOR: 303A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: Fisiología Teoría
+PROFESOR: 302A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 302A (100))
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 306B (100))
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: Inmunología Teoría
+PROFESOR: FRANKLIN TORRES
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: SALUD FAMILIAR II
+PROFESOR: 302A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: IV MEDICINA - GB
+MATERIA: SALUD FAMILIAR II  TEORIA
+PROFESOR: 303A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: IV MEDICINA GB
+MATERIA: Electiva: Razonamiento cuantitativo
+PROFESOR: JOSE JINETE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: IV MEDICINA/III INSTRUMENTACION/VIII FISIOTERAPIA/IV BACTERIOLOGÍA
+MATERIA: Electiva:Competencias informacionales y digitales
+PROFESOR: Luis Carlos Rodriguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: IV MEDICINA/IV FISIOTERAPIA/
+MATERIA: Electiva:Razonamiento Cuantitativo
+PROFESOR: Jose Jinete
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: IV MEDICINA/VI FISIOTERAPIA/
+MATERIA: Electiva: Competencia Ciudadana
+PROFESOR: Luz Marina Silvera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: IX MEDICINA
+MATERIA: Proyecto de Grado  teoría
+PROFESOR: GUSTAVO DE LA HOZ - Primer Corte
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (TORREON 1 (130))
+
+================================================================================
+GRUPO: MEDICINA I - GA
+MATERIA: Bioestadística y Demografía Taller
+PROFESOR: Sergio Nieves Vanegas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALA COMPUTO 202B (40))
+  • JUEVES: 11:00:00 - 12:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: MEDICINA I - GB
+MATERIA: Bioestadística y Demografía
+PROFESOR: 202B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALA COMPUTO 202B (40))
+  • VIERNES: 10:00:00 - 11:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: MEDICINA II
+MATERIA: Electiva de formación integral: Inteligencia Artificial
+PROFESOR: Luis Carlos Rodriguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 15:00:00 - 16:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: MEDICINA II - GA
+MATERIA: Metodología de la Investigación
+PROFESOR: Ronald Maestre
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 10:00:00 - 11:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: MEDICINA II - GA
+MATERIA: Taller Bioqca  A1
+PROFESOR: L. Banderas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 204B (50))
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: MEDICINA II - GB
+MATERIA: TALLER BIOQUIMICA A1
+PROFESOR: L. Banderas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: MEDICINA II - GB
+MATERIA: TALLER BIOQUIMICA B2
+PROFESOR: L. Banderas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: MEDICINA II - GB
+MATERIA: Taller Bioqca  B3 Doc de bioqca
+PROFESOR: L. Banderas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: "Modalidad: SEMESTRAL
+PROFESOR: Step 2
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 104B (50))
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 105B (50))
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 107B (50))
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: "Salud y Ambiente/Electiva de profundización B
+PROFESOR: D: Liliana Carranza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: *CONTROL DE INFECCIÓN Y PROMOCIÓN DE LA SALUD:
+PROFESOR: Bryan Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Administración
+PROFESOR: 102B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 102B (50))
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Administración 1
+PROFESOR: Lorena Herera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Administración II Teoría
+PROFESOR: Norka Márquez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Administración en servicios de salud G1
+PROFESOR: Lucy Bula
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 204B (50))
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Administración y SSS
+PROFESOR: D: Leidy Goenaga
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Análisis Físico-Químico
+PROFESOR: Mario Peña
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 10:00:00 - 11:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Análisis Matemático y Estadístico
+PROFESOR: Javier Duran
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Bacteriología Clínica Teoría
+PROFESOR: Gisell diFilippo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Bioestadística
+PROFESOR: 105B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALÓN 105B (50))
+  • LUNES: 09:00:00 - 10:00:00 (SALA COMPUTO 202B (40))
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALA COMPUTO 202B (40))
+  • JUEVES: 07:00:00 - 08:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biofisica
+PROFESOR: MATIAS PUELLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 15:00:00 - 16:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biofísica
+PROFESOR: Matías Puello
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biofísica Teoría G1
+PROFESOR: Matías Puello
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Bioinformática
+PROFESOR: 202B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biologia molecular
+PROFESOR: Arleth Lopez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 304B (50))
+  • JUEVES: 10:00:00 - 11:00:00 (SALON 204B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biología
+PROFESOR: G1. Alberto Moreno
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biología Molecular Teoría
+PROFESOR: D: Arleth López
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biología Teoría
+PROFESOR: Yosed Anaya
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biología de los Microorganismos
+PROFESOR: María Rosa Baldovino
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biología teoría
+PROFESOR: Evelyn Mendoza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biomecánica
+PROFESOR: GB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 303B (50))
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 303B (50))
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biomecánica GB
+PROFESOR: Gladys Helena Gutierrez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biomecánica teoría
+PROFESOR: GA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Bioquímica
+PROFESOR: Mario Mutis
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Bioquímica Microbiana Teoría
+PROFESOR: Juan David Sanchez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 06:00:00 - 07:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Bioquímica Teoría
+PROFESOR: Pierine España
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 103B (50))
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 104B (50))
+  • JUEVES: 12:00:00 - 13:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Biotecnología Teoría
+PROFESOR: Mario Peña
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 203B (50))
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: CALIDAD EN SERVICIOS DE SALUD
+PROFESOR: María Inés López
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: CONTROL DE INFECCIÓN: Angelica Corcho-
+PROFESOR: Sin profesor especificado
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALON 306B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: CURSO PREMEDICO
+PROFESOR: QUIMICA TEORIA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (TORREON 2)
+  • MIÉRCOLES: 08:00:00 - 09:00:00 (SALÓN 106B (100))
+  • JUEVES: 08:00:00 - 09:00:00 (SALÓN 306B (100))
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 101B (100))
+  • VIERNES: 13:00:00 - 14:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Calidad Microbiológica y Sanitaria en productos de Consumo - Teoría
+PROFESOR: 105B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Cinesiopatología G1
+PROFESOR: Yadira Barrios
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 303B (50))
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 204B (50))
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Competencia Comunicativas II
+PROFESOR: Marina Hernández
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Competencias Comunicativas I
+PROFESOR: Cecilia Arciniegas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Comunicación, Liderazgo y Trabajo en Equipo
+PROFESOR: Cecilia Arciniegas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Constitución Nacional
+PROFESOR: Elvis Ruiz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Constitución Política
+PROFESOR: D: Bibiana Sierra
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 17:00:00 - 18:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Constitución política G1
+PROFESOR: 303B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Control de la Infección y Promoción de la Salud
+PROFESOR: Arleth Cataño
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Control y aprendizaje motor G1
+PROFESOR: Yoly Yepes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Cuidados Básicos en Salud Teoría
+PROFESOR: María Amador
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Cálculo
+PROFESOR: Javier Duran
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 302B (50))
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Discapacidad G1
+PROFESOR: Yoly Yepes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: ELECTIVA DE PROFUNDIZACIÓN I
+PROFESOR: CALIDAD EN SERVICIO DE SALUD
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALON 105B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: ELECTIVA INSTITUCIONAL – COMPLEMENTARIA
+PROFESOR: Texto y cultura
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 13:00:00 - 14:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ecología Microbiana
+PROFESOR: Beatriz Barraza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de Profundización II: Estilos de vida saludable y MCH
+PROFESOR: LESLIE MONTEALEGRE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALON 201B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización (A):
+PROFESOR: Enfermedades Transmitidas por Vectores
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización I: Estilos de vida saludable
+PROFESOR: Luisa Galeano (TC)
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 104B (50))
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALON 202B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización I: Estilos de vida saludable y MCH
+PROFESOR: Leslie Montealegre
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización I: FT. Cardiopulmonar
+PROFESOR: Tammy Pulido (CAT)
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 204B (50))
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización I: Fisioterapia en enfermedades crónicas
+PROFESOR: Laura Ardila
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización I: Fisioterapia en enfermedades crónicas - Laura Ardila
+PROFESOR: salón 305B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización I: SST
+PROFESOR: Karol Cervantes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 205B (50))
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización II: Motricidad
+PROFESOR: Eulalia Amador
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 102B (50))
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización II: conexión mental
+PROFESOR: Mónica Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 206B (50))
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización II: enfermedades crónicas y MCH
+PROFESOR: Sindy Ariza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva de profundización II: estilos de vida saludable y MCH
+PROFESOR: Roberto Rebolledo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 106B (100))
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva:  Inglés Avanzado
+PROFESOR: 103B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva:  Inglés Basic
+PROFESOR: 102B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 15:00:00 - 16:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva:  Inglés II
+PROFESOR: 103B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva: Comunicación, Liderazgo y Trabajo en Equipo
+PROFESOR: 204B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electiva: Ingles Avanzado III
+PROFESOR: Salón  103B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Electivas de formación integral III
+PROFESOR: Cuidado Básico en Salud Noris Álvarez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Empresarismo y Emprendimiento
+PROFESOR: Luis Carlos Rodriguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 15:00:00 - 16:00:00 (SALON 202B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Epidemiología
+PROFESOR: Adalgiza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Epidemiología G1
+PROFESOR: Laura Ardila
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 206B (50))
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 304B (50))
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Epistemología de las ciencias G1
+PROFESOR: Karol Cervantes
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Evaluación y Diagnóstico                 GA
+PROFESOR: Roberto Rebolledo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Evaluación y Diagnóstico (práctica) GA Roberto Rebolledo
+PROFESOR: 104B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Evaluación y Diagnóstico GB
+PROFESOR: Julia Andrade
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 203B (50))
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 305B (50))
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Expresión Oral y Escrita
+PROFESOR: Marina Hernandez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 08:00:00 - 09:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: FARMACOLOGIA Y TOXICOLOGIA VII. LILIANA CARRANZA
+PROFESOR: Salón 107B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Farmacología en Ft
+PROFESOR: Luisa Galeano
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Farmacología en Ft. G1
+PROFESOR: Luisa Galeano
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Farmacología y Anestesia
+PROFESOR: SALÓN 105B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 305B (50))
+  • JUEVES: 10:00:00 - 11:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fisiología Animal y Vegetal Arleth Lopez
+PROFESOR: Salón 206B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fisiología del Ejercicio (practica) GB
+PROFESOR: 303B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fisiología del Ejercicio GA
+PROFESOR: Raúl Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fisiología del Ejercicio grupo B
+PROFESOR: Sindy Ariza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fisiología del Ejercicio grupo GA
+PROFESOR: Raul Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fisiopatología Humana / Morfosiología Humana
+PROFESOR: Gladys Gutierrez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fundamentos de Psicología
+PROFESOR: Mily Ardila
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Fundamentos en el Análisis y Redacción de Textos G1
+PROFESOR: Luz Marina Silvera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Hematología Clínica
+PROFESOR: Lady Goenaga
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 12:00:00 - 13:00:00 (SALON 204B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Hematología Teoria
+PROFESOR: Christian Cadenas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Historia de la Ciencia y la Microbiología.
+PROFESOR: Juan David Sánchez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Inmunohematología Teoría
+PROFESOR: Goenaga
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Inmunologia Teoria
+PROFESOR: Yosed Anaya
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Inmunología Clinica Teoria
+PROFESOR: Franklin Torres
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Innovación y tecnología TEORIA
+PROFESOR: Lorena Herrera- Coordinadora asignatura
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en Fisioterapia l
+PROFESOR: GA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALON 203B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en Fisioterapia l GA
+PROFESOR: Lucy Bula
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 205B (50))
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en Fisioterapia l GB
+PROFESOR: Nobis de la Cruz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 304B (50))
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 102B (50))
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en Ft II
+PROFESOR: Yadira Barrios
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 305B (50))
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en Ft II GA
+PROFESOR: GA 205B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 305B (50))
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 205B (50))
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en fisioterapia III
+PROFESOR: GA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 302B (50))
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en fisioterapia III GA
+PROFESOR: Salón 304B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en fisioterapia III GA Jennifer Barrios
+PROFESOR: 302B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Intervención en fisioterapia III GB
+PROFESOR: Jennifer Barrios
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Introducción a la Fisioterapia
+PROFESOR: Yadira Barrios
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Introducción a la Fisioterapia G1
+PROFESOR: Yadira Barrios
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 11:00:00 - 12:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Introducción a la instrumentación
+PROFESOR: María Amador
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Introducción a las ciencias ómicas                                 D: Cristian Cadena
+PROFESOR: Salón: 104B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Investigación Clínica Epidemiológica
+PROFESOR: Bryan Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Lógica Matemática
+PROFESOR: Sergio Nieves
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Lógica Matemática G1
+PROFESOR: José Jinete
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Metodología
+PROFESOR: de la Investigación
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Metodología de la investigación
+PROFESOR: Cecilia Arciniegas
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Metodología de la investigación   G1
+PROFESOR: Laura Ardila
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Micología teoría
+PROFESOR: Gloria Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología
+PROFESOR: Jaime Lordouy
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología Ambiental Teoría
+PROFESOR: Mario Peña
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología General Teoría
+PROFESOR: José Luis Villarreal
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología Industrial
+PROFESOR: Marianella  Suárez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología Teoría
+PROFESOR: Wendy Rosales
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 104B (50))
+  • JUEVES: 12:00:00 - 13:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología de Alimentos
+PROFESOR: Marianela Suárez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 12:00:00 - 13:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología de suelos
+PROFESOR: Beatriz Barraza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Microbiología predictiva
+PROFESOR: Juan David Sanchez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 15:00:00 - 16:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Modalidad: Semestral
+PROFESOR: Step 2
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 104B (50))
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 204B (50))
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 205B (50))
+  • VIERNES: 14:00:00 - 15:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Modalidades Físicas
+PROFESOR: GA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 206B (50))
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Modalidades Físicas GA
+PROFESOR: Lina Chavez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfo fisiología I Práctica- Anfiteatro
+PROFESOR: Gladys Helena Ríos
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfo fisiología I Teoría
+PROFESOR: Gladys Helena Ríos
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 15:00:00 - 16:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfo fisiología II- Teoría
+PROFESOR: Tatiana Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfo fisiología l (Práctica)
+PROFESOR: GB
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 305B (50))
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfo fisiología ll (teoría) G1
+PROFESOR: 303B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfofisiología Humana II
+PROFESOR: D: Aroldo Padilla.
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 15:00:00 - 16:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Morfofisiología l G1 (teoría)
+PROFESOR: Nobis De la Cruz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Neurociencias del Movimiento G1
+PROFESOR: Eulalia Amador
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ocupación y movimiento corporal G1
+PROFESOR: Martha Mendihueta
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 303B (50))
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 103B (50))
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa A: Introducción a la ciencia de datos
+PROFESOR: 202B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa A: Micología Avanzada
+PROFESOR: Gloria Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa B: Bioprospección
+PROFESOR: Caludia Tapia
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa C: Fitopatologia y control Biologico
+PROFESOR: Mario Peña
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa I Parasitología Veterinaria
+PROFESOR: 105B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa II: Diagnóstico Forense                         D: Miriam Linero
+PROFESOR: Salón: 303B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Optativa II: Gestión de residuos hospitalarios
+PROFESOR: D: Liliana Carranza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: PRACTICA HOSPITALARIA III
+PROFESOR: SEMINARIO TEORICO PRACTICO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: PRACTICA SALUD PUBLICA PROYECCIÓN COMUNITARIA – Teoría
+PROFESOR: Bryan Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: PRÁCTICA HOSPITALARIA IV
+PROFESOR: SEMINARIO TEORICO PRACTICO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Parasitología Clínica
+PROFESOR: Christian Cadena
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Patología Básica
+PROFESOR: Richard Zambrano
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Patología Teoría
+PROFESOR: Richard Zambrano
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 07:00:00 - 08:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Prescripción del Ejercicio GA
+PROFESOR: Roberto Rebolledo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Prescripción del Ejercicio GB
+PROFESOR: Raúl Polo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Prestamo Consejo Estudiantil de Medicina - CEM
+PROFESOR: 308B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 17:00:00 - 18:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Asépticos II
+PROFESOR: Teoría
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Industriales Teoría
+PROFESOR: Javier Duran
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Industriales Teoría / Javier Duran
+PROFESOR: Salón 104B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 15:00:00 - 16:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Qcos Otorrino- Teoría
+PROFESOR: Tatiana Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Qcos en Cirugía Plástica
+PROFESOR: Leidy Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Qcos en Neurocirugía
+PROFESOR: Leidy Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Qcos en Ortopedia
+PROFESOR: Jainer Molina
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 16:00:00 - 17:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Qcos. Cirugía Plástica
+PROFESOR: Leidy Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Qcos. Cx. General y Pediatría GA
+PROFESOR: Arleth Cataño
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 204B (50))
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Quirúrgico Urología(T)
+PROFESOR: Tatiana Gómez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Quirúrgicos
+PROFESOR: en Oftalmología
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 15:00:00 - 16:00:00 (SALÓN 103B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos Quirúrgicos en Cardiovascular( C )
+PROFESOR: MARIA MARRIAGA - LORENA HERRERA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Procesos asepticos I teoria
+PROFESOR: Maria Amador
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Propuesta de Investigación
+PROFESOR: Emilse Vásquez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 07:00:00 - 08:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Proyección a la comunidad TEORÍA D: Bryan Dominguéz Salón: 305B
+PROFESOR: VI BACTERIOLOGÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 07:00:00 - 08:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Proyecto de Investigación I G1
+PROFESOR: 102B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Proyecto de Investigación II
+PROFESOR: Laura Ardila (TC)
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 304B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Proyecto de Investigación III
+PROFESOR: Lina Chavez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Proyecto de investigación
+PROFESOR: Liliana Carranza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 17:00:00 - 18:00:00 (SALÓN 107B (50))
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 204B (50))
+  • MIÉRCOLES: 11:00:00 - 12:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Práctica Administrativa Teoría
+PROFESOR: Lorena Herrera
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Psicología Evolutiva G1
+PROFESOR: Salón 102B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Quimica Clinica Teoria
+PROFESOR: Lady Goenaga
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Química Especial Teoría
+PROFESOR: Leidy Goenaga
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Química Teoría
+PROFESOR: Mario Mutis
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALON TORREON 2)
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 107B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Salud Ocupacional - Teoría-Jainer Molina
+PROFESOR: 302B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 11:00:00 - 12:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Salud PUBLICA
+PROFESOR: ANDERSON DIAZ
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALON 307B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Salud Publica II
+PROFESOR: Elvira Crespo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 08:00:00 - 09:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Salud Pública G1
+PROFESOR: Lina chavez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 302B (50))
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Salud Pública I
+PROFESOR: Eduardo Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 102B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Salud y Comunidad G1
+PROFESOR: Lina Chávez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Seminario de integración Prácticas Formativas G1
+PROFESOR: 206B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 206B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Seminario de integración prácticas optativas
+PROFESOR: Yennifer Barrios
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Sistemas de Calidad
+PROFESOR: Maria Rosa Baldovino
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 15:00:00 - 16:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Sociedad y sector salud teoría
+PROFESOR: Maria Amador
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Sociedad y sector salud y comunidad - teoría
+PROFESOR: Brayan Domínguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALÓN 301B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Socio antropología
+PROFESOR: Virginia Sirtori
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 105B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: SocioAnatropologia
+PROFESOR: Salón 305B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 11:00:00 - 12:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: TOXICOLOGIA
+PROFESOR: Claudia Tapia
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 12:00:00 - 13:00:00 (SALON 203B)
+  • MARTES: 15:00:00 - 16:00:00 (SALON 301B)
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Tecnicas Especiales Teoria
+PROFESOR: Claudia Tapia
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Trabajo de grado
+PROFESOR: Alfonso Rodriguez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 07:00:00 - 08:00:00 (SALÓN 305B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Tutorias practicas
+PROFESOR: Sindy Ariza
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 14:00:00 - 15:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Técnicas Especiales Teoría
+PROFESOR: Claudia Tapias
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 204B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Virología Clínica
+PROFESOR: D: María Rosa Baldovino
+--------------------------------------------------------------------------------
+HORARIOS:
+  • VIERNES: 10:00:00 - 11:00:00 (SALÓN 205B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ética
+PROFESOR: Jose Luis Villareal
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (SALÓN 203B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ética Y Bioética
+PROFESOR: Anderson Diaz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ética y Deontología
+PROFESOR: Stephanye Carrillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 08:00:00 - 09:00:00 (SALA COMPUTO 202B (40))
+
+================================================================================
+GRUPO: Sin grupo especificado
+MATERIA: Ética y bioética G1
+PROFESOR: Gustavo de la Hoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 303B (50))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: ETICA
+PROFESOR: Esteffany Carrillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 15:00:00 - 16:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Farmacología Teoria
+PROFESOR: Elen Manrrique
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Micologia
+PROFESOR: Gloria Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Microbiología  teoría
+PROFESOR: Virologia. J. Villarreal
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 308B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Microbiología Teoría
+PROFESOR: Aracelys García
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (TORREON 1)
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Módulo farmacología
+PROFESOR: 303A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Patologia Practica
+PROFESOR: 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 09:00:00 - 10:00:00 (SALÓN 307B (100))
+  • VIERNES: 09:00:00 - 10:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GA
+MATERIA: Patología ATENEO
+PROFESOR: Dra Bertiller
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 101B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: ETICA
+PROFESOR: Esteffany Carrillo
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 12:00:00 - 13:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Farmacología Teoria
+PROFESOR: Elin Manrrique
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 15:00:00 - 16:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Micologia
+PROFESOR: Gloria Muñoz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 11:00:00 - 12:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Microbiología Teoría
+PROFESOR: ARACELLY GARCÍA
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 14:00:00 - 15:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Microbiología VIROLOGIA Teoría J.Villarreal
+PROFESOR: 302A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 15:00:00 - 16:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Módulo farmacología
+PROFESOR: 302A
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Patologia Teoria
+PROFESOR: Sin profesor especificado
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 09:00:00 - 10:00:00 (SALÓN 302A (100))
+  • VIERNES: 09:00:00 - 10:00:00 (TORREON 1)
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Patología ATENEO
+PROFESOR: Dra Bertiller
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Patología Macro Práctica      GRUPOS A4-B4
+PROFESOR: 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 09:00:00 - 10:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: V MEDICINA - GB
+MATERIA: Patología Teoria
+PROFESOR: 307B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 07:00:00 - 08:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: V MEDICINA GA
+MATERIA: Patología  Teoría
+PROFESOR: 306B
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: V Semestre Grupo D
+MATERIA: TUTELA PENAL DE LOS BIENES JURÍDICOS II
+PROFESOR: LUIS CASTILLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 13:00:00 - 14:00:00 (SALÓN 104B (50))
+
+================================================================================
+GRUPO: V Semestre grupo D
+MATERIA: HERMENÉUTICA JURÍDICA
+PROFESOR: PATRICIA MORRIS
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 206B (50))
+  • JUEVES: 15:00:00 - 16:00:00 (SALÓN 302B (50))
+
+================================================================================
+GRUPO: VI MEDICINA - GA
+MATERIA: Bioética
+PROFESOR: Anderson Diaz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 14:00:00 - 15:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GA
+MATERIA: Farmacología Práctica
+PROFESOR: A. GUERRERO/J. Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 14:00:00 - 15:00:00 (SALÓN 106B (100))
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GA
+MATERIA: Farmacología y Toxicología Teoría
+PROFESOR: G. Sarmiento/J. Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 13:00:00 - 14:00:00 (SALÓN 306B (100))
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GA
+MATERIA: Genética Clínica Teoría
+PROFESOR: Zuleima Yañez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 306B (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GA
+MATERIA: Genética Clínica Teoría-Practica
+PROFESOR: Zuleima Yañez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 17:00:00 - 18:00:00 (SALÓN 303A (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GB
+MATERIA: Bioética
+PROFESOR: Anderson Diaz
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 16:00:00 - 17:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GB
+MATERIA: Farmacología Práctica
+PROFESOR: A. GUERRERO/J. Navarro
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 16:00:00 - 17:00:00 (SALÓN 106B (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GB
+MATERIA: Farmacología y Toxicología Teoría
+PROFESOR: Dr. Guerrero
+--------------------------------------------------------------------------------
+HORARIOS:
+  • LUNES: 16:00:00 - 17:00:00 (SALÓN 106B (100))
+  • MIÉRCOLES: 13:00:00 - 14:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GB
+MATERIA: Farmacología y Toxicología Teoría Guillermo Sarmiento/
+PROFESOR: Elen Manrrique
+--------------------------------------------------------------------------------
+HORARIOS:
+  • JUEVES: 13:00:00 - 14:00:00 (SALÓN 302A (100))
+
+================================================================================
+GRUPO: VI MEDICINA - GB
+MATERIA: Genética Clínica Teoría
+PROFESOR: Zuleima Yañez
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MARTES: 12:00:00 - 13:00:00 (SALÓN 106B (100))
+  • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: VI MEDICINA
+MATERIA: Semiología
+PROFESOR: ELBA VALLE
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 307B (100))
+
+================================================================================
+GRUPO: VI MEDICINA
+MATERIA: Semiología Teoría
+PROFESOR: FERNANDO FIORILLO
+--------------------------------------------------------------------------------
+HORARIOS:
+  • MIÉRCOLES: 09:00:00 - 10:00:00 (SALÓN 302A (100))
