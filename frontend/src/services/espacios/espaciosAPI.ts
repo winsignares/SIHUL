@@ -64,6 +64,22 @@ export interface ListEspaciosResponse {
 }
 
 /**
+ * Interfaz para el modelo de TipoEspacio
+ */
+export interface TipoEspacio {
+    id: number;
+    nombre: string;
+    descripcion?: string;
+}
+
+/**
+ * Respuesta de la lista de tipos de espacios
+ */
+export interface ListTiposEspacioResponse {
+    tipos_espacio: TipoEspacio[];
+}
+
+/**
  * Interfaz para el modelo de EspacioPermitido
  */
 export interface EspacioPermitido {
@@ -142,6 +158,13 @@ export const espacioService = {
      */
     list: async (): Promise<ListEspaciosResponse> => {
         return apiClient.get<ListEspaciosResponse>('/espacios/list/');
+    },
+
+    /**
+     * Lista todos los tipos de espacios
+     */
+    listTipos: async (): Promise<ListTiposEspacioResponse> => {
+        return apiClient.get<ListTiposEspacioResponse>('/espacios/tipos/list/');
     },
 
     /**

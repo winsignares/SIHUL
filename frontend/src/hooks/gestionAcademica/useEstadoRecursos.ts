@@ -189,7 +189,7 @@ export function useEstadoRecursos() {
         return sede?.nombre || 'Sede desconocida';
     };
 
-    // Get all unique tipos from espacios
+    // Get all unique tipos from espacios que tienen al menos un salón
     const tiposDisponibles = Array.from(
         new Set(espacios.map(e => e.tipo_espacio?.nombre).filter(Boolean))
     ) as string[];
