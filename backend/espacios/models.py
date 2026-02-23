@@ -1,6 +1,8 @@
 from django.db import models
 from sedes.models import Sede
 from usuarios.models import Usuario
+from .managers import EspacioFisicoManager
+
 
 class TipoEspacio(models.Model):
     id = models.AutoField(primary_key=True)
@@ -26,6 +28,9 @@ class EspacioFisico(models.Model):
         ], 
         default='Disponible'
     )
+
+    # Manager con sincronización automática de estado al consultar
+    objects = EspacioFisicoManager()
 
     def __str__(self):
         return f"{self.nombre} - {self.tipo.nombre} ({self.ubicacion or 'sin ubicación'})"

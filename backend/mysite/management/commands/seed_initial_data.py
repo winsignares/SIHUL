@@ -239,14 +239,14 @@ class Command(BaseCommand):
         """Crear facultades con sus sedes"""
         self.stdout.write('  → Creando facultades...')
         
-        sede_candelaria = Sede.objects.get(nombre='Sede Candelaria')
+        sede_principal = Sede.objects.get(nombre='Sede Principal')
         sede_centro = Sede.objects.get(nombre='Sede Centro')
         
         facultades_data = [
             {'nombre': 'Facultad de Ingeniería', 'sede': sede_centro, 'activa': True},
             {'nombre': 'Facultad de Ciencias Económicas, Administrativas y Contables', 'sede': sede_centro, 'activa': True},
             {'nombre': 'Facultad de Derecho, Ciencias Políticas y Sociales', 'sede': sede_centro, 'activa': True},
-            {'nombre': 'Facultad de Ciencias de la Salud', 'sede': sede_candelaria, 'activa': True},
+            {'nombre': 'Facultad de Ciencias de la Salud', 'sede': sede_principal, 'activa': True},
             {'nombre': 'Facultad de Ciencias de la Salud, Exactas y Naturales', 'sede': sede_centro, 'activa': True},
         ]
         
@@ -276,6 +276,7 @@ class Command(BaseCommand):
             ('Facultad de Ciencias de la Salud, Exactas y Naturales', 'Instrumentación Quirúrgica', 8, True),
             ('Facultad de Ingeniería', 'Ingeniería de Sistemas', 10, True),
             ('Facultad de Ingeniería', 'Ingeniería Industrial', 10, True),
+            ('','Alianza Canadiense', 10, True),
         ]
         
         created_count = 0
@@ -290,7 +291,14 @@ class Command(BaseCommand):
                 if created:
                     created_count += 1
             except Facultad.DoesNotExist:
-                self.stdout.write(self.style.WARNING(f'    ! Facultad no encontrada: {nombre_facultad}'))
+                self.stdout.write(self.style.WARNING(f'    ! Facultad no encontrada: {nombre_facultad}, registrando sin facultad'))
+                _, created = Programa.objects.get_or_create(
+                    nombre=nombre_programa,
+                    facultad=None,
+                    defaults={'semestres': semestres, 'activo': activo}
+                )
+                if created:
+                    created_count += 1
         
         self.stdout.write(self.style.SUCCESS(f'    ✓ {created_count} programas creados ({len(programas_data)} totales)'))
 
@@ -1544,7 +1552,7 @@ class Command(BaseCommand):
         self.stdout.write('  → Creando espacios físicos...')
         self.stdout.write('     Este proceso puede tomar unos segundos...')
         
-        sede_candelaria = Sede.objects.get(nombre='Sede Candelaria')
+        sede_principal = Sede.objects.get(nombre='Sede Principal')
         sede_centro = Sede.objects.get(nombre='Sede Centro')
         
         tipo_torreon = TipoEspacio.objects.get(nombre='TORREON')
@@ -1555,32 +1563,32 @@ class Command(BaseCommand):
         # Formato: (nombre, sede, tipo, capacidad, ubicacion)
         espacios_data = [
             # === SEDE PRINCIPAL ===
-            ('TORREON 1', sede_candelaria, tipo_torreon, 130, 'N/A'),
-            ('TORREON 2', sede_candelaria, tipo_torreon, 130, 'N/A'),
-            ('SALON 302A', sede_candelaria, tipo_salon, 100, 'N/A'),
-            ('SALON 303A', sede_candelaria, tipo_salon, 100, 'N/A'),
-            ('SALON 101B', sede_candelaria, tipo_salon, 100, 'N/A'),
-            ('SALON 102B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 103B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 104B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 105B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 106B', sede_candelaria, tipo_salon, 100, 'N/A'),
-            ('SALON 107B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALA COMPUTO 201B', sede_candelaria, tipo_sala_computo, 30, 'N/A'),
-            ('SALA COMPUTO 202B', sede_candelaria, tipo_sala_computo, 40, 'N/A'),
-            ('SALA COMPUTO 203B', sede_candelaria, tipo_sala_computo, 30, 'N/A'),
-            ('SALON 203A', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 204A', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 205B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 206B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 301B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 302B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 303B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 304B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 305B', sede_candelaria, tipo_salon, 50, 'N/A'),
-            ('SALON 306B', sede_candelaria, tipo_salon, 100, 'N/A'),
-            ('SALON 307B', sede_candelaria, tipo_salon, 100, 'N/A'),
-            ('SALON 308B', sede_candelaria, tipo_salon, 100, 'N/A'),
+            ('TORREON 1', sede_principal, tipo_torreon, 130, 'N/A'),
+            ('TORREON 2', sede_principal, tipo_torreon, 130, 'N/A'),
+            ('SALON 302A', sede_principal, tipo_salon, 100, 'N/A'),
+            ('SALON 303A', sede_principal, tipo_salon, 100, 'N/A'),
+            ('SALON 101B', sede_principal, tipo_salon, 100, 'N/A'),
+            ('SALON 102B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 103B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 104B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 105B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 106B', sede_principal, tipo_salon, 100, 'N/A'),
+            ('SALON 107B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALA COMPUTO 201B', sede_principal, tipo_sala_computo, 30, 'N/A'),
+            ('SALA COMPUTO 202B', sede_principal, tipo_sala_computo, 40, 'N/A'),
+            ('SALA COMPUTO 203B', sede_principal, tipo_sala_computo, 30, 'N/A'),
+            ('SALON 203A', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 204A', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 205B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 206B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 301B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 302B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 303B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 304B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 305B', sede_principal, tipo_salon, 50, 'N/A'),
+            ('SALON 306B', sede_principal, tipo_salon, 100, 'N/A'),
+            ('SALON 307B', sede_principal, tipo_salon, 100, 'N/A'),
+            ('SALON 308B', sede_principal, tipo_salon, 100, 'N/A'),
             
             # === SEDE CENTRO ===
             ('SALON 103B-CENTRO', sede_centro, tipo_salon, 60, 'N/A'),
@@ -1875,38 +1883,39 @@ class Command(BaseCommand):
             
                         
             # Derecho
-            ('DERECHO', '2026-1', 'DERECHO GA', 'I'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'I'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'I'),
-            ('DERECHO', '2026-1', 'DERECHO GD', 'I'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'II'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'II'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'II'),
-            ('DERECHO', '2026-1', 'DERECHO GD', 'II'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'III'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'III'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'III'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'IV'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'IV'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'IV'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'V'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'V'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'V'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'VI'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'VI'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'VI'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'VII'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'VII'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'VII'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'VIII'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'VIII'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'VIII'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'IX'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'IX'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'IX'),
-            ('DERECHO', '2026-1', 'DERECHO GA', 'X'),
-            ('DERECHO', '2026-1', 'DERECHO GB', 'X'),
-            ('DERECHO', '2026-1', 'DERECHO GC', 'X'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'I'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'I'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'I'),
+            ('DERECHO', '2026-1', 'DERECHO D', 'I'),
+            ('DERECHO', '2026-1', 'DERECHO E', 'I'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'II'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'II'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'II'),
+            ('DERECHO', '2026-1', 'DERECHO D', 'II'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'III'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'III'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'III'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'IV'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'IV'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'IV'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'V'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'V'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'V'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'VI'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'VI'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'VI'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'VII'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'VII'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'VII'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'VIII'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'VIII'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'VIII'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'IX'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'IX'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'IX'),
+            ('DERECHO', '2026-1', 'DERECHO A', 'X'),
+            ('DERECHO', '2026-1', 'DERECHO B', 'X'),
+            ('DERECHO', '2026-1', 'DERECHO C', 'X'),
             
             # Administración de Negocios Internacionales
             ('ADM. NEGOCIOS', '2026-1', 'ADM. NEGOCIOS AN', 'I'),
@@ -2025,6 +2034,93 @@ class Command(BaseCommand):
         
         # Formato: (grupo, materia, profesor, dia, hora_inicio, hora_fin, espacio)
         horarios_data = [
+            # ── ALIANZA CANADIENSE ──
+            # Modalidad: Intensivo
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 501NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 502NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 505NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 506NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MARTES', '16:00:00', '17:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 501NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 502NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 505NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 506NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 501NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 502NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 505NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 506NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 501NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 502NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 505NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Intensiva', '7', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 506NB'),
+            # Modalidad: SEMESTRAL
+            ('ALIANZA CANADIENSE', 'Modalidad: SEMESTRAL', '4', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALÓN 413NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: SEMESTRAL', '4', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: SEMESTRAL', '4', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 413NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: SEMESTRAL', '4', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 414NB'),
+            # Modalidad: Sabatino
+            ('ALIANZA CANADIENSE', 'Modalidad: Sabatino', '2', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 409NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Sabatino', '2', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 410NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Sabatino', '2', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 411NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Sabatino', '2', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 412NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Sabatino', '2', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 413NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Sabatino', '2', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 414NB'),
+            # Modalidad: Semestral
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'LUNES', '11:00:00', '12:00:00', 'SALÓN 505NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'LUNES', '11:00:00', '12:00:00', 'SALÓN 506NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'LUNES', '11:00:00', '12:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALÓN 513NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 505NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 506NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semestral', '2', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 513NB'),
+            # Modalidad: Semi-Intensiva
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '5', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '5', 'MARTES', '16:00:00', '17:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '5', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALÓN 509NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '5', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 509NB'),
+            # Modalidad: Semi-Intensiva
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'MARTES', '16:00:00', '17:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 414NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '7', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 414NB'),
+            # Modalidad: Semi-intensiva
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-intensiva', '6', 'LUNES', '16:00:00', '17:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-intensiva', '6', 'MARTES', '16:00:00', '17:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-intensiva', '6', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALÓN 510NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-intensiva', '6', 'JUEVES', '16:00:00', '17:00:00', 'SALÓN 510NB'),
+            # Modalidad: Semi-Intensiva
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 410NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'LUNES', '14:00:00', '15:00:00', 'SALÓN 413NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 410NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'MARTES', '14:00:00', '15:00:00', 'SALÓN 413NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 410NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALÓN 413NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 406NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 410NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: Semi-Intensiva', '4', 'JUEVES', '14:00:00', '15:00:00', 'SALÓN 413NB'),
+            # Modalidad:Sabatino
+            ('ALIANZA CANADIENSE', 'Modalidad:Sabatino', '7', 'SÁBADO', '08:00:00', '09:00:00', 'SALÓN 502NB'),
+            # Modalidad: SEMESTRAL
+            ('ALIANZA CANADIENSE', 'Modalidad: SEMESTRAL', '1', 'LUNES', '11:00:00', '12:00:00', 'SALÓN 405NB'),
+            ('ALIANZA CANADIENSE', 'Modalidad: SEMESTRAL', '1', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 405NB'),
+
             # ELECTIVA LAW AT THE EDGE
             ('', 'ELECTIVA  LAW AT THE EDGE', 'ALEXANDER GONZÁLEZ', 'LUNES', '08:00:00', '09:00:00', 'SALON 501NB'),
             
@@ -2035,10 +2131,15 @@ class Command(BaseCommand):
             ('', 'Electiva: INTERMEDIATE ACCOUNTING ENGLISH', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '20:00:00', '21:00:00', 'I CONTADURIA AN'),
             
             # /II CONTADURIA AN/II ADM. NEGOCIOS AN - Calculo
-            ('/II CONTADURIA AN/II ADM. NEGOCIOS AN', 'Calculo', 'Rocío Mercedes Duarte Angarita', 'MARTES', '20:00:00', '21:00:00', 'SALÓN 506NB'),
+            ('II CONTADURIA AN', 'Cálculo', 'Rocío Mercedes Duarte Angarita', 'MARTES', '20:00:00', '21:00:00', 'SALÓN 506NB'),
             
-            # /II CONTADURIA AN/II ADM. NEGOCIOS AN - Epistemología y metodología de la investigación
-            ('/II CONTADURIA AN/II ADM. NEGOCIOS AN', 'Epistemología y metodología de la investigación', 'Milagros Del Carmen Villasmil Molero', 'MARTES', '18:00:00', '19:00:00', 'SALÓN 506NB'),
+            ('II ADM. NEGOCIOS AN', 'Cálculo', 'Rocío Mercedes Duarte Angarita', 'MARTES', '20:00:00', '21:00:00', 'SALÓN 506NB'),
+            
+            # /II CONTADURIA AN/II ADM. NEGOCIOS AN - Epistemología y Metodología de la Investigación
+            ('II CONTADURIA AN', 'Epistemología y Metodología de la Investigación', 'Milagros Del Carmen Villasmil Molero', 'MARTES', '18:00:00', '19:00:00', 'SALÓN 506NB'),
+            
+            ('II ADM. NEGOCIOS AN', 'Epistemología y Metodología de la Investigación', 'Milagros Del Carmen Villasmil Molero', 'MARTES', '18:00:00', '19:00:00', 'SALÓN 506NB'),
+            
             
             # 1 Semestre grupo C - HISTORIA DE LA FILOSOFÍA
             ('1 Semestre grupo C', 'HISTORIA DE LA FILOSOFÍA', 'CRISTÓBL ARTETA', 'LUNES', '10:00:00', '11:00:00', 'SALON 504NB'),
@@ -2638,6 +2739,7 @@ class Command(BaseCommand):
             programa_derecho = Programa.objects.get(nombre='Derecho')
             programa_admin = Programa.objects.get(nombre='Administración de Negocios Internacionales')
             programa_contaduria = Programa.objects.get(nombre='Contaduría Pública')
+            
             tipo_aula = TipoEspacio.objects.get(nombre='Aula')
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'    ✗ Error obteniendo entidades base: {str(e)}'))
@@ -2679,8 +2781,121 @@ class Command(BaseCommand):
             else:
                 return programa_derecho
         
+        # Mapeo de nombres informales de grupo → nombre formal del Grupo en BD
+        # Los nombres formales coinciden con el campo `nombre` del modelo Grupo.
+        # Los números romanos indican el semestre (I=1, II=2, …, X=10).
+        grupos_derecho_map = {
+            # Semestre I
+            '1 semestre grupo A':          'DERECHO A',
+            '1 Semestre grupo A':          'DERECHO A',
+            '1 semestre grupo B':          'DERECHO B',
+            '1 Semestre grupo B':          'DERECHO B',
+            '1 semestre grupo C':          'DERECHO C',
+            '1 Semestre grupo C':          'DERECHO C',
+            '1 semestre grupo D':          'DERECHO D',
+            '1 Semestre grupo D':          'DERECHO D',
+            '1 semestre grupo E':          'DERECHO E',
+            '1 Semestre grupo E':          'DERECHO E',
+            # Semestre II
+            '2 semestre grupo A':          'DERECHO A',
+            '2 Semestre grupo A':          'DERECHO A',
+            '2 semestre grupo B':          'DERECHO B',
+            '2 Semestre grupo B':          'DERECHO B',
+            '2. Semestre grupo B':         'DERECHO B',
+            '2 semestre grupo C':          'DERECHO C',
+            '2 Semestre grupo C':          'DERECHO C',
+            '2 semestre grupo D':          'DERECHO D',
+            '2 Semestre grupo D':          'DERECHO D',
+            # Semestre III
+            '3 semestre grupo A':          'DERECHO A',
+            '3 Semestre grupo A':          'DERECHO A',
+            '3 semestre grupo B':          'DERECHO B',
+            '3 Semestre grupo B':          'DERECHO B',
+            '3 semestre grupo C':          'DERECHO C',
+            '3 Semestre grupo C':          'DERECHO C',
+            # Semestre IV
+            '4 semestre grupo A':          'DERECHO A',
+            '4 Semestre grupo A':          'DERECHO A',
+            '4 semestre grupo B':          'DERECHO B',
+            '4 Semestre grupo B':          'DERECHO B',
+            '4 semestre grupo C':          'DERECHO C',
+            '4 Semestre grupo C':          'DERECHO C',
+            # Semestre V
+            '5 semestre grupo A':          'DERECHO A',
+            '5 Semestre grupo A':          'DERECHO A',
+            '5 Semestre Grupo A':          'DERECHO A',
+            '5 semestre grupo B':          'DERECHO B',
+            '5 Semestre grupo B':          'DERECHO B',
+            '5 Semestre Grupo B':          'DERECHO B',
+            '5 semestre grupo C':          'DERECHO C',
+            '5 Semestre grupo C':          'DERECHO C',
+            '5 Semestre Grupo C':          'DERECHO C',
+            '5. Semestre grupo C':         'DERECHO C',
+            # Semestre VI
+            '6 semestre grupo A':          'DERECHO A',
+            '6 Semestre grupo A':          'DERECHO A',
+            '6. Semestre grupo A':         'DERECHO A',
+            '6 semestre grupo B':          'DERECHO B',
+            '6 Semestre grupo B':          'DERECHO B',
+            '6 semestre grupo C':          'DERECHO C',
+            '6 Semestre grupo C':          'DERECHO C',
+            # Semestre VII
+            '7 semestre grupo A':          'DERECHO A',
+            '7 Semestre grupo A':          'DERECHO A',
+            '7 Semestre Grupo A':          'DERECHO A',
+            '7 semestre grupo B':          'DERECHO B',
+            '7 Semestre grupo B':          'DERECHO B',
+            '7 Semestre Grupo B':          'DERECHO B',
+            '7 semestre grupo C':          'DERECHO C',
+            '7 Semestre grupo C':          'DERECHO C',
+            '7 Semestre Grupo C':          'DERECHO C',
+            # Semestre VIII
+            '8 semestre grupo A':          'DERECHO A',
+            '8 Semestre grupo A':          'DERECHO A',
+            '8 semestre grupo B':          'DERECHO B',
+            '8 Semestre grupo B':          'DERECHO B',
+            '8 semestre grupo C':          'DERECHO C',
+            '8 Semestre grupo C':          'DERECHO C',
+            # Semestre IX
+            '9 semestre grupo A':          'DERECHO A',
+            '9 Semestre grupo A':          'DERECHO A',
+            '9 Semestre Grupo A Nocturno': 'DERECHO A',
+            '9 semestre grupo A Nocturno': 'DERECHO A',
+            '9 semestre grupo B':          'DERECHO B',
+            '9 Semestre grupo B':          'DERECHO B',
+            '9 semestre grupo C':          'DERECHO C',
+            '9 Semestre Grupo C':          'DERECHO C',
+            '9 semestre grupo D':          'DERECHO D',
+            '9. Semestre grupo C':         'DERECHO C',
+            # Semestre X
+            '10 semestre grupo A':         'DERECHO A',
+            '10 Semestre Grupo A Diurno':  'DERECHO A',
+            '10 semestre Grupo A Diurno':  'DERECHO A',
+            '10 semestre grupo B':         'DERECHO B',
+            '10 Semestre grupo B':         'DERECHO B',
+            '10 Semestre Grupo B Diurno':  'DERECHO B',
+            '10 semestre Grupo B Diurno':  'DERECHO B',
+            '10 semestre grupo C':         'DERECHO C',
+            '10 Semestre grupo C':         'DERECHO C',
+        }
+
+        # Semestres asociados a cada nombre formal de grupo DERECHO
+        semestres_derecho = {
+            'I':   1, 'II':  2, 'III': 3, 'IV':  4, 'V':   5,
+            'VI':  6, 'VII': 7, 'VIII':8, 'IX':  9, 'X':  10,
+        }
+        # Nombres formales registrados con su semestre
+        grupos_formales_derecho = {
+            'DERECHO A': None, 'DERECHO B': None,
+            'DERECHO C': None, 'DERECHO D': None,
+            'DERECHO E': None,
+        }
+
         for grupo_nombre, materia_nombre, profesor_nombre, dia, hora_inicio_str, hora_fin_str, espacio_nombre in horarios_data:
             try:
+                # Aplicar mapeo de nombre informal → nombre formal de grupo DERECHO
+                grupo_nombre_resuelto = grupos_derecho_map.get(grupo_nombre, grupo_nombre)
+
                 # Buscar la asignatura - si no existe, crearla
                 asignatura = Asignatura.objects.filter(nombre__iexact=materia_nombre.strip()).first()
                 if not asignatura:
@@ -2707,33 +2922,46 @@ class Command(BaseCommand):
                 
                 # Buscar o crear el grupo
                 grupo = None
-                programa_detectado = determinar_programa(grupo_nombre) if grupo_nombre.strip() else programa_derecho
-                
-                if grupo_nombre.strip():
-                    # Extraer semestre del nombre del grupo
-                    semestre = extraer_semestre(grupo_nombre)
-                    
-                    if not semestre:
-                        semestre = 1  # Default a primer semestre
-                    
-                    # Buscar grupo existente
-                    grupo = Grupo.objects.filter(
-                        periodo=periodo,
-                        programa=programa_detectado,
-                        semestre=semestre
-                    ).first()
-                    
-                    if not grupo:
-                        # Crear grupo
-                        romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-                        nombre_grupo = f'{romanos[semestre-1]} {programa_detectado.nombre[:20]} Centro'
-                        grupo, created = Grupo.objects.get_or_create(
-                            programa=programa_detectado,
+                programa_detectado = determinar_programa(grupo_nombre_resuelto) if grupo_nombre_resuelto.strip() else programa_derecho
+
+                if grupo_nombre_resuelto.strip():
+                    # ─── Grupos formales DERECHO (ej. "DERECHO A", "DERECHO B") ───
+                    if grupo_nombre_resuelto.strip().upper().startswith('DERECHO ') and \
+                       grupo_nombre_resuelto.strip().upper() in [k.upper() for k in grupos_formales_derecho]:
+                        grupo = Grupo.objects.filter(
                             periodo=periodo,
-                            semestre=semestre,
-                            nombre=nombre_grupo,
-                            defaults={'activo': True}
-                        )
+                            programa=programa_derecho,
+                            nombre__iexact=grupo_nombre_resuelto.strip(),
+                        ).first()
+                        if not grupo:
+                            errors.append(f'Grupo formal no encontrado en BD: {grupo_nombre_resuelto} (original: {grupo_nombre})')
+                            skipped_count += 1
+                            continue
+                    else:
+                        # ─── Grupos informales: extraer semestre del texto ───
+                        semestre = extraer_semestre(grupo_nombre_resuelto)
+
+                        if not semestre:
+                            semestre = 1  # Default a primer semestre
+
+                        # Buscar grupo existente
+                        grupo = Grupo.objects.filter(
+                            periodo=periodo,
+                            programa=programa_detectado,
+                            semestre=semestre
+                        ).first()
+
+                        if not grupo:
+                            # Crear grupo
+                            romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+                            nombre_grupo = f'{romanos[semestre-1]} {programa_detectado.nombre[:20]} Centro'
+                            grupo, created = Grupo.objects.get_or_create(
+                                programa=programa_detectado,
+                                periodo=periodo,
+                                semestre=semestre,
+                                nombre=nombre_grupo,
+                                defaults={'activo': True}
+                            )
                 else:
                     # Para horarios sin grupo específico, crear/usar un grupo general
                     grupo, created = Grupo.objects.get_or_create(
