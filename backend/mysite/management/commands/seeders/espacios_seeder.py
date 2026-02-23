@@ -14,10 +14,10 @@ def create_espacios_fisicos(stdout, style):
     sede_principal = Sede.objects.get(nombre='Sede Principal')
     sede_centro = Sede.objects.get(nombre='Sede Centro')
     
-    tipo_torreon = TipoEspacio.objects.get(nombre='TORREON')
-    tipo_salon = TipoEspacio.objects.get(nombre='SALON')
-    tipo_sala_computo = TipoEspacio.objects.get(nombre='SALA COMPUTO')
-    tipo_auditorio = TipoEspacio.objects.get(nombre='AUDITORIO')
+    tipo_torreon = TipoEspacio.objects.get(nombre='Torreon')
+    tipo_salon = TipoEspacio.objects.get(nombre='Aula')
+    tipo_sala_computo = TipoEspacio.objects.get(nombre='Sala Computo')
+    tipo_auditorio = TipoEspacio.objects.get(nombre='Auditorio')
     
     # Formato: (nombre, sede, tipo, capacidad, ubicacion)
     espacios_data = [
