@@ -13,12 +13,11 @@ def create_asignaturas_programa(stdout, style):
     
     # Mapeo de componentes formativos
     componentes_map = {
-        'Básica': 'Básica',
-        'Profesional': 'Profesional',
-        'Humanística': 'Humanística',
-        'Práctico': 'Práctico',
-        'Optativa': 'Optativa',
-        'Electiva': 'Electiva'
+        'Básica': 'básica',
+        'Profesional': 'profesional',
+        'Humanística': 'humanística',
+        'Optativa': 'optativa',
+        'Electiva': 'electiva'
     }
     
     # Formato: (nombre_programa, codigo_asignatura, semestre, componente_formativo)
@@ -74,7 +73,7 @@ def create_asignaturas_programa(stdout, style):
         ('Ingeniería de Sistemas', 'IS-IAP', 8, 'Profesional'),
         ('Ingeniería de Sistemas', 'IS-AE', 8, 'Profesional'),
         ('Ingeniería de Sistemas', 'IS-SIG', 8, 'Profesional'),
-        ('Ingeniería de Sistemas', 'IS-PE', 8, 'Práctico'),
+        ('Ingeniería de Sistemas', 'IS-PE', 8, 'Profesional'),
         ('Ingeniería de Sistemas', 'IS-GE', 8, 'Profesional'),
         ('Ingeniería de Sistemas', 'IS-OPT3', 8, 'Optativa'),
         
@@ -130,7 +129,7 @@ def create_asignaturas_programa(stdout, style):
         ('Ingeniería Industrial', 'II-LCS', 8, 'Profesional'),
         ('Ingeniería Industrial', 'II-IA', 8, 'Profesional'),
         ('Ingeniería Industrial', 'II-SP', 8, 'Profesional'),
-        ('Ingeniería Industrial', 'II-PE', 8, 'Práctico'),
+        ('Ingeniería Industrial', 'II-PE', 8, 'Profesional'),
         ('Ingeniería Industrial', 'II-OPT3', 8, 'Optativa'),
         
         # === NEGOCIOS INTERNACIONALES ===
@@ -261,12 +260,12 @@ def create_asignaturas_programa(stdout, style):
         ('Derecho', 'DER-DIPR', 8, 'Profesional'),
         ('Derecho', 'DER-DF', 8, 'Profesional'),
         ('Derecho', 'DER-DPA', 8, 'Profesional'),
-        ('Derecho', 'DER-CJ1', 8, 'Práctico'),
+        ('Derecho', 'DER-CJ1', 8, 'Profesional'),
         ('Derecho', 'DER-OPT2', 8, 'Optativa'),
-        ('Derecho', 'DER-CJ2', 9, 'Práctico'),
+        ('Derecho', 'DER-CJ2', 9, 'Profesional'),
         ('Derecho', 'DER-MASC', 9, 'Profesional'),
         ('Derecho', 'DER-SG', 9, 'Profesional'),
-        ('Derecho', 'DER-PJ', 10, 'Práctico'),
+        ('Derecho', 'DER-PJ', 10, 'Profesional'),
         ('Derecho', 'DER-OPT3', 10, 'Optativa'),
         
         # === BACTERIOLOGÍA ===
@@ -300,13 +299,13 @@ def create_asignaturas_programa(stdout, style):
         ('Bacteriología', 'BAC-GC', 6, 'Profesional'),
         ('Bacteriología', 'BAC-INV1', 6, 'Profesional'),
         ('Bacteriología', 'BAC-EGB', 6, 'Humanística'),
-        ('Bacteriología', 'BAC-PH1', 7, 'Práctico'),
+        ('Bacteriología', 'BAC-PH1', 7, 'Profesional'),
         ('Bacteriología', 'BAC-EP1', 7, 'Electiva'),
-        ('Bacteriología', 'BAC-PH2', 8, 'Práctico'),
+        ('Bacteriología', 'BAC-PH2', 8, 'Profesional'),
         ('Bacteriología', 'BAC-INV2', 8, 'Profesional'),
-        ('Bacteriología', 'BAC-PAAL', 9, 'Práctico'),
-        ('Bacteriología', 'BAC-PH3', 9, 'Práctico'),
-        ('Bacteriología', 'BAC-SPPC', 9, 'Práctico'),
+        ('Bacteriología', 'BAC-PAAL', 9, 'Profesional'),
+        ('Bacteriología', 'BAC-PH3', 9, 'Profesional'),
+        ('Bacteriología', 'BAC-SPPC', 9, 'Profesional'),
         ('Bacteriología', 'BAC-INV3', 9, 'Profesional'),
         ('Bacteriología', 'BAC-ADM2', 9, 'Profesional'),
         
@@ -340,13 +339,13 @@ def create_asignaturas_programa(stdout, style):
         ('Microbiología', 'MIC-ADM1', 6, 'Profesional'),
         ('Microbiología', 'MIC-INV1', 6, 'Profesional'),
         ('Microbiología', 'MIC-EGB', 6, 'Humanística'),
-        ('Microbiología', 'MIC-PH1', 7, 'Práctico'),
+        ('Microbiología', 'MIC-PH1', 7, 'Profesional'),
         ('Microbiología', 'MIC-EP1', 7, 'Electiva'),
-        ('Microbiología', 'MIC-PH2', 8, 'Práctico'),
+        ('Microbiología', 'MIC-PH2', 8, 'Profesional'),
         ('Microbiología', 'MIC-INV2', 8, 'Profesional'),
-        ('Microbiología', 'MIC-PAAL', 9, 'Práctico'),
-        ('Microbiología', 'MIC-PH3', 9, 'Práctico'),
-        ('Microbiología', 'MIC-SPPC', 9, 'Práctico'),
+        ('Microbiología', 'MIC-PAAL', 9, 'Profesional'),
+        ('Microbiología', 'MIC-PH3', 9, 'Profesional'),
+        ('Microbiología', 'MIC-SPPC', 9, 'Profesional'),
         ('Microbiología', 'MIC-INV3', 9, 'Profesional'),
         ('Microbiología', 'MIC-ADM2', 9, 'Profesional'),
         
@@ -385,15 +384,15 @@ def create_asignaturas_programa(stdout, style):
         ('Fisioterapia', 'FIS-CSS', 6, 'Profesional'),
         ('Fisioterapia', 'FIS-INV1', 6, 'Profesional'),
         ('Fisioterapia', 'FIS-EGDF', 6, 'Humanística'),
-        ('Fisioterapia', 'FIS-PH1', 7, 'Práctico'),
+        ('Fisioterapia', 'FIS-PH1', 7, 'Profesional'),
         ('Fisioterapia', 'FIS-EP1', 7, 'Electiva'),
-        ('Fisioterapia', 'FIS-PH2', 8, 'Práctico'),
+        ('Fisioterapia', 'FIS-PH2', 8, 'Profesional'),
         ('Fisioterapia', 'FIS-FMO', 8, 'Profesional'),
         ('Fisioterapia', 'FIS-INV2', 8, 'Profesional'),
         ('Fisioterapia', 'FIS-ADM2', 8, 'Profesional'),
-        ('Fisioterapia', 'FIS-PH3', 9, 'Práctico'),
-        ('Fisioterapia', 'FIS-PAADM', 9, 'Práctico'),
-        ('Fisioterapia', 'FIS-SPPC', 9, 'Práctico'),
+        ('Fisioterapia', 'FIS-PH3', 9, 'Profesional'),
+        ('Fisioterapia', 'FIS-PAADM', 9, 'Profesional'),
+        ('Fisioterapia', 'FIS-SPPC', 9, 'Profesional'),
         ('Fisioterapia', 'FIS-INV3', 9, 'Profesional'),
         
         # === INSTRUMENTACIÓN QUIRÚRGICA ===
@@ -430,15 +429,15 @@ def create_asignaturas_programa(stdout, style):
         ('Instrumentación Quirúrgica', 'IQ-CSS', 6, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-INV1', 6, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-EGDIQ', 6, 'Humanística'),
-        ('Instrumentación Quirúrgica', 'IQ-PH1', 7, 'Práctico'),
+        ('Instrumentación Quirúrgica', 'IQ-PH1', 7, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-EP1', 7, 'Electiva'),
-        ('Instrumentación Quirúrgica', 'IQ-PH2', 8, 'Práctico'),
+        ('Instrumentación Quirúrgica', 'IQ-PH2', 8, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-PQCM', 8, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-INV2', 8, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-ADM2', 8, 'Profesional'),
-        ('Instrumentación Quirúrgica', 'IQ-PH3', 9, 'Práctico'),
-        ('Instrumentación Quirúrgica', 'IQ-PAADM', 9, 'Práctico'),
-        ('Instrumentación Quirúrgica', 'IQ-SPPC', 9, 'Práctico'),
+        ('Instrumentación Quirúrgica', 'IQ-PH3', 9, 'Profesional'),
+        ('Instrumentación Quirúrgica', 'IQ-PAADM', 9, 'Profesional'),
+        ('Instrumentación Quirúrgica', 'IQ-SPPC', 9, 'Profesional'),
         ('Instrumentación Quirúrgica', 'IQ-INV3', 9, 'Profesional'),
         
         # === MEDICINA ===
@@ -447,20 +446,20 @@ def create_asignaturas_programa(stdout, style):
         ('Medicina', 'MED-MORF1', 1, 'Básica'),
         ('Medicina', 'MED-CC1', 1, 'Humanística'),
         ('Medicina', 'MED-AMA', 1, 'Humanística'),
-        ('Medicina', 'MED-PS1', 1, 'Práctico'),
+        ('Medicina', 'MED-PS1', 1, 'Profesional'),
         ('Medicina', 'MED-CU', 1, 'Humanística'),
         ('Medicina', 'MED-BQ', 2, 'Básica'),
         ('Medicina', 'MED-MORF2', 2, 'Básica'),
         ('Medicina', 'MED-FIS1', 2, 'Básica'),
         ('Medicina', 'MED-CC2', 2, 'Humanística'),
         ('Medicina', 'MED-BEI', 2, 'Básica'),
-        ('Medicina', 'MED-PS2', 2, 'Práctico'),
+        ('Medicina', 'MED-PS2', 2, 'Profesional'),
         ('Medicina', 'MED-FIS2', 3, 'Básica'),
         ('Medicina', 'MED-MP', 3, 'Básica'),
         ('Medicina', 'MED-GEN', 3, 'Básica'),
         ('Medicina', 'MED-FPS', 3, 'Humanística'),
         ('Medicina', 'MED-EGB', 3, 'Humanística'),
-        ('Medicina', 'MED-PS3', 3, 'Práctico'),
+        ('Medicina', 'MED-PS3', 3, 'Profesional'),
         ('Medicina', 'MED-INM', 4, 'Básica'),
         ('Medicina', 'MED-SEM1', 4, 'Profesional'),
         ('Medicina', 'MED-PAT1', 4, 'Básica'),
@@ -499,7 +498,7 @@ def create_asignaturas_programa(stdout, style):
         ('Medicina', 'MED-RAD', 10, 'Profesional'),
         ('Medicina', 'MED-EP1', 10, 'Electiva'),
         ('Medicina', 'MED-INV3', 10, 'Profesional'),
-        ('Medicina', 'MED-IR', 11, 'Práctico'),
+        ('Medicina', 'MED-IR', 11, 'Profesional'),
     ]
     
     created_count = 0
@@ -515,7 +514,7 @@ def create_asignaturas_programa(stdout, style):
                 asignatura=asignatura,
                 defaults={
                     'semestre': semestre,
-                    'componente_formativo': componentes_map.get(componente, 'Básica')
+                    'componente_formativo': componentes_map.get(componente, 'básica')
                 }
             )
             if created:
