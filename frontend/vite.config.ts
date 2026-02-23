@@ -9,6 +9,9 @@ export default defineConfig(() => {
       host: true, // Permite acceso externo (0.0.0.0) útil en contenedores
       port: Number(process.env.VITE_PORT) || 5173,
       strictPort: true, // Falla si el puerto está ocupado para evitar confusión
+      allowedHosts: [
+        'sihul.unilibre.edu.co',
+      ],
       open: false,
       proxy: {
         '/api': {
