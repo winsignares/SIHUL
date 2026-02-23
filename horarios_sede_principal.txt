@@ -745,8 +745,8 @@ HORARIOS:
 
 ================================================================================
 GRUPO: III MEDICINA - GB
-MATERIA: Psicología del Desarrollo                                                                                      Virginia Sirtori
-PROFESOR: 107B
+MATERIA: Psicología del Desarrollo                                                                                      
+PROFESOR: Virginia Sirtori
 --------------------------------------------------------------------------------
 HORARIOS:
   • LUNES: 09:00:00 - 10:00:00 (SALÓN 107B (50))
@@ -1308,7 +1308,7 @@ HORARIOS:
   • JUEVES: 12:00:00 - 13:00:00 (SALÓN 103B (50))
 
 ================================================================================
-GRUPO: Sin grupo especificado
+GRUPO: VI MICROBIOLOGIA
 MATERIA: Biotecnología Teoría
 PROFESOR: Mario Peña
 --------------------------------------------------------------------------------
@@ -1317,7 +1317,7 @@ HORARIOS:
   • JUEVES: 09:00:00 - 10:00:00 (SALÓN 204B (50))
 
 ================================================================================
-GRUPO: Sin grupo especificado
+GRUPO: VII INSTRUMENTACION
 MATERIA: CALIDAD EN SERVICIOS DE SALUD
 PROFESOR: María Inés López
 --------------------------------------------------------------------------------
@@ -1325,7 +1325,7 @@ HORARIOS:
   • MIÉRCOLES: 15:00:00 - 16:00:00 (SALÓN 305B (50))
 
 ================================================================================
-GRUPO: Sin grupo especificado
+GRUPO: INSTRUMENTACION VII
 MATERIA: CONTROL DE INFECCIÓN: Angelica Corcho-
 PROFESOR: Sin profesor especificado
 --------------------------------------------------------------------------------
