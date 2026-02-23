@@ -2,8 +2,8 @@
 Comando de Django para cargar datos iniciales completos en la base de datos SIHUL.
 
 Cada responsabilidad de seed está delegada a su propio módulo en seeders/:
-  roles_seeder, sedes_seeder, tipos_espacio_seeder, facultades_seeder,
-  programas_seeder, usuarios_seeder, asignaturas_seeder,
+  roles_seeder, sedes_seeder, tipos_espacio_seeder, tipos_actividad_seeder,
+  facultades_seeder, programas_seeder, usuarios_seeder, asignaturas_seeder,
   asignaturas_programa_seeder, espacios_seeder, componentes_seeder,
   periodos_seeder, grupos_seeder, horarios_seeder.
 
@@ -20,6 +20,7 @@ from .seeders import (
     roles_seeder,
     sedes_seeder,
     tipos_espacio_seeder,
+    tipos_actividad_seeder,
     facultades_seeder,
     programas_seeder,
     usuarios_seeder,
@@ -51,6 +52,7 @@ class Command(BaseCommand):
                 roles_seeder.create_roles(out, sty)
                 sedes_seeder.create_sedes(out, sty)
                 tipos_espacio_seeder.create_tipos_espacio(out, sty)
+                tipos_actividad_seeder.create_tipos_actividad(out, sty)
 
                 #  2. Estructura académica 
                 out.write(sty.SUCCESS('\n[2/12] Estructura Académica'))
