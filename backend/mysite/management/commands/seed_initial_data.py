@@ -248,6 +248,7 @@ class Command(BaseCommand):
             {'nombre': 'Facultad de Derecho, Ciencias Políticas y Sociales', 'sede': sede_centro, 'activa': True},
             {'nombre': 'Facultad de Ciencias de la Salud', 'sede': sede_principal, 'activa': True},
             {'nombre': 'Facultad de Ciencias de la Salud, Exactas y Naturales', 'sede': sede_centro, 'activa': True},
+            {'nombre': 'Ninguna', 'sede': sede_centro, 'activa': True},
         ]
         
         created_count = 0
@@ -276,7 +277,7 @@ class Command(BaseCommand):
             ('Facultad de Ciencias de la Salud, Exactas y Naturales', 'Instrumentación Quirúrgica', 8, True),
             ('Facultad de Ingeniería', 'Ingeniería de Sistemas', 10, True),
             ('Facultad de Ingeniería', 'Ingeniería Industrial', 10, True),
-            ('','Alianza Canadiense', 10, True),
+            ('Ninguna','Alianza Canadiense', 10, True),
         ]
         
         created_count = 0
