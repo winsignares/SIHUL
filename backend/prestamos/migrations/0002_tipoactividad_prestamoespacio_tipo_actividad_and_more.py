@@ -7,7 +7,7 @@ import django.db.models.deletion
 def create_default_tipo_actividad(apps, schema_editor):
     """Crear el tipo de actividad por defecto antes de agregar el campo FK"""
     TipoActividad = apps.get_model('prestamos', 'TipoActividad')
-    if not TipoActividad.objects.filter(id=1).exists():
+    if TipoActividad.objects.filter(id=1).exists():
         TipoActividad.objects.create(
             id=1,
             nombre='Otro',

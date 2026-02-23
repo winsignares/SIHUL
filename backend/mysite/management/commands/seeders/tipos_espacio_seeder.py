@@ -10,10 +10,11 @@ def create_tipos_espacio(stdout, style):
     stdout.write('  → Creando tipos de espacio...')
     
     tipos_data = [
-        {'nombre': 'Torreon', 'descripcion': 'N/A'},
+        {'nombre': 'Torreon', 'descripcion': 'Espacio grande para clases magistrales, con capacidad para más de 100 personas'},
         {'nombre': 'Aula', 'descripcion': 'Espacio de clase para asignaturas de los programas de la universidad libre'},
-        {'nombre': 'Sala Computo', 'descripcion': 'Espacio de clase para asignaturas de los programas de la universidad libre con computadores'},
+        {'nombre': 'Sala Cómputo', 'descripcion': 'Espacio de clase para asignaturas de los programas de la universidad libre con computadores'},
         {'nombre': 'Auditorio', 'descripcion': 'Espacio de conferencia y eventos de la universidad libre'},
+        {'nombre': 'Otro', 'descripcion': 'Otros tipos de espacios'}
     ]
     
     created_count = 0

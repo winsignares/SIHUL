@@ -11,15 +11,11 @@ def populate_tipo_espacios(apps, schema_editor):
     
     # Crear los tipos de espacio predefinidos
     tipos_predefinidos = [
-        {"nombre": "Aula", "descripcion": "Salón de clases estándar"},
         {"nombre": "Laboratorio", "descripcion": "Laboratorio equipado"},
-        {"nombre": "Auditorio", "descripcion": "Auditorio para eventos grandes"},
-        {"nombre": "Sala de Cómputo", "descripcion": "Sala con computadores"},
         {"nombre": "Taller", "descripcion": "Espacio para trabajo práctico"},
         {"nombre": "Sala de Reuniones", "descripcion": "Sala pequeña para reuniones"},
         {'nombre': 'Sala recreacional', 'descripcion': 'Espacio para actividades recreativas'},
-        {'nombre': 'Cancha', 'descripcion': 'Espacio deportivo'},
-        {'nombre': 'Otro', 'descripcion': 'Otros tipos de espacios'}
+        {'nombre': 'Cancha', 'descripcion': 'Espacio deportivo'}
     ]
     
     # Crear los tipos
