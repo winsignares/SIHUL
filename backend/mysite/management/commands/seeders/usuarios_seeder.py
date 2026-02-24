@@ -111,6 +111,8 @@ def create_usuarios_docentes(stdout, style):
         'Roberto Osio', 'Rocío Mercedes Duarte Angarita', 'Sandra Villa', 'Saúl Olivos', 'Tatiana Polo',
         'Tulio Díaz', 'Virginia Sirtori', 'Yadira García', 'Yesenia Valarezo', 'Yessy Coronel',
         'Yolanda Fandiño',
+        # Profesores genéricos para Alianza Canadiense
+        'Profesor 1', 'Profesor 2', 'Profesor 3', 'Profesor 4', 'Profesor 5', 'Profesor 6',
     ]
     
     created_count = 0

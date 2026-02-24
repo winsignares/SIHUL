@@ -447,4 +447,10 @@ def _get_all_asignaturas():
         ('Simulación de Procesos', 'ING-SIPR', 3, 'teórica', 144),
         ('Termodinámica', 'ING-TERM', 3, 'teórica', 144),
         ('Ética (Ingeniería)', 'ING-ETIC', 3, 'teórica', 144),
+        
+        # Asignaturas de Alianza Canadiense (Modalidades)
+        ('Modalidad Intensiva', 'ALI-INTE', 3, 'teórica', 144),
+        ('Modalidad Semestral', 'ALI-SEME', 3, 'teórica', 144),
+        ('Modalidad Sabatina', 'ALI-SABA', 3, 'teórica', 144),
+        ('Modalidad Semi-Intensiva', 'ALI-SEMI', 3, 'teórica', 144),
     ]

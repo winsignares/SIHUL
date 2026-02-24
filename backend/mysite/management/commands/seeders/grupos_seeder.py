@@ -13,6 +13,7 @@ def create_grupos(stdout, style):
     
     # Mapeo de nombres de programas
     programas_map = {
+        'ALIANZA CANADIENSE': 'Alianza Canadiense',
         'ING. INDUSTRIAL': 'Ingeniería Industrial',
         'ING. SISTEMAS': 'Ingeniería de Sistemas',
         'ADM. NEGOCIOS': 'Administración de Negocios Internacionales',
@@ -30,6 +31,19 @@ def create_grupos(stdout, style):
     
     # Formato: (nombre_programa_corto, periodo, nombre_grupo, semestre_romano)
     grupos_data = [
+        
+        # Alianza Canadiense
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 7', 'VII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 4', 'IV'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SABATINO 2', 'II'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 2', 'II'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 5', 'V'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 7', 'VII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 6', 'VI'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 4', 'IV'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SABATINO 7', 'VII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 1', 'I'),
+        
         # Ingeniería Industrial
         ('ING. INDUSTRIAL', '2026-1', 'ING. INDUSTRIAL GA', 'I'),
         ('ING. INDUSTRIAL', '2026-1', 'ING. INDUSTRIAL GB', 'I'),

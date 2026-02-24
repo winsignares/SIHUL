@@ -1432,4 +1432,26 @@ def _get_all_relaciones():
         
         # Ética Profesional
         ('Ingeniería Industrial', 'CEA-ETPR', 8, 'humanística'),
+        
+        # ==========================================
+        # RELACIONES ALIANZA CANADIENSE
+        # ==========================================
+        
+        # Modalidad Intensiva (Semestre VII)
+        ('Alianza Canadiense', 'ALI-INTE', 7, 'profesional'),
+        
+        # Modalidad Semestral (Semestres I, II, IV)
+        ('Alianza Canadiense', 'ALI-SEME', 1, 'profesional'),
+        ('Alianza Canadiense', 'ALI-SEME', 2, 'profesional'),
+        ('Alianza Canadiense', 'ALI-SEME', 4, 'profesional'),
+        
+        # Modalidad Sabatina (Semestres II, VII)
+        ('Alianza Canadiense', 'ALI-SABA', 2, 'profesional'),
+        ('Alianza Canadiense', 'ALI-SABA', 7, 'profesional'),
+        
+        # Modalidad Semi-Intensiva (Semestres IV, V, VI, VII)
+        ('Alianza Canadiense', 'ALI-SEMI', 4, 'profesional'),
+        ('Alianza Canadiense', 'ALI-SEMI', 5, 'profesional'),
+        ('Alianza Canadiense', 'ALI-SEMI', 6, 'profesional'),
+        ('Alianza Canadiense', 'ALI-SEMI', 7, 'profesional'),
     ]
