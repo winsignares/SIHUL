@@ -417,6 +417,8 @@ def _get_all_relaciones():
 
         ('Administración de Negocios Internacionales', 'CEA-ABEN', 6, 'electiva'),
         ('Administración de Negocios Internacionales', 'CEA-ABEN', 7, 'electiva'),
+        #CSA-EDPF
+        ('Bacteriología', 'CSA-EDPF', 7, 'electiva'),
 
         # Electiva IV
         ('Derecho', 'DER-ELE4', 4, 'electiva'),
@@ -426,6 +428,9 @@ def _get_all_relaciones():
         
         # Electiva Profesional II
         ('Medicina', 'CSA-EPR2', 9, 'electiva'),
+
+        # ELECTIVA PROFESIONAL II ING-EPR2
+        ('Ingeniería Industrial', 'ING-EPR2', 10, 'electiva'),
         
         # Electiva Profesional III (Sem. XI-XII)
         ('Medicina', 'CSA-EPR3', 11, 'electiva'),
@@ -1438,6 +1443,10 @@ def _get_all_relaciones():
         
         # Ética (Ingeniería)
         ('Ingeniería Industrial', 'ING-ETIC', 7, 'humanística'),
+        ('Ingeniería de Sistemas', 'ING-ETIC', 7, 'humanística'),
+
+        #Electiva 3 ING-ELE3
+        ('Ingeniería de Sistemas', 'ING-ELE3', 6, 'electiva'),
         
         # Ética Profesional
         ('Contaduría Pública', 'ING-ETPR', 8, 'humanística'),
