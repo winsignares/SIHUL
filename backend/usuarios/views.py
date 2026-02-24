@@ -257,10 +257,6 @@ def login(request):
         if not check_password_hash(u.contrasena_hash, contrasena):
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         
-        print("Contraseña de planeacion: ", generate_password_hash("plan123"))
-        print("Contraseña de docente:",generate_password_hash("doc123"))
-        print("Contraseña de estudiante:",generate_password_hash("est123"))
-        print("Contraseña de supervisor:",generate_password_hash("sup123"))
         
         # Obtener componentes del rol del usuario
         componentes = []

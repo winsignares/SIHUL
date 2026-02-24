@@ -1401,7 +1401,7 @@ def _get_all_relaciones():
         ('Ingeniería Industrial', 'ING-PRED', 3, 'básica'),
         
         # Procesos Industriales
-        ('Ingeniería Industrial', 'ING-PRIN2', 4, 'profesional'),
+        ('Ingeniería Industrial', 'CSA-PRIN2', 4, 'profesional'),
         
         # Proyecto de Investigación
         ('Ingeniería Industrial', 'CSA-PRIN', 7, 'profesional'),
@@ -1431,7 +1431,7 @@ def _get_all_relaciones():
         ('Ingeniería Industrial', 'ING-ETIC', 7, 'humanística'),
         
         # Ética Profesional
-        ('Ingeniería Industrial', 'CEA-ETPR', 8, 'humanística'),
+        ('Contaduría', 'ING-ETPR', 8, 'humanística'),
         
         # ==========================================
         # RELACIONES ALIANZA CANADIENSE
