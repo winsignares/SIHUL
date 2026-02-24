@@ -91,7 +91,7 @@ def create_horarios_sede_centro(stdout, style):
 
 
 
-        # ── SALON 404NB (1 horarios) ──
+        # ── SALON 404NB (22 horarios) ──
         ('V BACTERIOLOGÍA A', 'Electiva V', 'TATIANA POLO', 'LUNES', '08:00:00', '10:00:00', 'SALON 404NB'),
         ('VIII DERECHO A', 'Procesal Civil, Especial y De Familia', 'NUBIA MARRUGO', 'LUNES', '10:00:00', '12:00:00', 'SALON 404NB'),
         ('VIII DERECHO A', 'SEGURIDAD SOCIAL', 'RAFAEL RODRÍGUEZ ', 'LUNES', '13:00:00', '16:00:00', 'SALON 404NB'),
@@ -99,14 +99,22 @@ def create_horarios_sede_centro(stdout, style):
         ('I ADM. NEGOCIOS AN', 'Presupuestos empresariales', 'Rocío Mercedes Duarte Angarita', 'LUNES', '20:00:00', '22:00:00', 'SALON 404NB'),
         ('I CONTADURIA GN', 'Presupuestos empresariales', 'Rocío Mercedes Duarte Angarita', 'LUNES', '20:00:00', '22:00:00', 'SALON 404NB'),
         ('I DERECHO F', 'INTRODUCCIÓN AL DERECHO', 'RICARDO MÉNDEZ', 'MARTES', '06:00:00', '08:00:00', 'SALON 404NB'),
-        ('I DERECHO F', 'CSA-ELE1', '', 'MARTES', '08:00:00', '10   :00:00', 'SALON 404NB'),
+        ('I DERECHO F', 'CSA-ELE1', '', 'MARTES', '08:00:00', '10:00:00', 'SALON 404NB'),
         ('I CONTADURIA CD', 'Fundamentos de matemáticas', 'Boanerge José Salas Muñoz', 'MARTES', '06:00:00', '08:00:00', 'SALON 404NB'),
         ('I ADM. NEGOCIOS CD', 'Fundamentos de matemáticas', 'Boanerge José Salas Muñoz', 'MARTES', '06:00:00', '08:00:00', 'SALON 404NB'),
         ('VI ING. SISTEMAS GB', 'Formulación y Evaluación de Proyectos', 'FRANKLIN BARRIOS', 'MARTES', '18:00:00', '20:00:00', 'SALON 404NB'),
         ('IX ING. INDUSTRIAL GA', 'Investigación Aplicada IV', 'ASTRID BARRIOS', 'MARTES', '20:00:00', '22:00:00', 'SALON 404NB'),
         ('III ADMIN NEG CD', 'Matemáticas financieras', 'Ricardo Mena Torres', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 404NB'),
         ('III CONTADURIA CD', 'Matemáticas financieras', 'Ricardo Mena Torres', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 404NB'),
-        ('X DERECHO A', 'OPTATIVA IV DERECHO TRIBUTARIO', 'FELIPE HERAS', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 404NB'),
+        ('X DERECHO A', 'OPTATIVA IV DERECHO TRIBUTARIO', 'FELIPE HERAS', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 404NB'),
+        ('IX ING. INDUSTRIAL GA', 'Proyección Social', ' ERICK JASSIR', 'MIÉRCOLES', '17:00:00', '18:00:00', 'SALON 404NB'),
+        ('VIII ADM. NEGOCIOS BN', 'Optativa III. DESARROLLO DEL FACTOR HUMANO', 'Julie Samanta Arévalo Coral', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALON 404NB'),
+        ('VI DERECHO A', 'DERECHO COMERCIAL GENERAL', 'JAVIER CRESPO', 'JUEVES', '06:00:00', '10:00:00', 'SALON 404NB'),
+        ('IX ING. INDUSTRIAL GA', 'Psicología Industria. DESARROLLO DEL FACTOR HUMANO', 'GUSTAVO DE LA HOZ', 'JUEVES', '18:00:00', '20:00:00', 'SALON 404NB'),
+        ('X ING. INDUSTRIAL GA', 'Investigación Aplicada V', 'AGUSTIN VIDAL', 'JUEVES', '20:00:00', '22:00:00', 'SALON 404NB'),
+        ('X DERECHO B', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'VIERNES', '06:00:00', '09:00:00', 'SALON 404NB'),
+        ('IX ING. INDUSTRIAL GA', 'Psicología Industrial', 'GUSTAVO DE LA HOZ', 'VIERNES', '18:00:00', '22:00:00', 'SALON 404NB'),
+        
         
         
         
