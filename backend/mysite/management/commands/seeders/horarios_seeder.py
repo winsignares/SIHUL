@@ -3,6 +3,7 @@ Seeder de horarios para Sede Centro y Sede Principal.
 """
 
 from datetime import time
+from django.db.models import Q
 from sedes.models import Sede
 from espacios.models import TipoEspacio, EspacioFisico
 from usuarios.models import Rol, Usuario
@@ -40,10 +41,79 @@ def create_horarios_sede_centro(stdout, style):
     # ═══════════════════════════════════════════════════════
     # Formato: (grupo, materia, profesor, dia, hora_inicio, hora_fin, espacio)
     horarios_data = [
+        # -- SALON 103B - Capacidad 60 personas (1 horario) --
+        ('V DERECHO C', 'Tutela Penal De Los Bienes Jurídicos II', 'JUAN CARLOS GUTIÉRREZ', 'MARTES', '06:00:00', '09:00:00', 'SALON 103B'),
+        ('V DERECHO B', 'Tutela Penal De Los Bienes Jurídicos II', 'JUAN CARLOS GUTIÉRREZ', 'MIÉRCOLES', '06:00:00', '09:00:00', 'SALON 103B'),
+        ('V DERECHO A', 'Tutela Penal De Los Bienes Jurídicos II', 'JUAN CARLOS GUTIÉRREZ', 'MIÉRCOLES', '18:00:00', '21:00:00', 'SALON 103B'),
+        ('VI ADM. NEGOCIOS CD', 'Formulación y Gestión de Proyectos', 'DANILO ENRIQUE TORRES PIMIENTO', 'VIERNES', '19:00:00', '22:00:00', 'SALON 103B'),
+
+        # -- SALON 403NB (1 horario) --
+        ('II CONTADURÍA CD', 'Fundamentos de Administración', 'MARIBEL CERRO CAMERA', 'LUNES', '07:00:00', '10:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS CD', 'Fundamentos de Administración', 'MARIBEL CERRO CAMERA', 'LUNES', '07:00:00', '10:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS CD', 'Principios de Derecho y Constitución Política', 'Eduardo De Jesus Pérez Ramirez', 'LUNES', '07:00:00', '10:00:00', 'SALON 403NB'),
+        ('II CONTADURÍA CD', 'Principios de Derecho y Constitución Política', 'Eduardo De Jesus Pérez Ramirez', 'LUNES', '07:00:00', '10:00:00', 'SALON 403NB'),
+        ('II CONTADURÍA CD', 'Curso Francés', 'Eduardo De Jesus Pérez Ramirez', 'LUNES', '07:00:00', '10:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS CD', 'Curso Francés', '', 'LUNES', '16:00:00', '18:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GA', 'Electricidad, Magnetismo y Laboratorio', 'MARVIN MOLINA', 'LUNES', '18:00:00', '21:00:00', 'SALON 403NB'),
+        ('II CONTADURÍA CD', 'Derecho comercial', 'Eduardo De Jesus Pérez Ramirez', 'MARTES', '09:00:00', '11:00:00', 'SALON 403NB'),
+        ('II ADM. NEGOCIOS CD', 'Derecho comercial', 'Eduardo De Jesus Pérez Ramirez', 'MARTES', '09:00:00', '11:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GA', 'Cálculo Multivariado y Vectorial', 'MARTHA ARTETA', 'MARTES', '14:00:00', '16:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS AN', 'Expresión verbal y escrita', 'MONICA PATRICIA DE LA HOZ SILVA', 'MARTES', '18:00:00', '20:00:00', 'SALON 403NB'),
+        ('I CONTADURIA AN', 'Expresión verbal y escrita', 'MONICA PATRICIA DE LA HOZ SILVA', 'MARTES', '18:00:00', '20:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS AN', 'Fundamentos de matemáticas', 'Antonio Julio Castilla Romero', 'MARTES', '20:00:00', '22:00:00', 'SALON 403NB'),
+        ('I CONTADURIA AN', 'Fundamentos de matemáticas', 'Antonio Julio Castilla Romero', 'MARTES', '20:00:00', '22:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GB', 'Electricidad, Magnetismo y Laboratorio', 'EMELDO CABALLERO', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS CD', 'Fundamentos de Economía', 'Marco Antonio Ariza Dau', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 403NB'),
+        ('I CONTADURIA CD', 'Fundamentos de Economía', 'Marco Antonio Ariza Dau', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 403NB'),
+        ('I CONTADURIA CD', 'Expresión verbal y escrita', 'MONICA PATRICIA DE LA HOZ SILVA', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 403NB'),
+        ('I ADM. NEGOCIOS CD', 'Expresión verbal y escrita', 'MONICA PATRICIA DE LA HOZ SILVA', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GA', 'Cálculo Multivariado y Vectorial', 'MARTHA ARTETA', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 403NB'), 
+        ('I ING. INDUSTRIAL GA', 'Cálculo Diferencial', 'DANNA BETANCOURT ESPINOSA', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GA', 'Gestión Organizacional', 'RICARDO DE LA HOZ', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALON 403NB'),
+        ('VI ADM. NEGOCIOS CD', 'CEA-ABEN', 'RICHARD ANDRES PALACIO MATTA', 'JUEVES', '07:00:00', '09:00:00', 'SALON 403NB'),
+        ('VII ADM. NEGOCIOS CD', 'CEA-ABEN', 'RICHARD ANDRES PALACIO MATTA', 'JUEVES', '07:00:00', '09:00:00', 'SALON 403NB'),
+        ('VI ADM. NEGOCIOS CD', 'CSA-ELE1', 'RICHARD ANDRES PALACIO MATTA', 'JUEVES', '09:00:00', '11:00:00', 'SALON 403NB'),
+        ('VII ADM. NEGOCIOS CD', 'CSA-ELE1', 'RICHARD ANDRES PALACIO MATTA', 'JUEVES', '09:00:00', '11:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GA', 'Electricidad, Magnetismo y Laboratorio', 'MARVIN MOLINA', 'JUEVES', '18:00:00', '20:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GB', 'CEA-ABEN', 'CARLOS CONSUEGRA', 'JUEVES', '20:00:00', '22:00:00', 'SALON 403NB'),
+        ('VIII DERECHO B', 'LABORAL ADMINISTRATIVO', 'FRANCISCO BUSTAMANTE', 'VIERNES', '06:00:00', '09:00:00', 'SALON 403NB'),
+        ('III ING. INDUSTRIAL GA', 'Fundamentos de Economía', 'ARNALDO ARCE', 'VIERNES', '06:00:00', '09:00:00', 'SALON 403NB'),
+        ('I ING. INDUSTRIAL GA', 'Cálculo Diferencial', 'DANNA BETANCOURT ESPINOSA', 'VIERNES', '15:00:00', '17:00:00', 'SALON 403NB'),
+        ('VIII ADM. NEGOCIOS BN', 'Régimen cambiario y aduanero', 'Roberto Meisel Lanner', 'VIERNES', '18:00:00', '20:00:00', 'SALON 403NB'),
+        ('VIII ADM. NEGOCIOS EN', 'Optativa III. GESTION MARITIMA Y PORTUARIA', 'Cecilia Ibeth Sierra Martinez', 'VIERNES', '20:00:00', '22:00:00', 'SALON 403NB'),
+
+        
+
+
+
+
+
+
+
+
         # ── SALON 404NB (1 horarios) ──
-        ('X DERECHO B', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'VIERNES', '06:00:00', '07:00:00', 'SALON 404NB'),
-        ('V BACTERIOLOGÍA A', 'Electiva V', 'TATIANA POLO', 'LUNES', '08:00:00', '10:00:00', 'SALON 404NB')
-        ('VIII DERECHO A', 'Procesal Civil, Especial y De Familia', 'TATIANA POLO', 'LUNES', '08:00:00', '10:00:00', 'SALON 404NB')
+        ('V BACTERIOLOGÍA A', 'Electiva V', 'TATIANA POLO', 'LUNES', '08:00:00', '10:00:00', 'SALON 404NB'),
+        ('VIII DERECHO A', 'Procesal Civil, Especial y De Familia', 'NUBIA MARRUGO', 'LUNES', '10:00:00', '12:00:00', 'SALON 404NB'),
+        ('VIII DERECHO A', 'SEGURIDAD SOCIAL', 'RAFAEL RODRÍGUEZ ', 'LUNES', '13:00:00', '16:00:00', 'SALON 404NB'),
+        ('VII ADM. NEGOCIOS BN', 'Gerencia de comercio exterior', 'Cecilia Ibeth Sierra Martinez', 'LUNES', '18:00:00', '20:00:00', 'SALON 404NB'),
+        ('I ADM. NEGOCIOS AN', 'Presupuestos empresariales', 'Rocío Mercedes Duarte Angarita', 'LUNES', '20:00:00', '22:00:00', 'SALON 404NB'),
+        ('I CONTADURIA GN', 'Presupuestos empresariales', 'Rocío Mercedes Duarte Angarita', 'LUNES', '20:00:00', '22:00:00', 'SALON 404NB'),
+        ('I DERECHO F', 'INTRODUCCIÓN AL DERECHO', 'RICARDO MÉNDEZ', 'MARTES', '06:00:00', '08:00:00', 'SALON 404NB'),
+        ('I DERECHO F', 'CSA-ELE1', '', 'MARTES', '08:00:00', '10   :00:00', 'SALON 404NB'),
+        ('I CONTADURIA CD', 'Fundamentos de matemáticas', 'Boanerge José Salas Muñoz', 'MARTES', '06:00:00', '08:00:00', 'SALON 404NB'),
+        ('I ADM. NEGOCIOS CD', 'Fundamentos de matemáticas', 'Boanerge José Salas Muñoz', 'MARTES', '06:00:00', '08:00:00', 'SALON 404NB'),
+        ('VI ING. SISTEMAS GB', 'Formulación y Evaluación de Proyectos', 'FRANKLIN BARRIOS', 'MARTES', '18:00:00', '20:00:00', 'SALON 404NB'),
+        ('IX ING. INDUSTRIAL GA', 'Investigación Aplicada IV', 'ASTRID BARRIOS', 'MARTES', '20:00:00', '22:00:00', 'SALON 404NB'),
+        ('III ADMIN NEG CD', 'Matemáticas financieras', 'Ricardo Mena Torres', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 404NB'),
+        ('III CONTADURIA CD', 'Matemáticas financieras', 'Ricardo Mena Torres', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 404NB'),
+        ('X DERECHO A', 'OPTATIVA IV DERECHO TRIBUTARIO', 'FELIPE HERAS', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 404NB'),
+        
+        
+        
+        
+        
+        
+        
         
 
         # ── SALON 405NB (1 horarios) ──
@@ -241,8 +311,8 @@ def create_horarios_sede_centro(stdout, style):
         ('IV SEMESTRE GRUPO A', 'TEORÍA GENERAL DEL PROCESO', 'INGRID PEREZ', 'MIÉRCOLES', '13:00:00', '14:00:00', 'SALON 511NB'),
         ('IV SEMESTRE GRUPO A', 'TEORÍA GENERAL DEL PROCESO', 'INGRID PEREZ', 'VIERNES', '08:00:00', '09:00:00', 'SALON 511NB'),
         ('IV SEMESTRE GRUPO A', 'TUTELA PENAL DE LOS BIENES JURIDÍCOS I', 'EDGAR DEVIA', 'JUEVES', '06:00:00', '07:00:00', 'SALON 511NB'),
-        ('IX DERECHO A', 'JURISPRUDENCIA CONSTITUCIONAL', 'GRETTY PÁVLOVICH', 'LUNES', '06:00:00', '07:00:00', 'SALON 511NB'),
-        ('IX DERECHO A', 'JURISPRUDENCIA CONSTITUCIONAL', 'GRETTY PÁVLOVICH', 'MARTES', '06:00:00', '07:00:00', 'SALON 511NB'),
+        ('IX DERECHO A', 'JURISPRUDENCIA CONSTITUCIONAL', 'GRETTY PÁVLOVICH', 'LUNES', '06:00:00', '08:00:00', 'SALON 511NB'),
+        ('IX DERECHO A', 'JURISPRUDENCIA CONSTITUCIONAL', 'GRETTY PÁVLOVICH', 'MARTES', '06:00:00', '08:00:00', 'SALON 511NB'),
         ('', 'Electiva de profundización E: LITIGIO ESTRATÉGICO', 'PABLO RAFAEL BULA GONZALEZ', 'VIERNES', '14:00:00', '15:00:00', 'SALON 511NB'),
 
         # ── SALON 512NB (9 horarios) ──
@@ -480,33 +550,15 @@ def create_horarios_sede_centro(stdout, style):
         'I DERECHO C':                 'DERECHO C',
         'I DERECHO D':                 'DERECHO D',
         'I DERECHO E':                 'DERECHO E',
+        'I DERECHO F':                 'DERECHO F',
         'I DERECHO AN':                'DERECHO AN',
         'I DERECHO AN-E':              'DERECHO AN-E',
         'I DERECHO AN-1E':             'DERECHO AN-1E',
-        '1 semestre grupo A':          'DERECHO A',
-        '1 Semestre grupo A':          'DERECHO A',
-        '1 semestre grupo B':          'DERECHO B',
-        '1 Semestre grupo B':          'DERECHO B',
-        '1 semestre grupo C':          'DERECHO C',
-        '1 Semestre grupo C':          'DERECHO C',
-        '1 semestre grupo D':          'DERECHO D',
-        '1 Semestre grupo D':          'DERECHO D',
-        '1 semestre grupo E':          'DERECHO E',
-        '1 Semestre grupo E':          'DERECHO E',
         # Semestre II
         'II DERECHO A':                'DERECHO A',
         'II DERECHO B':                'DERECHO B',
         'II DERECHO C':                'DERECHO C',
         'II DERECHO D':                'DERECHO D',
-        '2 semestre grupo A':          'DERECHO A',
-        '2 Semestre grupo A':          'DERECHO A',
-        '2 semestre grupo B':          'DERECHO B',
-        '2 Semestre grupo B':          'DERECHO B',
-        '2. Semestre grupo B':         'DERECHO B',
-        '2 semestre grupo C':          'DERECHO C',
-        '2 Semestre grupo C':          'DERECHO C',
-        '2 semestre grupo D':          'DERECHO D',
-        '2 Semestre grupo D':          'DERECHO D',
         # Semestre III
         'III DERECHO A':               'DERECHO A',
         'III DERECHO B':               'DERECHO B',
@@ -514,109 +566,45 @@ def create_horarios_sede_centro(stdout, style):
         'III DERECHO D':               'DERECHO D',
         'III DERECHO AB':              'DERECHO AB',
         'III DERECHO AD':              'DERECHO AD',
-        '3 semestre grupo A':          'DERECHO A',
-        '3 Semestre grupo A':          'DERECHO A',
-        '3 semestre grupo B':          'DERECHO B',
-        '3 Semestre grupo B':          'DERECHO B',
-        '3 semestre grupo C':          'DERECHO C',
-        '3 Semestre grupo C':          'DERECHO C',
-        '3 semestre grupo D':          'DERECHO D',
-        '3 Semestre grupo D':          'DERECHO D',
+
         # Semestre IV
         'IV DERECHO A':                'DERECHO A',
         'IV DERECHO B':                'DERECHO B',
         'IV DERECHO C':                'DERECHO C',
-        'IV SEMESTRE GRUPO A':         'DERECHO A',
-        '4 semestre grupo A':          'DERECHO A',
-        '4 Semestre grupo A':          'DERECHO A',
-        '4 semestre grupo B':          'DERECHO B',
-        '4 Semestre grupo B':          'DERECHO B',
-        '4 semestre grupo C':          'DERECHO C',
-        '4 Semestre grupo C':          'DERECHO C',
+
         # Semestre V
         'V DERECHO A':                 'DERECHO A',
         'V DERECHO B':                 'DERECHO B',
         'V DERECHO C':                 'DERECHO C',
         'V DERECHO D':                 'DERECHO D',
-        '5 semestre grupo A':          'DERECHO A',
-        '5 Semestre grupo A':          'DERECHO A',
-        '5 Semestre Grupo A':          'DERECHO A',
-        '5 semestre grupo B':          'DERECHO B',
-        '5 Semestre grupo B':          'DERECHO B',
-        '5 Semestre Grupo B':          'DERECHO B',
-        '5 semestre grupo C':          'DERECHO C',
-        '5 Semestre grupo C':          'DERECHO C',
-        '5 Semestre Grupo C':          'DERECHO C',
-        '5. Semestre grupo C':         'DERECHO C',
-        '5 semestre grupo D':          'DERECHO D',
-        '5 Semestre grupo D':          'DERECHO D',
-        '5 Semestre Grupo D':          'DERECHO D',
+
         # Semestre VI
         'VI DERECHO A':                'DERECHO A',
         'VI DERECHO B':                'DERECHO B',
         'VI DERECHO C':                'DERECHO C',
-        '6 semestre grupo A':          'DERECHO A',
-        '6 Semestre grupo A':          'DERECHO A',
-        '6. Semestre grupo A':         'DERECHO A',
-        '6 semestre grupo B':          'DERECHO B',
-        '6 Semestre grupo B':          'DERECHO B',
-        '6 semestre grupo C':          'DERECHO C',
-        '6 Semestre grupo C':          'DERECHO C',
+
         # Semestre VII
         'VII DERECHO A':               'DERECHO A',
         'VII DERECHO B':               'DERECHO B',
         'VII DERECHO C':               'DERECHO C',
         'VII DERECHO D':               'DERECHO D',
-        '7 semestre grupo A':          'DERECHO A',
-        '7 Semestre grupo A':          'DERECHO A',
-        '7 Semestre Grupo A':          'DERECHO A',
-        '7 semestre grupo B':          'DERECHO B',
-        '7 Semestre grupo B':          'DERECHO B',
-        '7 Semestre Grupo B':          'DERECHO B',
-        '7 semestre grupo C':          'DERECHO C',
-        '7 Semestre grupo C':          'DERECHO C',
-        '7 Semestre Grupo C':          'DERECHO C',
-        '7 semestre grupo D':          'DERECHO D',
-        '7 Semestre grupo D':          'DERECHO D',
+
         # Semestre VIII
         'VIII DERECHO A':              'DERECHO A',
         'VIII DERECHO B':              'DERECHO B',
         'VIII DERECHO C':              'DERECHO C',
-        '8 semestre grupo A':          'DERECHO A',
-        '8 Semestre grupo A':          'DERECHO A',
-        '8 semestre grupo B':          'DERECHO B',
-        '8 Semestre grupo B':          'DERECHO B',
-        '8 semestre grupo C':          'DERECHO C',
-        '8 Semestre grupo C':          'DERECHO C',
+
         # Semestre IX
         'IX DERECHO A':                'DERECHO A',
         'IX DERECHO B':                'DERECHO B',
         'IX DERECHO C':                'DERECHO C',
         'IX DERECHO AN':               'DERECHO AN',
-        '9 semestre grupo A':          'DERECHO A',
-        '9 Semestre grupo A':          'DERECHO A',
-        '9 Semestre Grupo A Nocturno': 'DERECHO A',
-        '9 semestre grupo A Nocturno': 'DERECHO A',
-        '9 Semestre Diurno':           'DERECHO A',
-        '9 semestre grupo B':          'DERECHO B',
-        '9 Semestre grupo B':          'DERECHO B',
-        '9 semestre grupo C':          'DERECHO C',
-        '9 Semestre Grupo C':          'DERECHO C',
-        '9 semestre grupo D':          'DERECHO D',
-        '9. Semestre grupo C':         'DERECHO C',
+
         # Semestre X
         'X DERECHO A':                 'DERECHO A',
         'X DERECHO B':                 'DERECHO B',
         'X DERECHO C':                 'DERECHO C',
-        '10 semestre grupo A':         'DERECHO A',
-        '10 Semestre Grupo A Diurno':  'DERECHO A',
-        '10 semestre Grupo A Diurno':  'DERECHO A',
-        '10 semestre grupo B':         'DERECHO B',
-        '10 Semestre grupo B':         'DERECHO B',
-        '10 Semestre Grupo B Diurno':  'DERECHO B',
-        '10 semestre Grupo B Diurno':  'DERECHO B',
-        '10 semestre grupo C':         'DERECHO C',
-        '10 Semestre grupo C':         'DERECHO C',
+
     }
 
     # Semestres asociados a cada nombre formal de grupo DERECHO
@@ -637,7 +625,9 @@ def create_horarios_sede_centro(stdout, style):
             grupo_nombre_resuelto = grupos_derecho_map.get(grupo_nombre, grupo_nombre)
 
             # Buscar la asignatura - si no existe, crearla
-            asignatura = Asignatura.objects.filter(nombre__iexact=materia_nombre.strip()).first()
+            asignatura = Asignatura.objects.filter(
+                Q(nombre__iexact=materia_nombre.strip()) | Q(codigo__iexact=materia_nombre.strip())
+            ).first()
             if not asignatura:
                 # Crear la asignatura automáticamente con código único
                 import hashlib
@@ -669,14 +659,17 @@ def create_horarios_sede_centro(stdout, style):
                 semestre_extraido = extraer_semestre(grupo_nombre)
                 
                 # ─── Grupos formales DERECHO (ej. "DERECHO A", "DERECHO B") ───
-                if grupo_nombre_resuelto.strip().upper().startswith('DERECHO ') and \
-                   grupo_nombre_resuelto.strip().upper() in [k.upper() for k in grupos_formales_derecho]:
+                if grupo_nombre_resuelto.strip().upper().startswith('DERECHO '):
                     # VALIDACIÓN REFORZADA: Buscar grupo con nombre Y semestre
                     if semestre_extraido:
+                        # Construir el nombre completo con número romano (ej: "V DERECHO A")
+                        romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+                        nombre_completo = f'{romanos[semestre_extraido-1]} {grupo_nombre_resuelto.strip()}'
+                        
                         grupo = Grupo.objects.filter(
                             periodo=periodo,
                             programa=programa_derecho,
-                            nombre__iexact=grupo_nombre_resuelto.strip(),
+                            nombre__iexact=nombre_completo,
                             semestre=semestre_extraido
                         ).first()
                     else:
@@ -1387,9 +1380,11 @@ def create_horarios_sede_principal(stdout, style):
             codigo_base = materia_nombre[:12].replace(" ", "").upper()
             codigo = f'{codigo_base[:12]}-{nombre_hash}'  # Max 12+1+6 = 19 chars
             
-            # Primero intentar encontrar por nombre
+            # Primero intentar encontrar por nombre o código
             try:
-                asignatura = Asignatura.objects.filter(nombre=materia_nombre).first()
+                asignatura = Asignatura.objects.filter(
+                    Q(nombre__iexact=materia_nombre) | Q(codigo__iexact=materia_nombre)
+                ).first()
                 if not asignatura:
                     # Si no existe, crear una nueva
                     asignatura, _ = Asignatura.objects.get_or_create(

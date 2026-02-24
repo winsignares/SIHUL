@@ -389,11 +389,12 @@ def _get_all_relaciones():
         # Electiva Complementaria IV
         ('Fisioterapia', 'CSA-ELC4', 8, 'electiva'),
         
-        # Electiva I
+        # Electiva I CEA-ELE1
         ('Microbiología', 'CEA-ELE1', 1, 'electiva'),
         ('Contaduría Pública', 'CEA-ELE1', 1, 'electiva'),
-        ('Ingeniería de Sistemas', 'CEA-ELE1', 2, 'electiva'),
-        ('Administración de Negocios Internacionales', 'CEA-ELE1', 6, 'electiva'),
+        #Electiva I CSA-ELE1
+        ('Ingeniería de Sistemas', 'CSA-ELE1', 2, 'electiva'),
+        ('Administración de Negocios Internacionales', 'CSA-ELE1', 6, 'electiva'),
         
         # Electiva II
         ('Microbiología', 'CEA-ELE2', 3, 'electiva'),
@@ -409,6 +410,14 @@ def _get_all_relaciones():
         ('Ingeniería de Sistemas', 'CEA-ELE3', 6, 'electiva'),
         ('Administración de Negocios Internacionales', 'CEA-ELE3', 8, 'electiva'),
         
+        #ING-ELLE Electiva II (Emprendimiento y Liderazgo)
+        ('Ingeniería Industrial', 'ING-ELLE', 3, 'electiva'),
+
+        #CEA-ABEN ELECTIVA: ADVANCED BUSINESS ENGLISH
+
+        ('Administración de Negocios Internacionales', 'CEA-ABEN', 6, 'electiva'),
+        ('Administración de Negocios Internacionales', 'CEA-ABEN', 7, 'electiva'),
+
         # Electiva IV
         ('Derecho', 'DER-ELE4', 4, 'electiva'),
         
