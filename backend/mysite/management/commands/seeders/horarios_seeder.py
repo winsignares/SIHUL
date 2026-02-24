@@ -42,6 +42,9 @@ def create_horarios_sede_centro(stdout, style):
     horarios_data = [
         # ── SALON 404NB (1 horarios) ──
         ('X DERECHO B', 'RESPONSABILIDAD CIVIL', 'EDUARDO CERRA', 'VIERNES', '06:00:00', '07:00:00', 'SALON 404NB'),
+        ('V BACTERIOLOGÍA A', 'Electiva V', 'TATIANA POLO', 'LUNES', '08:00:00', '10:00:00', 'SALON 404NB')
+        ('VIII DERECHO A', 'Procesal Civil, Especial y De Familia', 'TATIANA POLO', 'LUNES', '08:00:00', '10:00:00', 'SALON 404NB')
+        
 
         # ── SALON 405NB (1 horarios) ──
         ('VII BACTERIOLOGÍA B', 'Electiva de profundización (B):', 'Miriam Linero', 'JUEVES', '16:00:00', '17:00:00', 'SALON 405NB'),
@@ -58,6 +61,7 @@ def create_horarios_sede_centro(stdout, style):
 
         # ── SALON 407NB (1 horarios) ──
         ('VII DERECHO A', 'FILOSOFÍA DEL DERECHO', 'ALEXANDER GONZÁLEZ', 'VIERNES', '06:00:00', '07:00:00', 'SALON 407NB'),
+
 
         # ── SALON 408NB (1 horarios) ──
         ('VII ADM. NEGOCIOS EN', 'OPTATIVA II . INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES', 'Danilo Enrique Torres Pimiento', 'JUEVES', '07:00:00', '08:00:00', 'SALON 408NB'),
@@ -471,6 +475,14 @@ def create_horarios_sede_centro(stdout, style):
     # Los números romanos indican el semestre (I=1, II=2, …, X=10).
     grupos_derecho_map = {
         # Semestre I
+        'I DERECHO A':                 'DERECHO A',
+        'I DERECHO B':                 'DERECHO B',
+        'I DERECHO C':                 'DERECHO C',
+        'I DERECHO D':                 'DERECHO D',
+        'I DERECHO E':                 'DERECHO E',
+        'I DERECHO AN':                'DERECHO AN',
+        'I DERECHO AN-E':              'DERECHO AN-E',
+        'I DERECHO AN-1E':             'DERECHO AN-1E',
         '1 semestre grupo A':          'DERECHO A',
         '1 Semestre grupo A':          'DERECHO A',
         '1 semestre grupo B':          'DERECHO B',
@@ -482,6 +494,10 @@ def create_horarios_sede_centro(stdout, style):
         '1 semestre grupo E':          'DERECHO E',
         '1 Semestre grupo E':          'DERECHO E',
         # Semestre II
+        'II DERECHO A':                'DERECHO A',
+        'II DERECHO B':                'DERECHO B',
+        'II DERECHO C':                'DERECHO C',
+        'II DERECHO D':                'DERECHO D',
         '2 semestre grupo A':          'DERECHO A',
         '2 Semestre grupo A':          'DERECHO A',
         '2 semestre grupo B':          'DERECHO B',
@@ -492,13 +508,25 @@ def create_horarios_sede_centro(stdout, style):
         '2 semestre grupo D':          'DERECHO D',
         '2 Semestre grupo D':          'DERECHO D',
         # Semestre III
+        'III DERECHO A':               'DERECHO A',
+        'III DERECHO B':               'DERECHO B',
+        'III DERECHO C':               'DERECHO C',
+        'III DERECHO D':               'DERECHO D',
+        'III DERECHO AB':              'DERECHO AB',
+        'III DERECHO AD':              'DERECHO AD',
         '3 semestre grupo A':          'DERECHO A',
         '3 Semestre grupo A':          'DERECHO A',
         '3 semestre grupo B':          'DERECHO B',
         '3 Semestre grupo B':          'DERECHO B',
         '3 semestre grupo C':          'DERECHO C',
         '3 Semestre grupo C':          'DERECHO C',
+        '3 semestre grupo D':          'DERECHO D',
+        '3 Semestre grupo D':          'DERECHO D',
         # Semestre IV
+        'IV DERECHO A':                'DERECHO A',
+        'IV DERECHO B':                'DERECHO B',
+        'IV DERECHO C':                'DERECHO C',
+        'IV SEMESTRE GRUPO A':         'DERECHO A',
         '4 semestre grupo A':          'DERECHO A',
         '4 Semestre grupo A':          'DERECHO A',
         '4 semestre grupo B':          'DERECHO B',
@@ -506,6 +534,10 @@ def create_horarios_sede_centro(stdout, style):
         '4 semestre grupo C':          'DERECHO C',
         '4 Semestre grupo C':          'DERECHO C',
         # Semestre V
+        'V DERECHO A':                 'DERECHO A',
+        'V DERECHO B':                 'DERECHO B',
+        'V DERECHO C':                 'DERECHO C',
+        'V DERECHO D':                 'DERECHO D',
         '5 semestre grupo A':          'DERECHO A',
         '5 Semestre grupo A':          'DERECHO A',
         '5 Semestre Grupo A':          'DERECHO A',
@@ -516,7 +548,13 @@ def create_horarios_sede_centro(stdout, style):
         '5 Semestre grupo C':          'DERECHO C',
         '5 Semestre Grupo C':          'DERECHO C',
         '5. Semestre grupo C':         'DERECHO C',
+        '5 semestre grupo D':          'DERECHO D',
+        '5 Semestre grupo D':          'DERECHO D',
+        '5 Semestre Grupo D':          'DERECHO D',
         # Semestre VI
+        'VI DERECHO A':                'DERECHO A',
+        'VI DERECHO B':                'DERECHO B',
+        'VI DERECHO C':                'DERECHO C',
         '6 semestre grupo A':          'DERECHO A',
         '6 Semestre grupo A':          'DERECHO A',
         '6. Semestre grupo A':         'DERECHO A',
@@ -525,6 +563,10 @@ def create_horarios_sede_centro(stdout, style):
         '6 semestre grupo C':          'DERECHO C',
         '6 Semestre grupo C':          'DERECHO C',
         # Semestre VII
+        'VII DERECHO A':               'DERECHO A',
+        'VII DERECHO B':               'DERECHO B',
+        'VII DERECHO C':               'DERECHO C',
+        'VII DERECHO D':               'DERECHO D',
         '7 semestre grupo A':          'DERECHO A',
         '7 Semestre grupo A':          'DERECHO A',
         '7 Semestre Grupo A':          'DERECHO A',
@@ -534,7 +576,12 @@ def create_horarios_sede_centro(stdout, style):
         '7 semestre grupo C':          'DERECHO C',
         '7 Semestre grupo C':          'DERECHO C',
         '7 Semestre Grupo C':          'DERECHO C',
+        '7 semestre grupo D':          'DERECHO D',
+        '7 Semestre grupo D':          'DERECHO D',
         # Semestre VIII
+        'VIII DERECHO A':              'DERECHO A',
+        'VIII DERECHO B':              'DERECHO B',
+        'VIII DERECHO C':              'DERECHO C',
         '8 semestre grupo A':          'DERECHO A',
         '8 Semestre grupo A':          'DERECHO A',
         '8 semestre grupo B':          'DERECHO B',
@@ -542,10 +589,15 @@ def create_horarios_sede_centro(stdout, style):
         '8 semestre grupo C':          'DERECHO C',
         '8 Semestre grupo C':          'DERECHO C',
         # Semestre IX
+        'IX DERECHO A':                'DERECHO A',
+        'IX DERECHO B':                'DERECHO B',
+        'IX DERECHO C':                'DERECHO C',
+        'IX DERECHO AN':               'DERECHO AN',
         '9 semestre grupo A':          'DERECHO A',
         '9 Semestre grupo A':          'DERECHO A',
         '9 Semestre Grupo A Nocturno': 'DERECHO A',
         '9 semestre grupo A Nocturno': 'DERECHO A',
+        '9 Semestre Diurno':           'DERECHO A',
         '9 semestre grupo B':          'DERECHO B',
         '9 Semestre grupo B':          'DERECHO B',
         '9 semestre grupo C':          'DERECHO C',
@@ -553,6 +605,9 @@ def create_horarios_sede_centro(stdout, style):
         '9 semestre grupo D':          'DERECHO D',
         '9. Semestre grupo C':         'DERECHO C',
         # Semestre X
+        'X DERECHO A':                 'DERECHO A',
+        'X DERECHO B':                 'DERECHO B',
+        'X DERECHO C':                 'DERECHO C',
         '10 semestre grupo A':         'DERECHO A',
         '10 Semestre Grupo A Diurno':  'DERECHO A',
         '10 semestre Grupo A Diurno':  'DERECHO A',
@@ -610,16 +665,30 @@ def create_horarios_sede_centro(stdout, style):
             programa_detectado = determinar_programa(grupo_nombre_resuelto) if grupo_nombre_resuelto.strip() else programa_derecho
 
             if grupo_nombre_resuelto.strip():
+                # Extraer semestre del nombre original para validación
+                semestre_extraido = extraer_semestre(grupo_nombre)
+                
                 # ─── Grupos formales DERECHO (ej. "DERECHO A", "DERECHO B") ───
                 if grupo_nombre_resuelto.strip().upper().startswith('DERECHO ') and \
                    grupo_nombre_resuelto.strip().upper() in [k.upper() for k in grupos_formales_derecho]:
-                    grupo = Grupo.objects.filter(
-                        periodo=periodo,
-                        programa=programa_derecho,
-                        nombre__iexact=grupo_nombre_resuelto.strip(),
-                    ).first()
+                    # VALIDACIÓN REFORZADA: Buscar grupo con nombre Y semestre
+                    if semestre_extraido:
+                        grupo = Grupo.objects.filter(
+                            periodo=periodo,
+                            programa=programa_derecho,
+                            nombre__iexact=grupo_nombre_resuelto.strip(),
+                            semestre=semestre_extraido
+                        ).first()
+                    else:
+                        # Fallback: buscar solo por nombre si no se pudo extraer semestre
+                        grupo = Grupo.objects.filter(
+                            periodo=periodo,
+                            programa=programa_derecho,
+                            nombre__iexact=grupo_nombre_resuelto.strip(),
+                        ).first()
+                    
                     if not grupo:
-                        errors.append(f'Grupo formal no encontrado en BD: {grupo_nombre_resuelto} (original: {grupo_nombre})')
+                        errors.append(f'Grupo formal no encontrado en BD: {grupo_nombre_resuelto} semestre {semestre_extraido} (original: {grupo_nombre})')
                         skipped_count += 1
                         continue
                 else:
