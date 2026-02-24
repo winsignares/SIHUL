@@ -5,8 +5,8 @@ Cada responsabilidad de seed está delegada a su propio módulo en seeders/:
   roles_seeder, sedes_seeder, tipos_espacio_seeder, tipos_actividad_seeder,
   facultades_seeder, programas_seeder, usuarios_seeder, asignaturas_seeder,
   asignaturas_programa_seeder, espacios_seeder, componentes_seeder,
-  periodos_seeder, grupos_seeder, horarios_seeder, agentes_seeder,
-  preguntas_sugeridas_seeder.
+  componentes_rol_seeder, periodos_seeder, grupos_seeder, horarios_seeder,
+  agentes_seeder, preguntas_sugeridas_seeder.
 
 Uso: python manage.py seed_initial_data
 
@@ -29,6 +29,7 @@ from .seeders import (
     asignaturas_programa_seeder,
     espacios_seeder,
     componentes_seeder,
+    componentes_rol_seeder,
     periodos_seeder,
     grupos_seeder,
     horarios_seeder,
@@ -89,7 +90,7 @@ class Command(BaseCommand):
 
                 #  9. Asignación de componentes a roles 
                 out.write(sty.SUCCESS('\n[9/14] Asignación de Componentes a Roles'))
-                componentes_seeder.create_componentes_rol(out, sty)
+                componentes_rol_seeder.create_componentes_rol(out, sty)
 
                 #  10. Grupos académicos 
                 out.write(sty.SUCCESS('\n[10/14] Grupos Académicos'))
