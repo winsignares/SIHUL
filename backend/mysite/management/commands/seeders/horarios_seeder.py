@@ -282,6 +282,28 @@ def create_horarios_sede_centro(stdout, style):
         ('VII CONTADURIA AN', 'Finanzas Corporativas', 'Ricardo Mena Torres', 'VIERNES', '19:00:00', '22:00:00', 'SALON 410NB'),
         ('III ALIANZA SABATINO 3', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 410NB'),
 
+        # ── SALON 411NB (21 horarios) ──
+        ('I DERECHO AN', 'CEA-ELE1', 'Yadira García', 'LUNES', '08:00:00', '10:00:00', 'SALON 411NB'),
+        ('I DERECHO AN', 'INTRODUCCIÓN AL DERECHO', 'Oona Hernández', 'LUNES', '10:00:00', '12:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'CEA-OPT2', 'Danilo Enrique Torres Pimiento', 'LUNES', '18:00:00', '20:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'Ingeniería Aplicada', 'Astrid Barrios', 'LUNES', '20:00:00', '22:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'Diseño de Instalaciones Industriales y de Servicios', 'Luis Carlos Acosta', 'MARTES', '06:00:00', '09:00:00', 'SALON 411NB'),
+        ('VII DERECHO B', 'Títulos Valores', 'Marlys Herazo', 'MARTES', '10:00:00', '12:00:00', 'SALON 411NB'),
+        ('VII DERECHO B', 'Contratos', 'Rafael Fierro', 'MARTES', '13:00:00', '15:00:00', 'SALON 411NB'),
+        ('VII DERECHO B', 'Probatorio', 'Eduardo Lascano', 'MARTES', '15:00:00', '18:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'Logística y Cadena de Suministro', 'Carlos Consuegra', 'MARTES', '18:00:00', '22:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'Diseño de Instalaciones Industriales y de Servicios', 'Luis Carlos Acosta', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 411NB'),
+        ('V ADM. NEGOCIOS CD', 'Derecho Comercial Internacional', 'Roberto Meisel Lanner', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 411NB'),
+        ('X DERECHO A', 'DER-OPT4', 'Jhonny Mendoza', 'MIÉRCOLES', '14:00:00', '17:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'CEA-OPT3B', 'Medardo González', 'MIÉRCOLES', '18:00:00', '22:00:00', 'SALON 411NB'),
+        ('VII DERECHO B', 'Familia, Infancia y Adolescencia', 'Juan Carlos de los Ríos', 'JUEVES', '06:00:00', '08:00:00', 'SALON 411NB'),
+        ('VII DERECHO B', 'Títulos Valores', 'Marlys Herazo', 'JUEVES', '08:00:00', '10:00:00', 'SALON 411NB'),
+        ('VII DERECHO B', 'Contratos', 'Rafael Fierro', 'JUEVES', '10:00:00', '12:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'CEA-ELE1', 'Agustín Vidal', 'JUEVES', '18:00:00', '21:00:00', 'SALON 411NB'),
+        ('VIII ING. INDUSTRIAL GA', 'Investigación Aplicada V', 'Astrid Barrios', 'JUEVES', '20:00:00', '22:00:00', 'SALON 411NB'),
+        ('I DERECHO B', 'Teoría Económica', 'Francisco Polo', 'VIERNES', '06:00:00', '09:00:00', 'SALON 411NB'),
+        ('VII DERECHO A', 'Criminología y Política Criminal', 'Ricardo Méndez', 'VIERNES', '18:00:00', '21:00:00', 'SALON 411NB'),
+        ('IV ALIANZA SABATINO 4', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 411NB'),
 
     ]
     

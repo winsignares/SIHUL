@@ -307,6 +307,7 @@ def _get_all_asignaturas():
         ('Optativa I', 'CEA-OPT1', 2, 'teórica', 96),
         ('Optativa II - Innovación y Transformación Digital en Empresas Globales', 'CEA-OPT2', 2, 'teórica', 96),
         ('Optativa III', 'CEA-OPT3', 2, 'teórica', 96),
+        ('Optativa III (Gestión de Procesos)', 'CEA-OPT3B', 2, 'teórica', 96),
         ('Optativa IV Gestión y Responsabilidad Fiscal', 'DER-OPT4', 2, 'teórica', 96),
         ('Optativa V', 'DER-OPT5', 2, 'teórica', 96),
         ('Optativa de Énfasis I', 'CEA-OEF1', 2, 'teórica', 96),

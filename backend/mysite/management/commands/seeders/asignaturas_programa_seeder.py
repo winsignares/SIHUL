@@ -1447,6 +1447,9 @@ def _get_all_relaciones():
 
         #Electiva 3 ING-ELE3
         ('Ingeniería de Sistemas', 'ING-ELE3', 6, 'electiva'),
+
+        #CEA-OPT3B
+        ('Ingeniería Industrial', 'CEA-OPT3B', 8, 'optativa'),
         
         # Ética Profesional
         ('Contaduría Pública', 'ING-ETPR', 8, 'humanística'),
