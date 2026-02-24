@@ -635,6 +635,8 @@ def create_horarios_sede_centro(stdout, style):
         # 9 semestre grupo A Nocturno - OPTATIVA II DIPLOMACIA Y RELACIONES INTERNACIONALES
         ('IX DERECHO AN', 'OPTATIVA II DIPLOMACIA Y RELACIONES INTERNACIONALES', 'ALEJANDRO BLANCO', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 512 NB'),
         
+        ('I ADM. NEG CD', 'PRINCIPIOS DE DERECHO Y CONSTITUCIÓN', 'ALEJANDRO BLANCO', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 512 NB'),
+        
         # DERECHO PROCESAL CONSTITUCIONAL
         ('', 'DERECHO PROCESAL CONSTITUCIONAL', 'PABLO RAFAEL BULA GONZALEZ', 'JUEVES', '16:00:00', '17:00:00', 'SALON 603NB'),
         
@@ -732,6 +734,7 @@ def create_horarios_sede_centro(stdout, style):
         programa_derecho = Programa.objects.get(nombre='Derecho')
         programa_admin = Programa.objects.get(nombre='Administración de Negocios Internacionales')
         programa_contaduria = Programa.objects.get(nombre='Contaduría Pública')
+        programa_alianza = Programa.objects.get(nombre='Alianza Canadiense')
         
         tipo_aula = TipoEspacio.objects.get(nombre='Aula')
     except Exception as e:
@@ -771,6 +774,8 @@ def create_horarios_sede_centro(stdout, style):
             return programa_contaduria
         elif 'ADM' in grupo_upper or 'NEGOCIOS' in grupo_upper:
             return programa_admin
+        elif 'ALIANZA' in grupo_upper:
+            return programa_alianza
         else:
             return programa_derecho
     
