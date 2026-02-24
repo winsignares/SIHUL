@@ -256,7 +256,33 @@ def create_horarios_sede_centro(stdout, style):
         ('II ING. INDUSTRIAL GA', 'Lógica y Algoritmo GA', 'Edgardo Buelvas', 'VIERNES', '17:00:00', '19:00:00', 'SALON 409NB'),
         ('II CONTADURIA AN', 'Ciclo de ingresos', 'Julio César Padilla Molina', 'VIERNES', '20:00:00', '22:00:00', 'SALON 409NB'),
         ('II ALIANZA SABATINO 2', 'Modalidad: Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 409NB'),
-    
+
+        # ── SALON 410NB (23 horarios) ──
+        ('X MEDICINA A', 'Gineco-Obstetricia Teórico', '', 'LUNES', '06:00:00', '09:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('VI ING. INDUSTRIAL GA', 'Gestión de Tecnología', 'José W. Penagos', 'LUNES', '16:00:00', '18:00:00', 'SALON 410NB'),
+        ('VI ADM. NEGOCIOS CD', 'Finanzas Internacionales', 'Winston Fontalvo Cerpa', 'LUNES', '18:00:00', '19:00:00', 'SALON 410NB'),
+        ('VI ADM. NEGOCIOS CD', 'Investigación de Mercados', 'José Rafael Simancas Trujillo', 'LUNES', '19:00:00', '20:00:00', 'SALON 410NB'),
+        ('III ADM. NEGOCIOS CD', 'Coyuntura económica nacional', 'Yesenia Judith Barandica Angulo', 'MARTES', '07:00:00', '09:00:00', 'SALON 410NB'),
+        ('III ADM. NEGOCIOS CD', 'Sistemas de Costeo', 'Jesús Rodríguez Polo', 'MARTES', '09:00:00', '12:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('VI ING. INDUSTRIAL GA', 'ING-OPT1', 'Medardo González', 'MARTES', '16:00:00', '18:00:00', 'SALON 410NB'),
+        ('V ING. INDUSTRIAL GA', 'Planeación y Control de la Producción y Operaciones', 'Roberto Osio', 'MARTES', '18:00:00', '20:00:00', 'SALON 410NB'),
+        ('X MEDICINA A', 'Gineco-Obstetricia Teórico', '', 'MIÉRCOLES', '06:00:00', '09:00:00', 'SALON 410NB'),
+        ('VII ADM. NEGOCIOS CD', 'Gerencia de Comercio Exterior', 'Cecilia Ibeth Sierra Martínez', 'MIÉRCOLES', '09:00:00', '12:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('X ING. INDUSTRIAL GA', 'Mercadeo GA', 'Erick Jassir', 'MIÉRCOLES', '18:00:00', '21:00:00', 'SALON 410NB'),
+        ('V ING. INDUSTRIAL GA', 'Sistemas Integrados de Gestión', 'Arnaldo Arce', 'JUEVES', '06:00:00', '09:00:00', 'SALON 410NB'),
+        ('V ING. INDUSTRIAL GA', 'Métodos GA', 'Ricardo De La Hoz', 'JUEVES', '09:00:00', '12:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('VI ING. INDUSTRIAL GA', 'ING-OPT1', 'Medardo González', 'JUEVES', '16:00:00', '18:00:00', 'SALON 410NB'),
+        ('VI ING. INDUSTRIAL GA', 'Planeación y Control de la Producción y Operaciones', 'Roberto Osio', 'JUEVES', '18:00:00', '21:00:00', 'SALON 410NB'),
+        ('V ING. INDUSTRIAL GA', 'Cátedra de Sostenibilidad', 'Ricardo De La Hoz', 'VIERNES', '08:00:00', '10:00:00', 'SALON 410NB'),
+        ('V ING. INDUSTRIAL GA', 'Diseño de productos y servicios', 'Erick Jassir', 'VIERNES', '10:00:00', '12:00:00', 'SALON 410NB'),
+        ('VII CONTADURIA AN', 'Finanzas Corporativas', 'Ricardo Mena Torres', 'VIERNES', '19:00:00', '22:00:00', 'SALON 410NB'),
+        ('III ALIANZA SABATINO 3', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 410NB'),
+
+
     ]
     
     created_count = 0
