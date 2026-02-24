@@ -125,13 +125,13 @@ def create_horarios_sede_centro(stdout, style):
         ('I ALIANZA SEMESTRAL 1', 'Modalidad Semestral', 'Profesor 1', 'JUEVES', '11:00:00', '12:00:00', 'SALÓN 405NB'),
 
         # ELECTIVA LAW AT THE EDGE
-        ('', 'ELECTIVA  LAW AT THE EDGE', 'ALEXANDER GONZÁLEZ', 'LUNES', '08:00:00', '09:00:00', 'SALON 501NB'),
+        ('IV DERECHO A', 'Electiva IV', 'ALEXANDER GONZÁLEZ', 'LUNES', '08:00:00', '09:00:00', 'SALON 501NB'),
         
         # Electiva: BASIC BUSSINESS ENGLISH
-        ('', 'Electiva: BASIC BUSSINESS ENGLISH', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '18:00:00', '19:00:00', 'I CONTADURIA AN'),
+        ('I CONTADURIA AN', 'Electiva I', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '18:00:00', '19:00:00', 'I CONTADURIA AN'),
         
         # Electiva: INTERMEDIATE ACCOUNTING ENGLISH
-        ('', 'Electiva: INTERMEDIATE ACCOUNTING ENGLISH', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '20:00:00', '21:00:00', 'I CONTADURIA AN'),
+        ('V CONTADURIA AN', 'Electiva V', 'RICHARD ANDRES PALACIO MATTA', 'LUNES', '20:00:00', '21:00:00', 'I CONTADURIA AN'),
         
         # /II CONTADURIA AN/II ADM. NEGOCIOS AN - Calculo
         ('II CONTADURIA AN', 'Cálculo', 'Rocío Mercedes Duarte Angarita', 'MARTES', '20:00:00', '21:00:00', 'SALÓN 506NB'),

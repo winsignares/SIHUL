@@ -1431,7 +1431,7 @@ def _get_all_relaciones():
         ('Ingeniería Industrial', 'ING-ETIC', 7, 'humanística'),
         
         # Ética Profesional
-        ('Contaduría', 'ING-ETPR', 8, 'humanística'),
+        ('Contaduría Pública', 'ING-ETPR', 8, 'humanística'),
         
         # ==========================================
         # RELACIONES ALIANZA CANADIENSE
