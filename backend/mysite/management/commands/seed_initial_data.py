@@ -32,8 +32,8 @@ from .seeders import (
     componentes_seeder,
     componentes_rol_seeder,
     periodos_seeder,
-    grupos_seeder,
-    horarios_seeder,
+    grupos_norte_seeder,
+    horarios_norte_seeder,
     agentes_seeder,
     preguntas_sugeridas_seeder,
 )
@@ -99,15 +99,15 @@ class Command(BaseCommand):
 
                 #  11. Grupos académicos 
                 out.write(sty.SUCCESS('\n[11/15] Grupos Académicos'))
-                grupos_seeder.create_grupos(out, sty)
+                grupos_norte_seeder.create_grupos(out, sty)
 
                 #  12. Horarios Sede Centro 
                 out.write(sty.SUCCESS('\n[12/15] Horarios Sede Centro'))
-                horarios_seeder.create_horarios_sede_centro(out, sty)
+                horarios_norte_seeder.create_horarios_sede_centro(out, sty)
 
                 #  13. Horarios Sede Principal 
                 out.write(sty.SUCCESS('\n[13/15] Horarios Sede Principal'))
-                horarios_seeder.create_horarios_sede_principal(out, sty)
+                horarios_norte_seeder.create_horarios_sede_principal(out, sty)
 
                 #  14. Agentes de chatbot 
                 out.write(sty.SUCCESS('\n[14/15] Agentes de Chatbot'))
