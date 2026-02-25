@@ -242,6 +242,8 @@ def _get_all_asignaturas():
         ('Impuesto Sobre la Renta', 'CEA-IMRE', 3, 'teórica', 144),
         ('Impuesto a las Ventas y Retención', 'CEA-IVYR', 3, 'teórica', 144),
         ('Impuestos Territoriales y Proc. Tributario', 'CEA-ITPT', 3, 'teórica', 144),
+        ('Electiva: BASIC BUSINESS ENGLISH', 'CEA-BBEN', 2, 'teórica', 96),
+        ('Electiva: INTERMEDIATE ACCOUNTING ENGLISH', 'CEA-IAEN', 2, 'teórica', 96),
         ('ELECTIVA: ADVANCED BUSINESS ENGLISH', 'CEA-ABEN', 2, 'teórica', 96),
         ('Ingeniería Aplicada', 'ING-INAP', 3, 'teórica', 144),
         ('Ingeniería de Software I', 'ING-ISW1', 3, 'teórica', 144),

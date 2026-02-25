@@ -444,7 +444,7 @@ def create_horarios_sede_centro(stdout, style):
         ("VII ALIANZA SABATINO 7", "Modalidad Sabatina", "", "Sábado", "08:00", "12:00", "SALON 502NB"),
         
         # --- SALON 503NB (24 horarios) ──
-        ("III DERECHO AB", "CIVIL BIENES", "CARLOS ESPINEL", "Lunes", "06:00", "08:00", "SALON 503NB"),
+        ("III DERECHO A", "CIVIL BIENES", "CARLOS ESPINEL", "Lunes", "06:00", "08:00", "SALON 503NB"),
         ("I DERECHO D", "INTRODUCCIÓN AL DERECHO", "OONA HERNÁNDEZ", "Lunes", "08:00", "10:00", "SALON 503NB"),
         ("I DERECHO D", "DERECHO ROMANO", "TATIANA POLO", "Lunes", "10:00", "13:00", "SALON 503NB"),
         ("I ADM. NEGOCIOS AN", "Fundamentos de administración", "Maribel Cerro Camera", "Lunes", "18:00", "21:00", "SALON 503NB"),
@@ -460,26 +460,131 @@ def create_horarios_sede_centro(stdout, style):
         ("VIII ADM. NEGOCIOS AN", "Ética profesional y responsabilidad social empresarial", "Milagros Del Carmen Villasmil Molero", "Jueves", "18:00", "20:00", "SALON 503NB"),
         ("VIII ADM. NEGOCIOS AN", "Mercado de capitales", "Winston Fontalvo Cerpa", "Jueves", "20:00", "22:00", "SALON 503NB"),
         ("III DERECHO AD", "INVESTIGACIÓN I", "ALEJANDRO BLANCO", "Viernes", "06:00", "08:00", "SALON 503NB"),
-        ("I DERECHO C", "DERECHO ROMANO", "TATIANA POLO", "Viernes", "08:00", "11:00", "SALON 503NB")
+        ("I DERECHO C", "DERECHO ROMANO", "TATIANA POLO", "Viernes", "08:00", "11:00", "SALON 503NB"),
 
+        # --- SALON 504NB (24 horarios) ──
+        ("I DERECHO C", "TEORÍA DEL ESTADO", "LINDA NADER", "Lunes", "08:00", "10:00", "SALON 504NB"),
+        ("I DERECHO C", "HISTORIA DE LA FILOSOFÍA", "CRISTÓBAL ARTETA", "Lunes", "10:00", "13:00", "SALON 504NB"),
+        ("III DERECHO D", "CIVIL BIENES", "BRENDA VALERO", "Lunes", "13:00", "15:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Revisoría fiscal", "Milagros Del Carmen Villasmil Molero", "Lunes", "18:00", "20:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Contabilidad y finanzas publicas", "Julio Cesar Padilla Molina", "Lunes", "20:00", "22:00", "SALON 504NB"),
+        ("V DERECHO A", "HERMENÉUTICA JURÍDICA", "PATRICIA MORRIS", "Martes", "10:00", "13:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Optativa II (Línea de Auditoría)", "Rafael Francisco Nuñez Suarez", "Martes", "18:00", "20:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Contabilidad y finanzas publicas", "Julio Cesar Padilla Molina", "Martes", "20:00", "22:00", "SALON 504NB"),
+        ("III DERECHO C", "LÓGICA JURÍDICA", "YADIRA GARCÍA", "Miércoles", "06:00", "09:00", "SALON 504NB"),
+        ("III DERECHO C", "INVESTIGACIÓN I", "ALEJANDRO BLANCO", "Miércoles", "10:00", "12:00", "SALON 504NB"),
+        ("III DERECHO C", "CIVIL BIENES", "BRENDA VALERO", "Miércoles", "13:00", "15:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Impuesto a la ventas y retención en la fuente", "Cástulo Antonio Maza Cabrera", "Miércoles", "18:00", "19:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Revisoría fiscal", "Milagros Del Carmen Villasmil Molero", "Miércoles", "19:00", "20:00", "SALON 504NB"),
+        ("VII CONTADURIA AN", "Formulación y Gestión de Proyectos", "Danilo Enrique Torres Pimiento", "Miércoles", "20:00", "22:00", "SALON 504NB"),
+        ("VIII DERECHO A", "CRIMINALÍSTICA Y CIENCIA FORENSE", "CARLOS NEWBALL", "Jueves", "06:00", "10:00", "SALON 504NB"),
+        ("VIII DERECHO A", "PROCESAL CIVIL ESPECIAL Y DE FAMILIA", "NUBIA MARRUGO", "Jueves", "12:00", "14:00", "SALON 504NB"), 
+        ("VII CONTADURIA AN", "Optativa II (Línea de Auditoría)", "Rafael Francisco Nuñez Suarez", "Jueves", "18:00", "20:00", "SALON 504NB"), 
+        ("VII CONTADURIA AN", "Impuesto a la ventas y retención en la fuente", "Cástulo Antonio Maza Cabrera", "Jueves", "20:00", "22:00", "SALON 504NB"), 
+        ("I DERECHO D", "TEORÍA ECONÓMICA", "GUILLERMO DE LA HOZ", "Viernes", "06:00", "09:00", "SALON 504NB"), 
+        ("II DERECHO A", "SOCIOLOGÍA GENERAL Y JURÍDICA", "YOLANDA FANDIÑO", "Viernes", "09:00", "12:00", "SALON 504NB"), 
+        ("V DERECHO A", "DERECHO INTERNACIONAL PRIVADO", "JUAN CARLOS DE LOS RÍOS", "Viernes", "18:00", "21:00", "SALON 504NB"),
 
+        # --- SALON 505NB (24 horarios) ──
+        ("II ALIANZA SEMESTRAL 2", "Modalidad Semestral", "", "Lunes", "11:00", "13:00", "SALON 505NB"), 
+        ("VI ALIANZA INTENSIVO 6", "Modalidad Intensivo", "", "Lunes", "14:00", "18:00", "SALON 505NB"), 
+        ("IV ADM. NEGOCIOS AN", "Gestión de talento humano", "Julie Samanta Arévalo Coral", "Lunes", "18:00", "21:00", "SALON 505NB"), 
+        ("II CONTADURIA CD", "Ciclo de ingresos", "Julio Cesar Padilla Molina", "Martes", "07:00", "09:00", "SALON 505NB"), 
+        ("I ING. SISTEMAS", "Física Mecánica y Lab", "ANDRES BERMUDEZ", "Martes", "09:00", "12:00", "SALON 505NB"), 
+        ("VI ALIANZA INTENSIVO 6", "Modalidad Intensivo", "", "Martes", "14:00", "18:00", "SALON 505NB"), 
+        ("IV ADM. NEGOCIOS AN", "Coyuntura económica internacional", "Marco Antonio Ariza Dau", "Martes", "18:00", "20:00", "SALON 505NB"), 
+        ("IV ADM. NEGOCIOS AN", "Fundamentos de mercadeo", "Luis Alfonso Grisales Domínguez", "Martes", "20:00", "21:00", "SALON 505NB"), 
+        ("I ING. INDUSTRIAL GA", "Introducción a la Ingeniería", "SAUL OLIVOS", "Miércoles", "09:00", "10:00", "SALON 505NB"), 
+        ("I ING. INDUSTRIAL GA", "ING-CPAC", "YESSY CORONEL", "Miércoles", "10:00", "13:00", "SALON 505NB"), 
+        ("VI ALIANZA INTENSIVO 6", "Modalidad Intensivo", "", "Miércoles", "14:00", "18:00", "SALON 505NB"), 
+        ("II CONTADURIA AN", "Derecho comercial", "Eduardo De Jesus Pérez Ramírez", "Miércoles", "18:00", "20:00", "SALON 505NB"), 
+        ("II ADM. NEGOCIOS AN", "Derecho comercial", "Eduardo De Jesus Pérez Ramírez", "Miércoles", "18:00", "20:00", "SALON 505NB"), 
+        ("II CONTADURIA AN", "Economía de empresa", "Yesenia Judith Barandica Angulo", "Miércoles", "20:00", "22:00", "SALON 505NB"), 
+        ("II ADM. NEGOCIOS AN", "Economía de empresa", "Yesenia Judith Barandica Angulo", "Miércoles", "20:00", "22:00", "SALON 505NB"), 
+        ("II ALIANZA SEMESTRAL 2", "Modalidad Semestral", "", "Jueves", "11:00", "13:00", "SALON 505NB"), 
+        ("VI ALIANZA INTENSIVO 6", "Modalidad Intensivo", "", "Jueves", "14:00", "18:00", "SALON 505NB"), 
+        ("I ADM. NEGOCIOS AN", "Fundamentos de negocios internacionales", "", "Jueves", "18:00", "21:00", "SALON 505NB"), 
+        ("I ADM. NEGOCIOS CD", "Fundamentos de negocios internacionales", "Yesenia Judith Barandica Angulo", "Viernes", "07:00", "10:00", "SALON 505NB"), 
+        ("I ADM. NEGOCIOS CD", "Fundamentos de matemáticas", "Boanerge José Salas Muñoz", "Viernes", "10:00", "12:00", "SALON 505NB"), 
+        ("I CONTADURIA CD", "Fundamentos de matemáticas", "Boanerge José Salas Muñoz", "Viernes", "10:00", "12:00", "SALON 505NB"), 
+        ("II CONTADURIA AN", "Cálculo", "Rocío Mercedes Duarte Angarita", "Viernes", "18:00", "20:00", "SALON 505NB"), 
+        ("II ADM. NEGOCIOS AN", "Cálculo", "Rocío Mercedes Duarte Angarita", "Viernes", "18:00", "20:00", "SALON 505NB"),
+
+        # --- SALON 506NB (24 horarios) ──
+        # (grupo, materia, profesor, dia, hora_inicio, hora_fin, espacio)
+
+        ("III ALIANZA SEMESTRAL 3", "Modalidad Semestral", "", "Lunes", "11:00", "13:00", "SALON 506NB"),
+        ("VII ALIANZA INTENSIVO 7", "Modalidad Intensivo", "", "Lunes", "14:00", "18:00", "SALON 506NB"),
+        ("III CONTADURIA AN", "Ciclo de egresos y administración de inventarios", "Rafael Francisco Nuñez Suarez", "Lunes", "20:00", "22:00", "SALON 506NB"),
+        ("I DERECHO F", "INTRODUCCIÓN AL DERECHO", "RICARDO MÉNDEZ", "Martes", "06:00", "08:00", "SALON 506NB"),
+        ("I DERECHO F", "ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA", "", "Martes", "08:00", "10:00", "SALON 506NB"),
+        ("VII ALIANZA INTENSIVO 7", "Modalidad Intensivo", "", "Martes", "14:00", "18:00", "SALON 506NB"),
+        ("II CONTADURIA AN", "Epistemología y metodología de la investigación", "Milagros Del Carmen Villasmil Molero", "Martes", "18:00", "20:00", "SALON 506NB"),
+        ("II ADM. NEGOCIOS AN", "Epistemología y metodología de la investigación", "Milagros Del Carmen Villasmil Molero", "Martes", "18:00", "20:00", "SALON 506NB"),
+        ("II CONTADURIA AN", "Cálculo", "Rocío Mercedes Duarte Angarita", "Martes", "20:00", "22:00", "SALON 506NB"),
+        ("II ADM. NEGOCIOS AN", "Cálculo", "Rocío Mercedes Duarte Angarita", "Martes", "20:00", "22:00", "SALON 506NB"),
+        ("VII ALIANZA INTENSIVO 7", "Modalidad Intensivo", "", "Miércoles", "14:00", "18:00", "SALON 506NB"),
+        ("III CONTADURIA AN", "Teorías contables", "Jose Barros", "Miércoles", "19:00", "21:00", "SALON 506NB"),
+        ("III ALIANZA SEMESTRAL 3", "Modalidad Semestral", "", "Jueves", "11:00", "13:00", "SALON 506NB"),
+        ("VII ALIANZA INTENSIVO 7", "Modalidad Intensivo", "", "Jueves", "14:00", "18:00", "SALON 506NB"),
+        ("IV CONTADURIA AN", "Ciclo de inversiones y financiación", "José Barros Padilla", "Jueves", "18:00", "20:00", "SALON 506NB"),
+        ("IV CONTADURIA AN", "Sistemas de costeo", "Yuleida Ariza Angarita", "Jueves", "20:00", "22:00", "SALON 506NB"),
+        ("V ADM. NEGOCIOS CD", "Comercio y negocios globales", "José Rafael Simancas Trujillo", "Viernes", "07:00", "09:00", "SALON 506NB"),
+
+        # --- SALON 507NB (24 horarios) ──
+        ("I ING. INDUSTRIAL GA", "Introducción a la Ingeniería", "SAUL OLIVOS", "Lunes", "09:00", "10:00", "SALON 507NB"),
+        ("II DERECHO A", "DERECHOS HUMANOS Y D.I.H.", "MAGDA DJANON", "Lunes", "10:00", "14:00", "SALON 507NB"),
+        ("II DERECHO A", "CIENCIA POLITICA", "ALEJANDRO BLANCO", "Lunes", "15:00", "18:00", "SALON 507NB"),
+        ("I CONTADURIA AN", "CEA-BBEN", "RICHARD ANDRES PALACIO MATTA", "Lunes", "18:00", "20:00", "SALON 507NB"),
+        ("I CONTADURIA AN", "CEA-IAEN", "RICHARD ANDRES PALACIO MATTA", "Lunes", "20:00", "22:00", "SALON 507NB"),
+        ("V CONTADURIA AN", "CEA-IAEN", "RICHARD ANDRES PALACIO MATTA", "Lunes", "20:00", "22:00", "SALON 507NB"),
         
+        ("IX DERECHO B", "PROCESAL ADMINISTRATIVO II", "GUILLERMO ARÉVALO", "Martes", "06:00", "09:00", "SALON 507NB"),
+        ("VIII ADM. NEGOCIOS AN", "Optativa III. PLAN DE INTERNACIONALIZACIÓN DE LA EMPRESA", "Roberto Antonio Morales Espinosa", "Martes", "18:00", "20:00", "SALON 507NB"),
+        ("VIII ADM. NEGOCIOS AN", "Globalización", "Marco Antonio Ariza Dau", "Martes", "20:00", "21:00", "SALON 507NB"),
+        ("IX DERECHO B", "SUCESIONES", "RICARDO JIMÉNEZ", "Miércoles", "06:00", "08:00", "SALON 507NB"),
+        ("I ING. INDUSTRIAL GA", "Introducción a la Ingeniería", "SAUL OLIVOS", "Miércoles", "09:00", "10:00", "SALON 507NB"),
+        ("I ING. INDUSTRIAL GA", "Competencias de Aprendizaje y Comunicación", "YESSY CORONEL", "Miércoles", "10:00", "13:00", "SALON 507NB"),
+        ("VIII ADM. NEGOCIOS AN", "Optativa III. PLAN DE INTERNACIONALIZACIÓN DE LA EMPRESA", "Roberto Antonio Morales Espinosa", "Miércoles", "18:00", "20:00", "SALON 507NB"),
+        ("VIII ADM. NEGOCIOS AN", "Globalización", "Marco Antonio Ariza Dau", "Miércoles", "20:00", "22:00", "SALON 507NB"),
+        ("IX DERECHO B", "SUCESIONES", "RICARDO JIMÉNEZ", "Jueves", "06:00", "09:00", "SALON 507NB"),
+        ("VII ADM. NEGOCIOS BN", "Seminario de negociacion y concertacion", "Winston Fontalvo Cerpa", "Jueves", "18:00", "20:00", "SALON 507NB"),
+        ("VII ADM. NEGOCIOS BN", "Proyecto de Investigación", "Lilia Mercedes Mendoza Vega", "Jueves", "20:00", "22:00", "SALON 507NB"),
+        ("III DERECHO C", "INVESTIGACIÓN I", "ALEJANDRO BLANCO", "Viernes", "08:00", "10:00", "SALON 507NB"),
+        ("III DERECHO C", "CIVIL BIENES", "BRENDA VALERO", "Viernes", "10:00", "12:00", "SALON 507NB"),
+
+        # --- SALON 508NB (24 horarios) ──
+        ("III DERECHO B", "LÓGICA JURÍDICA", "YADIRA GARCÍA", "Lunes", "10:00", "13:00", "SALON 508NB"),
+        ("III DERECHO B", "CONSTITUCIONAL COLOMBIANO", "", "Lunes", "15:00", "18:00", "SALON 508NB"),
+        ("V DERECHO D", "DERECHO INTERNACIONAL PRIVADO", "JUAN CARLOS DE LOS RÍOS", "Martes", "06:00", "08:00", "SALON 508NB"),
+        ("V DERECHO D", "ELECTIVA V CONFLICTOS CONTEMPORÁNEOS", "RAFAEL RODRÍGUEZ", "Martes", "10:00", "12:00", "SALON 508NB"),
+        ("III DERECHO B", "CONSTITUCIONAL COLOMBIANO", "", "Martes", "14:00", "17:00", "SALON 508NB"),
+        ("I DERECHO AN-E", "TEORÍA DEL ESTADO", "LINDA NADER", "Miércoles", "06:00", "08:00", "SALON 508NB"),
+        ("X DERECHO DIURNO A", "DERECHO AMBIENTAL", "JAIME BERMEJO", "Miércoles", "08:00", "11:00", "SALON 508NB"),
+        ("I DERECHO AN-E", "DERECHO ROMANO", "TATIANA POLO", "Jueves", "06:00", "09:00", "SALON 508NB"),
+        ("I DERECHO E", "INTRODUCCIÓN AL DERECHO", "GONZALO AGUILAR", "Jueves", "08:00", "10:00", "SALON 508NB"),
+        ("VIII DERECHO A", "PROCESAL ADMINISTRATIVO I", "LUIS CERRA", "Viernes", "06:00", "09:00", "SALON 508NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00", "21:00", "SALON 508NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00", "17:00", "SALON 508NB"),
+
+
+
         
         # --- SALON 702NB (24 horarios) ─
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 702NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 702NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 702NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 702NB"),
         # --- SALON 703NB (24 horarios) ──
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 703NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 703NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 703NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 703NB"),
         # --- SALON 704NB (24 horarios) ──
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 704NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 704NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 704NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 704NB"),
         # --- SALON 709NB (24 horarios) ──
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 709NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 709NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 709NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 709NB"),
         # --- SALON 710NB (24 horarios) ──
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 710NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 710NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 710NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 710NB"),
         # --- SALON 711NB (24 horarios) ──
         ("VIII MEDICINA", "Cirugía Teoría", "", "Lunes", "14:00", "16:00", "SALON 711NB"),
         ("VIII MEDICINA", "CSA-SSTM", "JORGE RIVERA", "Martes", "13:00", "16:00", "SALON 711NB"),
@@ -492,11 +597,11 @@ def create_horarios_sede_centro(stdout, style):
         ("V CONTADURIA AN", "Ciclo de Estados Financieros", "Jesús María Rodríguez Polo", "Viernes", "18:00", "20:00", "SALON 711NB"),
         ("V CONTADURIA AN", "Costos Gerenciales", "Yuleida Ariza Angarita", "Viernes", "20:00", "22:00", "SALON 711NB"),
         # ── SALON 713NB (24 horarios) ──
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 713NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 713NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 713NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 713NB"),
         # ── SALON 714NB (24 horarios) ──
-        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 714NB"), 
-        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 714NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00:00", "22:00:00", "SALON 714NB"), 
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00:00", "16:00:00", "SALON 714NB"),
         # ── SALON 717NB (24 horarios) ──
         ("IV ING. INDUSTRIAL GA", "Gerencia Estratégica", "ANDREA CORONADO", "Viernes", "18:00", "21:00", "SALON 717NB"),
         # ── SALON 718NB (24 horarios) ──

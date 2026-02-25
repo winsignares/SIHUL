@@ -1412,6 +1412,13 @@ def _get_all_relaciones():
         #ING-EBI3
         ('Ingeniería Industrial', 'ING-EBI3', 10, 'profesional'),
         
+        # CEA-BBEN
+        ('Contaduría Pública', 'CEA-BBEN', 1, 'profesional'),
+        
+        #CEA-IAEN
+        ('Contaduría Pública', 'CEA-IAEN', 1, 'profesional'),
+        ('Contaduría Pública', 'CEA-IAEN', 5, 'profesional'),
+        
         # Práctica Empresarial
         ('Ingeniería Industrial', 'ING-PREM2', 8, 'profesional'),
         
