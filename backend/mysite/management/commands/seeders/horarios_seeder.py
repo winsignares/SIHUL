@@ -398,7 +398,7 @@ def create_horarios_sede_centro(stdout, style):
         ('VIII ADM. NEGOCIOS AN', 'CSA-ELE1', 'SANDRA MILENA CASTILLO BERMÚDEZ', 'LUNES', '20:00:00', '22:00:00', 'SALON 415NB'),
         ('VII CONTADURIA AN', 'CSA-ELE1', 'SANDRA MILENA CASTILLO BERMÚDEZ', 'LUNES', '20:00:00', '22:00:00', 'SALON 415NB'),
         #MARTES
-        ('X ING. INDUSTRIAL GA2', 'CSA-EPI', 'JOSÉ PENAGOS', 'MARTES', '06:00:00', '09:00:00', 'SALON 415NB'),
+        ('X ING. INDUSTRIAL GA2', 'CSA-EPIV', 'JOSÉ PENAGOS', 'MARTES', '06:00:00', '09:00:00', 'SALON 415NB'),
         ('VII ING. SISTEMAS GA', 'Metodología de la investigación ga', 'AGUSTÍN VIDAL', 'MARTES', '17:00:00', '20:00:00', 'SALON 415NB'),
         ('VII ING. SISTEMAS GA', 'Ética ga', 'MARILUZ BARRIOS', 'MARTES', '20:00:00', '22:00:00', 'SALON 415NB'),
         #MIÉRCOLES
