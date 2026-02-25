@@ -652,8 +652,8 @@ def create_horarios_sede_centro(stdout, style):
         ("II ADM. NEGOCIOS CD", "Gestion de la planeación y organización", "Jessica Paola Muñoz Sánchez", "Jueves", "18:00", "21:00", "SALON 509NB"),
         ("I ADM. NEGOCIOS DD", "Fundamentos de matemáticas", "Boanerge José Salas Muñoz", "Viernes", "08:00", "10:00", "SALON 509NB"),
         ("I ADM. NEGOCIOS DD", "Principios de derecho y constitución política", "Eduardo De Jesus Pérez Ramirez", "Viernes", "10:00", "12:00", "SALON 509NB"),
-        ("CLASES POSGRADOS", "", "", "Viernes", "14:00", "21:00", "SALON 509NB"),
-        ("CLASES POSGRADOS", "", "", "Sábado", "08:00", "15:00", "SALON 509NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00", "21:00", "SALON 509NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00", "15:00", "SALON 509NB"),
         
         # --- SALON 510 NB (24 horarios) ──
         ("IV CONTADURIA CD", "Sistemas de costeo", "Yuleida Ariza Angarita", "Lunes", "07:00", "10:00", "SALON 510NB"),
@@ -680,8 +680,8 @@ def create_horarios_sede_centro(stdout, style):
         ("I CONTADURIA AN", "Ciclo de ingresos", "Julio Cesar Padilla Molina", "Jueves", "18:00", "20:00", "SALON 510NB"),
         ("IV CONTADURIA CD", "Fundamentos de mercadeo", "Cecilia Ibeth Sierra Martinez", "Viernes", "07:00", "09:00", "SALON 510NB"),
         ("IV CONTADURIA CD", "Modelos de investigación", "Gustavo Rafael Henriquez", "Viernes", "09:00", "11:00", "SALON 510NB"),
-        ("CLASES POSGRADOS", "", "", "Viernes", "14:00", "21:00", "SALON 510NB"),
-        ("CLASES POSGRADOS", "", "", "Sábado", "08:00", "15:00", "SALON 510NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Viernes", "14:00", "21:00", "SALON 510NB"),
+        ("CLASES POSGRADOS", "POSGRADOS", "", "Sábado", "08:00", "15:00", "SALON 510NB"),
 
 
         # --- SALON 511NB (24 horarios) ──
@@ -726,30 +726,30 @@ def create_horarios_sede_centro(stdout, style):
 
         # VIERNES
         ("IX DERECHO B", " JURISPRUDENCIA CONSTITUCIONAL ", "GRETTY PAVLOVICH", "VIERNES", "06:00:00", "09:00:00", "Salon 512NB"),
-        ( "CLASES POSGRADO", "POSGRADO","", "VIERNES", "14:00:00", "21:00:00", "Salon 512NB"),
+        ( "CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "21:00:00", "Salon 512NB"),
 
         # SABADO
-        ( "CLASES POSGRADO", "POSGRADO", "","SABADO", "08:00:00", "15:00:00", "Salon 512NB"),
+        ( "CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "15:00:00", "Salon 512NB"),
 
         # SALON 513NB
         
         # MARTES
         ("V CONTADURIA AN", "CICLO DE ESTADOS FINANCIEROS", "JESUS MARIA RODRIGUEZ POLO", "MARTES", "19:00:00", "22:00:00", "Salon 513NB"),
         # MIERCOLES
-        ("VII ALIANZA SEMESTRAL 7 ", "Modalidad Semestral", "","MIERCOLES", "11:00:00", "13:00:00", "Salon 513NB"),
+        ("VII ALIANZA SEMESTRAL 7 ", "Modalidad Semestral", "", "MIERCOLES", "11:00:00", "13:00:00", "Salon 513NB"),
         ("V CONTADURIA AN", "FUNDAMENTOS Y NORMATIVIDAD TRIBUTARIA", "MILAGROS DEL CARMEN VILLASMIL MOLERO", "MIERCOLES", "18:00:00", "19:00:00", "Salon 513NB"),
         ("V CONTADURIA AN", "ASEGURAMIENTO Y FUNDAMENTOS DE CONTROL", "FREDY ALBERTO MEJIA TORRES", "MIERCOLES", "19:00:00", "22:00:00", "Salon 513NB"),
         # JUEVES
-        ("VII ALIANZA SEMESTRAL 7", "Modalidad Semestral", "","JUEVES", "11:00:00", "13:00:00", "Salon 513NB"),
+        ("VII ALIANZA SEMESTRAL 7", "Modalidad Semestral", "", "JUEVES", "11:00:00", "13:00:00", "Salon 513NB"),
         ("IX MEDICINA ", "ELECTIVA ENFERMEDADES INMUNOPREVENIBLES DE INTERESES EN SALUD PUBLIC", "JAIME LORDUY", "JUEVES", "16:00:00", "18:00:00", "Salon 513NB"),
         ("V CONTADURIA AN", "COSTOS GERENCIALES", "YULEIDA ARIZA ANGARITA", "JUEVES", "18:00:00", "20:00:00", "Salon 513NB"),
         ("V CONTADURIA AN", "FUNDAMENTOS Y NORMATIVIDAD TRIBUTARIA", " MILAGROS DEL CARMEN VILLASMIL MOLERO ", "JUEVES", "20:00:00", "22:00:00", "Salon 513NB"),
         # VIERNES
         ("VII ADMIN NEGOCIOS CD ", "INTERNATIONAL AGREEMENT", "JEIMMY MARITZA BERNAL GOMEZ", "VIERNES", "07:00:00", "10:00:00", "Salon 513NB"),
         ("VII ADMIN NEGOCIOS CD ", " INTERNATIONAL MARKETING", "JOSE RAFAEL SIMANCAS TRUJILLO", "VIERNES", "10:00:00", "12:00:00", "Salon 513NB"),
-        ("CLASES POSGRADO", "POSGRADO", "","VIERNES", "14:00:00", "22:00:00", "Salon 513NB"),
+        ("CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 513NB"),
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "","SABADO", "08:00:00", "15:00:00", "Salon 513NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "15:00:00", "Salon 513NB"),
 
         #PAGINA 33 SALON 514 NB
 
@@ -785,10 +785,10 @@ def create_horarios_sede_centro(stdout, style):
         ("VIII DERECHO B", "SEGURIDAD SOCIAL", "RAFAEL RODRIGUEZ", "JUEVES", "11:00:00", "14:00:00", "Salon 515NB"),
 
         # VIERNES
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 515NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 515NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 515NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 515NB"),
 
 
         #PAGINA 35 SALON 516 NB
@@ -813,14 +813,14 @@ def create_horarios_sede_centro(stdout, style):
         ("VII DERECHO D ", "FAMILIA, INFANCIA Y ADOLESCENCIA ", "PEDRO ARIAS", "JUEVES", "06:00:00", "08:00:00", "Salon 516NB"),
         ("VII DERECHO D ", "PROBATORIO ", " EDUARDO LASCANO ", "JUEVES", "09:00:00", "12:00:00", "Salon 516NB"),
         ("VII DERECHO D ", "TITULOS VALORES ", " MARLYS HERAZO ", "JUEVES", "14:00:00", "16:00:00", "Salon 516NB"),
-        ("X MEDICINA ", "MEDICINA LEGAL TEORIA", "JUEVES", "16:00:00", "18:00:00", "Salon 516NB"),
+        ("X MEDICINA ", "MEDICINA LEGAL TEORIA", "", "JUEVES", "16:00:00", "18:00:00", "Salon 516NB"),
         ("VII DERECHO A ", " CONTRATOS ", " CARLOS ESPINEL ", "JUEVES", "18:00:00", "22:00:00", "Salon 516NB"),
 
         # VIERNES
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "15:00:00", "22:00:00", "Salon 516NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "15:00:00", "22:00:00", "Salon 516NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "15:00:00", "Salon 516NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "15:00:00", "Salon 516NB"),
 
         #PAGINA 38 SALON 601 NB
 
@@ -836,10 +836,10 @@ def create_horarios_sede_centro(stdout, style):
         (" I DERECHO AN", "TEORIA ECONOMICA ", "FRANCISCO POLO", "MIERCOLES", "18:00:00", "21:00:00", "Salon 601NB"),
 
         # VIERNES
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "13:00:00", "21:00:00", "Salon 601NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "13:00:00", "21:00:00", "Salon 601NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 601NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 601NB"),
 
         #PAGINA 39 SALON 602 NB
 
@@ -855,10 +855,10 @@ def create_horarios_sede_centro(stdout, style):
         ("VIII MEDICINA", "ELECTIVA: MEDICINA APLICADA A LA ACTIVIDAD FISICA Y DEL DEPORTE", "LUCY BULA", "JUEVES", "16:00:00", "18:00:00", "Salon 602NB"),
 
         # VIERNES
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 602NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 602NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 602NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 602NB"),
 
         
         #PAGINA 40 SALON 603 NB
@@ -889,10 +889,10 @@ def create_horarios_sede_centro(stdout, style):
         (" V DERECHO A", "HERMENEUTICA JURIDICA ", "PATRICIA MORRIS", "VIERNES", "07:00:00", "08:00:00", "Salon 603NB"),
         (" V DERECHO D", "OBLIGACIONES", "CARLOS ESPINEL", "VIERNES", "08:00:00", "10:00:00", "Salon 603NB"),
         (" V DERECHO D", "ADMINISTRATIVO GENERAL ", "JAIME BERMEJO", "VIERNES", "10:00:00", "12:00:00", "Salon 603NB"),
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 603NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 603NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 603NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 603NB"),
 
         #PAGINA 41 SALON 604 NB
         # LUNES
@@ -914,16 +914,16 @@ def create_horarios_sede_centro(stdout, style):
 
 
         # JUEVES
-        (" ESPECIALIZACION ", " MEDICINA INTERNA", "JUEVES", "06:00:00", "10:00:00", "Salon 604NB"),
-        (" ESPECIALIZACION ", " MEDICINA INTERNA", "JUEVES", "13:00:00", "17:00:00", "Salon 604NB"),
+        (" ESPECIALIZACION ", " MEDICINA INTERNA", "", "JUEVES", "06:00:00", "10:00:00", "Salon 604NB"),
+        (" ESPECIALIZACION ", " MEDICINA INTERNA", "", "JUEVES", "13:00:00", "17:00:00", "Salon 604NB"),
 
         # VIERNES
         (" V DERECHO C", "PROCESO PENAL I", "DAVID GUETTE", "VIERNES", "06:00:00", "09:00:00", "Salon 604NB"),
         (" V DERECHO C", "OBLIGACIONES", "CARLOS ESPINEL", "VIERNES", "10:00:00", "12:00:00", "Salon 604NB"),
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 604NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 604NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 604NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 604NB"),
 
         #PAGINA 42 SALON 605 NB
 
@@ -937,17 +937,17 @@ def create_horarios_sede_centro(stdout, style):
 
         # VIERNES
         (" I CONTADURIA CD", "CICLO BASICO CONTABLE ", "JESUS MARIA RODRIGUEZ POLO", "VIERNES", "08:00:00", "10:00:00", "Salon 605NB"),
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 605NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 605NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 605NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 605NB"),
 
         #PAGINA 43 SALON 606 NB
         # VIERNES
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 606NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 606NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 606NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 606NB"),
 
         #PAGINA 44 SALON 607 NB
         # LUNES
@@ -963,10 +963,10 @@ def create_horarios_sede_centro(stdout, style):
         (" VII DERECHO A", "FILOSOFIA DEL DERECHO ", "ALEXANDER GONZALEZ", "LUNES", "06:00:00", "08:00:00", "Salon 607NB"),
 
         # VIERNES
-        ( " CLASES POSGRADO", "POSGRADO", "VIERNES", "14:00:00", "22:00:00", "Salon 607NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "VIERNES", "14:00:00", "22:00:00", "Salon 607NB"),
 
         # SABADO
-        ( " CLASES POSGRADO", "POSGRADO", "SABADO", "08:00:00", "16:00:00", "Salon 607NB"),
+        ( " CLASES POSGRADO", "POSGRADO", "", "SABADO", "08:00:00", "16:00:00", "Salon 607NB"),
 
         #SALÓN 608NB C:60
         ##LUNES
