@@ -131,6 +131,7 @@ def _get_all_asignaturas():
         ('Cálculo Multivariado y Vectorial', 'ING-CMVC', 3, 'teórica', 144),
         ('Cátedra Unilibrista', 'CSA-CATU', 3, 'teórica', 144),
         ('Cátedra de Sostenibilidad', 'ING-CASO', 3, 'teórica', 144),
+        ('C.A.S.A', 'CASA-CASA', 3, 'teórica', 144),
         ('Derecho Ambiental', 'DER-DEAM', 3, 'teórica', 144),
         ('Derecho Comercial', 'CEA-DECO', 3, 'teórica', 144),
         ('Derecho Comercial General', 'DER-DCGE', 3, 'teórica', 144),

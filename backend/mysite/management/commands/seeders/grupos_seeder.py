@@ -25,6 +25,7 @@ def create_grupos(stdout, style):
         'BACTERIOLOGIA': 'Bacteriología',
         'INSTRUMENTACION': 'Instrumentación Quirúrgica',
         'MICROBIOLOGIA': 'Microbiología',
+        'CENTRO DE APOYO': 'Centro de Apoyo a la Superación Académica',
         'OTRO': 'Ninguna',
 
     }
@@ -298,6 +299,8 @@ def create_grupos(stdout, style):
         
         ('POSGRADO', '2026-1', 'CLASES POSGRADOS', 'I'),
 
+        ('CENTRO DE APOYO', '2026-1', 'CENTRO DE APOYO', 'I'),
+
     ]
     
     created_count = 0
@@ -328,7 +331,7 @@ def create_grupos(stdout, style):
                 skipped_count += 1
                 continue
             # Colocar Número Romano al Inicio del nombre del grupo
-            if programa.nombre != 'Posgrado' and nombre_grupo != 'ALIANZA SABATINO':
+            if programa.nombre != 'Posgrado' and programa.nombre != 'Centro de Apoyo a la Superación Académica'  and nombre_grupo != 'ALIANZA SABATINO':
                 nombre_grupo = f'{semestre_romano.strip()} {nombre_grupo}'
                 
             

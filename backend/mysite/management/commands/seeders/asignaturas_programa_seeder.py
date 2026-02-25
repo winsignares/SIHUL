@@ -1443,6 +1443,9 @@ def _get_all_relaciones():
         # Termodinámica
         ('Ingeniería Industrial', 'ING-TERM', 4, 'básica'),
         
+        # ('C.A.S.A', 'CASA-CASA', 3, 'teórica', 144),
+        ('Centro de Apoyo a la Superación Académica', 'CASA-CASA', 1, 'teórica'),
+
         # Ética (Ingeniería)
         ('Ingeniería Industrial', 'ING-ETIC', 7, 'humanística'),
         ('Ingeniería de Sistemas', 'ING-ETIC', 7, 'humanística'),

@@ -451,7 +451,13 @@ def create_horarios_sede_centro(stdout, style):
         ('VII ADM. NEGOCIOS BN', 'International agreement', 'ROBERTO ANTONIO MORALES ESPINOSA', 'VIERNES', '18:00:00', '21:00:00', 'SALON 416NB'),
 
         
-        
+        #SALÓN 510NB (Capacidad: 15)
+        ##LUNES, MARTES, MIERCOLES, JUEVES, VIERNES
+        ('Centro de Apoyo a la Superación Académica', 'CASA-CASA', '','LUNES','08:00:00', '21:00:00', 'SALON 510NB'),
+        ('Centro de Apoyo a la Superación Académica', 'CASA-CASA', '','MARTES','08:00:00', '21:00:00', 'SALON 510NB'),
+        ('Centro de Apoyo a la Superación Académica', 'CASA-CASA', '','MIÉRCOLES','08:00:00', '21:00:00', 'SALON 510NB'),
+        ('Centro de Apoyo a la Superación Académica', 'CASA-CASA', '','JUEVES','08:00:00', '21:00:00', 'SALON 510NB'),
+        ('Centro de Apoyo a la Superación Académica', 'CASA-CASA', '','VIERNES','08:00:00', '21:00:00', 'SALON 510NB'),
 
         
         # -─ SALON 501NB (24 horarios) ──
@@ -1176,6 +1182,7 @@ def create_horarios_sede_centro(stdout, style):
         programa_contaduria = Programa.objects.get(nombre='Contaduría Pública')
         programa_alianza = Programa.objects.get(nombre='Alianza Canadiense')
         programa_posgrado = Programa.objects.get(nombre='Posgrado')
+        programa_apoyo = Programa.objects.get(nombre='Centro de Apoyo a la Superación Académica')
         
         tipo_aula = TipoEspacio.objects.get(nombre='Aula')
     except Exception as e:
@@ -1219,6 +1226,8 @@ def create_horarios_sede_centro(stdout, style):
             return programa_alianza
         elif 'POSGRADO' in grupo_upper:
             return programa_posgrado
+        elif 'CENTRO DE APOYO' in grupo_upper:
+            return programa_apoyo
         else:
             return programa_derecho
     
