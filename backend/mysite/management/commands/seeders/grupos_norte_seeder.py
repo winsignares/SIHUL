@@ -25,13 +25,18 @@ def create_grupos(stdout, style):
         ('Derecho', '2026-1', 'I DERECHO GB', 'I'),
         ('Derecho', '2026-1', 'I DERECHO GC', 'I'),
         ('Derecho', '2026-1', 'I DERECHO GD', 'I'),
+        ('Derecho', '2026-1', 'I DERECHO GF', 'I'),
         ('Derecho', '2026-1', 'II DERECHO GA', 'II'),
         ('Derecho', '2026-1', 'II DERECHO GB', 'II'),
+        ('Derecho', '2026-1', 'III DERECHO GA', 'III'),
         ('Derecho', '2026-1', 'III DERECHO GB', 'III'),
         ('Derecho', '2026-1', 'III DERECHO GC', 'III'),
         ('Derecho', '2026-1', 'III DERECHO GD', 'III'),
+        ('Derecho', '2026-1', 'V DERECHO GB', 'V'),
         ('Derecho', '2026-1', 'V DERECHO GC', 'V'),
         ('Derecho', '2026-1', 'V DERECHO GD', 'V'),
+        ('Derecho', '2026-1', 'VII DERECHO GA', 'VII'),
+        ('Derecho', '2026-1', 'VII DERECHO GB', 'VII'),
         
         
         # GRUPOS DE MEDICINA
@@ -56,6 +61,7 @@ def create_grupos(stdout, style):
         ('Bacteriología', '2026-1', 'IV BACTERIOLOGÍA GA', 'IV'),
         ('Bacteriología', '2026-1', 'V BACTERIOLOGÍA GA', 'V'),
         ('Bacteriología', '2026-1', 'VI BACTERIOLOGÍA GA', 'VI'),
+        ('Bacteriología', '2026-1', 'VII BACTERIOLOGÍA GA', 'VII'),
         
         # GRUPOS DE MICROBIOLOGÍA
         ('Microbiología', '2026-1', 'I MICROBIOLOGÍA GA', 'I'),
@@ -73,9 +79,11 @@ def create_grupos(stdout, style):
         ('Instrumentación Quirúrgica', '2026-1', 'III INSTRUMENTACIÓN GA', 'III'),
         ('Instrumentación Quirúrgica', '2026-1', 'III INSTRUMENTACIÓN GB', 'III'),
         ('Instrumentación Quirúrgica', '2026-1', 'IV INSTRUMENTACIÓN GA', 'IV'),
+        ('Instrumentación Quirúrgica', '2026-1', 'IV INSTRUMENTACIÓN GB', 'IV'),
         ('Instrumentación Quirúrgica', '2026-1', 'V INSTRUMENTACIÓN GA', 'V'),
         ('Instrumentación Quirúrgica', '2026-1', 'VI INSTRUMENTACIÓN GA', 'VI'),
         ('Instrumentación Quirúrgica', '2026-1', 'VII INSTRUMENTACIÓN GA', 'VII'),
+        ('Instrumentación Quirúrgica', '2026-1', 'VIII INSTRUMENTACIÓN GA', 'VIII'),
         
         # GRUPOS DE FISIOTERAPIA
         ('Fisioterapia', '2026-1', 'I FISIOTERAPIA GA', 'I'),
@@ -86,6 +94,7 @@ def create_grupos(stdout, style):
         ('Fisioterapia', '2026-1', 'III FISIOTERAPIA GB', 'III'),
         ('Fisioterapia', '2026-1', 'IV FISIOTERAPIA GA', 'IV'),
         ('Fisioterapia', '2026-1', 'V FISIOTERAPIA GA', 'V'),
+        ('Fisioterapia', '2026-1', 'V FISIOTERAPIA GB', 'V'),
         ('Fisioterapia', '2026-1', 'VI FISIOTERAPIA GA', 'VI'),
         ('Fisioterapia', '2026-1', 'VII FISIOTERAPIA GA', 'VII'),
         ('Fisioterapia', '2026-1', 'VIII FISIOTERAPIA GA', 'VIII'),

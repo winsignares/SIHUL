@@ -325,6 +325,560 @@ def create_horarios_sede_principal(stdout, style):
         ('II MEDICINA GA', 'Electiva Profesional I', 'Tammy Pulido', 'VIERNES', '11:00:00', '13:00:00', 'SALON 105B'),
         ('III INSTRUMENTACIÓN GA', 'Electiva Profesional I', 'Tammy Pulido', 'VIERNES', '11:00:00', '13:00:00', 'SALON 105B'),
         ('ALIANZA CANADIENSE GA', 'Modalidad Semestral', '', 'VIERNES', '14:00:00', '18:00:00', 'SALON 105B'),
+        
+        # SALÓN 106B (Capacidad: 100)
+        # ══════════════════════════════════════════════════
+        
+        # LUNES
+        ('III MICROBIOLOGÍA GA', 'Genética', 'María Rosa Baldovino', 'LUNES', '11:00:00', '14:00:00', 'SALON 106B'),
+        ('VI MEDICINA GA', 'Farmacología y Toxicología', 'A. Guerrero', 'LUNES', '14:00:00', '16:00:00', 'SALON 106B'),
+        ('VI MEDICINA GB', 'Farmacología y Toxicología', 'A. Guerrero', 'LUNES', '16:00:00', '18:00:00', 'SALON 106B'),
+        
+        # MARTES
+        ('I DERECHO GC', 'Teoría Económica', 'Guillermo De La Hoz', 'MARTES', '06:00:00', '09:00:00', 'SALON 106B'),
+        ('I DERECHO GC', 'Introducción al Derecho', 'Oona Hernández', 'MARTES', '10:00:00', '12:00:00', 'SALON 106B'),
+        ('VI MEDICINA GB', 'Genética Clínica', 'Zuleima Yañez', 'MARTES', '12:00:00', '16:00:00', 'SALON 106B'),
+        ('VI MEDICINA GB', 'Farmacología y Toxicología', 'J. Navarro', 'MARTES', '16:00:00', '18:00:00', 'SALON 106B'),
+        
+        # MIÉRCOLES
+        ('I MEDICINA GA', 'Biología', '', 'MIÉRCOLES', '08:00:00', '11:00:00', 'SALON 106B'),
+        ('III MEDICINA GA', 'Electiva Complementaria I', 'Ana Medina', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 106B'),
+        ('IV FISIOTERAPIA GA', 'Electiva Complementaria I', 'Ana Medina', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 106B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria I', 'Ana Medina', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 106B'),
+        ('III MICROBIOLOGÍA GA', 'Electiva Complementaria I', 'Ana Medina', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 106B'),
+        ('III BACTERIOLOGÍA GA', 'Electiva Complementaria I', 'Ana Medina', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 106B'),
+        ('IV BACTERIOLOGÍA GA', 'Electiva Complementaria I', 'Ana Medina', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 106B'),
+        ('VIII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Luisa Galeano', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 106B'),
+        
+        # JUEVES
+        ('III DERECHO GC', 'Electiva Complementaria III', 'Claudia Vizcaíno', 'JUEVES', '06:00:00', '08:00:00', 'SALON 106B'),
+        ('III DERECHO GC', 'Teoría del Delito', 'Carlos Jiménez', 'JUEVES', '09:00:00', '12:00:00', 'SALON 106B'),
+        ('II MEDICINA GA', 'Bioquímica', 'Alejandra Zambrano', 'JUEVES', '12:00:00', '14:00:00', 'SALON 106B'),
+        ('IV BACTERIOLOGÍA GA', 'Metodología de la Investigación', 'Claudia Tapia', 'JUEVES', '14:00:00', '16:00:00', 'SALON 106B'),
+        ('IV MICROBIOLOGÍA GA', 'Metodología de la Investigación', 'Claudia Tapia', 'JUEVES', '14:00:00', '16:00:00', 'SALON 106B'),
+        
+        # VIERNES
+        ('V DERECHO GB', 'Electiva V', 'Rafael Rodríguez', 'VIERNES', '06:00:00', '08:00:00', 'SALON 106B'),
+        ('V DERECHO GB', 'Derecho Internacional Privado', 'Juan Carlos De Los Ríos', 'VIERNES', '09:00:00', '12:00:00', 'SALON 106B'),
+        ('IV MEDICINA GA', 'Epidemiología Básica', 'Eduardo Navarro', 'VIERNES', '14:00:00', '16:00:00', 'SALON 106B'),
+        ('IV MEDICINA GB', 'Epidemiología Básica', 'Eduardo Navarro', 'VIERNES', '16:00:00', '18:00:00', 'SALON 106B'),
+        
+        # SALÓN 107B (Capacidad: 50)
+        # ══════════════════════════════════════════════════════
+        
+        # LUNES
+        ('VII BACTERIOLOGÍA GA', 'Micología Clínica', 'Gloria Muñoz', 'LUNES', '07:00:00', '09:00:00', 'SALON 107B'),
+        ('III MEDICINA GB', 'Psicología del Desarrollo', 'Virginia Siacon', 'LUNES', '09:00:00', '13:00:00', 'SALON 107B'),
+        ('VII BACTERIOLOGÍA GA', 'Farmacología y Toxicología', 'Liliana Carranza', 'LUNES', '14:00:00', '16:00:00', 'SALON 107B'),
+        ('VII MICROBIOLOGÍA GA', 'Procesos Industriales', 'Javier Duran', 'LUNES', '16:00:00', '18:00:00', 'SALON 107B'),
+        
+        # MARTES
+        ('I BACTERIOLOGÍA GA', 'Lógica Matemática', 'Sergio Nieves Vanegas', 'MARTES', '07:00:00', '09:00:00', 'SALON 107B'),
+        ('III MEDICINA GA', 'Morfología II', 'Leonel Alfonso', 'MARTES', '09:00:00', '11:00:00', 'SALON 107B'),
+        ('VI BACTERIOLOGÍA GA', 'Inmunohematología y Banco de Sangre', 'Leidy Goenaga', 'MARTES', '14:00:00', '16:00:00', 'SALON 107B'),
+        ('VII BACTERIOLOGÍA GA', 'Proyecto de Investigación', 'Liliana Carranza', 'MARTES', '17:00:00', '19:00:00', 'SALON 107B'),
+        
+        # MIÉRCOLES
+        ('VII DERECHO GB', 'Filosofía del Derecho', 'Cristóbal Arteta', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 107B'),
+        ('VII DERECHO GB', 'Criminología y Política Criminal', 'Gonzalo Aguilar', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 107B'),
+        ('VI FISIOTERAPIA GA', 'Electiva Complementaria III', 'Nora Álvarez', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 107B'),
+        
+        # JUEVES
+        ('VII MICROBIOLOGÍA GA', 'Microbiología Ambiental', 'Mario Peña', 'JUEVES', '07:00:00', '09:00:00', 'SALON 107B'),
+        ('VI BACTERIOLOGÍA GA', 'Electiva Profesional II', 'Liliana Carranza', 'JUEVES', '09:00:00', '11:00:00', 'SALON 107B'),
+        ('VI BACTERIOLOGÍA GA', 'Administración en Salud II', 'Leidy Goenaga', 'JUEVES', '11:00:00', '14:00:00', 'SALON 107B'),
+        ('VI MICROBIOLOGÍA GA', 'Administración en Salud II', 'Marianella Suarez', 'JUEVES', '14:00:00', '15:00:00', 'SALON 107B'),
+        ('VIII FISIOTERAPIA GA', 'Electiva de Profundización I', 'Karol Cervantes', 'JUEVES', '16:00:00', '18:00:00', 'SALON 107B'),
+        
+        # VIERNES
+        ('I INSTRUMENTACIÓN GA', 'Química', 'Pierine España', 'VIERNES', '07:00:00', '09:00:00', 'SALON 107B'),
+        ('I INSTRUMENTACIÓN GA', 'Introducción a la Instrumentación', 'María Amador', 'VIERNES', '11:00:00', '13:00:00', 'SALON 107B'),
+        ('ALIANZA CANADIENSE GA', 'Modalidad Semestral', '', 'VIERNES', '14:00:00', '18:00:00', 'SALON 107B'),
+        
+        # SALA COMPUTO 201B (Capacidad: 40)
+        # ══════════════════════════════════════════════════════
+        
+        # LUNES
+        ('VII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Leslie Montealegre', 'LUNES', '09:00:00', '11:00:00', 'SALA COMPUTO 201B'),
+        
+        # SALA COMPUTO 202B (Capacidad: 40)
+        # ══════════════════════════════════════════════════════
+        
+        # LUNES
+        ('III FISIOTERAPIA GA', 'Bioestadística', 'Adalgiza Alcocer', 'LUNES', '09:00:00', '12:00:00', 'SALA COMPUTO 202B'),
+        ('III BACTERIOLOGÍA GA', 'Morfofisiología II', 'Aroldo Padilla', 'LUNES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        
+        # MARTES
+        ('II INSTRUMENTACIÓN GA', 'Ética General y Deontología IQ', 'Stephanye Carrillo', 'MARTES', '08:00:00', '11:00:00', 'SALA COMPUTO 202B'),
+        ('VIII MICROBIOLOGÍA GA', 'Electiva Profesional I', 'Javier Duran', 'MARTES', '13:00:00', '15:00:00', 'SALA COMPUTO 202B'),
+        ('IV MEDICINA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('VIII FISIOTERAPIA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('IV BACTERIOLOGÍA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('III MEDICINA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '17:00:00', '19:00:00', 'SALA COMPUTO 202B'),
+        ('VIII MICROBIOLOGÍA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '17:00:00', '19:00:00', 'SALA COMPUTO 202B'),
+        ('III BACTERIOLOGÍA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '17:00:00', '19:00:00', 'SALA COMPUTO 202B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '17:00:00', '19:00:00', 'SALA COMPUTO 202B'),
+        ('VIII FISIOTERAPIA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'MARTES', '17:00:00', '19:00:00', 'SALA COMPUTO 202B'),
+        
+        # MIÉRCOLES
+        ('II INSTRUMENTACIÓN GA', 'Bioestadística', 'Karol Cervantes', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALA COMPUTO 202B'),
+        ('II MEDICINA GB', 'Bioquímica', 'L Banderas', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALA COMPUTO 202B'),
+        ('V BACTERIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALA COMPUTO 202B'),
+        ('V MICROBIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALA COMPUTO 202B'),
+        ('III MICROBIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALA COMPUTO 202B'),
+        ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Luisa Galeano', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALA COMPUTO 202B'),
+        
+        # JUEVES
+        ('II INSTRUMENTACIÓN GA', 'Bioestadística', 'Karol Cervantes', 'JUEVES', '07:00:00', '09:00:00', 'SALA COMPUTO 202B'),
+        ('I MEDICINA GA', 'Bioestadística y Demografía', 'Sergio Nieves Vanegas', 'JUEVES', '09:00:00', '11:00:00', 'SALA COMPUTO 202B'),
+        ('V MICROBIOLOGÍA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'JUEVES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('V BACTERIOLOGÍA GA', 'Electiva Complementaria III', 'Luis Carlos Rodriguez', 'JUEVES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        
+        # VIERNES
+        ('VII BACTERIOLOGÍA GA', 'Bioinformática', 'Juan David Sanchez', 'VIERNES', '07:00:00', '09:00:00', 'SALA COMPUTO 202B'),
+        ('VII MICROBIOLOGÍA GA', 'Bioinformática', 'Juan David Sanchez', 'VIERNES', '07:00:00', '09:00:00', 'SALA COMPUTO 202B'),
+        ('I MEDICINA GB', 'Bioestadística y Demografía', '', 'VIERNES', '10:00:00', '12:00:00', 'SALA COMPUTO 202B'),
+        ('II MEDICINA GA', 'Electiva Complementaria I', 'Luis Carlos Rodriguez', 'VIERNES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('III BACTERIOLOGÍA GA', 'Electiva Complementaria I', 'Luis Carlos Rodriguez', 'VIERNES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria I', 'Luis Carlos Rodriguez', 'VIERNES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        ('VIII FISIOTERAPIA GA', 'Electiva Complementaria I', 'Luis Carlos Rodriguez', 'VIERNES', '15:00:00', '17:00:00', 'SALA COMPUTO 202B'),
+        
+        # SALA COMPUTO LABORATORIOS (Capacidad: 30)
+        # ══════════════════════════════════════════════════════
+        
+        # LUNES
+        ('VII INSTRUMENTACIÓN GA', 'Práctica Hospitalaria I', 'Boris Silva', 'LUNES', '16:00:00', '17:00:00', 'SALA COMPUTO LABORATORIOS'),
+        
+        # MARTES
+        ('VII MICROBIOLOGÍA GA', 'Proyecto de Investigación', 'Arleth Lopez', 'MARTES', '09:00:00', '11:00:00', 'SALA COMPUTO LABORATORIOS'),
+        
+        # SALÓN 203B (Capacidad: 50)
+        # ══════════════════════════════════════════════════════
+        
+        # LUNES
+        ('I BACTERIOLOGÍA GA', 'Expresión Oral y Escrita', 'Marina Hernandez', 'LUNES', '08:00:00', '10:00:00', 'SALON 203B'),
+        ('I MICROBIOLOGÍA GA', 'Expresión Oral y Escrita', 'Marina Hernandez', 'LUNES', '08:00:00', '10:00:00', 'SALON 203B'),
+        ('VI MICROBIOLOGÍA GA', 'Toxicología', 'Claudia Tapia', 'LUNES', '12:00:00', '14:00:00', 'SALON 203B'),
+        ('III INSTRUMENTACIÓN GA', 'Investigación Clínica Epidemiológica', 'Bryan Domínguez', 'LUNES', '14:00:00', '16:00:00', 'SALON 203B'),
+        
+        # MARTES
+        ('VI INSTRUMENTACIÓN GA', 'Proyecto de Investigación', 'Emilee Vásquez', 'MARTES', '07:00:00', '10:00:00', 'SALON 203B'),
+        ('II DERECHO GA', 'Economía Colombiana', 'Guillermo De La Hoz', 'MARTES', '10:00:00', '13:00:00', 'SALON 203B'),
+        ('V MICROBIOLOGÍA GA', 'Toxicología', 'Claudia Tapia', 'MARTES', '13:00:00', '15:00:00', 'SALON 203B'),
+        ('I MICROBIOLOGÍA GA', 'Biofísica', 'Matias Puello', 'MARTES', '15:00:00', '17:00:00', 'SALON 203B'),
+        ('I BACTERIOLOGÍA GA', 'Biofísica', 'Matias Puello', 'MARTES', '15:00:00', '17:00:00', 'SALON 203B'),
+        
+        # MIÉRCOLES
+        ('VIII INSTRUMENTACIÓN GA', 'Toxicología', 'Bryan Domínguez', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 203B'),
+        ('III FISIOTERAPIA GA', 'Intervención en Fisioterapia I', 'Lucy Bula', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 203B'),
+        ('III FISIOTERAPIA GB', 'Evaluación y Diagnóstico', 'Julia Andrade', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 203B'),
+        ('VIII FISIOTERAPIA GA', 'Proyecto de Investigación III', 'Lina Chavez', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 203B'),
+        
+        # JUEVES
+        ('VI MICROBIOLOGÍA GA', 'Biotecnología', 'Mario Peña', 'JUEVES', '07:00:00', '09:00:00', 'SALON 203B'),
+        ('IV BACTERIOLOGÍA GA', 'Hematología', 'Christian Cadenas', 'JUEVES', '09:00:00', '11:00:00', 'SALON 203B'),
+        ('II MICROBIOLOGÍA GA', 'Ética y Bioética', 'José Luis Villarreal', 'JUEVES', '13:00:00', '15:00:00', 'SALON 203B'),
+        
+        # VIERNES
+        ('I DERECHO GF', 'Derecho Romano', 'Luis Carlos Rueda', 'VIERNES', '07:00:00', '10:00:00', 'SALON 203B'),
+        ('IV BACTERIOLOGÍA GA', 'Microbiología General', 'José Luis Villarreal', 'VIERNES', '10:00:00', '12:00:00', 'SALON 203B'),
+        ('III MEDICINA GA', 'Electiva Complementaria II', 'Gustavo De La Hoz', 'VIERNES', '13:00:00', '15:00:00', 'SALON 203B'),
+        ('VII MICROBIOLOGÍA GA', 'Procesos Industriales', 'Javier Duran', 'VIERNES', '15:00:00', '16:00:00', 'SALON 203B'),
+        
+        # ============================================================
+        # SALON 204B
+        # ============================================================
+        
+        # LUNES
+        ('IV INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Cirugía General y Pediatría', 'Arleth Cataño', 'LUNES', '07:00:00', '09:00:00', 'SALON 204B'),
+        ('IV INSTRUMENTACIÓN GB', 'Procesos Quirúrgicos en Cirugía General y Pediatría', 'Arleth Cataño', 'LUNES', '09:00:00', '11:00:00', 'SALON 204B'),
+        ('IV FISIOTERAPIA GA', 'Modalidades Físicas', 'Lina Chavez', 'LUNES', '11:00:00', '13:00:00', 'SALON 204B'),
+        ('V MICROBIOLOGÍA GA', 'Toxicología', 'Claudia Tapia', 'LUNES', '14:00:00', '16:00:00', 'SALON 204B'),
+        ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Tammy Pulido', 'LUNES', '16:00:00', '18:00:00', 'SALON 204B'),
+        
+        # MARTES
+        ('VI BACTERIOLOGÍA GA', 'Bacteriología Clínica', 'Gisell diFilippo', 'MARTES', '07:00:00', '09:00:00', 'SALON 304B'),
+        ('III BACTERIOLOGÍA GA', 'Salud y Ambiente', 'Liliana Carranza', 'MARTES', '09:00:00', '11:00:00', 'SALON 204B'),
+        ('VII BACTERIOLOGÍA GA', 'Electiva de Profundización II', 'Liliana Carranza', 'MARTES', '09:00:00', '11:00:00', 'SALON 204B'),
+        ('V FISIOTERAPIA GA', 'Administración en Salud', 'Lucy Bula', 'MARTES', '14:00:00', '16:00:00', 'SALON 204B'),
+        ('V INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Neurocirugía', 'Leidy Gómez', 'MARTES', '16:00:00', '18:00:00', 'SALON 204B'),
+        
+        # MIÉRCOLES
+        ('III FISIOTERAPIA GA', 'Cinesiopatología', 'Yadira Barrios', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 204B'),
+        ('VII INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Otorrinolaringología', 'Tatiana Gómez', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 204B'),
+        ('VII INSTRUMENTACIÓN GA', 'Proyecto de Investigación', 'Jaime Lorduy', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 204B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria III', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 204B'),
+        ('II INSTRUMENTACIÓN GA', 'Fundamentos de Psicología', 'Mily Ardila', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 204B'),
+        
+        # JUEVES
+        ('II MEDICINA GA', 'Bioquímica', 'L Banderas', 'JUEVES', '07:00:00', '09:00:00', 'SALON 204B'),
+        ('VI MICROBIOLOGÍA GA', 'Biotecnología', 'Mario Peña', 'JUEVES', '09:00:00', '10:00:00', 'SALON 204B'),
+        ('V BACTERIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'JUEVES', '10:00:00', '11:00:00', 'SALON 204B'),
+        ('V BACTERIOLOGÍA GA', 'Hematología Clínica', 'Lady Goenaga', 'JUEVES', '12:00:00', '13:00:00', 'SALON 204B'),
+        ('I INSTRUMENTACIÓN GA', 'Bioética', 'Matias Puello', 'JUEVES', '15:00:00', '16:00:00', 'SALON 204B'),
+        
+        # VIERNES
+        ('IV BACTERIOLOGÍA GA', 'Salud Pública II', 'Elvira Crespo', 'VIERNES', '08:00:00', '10:00:00', 'SALON 204B'),
+        ('II MEDICINA GB', 'Bioquímica', 'L Banderas', 'VIERNES', '11:00:00', '13:00:00', 'SALON 204B'),
+        ('ALIANZA CANADIENSE GA', 'Optativa I', '', 'VIERNES', '14:00:00', '18:00:00', 'SALON 204B'),
+        
+        # ============================================================
+        # SALON 205B
+        # ============================================================
+        
+        # LUNES
+        ('I FISIOTERAPIA GA', 'Biología', 'Alberto Moreno', 'LUNES', '07:00:00', '09:00:00', 'SALON 205B'),
+        ('I FISIOTERAPIA GA', 'Introducción a la Fisioterapia', 'Yadira Barrios', 'LUNES', '09:00:00', '11:00:00', 'SALON 205B'),
+        ('I FISIOTERAPIA GA', 'Morfofisiología I', 'Nobis De La Cruz', 'LUNES', '11:00:00', '13:00:00', 'SALON 205B'),
+        ('II MICROBIOLOGÍA GA', 'Fisiopatología Humana', 'Gladys Gutiérrez', 'LUNES', '14:00:00', '16:00:00', 'SALON 205B'),
+        ('II BACTERIOLOGÍA GA', 'Fisiopatología Humana', 'Gladys Gutiérrez', 'LUNES', '14:00:00', '16:00:00', 'SALON 205B'),
+        
+        # MARTES
+        ('IV FISIOTERAPIA GA', 'Intervención en Fisioterapia II', 'Yoli Yepes', 'MARTES', '07:00:00', '09:00:00', 'SALON 205B'),
+        ('III FISIOTERAPIA GA', 'Intervención en Fisioterapia I', 'Lucy Bula', 'MARTES', '09:00:00', '11:00:00', 'SALON 205B'),
+        ('III FISIOTERAPIA GA', 'Neurociencia del Movimiento', 'Eulalia Amador', 'MARTES', '11:00:00', '13:00:00', 'SALON 205B'),
+        ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Sindy Ariza', 'MARTES', '14:00:00', '16:00:00', 'SALON 205B'),
+        ('IV INSTRUMENTACIÓN GA', 'Constitución Nacional', 'Elvis Ruiz', 'MARTES', '16:00:00', '18:00:00', 'SALON 205B'),
+        
+        # MIÉRCOLES
+        ('IV FISIOTERAPIA GA', 'Intervención en Fisioterapia II', 'Yoli Yepes', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 205B'),
+        ('IV FISIOTERAPIA GA', 'Epidemiología', 'Laura Ardila', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 205B'),
+        ('IV FISIOTERAPIA GA', 'Farmacología en Fisioterapia', 'Luisa Galeano', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 205B'),
+        ('I MICROBIOLOGÍA GA', 'Biología', 'Yosed Anaya', 'MIÉRCOLES', '13:00:00', '16:00:00', 'SALON 205B'),
+        ('I BACTERIOLOGÍA GA', 'Biología', 'Yosed Anaya', 'MIÉRCOLES', '13:00:00', '16:00:00', 'SALON 205B'),
+        ('VIII FISIOTERAPIA GA', 'Electiva de Profundización I', 'Karol Cervantes', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 205B'),
+        
+        # JUEVES
+        ('III DERECHO GA', 'Investigación I', 'Alejandro Blanco', 'JUEVES', '06:00:00', '08:00:00', 'SALON 205B'),
+        ('I DERECHO GD', 'ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA', 'Yadira García', 'JUEVES', '08:00:00', '10:00:00', 'SALON 205B'),
+        ('I DERECHO GD', 'Teoría del Estado', 'Linda Nader', 'JUEVES', '10:00:00', '12:00:00', 'SALON 205B'),
+        ('VI MICROBIOLOGÍA GA', 'Microbiología', 'Wendy Rosales', 'JUEVES', '12:00:00', '14:00:00', 'SALON 205B'),
+        ('VIII MICROBIOLOGÍA GA', 'Microbiología Predictiva', 'Juan David Sanchez', 'JUEVES', '15:00:00', '17:00:00', 'SALON 205B'),
+        
+        # VIERNES
+        ('I MEDICINA GA', 'Química', 'Alejandra Zambrano', 'VIERNES', '07:00:00', '08:00:00', 'SALON 205B'),
+        ('V BACTERIOLOGÍA GA', 'Parasitología Clínica', 'Christian Cadenas', 'VIERNES', '08:00:00', '10:00:00', 'SALON 205B'),
+        ('VI BACTERIOLOGÍA GA', 'Virología Clínica', 'María Rosa Baldovino', 'VIERNES', '10:00:00', '13:00:00', 'SALON 205B'),
+        ('ALIANZA CANADIENSE GA', 'Optativa I', '', 'VIERNES', '14:00:00', '18:00:00', 'SALON 205B'),
+        
+        # ============================================================
+        # SALON 206B
+        # ============================================================
+        
+        # LUNES
+        ('VII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Mónica Gómez', 'LUNES', '07:00:00', '09:00:00', 'SALON 206B'),
+        ('II FISIOTERAPIA GA', 'Fisiología del Ejercicio', 'Raúl Polo', 'LUNES', '09:00:00', '11:00:00', 'SALON 206B'),
+        ('IV INSTRUMENTACIÓN GA', 'Metodología de la Investigación', 'Cecilia Arcieniegas', 'LUNES', '11:00:00', '13:00:00', 'SALON 206B'),
+        
+        # MARTES
+        ('V INSTRUMENTACIÓN GA', 'Innovación y Tecnología', 'Lorena Herrera', 'MARTES', '07:00:00', '09:00:00', 'SALON 206B'),        
+        ('VIII MICROBIOLOGÍA GA', 'Microbiología de Suelos', 'Beatriz Barraza', 'MARTES', '09:00:00', '11:00:00', 'SALON 206B'),        
+        ('IV FISIOTERAPIA GA', 'Intervención en Fisioterapia II', 'Yadira Barrios', 'MARTES', '11:00:00', '14:00:00', 'SALON 206B'),
+        ('IV FISIOTERAPIA GA', 'Epidemiología', 'Laura Ardila', 'MARTES', '14:00:00', '16:00:00', 'SALON 206B'),
+        ('IV FISIOTERAPIA GA', 'Modalidades Físicas', 'Lina Chavez', 'MARTES', '16:00:00', '18:00:00', 'SALON 206B'),
+        
+        # MIÉRCOLES
+        ('VII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Mónica Gómez', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 206B'),
+        ('VII FISIOTERAPIA GA', 'Prácticas Formativas', 'Luisa Galeano', 'MIÉRCOLES', '09:00:00', '10:00:00', 'SALON 206B'),
+        ('III INSTRUMENTACIÓN GA', 'Control de Infecciones y Promoción de la Salud', 'Arleth Cataño', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 206B'),
+        ('IV MEDICINA GA', 'Electiva Complementaria I', 'José Jinete', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 206B'),
+        ('VIII INSTRUMENTACIÓN GA', 'Práctica Hospitalaria IV', '', 'MIÉRCOLES', '15:00:00', '18:00:00', 'SALON 206B'),
+        
+        # JUEVES
+        ('II INSTRUMENTACIÓN GA', 'Microbiología', 'Jaime Lorduy', 'JUEVES', '09:00:00', '11:00:00', 'SALON 206B'),
+        ('V DERECHO GD', 'Hermenéutica Jurídica', 'Patricia Morris', 'JUEVES', '14:00:00', '16:00:00', 'SALON 206B'),
+        ('IV BACTERIOLOGÍA GA', 'Química Clínica', 'Lady Goenaga', 'JUEVES', '16:00:00', '18:00:00', 'SALON 206B'),
+        
+        # VIERNES
+        ('I FISIOTERAPIA GA', 'Salud y Comunidad', 'Lina Chavez', 'VIERNES', '07:00:00', '09:00:00', 'SALON 206B'),
+        ('ALIANZA CANADIENSE GA', 'Optativa I', '', 'VIERNES', '14:00:00', '18:00:00', 'SALON 206B'),
+        
+        # ============================================================
+        # SALON 301B
+        # ============================================================
+        
+        # LUNES
+        ('IV MICROBIOLOGÍA GA', 'Ecología Microbiana', 'Beatriz Barraza', 'LUNES', '08:00:00', '11:00:00', 'SALON 301B'),
+        ('IV MICROBIOLOGÍA GA', 'Fisiopatología Vegetal', 'Arleth Lopez', 'LUNES', '15:00:00', '17:00:00', 'SALON 301B'),
+        
+        # MARTES
+        ('I INSTRUMENTACIÓN GA', 'Sociedad, Sector Salud y Comunidad', 'Bryan Domínguez', 'MARTES', '08:00:00', '10:00:00', 'SALON 301B'),
+        ('IV INSTRUMENTACIÓN GA', 'Procesos Asépticos II', 'Lorena Herrera', 'MARTES', '11:00:00', '13:00:00', 'SALON 301B'),
+        ('VI MICROBIOLOGÍA GA', 'Toxicología', 'Claudia Tapia', 'MARTES', '15:00:00', '17:00:00', 'SALON 301B'),
+        
+        # MIÉRCOLES
+        ('III INSTRUMENTACIÓN GA', 'Cuidados Básicos en Salud', 'María Amador', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 301B'),
+        ('V BACTERIOLOGÍA GA', 'Electiva de Profundización I', 'Ronald Maestre', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 301B'),
+        ('II FISIOTERAPIA GB', 'Fisiología del Ejercicio', 'Sindy Ariza', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 301B'),
+        ('II FISIOTERAPIA GB', 'Biomecánica', 'Gladys Gutiérrez', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 301B'),
+        ('IV FISIOTERAPIA GA', 'Control y Aprendizaje Motor', 'Yoli Yepes', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 301B'),
+        
+        # JUEVES
+        ('I INSTRUMENTACIÓN GA', 'Biología', 'Evelyn Mendoza', 'JUEVES', '07:00:00', '09:00:00', 'SALON 301B'),
+        ('I INSTRUMENTACIÓN GA', 'Sociedad, Sector Salud y Comunidad', 'María Amador', 'JUEVES', '09:00:00', '11:00:00', 'SALON 301B'),
+        ('V FISIOTERAPIA GA', 'Epistemología de las Ciencias', 'Karol Cervantes', 'JUEVES', '11:00:00', '13:00:00', 'SALON 301B'),
+        ('V BACTERIOLOGÍA GA', 'Inmunología Clínica', 'Franklin Torres', 'JUEVES', '14:00:00', '16:00:00', 'SALON 301B'),
+        
+        # VIERNES
+        ('III FISIOTERAPIA GA', 'Cinesiopatología', 'Yadira Barrios', 'VIERNES', '07:00:00', '09:00:00', 'SALON 301B'),
+        ('III FISIOTERAPIA GB', 'Evaluación y Diagnóstico', 'Julia Andrade', 'VIERNES', '11:00:00', '14:00:00', 'SALON 301B'),
+        
+        # ============================================================
+        # SALON 302B
+        # ============================================================
+        
+        # LUNES
+        ('V FISIOTERAPIA GA', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'LUNES', '07:00:00', '09:00:00', 'SALON 302B'),
+        ('VI FISIOTERAPIA GA', 'Salud Pública', 'Lina Chavez', 'LUNES', '09:00:00', '11:00:00', 'SALON 302B'),
+        ('V FISIOTERAPIA GB', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'LUNES', '11:00:00', '13:00:00', 'SALON 302B'),
+        ('IV FISIOTERAPIA GA', 'Farmacología en Fisioterapia', 'Luisa Galeano', 'LUNES', '14:00:00', '16:00:00', 'SALON 302B'),
+        
+        # MARTES
+        ('I DERECHO GD', 'Teoría del Estado', 'Linda Nader', 'MARTES', '08:00:00', '10:00:00', 'SALON 302B'),
+        ('I DERECHO GD', 'Historia de la Filosofía', 'Cristobal Arteta', 'MARTES', '10:00:00', '13:00:00', 'SALON 302B'),
+        ('VI INSTRUMENTACIÓN GA', 'Control de Infecciones y Promoción de la Salud', 'Bryan Domínguez', 'MARTES', '14:00:00', '17:00:00', 'SALON 302B'),
+        
+        # MIÉRCOLES
+        ('II MICROBIOLOGÍA GA', 'Cálculo', 'Javier Duran', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 302B'),
+        ('IV MEDICINA GA', 'Electiva Complementaria I', 'Cecilia Arcieniegas', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 302B'),
+        ('I FISIOTERAPIA GA', 'Lógica Matemática', 'José Jinete', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 302B'),
+        
+        # JUEVES
+        ('V FISIOTERAPIA GA', 'Ocupación y Movimiento Corporal', 'Martha Mendihueta', 'JUEVES', '07:00:00', '09:00:00', 'SALON 302B'),
+        ('V FISIOTERAPIA GA', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'JUEVES', '09:00:00', '11:00:00', 'SALON 302B'),
+        ('I FISIOTERAPIA GA', 'Introducción a la Fisioterapia', 'Yadira Barrios', 'JUEVES', '11:00:00', '13:00:00', 'SALON 302B'),
+        ('I FISIOTERAPIA GA', 'Biofísica', 'Matias Puello', 'JUEVES', '13:00:00', '15:00:00', 'SALON 302B'),
+        ('V DERECHO GD', 'Hermenéutica Jurídica', 'Patricia Morris', 'JUEVES', '15:00:00', '18:00:00', 'SALON 302B'),
+        
+        # VIERNES
+        ('IV INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Urología', 'Tatiana Gómez', 'VIERNES', '09:00:00', '11:00:00', 'SALON 302B'),
+        ('IV INSTRUMENTACIÓN GA', 'Seguridad y Salud en el Trabajo', 'Jainer Molina', 'VIERNES', '11:00:00', '13:00:00', 'SALON 302B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria I', '', 'VIERNES', '13:00:00', '15:00:00', 'SALON 302B'),
+        
+        # ============================================================
+        # SALON 303B
+        # ============================================================
+        
+        # LUNES
+        ('II FISIOTERAPIA GA', 'Patología', 'Richard Zambrano', 'LUNES', '07:00:00', '09:00:00', 'SALON 303B'),
+        ('VII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Eulalia Amador', 'LUNES', '09:00:00', '11:00:00', 'SALON 303B'),
+        ('II FISIOTERAPIA GB', 'Fisiología del Ejercicio', 'Sindy Ariza', 'LUNES', '11:00:00', '13:00:00', 'SALON 303B'),
+        ('II FISIOTERAPIA GA', 'Morfofisiología II', 'Gladys Helena Gutiérrez', 'LUNES', '13:00:00', '15:00:00', 'SALON 303B'),
+        
+        # MARTES
+        ('V FISIOTERAPIA GA', 'Ocupación y Movimiento Corporal', 'Martha Mendihueta', 'MARTES', '07:00:00', '09:00:00', 'SALON 303B'),
+        ('V FISIOTERAPIA GA', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'MARTES', '09:00:00', '11:00:00', 'SALON 303B'),
+        ('V FISIOTERAPIA GA', 'Salud Pública', 'Karol Cervantes', 'MARTES', '11:00:00', '13:00:00', 'SALON 303B'),
+        ('III FISIOTERAPIA GA', 'Prescripción del Ejercicio', 'Roberto Rebolledo', 'MARTES', '14:00:00', '16:00:00', 'SALON 303B'),
+        ('III FISIOTERAPIA GA', 'Cinesiopatología', 'Yadira Barrios', 'MARTES', '16:00:00', '18:00:00', 'SALON 303B'),
+        
+        # MIÉRCOLES
+        ('II FISIOTERAPIA GA', 'Biomecánica', 'Nobis De La Cruz', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 303B'),
+        ('II FISIOTERAPIA GA', 'Bioquímica', 'Mario Mutis', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 303B'),
+        ('V FISIOTERAPIA GA', 'Administración en Salud', 'Lucy Bula', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 303B'),
+        ('V FISIOTERAPIA GA', 'Ética y Bioética', 'Gustavo De La Hoz', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 303B'),
+        ('I MEDICINA GB', 'Biología', 'Yosed Anaya', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 303B'),
+        
+        # JUEVES
+        ('II FISIOTERAPIA GB', 'Biomecánica', 'Gladys Helena Gutiérrez', 'JUEVES', '09:00:00', '11:00:00', 'SALON 303B'),
+        ('IV FISIOTERAPIA GA', 'Constitución Política', 'Elvis Ruiz', 'JUEVES', '11:00:00', '13:00:00', 'SALON 303B'),
+        ('I MICROBIOLOGÍA GA', 'Historia de la Ciencia', 'Juan David Sanchez', 'JUEVES', '13:00:00', '15:00:00', 'SALON 303B'),
+        ('VI BACTERIOLOGÍA GA', 'Optativa II', 'Miriam Linero', 'JUEVES', '16:00:00', '18:00:00', 'SALON 303B'),
+        
+        # VIERNES
+        ('III MICROBIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'VIERNES', '07:00:00', '09:00:00', 'SALON 303B'),
+        ('III MEDICINA GB', 'Biología Molecular', 'Christian Cadena', 'VIERNES', '10:00:00', '11:00:00', 'SALON 303B'),
+        
+        # ============================================================
+        # SALON 304B
+        # ============================================================
+        
+        # LUNES
+        ('I INSTRUMENTACIÓN GA', 'Competencias Comunicativas I', 'Cecilia Arcieniegas', 'LUNES', '08:00:00', '10:00:00', 'SALON 304B'),
+        ('III FISIOTERAPIA GB', 'Intervención en Fisioterapia I', 'Nobis De La Cruz', 'LUNES', '14:00:00', '16:00:00', 'SALON 304B'),
+        ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Laura Ardila', 'LUNES', '16:00:00', '18:00:00', 'SALON 304B'),
+        
+        # MARTES
+        ('I MEDICINA GA', 'Biología', 'Juan David Rodriguez', 'MARTES', '07:00:00', '09:00:00', 'SALON 304B'),
+        ('IV FISIOTERAPIA GA', 'Epidemiología', 'Laura Ardila', 'MARTES', '09:00:00', '11:00:00', 'SALON 304B'),
+        ('VI INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Cirugía Plástica', 'Leidy Gómez', 'MARTES', '11:00:00', '13:00:00', 'SALON 304B'),
+        ('VIII MICROBIOLOGÍA GA', 'Prácticas Profesionales', 'Gloria Muñoz', 'MARTES', '13:00:00', '15:00:00', 'SALON 304B'),
+        ('III MEDICINA GB', 'Biología Molecular', 'Christian Cadena', 'MARTES', '15:00:00', '17:00:00', 'SALON 304B'),
+        
+        # MIÉRCOLES
+        ('IV MEDICINA GA', 'Electiva III', 'Yesenia Valarezo', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 304B'),
+        ('V BACTERIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 304B'),
+        
+        # JUEVES
+        ('VII DERECHO GA', 'Títulos Valores', 'Sandra Villa', 'JUEVES', '06:00:00', '08:00:00', 'SALON 304B'),
+        ('II FISIOTERAPIA GA', 'Fisiología del Ejercicio', 'Raúl Polo', 'JUEVES', '09:00:00', '11:00:00', 'SALON 304B'),
+        ('V FISIOTERAPIA GA', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'JUEVES', '14:00:00', '16:00:00', 'SALON 304B'),
+        
+        # VIERNES
+        ('VII FISIOTERAPIA GA', 'Proyecto de Investigación II', 'Laura Ardila', 'VIERNES', '07:00:00', '09:00:00', 'SALON 304B'),
+        ('VII FISIOTERAPIA GA', 'Electiva de Profundización I', 'Leslie Montealegre', 'VIERNES', '09:00:00', '11:00:00', 'SALON 304B'),
+        ('II INSTRUMENTACIÓN GA', 'Morfofisiología II', 'Tatiana Gómez', 'VIERNES', '11:00:00', '13:00:00', 'SALON 304B'),
+        
+        # ============================================================
+        # SALÓN 308B
+        # ============================================================
+        
+        # LUNES
+        ('III MEDICINA GA', 'Biología Molecular', 'Christian Cadena', 'LUNES', '07:00:00', '09:00:00', 'SALON 308B'),
+        ('I MEDICINA GA', 'Expresión Oral y Escrita', 'Marina Hernandez', 'LUNES', '10:00:00', '12:00:00', 'SALON 308B'),
+        ('I MEDICINA GA', 'Socioantropología', 'Virginia Sirtori', 'LUNES', '14:00:00', '16:00:00', 'SALON 308B'),
+        ('I MEDICINA GA', 'Biología', 'Yosed Anaya', 'LUNES', '16:00:00', '17:00:00', 'SALON 308B'),
+
+        # MARTES
+        ('VII DERECHO GA', 'Títulos Valores', 'Sandra Villa', 'MARTES', '06:00:00', '08:00:00', 'SALON 308B'),
+        ('II DERECHO GA', 'Electiva II', 'Sandra Villa', 'MARTES', '08:00:00', '10:00:00', 'SALON 308B'),
+        ('II MEDICINA GB', 'Morfología I', 'Gilberto Barrios', 'MARTES', '11:00:00', '13:00:00', 'SALON 308B'),
+        ('IV MEDICINA GA', 'Salud Familiar II', '', 'MARTES', '13:00:00', '15:00:00', 'SALON 308B'),
+        ('IV MEDICINA GB', 'Electiva III', 'José Jinete', 'MARTES', '15:00:00', '17:00:00', 'SALON 308B'),
+
+        # MIÉRCOLES
+        ('III DERECHO GA', 'Electiva III', 'Claudia Vizcaíno', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 308B'),
+        ('III DERECHO GB', 'Electiva III', 'Claudia Vizcaíno', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 308B'),
+        ('II DERECHO GA', 'Teoría de la Constitución', 'Gretty Pavlovich', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 308B'),
+        ('I MEDICINA GB', 'Química', 'Alejandra Zambrano', 'MIÉRCOLES', '12:00:00', '13:00:00', 'SALON 308B'),
+        ('IV MEDICINA GA', 'Electiva Complementaria I', 'Luz Marina Silvera', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 308B'),
+        ('V MEDICINA GA', 'Virología Clínica', 'J. Villarreal', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 308B'),
+
+        # JUEVES
+        ('III MEDICINA GB', 'Salud Familiar I', '', 'JUEVES', '07:00:00', '09:00:00', 'SALON 308B'),
+        ('IV MEDICINA GB', 'Fisiología', '', 'JUEVES', '11:00:00', '12:00:00', 'SALON 308B'),
+        ('IV MEDICINA GA', 'Fisiología', 'Jesús Iglesias', 'JUEVES', '12:00:00', '13:00:00', 'SALON 308B'),
+        ('II MEDICINA GB', 'Bioquímica', 'Ismael Lizarazu', 'JUEVES', '13:00:00', '15:00:00', 'SALON 308B'),
+        ('III MEDICINA GB', 'Morfología II', 'Aroldo Padilla', 'JUEVES', '16:00:00', '18:00:00', 'SALON 308B'),
+
+        # VIERNES
+        ('III MEDICINA GA', 'Electiva Complementaria I', 'Marina Hernandez', 'VIERNES', '08:00:00', '10:00:00', 'SALON 308B'),
+        ('III BACTERIOLOGÍA GA', 'Electiva Complementaria I', 'Marina Hernandez', 'VIERNES', '08:00:00', '10:00:00', 'SALON 308B'),
+        ('I MEDICINA GA', 'Química', 'Alejandra Zambrano', 'VIERNES', '10:00:00', '13:00:00', 'SALON 308B'),
+
+        # ============================================================
+        # SALÓN 307B
+        # ============================================================
+        
+        # LUNES
+        ('V MEDICINA GB', 'Patología', '', 'LUNES', '07:00:00', '09:00:00', 'SALON 307B'),
+        ('V MEDICINA GB', 'Patología', '', 'LUNES', '09:00:00', '11:00:00', 'SALON 307B'),
+        ('V MEDICINA GB', 'Micología Clínica', 'Gloria Muñoz', 'LUNES', '11:00:00', '12:00:00', 'SALON 307B'),
+        ('V MEDICINA GB', 'Patología', 'Bertiller', 'LUNES', '13:00:00', '15:00:00', 'SALON 307B'),
+        ('V MEDICINA GB', 'Farmacología y Toxicología', 'Elen Manrrique', 'LUNES', '15:00:00', '17:00:00', 'SALON 307B'),
+
+        # MARTES
+        ('III MEDICINA GA', 'Salud Familiar I', '', 'MARTES', '07:00:00', '09:00:00', 'SALON 307B'),
+        ('V MEDICINA GA', 'Patología', '', 'MARTES', '09:00:00', '11:00:00', 'SALON 307B'),
+        ('V INSTRUMENTACIÓN GA', 'Salud Pública', 'Anderson Díaz', 'MARTES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('III MEDICINA GA', 'Psicología del Desarrollo', 'Mily Ardila', 'MARTES', '13:00:00', '15:00:00', 'SALON 307B'),
+        ('III MEDICINA GA', 'Morfología II', 'Aroldo Padilla', 'MARTES', '15:00:00', '17:00:00', 'SALON 307B'),
+
+        # MIÉRCOLES
+        ('IV MEDICINA GA', 'Fisiología', '', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 307B'),
+        ('VI MEDICINA GA', 'Semiología', 'Elba Valle', 'MIÉRCOLES', '09:00:00', '12:00:00', 'SALON 307B'),
+        ('VI MEDICINA GB', 'Semiología', 'Elba Valle', 'MIÉRCOLES', '09:00:00', '12:00:00', 'SALON 307B'),
+        ('VI MEDICINA GB', 'Farmacología y Toxicología', 'A. Guerrero', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 307B'),
+        ('VI MEDICINA GB', 'Genética Clínica', 'Zuleima Yañez', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 307B'),
+
+        # JUEVES
+        ('V DERECHO GC', 'Investigación III', 'Claudia Vizcaíno', 'JUEVES', '08:00:00', '10:00:00', 'SALON 307B'),
+        ('I MEDICINA GB', 'Química', 'Alejandra Zambrano', 'JUEVES', '10:00:00', '14:00:00', 'SALON 307B'),
+        ('VI MEDICINA GA', 'Bioética', 'Anderson Díaz', 'JUEVES', '14:00:00', '16:00:00', 'SALON 307B'),
+        ('VI MEDICINA GB', 'Bioética', 'Anderson Díaz', 'JUEVES', '16:00:00', '18:00:00', 'SALON 307B'),
+
+        # VIERNES
+        ('V MEDICINA GA', 'Patología', '', 'VIERNES', '09:00:00', '11:00:00', 'SALON 307B'),
+        ('II MEDICINA GA', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('II MEDICINA GB', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('II FISIOTERAPIA GA', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('II FISIOTERAPIA GB', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('II MICROBIOLOGÍA GA', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('II BACTERIOLOGÍA GA', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+        ('III INSTRUMENTACIÓN GB', 'Electiva Complementaria I', '', 'VIERNES', '11:00:00', '13:00:00', 'SALON 307B'),
+
+        # ============================================================
+        # SALÓN 306B
+        # ============================================================
+        
+        # LUNES
+        ('III MEDICINA GB', 'Salud Familiar I', '', 'LUNES', '07:00:00', '09:00:00', 'SALON 306B'),
+        ('II MEDICINA GB', 'Metodología de la Investigación', 'Elvira Crespo', 'LUNES', '09:00:00', '11:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Fisiología', 'Simón Bolívar', 'LUNES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Epidemiología Básica', 'Eduardo Navarro', 'LUNES', '14:00:00', '16:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Inmunología', 'Franklin Torres', 'LUNES', '16:00:00', '18:00:00', 'SALON 306B'),
+
+        # MARTES
+        ('IV MEDICINA GB', 'Fisiología', 'Simón Bolívar', 'MARTES', '07:00:00', '09:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Fisiología', '', 'MARTES', '10:00:00', '12:00:00', 'SALON 306B'),
+        ('VI MEDICINA GA', 'Farmacología y Toxicología', 'G. Sarmiento', 'MARTES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('VI MEDICINA GA', 'Genética Clínica', 'Zuleima Yañez', 'MARTES', '16:00:00', '20:00:00', 'SALON 306B'),
+
+        # MIÉRCOLES
+        ('II MEDICINA GA', 'Metodología de la Investigación', 'Gustavo De La Hoz', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 306B'),
+        ('V MEDICINA GA', 'Patología', '', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 306B'),
+        ('II MEDICINA GA', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('II MEDICINA GB', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('II FISIOTERAPIA GA', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('II FISIOTERAPIA GB', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('II MICROBIOLOGÍA GA', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('III INSTRUMENTACIÓN GB', 'Electiva Complementaria I', 'Marina Hernandez', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Ética Profesional y Responsabilidad Social', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('IV MEDICINA GB', 'Ética Profesional y Responsabilidad Social', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('VI FISIOTERAPIA GA', 'Ética Profesional y Responsabilidad Social', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('III INSTRUMENTACIÓN GA', 'Ética Profesional y Responsabilidad Social', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('III INSTRUMENTACIÓN GB', 'Ética Profesional y Responsabilidad Social', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('IV BACTERIOLOGÍA GA', 'Ética Profesional y Responsabilidad Social', '', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 306B'),
+        ('VII INSTRUMENTACIÓN GA', 'Control de Infecciones y Promoción de la Salud', 'Angélica Corcho', 'MIÉRCOLES', '15:00:00', '16:00:00', 'SALON 306B'),
+
+        # JUEVES
+        ('II DERECHO GA', 'Teoría de la Constitución', 'Gretty Pavlovich', 'JUEVES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Epidemiología Básica', 'Eduardo Navarro', 'JUEVES', '14:00:00', '16:00:00', 'SALON 306B'),
+        ('IV MEDICINA GB', 'Epidemiología Básica', 'Eduardo Navarro', 'JUEVES', '14:00:00', '16:00:00', 'SALON 306B'),
+        ('IV MEDICINA GA', 'Inmunología', 'Franklin Torres', 'JUEVES', '16:00:00', '18:00:00', 'SALON 306B'),
+        ('IV MEDICINA GB', 'Inmunología', 'Franklin Torres', 'JUEVES', '16:00:00', '18:00:00', 'SALON 306B'),
+
+        # VIERNES
+        ('IV MEDICINA GA', 'Bioquímica', 'L Banderas', 'VIERNES', '09:00:00', '11:00:00', 'SALON 306B'),
+        ('III MEDICINA GA', 'Biología Molecular', 'Christian Cadena', 'VIERNES', '11:00:00', '12:00:00', 'SALON 306B'),
+
+        # ============================================================
+        # SALÓN 305B
+        # ============================================================
+        
+        # LUNES
+        ('IV FISIOTERAPIA GA', 'Intervención en Fisioterapia II', 'Yoli Yepes', 'LUNES', '07:00:00', '09:00:00', 'SALON 305B'),
+        ('IV FISIOTERAPIA GA', 'Discapacidad', 'Yoli Yepes', 'LUNES', '09:00:00', '11:00:00', 'SALON 305B'),
+        ('IV FISIOTERAPIA GB', 'Intervención en Fisioterapia II', 'Yadira Barrios', 'LUNES', '11:00:00', '14:00:00', 'SALON 305B'),
+        ('VII INSTRUMENTACIÓN GA', 'Práctica Hospitalaria III', 'Angélica Corcho', 'LUNES', '16:00:00', '19:00:00', 'SALON 305B'),
+
+        # MARTES
+        ('II FISIOTERAPIA GA', 'Metodología de la Investigación', 'Laura Ardila', 'MARTES', '07:00:00', '09:00:00', 'SALON 305B'),
+        ('II FISIOTERAPIA GB', 'Metodología de la Investigación', 'Laura Ardila', 'MARTES', '07:00:00', '09:00:00', 'SALON 305B'),
+        ('II FISIOTERAPIA GA', 'Biomecánica', 'Nobis De La Cruz', 'MARTES', '09:00:00', '11:00:00', 'SALON 305B'),
+        ('III INSTRUMENTACIÓN GA', 'Socioantropología', '', 'MARTES', '11:00:00', '13:00:00', 'SALON 305B'),
+        ('III INSTRUMENTACIÓN GB', 'Socioantropología', '', 'MARTES', '11:00:00', '13:00:00', 'SALON 305B'),
+        ('III INSTRUMENTACIÓN GA', 'Farmacología y Anestesia', 'Jorge Bolaño', 'MARTES', '14:00:00', '16:00:00', 'SALON 305B'),
+        ('III INSTRUMENTACIÓN GB', 'Farmacología y Anestesia', 'Jorge Bolaño', 'MARTES', '14:00:00', '16:00:00', 'SALON 305B'),
+        ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Laura Ardila', 'MARTES', '16:00:00', '18:00:00', 'SALON 305B'),
+
+        # MIÉRCOLES
+        ('VI BACTERIOLOGÍA GA', 'Proyección a la Comunidad', 'Bryan Domínguez', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 305B'),
+        ('I FISIOTERAPIA GA', 'Morfofisiología I', 'Nobis De La Cruz', 'MIÉRCOLES', '11:00:00', '14:00:00', 'SALON 305B'),
+        ('VII INSTRUMENTACIÓN GA', 'Calidad en Servicios de Salud', 'María Inés López', 'MIÉRCOLES', '15:00:00', '18:00:00', 'SALON 305B'),
+
+        # JUEVES
+        ('III FISIOTERAPIA GB', 'Intervención en Fisioterapia I', 'Nobis De La Cruz', 'JUEVES', '09:00:00', '12:00:00', 'SALON 305B'),
+        ('III FISIOTERAPIA GB', 'Evaluación y Diagnóstico', 'Julia Andrade', 'JUEVES', '11:00:00', '13:00:00', 'SALON 305B'),
+        ('III FISIOTERAPIA GA', 'Psicología de la Salud', 'Mily Ardila', 'JUEVES', '14:00:00', '16:00:00', 'SALON 305B'),
+        ('III FISIOTERAPIA GB', 'Psicología de la Salud', 'Mily Ardila', 'JUEVES', '14:00:00', '16:00:00', 'SALON 305B'),
+
+        # VIERNES
+        ('VIII INSTRUMENTACIÓN GA', 'Trabajo de Grado', 'Leonel Alfonso', 'VIERNES', '07:00:00', '09:00:00', 'SALON 305B'),
+        ('VIII INSTRUMENTACIÓN GA', 'Práctica Hospitalaria IV', 'Lorena Herrera', 'VIERNES', '09:00:00', '11:00:00', 'SALON 305B'),
     ]
     
     # Obtener sede principal
