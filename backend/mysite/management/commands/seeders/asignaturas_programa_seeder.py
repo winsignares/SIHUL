@@ -1419,6 +1419,9 @@ def _get_all_relaciones():
         ('Contaduría Pública', 'CEA-IAEN', 1, 'profesional'),
         ('Contaduría Pública', 'CEA-IAEN', 5, 'profesional'),
         
+        #CEA-OPT3A
+        ('Administración de Negocios Internacionales', 'CEA-OPT3A', 8, 'optativa'),
+        
         # Práctica Empresarial
         ('Ingeniería Industrial', 'ING-PREM2', 8, 'profesional'),
         
