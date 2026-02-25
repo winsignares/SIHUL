@@ -140,33 +140,33 @@ def create_horarios_sede_centro(stdout, style):
         ('II ING. SISTEMAS GA', 'Electricidad y Magnetismo & Lab.', 'Ingrid Steffanell', 'VIERNES', '09:00:00', '12:00:00', 'SALON 405NB'),
         ('I ING. SISTEMAS GB', 'Cálculo Diferencial GB', 'Danna Betancourt', 'VIERNES', '18:00:00', '20:00:00', 'SALON 405NB'),
         ('I CONTADURIA AN', 'Ciclo básico contable', 'Jesús Maria Rodríguez Polo', 'VIERNES', '20:00:00', '22:00:00', 'SALON 405NB'),
-        ('I ALIANZA SABATINO 1', 'Modalidad Sabatino', 'Profesor 1', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 405NB'),
+        ('I ALIANZA SABATINO 1', 'Modalidad Sabatina', 'Profesor 1', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 405NB'),
         
         # ── SALON 406NB (26 horarios) ──
         ('V ADM. NEGOCIOS CD', 'Logística y Distribución Física Internacional', 'Roberto Antonio Morales Espinosa', 'LUNES', '08:00:00', '10:00:00', 'SALON 406NB'),
         ('V ADM. NEGOCIOS CD', 'Modelos de Investigación', 'Gustavo Rafael Henríquez Fuentes', 'LUNES', '10:00:00', '12:00:00', 'SALON 406NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensivo', 'Profesor 4', 'LUNES', '14:00:00', '16:00:00', 'SALON 406NB'),
-        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensivo', 'Profesor 7', 'LUNES', '16:00:00', '18:00:00', 'SALON 406NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', 'Profesor 4', 'LUNES', '14:00:00', '16:00:00', 'SALON 406NB'),
+        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensiva', 'Profesor 7', 'LUNES', '16:00:00', '18:00:00', 'SALON 406NB'),
         ('VIII ING. SISTEMAS GB', 'Gerencia Estratégica GB', 'José Peñagos', 'LUNES', '18:00:00', '20:00:00', 'SALON 406NB'),
         ('III CONTADURÍA CD', 'Ciclo de Egresos y Administración de Inventarios', 'Rafael Francisco Núñez Suárez', 'MARTES', '09:00:00', '12:00:00', 'SALON 406NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensivo', 'Profesor 4', 'MARTES', '14:00:00', '16:00:00', 'SALON 406NB'),
-        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensivo', 'Profesor 7', 'MARTES', '16:00:00', '18:00:00', 'SALON 406NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', 'Profesor 4', 'MARTES', '14:00:00', '16:00:00', 'SALON 406NB'),
+        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensiva', 'Profesor 7', 'MARTES', '16:00:00', '18:00:00', 'SALON 406NB'),
         ('VIII ING. SISTEMAS GB', 'Dirección y liderazgo', 'Saúl Olivos', 'MARTES', '18:00:00', '20:00:00', 'SALON 406NB'),
         ('III ADM. NEGOCIOS CD', 'Ingeniería Aplicada', 'Lilia Mercedes Mendoza Vega', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 406NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensivo', 'Profesor 4', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 406NB'),
-        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensivo', 'Profesor 7', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 406NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', 'Profesor 4', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 406NB'),
+        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensiva', 'Profesor 7', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 406NB'),
         ('IV ADM. NEGOCIOS AN', 'Estadística Inferencial', 'Rocío Mercedes Duarte Angarita', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 406NB'),
         ('IV CONTADURÍA AN', 'Estadística Inferencial', 'Rocío Mercedes Duarte Angarita', 'MIÉRCOLES', '18:00:00', '19:00:00', 'SALON 406NB'),
         ('IX ING. INDUSTRIAL A', 'Diseño de Planta', 'Franklin Barrios', 'MIÉRCOLES', '20:00:00', '22:00:00', 'SALON 406NB'),
         ('VII ING. INDUSTRIAL GB', 'Modelos Estocásticos Matemáticos GB', 'Luis Carlos Acosta', 'JUEVES', '06:00:00', '09:00:00', 'SALON 406NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensivo', 'Profesor 4', 'JUEVES', '14:00:00', '16:00:00', 'SALON 406NB'),
-        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensivo', 'Profesor 7', 'JUEVES', '16:00:00', '18:00:00', 'SALON 406NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', 'Profesor 4', 'JUEVES', '14:00:00', '16:00:00', 'SALON 406NB'),
+        ('VII ALIANZA INTENSIVO 7', 'Modalidad Intensiva', 'Profesor 7', 'JUEVES', '16:00:00', '18:00:00', 'SALON 406NB'),
         ('IV ADM. NEGOCIOS AN', 'Legislación Aduanera', 'Roberto Meisel Lanner', 'JUEVES', '18:00:00', '20:00:00', 'SALON 406NB'),
         ('IV ADM. NEGOCIOS AN', 'Geopolítica', 'Roberto Antonio Morales Espinosa', 'JUEVES', '20:00:00', '22:00:00', 'SALON 406NB'),
         ('X MEDICINA', 'Medicina Legal', 'Luz Marina Carvajal Bustos', 'VIERNES', '07:00:00', '10:00:00', 'SALON 406NB'),
         ('II ING. INDUSTRIAL GA', 'Ciencia de los Materiales', 'Juan Carlos Carrasco', 'VIERNES', '18:00:00', '21:00:00', 'SALON 406NB'),
-        ('IV ALIANZA SABATINO 4', 'Modalidad Sabatino', 'Profesor 4', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 406NB'),
-        ('VII ALIANZA SABATINO 7', 'Modalidad Sabatino', 'Profesor 7', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 406NB'),
+        ('IV ALIANZA SABATINO 4', 'Modalidad Sabatina', 'Profesor 4', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 406NB'),
+        ('VII ALIANZA SABATINO 7', 'Modalidad Sabatina', 'Profesor 7', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 406NB'),
 
 
         # ── SALON 407NB (17 horarios) ──
@@ -259,28 +259,28 @@ def create_horarios_sede_centro(stdout, style):
 
         # ── SALON 410NB (23 horarios) ──
         ('X MEDICINA', 'Gineco-Obstetricia Teórico', '', 'LUNES', '06:00:00', '09:00:00', 'SALON 410NB'),
-        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensiva', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('VI ING. INDUSTRIAL GA', 'Gestión de Tecnología', 'José W. Penagos', 'LUNES', '16:00:00', '18:00:00', 'SALON 410NB'),
         ('VI ADM. NEGOCIOS CD', 'Finanzas Internacionales', 'Winston Fontalvo Cerpa', 'LUNES', '18:00:00', '19:00:00', 'SALON 410NB'),
         ('VI ADM. NEGOCIOS CD', 'Investigación de Mercados', 'José Rafael Simancas Trujillo', 'LUNES', '19:00:00', '20:00:00', 'SALON 410NB'),
         ('III ADM. NEGOCIOS CD', 'Coyuntura económica nacional', 'Yesenia Judith Barandica Angulo', 'MARTES', '07:00:00', '09:00:00', 'SALON 410NB'),
         ('III ADM. NEGOCIOS CD', 'Sistemas de Costeo', 'Jesús Rodríguez Polo', 'MARTES', '09:00:00', '12:00:00', 'SALON 410NB'),
-        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensiva', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('VI ING. INDUSTRIAL GA', 'ING-OPT1', 'Medardo González', 'MARTES', '16:00:00', '18:00:00', 'SALON 410NB'),
         ('V ING. INDUSTRIAL GA', 'Planeación y Control de la Producción y Operaciones', 'Roberto Osio', 'MARTES', '18:00:00', '20:00:00', 'SALON 410NB'),
         ('X MEDICINA', 'Gineco-Obstetricia Teórico', '', 'MIÉRCOLES', '06:00:00', '09:00:00', 'SALON 410NB'),
         ('VII ADM. NEGOCIOS CD', 'Gerencia de Comercio Exterior', 'Cecilia Ibeth Sierra Martínez', 'MIÉRCOLES', '09:00:00', '12:00:00', 'SALON 410NB'),
-        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensiva', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('X ING. INDUSTRIAL GA', 'Mercadeo GA', 'Erick Jassir', 'MIÉRCOLES', '18:00:00', '21:00:00', 'SALON 410NB'),
         ('V ING. INDUSTRIAL GA', 'Sistemas Integrados de Gestión', 'Arnaldo Arce', 'JUEVES', '06:00:00', '09:00:00', 'SALON 410NB'),
         ('V ING. INDUSTRIAL GA', 'Métodos GA', 'Ricardo De La Hoz', 'JUEVES', '09:00:00', '12:00:00', 'SALON 410NB'),
-        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 410NB'),
+        ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensiva', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('VI ING. INDUSTRIAL GA', 'ING-OPT1', 'Medardo González', 'JUEVES', '16:00:00', '18:00:00', 'SALON 410NB'),
         ('VI ING. INDUSTRIAL GA', 'Planeación y Control de la Producción y Operaciones', 'Roberto Osio', 'JUEVES', '18:00:00', '21:00:00', 'SALON 410NB'),
         ('V ING. INDUSTRIAL GA', 'Cátedra de Sostenibilidad', 'Ricardo De La Hoz', 'VIERNES', '08:00:00', '10:00:00', 'SALON 410NB'),
         ('V ING. INDUSTRIAL GA', 'Diseño de productos y servicios', 'Erick Jassir', 'VIERNES', '10:00:00', '12:00:00', 'SALON 410NB'),
         ('VII CONTADURIA AN', 'Finanzas Corporativas', 'Ricardo Mena Torres', 'VIERNES', '19:00:00', '22:00:00', 'SALON 410NB'),
-        ('III ALIANZA SABATINO 3', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 410NB'),
+        ('III ALIANZA SABATINO 3', 'Modalidad Sabatina', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 410NB'),
 
         # ── SALON 411NB (21 horarios) ──
         ('I DERECHO AN', 'CEA-ELE1', 'Yadira García', 'LUNES', '08:00:00', '10:00:00', 'SALON 411NB'),
@@ -303,7 +303,7 @@ def create_horarios_sede_centro(stdout, style):
         ('VIII ING. INDUSTRIAL GA', 'Investigación Aplicada V', 'Astrid Barrios', 'JUEVES', '20:00:00', '22:00:00', 'SALON 411NB'),
         ('I DERECHO B', 'Teoría Económica', 'Francisco Polo', 'VIERNES', '06:00:00', '09:00:00', 'SALON 411NB'),
         ('VII DERECHO A', 'Criminología y Política Criminal', 'Ricardo Méndez', 'VIERNES', '18:00:00', '21:00:00', 'SALON 411NB'),
-        ('IV ALIANZA SABATINO 4', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 411NB'),
+        ('IV ALIANZA SABATINO 4', 'Modalidad Sabatina', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 411NB'),
 
         # ── SALON 412NB (20 horarios) ──
         ('VII DERECHO B', 'Filosofía del Derecho', 'Cristóbal Arteta', 'LUNES', '08:00:00', '10:00:00', 'SALON 412NB'),
@@ -330,25 +330,25 @@ def create_horarios_sede_centro(stdout, style):
         ('VII ADM. NEGOCIOS AN', 'International Marketing', 'José Rafael Simancas Trujillo', 'JUEVES', '20:00:00', '22:00:00', 'SALON 412NB'),
         ('I ADM. NEGOCIOS AN', 'Emprendimiento e innovación', 'José Rafael Simancas Trujillo', 'VIERNES', '20:00:00', '22:00:00', 'SALON 412NB'),
         ('I CONTADURIA AN', 'Emprendimiento e innovación', 'José Rafael Simancas Trujillo', 'VIERNES', '20:00:00', '22:00:00', 'SALON 412NB'),
-        ('I ALIANZA SABATINO 1', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 412NB'),
+        ('I ALIANZA SABATINO 1', 'Modalidad Sabatina', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 412NB'),
 
         # ── SALON 413NB (26 horarios) ──
         ('III CONTADURIA CD', 'Teorías Contables', 'Julio César Padilla Molina', 'LUNES', '07:00:00', '09:00:00', 'SALON 413NB'),
         ('III CONTADURIA CD', 'CEA-CEAI', 'Rafael Francisco Núñez Suárez', 'LUNES', '09:00:00', '11:00:00', 'SALON 413NB'),
         ('IV ALIANZA SEMESTRAL 4', 'Modalidad Semestral', '', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 413NB'),
-        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 413NB'),
+        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensiva', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 413NB'),
         ('V CONTADURIA AN', 'Investigación de Operaciones', 'Boanerge Salas Muñoz', 'LUNES', '18:00:00', '19:00:00', 'SALON 413NB'),
         ('V ADM. NEGOCIOS AN', 'Investigación de Operaciones', 'Boanerge Salas Muñoz', 'LUNES', '18:00:00', '20:00:00', 'SALON 413NB'),
         ('VI CONTADURIA AN', 'CEA-IMRE', 'Cástulo Antonio Maza Cabrera', 'MARTES', '19:00:00', '20:00:00', 'SALON 413NB'),
         ('V ADM. NEGOCIOS AN', 'Comercio y Negocios Globales', 'José Rafael Simanca Trujillo', 'LUNES', '20:00:00', '22:00:00', 'SALON 413NB'),
         ('VII ADM. NEGOCIOS CD', 'Seminario de Negociación y Concertación', 'Farid Elías Amín De La Hoz', 'MARTES', '07:00:00', '09:00:00', 'SALON 413NB'),
         ('VII ADM. NEGOCIOS CD', 'Proyecto de Investigación', 'Milagros Del Carmen Villasmil Molero', 'MARTES', '09:00:00', '11:00:00', 'SALON 413NB'),
-        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 413NB'),
-        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 413NB'),
+        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensiva', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 413NB'),
+        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensiva', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 413NB'),
         ('VI CONTADURIA AN', 'Auditoría Aplicada', 'Juan Torres Palacio', 'MIÉRCOLES', '20:00:00', '22:00:00', 'SALON 413NB'),
         ('II CONTADURIA CD', 'CEA-CIIN', 'Julio César Padilla Molina', 'JUEVES', '07:00:00', '09:00:00', 'SALON 413NB'),
         ('IV ALIANZA SEMESTRAL 4', 'Modalidad Semestral', '', 'JUEVES', '11:00:00', '13:00:00', 'SALON 413NB'),
-        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensivo', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 413NB'),
+        ('VI ALIANZA SEMI-INTENSIVO 6', 'Modalidad Semi-intensiva', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 413NB'),
         ('VI ING. INDUSTRIAL GA', 'ING-ELE3', 'Yessy Coronel', 'JUEVES', '16:00:00', '18:00:00', 'SALON 413NB'),
         ('V ADM. NEGOCIOS AN', 'CEA-DINO', 'Danilo Enrique Torres Pimiento', 'JUEVES', '18:00:00', '21:00:00', 'SALON 413NB'),
         ('IV CONTADURIA AN', 'Fundamentos de Mercadeo', 'Luis Alfonso Grisales Domínguez', 'VIERNES', '18:00:00', '20:00:00', 'SALON 413NB'),
@@ -356,38 +356,38 @@ def create_horarios_sede_centro(stdout, style):
         ('X MEDICINA', 'Medicina Legal', 'Luz Marina Carvajal Bustos', 'VIERNES', '07:00:00', '10:00:00', 'SALON 413NB'),
         ('IV CONTADURIA AN', 'Estadística Inferencial', 'Rocío Mercedes Duarte Angarita', 'VIERNES', '20:00:00', '21:00:00', 'SALON 413NB'),
         ('IV ADM. NEGOCIOS AN', 'Estadística Inferencial', 'Rocío Mercedes Duarte Angarita', 'VIERNES', '20:00:00', '22:00:00', 'SALON 413NB'),
-        ('V ALIANZA SABATINO 5', 'Modalidad Sabatino', '', 'SÁBADO', '09:00:00', '12:00:00', 'SALON 413NB'),
+        ('V ALIANZA SABATINO 5', 'Modalidad Sabatina', '', 'SÁBADO', '09:00:00', '12:00:00', 'SALON 413NB'),
         
         # ── SALON 414NB (22 horarios) ──
         ('VII ADM. NEGOCIOS CD', 'Optativa II. Administración Estratégica', 'Luis Alfonso Grisales Domínguez', 'LUNES', '07:00:00', '10:00:00', 'SALON 414NB'),
         ('VII ADM. NEGOCIOS CD', 'Gestión de Exportaciones', 'Maribel Cerro Camera', 'LUNES', '10:00:00', '12:00:00', 'SALON 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 414NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'LUNES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-intensiva', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', '', 'LUNES', '16:00:00', '18:00:00', 'SALON 414NB'),
         ('VIII CONTADURIA AN', 'CEA-OPT3', 'Juan Torres Palacio', 'LUNES', '18:00:00', '20:00:00', 'SALON 414NB'),
          ('VII ING. INDUSTRIAL GB', 'Modelos Estocásticos Matemáticos GB', 'Luis Carlos Acosta', 'LUNES', '20:00:00', '22:00:00', 'SALON 414NB'),
         
          ('V ADM. NEGOCIOS CD', 'Desarrollo e innovaciones de las organizaciones', 'Danilo Enrique Torres Pimiento', 'MARTES', '07:00:00', '10:00:00', 'SALON 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 414NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'MARTES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-intensiva', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', '', 'MARTES', '16:00:00', '18:00:00', 'SALON 414NB'),
         ('VII ING. INDUSTRIAL GA', 'ING-ETIC', 'Mariluz Barrios', 'MARTES', '18:00:00', '20:00:00', 'SALON 414NB'),
         
         ('V ALIANZA SEMESTRAL 5', 'Modalidad Semestral', '', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 414NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-intensiva', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', '', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 414NB'),
         ('VII ING. INDUSTRIAL GA', 'Metodología de la Investigación', 'Agustín Vidal', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALON 414NB'),
         
         ('IV DERECHO B', 'DER-TPB1', '', 'JUEVES', '07:00:00', '09:00:00', 'SALON 414NB'),
         ('V ALIANZA SEMESTRAL 5', 'Modalidad Semestral', '', 'JUEVES', '11:00:00', '13:00:00', 'SALON 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 414NB'),
-        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'JUEVES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-intensiva', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-intensiva', '', 'JUEVES', '16:00:00', '18:00:00', 'SALON 414NB'),
         ('VI CONTADURIA AN', 'CEA-IMRE', 'Castulo Antonio Maza Cabrera', 'JUEVES', '18:00:00', '20:00:00', 'SALON 414NB'),
         ('X ING. INDUSTRIAL GA', 'ING-EBI3', 'Alexander Parody', 'JUEVES', '20:00:00', '22:00:00', 'SALON 414NB'),
         
         ('X MEDICINA', 'CSA-GIOB', '', 'VIERNES', '07:00:00', '09:00:00', 'SALON 414NB'),
-        ('ALIANZA SABATINO', 'Modalidad Sabatino', '', 'VIERNES', '09:00:00', '13:00:00', 'SALON 414NB'),
+        ('ALIANZA SABATINO', 'Modalidad Sabatina', '', 'VIERNES', '09:00:00', '13:00:00', 'SALON 414NB'),
         ('VI CONTADURIA AN', 'Comercio y Negocios Globales', 'José Rafael Simancas Trujillo', 'VIERNES', '18:00:00', '20:00:00', 'SALON 414NB'),
         ('VI CONTADURIA AN', 'Administración Financiera', 'Winston Fontanilla Correa', 'VIERNES', '20:00:00', '21:00:00', 'SALON 414NB'),
-        ('ALIANZA SABATINO', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 414NB'),
+        ('ALIANZA SABATINO', 'Modalidad Sabatina', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 414NB'),
         
         
         # ── SALON 415NB (24 horarios) ─
@@ -395,7 +395,75 @@ def create_horarios_sede_centro(stdout, style):
         
         # -─ SALON 416NB (24 horarios) ──
         
-        # -─ SALON 510NB (24 horarios) ──
+        # -─ SALON 501NB (24 horarios) ──
+        ("IV DERECHO A", "ELECTIVA LAW AT THE EDGE", "ALEXANDER GONZÁLEZ", "Lunes", "08:00", "10:00", "SALON 501NB"), 
+        ("IV ALIANZA INTENSIVO 4", "Modalidad Intensiva", "", "Lunes", "14:00", "18:00", "SALON 501NB"), 
+        ("VI CONTADURIA AN", "Presupuestos empresariales", "Freddy Alberto Mejía Torres", "Lunes", "18:00", "20:00", "SALON 501NB"), 
+        ("VI CONTADURIA AN", "Auditoría aplicada", "", "Lunes", "20:00", "22:00", "SALON 501NB"), 
+        
+        ("I ADM. NEGOCIOS DD", "Ciclo básico contable", "", "Martes", "08:00", "10:00", "SALON 501NB"), 
+        ("IV ALIANZA INTENSIVO 4", "Modalidad Intensiva", "", "Martes", "14:00", "18:00", "SALON 501NB"), 
+        ("III ADM. NEGOCIOS AN/ III CONTADURIA AN", "Derecho laboral y seguridad social", "Farid Elias Amín De La Hoz", "Martes", "18:00", "20:00", "SALON 501NB"), 
+        
+        ("I ADM. NEGOCIOS DD", "Expresión verbal y escrita", "MONICA PATRICIA DE LA HOZ SILVA", "Miércoles", "07:00", "09:00", "SALON 501NB"), 
+        ("I ADM. NEGOCIOS DD", "Fundamentos de negocios internacionales", "Yesenia Judith Barandica Angulo", "Miércoles", "09:00", "12:00", "SALON 501NB"), 
+        ("IV ALIANZA INTENSIVO 4", "Modalidad Intensiva", "", "Miércoles", "16:00", "18:00", "SALON 501NB"), 
+        ("III ADM. NEGOCIOS AN", "Sistemas de costeo", "GLORIA QUIJANO", "Miércoles", "19:00", "22:00", "SALON 501NB"), 
+        
+        ("I ADM. NEGOCIOS DD", "Fundamentos de administración", "Maribel Cerro Camera", "Jueves", "07:00", "10:00", "SALON 501NB"), 
+        ("I ADM. NEGOCIOS DD", "Fundamentos de economía", "Marco Antonio Ariza Dau", "Jueves", "10:00", "12:00", "SALON 501NB"), 
+        ("IV ALIANZA INTENSIVO 4", "Modalidad Intensiva", "", "Jueves", "14:00", "18:00", "SALON 501NB"), 
+        ("III ADM. NEGOCIOS AN", "Presupuestos empresariales", "Rocío Mercedes Duarte Angarita", "Jueves", "18:00", "19:00", "SALON 501NB"),
+        ("III ADM. NEGOCIOS AN", "Matemáticas financieras", "Ricardo Mena Torres", "Jueves", "19:00", "22:00", "SALON 501NB"), 
+        ("III CONTADURIA AN", "Matemáticas financieras", "Ricardo Mena Torres", "Jueves", "19:00", "22:00", "SALON 501NB"), 
+        
+        ("VIII ING. SISTEMAS GA", "Práctica Empresarial", "ERICK JASSIR", "Viernes", "06:00", "09:00", "SALON 501NB"), 
+        ("V ADM. NEGOCIOS CD", "Investigación de operaciones", "Boanerge Salas Muñoz", "Viernes", "09:00", "12:00", "SALON 501NB"), 
+        ("IX MEDICINA", "Electiva Imagenología en clínicas y hospitales", "", "Viernes", "13:00", "15:00", "SALON 501NB"), 
+        ("III ADM. NEGOCIOS AN", "Coyuntura económica nacional", "Yesenia Judith Barandica Angulo", "Viernes", "18:00", "20:00", "SALON 501NB"),
+        ("III CONTADURIA AN", "Coyuntura económica nacional", "Yesenia Judith Barandica Angulo", "Viernes", "18:00", "20:00", "SALON 501NB"),  
+        
+        ("IX ING. SISTEMAS GA", "Gestión de Tecnología GA", "JOSE W. PENAGOS", "Sábado", "06:00", "09:00", "SALON 501NB"),
+
+        # --- SALON 502NB (24 horarios) ──
+        
+        ("I ING. SISTEMAS DE", "Física Mecánica y Lab. GA", "ANDRES BERMUDEZ", "Lunes", "07:00", "09:00", "SALON 502NB"), 
+        ("V ALIANZA INTENSIVO 5", "Modalidad Intensiva", "", "Lunes", "14:00", "18:00", "SALON 502NB"), 
+        ("V ING. INDUSTRIAL GA", "Diseño de productos y servicios GA", "ERICK JASSIR", "Lunes", "19:00", "22:00", "SALON 502NB"), 
+        ("I ADM. NEGOCIOS DD", "Fundamentos de matemáticas", "Boanerge José Salas Muñoz", "Martes", "08:00", "10:00", "SALON 502NB"), 
+        ("I ADM. NEGOCIOS DD", "Emprendimiento e innovación", "José Rafael Simancas Trujillo", "Martes", "10:00", "12:00", "SALON 502NB"), 
+        ("V ALIANZA INTENSIVO 5", "Modalidad Intensiva", "", "Martes", "14:00", "18:00", "SALON 502NB"), 
+        ("III ADM. NEGOCIOS AN", "Dirección y liderazgo", "José Rafael Simancas Trujillo", "Martes", "20:00", "22:00", "SALON 502NB"), 
+        ("III CONTADURIA CD", "Ciclo de egresos y administración de inventarios", "Rafael Francisco Nuñez Suarez", "Miércoles", "10:00", "12:00", "SALON 502NB"), 
+        ("V ALIANZA INTENSIVO 5", "Modalidad Intensiva", "", "Miércoles", "14:00", "18:00", "SALON 502NB"), ("I DERECHO F", "INTRODUCCIÓN AL DERECHO", "RICARDO MÉNDEZ", "Jueves", "06:00", "08:00", "SALON 502NB"), ("I DERECHO F", "HISTORIA DE LA FILOSOFÍA", "YADIRA GARCÍA", "Jueves", "09:00", "12:00", "SALON 502NB"), ("", "Modalidad: Intensivo Step 5", "ALIANZA CANADIENSE", "Jueves", "14:00", "18:00", "SALON 502NB"), 
+        ("I DERECHO AN", "CEA-ELE1", "PEDRO ARIAS", "Jueves", "18:00", "20:00", "SALON 502NB"), 
+        ("III ADM. NEGOCIOS CD", "Presupuestos empresariales", "Arnulfo Rico Camacho", "Viernes", "07:00", "10:00", "SALON 502NB"), 
+        ("I ING. SISTEMAS DE", "Lógica Matemática GB", "ANDRES BERMUDEZ", "Viernes", "10:00", "12:00", "SALON 502NB"), 
+        ("IX MEDICINA", "Electiva II: Atencion al adulto mayor", "Fanny Lambraño", "Viernes", "14:00", "16:00", "SALON 502NB"), 
+        ("I DERECHO AN", "HISTORIA DE LA FILOSOFÍA", "ALEXANDER GONZÁLEZ", "Viernes", "18:00", "19:00", "SALON 502NB"), 
+        ("VII ALIANZA SABATINO 7", "Modalidad Sabatina", "", "Sábado", "08:00", "12:00", "SALON 502NB"),
+        
+        # --- SALON 503NB (24 horarios) ──
+        ("III DERECHO AB", "CIVIL BIENES", "CARLOS ESPINEL", "Lunes", "06:00", "08:00", "SALON 503NB"),
+        ("I DERECHO D", "INTRODUCCIÓN AL DERECHO", "OONA HERNÁNDEZ", "Lunes", "08:00", "10:00", "SALON 503NB"),
+        ("I DERECHO D", "DERECHO ROMANO", "TATIANA POLO", "Lunes", "10:00", "13:00", "SALON 503NB"),
+        ("I ADM. NEGOCIOS AN", "Fundamentos de administración", "Maribel Cerro Camera", "Lunes", "18:00", "21:00", "SALON 503NB"),
+        ("II CONTADURIA AN", "Fundamentos de administración", "Maribel Cerro Camera", "Lunes", "18:00", "21:00", "SALON 503NB"),
+        ("III DERECHO AB", "CIVIL BIENES", "CARLOS ESPINEL", "Martes", "06:00", "08:00", "SALON 503NB"),
+        ("III DERECHO B", "INVESTIGACIÓN I", "PATRICIA MORRIS", "Martes", "08:00", "10:00", "SALON 503NB"),
+        ("VII ADM. NEGOCIOS FN", "OPTATIVA II: INNOVACIÓN Y TRANSFORMACIÓN DIGITAL EN EMPRESAS GLOBALES", "Danilo Enrique Torres Pimiento", "Martes", "18:00", "19:00", "SALON 503NB"),
+        ("VIII CONTADURIA AN", "Ética profesional", "Milagros Del Carmen Villasmil Molero", "Martes", "20:00", "22:00", "SALON 503NB"),
+        ("I DERECHO C", "TEORÍA DEL ESTADO", "LINDA NADER", "Miércoles", "08:00", "10:00", "SALON 503NB"),
+        ("I DERECHO C", "ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA", "YADIRA GARCÍA", "Miércoles", "10:00", "12:00", "SALON 503NB"),
+        ("VIII CONTADURIA AN", "Impuestos territoriales y procedimiento tributario", "Cástulo Antonio Maza Cabrera", "Miércoles", "19:00", "22:00", "SALON 503NB"),
+        ("III ADM. NEGOCIOS CD", "Estadística descriptiva", "Antonio Julio Castilla Romero", "Jueves", "09:00", "12:00", "SALON 503NB"),
+        ("VIII ADM. NEGOCIOS AN", "Ética profesional y responsabilidad social empresarial", "Milagros Del Carmen Villasmil Molero", "Jueves", "18:00", "20:00", "SALON 503NB"),
+        ("VIII ADM. NEGOCIOS AN", "Mercado de capitales", "Winston Fontalvo Cerpa", "Jueves", "20:00", "22:00", "SALON 503NB"),
+        ("III DERECHO AD", "INVESTIGACIÓN I", "ALEJANDRO BLANCO", "Viernes", "06:00", "08:00", "SALON 503NB"),
+        ("I DERECHO C", "DERECHO ROMANO", "TATIANA POLO", "Viernes", "08:00", "11:00", "SALON 503NB")
+
+
+        
         
         # --- SALON 702NB (24 horarios) ─
         ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 702NB"), 
