@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { espacioPermitidoService, espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getEspaciosFromCache, setEspaciosInCache, getCacheKey } from '../../services/cache/cacheService';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 export interface EspacioView {
     id: string;
@@ -298,6 +300,181 @@ export function useConsultaEspacios() {
         }
     };
 
+    const exportarCronogramaPDF = () => {
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        
+        const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const horasIntervalos = Array.from({ length: 15 }, (_, i) => i + 6); // 6:00 a 20:00
+        
+        filteredEspacios.forEach((espacio, espacioIndex) => {
+            if (espacioIndex > 0) doc.addPage();
+            
+            // Título del espacio
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${espacio.nombre} - ${espacio.tipo}`, pageWidth / 2, 15, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Capacidad: ${espacio.capacidad} | Sede: ${espacio.sede} | Edificio: ${espacio.edificio}`, pageWidth / 2, 22, { align: 'center' });
+            
+            // Construir cuadrícula
+            const cellWidth = (pageWidth - 30) / 7; // 1 columna hora + 6 días
+            const cellHeight = (pageHeight - 40) / (horasIntervalos.length + 1);
+            const startX = 15;
+            const startY = 30;
+            
+            // Dibujar encabezado (días)
+            doc.setFillColor(139, 0, 0);
+            doc.rect(startX, startY, cellWidth, cellHeight, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Hora', startX + cellWidth / 2, startY + cellHeight / 2 + 2, { align: 'center' });
+            
+            diasNombres.forEach((dia, idx) => {
+                doc.setFillColor(139, 0, 0);
+                doc.rect(startX + cellWidth * (idx + 1), startY, cellWidth, cellHeight, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.text(dia, startX + cellWidth * (idx + 1) + cellWidth / 2, startY + cellHeight / 2 + 2, { align: 'center' });
+            });
+            
+            // Dibujar filas de horas
+            horasIntervalos.forEach((hora, horaIdx) => {
+                const y = startY + cellHeight * (horaIdx + 1);
+                
+                // Columna de hora
+                doc.setFillColor(243, 244, 246);
+                doc.rect(startX, y, cellWidth, cellHeight, 'FD');
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                doc.text(`${hora}:00-${hora + 1}:00`, startX + cellWidth / 2, y + cellHeight / 2 + 1, { align: 'center' });
+                
+                // Celdas de días
+                diasNombres.forEach((dia, diaIdx) => {
+                    const x = startX + cellWidth * (diaIdx + 1);
+                    
+                    // Buscar horario para esta hora y día
+                    const horarioEnCelda = horarios.find(h =>
+                        h.espacioId === espacio.id &&
+                        h.dia === dia &&
+                        hora >= h.horaInicio &&
+                        hora < h.horaFin
+                    );
+                    
+                    if (horarioEnCelda) {
+                        // Celda ocupada
+                        doc.setFillColor(219, 234, 254);
+                        doc.rect(x, y, cellWidth, cellHeight, 'FD');
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(6);
+                        
+                        const materia = horarioEnCelda.materia || '';
+                        const docente = horarioEnCelda.docente ? horarioEnCelda.docente.toUpperCase() : '';
+                        const grupo = horarioEnCelda.grupo || '';
+                        
+                        let textY = y + 4;
+                        if (materia) {
+                            doc.text(materia, x + cellWidth / 2, textY, { align: 'center', maxWidth: cellWidth - 2 });
+                            textY += 3;
+                        }
+                        if (docente) {
+                            doc.text(docente, x + cellWidth / 2, textY, { align: 'center', maxWidth: cellWidth - 2 });
+                            textY += 3;
+                        }
+                        if (grupo) {
+                            doc.text(grupo, x + cellWidth / 2, textY, { align: 'center', maxWidth: cellWidth - 2 });
+                        }
+                    } else {
+                        // Celda vacía
+                        doc.rect(x, y, cellWidth, cellHeight, 'D');
+                    }
+                });
+            });
+        });
+        
+        const nombreArchivo = `cronograma_espacios_${new Date().getTime()}.pdf`;
+        doc.save(nombreArchivo);
+    };
+
+    const exportarCronogramaExcel = () => {
+        const wb = XLSX.utils.book_new();
+        
+        const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const horasIntervalos = Array.from({ length: 15 }, (_, i) => `${i + 6}:00-${i + 7}:00`); // 6:00 a 20:00
+        
+        filteredEspacios.forEach((espacio, espacioIdx) => {
+            // Crear matriz de datos para este espacio
+            const data: any[][] = [];
+            
+            // Encabezado con días
+            data.push(diasNombres);
+            
+            // Filas de horas
+            horasIntervalos.forEach((intervalo, horaIdx) => {
+                const hora = horaIdx + 6;
+                const row = [intervalo];
+                
+                // Para cada día
+                diasNombres.slice(1).forEach(dia => {
+                    // Buscar horario para esta hora y día
+                    const horarioEnCelda = horarios.find(h =>
+                        h.espacioId === espacio.id &&
+                        h.dia === dia &&
+                        hora >= h.horaInicio &&
+                        hora < h.horaFin
+                    );
+                    
+                    if (horarioEnCelda) {
+                        const materia = horarioEnCelda.materia || '';
+                        const docente = horarioEnCelda.docente ? horarioEnCelda.docente.toUpperCase() : '';
+                        const grupo = horarioEnCelda.grupo || '';
+                        
+                        let cellText = materia;
+                        if (docente) cellText += ` / ${docente}`;
+                        if (grupo) cellText += `\\n${grupo}`;
+                        
+                        row.push(cellText);
+                    } else {
+                        row.push('');
+                    }
+                });
+                
+                data.push(row);
+            });
+            
+            // Crear hoja
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Aplicar estilos y anchos
+            ws['!cols'] = [
+                { wch: 14 }, // Columna Hora
+                { wch: 25 }, // Lunes
+                { wch: 25 }, // Martes
+                { wch: 25 }, // Miércoles
+                { wch: 25 }, // Jueves
+                { wch: 25 }, // Viernes
+                { wch: 25 }  // Sábado
+            ];
+            
+            // Ajustar alto de filas
+            const rowHeights = Array(data.length).fill({ hpt: 60 });
+            rowHeights[0] = { hpt: 30 }; // Header más pequeño
+            ws['!rows'] = rowHeights;
+            
+            // Nombre de hoja (máximo 31 caracteres)
+            const sheetName = `${espacio.nombre} - ${espacio.tipo}`.substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+        
+        // Guardar archivo
+        const nombreArchivo = `cronograma_espacios_${new Date().getTime()}.xlsx`;
+        XLSX.writeFile(wb, nombreArchivo);
+    };
+
     return {
         searchTerm,
         setSearchTerm,
@@ -319,6 +496,8 @@ export function useConsultaEspacios() {
         getColorEstado,
         loading,
         horarios,
-        calcularProximaClaseYEstado
+        calcularProximaClaseYEstado,
+        exportarCronogramaPDF,
+        exportarCronogramaExcel
     };
 } 

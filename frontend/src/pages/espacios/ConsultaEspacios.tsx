@@ -3,7 +3,7 @@ import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
-import { Search, MapPin, Users, Home, Grid3x3, CalendarDays } from 'lucide-react';
+import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
@@ -29,7 +29,9 @@ export default function ConsultaEspacios() {
     filteredEspacios,
     estadisticas,
     horarios,
-    calcularProximaClaseYEstado
+    calcularProximaClaseYEstado,
+    exportarCronogramaPDF,
+    exportarCronogramaExcel
   } = useConsultaEspacios();
 
   const getEstadoBadge = (estado: string) => {
@@ -140,6 +142,24 @@ export default function ConsultaEspacios() {
             {isMobile ? 'Cronograma' : 'Vista Cronograma'}
           </Button>
         </div>
+        {vistaActual === 'cronograma' && (
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              onClick={exportarCronogramaPDF}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            >
+              <FileDown className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+              {isMobile ? 'PDF' : 'Exportar PDF'}
+            </Button>
+            <Button
+              onClick={exportarCronogramaExcel}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+            >
+              <FileSpreadsheet className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+              {isMobile ? 'Excel' : 'Exportar Excel'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
