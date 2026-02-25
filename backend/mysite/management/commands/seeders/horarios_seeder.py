@@ -306,31 +306,31 @@ def create_horarios_sede_centro(stdout, style):
         ('IV ALIANZA SABATINO 4', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 411NB'),
 
         # ── SALON 412NB (20 horarios) ──
-        ('VII DERECHO B', 'Filosofía del Derecho', 'Cristóbal Arteta', 'LUNES', '08:00:00', '10:00:00', 'SALÓN 412NB'),
-        ('VII DERECHO A', 'Laboral Administrativo', 'Francisco Bustamante', 'MARTES', '08:00:00', '10:00:00', 'SALÓN 412NB'),
-        ('II CONTADURIA CD', 'Cálculo', 'Antonio Julio Castilla Romero', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALÓN 412NB'),
-        ('II ADM. NEGOCIOS CD', 'Cálculo', 'Antonio Julio Castilla Romero', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALÓN 412NB'),
-        ('III ADM. NEGOCIOS CD', 'Derecho laboral y seguridad social', 'Antonio Julio Castilla Romero', 'JUEVES', '08:00:00', '10:00:00', 'SALÓN 412NB'),
-        ('III CONTADURIA CD', 'Derecho laboral y seguridad social', 'Antonio Julio Castilla Romero', 'JUEVES', '08:00:00', '10:00:00', 'SALÓN 412NB'),
-        ('VII DERECHO B', 'Familia, Infancia y Adolescencia', 'Juan Carlos de los Ríos', 'LUNES', '10:00:00', '12:00:00', 'SALÓN 412NB'),
-        ('VIII DERECHO A', 'Procesal Laboral', 'Lilia Cedeño', 'MARTES', '10:00:00', '12:00:00', 'SALÓN 412NB'),
-        ('II CONTADURIA CD', 'Epistemología y metodología de la investigación', 'Milagros del Carmen Villasmil', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALÓN 412NB'),
-        ('II ADM. NEGOCIOS CD', 'Epistemología y metodología de la investigación', 'Milagros del Carmen Villasmil', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALÓN 412NB'),
-        ('II CONTADURIA CD', 'Economía de empresa', 'Yesenia Judith Barandica Angulo', 'JUEVES', '10:00:00', '12:00:00', 'SALÓN 412NB'),
-        ('II ADM. NEGOCIOS CD', 'Economía de empresa', 'Yesenia Judith Barandica Angulo', 'JUEVES', '10:00:00', '12:00:00', 'SALÓN 412NB'),
-        ('VII DERECHO B', 'Probatorio', 'Eduardo Lascano', 'LUNES', '14:00:00', '16:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'Principles of Public Speaking', 'Sandra Milena Castillo Balmaceda', 'LUNES', '18:00:00', '20:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'Gerencia de comercio exterior', 'Cecilia Ibet Sierra Martínez', 'MARTES', '18:00:00', '20:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'International Agreement', 'Jemmy Maritza Bernal Gómez', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'Gestión de Exportaciones', 'Maribel Cera Camera', 'JUEVES', '18:00:00', '20:00:00', 'SALÓN 412NB'),
-        ('I ADM. NEGOCIOS AN', 'Fundamentos de matemáticas', 'Antonio Julio Castilla Romero', 'VIERNES', '18:00:00', '20:00:00', 'SALÓN 412NB'),
-        ('I CONTADURIA AN', 'Fundamentos de matemáticas', 'Antonio Julio Castilla Romero', 'VIERNES', '18:00:00', '20:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'Optativa II. Innovación y sostenibilidad estratégica', 'Daniel Enrique Torres Avendaño', 'LUNES', '20:00:00', '22:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'Optativa II. Innovación y sostenibilidad estratégica', 'Danilo Enrique Torres Pimiento', 'MARTES', '20:00:00', '22:00:00', 'SALÓN 412NB'),
-        ('VII ADM. NEGOCIOS AN', 'International Marketing', 'José Rafael Simancas Trujillo', 'JUEVES', '20:00:00', '22:00:00', 'SALÓN 412NB'),
-        ('I ADM. NEGOCIOS AN', 'Emprendimiento e innovación', 'José Rafael Simancas Trujillo', 'VIERNES', '20:00:00', '22:00:00', 'SALÓN 412NB'),
-        ('I CONTADURIA AN', 'Emprendimiento e innovación', 'José Rafael Simancas Trujillo', 'VIERNES', '20:00:00', '22:00:00', 'SALÓN 412NB'),
-        ('I ALIANZA SABATINO 1', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALÓN 412NB'),
+        ('VII DERECHO B', 'Filosofía del Derecho', 'Cristóbal Arteta', 'LUNES', '08:00:00', '10:00:00', 'SALON 412NB'),
+        ('VII DERECHO A', 'Laboral Administrativo', 'Francisco Bustamante', 'MARTES', '08:00:00', '10:00:00', 'SALON 412NB'),
+        ('II CONTADURIA CD', 'Cálculo', 'Antonio Julio Castilla Romero', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 412NB'),
+        ('II ADM. NEGOCIOS CD', 'Cálculo', 'Antonio Julio Castilla Romero', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 412NB'),
+        ('III ADM. NEGOCIOS CD', 'Derecho laboral y seguridad social', 'Antonio Julio Castilla Romero', 'JUEVES', '08:00:00', '10:00:00', 'SALON 412NB'),
+        ('III CONTADURIA CD', 'Derecho laboral y seguridad social', 'Antonio Julio Castilla Romero', 'JUEVES', '08:00:00', '10:00:00', 'SALON 412NB'),
+        ('VII DERECHO B', 'Familia, Infancia y Adolescencia', 'Juan Carlos de los Ríos', 'LUNES', '10:00:00', '12:00:00', 'SALON 412NB'),
+        ('VIII DERECHO A', 'Procesal Laboral', 'Lilia Cedeño', 'MARTES', '10:00:00', '12:00:00', 'SALON 412NB'),
+        ('II CONTADURIA CD', 'Epistemología y metodología de la investigación', 'Milagros del Carmen Villasmil', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 412NB'),
+        ('II ADM. NEGOCIOS CD', 'Epistemología y metodología de la investigación', 'Milagros del Carmen Villasmil', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 412NB'),
+        ('II CONTADURIA CD', 'Economía de empresa', 'Yesenia Judith Barandica Angulo', 'JUEVES', '10:00:00', '12:00:00', 'SALON 412NB'),
+        ('II ADM. NEGOCIOS CD', 'Economía de empresa', 'Yesenia Judith Barandica Angulo', 'JUEVES', '10:00:00', '12:00:00', 'SALON 412NB'),
+        ('VII DERECHO B', 'Probatorio', 'Eduardo Lascano', 'LUNES', '14:00:00', '16:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'Principles of Public Speaking', 'Sandra Milena Castillo Balmaceda', 'LUNES', '18:00:00', '20:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'Gerencia de comercio exterior', 'Cecilia Ibet Sierra Martínez', 'MARTES', '18:00:00', '20:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'International Agreement', 'Jemmy Maritza Bernal Gómez', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'Gestión de Exportaciones', 'Maribel Cera Camera', 'JUEVES', '18:00:00', '20:00:00', 'SALON 412NB'),
+        ('I ADM. NEGOCIOS AN', 'Fundamentos de matemáticas', 'Antonio Julio Castilla Romero', 'VIERNES', '18:00:00', '20:00:00', 'SALON 412NB'),
+        ('I CONTADURIA AN', 'Fundamentos de matemáticas', 'Antonio Julio Castilla Romero', 'VIERNES', '18:00:00', '20:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'Optativa II. Innovación y sostenibilidad estratégica', 'Daniel Enrique Torres Avendaño', 'LUNES', '20:00:00', '22:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'Optativa II. Innovación y sostenibilidad estratégica', 'Danilo Enrique Torres Pimiento', 'MARTES', '20:00:00', '22:00:00', 'SALON 412NB'),
+        ('VII ADM. NEGOCIOS AN', 'International Marketing', 'José Rafael Simancas Trujillo', 'JUEVES', '20:00:00', '22:00:00', 'SALON 412NB'),
+        ('I ADM. NEGOCIOS AN', 'Emprendimiento e innovación', 'José Rafael Simancas Trujillo', 'VIERNES', '20:00:00', '22:00:00', 'SALON 412NB'),
+        ('I CONTADURIA AN', 'Emprendimiento e innovación', 'José Rafael Simancas Trujillo', 'VIERNES', '20:00:00', '22:00:00', 'SALON 412NB'),
+        ('I ALIANZA SABATINO 1', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 412NB'),
 
         # ── SALON 413NB (26 horarios) ──
         ('III CONTADURIA CD', 'Teorías Contables', 'Julio César Padilla Molina', 'LUNES', '07:00:00', '09:00:00', 'SALON 413NB'),
@@ -359,30 +359,88 @@ def create_horarios_sede_centro(stdout, style):
         ('V ALIANZA SABATINO 5', 'Modalidad Sabatino', '', 'SÁBADO', '09:00:00', '12:00:00', 'SALON 413NB'),
         
         # ── SALON 414NB (22 horarios) ──
-        ('VII ADM. NEGOCIOS CD', 'Optativa II. Administración Estratégica', 'Luis Alfonso Grisales Domínguez', 'LUNES', '07:00:00', '09:00:00', 'SALÓN 414NB'),
-        ('V ADM. NEGOCIOS CD', 'Desarrollo e innovaciones de las organizaciones', 'Danilo Enrique Torres Pimiento', 'MARTES', '07:00:00', '09:00:00', 'SALÓN 414NB'),
-        ('VII ADM. NEGOCIOS CD', 'Gestión de Exportaciones', 'Maribel Cerro Camera', 'LUNES', '10:00:00', '12:00:00', 'SALÓN 414NB'),
-        ('IV DERECHO B', 'Tutela Penal I', '', 'JUEVES', '07:00:00', '09:00:00', 'SALÓN 414NB'),
-        ('X MEDICINA', 'Gineco-obstetricia Teórico', '', 'VIERNES', '07:00:00', '09:00:00', 'SALÓN 414NB'),
-        ('V ALIANZA SEMESTRAL 5', 'Modalidad Semestral', '', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALÓN 414NB'),
-        ('V ALIANZA SEMESTRAL 5', 'Modalidad Semestral', '', 'JUEVES', '11:00:00', '13:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'JUEVES', '14:00:00', '16:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'LUNES', '16:00:00', '18:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MARTES', '16:00:00', '18:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALÓN 414NB'),
-        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'JUEVES', '16:00:00', '18:00:00', 'SALÓN 414NB'),
-        ('VIII CONTADURIA AN', 'Optativa II', 'Juan Torres Palacio', 'LUNES', '18:00:00', '20:00:00', 'SALÓN 414NB'),
-        ('VII ING. INDUSTRIAL GA', 'Ética GA', 'Mariluz Barrios', 'MARTES', '18:00:00', '20:00:00', 'SALÓN 414NB'),
-        ('VII ING. INDUSTRIAL GA', 'Metodología de la Investigación GA', 'Agustín Vidal', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALÓN 414NB'),
-        ('VI CONTADURIA AN', 'Impuesto sobre la renta y complementarios', 'Castulo Antonio Maza Cabrera', 'JUEVES', '18:00:00', '20:00:00', 'SALÓN 414NB'),
-        ('VI CONTADURIA AN', 'Comercio y negocios globales', 'José Rafael Simancas Trujillo', 'VIERNES', '18:00:00', '20:00:00', 'SALÓN 414NB'),
-        ('VII ING. INDUSTRIAL GB', 'Modelos Estocásticos Matemáticos GB', 'Luis Carlos Acosta', 'LUNES', '20:00:00', '22:00:00', 'SALÓN 414NB'),
-        ('10A Ingeniería', 'Elect. Básica de Ingeniería III (Inv. de Operaciones)', 'Alexander Parody', 'JUEVES', '20:00:00', '22:00:00', 'SALÓN 414NB'),
-        ('VI CONTADURIA AN', 'Administración Financiera', 'Winston Fontanilla Correa', 'VIERNES', '20:00:00', '22:00:00', 'SALÓN 414NB'),
-        ('ALIANZA CANADIENSE', 'Modalidad Sábado', 'No especificado', 'SÁBADO', '08:00:00', '12:00:00', 'SALÓN 414NB')
+        ('VII ADM. NEGOCIOS CD', 'Optativa II. Administración Estratégica', 'Luis Alfonso Grisales Domínguez', 'LUNES', '07:00:00', '10:00:00', 'SALON 414NB'),
+        ('VII ADM. NEGOCIOS CD', 'Gestión de Exportaciones', 'Maribel Cerro Camera', 'LUNES', '10:00:00', '12:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'LUNES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VIII CONTADURIA AN', 'CEA-OPT3', 'Juan Torres Palacio', 'LUNES', '18:00:00', '20:00:00', 'SALON 414NB'),
+         ('VII ING. INDUSTRIAL GB', 'Modelos Estocásticos Matemáticos GB', 'Luis Carlos Acosta', 'LUNES', '20:00:00', '22:00:00', 'SALON 414NB'),
+        
+         ('V ADM. NEGOCIOS CD', 'Desarrollo e innovaciones de las organizaciones', 'Danilo Enrique Torres Pimiento', 'MARTES', '07:00:00', '10:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'MARTES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VII ING. INDUSTRIAL GA', 'ING-ETIC', 'Mariluz Barrios', 'MARTES', '18:00:00', '20:00:00', 'SALON 414NB'),
+        
+        ('V ALIANZA SEMESTRAL 5', 'Modalidad Semestral', '', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VII ING. INDUSTRIAL GA', 'Metodología de la Investigación', 'Agustín Vidal', 'MIÉRCOLES', '18:00:00', '20:00:00', 'SALON 414NB'),
+        
+        ('IV DERECHO B', 'DER-TPB1', '', 'JUEVES', '07:00:00', '09:00:00', 'SALON 414NB'),
+        ('V ALIANZA SEMESTRAL 5', 'Modalidad Semestral', '', 'JUEVES', '11:00:00', '13:00:00', 'SALON 414NB'),
+        ('VII ALIANZA SEMI-INTENSIVO 7', 'Modalidad Semi-Intensivo', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 414NB'),
+        ('IV ALIANZA SEMI-INTENSIVO 4', 'Modalidad Semi-Intensivo', '', 'JUEVES', '16:00:00', '18:00:00', 'SALON 414NB'),
+        ('VI CONTADURIA AN', 'CEA-IMRE', 'Castulo Antonio Maza Cabrera', 'JUEVES', '18:00:00', '20:00:00', 'SALON 414NB'),
+        ('X ING. INDUSTRIAL GA', 'ING-EBI3', 'Alexander Parody', 'JUEVES', '20:00:00', '22:00:00', 'SALON 414NB'),
+        
+        ('X MEDICINA', 'CSA-GIOB', '', 'VIERNES', '07:00:00', '09:00:00', 'SALON 414NB'),
+        ('ALIANZA SABATINO', 'Modalidad Sabatino', '', 'VIERNES', '09:00:00', '13:00:00', 'SALON 414NB'),
+        ('VI CONTADURIA AN', 'Comercio y Negocios Globales', 'José Rafael Simancas Trujillo', 'VIERNES', '18:00:00', '20:00:00', 'SALON 414NB'),
+        ('VI CONTADURIA AN', 'Administración Financiera', 'Winston Fontanilla Correa', 'VIERNES', '20:00:00', '21:00:00', 'SALON 414NB'),
+        ('ALIANZA SABATINO', 'Modalidad Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 414NB'),
+        
+        
+        # ── SALON 415NB (24 horarios) ─
+        
+        
+        # -─ SALON 416NB (24 horarios) ──
+        
+        # -─ SALON 510NB (24 horarios) ──
+        
+        # --- SALON 702NB (24 horarios) ─
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 702NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 702NB"),
+        # --- SALON 703NB (24 horarios) ──
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 703NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 703NB"),
+        # --- SALON 704NB (24 horarios) ──
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 704NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 704NB"),
+        # --- SALON 709NB (24 horarios) ──
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 709NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 709NB"),
+        # --- SALON 710NB (24 horarios) ──
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 710NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 710NB"),
+        # --- SALON 711NB (24 horarios) ──
+        ("VIII MEDICINA", "Cirugía Teoría", "", "Lunes", "14:00", "16:00", "SALON 711NB"),
+        ("VIII MEDICINA", "CSA-SSTM", "JORGE RIVERA", "Martes", "13:00", "16:00", "SALON 711NB"),
+        ("VII MEDICINA", "CSA-MEIN", "", "Martes", "17:00", "20:00", "SALON 711NB"),
+        ("VIII MEDICINA", "Especialidades Quirúrgicas", "", "Miércoles", "13:00", "15:00", "SALON 711NB"),
+        ("VIII MEDICINA", "CSA-SSTM", "JORGE RIVERA", "Jueves", "13:00", "14:00", "SALON 711NB"),
+        ("VII MEDICINA", "Psiquiatría", "MILENA RUBIO", "Jueves", "17:00", "19:00", "SALON 711NB"),
+        ("VII MEDICINA", "CSA-MEIN", "", "Jueves", "19:00", "21:00", "SALON 711NB"),
+        ("VIII MEDICINA", "CSA-CIRU", "", "Viernes", "13:00", "16:00", "SALON 711NB"),
+        ("V CONTADURIA AN", "Ciclo de Estados Financieros", "Jesús María Rodríguez Polo", "Viernes", "18:00", "20:00", "SALON 711NB"),
+        ("V CONTADURIA AN", "Costos Gerenciales", "Yuleida Ariza Angarita", "Viernes", "20:00", "22:00", "SALON 711NB"),
+        # ── SALON 713NB (24 horarios) ──
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 713NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 713NB"),
+        # ── SALON 714NB (24 horarios) ──
+        ("CLASES POSGRADOS", "POSGRADO", "", "Viernes", "14:00:00", "22:00:00", "SALON 714NB"), 
+        ("CLASES POSGRADOS", "POSGRADO", "", "Sábado", "08:00:00", "16:00:00", "SALON 714NB"),
+        # ── SALON 717NB (24 horarios) ──
+        ("IV ING. INDUSTRIAL GA", "Gerencia Estratégica", "ANDREA CORONADO", "Viernes", "18:00", "21:00", "SALON 717NB"),
+        # ── SALON 718NB (24 horarios) ──
+        ("VII ING. INDUSTRIAL GA", "Constitución Política GA", "MARILUZ BARROS", "Viernes", "18:00", "20:00", "SALON 718NB"),
+        
+       
+        
+        
+       
+        
+        
+        
    
    
     ]
@@ -398,6 +456,7 @@ def create_horarios_sede_centro(stdout, style):
         programa_admin = Programa.objects.get(nombre='Administración de Negocios Internacionales')
         programa_contaduria = Programa.objects.get(nombre='Contaduría Pública')
         programa_alianza = Programa.objects.get(nombre='Alianza Canadiense')
+        programa_posgrado = Programa.objects.get(nombre='Posgrado')
         
         tipo_aula = TipoEspacio.objects.get(nombre='Aula')
     except Exception as e:
@@ -439,6 +498,8 @@ def create_horarios_sede_centro(stdout, style):
             return programa_admin
         elif 'ALIANZA' in grupo_upper:
             return programa_alianza
+        elif 'POSGRADO' in grupo_upper:
+            return programa_posgrado
         else:
             return programa_derecho
     
@@ -593,12 +654,20 @@ def create_horarios_sede_centro(stdout, style):
                     if not semestre:
                         semestre = 1  # Default a primer semestre
 
-                    # Buscar grupo existente
+                    # Primero intentar buscar por nombre exacto
                     grupo = Grupo.objects.filter(
                         periodo=periodo,
                         programa=programa_detectado,
-                        semestre=semestre
+                        nombre__iexact=grupo_nombre_resuelto.strip()
                     ).first()
+
+                    # Si no se encuentra, buscar por programa y semestre
+                    if not grupo:
+                        grupo = Grupo.objects.filter(
+                            periodo=periodo,
+                            programa=programa_detectado,
+                            semestre=semestre
+                        ).first()
 
                     if not grupo:
                         # Crear grupo
@@ -805,7 +874,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Intervención en Fisioterapia l GB', 'Nobis de la Cruz', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 102B'),
         ('Sin grupo especificado', 'Prescripción del Ejercicio GB', 'Raúl Polo', 'LUNES', '12:00:00', '13:00:00', 'SALON 102B'),
         ('Sin grupo especificado', 'Proyecto de Investigación I G1', '102B', 'LUNES', '14:00:00', '15:00:00', 'SALON 102B'),
-        ('Sin grupo especificado', 'Psicología Evolutiva G1', 'Salón 102B', 'MARTES', '16:00:00', '17:00:00', 'SALON 102B'),
+        ('Sin grupo especificado', 'Psicología Evolutiva G1', 'SALON 102B', 'MARTES', '16:00:00', '17:00:00', 'SALON 102B'),
         ('Sin grupo especificado', 'Salud Pública I', 'Eduardo Navarro', 'MARTES', '11:00:00', '12:00:00', 'SALON 102B'),
 
         # ── SALON 103B (17 horarios) ──
@@ -820,7 +889,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Electiva de profundización I: FT. Cardiopulmonar', 'Tammy Pulido (CAT)', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALON 103B'),
         ('Sin grupo especificado', 'Electiva:  Inglés Avanzado', '103B', 'JUEVES', '14:00:00', '15:00:00', 'SALON 103B'),
         ('Sin grupo especificado', 'Electiva:  Inglés II', '103B', 'JUEVES', '16:00:00', '17:00:00', 'SALON 103B'),
-        ('Sin grupo especificado', 'Electiva: Ingles Avanzado III', 'Salón  103B', 'MIÉRCOLES', '13:00:00', '14:00:00', 'SALON 103B'),
+        ('Sin grupo especificado', 'Electiva: Ingles Avanzado III', 'SALON  103B', 'MIÉRCOLES', '13:00:00', '14:00:00', 'SALON 103B'),
         ('Sin grupo especificado', 'Evaluación y Diagnóstico                 GA', 'Roberto Rebolledo', 'LUNES', '12:00:00', '13:00:00', 'SALON 103B'),
         ('Sin grupo especificado', 'Microbiología Industrial', 'Marianella  Suárez', 'MARTES', '07:00:00', '08:00:00', 'SALON 103B'),
         ('Sin grupo especificado', 'Morfo fisiología l (Práctica)', 'GB', 'VIERNES', '09:00:00', '10:00:00', 'SALON 103B'),
@@ -830,7 +899,7 @@ def create_horarios_sede_principal(stdout, style):
         # ── SALON 104B (21 horarios) ──
         ('1 semestre grupo D', 'INTRODUCCIÓN AL DERECHO', 'OONA HERNÁNDEZ', 'MIÉRCOLES', '08:00:00', '09:00:00', 'SALON 104B'),
         ('II MEDICINA', 'Electiva  complementaria 1 : Inteligencia emocional', '104B', 'VIERNES', '11:00:00', '12:00:00', 'SALON 104B'),
-        ('II Medicina', 'Electiva Cuidados Basicos', 'Salón  104B', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALON 104B'),
+        ('II Medicina', 'Electiva Cuidados Basicos', 'SALON  104B', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALON 104B'),
         ('Sin grupo especificado', '"Modalidad: SEMESTRAL', 'Step 2', 'VIERNES', '14:00:00', '15:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Administración II Teoría', 'Norka Márquez', 'LUNES', '11:00:00', '12:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Análisis Matemático y Estadístico', 'Javier Duran', 'VIERNES', '07:00:00', '08:00:00', 'SALON 104B'),
@@ -841,7 +910,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Electiva de profundización I: Estilos de vida saludable', 'Luisa Galeano (TC)', 'LUNES', '16:00:00', '17:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Electiva de profundización II: estilos de vida saludable y MCH', 'Roberto Rebolledo', 'JUEVES', '14:00:00', '15:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Evaluación y Diagnóstico (práctica) GA Roberto Rebolledo', '104B', 'JUEVES', '09:00:00', '10:00:00', 'SALON 104B'),
-        ('Sin grupo especificado', 'Introducción a las ciencias ómicas                                 D: Cristian Cadena', 'Salón: 104B', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 104B'),
+        ('Sin grupo especificado', 'Introducción a las ciencias ómicas                                 D: Cristian Cadena', 'SALON: 104B', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Microbiología Teoría', 'Wendy Rosales', 'MARTES', '11:00:00', '12:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Modalidad: Semestral', 'Step 2', 'JUEVES', '16:00:00', '17:00:00', 'SALON 104B'),
         ('Sin grupo especificado', 'Procesos Qcos en Ortopedia', 'Jainer Molina', 'MIÉRCOLES', '16:00:00', '17:00:00', 'SALON 104B'),
@@ -860,7 +929,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Cálculo', 'Javier Duran', 'VIERNES', '09:00:00', '10:00:00', 'SALON 105B'),
         ('Sin grupo especificado', 'ELECTIVA DE PROFUNDIZACIÓN I', 'CALIDAD EN SERVICIO DE SALUD', 'MARTES', '14:00:00', '15:00:00', 'SALON 105B'),
         ('Sin grupo especificado', 'Epidemiología', 'Adalgiza', 'MIÉRCOLES', '07:00:00', '08:00:00', 'SALON 105B'),
-        ('Sin grupo especificado', 'Farmacología y Anestesia', 'SALÓN 105B', 'JUEVES', '10:00:00', '11:00:00', 'SALON 105B'),
+        ('Sin grupo especificado', 'Farmacología y Anestesia', 'SALON 105B', 'JUEVES', '10:00:00', '11:00:00', 'SALON 105B'),
         ('Sin grupo especificado', 'Fundamentos en el Análisis y Redacción de Textos G1', 'Luz Marina Silvera', 'LUNES', '14:00:00', '15:00:00', 'SALON 105B'),
         ('Sin grupo especificado', 'Microbiología de Alimentos', 'Marianela Suárez', 'JUEVES', '12:00:00', '13:00:00', 'SALON 105B'),
         ('Sin grupo especificado', 'Morfo fisiología I Práctica- Anfiteatro', 'Gladys Helena Ríos', 'MARTES', '11:00:00', '12:00:00', 'SALON 105B'),
@@ -902,7 +971,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Administración y SSS', 'D: Leidy Goenaga', 'JUEVES', '11:00:00', '12:00:00', 'SALON 107B'),
         ('Sin grupo especificado', 'Electiva de profundización I: SST', 'Karol Cervantes', 'JUEVES', '16:00:00', '17:00:00', 'SALON 107B'),
         ('Sin grupo especificado', 'Electivas de formación integral III', 'Cuidado Básico en Salud Noris Álvarez', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 107B'),
-        ('Sin grupo especificado', 'FARMACOLOGIA Y TOXICOLOGIA VII. LILIANA CARRANZA', 'Salón 107B', 'LUNES', '14:00:00', '15:00:00', 'SALON 107B'),
+        ('Sin grupo especificado', 'FARMACOLOGIA Y TOXICOLOGIA VII. LILIANA CARRANZA', 'SALON 107B', 'LUNES', '14:00:00', '15:00:00', 'SALON 107B'),
         ('Sin grupo especificado', 'Inmunohematología Teoría', 'Goenaga', 'MARTES', '14:00:00', '15:00:00', 'SALON 107B'),
         ('Sin grupo especificado', 'Introducción a la instrumentación', 'María Amador', 'VIERNES', '11:00:00', '12:00:00', 'SALON 107B'),
         ('Sin grupo especificado', 'Lógica Matemática', 'Sergio Nieves', 'MARTES', '07:00:00', '08:00:00', 'SALON 107B'),
@@ -925,7 +994,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Investigación Clínica Epidemiológica', 'Bryan Domínguez', 'LUNES', '14:00:00', '15:00:00', 'SALON 203B'),
         ('Sin grupo especificado', 'Microbiología General Teoría', 'José Luis Villarreal', 'VIERNES', '10:00:00', '11:00:00', 'SALON 203B'),
         ('Sin grupo especificado', 'PRACTICA SALUD PUBLICA PROYECCIÓN COMUNITARIA û Teoría', 'Bryan Domínguez', 'MIÉRCOLES', '07:00:00', '08:00:00', 'SALON 203B'),
-        ('Sin grupo especificado', 'Procesos Industriales Teoría / Javier Duran', 'Salón 104B', 'VIERNES', '15:00:00', '16:00:00', 'SALON 203B'),
+        ('Sin grupo especificado', 'Procesos Industriales Teoría / Javier Duran', 'SALON 104B', 'VIERNES', '15:00:00', '16:00:00', 'SALON 203B'),
         ('Sin grupo especificado', 'Propuesta de Investigación', 'Emilse Vásquez', 'MARTES', '07:00:00', '08:00:00', 'SALON 203B'),
         ('Sin grupo especificado', 'Proyecto de Investigación III', 'Lina Chavez', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 203B'),
         ('Sin grupo especificado', 'TOXICOLOGIA', 'Claudia Tapia', 'LUNES', '12:00:00', '13:00:00', 'SALON 203B'),
@@ -1010,7 +1079,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Electiva de profundización (A):', 'Enfermedades Transmitidas por Vectores', 'MIÉRCOLES', '09:00:00', '10:00:00', 'SALON 301B'),
         ('Sin grupo especificado', 'Epistemología de las ciencias G1', 'Karol Cervantes', 'JUEVES', '11:00:00', '12:00:00', 'SALON 301B'),
         ('Sin grupo especificado', 'Evaluación y Diagnóstico GB', 'Julia Andrade', 'VIERNES', '11:00:00', '12:00:00', 'SALON 301B'),
-        ('Sin grupo especificado', 'Fisiología Animal y Vegetal Arleth Lopez', 'Salón 206B', 'LUNES', '14:00:00', '15:00:00', 'SALON 301B'),
+        ('Sin grupo especificado', 'Fisiología Animal y Vegetal Arleth Lopez', 'SALON 206B', 'LUNES', '14:00:00', '15:00:00', 'SALON 301B'),
         ('Sin grupo especificado', 'Fisiología del Ejercicio grupo B', 'Sindy Ariza', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALON 301B'),
         ('Sin grupo especificado', 'Inmunología Clinica Teoria', 'Franklin Torres', 'JUEVES', '14:00:00', '15:00:00', 'SALON 301B'),
         ('Sin grupo especificado', 'Procesos Asépticos II', 'Teoría', 'MARTES', '11:00:00', '12:00:00', 'SALON 301B'),
@@ -1097,7 +1166,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Morfo fisiología I Teoría', 'Gladys Helena Ríos', 'LUNES', '15:00:00', '16:00:00', 'SALON 303B'),
         ('Sin grupo especificado', 'Morfo fisiología ll (teoría) G1', '303B', 'LUNES', '13:00:00', '14:00:00', 'SALON 303B'),
         ('Sin grupo especificado', 'Ocupación y movimiento corporal G1', 'Martha Mendihueta', 'MARTES', '07:00:00', '08:00:00', 'SALON 303B'),
-        ('Sin grupo especificado', 'Optativa II: Diagnóstico Forense                         D: Miriam Linero', 'Salón: 303B', 'JUEVES', '16:00:00', '17:00:00', 'SALON 303B'),
+        ('Sin grupo especificado', 'Optativa II: Diagnóstico Forense                         D: Miriam Linero', 'SALON: 303B', 'JUEVES', '16:00:00', '17:00:00', 'SALON 303B'),
         ('Sin grupo especificado', 'Patología Básica', 'Richard Zambrano', 'LUNES', '07:00:00', '08:00:00', 'SALON 303B'),
         ('Sin grupo especificado', 'Prescripción del Ejercicio GA', 'Roberto Rebolledo', 'MARTES', '14:00:00', '15:00:00', 'SALON 303B'),
         ('Sin grupo especificado', 'Salud Pública G1', 'Lina chavez', 'MARTES', '11:00:00', '12:00:00', 'SALON 303B'),
@@ -1116,7 +1185,7 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Epidemiología G1', 'Laura Ardila', 'MARTES', '09:00:00', '10:00:00', 'SALON 304B'),
         ('Sin grupo especificado', 'Fisiología del Ejercicio GA', 'Raúl Polo', 'JUEVES', '09:00:00', '10:00:00', 'SALON 304B'),
         ('Sin grupo especificado', 'Intervención en Fisioterapia l GB', 'Nobis de la Cruz', 'LUNES', '14:00:00', '15:00:00', 'SALON 304B'),
-        ('Sin grupo especificado', 'Intervención en fisioterapia III GA', 'Salón 304B', 'JUEVES', '14:00:00', '15:00:00', 'SALON 304B'),
+        ('Sin grupo especificado', 'Intervención en fisioterapia III GA', 'SALON 304B', 'JUEVES', '14:00:00', '15:00:00', 'SALON 304B'),
         ('Sin grupo especificado', 'Morfo fisiología II- Teoría', 'Tatiana Gómez', 'VIERNES', '11:00:00', '12:00:00', 'SALON 304B'),
         ('Sin grupo especificado', 'Optativa A: Micología Avanzada', 'Gloria Muñoz', 'MARTES', '13:00:00', '14:00:00', 'SALON 304B'),
         ('Sin grupo especificado', 'Procesos Qcos. Cirugía Plástica', 'Leidy Gómez', 'MARTES', '11:00:00', '12:00:00', 'SALON 304B'),
@@ -1127,9 +1196,9 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Biomecánica teoría', 'GA', 'MARTES', '09:00:00', '10:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'CALIDAD EN SERVICIOS DE SALUD', 'María Inés López', 'MIÉRCOLES', '15:00:00', '16:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Discapacidad G1', 'Yoly Yepes', 'LUNES', '09:00:00', '10:00:00', 'SALON 305B'),
-        ('Sin grupo especificado', 'Electiva de profundización I: Fisioterapia en enfermedades crónicas - Laura Ardila', 'salón 305B', 'MARTES', '16:00:00', '17:00:00', 'SALON 305B'),
+        ('Sin grupo especificado', 'Electiva de profundización I: Fisioterapia en enfermedades crónicas - Laura Ardila', 'SALON 305B', 'MARTES', '16:00:00', '17:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Evaluación y Diagnóstico GB', 'Julia Andrade', 'JUEVES', '11:00:00', '12:00:00', 'SALON 305B'),
-        ('Sin grupo especificado', 'Farmacología y Anestesia', 'SALÓN 105B', 'MARTES', '14:00:00', '15:00:00', 'SALON 305B'),
+        ('Sin grupo especificado', 'Farmacología y Anestesia', 'SALON 105B', 'MARTES', '14:00:00', '15:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Intervención en Fisioterapia l GB', 'Nobis de la Cruz', 'JUEVES', '09:00:00', '10:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Intervención en Ft II', 'Yadira Barrios', 'LUNES', '11:00:00', '12:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Intervención en Ft II GA', 'GA 205B', 'LUNES', '07:00:00', '08:00:00', 'SALON 305B'),
@@ -1137,9 +1206,9 @@ def create_horarios_sede_principal(stdout, style):
         ('Sin grupo especificado', 'Modalidades Físicas', 'GA', 'JUEVES', '14:00:00', '15:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Morfo fisiología l (Práctica)', 'GB', 'MIÉRCOLES', '11:00:00', '12:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'PRACTICA HOSPITALARIA III', 'SEMINARIO TEORICO PRACTICO', 'LUNES', '16:00:00', '17:00:00', 'SALON 305B'),
-        ('Sin grupo especificado', 'Proyección a la comunidad TEORÍA D: Bryan Dominguéz Salón: 305B', 'VI BACTERIOLOGÍA', 'MIÉRCOLES', '07:00:00', '08:00:00', 'SALON 305B'),
+        ('Sin grupo especificado', 'Proyección a la comunidad TEORÍA D: Bryan Dominguéz SALON: 305B', 'VI BACTERIOLOGÍA', 'MIÉRCOLES', '07:00:00', '08:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Práctica Administrativa Teoría', 'Lorena Herrera', 'VIERNES', '09:00:00', '10:00:00', 'SALON 305B'),
-        ('Sin grupo especificado', 'SocioAnatropologia', 'Salón 305B', 'MARTES', '11:00:00', '12:00:00', 'SALON 305B'),
+        ('Sin grupo especificado', 'SocioAnatropologia', 'SALON 305B', 'MARTES', '11:00:00', '12:00:00', 'SALON 305B'),
         ('Sin grupo especificado', 'Trabajo de grado', 'Alfonso Rodriguez', 'VIERNES', '07:00:00', '08:00:00', 'SALON 305B'),
 
         # ── SALON 306B (20 horarios) ──

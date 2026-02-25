@@ -14,6 +14,7 @@ def create_grupos(stdout, style):
     # Mapeo de nombres de programas
     programas_map = {
         'ALIANZA CANADIENSE': 'Alianza Canadiense',
+        'POSGRADO': 'Posgrado',
         'ING. INDUSTRIAL': 'Ingeniería Industrial',
         'ING. SISTEMAS': 'Ingeniería de Sistemas',
         'ADM. NEGOCIOS': 'Administración de Negocios Internacionales',
@@ -39,8 +40,23 @@ def create_grupos(stdout, style):
     grupos_data = [
         
         # Alianza Canadiense
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 1', 'I'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 2', 'II'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 3', 'III'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 4', 'IV'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 5', 'V'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 6', 'VI'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA INTENSIVO 7', 'VII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 1', 'I'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 2', 'II'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 3', 'III'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 4', 'IV'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 5', 'V'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 6', 'VI'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 7', 'VII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 8', 'VIII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 9', 'IX'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SABATINO', 'I'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SABATINO 1', 'I'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SABATINO 2', 'II'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SABATINO 3', 'III'),
@@ -55,6 +71,9 @@ def create_grupos(stdout, style):
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 5', 'V'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 6', 'VI'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMESTRAL 7', 'VII'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 1', 'I'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 2', 'II'),
+        ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 3', 'III'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 4', 'IV'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 5', 'V'),
         ('ALIANZA CANADIENSE', '2026-1', 'ALIANZA SEMI-INTENSIVO 6', 'VI'),
@@ -276,6 +295,8 @@ def create_grupos(stdout, style):
         ('FISIOTERAPIA', '2026-1', 'FISIOTERAPIA GA', 'IX'),
         ('FISIOTERAPIA', '2026-1', 'FISIOTERAPIA GB', 'IX'),
         ('FISIOTERAPIA', '2026-1', 'FISIOTERAPIA GA', 'X'),
+        
+        ('POSGRADO', '2026-1', 'CLASES POSGRADOS', 'I'),
 
     ]
     
@@ -307,7 +328,9 @@ def create_grupos(stdout, style):
                 skipped_count += 1
                 continue
             # Colocar Número Romano al Inicio del nombre del grupo
-            nombre_grupo = f'{semestre_romano.strip()} {nombre_grupo}'
+            if programa.nombre != 'Posgrado' and nombre_grupo != 'ALIANZA SABATINO':
+                nombre_grupo = f'{semestre_romano.strip()} {nombre_grupo}'
+                
             
             # Crear o obtener el grupo
             grupo, created = Grupo.objects.get_or_create(

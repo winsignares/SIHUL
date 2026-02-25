@@ -1391,6 +1391,9 @@ def _get_all_relaciones():
         # Optativa II
         ('Ingeniería Industrial', 'CEA-OPT2', 7, 'optativa'),
         
+        #CEA-OPT2A
+        ('Administración de Negocios Internacionales', 'CEA-OPT2A', 7, 'optativa'),
+        
         # Optativa III
         ('Ingeniería Industrial', 'CEA-OPT3', 8, 'optativa'),
         
@@ -1405,6 +1408,9 @@ def _get_all_relaciones():
         
         # Proyecto de Investigación
         ('Ingeniería Industrial', 'CSA-PRIN', 7, 'profesional'),
+        
+        #ING-EBI3
+        ('Ingeniería Industrial', 'ING-EBI3', 10, 'profesional'),
         
         # Práctica Empresarial
         ('Ingeniería Industrial', 'ING-PREM2', 8, 'profesional'),

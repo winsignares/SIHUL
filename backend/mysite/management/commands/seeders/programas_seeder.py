@@ -22,6 +22,7 @@ def create_programas(stdout, style):
         ('Facultad de Ingeniería', 'Ingeniería de Sistemas', 10, True),
         ('Facultad de Ingeniería', 'Ingeniería Industrial', 10, True),
         ('Ninguna','Alianza Canadiense', 10, True),
+        ('Ninguna','Posgrado', 2, True),
     ]
     
     created_count = 0
