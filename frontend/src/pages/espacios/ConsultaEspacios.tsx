@@ -18,9 +18,12 @@ export default function ConsultaEspacios() {
     setFilterTipo,
     filterEstado,
     setFilterEstado,
+    filterSede,
+    setFilterSede,
     vistaActual,
     setVistaActual,
     tiposEspacio,
+    sedes,
     diasSemana,
     horas,
     filteredEspacios,
@@ -170,6 +173,17 @@ export default function ConsultaEspacios() {
               <SelectItem value="disponible">Disponible</SelectItem>
               <SelectItem value="ocupado">Ocupado</SelectItem>
               <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterSede} onValueChange={setFilterSede}>
+            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+              <SelectValue placeholder="Sede" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas las sedes</SelectItem>
+              {sedes.map(sede => (
+                <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

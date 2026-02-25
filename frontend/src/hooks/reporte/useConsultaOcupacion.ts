@@ -1,5 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { EspacioOcupacion } from '../../models';
+import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
+import { espacioService } from '../../services/espacios/espaciosAPI';
 
 const espaciosOcupacion: EspacioOcupacion[] = [
     {
@@ -73,12 +75,76 @@ const espaciosOcupacion: EspacioOcupacion[] = [
 export function useConsultaOcupacion() {
     const [periodo, setPeriodo] = useState('2025-1');
     const [tipoEspacio, setTipoEspacio] = useState<string>('todos');
+    const [sedeId, setSedeId] = useState<string>('todas');
+    const [sedes, setSedes] = useState<Sede[]>([]);
+    const [espaciosReales, setEspaciosReales] = useState<EspacioOcupacion[]>([]);
+    const [cargando, setCargando] = useState(false);
+
+    // Cargar sedes al montar el componente
+    useEffect(() => {
+        const cargarSedes = async () => {
+            try {
+                const response = await sedeService.listarSedes();
+                setSedes(response.sedes);
+            } catch (error) {
+                console.error('Error al cargar sedes:', error);
+            }
+        };
+        cargarSedes();
+    }, []);
+
+    // Cargar espacios cuando cambia la sede
+    useEffect(() => {
+        const cargarEspacios = async () => {
+            setCargando(true);
+            try {
+                const response = await espacioService.list();
+                // Filtrar por sede si se seleccionó una específica
+                const espaciosFiltradosPorSede = sedeId === 'todas'
+                    ? response.espacios
+                    : response.espacios.filter(e => e.sede_id === parseInt(sedeId));
+
+                // Convertir a formato EspacioOcupacion (datos simulados por ahora)
+                const espaciosConOcupacion: EspacioOcupacion[] = espaciosFiltradosPorSede.map(espacio => ({
+                    id: espacio.id?.toString() || '0',
+                    nombre: espacio.nombre,
+                    tipo: espacio.tipo_espacio?.nombre || 'Desconocido',
+                    capacidad: espacio.capacidad,
+                    // Por ahora usamos datos simulados para ocupación
+                    horasOcupadas: Math.floor(Math.random() * 40) + 10,
+                    horasDisponibles: 48,
+                    porcentajeOcupacion: 0, // Se calculará después
+                    edificio: espacio.ubicacion || 'N/A',
+                    jornada: {
+                        manana: Math.floor(Math.random() * 100),
+                        tarde: Math.floor(Math.random() * 100),
+                        noche: Math.floor(Math.random() * 100)
+                    }
+                }));
+
+                // Calcular porcentaje de ocupación
+                espaciosConOcupacion.forEach(e => {
+                    e.porcentajeOcupacion = (e.horasOcupadas / e.horasDisponibles) * 100;
+                });
+
+                setEspaciosReales(espaciosConOcupacion);
+            } catch (error) {
+                console.error('Error al cargar espacios:', error);
+                // Si falla, usar datos de muestra
+                setEspaciosReales(espaciosOcupacion);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargarEspacios();
+    }, [sedeId]);
 
     const espaciosFiltrados = useMemo(() => {
+        const espaciosParaFiltrar = espaciosReales.length > 0 ? espaciosReales : espaciosOcupacion;
         return tipoEspacio === 'todos'
-            ? espaciosOcupacion
-            : espaciosOcupacion.filter(e => e.tipo === tipoEspacio);
-    }, [tipoEspacio]);
+            ? espaciosParaFiltrar
+            : espaciosParaFiltrar.filter(e => e.tipo === tipoEspacio);
+    }, [tipoEspacio, espaciosReales]);
 
     const estadisticas = useMemo(() => {
         const promedioOcupacion = espaciosFiltrados.length > 0
@@ -155,10 +221,14 @@ export function useConsultaOcupacion() {
         setPeriodo,
         tipoEspacio,
         setTipoEspacio,
+        sedeId,
+        setSedeId,
+        sedes,
         espaciosFiltrados,
         estadisticas,
         exportarReporte,
         getColorPorOcupacion,
-        getBarColor
+        getBarColor,
+        cargando
     };
 }

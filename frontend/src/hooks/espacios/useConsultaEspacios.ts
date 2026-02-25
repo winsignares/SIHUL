@@ -30,6 +30,7 @@ export function useConsultaEspacios() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState('todos');
     const [filterEstado, setFilterEstado] = useState('todos');
+    const [filterSede, setFilterSede] = useState('todas');
     const [vistaActual, setVistaActual] = useState<'tarjetas' | 'cronograma'>('tarjetas');
 
     const [espacios, setEspacios] = useState<EspacioView[]>([]);
@@ -252,6 +253,7 @@ export function useConsultaEspacios() {
     };
 
     const tiposEspacio = useMemo(() => [...new Set(espacios.map(e => e.tipo))], [espacios]);
+    const sedes = useMemo(() => [...new Set(espacios.map(e => e.sede))], [espacios]);
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     // Horas de 6am a 10pm (22:00)
     const horas = Array.from({ length: 17 }, (_, i) => i + 6);
@@ -262,9 +264,10 @@ export function useConsultaEspacios() {
                 (e.edificio && e.edificio.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchesTipo = filterTipo === 'todos' || e.tipo === filterTipo;
             const matchesEstado = filterEstado === 'todos' || e.estado === filterEstado;
-            return matchesSearch && matchesTipo && matchesEstado;
+            const matchesSede = filterSede === 'todas' || e.sede === filterSede;
+            return matchesSearch && matchesTipo && matchesEstado && matchesSede;
         });
-    }, [espacios, searchTerm, filterTipo, filterEstado]);
+    }, [espacios, searchTerm, filterTipo, filterEstado, filterSede]);
 
     const estadisticas = useMemo(() => ({
         total: espacios.length,
@@ -302,9 +305,12 @@ export function useConsultaEspacios() {
         setFilterTipo,
         filterEstado,
         setFilterEstado,
+        filterSede,
+        setFilterSede,
         vistaActual,
         setVistaActual,
         tiposEspacio,
+        sedes,
         diasSemana,
         horas,
         filteredEspacios,

@@ -17,11 +17,15 @@ export default function ConsultaOcupacion() {
     setPeriodo,
     tipoEspacio,
     setTipoEspacio,
+    sedeId,
+    setSedeId,
+    sedes,
     espaciosFiltrados,
     estadisticas,
     exportarReporte,
     getColorPorOcupacion,
-    getBarColor
+    getBarColor,
+    cargando
   } = useConsultaOcupacion();
 
   const {
@@ -73,6 +77,19 @@ export default function ConsultaOcupacion() {
             <SelectItem value="Laboratorio">Laboratorios</SelectItem>
             <SelectItem value="Auditorio">Auditorios</SelectItem>
             <SelectItem value="Sala">Salas</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sedeId} onValueChange={setSedeId} disabled={cargando}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Sede" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas las sedes</SelectItem>
+            {sedes.map((sede) => (
+              <SelectItem key={sede.id} value={sede.id.toString()}>
+                {sede.nombre}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -141,8 +158,13 @@ export default function ConsultaOcupacion() {
           <CardTitle className="text-slate-900 dark:text-slate-100">Ocupación Detallada por Espacio</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+          {cargando ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-slate-600 dark:text-slate-400">Cargando espacios...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
               <TableRow>
                 <TableHead>Espacio</TableHead>
                 <TableHead>Tipo</TableHead>
@@ -217,6 +239,7 @@ export default function ConsultaOcupacion() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
