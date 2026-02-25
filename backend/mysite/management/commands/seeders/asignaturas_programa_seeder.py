@@ -1429,6 +1429,13 @@ def _get_all_relaciones():
         
         # Ética (Ingeniería)
         ('Ingeniería Industrial', 'ING-ETIC', 7, 'humanística'),
+        ('Ingeniería de Sistemas', 'ING-ETIC', 7, 'humanística'),
+
+        #Electiva 3 ING-ELE3
+        ('Ingeniería de Sistemas', 'ING-ELE3', 6, 'electiva'),
+
+        #CEA-OPT3B
+        ('Ingeniería Industrial', 'CEA-OPT3B', 8, 'optativa'),
         
         # Ética Profesional
         ('Contaduría Pública', 'ING-ETPR', 8, 'humanística'),
