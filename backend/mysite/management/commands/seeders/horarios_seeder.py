@@ -258,7 +258,7 @@ def create_horarios_sede_centro(stdout, style):
         ('II ALIANZA SABATINO 2', 'Modalidad: Sabatino', '', 'SÁBADO', '08:00:00', '12:00:00', 'SALON 409NB'),
 
         # ── SALON 410NB (23 horarios) ──
-        ('X MEDICINA A', 'Gineco-Obstetricia Teórico', '', 'LUNES', '06:00:00', '09:00:00', 'SALON 410NB'),
+        ('X MEDICINA', 'Gineco-Obstetricia Teórico', '', 'LUNES', '06:00:00', '09:00:00', 'SALON 410NB'),
         ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'LUNES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('VI ING. INDUSTRIAL GA', 'Gestión de Tecnología', 'José W. Penagos', 'LUNES', '16:00:00', '18:00:00', 'SALON 410NB'),
         ('VI ADM. NEGOCIOS CD', 'Finanzas Internacionales', 'Winston Fontalvo Cerpa', 'LUNES', '18:00:00', '19:00:00', 'SALON 410NB'),
@@ -268,7 +268,7 @@ def create_horarios_sede_centro(stdout, style):
         ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'MARTES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('VI ING. INDUSTRIAL GA', 'ING-OPT1', 'Medardo González', 'MARTES', '16:00:00', '18:00:00', 'SALON 410NB'),
         ('V ING. INDUSTRIAL GA', 'Planeación y Control de la Producción y Operaciones', 'Roberto Osio', 'MARTES', '18:00:00', '20:00:00', 'SALON 410NB'),
-        ('X MEDICINA A', 'Gineco-Obstetricia Teórico', '', 'MIÉRCOLES', '06:00:00', '09:00:00', 'SALON 410NB'),
+        ('X MEDICINA', 'Gineco-Obstetricia Teórico', '', 'MIÉRCOLES', '06:00:00', '09:00:00', 'SALON 410NB'),
         ('VII ADM. NEGOCIOS CD', 'Gerencia de Comercio Exterior', 'Cecilia Ibeth Sierra Martínez', 'MIÉRCOLES', '09:00:00', '12:00:00', 'SALON 410NB'),
         ('V ALIANZA SEMI-INTENSIVO 5', 'Modalidad Semi-intensivo', '', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 410NB'),
         ('X ING. INDUSTRIAL GA', 'Mercadeo GA', 'Erick Jassir', 'MIÉRCOLES', '18:00:00', '21:00:00', 'SALON 410NB'),
@@ -353,7 +353,7 @@ def create_horarios_sede_centro(stdout, style):
         ('V ADM. NEGOCIOS AN', 'CEA-DINO', 'Danilo Enrique Torres Pimiento', 'JUEVES', '18:00:00', '21:00:00', 'SALON 413NB'),
         ('IV CONTADURIA AN', 'Fundamentos de Mercadeo', 'Luis Alfonso Grisales Domínguez', 'VIERNES', '18:00:00', '20:00:00', 'SALON 413NB'),
         ('IV ADM. NEGOCIOS AN', 'Fundamentos de Mercadeo', 'Luis Alfonso Grisales Domínguez', 'JUEVES', '20:00:00', '21:00:00', 'SALON 413NB'),
-        ('X MEDICINA A', 'Medicina Legal', 'Luz Marina Carvajal Bustos', 'VIERNES', '07:00:00', '10:00:00', 'SALON 413NB'),
+        ('X MEDICINA', 'Medicina Legal', 'Luz Marina Carvajal Bustos', 'VIERNES', '07:00:00', '10:00:00', 'SALON 413NB'),
         ('IV CONTADURIA AN', 'Estadística Inferencial', 'Rocío Mercedes Duarte Angarita', 'VIERNES', '20:00:00', '21:00:00', 'SALON 413NB'),
         ('IV ADM. NEGOCIOS AN', 'Estadística Inferencial', 'Rocío Mercedes Duarte Angarita', 'VIERNES', '20:00:00', '22:00:00', 'SALON 413NB'),
         ('V ALIANZA SABATINO 5', 'Modalidad Sabatino', '', 'SÁBADO', '09:00:00', '12:00:00', 'SALON 413NB'),
