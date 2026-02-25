@@ -24,12 +24,15 @@ def create_grupos(stdout, style):
         # GRUPOS DE DERECHO
         ('Derecho', '2026-1', 'I DERECHO GB', 'I'),
         ('Derecho', '2026-1', 'I DERECHO GC', 'I'),
+        ('Derecho', '2026-1', 'I DERECHO GD', 'I'),
         ('Derecho', '2026-1', 'II DERECHO GA', 'II'),
         ('Derecho', '2026-1', 'II DERECHO GB', 'II'),
         ('Derecho', '2026-1', 'III DERECHO GB', 'III'),
         ('Derecho', '2026-1', 'III DERECHO GC', 'III'),
         ('Derecho', '2026-1', 'III DERECHO GD', 'III'),
         ('Derecho', '2026-1', 'V DERECHO GC', 'V'),
+        ('Derecho', '2026-1', 'V DERECHO GD', 'V'),
+        
         
         # GRUPOS DE MEDICINA
         ('Medicina', '2026-1', 'I MEDICINA GA', 'I'),
@@ -51,28 +54,44 @@ def create_grupos(stdout, style):
         ('Bacteriología', '2026-1', 'II BACTERIOLOGÍA GA', 'II'),
         ('Bacteriología', '2026-1', 'III BACTERIOLOGÍA GA', 'III'),
         ('Bacteriología', '2026-1', 'IV BACTERIOLOGÍA GA', 'IV'),
+        ('Bacteriología', '2026-1', 'V BACTERIOLOGÍA GA', 'V'),
+        ('Bacteriología', '2026-1', 'VI BACTERIOLOGÍA GA', 'VI'),
         
         # GRUPOS DE MICROBIOLOGÍA
         ('Microbiología', '2026-1', 'I MICROBIOLOGÍA GA', 'I'),
         ('Microbiología', '2026-1', 'II MICROBIOLOGÍA GA', 'II'),
         ('Microbiología', '2026-1', 'III MICROBIOLOGÍA GA', 'III'),
         ('Microbiología', '2026-1', 'IV MICROBIOLOGÍA GA', 'IV'),
+        ('Microbiología', '2026-1', 'V MICROBIOLOGÍA GA', 'V'),
         ('Microbiología', '2026-1', 'VI MICROBIOLOGÍA GA', 'VI'),
+        ('Microbiología', '2026-1', 'VII MICROBIOLOGÍA GA', 'VII'),
+        ('Microbiología', '2026-1', 'VIII MICROBIOLOGÍA GA', 'VIII'),
         
         # GRUPOS DE INSTRUMENTACIÓN QUIRÚRGICA
         ('Instrumentación Quirúrgica', '2026-1', 'I INSTRUMENTACIÓN GA', 'I'),
         ('Instrumentación Quirúrgica', '2026-1', 'II INSTRUMENTACIÓN GA', 'II'),
         ('Instrumentación Quirúrgica', '2026-1', 'III INSTRUMENTACIÓN GA', 'III'),
         ('Instrumentación Quirúrgica', '2026-1', 'III INSTRUMENTACIÓN GB', 'III'),
+        ('Instrumentación Quirúrgica', '2026-1', 'IV INSTRUMENTACIÓN GA', 'IV'),
+        ('Instrumentación Quirúrgica', '2026-1', 'V INSTRUMENTACIÓN GA', 'V'),
+        ('Instrumentación Quirúrgica', '2026-1', 'VI INSTRUMENTACIÓN GA', 'VI'),
+        ('Instrumentación Quirúrgica', '2026-1', 'VII INSTRUMENTACIÓN GA', 'VII'),
         
         # GRUPOS DE FISIOTERAPIA
+        ('Fisioterapia', '2026-1', 'I FISIOTERAPIA GA', 'I'),
+        ('Fisioterapia', '2026-1', 'I FISIOTERAPIA GB', 'I'),
         ('Fisioterapia', '2026-1', 'II FISIOTERAPIA GA', 'II'),
         ('Fisioterapia', '2026-1', 'II FISIOTERAPIA GB', 'II'),
         ('Fisioterapia', '2026-1', 'III FISIOTERAPIA GA', 'III'),
         ('Fisioterapia', '2026-1', 'III FISIOTERAPIA GB', 'III'),
+        ('Fisioterapia', '2026-1', 'IV FISIOTERAPIA GA', 'IV'),
+        ('Fisioterapia', '2026-1', 'V FISIOTERAPIA GA', 'V'),
         ('Fisioterapia', '2026-1', 'VI FISIOTERAPIA GA', 'VI'),
         ('Fisioterapia', '2026-1', 'VII FISIOTERAPIA GA', 'VII'),
         ('Fisioterapia', '2026-1', 'VIII FISIOTERAPIA GA', 'VIII'),
+        
+        # GRUPO DE ALIANZA CANADIENSE
+        ('Alianza Canadiense', '2026-1', 'ALIANZA CANADIENSE GA', 'I'),
     ]
     
     created_count = 0

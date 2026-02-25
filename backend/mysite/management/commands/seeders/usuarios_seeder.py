@@ -114,6 +114,12 @@ def create_usuarios_docentes(stdout, style):
         'Elen Manrrique', 'Adalgisa Alcocer', 'Ismael Piñeres', 'Gloria Muñoz', 'Eulalia Amador', 'Marianella Suarez',
         'Yosed Anaya', 'Eduardo Navarro', 'Mily Ardila', 'Laura Ardila', 'Tammy Pulido', 'Nobis De La Cruz', 
         'Lucy Bula', 'Marina Hernandez', 'Sindy Ariza', 'Gladys Helena Gutiérrez', 'Raúl Polo', 'Juan Carlos De Los Ríos',
+        'Sergio Nieves Vanegas', 'Mario Peña', 'Roberto Rebolledo', 'Angélica Corcho', 'Ronald Maestre',
+        'Pierine España', 'Martha Mendihueta', 'Evelyn Mendoza', 'L Banderas',
+        'Juan David Sanchez', 'Lorena Herrera', 'Anderson Díaz', 'Wendy Rosales', 'Yennifer Barrios',
+        'Cecilia Arcieniegas', 'Cristian Cadena', 'Jainer Molina', 'María Rosa Baldovino', 'Javier Duran',
+        'Norka Márquez', 'Luisa Galeano', 'Leidy Gómez', 'Leidy Goenaga', 'Richard Zambrano', 'María Amador',
+        'Claudia Tapia', 'Ingrid Perez', 'Adalgiza Alcocer',
         # Profesores genéricos para Alianza Canadiense
         'Profesor 1', 'Profesor 2', 'Profesor 3', 'Profesor 4', 'Profesor 5', 'Profesor 6',
     ]

@@ -389,12 +389,11 @@ def _get_all_relaciones():
         # Electiva Complementaria IV
         ('Fisioterapia', 'CSA-ELC4', 8, 'electiva'),
         
-        # Electiva I CEA-ELE1
+        # Electiva I
         ('Microbiología', 'CEA-ELE1', 1, 'electiva'),
         ('Contaduría Pública', 'CEA-ELE1', 1, 'electiva'),
-        #Electiva I CSA-ELE1
-        ('Ingeniería de Sistemas', 'CSA-ELE1', 2, 'electiva'),
-        ('Administración de Negocios Internacionales', 'CSA-ELE1', 6, 'electiva'),
+        ('Ingeniería de Sistemas', 'CEA-ELE1', 2, 'electiva'),
+        ('Administración de Negocios Internacionales', 'CEA-ELE1', 6, 'electiva'),
         
         # Electiva II
         ('Microbiología', 'CEA-ELE2', 3, 'electiva'),
@@ -410,16 +409,6 @@ def _get_all_relaciones():
         ('Ingeniería de Sistemas', 'CEA-ELE3', 6, 'electiva'),
         ('Administración de Negocios Internacionales', 'CEA-ELE3', 8, 'electiva'),
         
-        #ING-ELLE Electiva II (Emprendimiento y Liderazgo)
-        ('Ingeniería Industrial', 'ING-ELLE', 3, 'electiva'),
-
-        #CEA-ABEN ELECTIVA: ADVANCED BUSINESS ENGLISH
-
-        ('Administración de Negocios Internacionales', 'CEA-ABEN', 6, 'electiva'),
-        ('Administración de Negocios Internacionales', 'CEA-ABEN', 7, 'electiva'),
-        #CSA-EDPF
-        ('Bacteriología', 'CSA-EDPF', 7, 'electiva'),
-
         # Electiva IV
         ('Derecho', 'DER-ELE4', 4, 'electiva'),
         
@@ -428,9 +417,6 @@ def _get_all_relaciones():
         
         # Electiva Profesional II
         ('Medicina', 'CSA-EPR2', 9, 'electiva'),
-
-        # ELECTIVA PROFESIONAL II ING-EPR2
-        ('Ingeniería Industrial', 'ING-EPR2', 10, 'electiva'),
         
         # Electiva Profesional III (Sem. XI-XII)
         ('Medicina', 'CSA-EPR3', 11, 'electiva'),
@@ -1443,10 +1429,6 @@ def _get_all_relaciones():
         
         # Ética (Ingeniería)
         ('Ingeniería Industrial', 'ING-ETIC', 7, 'humanística'),
-        ('Ingeniería de Sistemas', 'ING-ETIC', 7, 'humanística'),
-
-        #Electiva 3 ING-ELE3
-        ('Ingeniería de Sistemas', 'ING-ELE3', 6, 'electiva'),
         
         # Ética Profesional
         ('Contaduría Pública', 'ING-ETPR', 8, 'humanística'),
