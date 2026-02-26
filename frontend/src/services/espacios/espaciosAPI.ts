@@ -199,6 +199,14 @@ export const espacioService = {
         }[];
     }> => {
         return apiClient.get(`/espacios/${espacioId}/horario/`);
+    },
+
+    /**
+     * Cambia el estado de un espacio físico
+     * Usado para abrir/cerrar salones desde el supervisor
+     */
+    cambiarEstado: async (espacioId: number, nuevoEstado: 'Disponible' | 'No Disponible' | 'Mantenimiento'): Promise<{ message: string }> => {
+        return apiClient.put<{ message: string }>(`/espacios/${espacioId}/estado/`, { estado: nuevoEstado });
     }
 };
 
@@ -284,13 +292,9 @@ export const espacioHorariosService = {
 };
 
 /**
- * Interfaz para el modelo de apertura/cierre de salones
+ * Interfaz para un horario/préstamo dentro de un espacio
  */
-export interface SalonAperturaCierre {
-    idEspacio: number;
-    nombreEspacio: string;
-    sede: string;
-    piso: string;
+export interface HorarioEspacio {
     tipoUso: 'Clase' | 'Préstamo';
     asignatura?: string;
     docente?: string;
@@ -300,14 +304,30 @@ export interface SalonAperturaCierre {
     horaFin: string;
     diaSemana?: string;
     fecha?: string;
+    proximaAccion: 'apertura' | 'cierre';
+    minutosRestantes: number;
+    segundosRestantes: number;
+    tiempoRestanteTotal: number;
+}
+
+/**
+ * Interfaz para un espacio con sus horarios del día
+ */
+export interface EspacioConHorarios {
+    idEspacio: number;
+    nombreEspacio: string;
+    sede: string;
+    piso: string;
+    estadoActual: string;
+    horarios: HorarioEspacio[];
 }
 
 /**
  * Respuesta del endpoint de proximos apertura/cierre
+ * Retorna espacios agrupados con sus horarios
  */
 export interface ProximosAperturaCierreResponse {
-    aperturasPendientes: SalonAperturaCierre[];
-    cierresPendientes: SalonAperturaCierre[];
+    espacios: EspacioConHorarios[];
     horaActual: string;
     diaActual: string;
     fechaActual: string;
@@ -318,8 +338,9 @@ export interface ProximosAperturaCierreResponse {
  */
 export const aperturaCierreService = {
     /**
-     * Obtiene los salones próximos a abrir (15 min antes) y cerrar (5 min antes)
+     * Obtiene TODOS los salones con aperturas y cierres pendientes
      * para el usuario autenticado (Supervisor General)
+     * Retorna lista unificada ordenada por urgencia (tiempo restante)
      */
     getProximos: async (): Promise<ProximosAperturaCierreResponse> => {
         // Obtener user_id del localStorage (AuthContext)
@@ -335,3 +356,8 @@ export const aperturaCierreService = {
         return apiClient.get<ProximosAperturaCierreResponse>(endpoint);
     }
 };
+
+/**
+ * Alias para compatibilidad con imports
+ */
+export const espaciosAPI = espacioService;
