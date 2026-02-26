@@ -126,7 +126,11 @@ export default function ConsultaEspacios() {
           sede.id
         );
         setEspaciosDisponibles(response.espacios || []);
-        setFormData(prev => ({ ...prev, sede_id: sede.id }));
+        setFormData(prev => ({ 
+          ...prev, 
+          sede_id: sede.id,
+          espacio_id: nuevaSolicitudData.espacio_id
+        }));
       } catch (err) {
         console.error('Error cargando espacios disponibles:', err);
       }
@@ -332,40 +336,44 @@ export default function ConsultaEspacios() {
       {/* Botones de vista */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button
-            variant={vistaActual === 'tarjetas' ? 'default' : 'outline'}
-            onClick={() => setVistaActual('tarjetas')}
-            className={`flex-1 sm:flex-none ${vistaActual === 'tarjetas'
-              ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
-              : 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950'
-            } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
-          >
-            <Grid3x3 className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-            {isMobile ? 'Tarjetas' : 'Vista Tarjetas'}
-          </Button>
-          <Button
-            variant={vistaActual === 'cronograma' ? 'default' : 'outline'}
-            onClick={() => setVistaActual('cronograma')}
-            className={`flex-1 sm:flex-none ${vistaActual === 'cronograma'
-              ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white'
-              : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950'
-            } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
-          >
-            <CalendarDays className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-            {isMobile ? 'Cronograma' : 'Vista Cronograma'}
-          </Button>
+          {!espacioSeleccionado && (
+            <>
+              <Button
+                variant={vistaActual === 'tarjetas' ? 'default' : 'outline'}
+                onClick={() => setVistaActual('tarjetas')}
+                className={`flex-1 sm:flex-none ${vistaActual === 'tarjetas'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
+                  : 'border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950'
+                } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
+              >
+                <Grid3x3 className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+                {isMobile ? 'Tarjetas' : 'Vista Tarjetas'}
+              </Button>
+              <Button
+                variant={vistaActual === 'cronograma' ? 'default' : 'outline'}
+                onClick={() => setVistaActual('cronograma')}
+                className={`flex-1 sm:flex-none ${vistaActual === 'cronograma'
+                  ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white'
+                  : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950'
+                } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
+              >
+                <CalendarDays className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+                {isMobile ? 'Cronograma' : 'Vista Cronograma'}
+              </Button>
+            </>
+          )}
         </div>
         {vistaActual === 'cronograma' && (
           <div className="flex gap-2 w-full sm:w-auto">
             <Button
-              onClick={exportarCronogramaPDF}
+              onClick={() => exportarCronogramaPDF(espacioSeleccionado ? [espacioSeleccionado] : undefined)}
               className="flex-1 sm:flex-none bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
             >
               <FileDown className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
               {isMobile ? 'PDF' : 'Exportar PDF'}
             </Button>
             <Button
-              onClick={exportarCronogramaExcel}
+              onClick={() => exportarCronogramaExcel(espacioSeleccionado ? [espacioSeleccionado] : undefined)}
               className="flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
             >
               <FileSpreadsheet className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
@@ -375,63 +383,65 @@ export default function ConsultaEspacios() {
         )}
       </div>
 
-      {/* Filtros */}
-      <div className="space-y-4">
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap'} gap-4`}>
-          <div className={`${isMobile ? 'w-full' : 'flex-1 min-w-[200px]'} relative`}>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <Input
-              placeholder="Buscar espacio..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`pl-10 ${isMobile ? 'text-sm' : ''}`}
-            />
-          </div>
-          <Select value={filterTipo} onValueChange={setFilterTipo}>
-            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los tipos</SelectItem>
-              {tiposEspacio.map(tipo => (
-                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterEstado} onValueChange={setFilterEstado}>
-            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los estados</SelectItem>
-              <SelectItem value="disponible">Disponible</SelectItem>
-              <SelectItem value="ocupado">Ocupado</SelectItem>
-              <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
-            <Select value={filterSede} onValueChange={setFilterSede}>
-              <SelectTrigger className={`${isMobile ? 'flex-1' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
-                <SelectValue placeholder="Sede" />
+      {/* Filtros - ocultos cuando se selecciona un espacio */}
+      {!espacioSeleccionado && (
+        <div className="space-y-4">
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap'} gap-4`}>
+            <div className={`${isMobile ? 'w-full' : 'flex-1 min-w-[200px]'} relative`}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Input
+                placeholder="Buscar espacio..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`pl-10 ${isMobile ? 'text-sm' : ''}`}
+              />
+            </div>
+            <Select value={filterTipo} onValueChange={setFilterTipo}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+                <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todas">Todas las sedes</SelectItem>
-                {sedes.map(sede => (
-                  <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                <SelectItem value="todos">Todos los tipos</SelectItem>
+                {tiposEspacio.map(tipo => (
+                  <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              onClick={limpiarFiltros}
-              className="border-slate-300 text-slate-600 hover:bg-slate-100"
-              title="Limpiar filtros"
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            <Select value={filterEstado} onValueChange={setFilterEstado}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value="disponible">Disponible</SelectItem>
+                <SelectItem value="ocupado">Ocupado</SelectItem>
+                <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
+              <Select value={filterSede} onValueChange={setFilterSede}>
+                <SelectTrigger className={`${isMobile ? 'flex-1' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+                  <SelectValue placeholder="Sede" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las sedes</SelectItem>
+                  {sedes.map(sede => (
+                    <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={limpiarFiltros}
+                className="border-slate-300 text-slate-600 hover:bg-slate-100"
+                title="Limpiar filtros"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Vista Tarjetas */}
       {vistaActual === 'tarjetas' && !espacioSeleccionado && (
