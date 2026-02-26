@@ -21,24 +21,6 @@ def create_grupos(stdout, style):
     
     # Formato: (programa, periodo, nombre_grupo, semestre_romano)
     grupos_data = [
-        # GRUPOS DE DERECHO
-        ('Derecho', '2026-1', 'I DERECHO GB', 'I'),
-        ('Derecho', '2026-1', 'I DERECHO GC', 'I'),
-        ('Derecho', '2026-1', 'I DERECHO GD', 'I'),
-        ('Derecho', '2026-1', 'I DERECHO GF', 'I'),
-        ('Derecho', '2026-1', 'II DERECHO GA', 'II'),
-        ('Derecho', '2026-1', 'II DERECHO GB', 'II'),
-        ('Derecho', '2026-1', 'III DERECHO GA', 'III'),
-        ('Derecho', '2026-1', 'III DERECHO GB', 'III'),
-        ('Derecho', '2026-1', 'III DERECHO GC', 'III'),
-        ('Derecho', '2026-1', 'III DERECHO GD', 'III'),
-        ('Derecho', '2026-1', 'V DERECHO GB', 'V'),
-        ('Derecho', '2026-1', 'V DERECHO GC', 'V'),
-        ('Derecho', '2026-1', 'V DERECHO GD', 'V'),
-        ('Derecho', '2026-1', 'VII DERECHO GA', 'VII'),
-        ('Derecho', '2026-1', 'VII DERECHO GB', 'VII'),
-        
-        
         # GRUPOS DE MEDICINA
         ('Medicina', '2026-1', 'I MEDICINA GA', 'I'),
         ('Medicina', '2026-1', 'I MEDICINA GB', 'I'),
