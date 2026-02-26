@@ -75,6 +75,7 @@ def create_grupos(stdout, style):
         ('Fisioterapia', '2026-1', 'III FISIOTERAPIA GA', 'III'),
         ('Fisioterapia', '2026-1', 'III FISIOTERAPIA GB', 'III'),
         ('Fisioterapia', '2026-1', 'IV FISIOTERAPIA GA', 'IV'),
+        ('Fisioterapia', '2026-1', 'IV FISIOTERAPIA GB', 'IV'),
         ('Fisioterapia', '2026-1', 'V FISIOTERAPIA GA', 'V'),
         ('Fisioterapia', '2026-1', 'V FISIOTERAPIA GB', 'V'),
         ('Fisioterapia', '2026-1', 'VI FISIOTERAPIA GA', 'VI'),
