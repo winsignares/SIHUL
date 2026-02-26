@@ -29,6 +29,7 @@ from .seeders import (
     asignaturas_programa_seeder,
     espacios_seeder,
     espacios_permitidos_seeder,
+    recursos_seeder,
     componentes_seeder,
     componentes_rol_seeder,
     periodos_seeder,
@@ -84,40 +85,44 @@ class Command(BaseCommand):
                 usuarios_seeder.create_usuarios_docentes(out, sty)
 
                 #  7. Espacios físicos 
-                out.write(sty.SUCCESS('\n[7/15] Espacios Físicos'))
+                out.write(sty.SUCCESS('\n[7/16] Espacios Físicos'))
                 espacios_seeder.create_espacios_fisicos(out, sty)
 
-                #  8. Espacios permitidos para supervisores 
-                out.write(sty.SUCCESS('\n[8/15] Espacios Permitidos'))
+                #  8. Recursos para espacios 
+                out.write(sty.SUCCESS('\n[8/16] Recursos para Espacios'))
+                recursos_seeder.create_recursos(out, sty)
+
+                #  9. Espacios permitidos para supervisores 
+                out.write(sty.SUCCESS('\n[9/16] Espacios Permitidos'))
                 espacios_permitidos_seeder.create_espacios_permitidos(out, sty)
 
-                #  9. Componentes del sistema 
-                out.write(sty.SUCCESS('\n[9/15] Componentes del Sistema'))
+                #  10. Componentes del sistema 
+                out.write(sty.SUCCESS('\n[10/16] Componentes del Sistema'))
                 componentes_seeder.create_componentes(out, sty)
 
-                #  10. Asignación de componentes a roles 
-                out.write(sty.SUCCESS('\n[10/15] Asignación de Componentes a Roles'))
+                #  11. Asignación de componentes a roles 
+                out.write(sty.SUCCESS('\n[11/16] Asignación de Componentes a Roles'))
                 componentes_rol_seeder.create_componentes_rol(out, sty)
 
-                #  11. Grupos académicos 
-                out.write(sty.SUCCESS('\n[11/15] Grupos Académicos'))
+                #  12. Grupos académicos 
+                out.write(sty.SUCCESS('\n[12/16] Grupos Académicos'))
                 grupos_norte_seeder.create_grupos(out, sty)
                 grupos_seeder.create_grupos(out, sty)
 
-                #  12. Horarios Sede Centro 
-                out.write(sty.SUCCESS('\n[12/15] Horarios Sede Centro'))
+                #  13. Horarios Sede Centro 
+                out.write(sty.SUCCESS('\n[13/16] Horarios Sede Centro'))
                 horarios_seeder.create_horarios_sede_centro(out, sty)
 
-                #  13. Horarios Sede Principal 
-                out.write(sty.SUCCESS('\n[13/15] Horarios Sede Principal'))
+                #  14. Horarios Sede Principal 
+                out.write(sty.SUCCESS('\n[14/16] Horarios Sede Principal'))
                 horarios_norte_seeder.create_horarios_sede_principal(out, sty)
 
-                #  14. Agentes de chatbot 
-                out.write(sty.SUCCESS('\n[14/15] Agentes de Chatbot'))
+                #  15. Agentes de chatbot 
+                out.write(sty.SUCCESS('\n[15/16] Agentes de Chatbot'))
                 agentes_seeder.create_agentes(out, sty)
 
-                #  15. Preguntas Sugeridas 
-                out.write(sty.SUCCESS('\n[15/15] Preguntas Sugeridas'))
+                #  16. Preguntas Sugeridas 
+                out.write(sty.SUCCESS('\n[16/16] Preguntas Sugeridas'))
                 preguntas_sugeridas_seeder.create_preguntas_sugeridas(out, sty)
 
             out.write(sty.SUCCESS('\n'))
