@@ -35,6 +35,8 @@ export default function ConsultaEspacios() {
     setFilterEstado,
     filterSede,
     setFilterSede,
+    filterFecha,
+    setFilterFecha,
     vistaActual,
     setVistaActual,
     tiposEspacio,
@@ -44,6 +46,7 @@ export default function ConsultaEspacios() {
     filteredEspacios,
     estadisticas,
     horarios,
+    prestamos,
     calcularProximaClaseYEstado,
     exportarCronogramaPDF,
     exportarCronogramaExcel,
@@ -430,6 +433,14 @@ export default function ConsultaEspacios() {
                   ))}
                 </SelectContent>
               </Select>
+              <Input
+                type="date"
+                value={filterFecha}
+                onChange={(e) => setFilterFecha(e.target.value)}
+                className={`${isMobile ? 'flex-1' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}
+                placeholder="Filtrar por fecha"
+                title="Filtrar por fecha para ver préstamos aprobados"
+              />
               <Button
                 variant="outline"
                 onClick={limpiarFiltros}
@@ -440,6 +451,14 @@ export default function ConsultaEspacios() {
               </Button>
             </div>
           </div>
+          {filterFecha && (
+            <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3">
+              <p className="text-blue-700 dark:text-blue-300 text-sm">
+                <strong>Vista con fecha seleccionada:</strong> Mostrando horarios académicos y préstamos aprobados para {new Date(filterFecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {prestamos.length > 0 && <span className="ml-2">({prestamos.length} préstamo{prestamos.length !== 1 ? 's' : ''} aprobado{prestamos.length !== 1 ? 's' : ''})</span>}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -512,7 +531,11 @@ export default function ConsultaEspacios() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-blue-600 rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Ocupado</span>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Horario Académico</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-purple-600 rounded"></div>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Préstamo Aprobado</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-yellow-600 rounded"></div>
@@ -643,9 +666,14 @@ export default function ConsultaEspacios() {
 
                           if (rowStart < 2 || rowStart > 18) return null;
 
-                          const colorClass = ocupacion.estado === 'ocupado'
-                            ? 'bg-blue-600 hover:bg-blue-700'
-                            : 'bg-yellow-600 hover:bg-yellow-700';
+                          // Determinar si es un préstamo o un horario académico
+                          const isPrestamo = ocupacion.tipo === 'prestamo';
+                          
+                          const colorClass = isPrestamo
+                            ? 'bg-purple-600 hover:bg-purple-700' // Color morado para préstamos
+                            : ocupacion.estado === 'ocupado'
+                              ? 'bg-blue-600 hover:bg-blue-700'
+                              : 'bg-yellow-600 hover:bg-yellow-700';
 
                           return (
                             <TooltipProvider key={`ocup-${idx}`}>
@@ -662,6 +690,9 @@ export default function ConsultaEspacios() {
                                       minHeight: `${rowSpan * 60}px`
                                     }}
                                   >
+                                    {isPrestamo && (
+                                      <p className="text-[8px] opacity-75 mb-1">PRÉSTAMO</p>
+                                    )}
                                     <p className="font-bold truncate text-xs leading-tight">{ocupacion.materia}</p>
                                     <p className="truncate opacity-90 text-[9px] leading-tight">{ocupacion.docente}</p>
                                     <p className="truncate opacity-75 text-[8px] leading-tight mt-1">{ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
@@ -669,11 +700,30 @@ export default function ConsultaEspacios() {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <div className="space-y-1">
-                                    <p className="font-semibold text-sm">{ocupacion.materia}</p>
-                                    <p className="text-xs">Docente: {ocupacion.docente || 'No asignado'}</p>
-                                    <p className="text-xs">Grupo: {ocupacion.grupo || 'N/A'}</p>
-                                    <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
-                                    <p className="text-xs capitalize">Estado: {ocupacion.estado}</p>
+                                    {isPrestamo ? (
+                                      <>
+                                        <p className="font-semibold text-sm text-purple-600">PRÉSTAMO APROBADO</p>
+                                        <p className="text-xs">Actividad: {ocupacion.materia}</p>
+                                        <p className="text-xs">Solicitante: {ocupacion.docente || 'No especificado'}</p>
+                                        {ocupacion.grupo && <p className="text-xs">Motivo: {ocupacion.grupo}</p>}
+                                        {ocupacion.prestamo?.asistentes && (
+                                          <p className="text-xs">Asistentes: {ocupacion.prestamo.asistentes}</p>
+                                        )}
+                                        {ocupacion.prestamo?.telefono && (
+                                          <p className="text-xs">Teléfono: {ocupacion.prestamo.telefono}</p>
+                                        )}
+                                        <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                        <p className="text-xs">Fecha: {ocupacion.prestamo?.fecha}</p>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="font-semibold text-sm">{ocupacion.materia}</p>
+                                        <p className="text-xs">Docente: {ocupacion.docente || 'No asignado'}</p>
+                                        <p className="text-xs">Grupo: {ocupacion.grupo || 'N/A'}</p>
+                                        <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                        <p className="text-xs capitalize">Estado: {ocupacion.estado}</p>
+                                      </>
+                                    )}
                                   </div>
                                 </TooltipContent>
                               </Tooltip>

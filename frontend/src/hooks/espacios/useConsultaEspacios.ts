@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { espacioPermitidoService, espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getEspaciosFromCache, setEspaciosInCache, getCacheKey } from '../../services/cache/cacheService';
+import { prestamoService } from '../../services/prestamos/prestamoAPI';
+import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 
@@ -26,6 +28,8 @@ export interface OcupacionView {
     docente?: string;
     grupo?: string;
     estado: string;
+    tipo?: 'horario' | 'prestamo'; // Tipo de ocupación
+    prestamo?: PrestamoEspacio; // Datos del préstamo si es tipo prestamo
 }
 
 export interface SeleccionRango {
@@ -49,10 +53,12 @@ export function useConsultaEspacios() {
     const [filterTipo, setFilterTipo] = useState('todos');
     const [filterEstado, setFilterEstado] = useState('todos');
     const [filterSede, setFilterSede] = useState('todas');
+    const [filterFecha, setFilterFecha] = useState<string>(''); // Filtro de fecha
     const [vistaActual, setVistaActual] = useState<'tarjetas' | 'cronograma'>('tarjetas');
 
     const [espacios, setEspacios] = useState<EspacioView[]>([]);
     const [horarios, setHorarios] = useState<OcupacionView[]>([]);
+    const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]); // Préstamos aprobados
     const [loading, setLoading] = useState(true);
 
     // Estados para selección drag-to-select (solo para supervisor)
@@ -237,6 +243,45 @@ export function useConsultaEspacios() {
         loadData();
     }, [user]); // Recargar si cambia el usuario
 
+    // Cargar préstamos aprobados cuando cambia la fecha
+    useEffect(() => {
+        const loadPrestamos = async () => {
+            if (!filterFecha) {
+                setPrestamos([]);
+                return;
+            }
+
+            try {
+                const { prestamos: todosLosPrestamos } = await prestamoService.listarPrestamos();
+                
+                // Filtrar solo préstamos aprobados de la fecha seleccionada
+                const prestamosAprobadosFecha = todosLosPrestamos.filter(p => 
+                    p.estado === 'Aprobado' && p.fecha === filterFecha
+                );
+                
+                setPrestamos(prestamosAprobadosFecha);
+            } catch (error) {
+                console.error("Error loading prestamos:", error);
+                setPrestamos([]);
+            }
+        };
+
+        loadPrestamos();
+    }, [filterFecha]);
+
+    // Función auxiliar para convertir fecha a día de la semana
+    const getFechaDiaSemana = (fecha: string): string => {
+        const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const date = new Date(fecha + 'T00:00:00'); // Agregar tiempo para evitar problemas de zona horaria
+        return dias[date.getDay()];
+    };
+
+    // Función auxiliar para convertir hora HH:MM:SS a número
+    const horaANumero = (hora: string): number => {
+        const partes = hora.split(':');
+        return parseInt(partes[0]);
+    };
+
     // Función auxiliar para calcular próxima clase durante la carga inicial
     const calcularProximaClaseYEstadoPrevio = (
         espacioId: string, 
@@ -307,8 +352,32 @@ export function useConsultaEspacios() {
         mantenimiento: espacios.filter(e => e.estado === 'mantenimiento').length
     }), [espacios]);
 
+    // Combinar horarios con préstamos si hay fecha seleccionada
+    const horariosConPrestamos = useMemo(() => {
+        if (!filterFecha || prestamos.length === 0) {
+            return horarios;
+        }
+
+        const diaSemana = getFechaDiaSemana(filterFecha);
+        const prestamosComoOcupacion: OcupacionView[] = prestamos.map(p => ({
+            espacioId: p.espacio_id.toString(),
+            dia: diaSemana,
+            horaInicio: horaANumero(p.hora_inicio),
+            horaFin: horaANumero(p.hora_fin),
+            materia: p.tipo_actividad_nombre || 'Préstamo',
+            docente: p.usuario_nombre || p.solicitante_publico_nombre,
+            grupo: p.motivo,
+            estado: 'prestamo',
+            tipo: 'prestamo',
+            prestamo: p
+        }));
+
+        // Combinar horarios y préstamos
+        return [...horarios, ...prestamosComoOcupacion];
+    }, [horarios, prestamos, filterFecha]);
+
     const getOcupacionPorHora = (espacioId: string, dia: string, hora: number) => {
-        return horarios.find(h =>
+        return horariosConPrestamos.find(h =>
             h.espacioId === espacioId &&
             h.dia === dia &&
             hora >= h.horaInicio &&
@@ -580,6 +649,7 @@ export function useConsultaEspacios() {
         setFilterTipo('todos');
         setFilterEstado('todos');
         setFilterSede('todas');
+        setFilterFecha('');
     }, []);
 
     const verCronogramaIndividual = useCallback((espacio: EspacioView) => {
@@ -601,6 +671,8 @@ export function useConsultaEspacios() {
         setFilterEstado,
         filterSede,
         setFilterSede,
+        filterFecha,
+        setFilterFecha,
         vistaActual,
         setVistaActual,
         tiposEspacio,
@@ -612,7 +684,8 @@ export function useConsultaEspacios() {
         getOcupacionPorHora,
         getColorEstado,
         loading,
-        horarios,
+        horarios: horariosConPrestamos,
+        prestamos,
         calcularProximaClaseYEstado,
         exportarCronogramaPDF,
         exportarCronogramaExcel,

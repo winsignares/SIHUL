@@ -51,21 +51,21 @@ def create_horarios_sede_principal(stdout, style):
         # ══════════════════════════════════════════════════
         
         # LUNES
-        ('III DERECHO GC', 'Constitucional Colombiano', '', 'LUNES', '06:00:00', '09:00:00', 'TORREON 1'),
+        ('III DERECHO C', 'Constitucional Colombiano', '', 'LUNES', '06:00:00', '09:00:00', 'TORREON 1'),
         
         # MARTES
-        ('III DERECHO GC', 'Constitucional Colombiano', '', 'MARTES', '06:00:00', '09:00:00', 'TORREON 1'),
-        ('III DERECHO GC', 'Teoría del Delito', 'Carlos Jiménez', 'MARTES', '10:00:00', '13:00:00', 'TORREON 1'),
+        ('III DERECHO C', 'Constitucional Colombiano', '', 'MARTES', '06:00:00', '09:00:00', 'TORREON 1'),
+        ('III DERECHO C', 'Teoría del Delito', 'Carlos Jiménez', 'MARTES', '10:00:00', '13:00:00', 'TORREON 1'),
         
         # MIÉRCOLES
-        ('II DERECHO GB', 'Civil General y Personas', 'Beatriz Tovar', 'MIÉRCOLES', '07:00:00', '09:00:00', 'TORREON 1'),
-        ('III DERECHO GB', 'Teoría del Delito', 'John Buitrago', 'MIÉRCOLES', '9:00:00', '12:00:00', 'TORREON 1'),
+        ('II DERECHO B', 'Civil General y Personas', 'Beatriz Tovar', 'MIÉRCOLES', '07:00:00', '09:00:00', 'TORREON 1'),
+        ('III DERECHO B', 'Teoría del Delito', 'John Buitrago', 'MIÉRCOLES', '9:00:00', '12:00:00', 'TORREON 1'),
         ('IX MEDICINA GA', 'Proyecto de Investigación', 'Gustavo De La Hoz', 'MIÉRCOLES', '14:00:00', '16:00:00', 'TORREON 1'),
         ('II MEDICINA GB', 'Bioquímica', 'Ismael Lizarazu', 'MIÉRCOLES', '16:00:00', '18:00:00', 'TORREON 1'),
         
         # JUEVES
-        ('II DERECHO GB', 'Civil General y Personas', 'Beatriz Tovar', 'JUEVES', '07:00:00', '09:00:00', 'TORREON 1'),
-        ('III DERECHO GB', 'Teoría del Delito', 'John Buitrago', 'JUEVES', '9:00:00', '12:00:00', 'TORREON 1'),
+        ('II DERECHO B', 'Civil General y Personas', 'Beatriz Tovar', 'JUEVES', '07:00:00', '09:00:00', 'TORREON 1'),
+        ('III DERECHO B', 'Teoría del Delito', 'John Buitrago', 'JUEVES', '9:00:00', '12:00:00', 'TORREON 1'),
         ('V MEDICINA GA', 'Microbiología', 'Aracelly García', 'JUEVES', '13:00:00', '15:00:00', 'TORREON 1'),
         ('II MEDICINA GA', 'Bioquímica', 'Ismael Lizarazu', 'JUEVES', '16:00:00', '18:00:00', 'TORREON 1'),
         
@@ -91,13 +91,13 @@ def create_horarios_sede_principal(stdout, style):
         ('II MEDICINA GB', 'Fundamentos en Análisis y Redacción de Texto', 'Luz M. Silvera', 'MIÉRCOLES', '11:00:00', '13:00:00', 'TORREON 2'),
         ('II BACTERIOLOGÍA GA', 'Fundamentos en Análisis y Redacción de Texto', 'Luz M. Silvera', 'MIÉRCOLES', '11:00:00', '13:00:00', 'TORREON 2'),
         ('II MICROBIOLOGÍA GA', 'Fundamentos en Análisis y Redacción de Texto', 'Luz M. Silvera', 'MIÉRCOLES', '11:00:00', '13:00:00', 'TORREON 2'),
-        ('III DERECHO GD', 'Teoría del Delito', 'Luis Castillo', 'MIÉRCOLES', '13:00:00', '16:00:00', 'TORREON 2'),
+        ('III DERECHO D', 'Teoría del Delito', 'Luis Castillo', 'MIÉRCOLES', '13:00:00', '16:00:00', 'TORREON 2'),
         
         # JUEVES
-        ('III DERECHO GB', 'Investigación I', 'Patricia Morris', 'JUEVES', '06:00:00', '08:00:00', 'TORREON 2'),
-        ('I DERECHO GB', 'Teoría del Estado', 'Linda Nader', 'JUEVES', '08:00:00', '10:00:00', 'TORREON 2'),
-        ('I DERECHO GB', 'Filosofía del Derecho', 'Cristóbal Arteta', 'JUEVES', '10:00:00', '13:00:00', 'TORREON 2'),
-        ('III DERECHO GD', 'Teoría del Delito', 'Luis Castillo', 'JUEVES', '13:00:00', '16:00:00', 'TORREON 2'),
+        ('III DERECHO B', 'Investigación I', 'Patricia Morris', 'JUEVES', '06:00:00', '08:00:00', 'TORREON 2'),
+        ('I DERECHO B', 'Teoría del Estado', 'Linda Nader', 'JUEVES', '08:00:00', '10:00:00', 'TORREON 2'),
+        ('I DERECHO B', 'Filosofía del Derecho', 'Cristóbal Arteta', 'JUEVES', '10:00:00', '13:00:00', 'TORREON 2'),
+        ('III DERECHO D', 'Teoría del Delito', 'Luis Castillo', 'JUEVES', '13:00:00', '16:00:00', 'TORREON 2'),
         
         # ══════════════════════════════════════════════════
         # SALÓN 302A (Capacidad: 100)
@@ -113,7 +113,7 @@ def create_horarios_sede_principal(stdout, style):
         
         # MARTES
         ('II MEDICINA GB', 'Metodología de la Investigación', 'Elvira Crespo', 'MARTES', '07:00:00', '09:00:00', 'SALON 302A'),
-        ('III DERECHO GD', 'Lógica Jurídica', 'Yadira García', 'MARTES', '09:00:00', '12:00:00', 'SALON 302A'),
+        ('III DERECHO D', 'Lógica Jurídica', 'Yadira García', 'MARTES', '09:00:00', '12:00:00', 'SALON 302A'),
         ('V MEDICINA GB', 'Farmacología y Toxicología Básica', '', 'MARTES', '13:00:00', '15:00:00', 'SALON 302A'),
         ('V MEDICINA GB', 'Microbiología', 'J. Villareal', 'MARTES', '15:00:00', '17:00:00', 'SALON 302A'),
         
@@ -145,24 +145,24 @@ def create_horarios_sede_principal(stdout, style):
         ('V MEDICINA GA', 'Micología Clínica', 'Gloria Muñoz', 'LUNES', '13:00:00', '14:00:00', 'SALON 101B'),
         
         # MARTES
-        ('III DERECHO GD', 'CEA-ELE3', 'Claudia Vizcaíno', 'MARTES', '06:00:00', '08:00:00', 'SALON 101B'),
-        ('I DERECHO GB', 'Introducción al Derecho', 'Oona Hernández', 'MARTES', '08:00:00', '10:00:00', 'SALON 101B'),
-        ('I DERECHO GB', 'Habilidades Comunicativas', 'Claudia Vizcaíno', 'MARTES', '10:00:00', '13:00:00', 'SALON 101B'),
+        ('III DERECHO D', 'CEA-ELE3', 'Claudia Vizcaíno', 'MARTES', '06:00:00', '08:00:00', 'SALON 101B'),
+        ('I DERECHO B', 'Introducción al Derecho', 'Oona Hernández', 'MARTES', '08:00:00', '10:00:00', 'SALON 101B'),
+        ('I DERECHO B', 'Habilidades Comunicativas', 'Claudia Vizcaíno', 'MARTES', '10:00:00', '13:00:00', 'SALON 101B'),
         
         # MIÉRCOLES
-        ('III DERECHO GD', 'Constitucional Colombiano', 'Gretty Pavlovich', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 101B'),
+        ('III DERECHO D', 'Constitucional Colombiano', 'Gretty Pavlovich', 'MIÉRCOLES', '07:00:00', '10:00:00', 'SALON 101B'),
         ('I MEDICINA GA', 'Historia de la Medicina', 'Enrique Fonseca', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 101B'),
         ('I MEDICINA GA', 'Biofísica', 'Ismael Piñeres', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 101B'),
         
         # JUEVES
-        ('III DERECHO GB', 'Investigación I', 'Patricia Morris', 'JUEVES', '06:00:00', '08:00:00', 'SALON 101B'),
-        ('I DERECHO GC', 'Introducción al Derecho', 'Oona Hernández', 'JUEVES', '08:00:00', '10:00:00', 'SALON 101B'),
-        ('I DERECHO GC', 'Habilidades Comunicativas', 'Claudia Vizcaíno', 'JUEVES', '10:00:00', '13:00:00', 'SALON 101B'),
-        ('II DERECHO GA', 'Ética I', 'Cristóbal Arteta Ripoll', 'JUEVES', '14:00:00', '17:00:00', 'SALON 101B'),
+        ('III DERECHO B', 'Investigación I', 'Patricia Morris', 'JUEVES', '06:00:00', '08:00:00', 'SALON 101B'),
+        ('I DERECHO C', 'Introducción al Derecho', 'Oona Hernández', 'JUEVES', '08:00:00', '10:00:00', 'SALON 101B'),
+        ('I DERECHO C', 'Habilidades Comunicativas', 'Claudia Vizcaíno', 'JUEVES', '10:00:00', '13:00:00', 'SALON 101B'),
+        ('II DERECHO A', 'Ética I', 'Cristóbal Arteta Ripoll', 'JUEVES', '14:00:00', '17:00:00', 'SALON 101B'),
         
         # VIERNES
-        ('I DERECHO GB', 'Biología', '', 'VIERNES', '08:00:00', '10:00:00', 'SALON 101B'),
-        ('I DERECHO GB', 'Química', '', 'VIERNES', '13:00:00', '15:00:00', 'SALON 101B'),
+        ('I DERECHO B', 'Biología', '', 'VIERNES', '08:00:00', '10:00:00', 'SALON 101B'),
+        ('I DERECHO B', 'Química', '', 'VIERNES', '13:00:00', '15:00:00', 'SALON 101B'),
         
         # SALÓN 102B (Capacidad: 50)
         # ══════════════════════════════════════════════════
@@ -182,14 +182,14 @@ def create_horarios_sede_principal(stdout, style):
         ('II FISIOTERAPIA GB', 'Psicología Evolutiva', 'Mily Ardila', 'MARTES', '16:00:00', '18:00:00', 'SALON 102B'),
         
         # MIÉRCOLES
-        ('V DERECHO GC', 'Investigación III', 'Claudia Vizcaíno', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 102B'),
-        ('V DERECHO GC', 'Derecho Internacional Privado', 'Juan Carlos De Los Ríos', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 102B'),
+        ('V DERECHO C', 'Investigación III', 'Claudia Vizcaíno', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 102B'),
+        ('V DERECHO C', 'Derecho Internacional Privado', 'Juan Carlos De Los Ríos', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 102B'),
         ('III FISIOTERAPIA GB', 'Intervención en Fisioterapia I', 'Nobis De La Cruz', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 102B'),
         ('III FISIOTERAPIA GA', 'Intervención en Fisioterapia I', 'Lucy Bula', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 102B'),
         
         # JUEVES
         ('I MEDICINA GB', 'Expresión Oral y Escrita', 'Marina Hernandez', 'JUEVES', '07:00:00', '09:00:00', 'SALON 102B'),
-        ('V DERECHO GC', 'Administrativo General', 'Jaime Bermejo', 'JUEVES', '10:00:00', '12:00:00', 'SALON 102B'),
+        ('V DERECHO C', 'Administrativo General', 'Jaime Bermejo', 'JUEVES', '10:00:00', '12:00:00', 'SALON 102B'),
         ('VII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Sindy Ariza', 'JUEVES', '14:00:00', '17:00:00', 'SALON 102B'),
         
         # VIERNES
@@ -232,12 +232,12 @@ def create_horarios_sede_principal(stdout, style):
         
         # MIÉRCOLES
         ('V FISIOTERAPIA GA', 'Ocupación y Movimiento Corporal', 'Martha Mendihueta', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 103B'),
-        ('I DERECHO GD', 'Habilidades Comunicativas', 'Claudia Vizcaíno', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 103B'),
+        ('I DERECHO D', 'Habilidades Comunicativas', 'Claudia Vizcaíno', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 103B'),
         ('III INSTRUMENTACIÓN GA', 'Electiva Complementaria III', '', 'MIÉRCOLES', '14:00:00', '15:00:00', 'SALON 103B'),
         ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Tammy Pulido', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 103B'),
         
         # JUEVES
-        ('III DERECHO GD', 'Constitucional Colombiano', 'Gretty Pavlovich', 'JUEVES', '08:00:00', '11:00:00', 'SALON 103B'),
+        ('III DERECHO D', 'Constitucional Colombiano', 'Gretty Pavlovich', 'JUEVES', '08:00:00', '11:00:00', 'SALON 103B'),
         ('II MICROBIOLOGÍA GA', 'Bioquímica', 'Evelyn Mendoza', 'JUEVES', '12:00:00', '13:00:00', 'SALON 103B'),
         ('II BACTERIOLOGÍA GA', 'Bioquímica', 'Evelyn Mendoza', 'JUEVES', '12:00:00', '13:00:00', 'SALON 103B'),
         ('IV FISIOTERAPIA GA', 'Electiva Complementaria III', '', 'JUEVES', '14:00:00', '16:00:00', 'SALON 103B'),
@@ -255,7 +255,7 @@ def create_horarios_sede_principal(stdout, style):
         ('III MICROBIOLOGÍA GA', 'Bioquímica Microbiana', 'Juan David Sanchez', 'LUNES', '06:00:00', '09:00:00', 'SALON 104B'),
         ('VII INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Cardiovascular', 'Lorena Herrera', 'LUNES', '09:00:00', '11:00:00', 'SALON 104B'),
         ('VII INSTRUMENTACIÓN GA', 'Administración II', 'Norka Márquez', 'LUNES', '11:00:00', '13:00:00', 'SALON 104B'),
-        ('V DERECHO GD', 'Tutela Penal de los Bienes Jurídicos II', 'Luis Castillo', 'LUNES', '13:00:00', '16:00:00', 'SALON 104B'),
+        ('V DERECHO D', 'Tutela Penal de los Bienes Jurídicos II', 'Luis Castillo', 'LUNES', '13:00:00', '16:00:00', 'SALON 104B'),
         ('VI FISIOTERAPIA GA', 'Electiva de Profundización I', 'Luisa Galeano', 'LUNES', '16:00:00', '18:00:00', 'SALON 104B'),
         
         # MARTES
@@ -269,7 +269,7 @@ def create_horarios_sede_principal(stdout, style):
         ('III INSTRUMENTACIÓN GA', 'Administración en Salud II', 'Cecilia Arcieniegas', 'MARTES', '16:00:00', '18:00:00', 'SALON 104B'),
         
         # MIÉRCOLES
-        ('I DERECHO GD', 'Introducción al Derecho', 'Oona Hernández', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 104B'),
+        ('I DERECHO D', 'Introducción al Derecho', 'Oona Hernández', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 104B'),
         ('II MEDICINA GA', 'Cuidados Básicos en Salud', '', 'MIÉRCOLES', '11:00:00', '13:00:00', 'SALON 104B'),
         ('VI BACTERIOLOGÍA GA', 'Introducción a las Tecnologías Ómicas', 'Cristian Cadena', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 104B'),
         ('V INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Ortopedia', 'Jainer Molina', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 104B'),
@@ -335,8 +335,8 @@ def create_horarios_sede_principal(stdout, style):
         ('VI MEDICINA GB', 'Farmacología y Toxicología', 'A. Guerrero', 'LUNES', '16:00:00', '18:00:00', 'SALON 106B'),
         
         # MARTES
-        ('I DERECHO GC', 'Teoría Económica', 'Guillermo De La Hoz', 'MARTES', '06:00:00', '09:00:00', 'SALON 106B'),
-        ('I DERECHO GC', 'Introducción al Derecho', 'Oona Hernández', 'MARTES', '10:00:00', '12:00:00', 'SALON 106B'),
+        ('I DERECHO C', 'Teoría Económica', 'Guillermo De La Hoz', 'MARTES', '06:00:00', '09:00:00', 'SALON 106B'),
+        ('I DERECHO C', 'Introducción al Derecho', 'Oona Hernández', 'MARTES', '10:00:00', '12:00:00', 'SALON 106B'),
         ('VI MEDICINA GB', 'Genética Clínica', 'Zuleima Yañez', 'MARTES', '12:00:00', '16:00:00', 'SALON 106B'),
         ('VI MEDICINA GB', 'Farmacología y Toxicología', 'J. Navarro', 'MARTES', '16:00:00', '18:00:00', 'SALON 106B'),
         
@@ -351,15 +351,15 @@ def create_horarios_sede_principal(stdout, style):
         ('VIII FISIOTERAPIA GA', 'Electiva de Profundización II', 'Luisa Galeano', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 106B'),
         
         # JUEVES
-        ('III DERECHO GC', 'Electiva Complementaria III', 'Claudia Vizcaíno', 'JUEVES', '06:00:00', '08:00:00', 'SALON 106B'),
-        ('III DERECHO GC', 'Teoría del Delito', 'Carlos Jiménez', 'JUEVES', '09:00:00', '12:00:00', 'SALON 106B'),
+        ('III DERECHO C', 'Electiva Complementaria III', 'Claudia Vizcaíno', 'JUEVES', '06:00:00', '08:00:00', 'SALON 106B'),
+        ('III DERECHO C', 'Teoría del Delito', 'Carlos Jiménez', 'JUEVES', '09:00:00', '12:00:00', 'SALON 106B'),
         ('II MEDICINA GA', 'Bioquímica', 'Alejandra Zambrano', 'JUEVES', '12:00:00', '14:00:00', 'SALON 106B'),
         ('IV BACTERIOLOGÍA GA', 'Metodología de la Investigación', 'Claudia Tapia', 'JUEVES', '14:00:00', '16:00:00', 'SALON 106B'),
         ('IV MICROBIOLOGÍA GA', 'Metodología de la Investigación', 'Claudia Tapia', 'JUEVES', '14:00:00', '16:00:00', 'SALON 106B'),
         
         # VIERNES
-        ('V DERECHO GB', 'Electiva V', 'Rafael Rodríguez', 'VIERNES', '06:00:00', '08:00:00', 'SALON 106B'),
-        ('V DERECHO GB', 'Derecho Internacional Privado', 'Juan Carlos De Los Ríos', 'VIERNES', '09:00:00', '12:00:00', 'SALON 106B'),
+        ('V DERECHO B', 'Electiva V', 'Rafael Rodríguez', 'VIERNES', '06:00:00', '08:00:00', 'SALON 106B'),
+        ('V DERECHO B', 'Derecho Internacional Privado', 'Juan Carlos De Los Ríos', 'VIERNES', '09:00:00', '12:00:00', 'SALON 106B'),
         ('IV MEDICINA GA', 'Epidemiología Básica', 'Eduardo Navarro', 'VIERNES', '14:00:00', '16:00:00', 'SALON 106B'),
         ('IV MEDICINA GB', 'Epidemiología Básica', 'Eduardo Navarro', 'VIERNES', '16:00:00', '18:00:00', 'SALON 106B'),
         
@@ -379,8 +379,8 @@ def create_horarios_sede_principal(stdout, style):
         ('VII BACTERIOLOGÍA GA', 'Proyecto de Investigación', 'Liliana Carranza', 'MARTES', '17:00:00', '19:00:00', 'SALON 107B'),
         
         # MIÉRCOLES
-        ('VII DERECHO GB', 'Filosofía del Derecho', 'Cristóbal Arteta', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 107B'),
-        ('VII DERECHO GB', 'Criminología y Política Criminal', 'Gonzalo Aguilar', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 107B'),
+        ('VII DERECHO B', 'Filosofía del Derecho', 'Cristóbal Arteta', 'MIÉRCOLES', '08:00:00', '10:00:00', 'SALON 107B'),
+        ('VII DERECHO B', 'Criminología y Política Criminal', 'Gonzalo Aguilar', 'MIÉRCOLES', '10:00:00', '13:00:00', 'SALON 107B'),
         ('VI FISIOTERAPIA GA', 'Electiva Complementaria III', 'Nora Álvarez', 'MIÉRCOLES', '14:00:00', '16:00:00', 'SALON 107B'),
         
         # JUEVES
@@ -464,7 +464,7 @@ def create_horarios_sede_principal(stdout, style):
         
         # MARTES
         ('VI INSTRUMENTACIÓN GA', 'Proyecto de Investigación', 'Emilee Vásquez', 'MARTES', '07:00:00', '10:00:00', 'SALON 203B'),
-        ('II DERECHO GA', 'Economía Colombiana', 'Guillermo De La Hoz', 'MARTES', '10:00:00', '13:00:00', 'SALON 203B'),
+        ('II DERECHO A', 'Economía Colombiana', 'Guillermo De La Hoz', 'MARTES', '10:00:00', '13:00:00', 'SALON 203B'),
         ('V MICROBIOLOGÍA GA', 'Toxicología', 'Claudia Tapia', 'MARTES', '13:00:00', '15:00:00', 'SALON 203B'),
         ('I MICROBIOLOGÍA GA', 'Biofísica', 'Matias Puello', 'MARTES', '15:00:00', '17:00:00', 'SALON 203B'),
         ('I BACTERIOLOGÍA GA', 'Biofísica', 'Matias Puello', 'MARTES', '15:00:00', '17:00:00', 'SALON 203B'),
@@ -481,7 +481,7 @@ def create_horarios_sede_principal(stdout, style):
         ('II MICROBIOLOGÍA GA', 'Ética y Bioética', 'José Luis Villarreal', 'JUEVES', '13:00:00', '15:00:00', 'SALON 203B'),
         
         # VIERNES
-        ('I DERECHO GF', 'Derecho Romano', 'Luis Carlos Rueda', 'VIERNES', '07:00:00', '10:00:00', 'SALON 203B'),
+        ('I DERECHO F', 'Derecho Romano', 'Luis Carlos Rueda', 'VIERNES', '07:00:00', '10:00:00', 'SALON 203B'),
         ('IV BACTERIOLOGÍA GA', 'Microbiología General', 'José Luis Villarreal', 'VIERNES', '10:00:00', '12:00:00', 'SALON 203B'),
         ('III MEDICINA GA', 'Electiva Complementaria II', 'Gustavo De La Hoz', 'VIERNES', '13:00:00', '15:00:00', 'SALON 203B'),
         ('VII MICROBIOLOGÍA GA', 'Procesos Industriales', 'Javier Duran', 'VIERNES', '15:00:00', '16:00:00', 'SALON 203B'),
@@ -550,9 +550,9 @@ def create_horarios_sede_principal(stdout, style):
         ('VIII FISIOTERAPIA GA', 'Electiva de Profundización I', 'Karol Cervantes', 'MIÉRCOLES', '16:00:00', '18:00:00', 'SALON 205B'),
         
         # JUEVES
-        ('III DERECHO GA', 'Investigación I', 'Alejandro Blanco', 'JUEVES', '06:00:00', '08:00:00', 'SALON 205B'),
-        ('I DERECHO GD', 'ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA', 'Yadira García', 'JUEVES', '08:00:00', '10:00:00', 'SALON 205B'),
-        ('I DERECHO GD', 'Teoría del Estado', 'Linda Nader', 'JUEVES', '10:00:00', '12:00:00', 'SALON 205B'),
+        ('III DERECHO A', 'Investigación I', 'Alejandro Blanco', 'JUEVES', '06:00:00', '08:00:00', 'SALON 205B'),
+        ('I DERECHO D', 'ELECTIVA I COMPETENCIA Y CULTURA CIUDADANA', 'Yadira García', 'JUEVES', '08:00:00', '10:00:00', 'SALON 205B'),
+        ('I DERECHO D', 'Teoría del Estado', 'Linda Nader', 'JUEVES', '10:00:00', '12:00:00', 'SALON 205B'),
         ('VI MICROBIOLOGÍA GA', 'Microbiología', 'Wendy Rosales', 'JUEVES', '12:00:00', '14:00:00', 'SALON 205B'),
         ('VIII MICROBIOLOGÍA GA', 'Microbiología Predictiva', 'Juan David Sanchez', 'JUEVES', '15:00:00', '17:00:00', 'SALON 205B'),
         
@@ -587,7 +587,7 @@ def create_horarios_sede_principal(stdout, style):
         
         # JUEVES
         ('II INSTRUMENTACIÓN GA', 'Microbiología', 'Jaime Lorduy', 'JUEVES', '09:00:00', '11:00:00', 'SALON 206B'),
-        ('V DERECHO GD', 'Hermenéutica Jurídica', 'Patricia Morris', 'JUEVES', '14:00:00', '16:00:00', 'SALON 206B'),
+        ('V DERECHO D', 'Hermenéutica Jurídica', 'Patricia Morris', 'JUEVES', '14:00:00', '16:00:00', 'SALON 206B'),
         ('IV BACTERIOLOGÍA GA', 'Química Clínica', 'Lady Goenaga', 'JUEVES', '16:00:00', '18:00:00', 'SALON 206B'),
         
         # VIERNES
@@ -635,8 +635,8 @@ def create_horarios_sede_principal(stdout, style):
         ('IV FISIOTERAPIA GA', 'Farmacología en Fisioterapia', 'Luisa Galeano', 'LUNES', '14:00:00', '16:00:00', 'SALON 302B'),
         
         # MARTES
-        ('I DERECHO GD', 'Teoría del Estado', 'Linda Nader', 'MARTES', '08:00:00', '10:00:00', 'SALON 302B'),
-        ('I DERECHO GD', 'Historia de la Filosofía', 'Cristobal Arteta', 'MARTES', '10:00:00', '13:00:00', 'SALON 302B'),
+        ('I DERECHO D', 'Teoría del Estado', 'Linda Nader', 'MARTES', '08:00:00', '10:00:00', 'SALON 302B'),
+        ('I DERECHO D', 'Historia de la Filosofía', 'Cristobal Arteta', 'MARTES', '10:00:00', '13:00:00', 'SALON 302B'),
         ('VI INSTRUMENTACIÓN GA', 'Control de Infecciones y Promoción de la Salud', 'Bryan Domínguez', 'MARTES', '14:00:00', '17:00:00', 'SALON 302B'),
         
         # MIÉRCOLES
@@ -649,7 +649,7 @@ def create_horarios_sede_principal(stdout, style):
         ('V FISIOTERAPIA GA', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'JUEVES', '09:00:00', '11:00:00', 'SALON 302B'),
         ('I FISIOTERAPIA GA', 'Introducción a la Fisioterapia', 'Yadira Barrios', 'JUEVES', '11:00:00', '13:00:00', 'SALON 302B'),
         ('I FISIOTERAPIA GA', 'Biofísica', 'Matias Puello', 'JUEVES', '13:00:00', '15:00:00', 'SALON 302B'),
-        ('V DERECHO GD', 'Hermenéutica Jurídica', 'Patricia Morris', 'JUEVES', '15:00:00', '18:00:00', 'SALON 302B'),
+        ('V DERECHO D', 'Hermenéutica Jurídica', 'Patricia Morris', 'JUEVES', '15:00:00', '18:00:00', 'SALON 302B'),
         
         # VIERNES
         ('IV INSTRUMENTACIÓN GA', 'Procesos Quirúrgicos en Urología', 'Tatiana Gómez', 'VIERNES', '09:00:00', '11:00:00', 'SALON 302B'),
@@ -711,7 +711,7 @@ def create_horarios_sede_principal(stdout, style):
         ('V BACTERIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 304B'),
         
         # JUEVES
-        ('VII DERECHO GA', 'Títulos Valores', 'Sandra Villa', 'JUEVES', '06:00:00', '08:00:00', 'SALON 304B'),
+        ('VII DERECHO A', 'Títulos Valores', 'Sandra Villa', 'JUEVES', '06:00:00', '08:00:00', 'SALON 304B'),
         ('II FISIOTERAPIA GA', 'Fisiología del Ejercicio', 'Raúl Polo', 'JUEVES', '09:00:00', '11:00:00', 'SALON 304B'),
         ('V FISIOTERAPIA GA', 'Intervención en Fisioterapia III', 'Jennifer Barrios', 'JUEVES', '14:00:00', '16:00:00', 'SALON 304B'),
         
@@ -731,16 +731,16 @@ def create_horarios_sede_principal(stdout, style):
         ('I MEDICINA GA', 'Biología', 'Yosed Anaya', 'LUNES', '16:00:00', '17:00:00', 'SALON 308B'),
 
         # MARTES
-        ('VII DERECHO GA', 'Títulos Valores', 'Sandra Villa', 'MARTES', '06:00:00', '08:00:00', 'SALON 308B'),
-        ('II DERECHO GA', 'Electiva II', 'Sandra Villa', 'MARTES', '08:00:00', '10:00:00', 'SALON 308B'),
+        ('VII DERECHO A', 'Títulos Valores', 'Sandra Villa', 'MARTES', '06:00:00', '08:00:00', 'SALON 308B'),
+        ('II DERECHO A', 'Electiva II', 'Sandra Villa', 'MARTES', '08:00:00', '10:00:00', 'SALON 308B'),
         ('II MEDICINA GB', 'Morfología I', 'Gilberto Barrios', 'MARTES', '11:00:00', '13:00:00', 'SALON 308B'),
         ('IV MEDICINA GA', 'Salud Familiar II', '', 'MARTES', '13:00:00', '15:00:00', 'SALON 308B'),
         ('IV MEDICINA GB', 'Electiva III', 'José Jinete', 'MARTES', '15:00:00', '17:00:00', 'SALON 308B'),
 
         # MIÉRCOLES
-        ('III DERECHO GA', 'Electiva III', 'Claudia Vizcaíno', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 308B'),
-        ('III DERECHO GB', 'Electiva III', 'Claudia Vizcaíno', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 308B'),
-        ('II DERECHO GA', 'Teoría de la Constitución', 'Gretty Pavlovich', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 308B'),
+        ('III DERECHO A', 'Electiva III', 'Claudia Vizcaíno', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 308B'),
+        ('III DERECHO B', 'Electiva III', 'Claudia Vizcaíno', 'MIÉRCOLES', '06:00:00', '08:00:00', 'SALON 308B'),
+        ('II DERECHO A', 'Teoría de la Constitución', 'Gretty Pavlovich', 'MIÉRCOLES', '10:00:00', '12:00:00', 'SALON 308B'),
         ('I MEDICINA GB', 'Química', 'Alejandra Zambrano', 'MIÉRCOLES', '12:00:00', '13:00:00', 'SALON 308B'),
         ('IV MEDICINA GA', 'Electiva Complementaria I', 'Luz Marina Silvera', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 308B'),
         ('V MEDICINA GA', 'Virología Clínica', 'J. Villarreal', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 308B'),
@@ -783,7 +783,7 @@ def create_horarios_sede_principal(stdout, style):
         ('VI MEDICINA GB', 'Genética Clínica', 'Zuleima Yañez', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 307B'),
 
         # JUEVES
-        ('V DERECHO GC', 'Investigación III', 'Claudia Vizcaíno', 'JUEVES', '08:00:00', '10:00:00', 'SALON 307B'),
+        ('V DERECHO C', 'Investigación III', 'Claudia Vizcaíno', 'JUEVES', '08:00:00', '10:00:00', 'SALON 307B'),
         ('I MEDICINA GB', 'Química', 'Alejandra Zambrano', 'JUEVES', '10:00:00', '14:00:00', 'SALON 307B'),
         ('VI MEDICINA GA', 'Bioética', 'Anderson Díaz', 'JUEVES', '14:00:00', '16:00:00', 'SALON 307B'),
         ('VI MEDICINA GB', 'Bioética', 'Anderson Díaz', 'JUEVES', '16:00:00', '18:00:00', 'SALON 307B'),
@@ -835,7 +835,7 @@ def create_horarios_sede_principal(stdout, style):
         ('VII INSTRUMENTACIÓN GA', 'Control de Infecciones y Promoción de la Salud', 'Angélica Corcho', 'MIÉRCOLES', '15:00:00', '16:00:00', 'SALON 306B'),
 
         # JUEVES
-        ('II DERECHO GA', 'Teoría de la Constitución', 'Gretty Pavlovich', 'JUEVES', '11:00:00', '13:00:00', 'SALON 306B'),
+        ('II DERECHO A', 'Teoría de la Constitución', 'Gretty Pavlovich', 'JUEVES', '11:00:00', '13:00:00', 'SALON 306B'),
         ('IV MEDICINA GA', 'Epidemiología Básica', 'Eduardo Navarro', 'JUEVES', '14:00:00', '16:00:00', 'SALON 306B'),
         ('IV MEDICINA GB', 'Epidemiología Básica', 'Eduardo Navarro', 'JUEVES', '14:00:00', '16:00:00', 'SALON 306B'),
         ('IV MEDICINA GA', 'Inmunología', 'Franklin Torres', 'JUEVES', '16:00:00', '18:00:00', 'SALON 306B'),

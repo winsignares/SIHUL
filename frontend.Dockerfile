@@ -12,8 +12,8 @@ ENV NODE_ENV=development \
 # Directorio de trabajo
 WORKDIR /app
 
-# Instalar git (útil para algunas dependencias npm)
-RUN apk add --no-cache git
+# Instalar git y tzdata (para zona horaria)
+RUN apk add --no-cache git tzdata
 
 # Copiar archivos de dependencias
 COPY frontend/package*.json ./
