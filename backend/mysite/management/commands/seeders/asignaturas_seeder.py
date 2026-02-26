@@ -319,6 +319,8 @@ def _get_all_asignaturas():
         ('Optativa de Énfasis I', 'CEA-OEF1', 2, 'teórica', 96),
         ('Optativa de Énfasis III', 'CEA-OEF3', 2, 'teórica', 96),
         ('Optativa III. DESARROLLO DEL FACTOR HUMANO', 'CEA-OPT3A', 2, 'teórica', 96),
+        ('Optativa C: Fitopatología y Control Biológico', 'CSA-OPTC', 2, 'teórica', 96),
+        ('Optativa B: Bioprospección', 'CSA-OPTB', 2, 'teórica', 96),
         ('POSGRADOS', 'POSGRADOS', 2, 'teórica', 96),
         ('Parasitología Clínica', 'CSA-PACL', 3, 'teórica', 144),
         ('Patología', 'CSA-PATO', 3, 'teórica', 144),
