@@ -3,14 +3,29 @@ import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
-import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/dialog';
+import { Label } from '../../share/label';
+import { Textarea } from '../../share/textarea';
+import { Alert, AlertDescription } from '../../share/alert';
+import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet, Plus, Trash2, AlertCircle, ArrowLeft, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useAuth } from '../../context/AuthContext';
+import { useState, useEffect } from 'react';
+import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
+import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
+import { sedeService } from '../../services/sedes/sedeAPI';
+import { prestamosPublicAPI, type EspacioDisponibleAPI } from '../../services/prestamos/prestamosPublicAPI';
+import { prestamoService, type RecursoPrestamo } from '../../services/prestamos/prestamoAPI';
+import { toast } from 'sonner';
+import type { Sede } from '../../services/sedes/sedeAPI';
 
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  
   const {
     searchTerm,
     setSearchTerm,
@@ -31,8 +46,101 @@ export default function ConsultaEspacios() {
     horarios,
     calcularProximaClaseYEstado,
     exportarCronogramaPDF,
-    exportarCronogramaExcel
+    exportarCronogramaExcel,
+    getOcupacionPorHora,
+    // Drag-to-select
+    isDragging,
+    seleccionRango,
+    iniciarSeleccion,
+    actualizarSeleccion,
+    finalizarSeleccion,
+    esSupervisor,
+    // Modal solicitud
+    dialogSolicitudOpen,
+    setDialogSolicitudOpen,
+    nuevaSolicitudData,
+    setNuevaSolicitudData,
+    // Vista individual
+    espacioSeleccionado,
+    verCronogramaIndividual,
+    volverALista,
+    // Filtros
+    limpiarFiltros
   } = useConsultaEspacios();
+
+  // Estados para el formulario de solicitud
+  const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
+  const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
+  const [sedesList, setSedesList] = useState<Sede[]>([]);
+  const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioDisponibleAPI[]>([]);
+  const [recursosSeleccionados, setRecursosSeleccionados] = useState<RecursoPrestamo[]>([]);
+  const [formData, setFormData] = useState({
+    sede_id: 0,
+    espacio_id: 0,
+    tipo_actividad_id: 0,
+    asistentes: '',
+    motivo: '',
+    telefono: ''
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Cargar datos para el formulario
+  useEffect(() => {
+    const loadFormData = async () => {
+      try {
+        const [tiposResp, recursosResp, sedesResp] = await Promise.all([
+          tipoActividadService.listarTiposActividad(),
+          recursoService.listarRecursos(),
+          sedeService.listarSedes()
+        ]);
+        setTiposActividad(tiposResp.tipos_actividad);
+        setRecursosDisponibles(recursosResp.recursos);
+        setSedesList(sedesResp.sedes);
+      } catch (err) {
+        console.error('Error cargando datos del formulario:', err);
+      }
+    };
+    loadFormData();
+  }, []);
+
+  // Cargar espacios disponibles cuando cambian sede/fecha/hora
+  useEffect(() => {
+    const loadEspaciosDisponibles = async () => {
+      if (!nuevaSolicitudData?.fecha || !nuevaSolicitudData?.horaInicio || !nuevaSolicitudData?.horaFin) {
+        return;
+      }
+      
+      try {
+        // Buscar el sede_id del espacio seleccionado
+        const espacio = filteredEspacios.find(e => e.id === nuevaSolicitudData.espacio_id.toString());
+        if (!espacio) return;
+        
+        const sede = sedesList.find(s => s.nombre === espacio.sede);
+        if (!sede) return;
+
+        const response = await prestamosPublicAPI.listarEspaciosDisponibles(
+          nuevaSolicitudData.fecha,
+          `${nuevaSolicitudData.horaInicio}:00`,
+          `${nuevaSolicitudData.horaFin}:00`,
+          sede.id
+        );
+        setEspaciosDisponibles(response.espacios || []);
+        setFormData(prev => ({ ...prev, sede_id: sede.id }));
+      } catch (err) {
+        console.error('Error cargando espacios disponibles:', err);
+      }
+    };
+    
+    if (dialogSolicitudOpen) {
+      loadEspaciosDisponibles();
+    }
+  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList]);
+
+  // Determinar qué espacios mostrar
+  const espaciosToShow = espacioSeleccionado 
+    ? filteredEspacios.filter(e => e.id === espacioSeleccionado.id)
+    : filteredEspacios;
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -57,13 +165,117 @@ export default function ConsultaEspacios() {
     return row;
   };
 
+  // Funciones del formulario
+  const agregarRecurso = (recurso_id: number) => {
+    const recursoExistente = recursosSeleccionados.find(r => r.recurso_id === recurso_id);
+    if (recursoExistente) return;
+    
+    const recurso = recursosDisponibles.find(r => r.id === recurso_id);
+    setRecursosSeleccionados(prev => [...prev, {
+      recurso_id,
+      recurso_nombre: recurso?.nombre,
+      cantidad: 1
+    }]);
+  };
+
+  const eliminarRecurso = (recurso_id: number) => {
+    setRecursosSeleccionados(prev => prev.filter(r => r.recurso_id !== recurso_id));
+  };
+
+  const handleSubmitSolicitud = async () => {
+    if (!nuevaSolicitudData || !user?.id) return;
+
+    // Validaciones
+    if (!formData.espacio_id || !formData.tipo_actividad_id || !formData.motivo) {
+      setFormError('Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    const asistentesNum = parseInt(formData.asistentes) || 0;
+    if (asistentesNum > 0) {
+      const espacioSeleccionado = espaciosDisponibles.find(e => e.id === formData.espacio_id);
+      if (espacioSeleccionado && asistentesNum > espacioSeleccionado.capacidad) {
+        setFormError(`El número de asistentes (${asistentesNum}) excede la capacidad del espacio (${espacioSeleccionado.capacidad})`);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+
+    try {
+      await prestamoService.crearPrestamo({
+        espacio_id: formData.espacio_id,
+        usuario_id: user.id,
+        administrador_id: null,
+        tipo_actividad_id: formData.tipo_actividad_id,
+        fecha: nuevaSolicitudData.fecha,
+        hora_inicio: `${nuevaSolicitudData.horaInicio}:00`,
+        hora_fin: `${nuevaSolicitudData.horaFin}:00`,
+        motivo: formData.motivo,
+        asistentes: asistentesNum,
+        telefono: formData.telefono,
+        estado: 'Pendiente',
+        recursos: recursosSeleccionados.map(r => ({
+          recurso_id: r.recurso_id,
+          cantidad: r.cantidad
+        }))
+      });
+
+      toast.success('Solicitud enviada exitosamente');
+      setDialogSolicitudOpen(false);
+      setNuevaSolicitudData(null);
+      setFormData({
+        sede_id: 0,
+        espacio_id: 0,
+        tipo_actividad_id: 0,
+        asistentes: '',
+        motivo: '',
+        telefono: ''
+      });
+      setRecursosSeleccionados([]);
+    } catch (err: any) {
+      setFormError(err.message || 'Error al crear la solicitud');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const estaEnRangoSeleccion = (espacioId: string, dia: string, hora: number) => {
+    if (!seleccionRango) return false;
+    return seleccionRango.espacioId === espacioId &&
+           seleccionRango.dia === dia &&
+           hora >= seleccionRango.horaInicio &&
+           hora < seleccionRango.horaFin;
+  };
+
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
-      <div>
-        <h1 className={`text-slate-900 dark:text-slate-100 mb-2 ${isMobile ? 'text-xl' : ''}`}>Disponibilidad de Espacios</h1>
-        <p className={`text-slate-600 dark:text-slate-400 ${isMobile ? 'text-sm' : ''}`}>Consulta la disponibilidad de aulas, laboratorios y espacios</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className={`text-slate-900 dark:text-slate-100 mb-2 ${isMobile ? 'text-xl' : ''}`}>
+            {espacioSeleccionado ? `Cronograma: ${espacioSeleccionado.nombre}` : 'Disponibilidad de Espacios'}
+          </h1>
+          <p className={`text-slate-600 dark:text-slate-400 ${isMobile ? 'text-sm' : ''}`}>
+            {espacioSeleccionado 
+              ? 'Vista individual del espacio seleccionado'
+              : 'Consulta la disponibilidad de aulas, laboratorios y espacios'}
+          </p>
+        </div>
+        {espacioSeleccionado && (
+          <Button
+            variant="outline"
+            onClick={volverALista}
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver a la lista
+          </Button>
+        )}
       </div>
 
+      {/* Estadísticas */}
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
@@ -117,6 +329,7 @@ export default function ConsultaEspacios() {
         </Card>
       </div>
 
+      {/* Botones de vista */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex gap-2 w-full sm:w-auto">
           <Button
@@ -162,6 +375,7 @@ export default function ConsultaEspacios() {
         )}
       </div>
 
+      {/* Filtros */}
       <div className="space-y-4">
         <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap'} gap-4`}>
           <div className={`${isMobile ? 'w-full' : 'flex-1 min-w-[200px]'} relative`}>
@@ -195,66 +409,90 @@ export default function ConsultaEspacios() {
               <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filterSede} onValueChange={setFilterSede}>
-            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
-              <SelectValue placeholder="Sede" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas las sedes</SelectItem>
-              {sedes.map(sede => (
-                <SelectItem key={sede} value={sede}>{sede}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
+            <Select value={filterSede} onValueChange={setFilterSede}>
+              <SelectTrigger className={`${isMobile ? 'flex-1' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+                <SelectValue placeholder="Sede" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las sedes</SelectItem>
+                {sedes.map(sede => (
+                  <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              onClick={limpiarFiltros}
+              className="border-slate-300 text-slate-600 hover:bg-slate-100"
+              title="Limpiar filtros"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {vistaActual === 'tarjetas' ? (
+      {/* Vista Tarjetas */}
+      {vistaActual === 'tarjetas' && !espacioSeleccionado && (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
           {filteredEspacios.map(espacio => {
             const { proximaClase, estado } = calcularProximaClaseYEstado(espacio.id);
             return (
-            <motion.div
-              key={espacio.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow bg-white dark:bg-slate-800">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-slate-900 dark:text-slate-100 mb-2">{espacio.nombre}</CardTitle>
-                      <Badge variant="outline" className="border-blue-600 text-blue-600">
-                        {espacio.tipo}
-                      </Badge>
+              <motion.div
+                key={espacio.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card 
+                  className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow bg-white dark:bg-slate-800 cursor-pointer"
+                  onClick={() => verCronogramaIndividual(espacio)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-slate-900 dark:text-slate-100 mb-2">{espacio.nombre}</CardTitle>
+                        <Badge variant="outline" className="border-blue-600 text-blue-600">
+                          {espacio.tipo}
+                        </Badge>
+                      </div>
+                      {getEstadoBadge(estado)}
                     </div>
-                    {getEstadoBadge(estado)}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                    <Users className="w-4 h-4" />
-                    <span>Capacidad: {espacio.capacidad} personas</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                    <MapPin className="w-4 h-4" />
-                    <span>{espacio.sede} - Edificio {espacio.edificio}</span>
-                  </div>
-                  {proximaClase && (
-                    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
-                      <p className="text-slate-600 dark:text-slate-400">Próxima clase:</p>
-                      <p className="text-blue-700 dark:text-blue-300">{proximaClase}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <Users className="w-4 h-4" />
+                      <span>Capacidad: {espacio.capacidad} personas</span>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <MapPin className="w-4 h-4" />
+                      <span>{espacio.sede} - Edificio {espacio.edificio}</span>
+                    </div>
+                    {proximaClase && (
+                      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
+                        <p className="text-slate-600 dark:text-slate-400">Próxima clase:</p>
+                        <p className="text-blue-700 dark:text-blue-300">{proximaClase}</p>
+                      </div>
+                    )}
+                    <div className="pt-2">
+                      <Button variant="outline" className="w-full text-sm border-blue-600 text-blue-600 hover:bg-blue-50">
+                        <CalendarDays className="w-4 h-4 mr-2" />
+                        Ver Cronograma
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
         </div>
-      ) : (
+      )}
+
+      {/* Vista Cronograma */}
+      {vistaActual === 'cronograma' && (
         <div className="space-y-6">
+          {/* Leyenda */}
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-6">
@@ -270,11 +508,26 @@ export default function ConsultaEspacios() {
                   <div className="w-6 h-6 bg-yellow-600 rounded"></div>
                   <span className="text-sm text-slate-700 dark:text-slate-300">Mantenimiento</span>
                 </div>
+                {esSupervisor && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-purple-500 rounded border-2 border-purple-700"></div>
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Seleccionar (drag para solicitud)</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {filteredEspacios.map((espacio) => (
+          {/* Indicador de selección activa */}
+          {isDragging && esSupervisor && (
+            <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-3 text-center">
+              <p className="text-purple-700 dark:text-purple-300 text-sm font-medium">
+                Suelta el mouse para crear una nueva solicitud de préstamo
+              </p>
+            </div>
+          )}
+
+          {espaciosToShow.map((espacio) => (
             <motion.div
               key={espacio.id}
               initial={{ opacity: 0, y: 20 }}
@@ -301,7 +554,12 @@ export default function ConsultaEspacios() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div 
+                    className="overflow-x-auto"
+                    onMouseLeave={() => {
+                      if (isDragging) finalizarSeleccion();
+                    }}
+                  >
                     <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
                       {diasSemana.map((dia) => (
@@ -323,19 +581,49 @@ export default function ConsultaEspacios() {
                         </div>
                       ))}
 
+                      {/* Celdas vacías / disponibles - con interacción de selección */}
                       {horas.flatMap((hora, horaIdx) =>
-                        diasSemana.map((dia, diaIdx) => (
-                          <div
-                            key={`empty-${dia}-${hora}`}
-                            className="border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded"
-                            style={{
-                              gridColumn: diaIdx + 2,
-                              gridRow: horaIdx + 2
-                            }}
-                          />
-                        ))
+                        diasSemana.map((dia, diaIdx) => {
+                          const ocupado = getOcupacionPorHora(espacio.id, dia, hora);
+                          const estaSeleccionada = estaEnRangoSeleccion(espacio.id, dia, hora);
+                          
+                          return (
+                            <div
+                              key={`cell-${espacio.id}-${dia}-${hora}`}
+                              className={`border rounded transition-all ${
+                                ocupado 
+                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50' 
+                                  : esSupervisor
+                                    ? estaSeleccionada
+                                      ? 'bg-purple-500 border-purple-700 cursor-grabbing'
+                                      : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
+                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                              }`}
+                              style={{
+                                gridColumn: diaIdx + 2,
+                                gridRow: horaIdx + 2
+                              }}
+                              onMouseDown={() => {
+                                if (!ocupado && esSupervisor) {
+                                  iniciarSeleccion(espacio.id, dia, hora);
+                                }
+                              }}
+                              onMouseEnter={() => {
+                                if (!ocupado && esSupervisor) {
+                                  actualizarSeleccion(espacio.id, dia, hora);
+                                }
+                              }}
+                              onMouseUp={() => {
+                                if (esSupervisor) {
+                                  finalizarSeleccion();
+                                }
+                              }}
+                            />
+                          );
+                        })
                       )}
 
+                      {/* Horarios ocupados */}
                       {horarios
                         .filter(h => h.espacioId === espacio.id)
                         .map((ocupacion, idx) => {
@@ -390,6 +678,219 @@ export default function ConsultaEspacios() {
           ))}
         </div>
       )}
+
+      {/* Modal de Nueva Solicitud */}
+      <Dialog open={dialogSolicitudOpen} onOpenChange={setDialogSolicitudOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nueva Solicitud de Préstamo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {formError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Información del horario seleccionado */}
+            {nuevaSolicitudData && (
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  Horario Seleccionado
+                </h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-slate-600 dark:text-slate-400">Espacio:</span>
+                    <p className="font-medium">{nuevaSolicitudData.espacio_nombre}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 dark:text-slate-400">Día:</span>
+                    <p className="font-medium">{nuevaSolicitudData.diaSemana}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 dark:text-slate-400">Fecha:</span>
+                    <p className="font-medium">{nuevaSolicitudData.fecha}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-600 dark:text-slate-400">Horario:</span>
+                    <p className="font-medium">{nuevaSolicitudData.horaInicio} - {nuevaSolicitudData.horaFin}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Información Personal */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 border-b pb-2">
+                Información del Solicitante
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre del Solicitante</Label>
+                  <Input value={user?.nombre || ''} disabled className="bg-slate-50 dark:bg-slate-800" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input value={user?.correo || ''} disabled className="bg-slate-50 dark:bg-slate-800" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefono">Teléfono de Contacto</Label>
+                <Input
+                  id="telefono"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                  placeholder="+57 300 123 4567"
+                />
+              </div>
+            </div>
+
+            {/* Selección de Espacio */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 border-b pb-2">
+                Selección de Espacio
+              </h3>
+              {espaciosDisponibles.length > 0 ? (
+                <div className="space-y-2">
+                  <Label>Espacio Disponible *</Label>
+                  <Select
+                    value={formData.espacio_id > 0 ? formData.espacio_id.toString() : ''}
+                    onValueChange={(v) => setFormData({ ...formData, espacio_id: parseInt(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar espacio disponible" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {espaciosDisponibles.map(espacio => (
+                        <SelectItem key={espacio.id} value={espacio.id.toString()}>
+                          {espacio.nombre} - {espacio.tipo} (Capacidad: {espacio.capacidad})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                    {espaciosDisponibles.length} espacio(s) disponible(s) para este horario
+                  </p>
+                </div>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No hay espacios disponibles para la fecha y horario seleccionados.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            {/* Detalles de la Actividad */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 border-b pb-2">
+                Detalles de la Actividad
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Actividad *</Label>
+                  <Select
+                    value={formData.tipo_actividad_id > 0 ? formData.tipo_actividad_id.toString() : ''}
+                    onValueChange={(v) => setFormData({ ...formData, tipo_actividad_id: parseInt(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposActividad.map(tipo => (
+                        <SelectItem key={tipo.id} value={tipo.id.toString()}>{tipo.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Número de Asistentes</Label>
+                  <Input
+                    type="number"
+                    value={formData.asistentes}
+                    onChange={(e) => setFormData({ ...formData, asistentes: e.target.value })}
+                    placeholder="Ej: 30"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Motivo del Préstamo *</Label>
+                <Textarea
+                  value={formData.motivo}
+                  onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
+                  placeholder="Describa el motivo de la solicitud (clase adicional, tutoría, evento, etc.)"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Recursos Adicionales */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 border-b pb-2">
+                Recursos Adicionales (Opcional)
+              </h3>
+              <div className="space-y-4 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Agregar recursos necesarios</Label>
+                  <Select onValueChange={(v) => agregarRecurso(parseInt(v))}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Agregar recurso..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recursosDisponibles.map((recurso) => (
+                        <SelectItem key={recurso.id} value={recurso.id!.toString()}>
+                          {recurso.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {recursosSeleccionados.length > 0 ? (
+                  <div className="space-y-2">
+                    {recursosSeleccionados.map((item) => (
+                      <div key={item.recurso_id} className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-md border border-slate-200 dark:border-slate-700">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {item.recurso_nombre}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => eliminarRecurso(item.recurso_id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-3 text-slate-500 dark:text-slate-400 text-sm italic">
+                    No has seleccionado ningún recurso
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setDialogSolicitudOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSubmitSolicitud} 
+                disabled={submitting}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+              >
+                {submitting ? 'Enviando...' : 'Enviar Solicitud'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { espacioPermitidoService, espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getEspaciosFromCache, setEspaciosInCache, getCacheKey } from '../../services/cache/cacheService';
@@ -28,6 +28,22 @@ export interface OcupacionView {
     estado: string;
 }
 
+export interface SeleccionRango {
+    espacioId: string;
+    dia: string;
+    horaInicio: number;
+    horaFin: number;
+}
+
+export interface NuevaSolicitudData {
+    espacio_id: number;
+    espacio_nombre: string;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    diaSemana: string;
+}
+
 export function useConsultaEspacios() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState('todos');
@@ -39,8 +55,21 @@ export function useConsultaEspacios() {
     const [horarios, setHorarios] = useState<OcupacionView[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Estados para selección drag-to-select (solo para supervisor)
+    const [isDragging, setIsDragging] = useState(false);
+    const [seleccionInicio, setSeleccionInicio] = useState<{espacioId: string, dia: string, hora: number} | null>(null);
+    const [seleccionRango, setSeleccionRango] = useState<SeleccionRango | null>(null);
+    const [dialogSolicitudOpen, setDialogSolicitudOpen] = useState(false);
+    const [nuevaSolicitudData, setNuevaSolicitudData] = useState<NuevaSolicitudData | null>(null);
+
+    // Estado para espacio seleccionado en vista individual
+    const [espacioSeleccionado, setEspacioSeleccionado] = useState<EspacioView | null>(null);
+
     // Obtener usuario del contexto de autenticación
     const { user } = useAuth();
+
+    // Verificar si es supervisor
+    const esSupervisor = user?.rol?.nombre === 'supervisor_general';
 
     // Función para normalizar días
     const normalizarDia = (dia: string): string => {
@@ -435,7 +464,7 @@ export function useConsultaEspacios() {
                         
                         let cellText = materia;
                         if (docente) cellText += ` / ${docente}`;
-                        if (grupo) cellText += `\\n${grupo}`;
+                        if (grupo) cellText += `\n${grupo}`;
                         
                         row.push(cellText);
                     } else {
@@ -475,6 +504,90 @@ export function useConsultaEspacios() {
         XLSX.writeFile(wb, nombreArchivo);
     };
 
+    // Funciones para drag-to-select (solo supervisor)
+    const iniciarSeleccion = useCallback((espacioId: string, dia: string, hora: number) => {
+        if (!esSupervisor) return;
+        
+        const ocupado = getOcupacionPorHora(espacioId, dia, hora);
+        if (ocupado) return; // No permitir seleccionar horarios ocupados
+
+        setIsDragging(true);
+        setSeleccionInicio({ espacioId, dia, hora });
+        setSeleccionRango({ espacioId, dia, horaInicio: hora, horaFin: hora + 1 });
+    }, [esSupervisor]);
+
+    const actualizarSeleccion = useCallback((espacioId: string, dia: string, hora: number) => {
+        if (!isDragging || !seleccionInicio) return;
+        
+        // Solo permitir selección en el mismo espacio y día
+        if (espacioId !== seleccionInicio.espacioId || dia !== seleccionInicio.dia) return;
+
+        const horaInicio = Math.min(seleccionInicio.hora, hora);
+        const horaFin = Math.max(seleccionInicio.hora, hora) + 1;
+
+        setSeleccionRango({ espacioId, dia, horaInicio, horaFin });
+    }, [isDragging, seleccionInicio]);
+
+    const finalizarSeleccion = useCallback(() => {
+        if (!isDragging || !seleccionRango) {
+            setIsDragging(false);
+            setSeleccionInicio(null);
+            setSeleccionRango(null);
+            return;
+        }
+
+        // Preparar datos para la nueva solicitud
+        const espacio = espacios.find(e => e.id === seleccionRango.espacioId);
+        if (espacio) {
+            // Calcular fecha del próximo día seleccionado
+            const diasMap: { [key: string]: number } = {
+                'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6
+            };
+            const hoy = new Date();
+            const diaSemana = diasMap[seleccionRango.dia] || 1;
+            const diasHasta = (diaSemana - hoy.getDay() + 7) % 7;
+            const fecha = new Date(hoy);
+            fecha.setDate(hoy.getDate() + (diasHasta === 0 ? 7 : diasHasta));
+
+            setNuevaSolicitudData({
+                espacio_id: parseInt(espacio.id),
+                espacio_nombre: espacio.nombre,
+                fecha: fecha.toISOString().split('T')[0],
+                horaInicio: `${seleccionRango.horaInicio.toString().padStart(2, '0')}:00`,
+                horaFin: `${seleccionRango.horaFin.toString().padStart(2, '0')}:00`,
+                diaSemana: seleccionRango.dia
+            });
+            setDialogSolicitudOpen(true);
+        }
+
+        setIsDragging(false);
+        setSeleccionInicio(null);
+        setSeleccionRango(null);
+    }, [isDragging, seleccionRango, espacios]);
+
+    const cancelarSeleccion = useCallback(() => {
+        setIsDragging(false);
+        setSeleccionInicio(null);
+        setSeleccionRango(null);
+    }, []);
+
+    const limpiarFiltros = useCallback(() => {
+        setSearchTerm('');
+        setFilterTipo('todos');
+        setFilterEstado('todos');
+        setFilterSede('todas');
+    }, []);
+
+    const verCronogramaIndividual = useCallback((espacio: EspacioView) => {
+        setEspacioSeleccionado(espacio);
+        setVistaActual('cronograma');
+    }, []);
+
+    const volverALista = useCallback(() => {
+        setEspacioSeleccionado(null);
+        setVistaActual('tarjetas');
+    }, []);
+
     return {
         searchTerm,
         setSearchTerm,
@@ -498,6 +611,25 @@ export function useConsultaEspacios() {
         horarios,
         calcularProximaClaseYEstado,
         exportarCronogramaPDF,
-        exportarCronogramaExcel
+        exportarCronogramaExcel,
+        // Drag-to-select (supervisor)
+        isDragging,
+        seleccionRango,
+        iniciarSeleccion,
+        actualizarSeleccion,
+        finalizarSeleccion,
+        cancelarSeleccion,
+        esSupervisor,
+        // Modal solicitud
+        dialogSolicitudOpen,
+        setDialogSolicitudOpen,
+        nuevaSolicitudData,
+        setNuevaSolicitudData,
+        // Vista individual
+        espacioSeleccionado,
+        verCronogramaIndividual,
+        volverALista,
+        // Filtros
+        limpiarFiltros
     };
-} 
+}
