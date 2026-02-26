@@ -1396,6 +1396,12 @@ def _get_all_relaciones():
         
         # Optativa III
         ('Ingeniería Industrial', 'CEA-OPT3', 8, 'optativa'),
+
+        #CSA-OPTC
+        ('Microbiología', 'CSA-OPTC', 8, 'optativa'),
+
+        #CSA-OPTB
+        ('Microbiología', 'CSA-OPTB', 8, 'optativa'),
         
         # Planeación y Control de la Producción y Operaciones
         ('Ingeniería Industrial', 'ING-PCPO', 6, 'profesional'),

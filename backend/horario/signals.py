@@ -4,7 +4,7 @@ Maneja la creación automática de HorarioFusionado cuando múltiples grupos com
 y valida solapamientos/capacidad antes de guardar
 """
 
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from datetime import datetime, timedelta
@@ -238,3 +238,33 @@ def crear_horario_fusionado(sender, instance, created, **kwargs):
             print(f"✅ HorarioFusionado creado automáticamente: ID {fusionado.id} para grupos {grupo1_id}, {grupo2_id}" + (f", {grupo3_id}" if grupo3_id else ""))
         except Exception as e:
             print(f"⚠️ Error al crear HorarioFusionado: {e}")
+
+@receiver(post_delete, sender=Horario)
+def eliminar_horario_fusionado_relacionado(sender, instance, **kwargs):
+    """
+    Signal que se ejecuta después de eliminar un Horario.
+    Busca y elimina HorarioFusionado que coincida con el horario eliminado.
+    Un HorarioFusionado coincide si:
+    - Tiene la misma asignatura, espacio, día y hora
+    - El grupo del horario eliminado es uno de los grupos (grupo1, grupo2 o grupo3) del fusionado
+    """
+    from django.db.models import Q
+    
+    # Buscar HorarioFusionado que coincida con el horario eliminado
+    fusionados_relacionados = HorarioFusionado.objects.filter(
+        asignatura_id=instance.asignatura_id,
+        espacio_id=instance.espacio_id,
+        dia_semana=instance.dia_semana,
+        hora_inicio=instance.hora_inicio,
+        hora_fin=instance.hora_fin
+    ).filter(
+        Q(grupo1_id=instance.grupo_id) | 
+        Q(grupo2_id=instance.grupo_id) | 
+        Q(grupo3_id=instance.grupo_id)
+    )
+    
+    if fusionados_relacionados.exists():
+        count = fusionados_relacionados.count()
+        ids = list(fusionados_relacionados.values_list('id', flat=True))
+        fusionados_relacionados.delete()
+        print(f"🗑️ Eliminados {count} HorarioFusionado relacionados (IDs: {ids}) al eliminar Horario {instance.id} del grupo {instance.grupo.nombre}")

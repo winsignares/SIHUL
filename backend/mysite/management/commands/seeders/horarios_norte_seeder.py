@@ -308,8 +308,8 @@ def create_horarios_sede_principal(stdout, style):
         ('III BACTERIOLOGÍA GA', 'Epidemiología', 'Adalgiza Alcocer', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 105B'),
         ('III MICROBIOLOGÍA GA', 'Epidemiología', 'Adalgiza Alcocer', 'MIÉRCOLES', '07:00:00', '09:00:00', 'SALON 105B'),
         ('II INSTRUMENTACIÓN GA', 'Competencias Comunicativas II', 'Marina Hernandez', 'MIÉRCOLES', '09:00:00', '11:00:00', 'SALON 105B'),
-        ('VIII MICROBIOLOGÍA GA', 'Prácticas Profesionales', 'Claudia Tapia', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 105B'),
-        ('VIII MICROBIOLOGÍA GA', 'Optativa III', 'Mario Peña', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 105B'),
+        ('VIII MICROBIOLOGÍA GA', 'CSA-OPTB', 'Claudia Tapia', 'MIÉRCOLES', '13:00:00', '15:00:00', 'SALON 105B'),
+        ('VIII MICROBIOLOGÍA GA', 'CSA-OPTC', 'Mario Peña', 'MIÉRCOLES', '15:00:00', '17:00:00', 'SALON 105B'),
         ('II BACTERIOLOGÍA GA', 'Constitución Política', 'Ingrid Perez', 'MIÉRCOLES', '17:00:00', '19:00:00', 'SALON 105B'),
         ('II MICROBIOLOGÍA GA', 'Constitución Política', 'Ingrid Perez', 'MIÉRCOLES', '17:00:00', '19:00:00', 'SALON 105B'),
         
