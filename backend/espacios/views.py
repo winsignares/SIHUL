@@ -551,45 +551,34 @@ def get_dia_semana_actual():
 @csrf_exempt
 def proximos_apertura_cierre(request):
     """
-    Endpoint para obtener las aperturas y cierres pendientes de salones
-    para el Supervisor General autenticado.
-    
-    Retorna:
-    - aperturasPendientes: Lista de espacios que están por abrir (15 min antes)
-    - cierresPendientes: Lista de espacios que están por cerrar (5 min antes)
+    Endpoint para obtener espacios con sus horarios/préstamos del día.
+    Agrupa por ESPACIO (no por acción) y retorna información de:
+    - Horarios del día en ese espacio
+    - Estado actual del espacio
+    - Próxima acción requerida (apertura o cierre)
+    - Tiempo restante hasta la próxima acción
     """
     if request.method != 'GET':
         return JsonResponse({"error": "Solo se permite GET"}, status=405)
     
     try:
-        # Obtener usuario autenticado del contexto de auth
-        # El frontend envía el user_id en localStorage como 'user'
+        # Obtener usuario autenticado
         from usuarios.models import Usuario
         
-        # Intentar obtener userId del token/header o del contexto de sesión
         usuario_id = request.session.get('user_id')
-        
-        # Si no está en sesión, intentar del query param (para pruebas/desarrollo)
         if not usuario_id:
-            # Buscar en cookies o headers
-            auth_user = request.COOKIES.get('user_id')
-            if auth_user:
-                usuario_id = auth_user
-        
-        # Si aún no encontramos el user, intentar extraerlo del contexto de React
-        # Para desarrollo, podemos usar query params temporalmente
+            usuario_id = request.COOKIES.get('user_id')
         if not usuario_id:
             usuario_id = request.GET.get('user_id')
         
         if not usuario_id:
             return JsonResponse({
                 "error": "Usuario no autenticado. Por favor inicia sesión.",
-                "aperturasPendientes": [],
-                "cierresPendientes": [],
+                "espacios": [],
                 "horaActual": datetime.now().strftime('%H:%M'),
                 "diaActual": get_dia_semana_actual(),
                 "fechaActual": datetime.now().date().strftime('%Y-%m-%d')
-            }, status=200)  # Cambiado a 200 para no bloquear la UI
+            }, status=200)
         
         # Obtener hora actual del servidor
         ahora = datetime.now()
@@ -604,8 +593,7 @@ def proximos_apertura_cierre(request):
         
         if not espacios_permitidos.exists():
             return JsonResponse({
-                "aperturasPendientes": [],
-                "cierresPendientes": [],
+                "espacios": [],
                 "horaActual": hora_actual.strftime('%H:%M'),
                 "diaActual": dia_actual,
                 "fechaActual": fecha_actual.strftime('%Y-%m-%d')
@@ -613,16 +601,12 @@ def proximos_apertura_cierre(request):
         
         # Extraer IDs de espacios
         espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
-        
-        # Crear un mapa de espacios para fácil acceso
         espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
         
-        # Listas para almacenar resultados
-        aperturas_pendientes = []
-        cierres_pendientes = []
+        # Diccionario para agrupar por espacio
+        espacios_data = {}
         
         # ========== CONSULTAR HORARIOS ==========
-        # Buscar horarios del día actual en los espacios permitidos
         horarios = Horario.objects.filter(
             espacio_id__in=espacios_ids,
             dia_semana=dia_actual,
@@ -634,54 +618,63 @@ def proximos_apertura_cierre(request):
             if not espacio:
                 continue
             
-            # Calcular ventana de apertura (15 minutos antes)
-            hora_apertura_inicio = (
-                datetime.combine(fecha_actual, horario.hora_inicio) - timedelta(minutes=15)
-            ).time()
-            hora_apertura_fin = horario.hora_inicio
+            # Calcular tiempo restante hasta la hora de inicio
+            datetime_inicio = datetime.combine(fecha_actual, horario.hora_inicio)
+            tiempo_hasta_inicio = datetime_inicio - ahora
+            segundos_hasta_inicio = int(tiempo_hasta_inicio.total_seconds())
             
-            # Calcular ventana de cierre (5 minutos antes)
-            hora_cierre_inicio = (
-                datetime.combine(fecha_actual, horario.hora_fin) - timedelta(minutes=5)
-            ).time()
-            hora_cierre_fin = horario.hora_fin
+            # Calcular tiempo restante hasta la hora de fin
+            datetime_fin = datetime.combine(fecha_actual, horario.hora_fin)
+            tiempo_hasta_fin = datetime_fin - ahora
+            segundos_hasta_fin = int(tiempo_hasta_fin.total_seconds())
             
-            # Verificar si está en ventana de apertura
-            if hora_apertura_inicio <= hora_actual < hora_apertura_fin:
-                aperturas_pendientes.append({
-                    "idEspacio": espacio.id,
-                    "nombreEspacio": espacio.nombre,
-                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                    "piso": espacio.ubicacion or "No especificado",
+            # Determinar próxima acción y tiempo restante
+            proxima_accion = None
+            tiempo_restante_segundos = None
+            minutos_restantes = 0
+            segundos_restantes = 0
+            
+            if segundos_hasta_inicio > 0:
+                proxima_accion = 'apertura'
+                tiempo_restante_segundos = segundos_hasta_inicio
+                minutos_restantes = segundos_hasta_inicio // 60
+                segundos_restantes = segundos_hasta_inicio % 60
+            elif segundos_hasta_fin > 0:
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = segundos_hasta_fin
+                minutos_restantes = segundos_hasta_fin // 60
+                segundos_restantes = segundos_hasta_fin % 60
+            
+            # Solo agregar si hay una acción pendiente
+            if proxima_accion and tiempo_restante_segundos:
+                if espacio.id not in espacios_data:
+                    espacios_data[espacio.id] = {
+                        "idEspacio": espacio.id,
+                        "nombreEspacio": espacio.nombre,
+                        "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                        "piso": espacio.ubicacion or "No especificado",
+                        "estadoActual": espacio.estado,
+                        "horarios": []
+                    }
+                
+                espacios_data[espacio.id]["horarios"].append({
                     "tipoUso": "Clase",
                     "asignatura": horario.asignatura.nombre if horario.asignatura else "Sin asignatura",
                     "docente": horario.docente.nombre if horario.docente else "Sin docente",
                     "horaInicio": horario.hora_inicio.strftime('%H:%M'),
                     "horaFin": horario.hora_fin.strftime('%H:%M'),
-                    "diaSemana": dia_actual
-                })
-            
-            # Verificar si está en ventana de cierre
-            if hora_cierre_inicio <= hora_actual < hora_cierre_fin:
-                cierres_pendientes.append({
-                    "idEspacio": espacio.id,
-                    "nombreEspacio": espacio.nombre,
-                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                    "piso": espacio.ubicacion or "No especificado",
-                    "tipoUso": "Clase",
-                    "asignatura": horario.asignatura.nombre if horario.asignatura else "Sin asignatura",
-                    "docente": horario.docente.nombre if horario.docente else "Sin docente",
-                    "horaInicio": horario.hora_inicio.strftime('%H:%M'),
-                    "horaFin": horario.hora_fin.strftime('%H:%M'),
-                    "diaSemana": dia_actual
+                    "diaSemana": dia_actual,
+                    "proximaAccion": proxima_accion,
+                    "minutosRestantes": minutos_restantes,
+                    "segundosRestantes": segundos_restantes,
+                    "tiempoRestanteTotal": tiempo_restante_segundos
                 })
         
         # ========== CONSULTAR PRÉSTAMOS ==========
-        # Buscar préstamos del día actual en los espacios permitidos
         prestamos = PrestamoEspacio.objects.filter(
             espacio_id__in=espacios_ids,
             fecha=fecha_actual,
-            estado='Aprobado'  # Solo préstamos aprobados
+            estado='Aprobado'
         ).select_related('espacio', 'espacio__sede', 'espacio__tipo', 'usuario', 'tipo_actividad')
         
         for prestamo in prestamos:
@@ -689,51 +682,69 @@ def proximos_apertura_cierre(request):
             if not espacio:
                 continue
             
-            # Calcular ventana de apertura (15 minutos antes)
-            hora_apertura_inicio = (
-                datetime.combine(fecha_actual, prestamo.hora_inicio) - timedelta(minutes=15)
-            ).time()
-            hora_apertura_fin = prestamo.hora_inicio
+            # Calcular tiempo restante hasta la hora de inicio
+            datetime_inicio = datetime.combine(fecha_actual, prestamo.hora_inicio)
+            tiempo_hasta_inicio = datetime_inicio - ahora
+            segundos_hasta_inicio = int(tiempo_hasta_inicio.total_seconds())
             
-            # Calcular ventana de cierre (5 minutos antes)
-            hora_cierre_inicio = (
-                datetime.combine(fecha_actual, prestamo.hora_fin) - timedelta(minutes=5)
-            ).time()
-            hora_cierre_fin = prestamo.hora_fin
+            # Calcular tiempo restante hasta la hora de fin
+            datetime_fin = datetime.combine(fecha_actual, prestamo.hora_fin)
+            tiempo_hasta_fin = datetime_fin - ahora
+            segundos_hasta_fin = int(tiempo_hasta_fin.total_seconds())
             
-            # Verificar si está en ventana de apertura
-            if hora_apertura_inicio <= hora_actual < hora_apertura_fin:
-                aperturas_pendientes.append({
-                    "idEspacio": espacio.id,
-                    "nombreEspacio": espacio.nombre,
-                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                    "piso": espacio.ubicacion or "No especificado",
+            # Determinar próxima acción y tiempo restante
+            proxima_accion = None
+            tiempo_restante_segundos = None
+            minutos_restantes = 0
+            segundos_restantes = 0
+            
+            if segundos_hasta_inicio > 0:
+                proxima_accion = 'apertura'
+                tiempo_restante_segundos = segundos_hasta_inicio
+                minutos_restantes = segundos_hasta_inicio // 60
+                segundos_restantes = segundos_hasta_inicio % 60
+            elif segundos_hasta_fin > 0:
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = segundos_hasta_fin
+                minutos_restantes = segundos_hasta_fin // 60
+                segundos_restantes = segundos_hasta_fin % 60
+            
+            # Solo agregar si hay una acción pendiente
+            if proxima_accion and tiempo_restante_segundos:
+                if espacio.id not in espacios_data:
+                    espacios_data[espacio.id] = {
+                        "idEspacio": espacio.id,
+                        "nombreEspacio": espacio.nombre,
+                        "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                        "piso": espacio.ubicacion or "No especificado",
+                        "estadoActual": espacio.estado,
+                        "horarios": []
+                    }
+                
+                espacios_data[espacio.id]["horarios"].append({
                     "tipoUso": "Préstamo",
                     "tipoActividad": prestamo.tipo_actividad.nombre if prestamo.tipo_actividad else "Sin especificar",
                     "solicitante": prestamo.usuario.nombre if prestamo.usuario else "Sin solicitante",
                     "horaInicio": prestamo.hora_inicio.strftime('%H:%M'),
                     "horaFin": prestamo.hora_fin.strftime('%H:%M'),
-                    "fecha": prestamo.fecha.strftime('%Y-%m-%d')
-                })
-            
-            # Verificar si está en ventana de cierre
-            if hora_cierre_inicio <= hora_actual < hora_cierre_fin:
-                cierres_pendientes.append({
-                    "idEspacio": espacio.id,
-                    "nombreEspacio": espacio.nombre,
-                    "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                    "piso": espacio.ubicacion or "No especificado",
-                    "tipoUso": "Préstamo",
-                    "tipoActividad": prestamo.tipo_actividad.nombre if prestamo.tipo_actividad else "Sin especificar",
-                    "solicitante": prestamo.usuario.nombre if prestamo.usuario else "Sin solicitante",
-                    "horaInicio": prestamo.hora_inicio.strftime('%H:%M'),
-                    "horaFin": prestamo.hora_fin.strftime('%H:%M'),
-                    "fecha": prestamo.fecha.strftime('%Y-%m-%d')
+                    "fecha": prestamo.fecha.strftime('%Y-%m-%d'),
+                    "proximaAccion": proxima_accion,
+                    "minutosRestantes": minutos_restantes,
+                    "segundosRestantes": segundos_restantes,
+                    "tiempoRestanteTotal": tiempo_restante_segundos
                 })
         
+        # Convertir diccionario a lista y ordenar por urgencia del primer horario
+        espacios_list = list(espacios_data.values())
+        for espacio in espacios_list:
+            # Ordenar horarios por urgencia dentro de cada espacio
+            espacio["horarios"].sort(key=lambda x: x["tiempoRestanteTotal"])
+        
+        # Ordenar espacios por urgencia del horario más urgente
+        espacios_list.sort(key=lambda x: x["horarios"][0]["tiempoRestanteTotal"] if x["horarios"] else float('inf'))
+        
         return JsonResponse({
-            "aperturasPendientes": aperturas_pendientes,
-            "cierresPendientes": cierres_pendientes,
+            "espacios": espacios_list,
             "horaActual": hora_actual.strftime('%H:%M'),
             "diaActual": dia_actual,
             "fechaActual": fecha_actual.strftime('%Y-%m-%d')
@@ -748,13 +759,52 @@ def proximos_apertura_cierre(request):
 @csrf_exempt
 def get_estado_espacio(request, espacio_id=None):
     """
-    Obtiene el estado actual y la próxima clase de un espacio.
-    """
-    if request.method != 'GET':
-        return JsonResponse({"error": "Solo se permite GET"}, status=405)
+    Obtiene o cambia el estado actual de un espacio.
     
+    GET: Obtiene el estado actual y la próxima clase
+    PUT: Cambia el estado del espacio (para supervisores)
+         Body: { "estado": "Disponible" | "No Disponible" | "Mantenimiento" }
+    """
     if espacio_id is None:
         return JsonResponse({"error": "El espacio_id es requerido"}, status=400)
+    
+    # Manejar PUT - Cambiar estado
+    if request.method == 'PUT':
+        try:
+            import json
+            data = json.loads(request.body.decode('utf-8'))
+            nuevo_estado = data.get('estado')
+            
+            # Validar estado
+            estados_validos = ['Disponible', 'No Disponible', 'Mantenimiento']
+            if nuevo_estado not in estados_validos:
+                return JsonResponse({
+                    "error": f"Estado inválido. Debe ser uno de: {', '.join(estados_validos)}"
+                }, status=400)
+            
+            # Obtener y actualizar espacio
+            espacio = EspacioFisico.objects.get(id=espacio_id)
+            estado_anterior = espacio.estado
+            espacio.estado = nuevo_estado
+            espacio.save()
+            
+            return JsonResponse({
+                "message": f"Estado del espacio '{espacio.nombre}' cambiado de '{estado_anterior}' a '{nuevo_estado}' correctamente",
+                "espacio_id": espacio.id,
+                "estado_anterior": estado_anterior,
+                "estado_nuevo": nuevo_estado
+            }, status=200)
+            
+        except EspacioFisico.DoesNotExist:
+            return JsonResponse({"error": "Espacio no encontrado"}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "JSON inválido en el body"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    # Manejar GET - Obtener estado actual
+    if request.method != 'GET':
+        return JsonResponse({"error": "Solo se permite GET o PUT"}, status=405)
 
     try:
         espacio = EspacioFisico.objects.get(id=espacio_id)

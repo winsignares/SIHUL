@@ -329,7 +329,7 @@ export function useConsultaEspacios() {
         }
     };
 
-    const exportarCronogramaPDF = () => {
+    const exportarCronogramaPDF = (espaciosToExport?: EspacioView[]) => {
         const doc = new jsPDF('l', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -337,7 +337,9 @@ export function useConsultaEspacios() {
         const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const horasIntervalos = Array.from({ length: 15 }, (_, i) => i + 6); // 6:00 a 20:00
         
-        filteredEspacios.forEach((espacio, espacioIndex) => {
+        const espaciosAExportar = espaciosToExport || filteredEspacios;
+        
+        espaciosAExportar.forEach((espacio, espacioIndex) => {
             if (espacioIndex > 0) doc.addPage();
             
             // Título del espacio
@@ -429,13 +431,15 @@ export function useConsultaEspacios() {
         doc.save(nombreArchivo);
     };
 
-    const exportarCronogramaExcel = () => {
+    const exportarCronogramaExcel = (espaciosToExport?: EspacioView[]) => {
         const wb = XLSX.utils.book_new();
         
         const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const horasIntervalos = Array.from({ length: 15 }, (_, i) => `${i + 6}:00-${i + 7}:00`); // 6:00 a 20:00
         
-        filteredEspacios.forEach((espacio, espacioIdx) => {
+        const espaciosAExportar = espaciosToExport || filteredEspacios;
+        
+        espaciosAExportar.forEach((espacio, espacioIdx) => {
             // Crear matriz de datos para este espacio
             const data: any[][] = [];
             
