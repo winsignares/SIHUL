@@ -684,7 +684,7 @@ def create_horarios_sede_principal(stdout, style):
         ('II FISIOTERAPIA GB', 'Biomecánica', 'Gladys Helena Gutiérrez', 'JUEVES', '09:00:00', '11:00:00', 'SALON 303B'),
         ('IV FISIOTERAPIA GA', 'Constitución Política', 'Elvis Ruiz', 'JUEVES', '11:00:00', '13:00:00', 'SALON 303B'),
         ('I MICROBIOLOGÍA GA', 'Historia de la Ciencia', 'Juan David Sanchez', 'JUEVES', '13:00:00', '15:00:00', 'SALON 303B'),
-        ('VI BACTERIOLOGÍA GA', 'Optativa II', 'Miriam Linero', 'JUEVES', '16:00:00', '18:00:00', 'SALON 303B'),
+        ('VI BACTERIOLOGÍA GA', 'CSA-EDPF', 'Miriam Linero', 'JUEVES', '16:00:00', '18:00:00', 'SALON 303B'),
         
         # VIERNES
         ('III MICROBIOLOGÍA GA', 'Biología Molecular', 'Arleth Lopez', 'VIERNES', '07:00:00', '09:00:00', 'SALON 303B'),
