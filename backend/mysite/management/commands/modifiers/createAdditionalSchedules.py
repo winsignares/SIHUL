@@ -40,8 +40,8 @@ ADDITIONAL_SCHEDULES_PRINCIPAL: List[ScheduleTuple] = [
 	#Teoría del derecho
 	("III DERECHO A", "DER-TEDE", "CARLOS JIMÉNEZ", "JUEVES", "18:00:00", "21:00:00", "613NB"),
 	("III DERECHO A", "DER-TEDE", "CARLOS JIMENEZ", "VIERNES", "18:00:00", "21:00:00", "Salon 514NB"),
-	#ELectiva Oratoria y Liderazgo
-	("II III IV Y VIII DERECHO", "ELECTIVA ORATORIA Y LIDERAZGO", "LILIA CEDEÑO", "Lunes", "08:00:00", "10:00:00", "Salon 514NB"),
+	#ELectiva Oratoria y Liderazgo - Grupo II, III, IV y VIII Derecho
+	("II III IV Y VIII DERECHO", "ELE-ORALI", "LILIA CEDEÑO", "Lunes", "08:00:00", "10:00:00", "Salon 514NB"),
 	#Electronica digital
 	(" II ING SISTEMAS GA", "ING-ELDI", "MARVIN MOLINA", "MARTES", "18:00:00", "21:00:00", "Salon 602NB"),
 	#Derechos Humanos y D.I.H.

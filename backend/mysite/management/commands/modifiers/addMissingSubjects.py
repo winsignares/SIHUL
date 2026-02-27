@@ -14,6 +14,7 @@ SubjectTuple = Tuple[str, str, int, str, int]
 
 
 MISSING_SUBJECTS: List[SubjectTuple] = [
+    ('Electiva Oratoria y Liderazgo', 'ELE-ORALI', 3, 'teórica', 144),
     # Ejemplo:
     # ('Lógica Jurídica', 'DER-LGJU', 3, 'teórica', 144),
 ]
