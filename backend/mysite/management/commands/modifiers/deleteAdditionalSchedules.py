@@ -25,11 +25,9 @@ ScheduleTuple = Tuple[str, str, str, str, str, str, str]
 # -----------------------------------------------------------------------------
 ADDITIONAL_SCHEDULES_CENTRO: List[ScheduleTuple] = [
 	# Ejemplo:
-	# ('V DERECHO C', 'Tutela Penal De Los Bienes Jurídicos II', 'JUAN CARLOS GUTIÉRREZ', 'MARTES', '06:00:00', '09:00:00', 'SALON 103B'),
-]
-
-ADDITIONAL_SCHEDULES_PRINCIPAL: List[ScheduleTuple] = [
-	#Lógica Jurídica
+	
+    # ('V DERECHO C', 'Tutela Penal De Los Bienes Jurídicos II', 'JUAN CARLOS GUTIÉRREZ', 'MARTES', '06:00:00', '09:00:00', 'SALON 103B'),
+    	#Lógica Jurídica
 	("III DERECHO A", "DER-LGJU", "Yadira García", "LUNES", "18:00:00", "21:00:00", "613NB"),
 	#Constitucional Colombiano
 	("III DERECHO A", "DER-COCO", "JHONNY MENDOZA", "MARTES", "18:00:00", "21:00:00", "613NB"),
@@ -45,6 +43,10 @@ ADDITIONAL_SCHEDULES_PRINCIPAL: List[ScheduleTuple] = [
 	("II DERECHO A", "DER-DHDH", "MAGDA DJANON", "Lunes", "10:00", "14:00", "SALON 507NB"),
 	#Ciencia Política
 	("II DERECHO A", "DER-CIPL", "ALEJANDRO BLANCO", "Lunes", "15:00", "18:00", "SALON 507NB"),
+]
+
+ADDITIONAL_SCHEDULES_PRINCIPAL: List[ScheduleTuple] = [
+
 ]
 
 
