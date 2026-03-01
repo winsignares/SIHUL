@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import {
   Clock,
   Search,
@@ -40,6 +41,7 @@ export default function CentroHorarios() {
     horariosFusionados,
     facultades,
     espacios,
+    docentes,
     filtroFacultad, setFiltroFacultad,
     filtroPrograma, setFiltroPrograma,
     filtroGrupo, setFiltroGrupo,
@@ -763,10 +765,26 @@ export default function CentroHorarios() {
                 </div>
                 <div>
                   <Label>Docente</Label>
-                  <Input
-                    value={horarioEditar.docente_nombre || ''}
-                    disabled
-                    className="bg-slate-100"
+                  <SearchableSelect
+                    items={docentes}
+                    value={horarioEditar.docente_id}
+                    onSelect={(docente) => setHorarioEditar({ 
+                      ...horarioEditar, 
+                      docente_id: docente.id,
+                      docente_nombre: docente.nombre
+                    })}
+                    getItemId={(docente) => docente.id}
+                    getItemLabel={(docente) => docente.nombre}
+                    getItemSecondary={(docente) => docente.correo}
+                    placeholder="Seleccionar docente..."
+                    searchPlaceholder="Buscar docente..."
+                    emptyMessage="No se encontró ningún docente."
+                    clearable
+                    onClear={() => setHorarioEditar({ 
+                      ...horarioEditar, 
+                      docente_id: null,
+                      docente_nombre: ''
+                    })}
                   />
                 </div>
                 <div>
@@ -803,19 +821,21 @@ export default function CentroHorarios() {
                 </div>
                 <div className="col-span-2">
                   <Label>Espacio</Label>
-                  <Select
-                    value={horarioEditar.espacio_id?.toString()}
-                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, espacio_id: parseInt(v) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {espacios.map(e => (
-                        <SelectItem key={e.id} value={e.id.toString()}>{e.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={espacios}
+                    value={horarioEditar.espacio_id}
+                    onSelect={(espacio) => setHorarioEditar({ 
+                      ...horarioEditar, 
+                      espacio_id: espacio.id,
+                      espacio_nombre: espacio.nombre
+                    })}
+                    getItemId={(espacio) => espacio.id}
+                    getItemLabel={(espacio) => espacio.nombre}
+                    getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad}`}
+                    placeholder="Seleccionar espacio..."
+                    searchPlaceholder="Buscar espacio..."
+                    emptyMessage="No se encontró ningún espacio."
+                  />
                 </div>
               </div>
             </div>
