@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../../share/command';
-import { Popover, PopoverContent, PopoverTrigger } from '../../share/popover';
+import { SearchableSelect } from '../../share/searchableSelect';
 import {
   Clock,
   Search,
@@ -25,9 +24,7 @@ import {
   Plus,
   AlertTriangle,
   FileDown,
-  FileSpreadsheet,
-  Check,
-  ChevronsUpDown
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import CrearHorarios from './CrearHorarios';
@@ -45,9 +42,6 @@ export default function CentroHorarios() {
     facultades,
     espacios,
     docentes,
-    docentesFiltrados,
-    busquedaDocente, setBusquedaDocente,
-    comboboxAbierto, setComboboxAbierto,
     filtroFacultad, setFiltroFacultad,
     filtroPrograma, setFiltroPrograma,
     filtroGrupo, setFiltroGrupo,
@@ -771,79 +765,27 @@ export default function CentroHorarios() {
                 </div>
                 <div>
                   <Label>Docente</Label>
-                  <div className="flex gap-2">
-                    <Popover open={comboboxAbierto} onOpenChange={setComboboxAbierto}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={comboboxAbierto}
-                          className="w-full justify-between"
-                        >
-                          {horarioEditar.docente_id
-                            ? docentes.find((d) => d.id === horarioEditar.docente_id)?.nombre || 'Seleccionar docente...'
-                            : 'Seleccionar docente...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Buscar docente..." 
-                            value={busquedaDocente}
-                            onValueChange={setBusquedaDocente}
-                          />
-                          <CommandList>
-                            <CommandEmpty>No se encontró ningún docente.</CommandEmpty>
-                            <CommandGroup>
-                              {docentesFiltrados.slice(0, 50).map((docente) => (
-                                <CommandItem
-                                  key={docente.id}
-                                  value={docente.nombre}
-                                  onSelect={() => {
-                                    setHorarioEditar({ 
-                                      ...horarioEditar, 
-                                      docente_id: docente.id,
-                                      docente_nombre: docente.nombre
-                                    });
-                                    setBusquedaDocente(docente.nombre);
-                                    setComboboxAbierto(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 ${
-                                      horarioEditar.docente_id === docente.id ? 'opacity-100' : 'opacity-0'
-                                    }`}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span>{docente.nombre}</span>
-                                    <span className="text-xs text-slate-500">{docente.correo}</span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {horarioEditar.docente_id && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setHorarioEditar({ 
-                            ...horarioEditar, 
-                            docente_id: null,
-                            docente_nombre: ''
-                          });
-                          setBusquedaDocente('');
-                        }}
-                        title="Limpiar docente"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  <SearchableSelect
+                    items={docentes}
+                    value={horarioEditar.docente_id}
+                    onSelect={(docente) => setHorarioEditar({ 
+                      ...horarioEditar, 
+                      docente_id: docente.id,
+                      docente_nombre: docente.nombre
+                    })}
+                    getItemId={(docente) => docente.id}
+                    getItemLabel={(docente) => docente.nombre}
+                    getItemSecondary={(docente) => docente.correo}
+                    placeholder="Seleccionar docente..."
+                    searchPlaceholder="Buscar docente..."
+                    emptyMessage="No se encontró ningún docente."
+                    clearable
+                    onClear={() => setHorarioEditar({ 
+                      ...horarioEditar, 
+                      docente_id: null,
+                      docente_nombre: ''
+                    })}
+                  />
                 </div>
                 <div>
                   <Label>Día</Label>
@@ -879,19 +821,21 @@ export default function CentroHorarios() {
                 </div>
                 <div className="col-span-2">
                   <Label>Espacio</Label>
-                  <Select
-                    value={horarioEditar.espacio_id?.toString()}
-                    onValueChange={(v) => setHorarioEditar({ ...horarioEditar, espacio_id: parseInt(v) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {espacios.map(e => (
-                        <SelectItem key={e.id} value={e.id.toString()}>{e.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={espacios}
+                    value={horarioEditar.espacio_id}
+                    onSelect={(espacio) => setHorarioEditar({ 
+                      ...horarioEditar, 
+                      espacio_id: espacio.id,
+                      espacio_nombre: espacio.nombre
+                    })}
+                    getItemId={(espacio) => espacio.id}
+                    getItemLabel={(espacio) => espacio.nombre}
+                    getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad}`}
+                    placeholder="Seleccionar espacio..."
+                    searchPlaceholder="Buscar espacio..."
+                    emptyMessage="No se encontró ningún espacio."
+                  />
                 </div>
               </div>
             </div>

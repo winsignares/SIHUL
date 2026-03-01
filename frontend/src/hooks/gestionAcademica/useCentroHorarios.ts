@@ -76,8 +76,6 @@ export function useCentroHorarios() {
     const [programas, setProgramas] = useState<Programa[]>([]);
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
     const [docentes, setDocentes] = useState<Docente[]>([]);
-    const [busquedaDocente, setBusquedaDocente] = useState('');
-    const [comboboxAbierto, setComboboxAbierto] = useState(false);
 
     // Filtros
     const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
@@ -313,19 +311,8 @@ export function useCentroHorarios() {
 
     const handleEditar = (horario: HorarioExtendido) => {
         setHorarioEditar({ ...horario });
-        setBusquedaDocente(horario.docente_nombre || '');
         setShowEditModal(true);
     };
-
-    // Filtrar docentes según búsqueda
-    const docentesFiltrados = useMemo(() => {
-        if (!busquedaDocente) return docentes;
-        const busqueda = busquedaDocente.toLowerCase();
-        return docentes.filter(d => 
-            d.nombre.toLowerCase().includes(busqueda) ||
-            d.correo.toLowerCase().includes(busqueda)
-        );
-    }, [docentes, busquedaDocente]);
 
     // Validar conflictos de horario al editar
     const validarConflictosEdicion = (horarioEditado: HorarioExtendido): { valido: boolean; mensaje: string } => {
@@ -755,9 +742,6 @@ export function useCentroHorarios() {
         programas,
         espacios,
         docentes,
-        docentesFiltrados,
-        busquedaDocente, setBusquedaDocente,
-        comboboxAbierto, setComboboxAbierto,
         filtroFacultad, setFiltroFacultad,
         filtroPrograma, setFiltroPrograma,
         filtroGrupo, setFiltroGrupo,
