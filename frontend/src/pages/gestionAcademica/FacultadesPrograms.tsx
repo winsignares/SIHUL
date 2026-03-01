@@ -6,8 +6,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, Check, ChevronDown } from 'lucide-react';
+import * as React from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { Popover, PopoverContent, PopoverTrigger } from '../../share/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../../share/command';
+
+// Hook personalizado para debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  
+  return debouncedValue;
+}
 
 import { useFacultadesPrograms, type TabOption } from '../../hooks/gestionAcademica/useFacultadesPrograms';
 
@@ -19,6 +40,38 @@ import Sedes from './Sedes';
 
 export default function FacultadesPrograms() {
   const isMobile = useIsMobile();
+  const [asignaturaSearch, setAsignaturaSearch] = React.useState('');
+  const [semestreSearch, setSemestreSearch] = React.useState('');
+  const [asignaturaOpen, setAsignaturaOpen] = React.useState(false);
+  const [semestreOpen, setSemestreOpen] = React.useState(false);
+  
+  // Debounce para búsquedas (200ms)
+  const debouncedAsignaturaSearch = useDebounce(asignaturaSearch, 200);
+  const debouncedSemestreSearch = useDebounce(semestreSearch, 200);
+  
+  // Refs para manejar el foco del input y contenedor del combo box
+  const asignaturaInputRef = useRef<HTMLInputElement>(null);
+  const semestreInputRef = useRef<HTMLInputElement>(null);
+  const asignaturaContainerRef = useRef<HTMLDivElement>(null);
+  const semestreContainerRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar dropdowns al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (asignaturaContainerRef.current && !asignaturaContainerRef.current.contains(event.target as Node)) {
+        setAsignaturaOpen(false);
+      }
+      if (semestreContainerRef.current && !semestreContainerRef.current.contains(event.target as Node)) {
+        setSemestreOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const {
     searchTerm, setSearchTerm,
     activeTab, setActiveTab,
@@ -66,6 +119,35 @@ export default function FacultadesPrograms() {
     availableAsignaturas,
     asignaturasBySemestre
   } = useFacultadesPrograms();
+
+  // Memoizar listas filtradas usando debounced search (solo se recalcula después de 200ms)
+  const filteredAsignaturas = useMemo(() => {
+    if (!debouncedAsignaturaSearch.trim()) return availableAsignaturas;
+    const searchLower = debouncedAsignaturaSearch.toLowerCase();
+    return availableAsignaturas.filter((a) =>
+      a.codigo.toLowerCase().includes(searchLower) ||
+      a.nombre.toLowerCase().includes(searchLower)
+    );
+  }, [availableAsignaturas, debouncedAsignaturaSearch]);
+
+  // Generar lista de semestres una sola vez
+  const semestresList = useMemo(() => {
+    if (!selectedProgramaForAsignaturas) return [];
+    return Array.from(
+      { length: selectedProgramaForAsignaturas.semestres },
+      (_, i) => i + 1
+    );
+  }, [selectedProgramaForAsignaturas]);
+
+  // Memoizar semestres filtrados usando debounced search
+  const filteredSemestres = useMemo(() => {
+    if (!debouncedSemestreSearch.trim()) return semestresList;
+    const searchLower = debouncedSemestreSearch.toLowerCase();
+    return semestresList.filter((sem) =>
+      `semestre ${sem}`.includes(searchLower) ||
+      sem.toString().includes(debouncedSemestreSearch)
+    );
+  }, [semestresList, debouncedSemestreSearch]);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -675,7 +757,7 @@ export default function FacultadesPrograms() {
 
       {/* Modal: Gestionar Asignaturas del Programa */}
       <Dialog open={showAsignaturasModal} onOpenChange={setShowAsignaturasModal}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[60vw] max-h-[90vh] overflow-y-auto w-full">
           <DialogHeader>
             <DialogTitle className="text-slate-900 flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-purple-600" />
@@ -796,68 +878,115 @@ export default function FacultadesPrograms() {
             <DialogTitle className="text-slate-900">Agregar Asignatura al Plan de Estudios</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="asignatura">
-                Asignatura <span className="text-red-600">*</span>
-              </Label>
-              <Select
-                value={asignaturaForm.asignaturaId}
-                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, asignaturaId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar asignatura" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableAsignaturas.length === 0 ? (
-                    <div className="px-2 py-1.5 text-sm text-slate-500">
-                      Todas las asignaturas ya están asignadas
-                    </div>
-                  ) : (
-                    availableAsignaturas.map(a => (
-                      <SelectItem key={a.id} value={a.id?.toString() || ''}>
-                        {a.codigo} - {a.nombre} ({a.creditos} créditos)
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+            {/* Asignatura - Combobox editable */}
+            <div className="space-y-2" ref={asignaturaContainerRef}>
+              <Label>Asignatura <span className="text-red-600">*</span></Label>
+              <div className="relative">
+                <Input
+                  ref={asignaturaInputRef}
+                  placeholder="Escribe para buscar..."
+                  value={asignaturaSearch}
+                  onChange={(e) => {
+                    setAsignaturaSearch(e.target.value);
+                    setAsignaturaOpen(true);
+                  }}
+                  onClick={() => setAsignaturaOpen(prev => !prev)}
+                  className="w-full pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setAsignaturaOpen(!asignaturaOpen)}
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-slate-100 rounded-r-md"
+                >
+                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${asignaturaOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+              {asignaturaOpen && (
+                <div className="relative">
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-[250px] overflow-y-auto">
+                    {filteredAsignaturas.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-slate-500">
+                        {debouncedAsignaturaSearch ? 'No se encontraron asignaturas' : 'Todas las asignaturas ya están asignadas'}
+                      </div>
+                    ) : (
+                      filteredAsignaturas.map((a) => (
+                        <div
+                          key={a.id}
+                          onClick={() => {
+                            setAsignaturaForm({ ...asignaturaForm, asignaturaId: a.id?.toString() || '' });
+                            setAsignaturaSearch(`${a.codigo} - ${a.nombre}`);
+                            setAsignaturaOpen(false);
+                          }}
+                          className={`px-3 py-2 cursor-pointer hover:bg-slate-100 flex items-center gap-2 ${
+                            asignaturaForm.asignaturaId === a.id?.toString() ? 'bg-slate-100' : ''
+                          }`}
+                        >
+                          <Check className={`h-4 w-4 ${asignaturaForm.asignaturaId === a.id?.toString() ? "text-purple-600" : "opacity-0"}`} />
+                          <span className="text-sm">{a.codigo} - {a.nombre}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="semestre">
-                Semestre <span className="text-red-600">*</span>
-              </Label>
-              <Select
-                value={asignaturaForm.semestre}
-                onValueChange={(value) => setAsignaturaForm({ ...asignaturaForm, semestre: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar semestre" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedProgramaForAsignaturas && Array.from(
-                    { length: selectedProgramaForAsignaturas.semestres },
-                    (_, i) => i + 1
-                  ).map(sem => (
-                    <SelectItem key={sem} value={sem.toString()}>
-                      Semestre {sem}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Semestre - Combobox editable */}
+            <div className="space-y-2" ref={semestreContainerRef}>
+              <Label>Semestre <span className="text-red-600">*</span></Label>
+              <div className="relative">
+                <Input
+                  ref={semestreInputRef}
+                  placeholder="Escribe para buscar..."
+                  value={semestreSearch || (asignaturaForm.semestre ? `Semestre ${asignaturaForm.semestre}` : '')}
+                  onChange={(e) => {
+                    setSemestreSearch(e.target.value);
+                    setSemestreOpen(true);
+                  }}
+                  onClick={() => setSemestreOpen(prev => !prev)}
+                  className="w-full pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSemestreOpen(!semestreOpen)}
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-slate-100 rounded-r-md"
+                >
+                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${semestreOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+              {semestreOpen && (
+                <div className="relative">
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-[250px] overflow-y-auto">
+                    {filteredSemestres.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-slate-500">No se encontraron semestres</div>
+                    ) : (
+                      filteredSemestres.map((sem) => (
+                        <div
+                          key={sem}
+                          onClick={() => {
+                            setAsignaturaForm({ ...asignaturaForm, semestre: sem.toString() });
+                            setSemestreSearch(`Semestre ${sem}`);
+                            setSemestreOpen(false);
+                          }}
+                          className={`px-3 py-2 cursor-pointer hover:bg-slate-100 flex items-center gap-2 ${
+                            asignaturaForm.semestre === sem.toString() ? 'bg-slate-100' : ''
+                          }`}
+                        >
+                          <Check className={`h-4 w-4 ${asignaturaForm.semestre === sem.toString() ? "text-purple-600" : "opacity-0"}`} />
+                          <span className="text-sm">Semestre {sem}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Tipo */}
             <div className="space-y-2">
-              <Label htmlFor="tipo">
-                Tipo de Asignatura <span className="text-red-600">*</span>
-              </Label>
-              <Select
-                value={asignaturaForm.componente_formativo}
-                onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, componente_formativo: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Label>Tipo de Asignatura <span className="text-red-600">*</span></Label>
+              <Select value={asignaturaForm.componente_formativo} onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, componente_formativo: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="básica">Básica</SelectItem>
                   <SelectItem value="profesional">Profesional</SelectItem>
@@ -869,25 +998,13 @@ export default function FacultadesPrograms() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowAddAsignaturaModal(false);
-                setAsignaturaForm({
-                  asignaturaId: '',
-                  semestre: '',
-                  componente_formativo: 'profesional'
-                });
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleAddAsignatura}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              Agregar
-            </Button>
+            <Button variant="outline" onClick={() => {
+              setShowAddAsignaturaModal(false);
+              setAsignaturaForm({ asignaturaId: '', semestre: '', componente_formativo: 'profesional' });
+              setAsignaturaSearch('');
+              setSemestreSearch('');
+            }}>Cancelar</Button>
+            <Button onClick={handleAddAsignatura} className="bg-purple-600 hover:bg-purple-700">Agregar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
