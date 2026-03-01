@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import {
   Clock,
   Search,
@@ -557,29 +558,30 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <Label>
                   Asignatura <span className="text-red-600">*</span>
                 </Label>
-                <Select 
-                  value={asignaturaSeleccionada?.toString() || ''} 
-                  onValueChange={(v) => setAsignaturaSeleccionada(v ? parseInt(v) : '')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar asignatura" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {asignaturasFiltradas.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-slate-500">
-                        {grupoSeleccionado?.programa_nombre 
-                          ? `No hay asignaturas asignadas al programa ${grupoSeleccionado.programa_nombre}`
-                          : 'No hay asignaturas disponibles'}
-                      </div>
-                    ) : (
-                      asignaturasFiltradas.map(a => (
-                        <SelectItem key={a.id} value={a.id?.toString() || ''}>
-                          {a.nombre} ({a.creditos} créditos)
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  items={asignaturasFiltradas}
+                  value={asignaturaSeleccionada}
+                  onSelect={(asignatura) => setAsignaturaSeleccionada(asignatura.id || '')}
+                  getItemId={(asignatura) => asignatura.id || 0}
+                  getItemLabel={(asignatura) => asignatura.nombre}
+                  getItemSecondary={(asignatura) => `${asignatura.codigo} • ${asignatura.creditos} créditos`}
+                  placeholder="Seleccionar asignatura..."
+                  searchPlaceholder="Buscar por nombre o código..."
+                  emptyMessage={
+                    grupoSeleccionado?.programa_nombre 
+                      ? `No hay asignaturas asignadas al programa ${grupoSeleccionado.programa_nombre}`
+                      : 'No hay asignaturas disponibles'
+                  }
+                  clearable
+                  onClear={() => setAsignaturaSeleccionada('')}
+                  filterFn={(asignatura, searchTerm) => {
+                    return (
+                      asignatura.nombre.toLowerCase().includes(searchTerm) ||
+                      asignatura.codigo.toLowerCase().includes(searchTerm) ||
+                      asignatura.creditos.toString().includes(searchTerm)
+                    );
+                  }}
+                />
               </div>
 
               <div className="col-span-2">
@@ -604,50 +606,42 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <Label>
                   Docente <span className="text-red-600">*</span>
                 </Label>
-                <Select 
-                  value={docenteSeleccionado?.toString() || ''} 
-                  onValueChange={(v) => setDocenteSeleccionado(v ? parseInt(v) : '')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar docente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {docentes.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-slate-500">No hay docentes disponibles</div>
-                    ) : docentes.map(d => (
-                      <SelectItem key={d.id} value={d.id?.toString() || ''}>
-                        {d.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  items={docentes}
+                  value={docenteSeleccionado}
+                  onSelect={(docente) => setDocenteSeleccionado(docente.id)}
+                  getItemId={(docente) => docente.id}
+                  getItemLabel={(docente) => docente.nombre}
+                  getItemSecondary={(docente) => docente.correo}
+                  placeholder="Seleccionar docente..."
+                  searchPlaceholder="Buscar docente..."
+                  emptyMessage="No hay docentes disponibles."
+                  clearable
+                  onClear={() => setDocenteSeleccionado('')}
+                />
               </div>
 
               <div className="col-span-2">
                 <Label>
                   Espacio Físico <span className="text-red-600">*</span>
                 </Label>
-                <Select 
-                  value={espacioSeleccionado?.toString() || ''} 
-                  onValueChange={(v) => setEspacioSeleccionado(v ? parseInt(v) : '')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar espacio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {espaciosDisponibles.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-slate-500">
-                        {cantidadEstudiantes && cantidadEstudiantes > 0
-                          ? `No hay espacios con capacidad para ${cantidadEstudiantes} estudiantes`
-                          : 'No hay espacios disponibles'}
-                      </div>
-                    ) : espaciosDisponibles.map(e => (
-                      <SelectItem key={e.id} value={e.id?.toString() || ''}>
-                        {e.nombre} - Capacidad: {e.capacidad}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  items={espaciosDisponibles}
+                  value={espacioSeleccionado}
+                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id)}
+                  getItemId={(espacio) => espacio.id}
+                  getItemLabel={(espacio) => espacio.nombre}
+                  getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad} personas`}
+                  placeholder="Seleccionar espacio..."
+                  searchPlaceholder="Buscar espacio..."
+                  emptyMessage={
+                    cantidadEstudiantes && cantidadEstudiantes > 0
+                      ? `No hay espacios con capacidad para ${cantidadEstudiantes} estudiantes`
+                      : 'No hay espacios disponibles'
+                  }
+                  clearable
+                  onClear={() => setEspacioSeleccionado('')}
+                />
               </div>
             </div>
 
