@@ -16,11 +16,13 @@ const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
         email: prestamo.usuario_correo || '',
         telefono: prestamo.telefono || '',
         espacio: prestamo.espacio_nombre || '',
+        espacio_id: prestamo.espacio_id,
         fecha: prestamo.fecha,
         horaInicio: prestamo.hora_inicio.substring(0, 5), // Remove seconds HH:MM:SS -> HH:MM
         horaFin: prestamo.hora_fin.substring(0, 5),
         motivo: prestamo.motivo || '',
         tipoEvento: prestamo.tipo_actividad_nombre || '',
+        tipo_actividad_id: prestamo.tipo_actividad_id,
         asistentes: prestamo.asistentes || 0,
         recursosNecesarios: prestamo.recursos?.map(r => r.recurso_nombre || '') || [],
         estado: prestamo.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
@@ -46,6 +48,11 @@ export function useDocentePrestamos() {
 
     // Estado para recursos seleccionados (con cantidad)
     const [recursosSeleccionados, setRecursosSeleccionados] = useState<RecursoPrestamo[]>([]);
+
+    // Estados para edición
+    const [modoEdicion, setModoEdicion] = useState(false);
+    const [prestamoEditando, setPrestamoEditando] = useState<Prestamo | null>(null);
+    const [dialogPrestamoId, setDialogPrestamoId] = useState<string | null>(null);
 
     const [nuevaSolicitud, setNuevaSolicitud] = useState({
         solicitante: user?.nombre || '',
@@ -271,6 +278,81 @@ export function useDocentePrestamos() {
         pendientes: prestamos.filter(p => p.estado === 'pendiente').length
     };
 
+    const iniciarEdicion = (prestamo: Prestamo) => {
+        setModoEdicion(true);
+        setPrestamoEditando({ ...prestamo });
+        setDialogPrestamoId(prestamo.id);
+    };
+
+    const cancelarEdicion = () => {
+        setModoEdicion(false);
+        setPrestamoEditando(null);
+        setDialogPrestamoId(null);
+    };
+
+    const guardarEdicion = async () => {
+        if (!prestamoEditando) return;
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Validar que tenemos los IDs necesarios
+            if (!prestamoEditando.espacio_id || !prestamoEditando.tipo_actividad_id) {
+                throw new Error('Faltan datos necesarios del préstamo');
+            }
+
+            // Llamar al servicio para actualizar el préstamo
+            await prestamoService.actualizarPrestamo({
+                id: parseInt(prestamoEditando.id),
+                espacio_id: prestamoEditando.espacio_id,
+                usuario_id: user?.id || null,
+                administrador_id: null,
+                tipo_actividad_id: prestamoEditando.tipo_actividad_id,
+                fecha: prestamoEditando.fecha,
+                hora_inicio: prestamoEditando.horaInicio + ':00',
+                hora_fin: prestamoEditando.horaFin + ':00',
+                motivo: prestamoEditando.motivo,
+                asistentes: prestamoEditando.asistentes,
+                telefono: prestamoEditando.telefono,
+                estado: prestamoEditando.estado.charAt(0).toUpperCase() + prestamoEditando.estado.slice(1)
+            });
+
+            // Recargar datos
+            await fetchPrestamos();
+
+            setModoEdicion(false);
+            setPrestamoEditando(null);
+            setDialogPrestamoId(null);
+
+            console.log('✅ Préstamo actualizado correctamente');
+        } catch (err) {
+            console.error('Error al actualizar préstamo:', err);
+            setError('Error al actualizar el préstamo');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const eliminarPrestamo = async (id: string) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            await prestamoService.eliminarPrestamo(parseInt(id));
+            
+            // Recargar datos
+            await fetchPrestamos();
+
+            console.log('✅ Préstamo eliminado correctamente');
+        } catch (err) {
+            console.error('Error al eliminar préstamo:', err);
+            setError('Error al eliminar el préstamo');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         dialogOpen,
         setDialogOpen,
@@ -294,6 +376,16 @@ export function useDocentePrestamos() {
         estadisticas,
         loading,
         error,
-        refetch: fetchPrestamos
+        refetch: fetchPrestamos,
+        // Funciones de edición
+        modoEdicion,
+        prestamoEditando,
+        setPrestamoEditando,
+        dialogPrestamoId,
+        setDialogPrestamoId,
+        iniciarEdicion,
+        cancelarEdicion,
+        guardarEdicion,
+        eliminarPrestamo
     };
 }
