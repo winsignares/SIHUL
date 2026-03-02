@@ -4,11 +4,13 @@ export interface Prestamo {
     email: string;
     telefono: string;
     espacio: string;
+    espacio_id?: number;
     fecha: string;
     horaInicio: string;
     horaFin: string;
     motivo: string;
     tipoEvento: string;
+    tipo_actividad_id?: number;
     asistentes: number;
     recursosNecesarios: string[];
     estado: 'pendiente' | 'aprobado' | 'rechazado';

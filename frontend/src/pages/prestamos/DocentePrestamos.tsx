@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
@@ -8,7 +9,7 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft, Edit, Save, X as XIcon } from 'lucide-react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../share/alert';
@@ -39,9 +40,19 @@ export default function DocentePrestamos() {
     eliminarRecurso,
     actualizarCantidadRecurso,
     crearSolicitud,
+    prestamos,
     filteredPrestamos,
     estadisticas,
-    error
+    error,
+    modoEdicion,
+    prestamoEditando,
+    setPrestamoEditando,
+    dialogPrestamoId,
+    setDialogPrestamoId,
+    iniciarEdicion,
+    cancelarEdicion,
+    guardarEdicion,
+    eliminarPrestamo
   } = useDocentePrestamos();
 
   // Mostrar error con toast cuando cambie
@@ -439,12 +450,13 @@ export default function DocentePrestamos() {
                 <TableHead>Tipo de Actividad</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Detalles</TableHead>
+                <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPrestamos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500 dark:text-slate-400">
                     No hay solicitudes que mostrar
                   </TableCell>
                 </TableRow>
@@ -474,62 +486,47 @@ export default function DocentePrestamos() {
                     </TableCell>
                     <TableCell>{getEstadoBadge(prestamo.estado)}</TableCell>
                     <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            Ver Detalles
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Detalles del Préstamo</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label className="text-slate-600 dark:text-slate-400">Espacio</Label>
-                                <p className="text-slate-900 dark:text-slate-100">{prestamo.espacio}</p>
-                              </div>
-                              <div>
-                                <Label className="text-slate-600 dark:text-slate-400">Fecha</Label>
-                                <p className="text-slate-900 dark:text-slate-100">{prestamo.fecha}</p>
-                              </div>
-                              <div>
-                                <Label className="text-slate-600 dark:text-slate-400">Horario</Label>
-                                <p className="text-slate-900 dark:text-slate-100">{prestamo.horaInicio} - {prestamo.horaFin}</p>
-                              </div>
-                              <div>
-                                <Label className="text-slate-600 dark:text-slate-400">Asistentes</Label>
-                                <p className="text-slate-900 dark:text-slate-100">{prestamo.asistentes}</p>
-                              </div>
-                            </div>
-                            <div>
-                              <Label className="text-slate-600 dark:text-slate-400">Motivo</Label>
-                              <p className="text-slate-900 dark:text-slate-100">{prestamo.motivo}</p>
-                            </div>
-                            <div>
-                              <Label className="text-slate-600 dark:text-slate-400">Recursos Necesarios</Label>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {prestamo.recursosNecesarios.map(recurso => (
-                                  <Badge key={recurso} variant="outline">{recurso}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                            {prestamo.comentariosAdmin && (
-                              <div>
-                                <Label className="text-slate-600 dark:text-slate-400">Comentarios del Administrador</Label>
-                                <p className="text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 p-3 rounded-lg mt-2">
-                                  {prestamo.comentariosAdmin}
-                                </p>
-                              </div>
-                            )}
-                            <div>
-                              <Label className="text-slate-600 dark:text-slate-400">Estado</Label>
-                              <div className="mt-2">{getEstadoBadge(prestamo.estado)}</div>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setDialogPrestamoId(prestamo.id)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver Detalles
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {(prestamo.estado === 'pendiente' || prestamo.estado === 'rechazado') && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => iniciarEdicion(prestamo)}
+                              className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                              title="Editar solicitud"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (window.confirm('¿Está seguro de eliminar esta solicitud de préstamo?')) {
+                                  eliminarPrestamo(prestamo.id);
+                                }
+                              }}
+                              className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                              title="Eliminar solicitud"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        {prestamo.estado === 'aprobado' && (
+                          <span className="text-sm text-slate-500 dark:text-slate-400 italic">No editable</span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -538,6 +535,201 @@ export default function DocentePrestamos() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog de Detalles del Préstamo */}
+      <Dialog 
+        open={!!dialogPrestamoId}
+        onOpenChange={(open) => {
+          if (!open) {
+            cancelarEdicion();
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalles del Préstamo</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            // Si no hay dialogPrestamoId, no renderizar nada (durante cierre o estado inicial)
+            if (!dialogPrestamoId) {
+              return <div className="text-center py-8 text-slate-500">Cargando...</div>;
+            }
+
+            // Siempre buscar el préstamo actual por ID en la lista COMPLETA (sin filtros)
+            const prestamoActual = prestamos.find(p => p.id === dialogPrestamoId);
+            
+            if (!prestamoActual) {
+              return <div className="text-center py-8 text-red-500">Error: Préstamo no encontrado</div>;
+            }
+
+            // Usar prestamoEditando si está en modo edición, sino usar el préstamo actual
+            const prestamo = modoEdicion && prestamoEditando ? prestamoEditando : prestamoActual;
+
+            return (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-slate-600 dark:text-slate-400">Espacio</Label>
+                    <p className="text-slate-900 dark:text-slate-100">{prestamo.espacio}</p>
+                  </div>
+                  <div>
+                    <Label className="text-slate-600 dark:text-slate-400">Fecha</Label>
+                    {modoEdicion && prestamoEditando ? (
+                      <Input
+                        type="date"
+                        value={prestamoEditando.fecha}
+                        onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fecha: e.target.value })}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <p className="text-slate-900 dark:text-slate-100">{prestamo.fecha}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-slate-600 dark:text-slate-400">Horario</Label>
+                    {modoEdicion && prestamoEditando ? (
+                      <div className="flex gap-2 items-center mt-1">
+                        <Input
+                          type="time"
+                          value={prestamoEditando.horaInicio}
+                          onChange={(e) => setPrestamoEditando({ ...prestamoEditando, horaInicio: e.target.value })}
+                        />
+                        <span>-</span>
+                        <Input
+                          type="time"
+                          value={prestamoEditando.horaFin}
+                          onChange={(e) => setPrestamoEditando({ ...prestamoEditando, horaFin: e.target.value })}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-slate-900 dark:text-slate-100">{prestamo.horaInicio} - {prestamo.horaFin}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-slate-600 dark:text-slate-400">Asistentes</Label>
+                    {modoEdicion && prestamoEditando ? (
+                      <Input
+                        type="number"
+                        min="1"
+                        value={prestamoEditando.asistentes}
+                        onChange={(e) => setPrestamoEditando({ ...prestamoEditando, asistentes: parseInt(e.target.value) || 0 })}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <p className="text-slate-900 dark:text-slate-100">{prestamo.asistentes}</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-slate-600 dark:text-slate-400">Motivo</Label>
+                  {modoEdicion && prestamoEditando ? (
+                    <Textarea
+                      value={prestamoEditando.motivo}
+                      onChange={(e) => setPrestamoEditando({ ...prestamoEditando, motivo: e.target.value })}
+                      rows={3}
+                      className="resize-none mt-1"
+                    />
+                  ) : (
+                    <p className="text-slate-900 dark:text-slate-100">{prestamo.motivo}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-slate-600 dark:text-slate-400">Recursos Necesarios</Label>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2">
+                      {modoEdicion && prestamoEditando ? (
+                        prestamoEditando.recursosNecesarios.map((recurso, index) => (
+                          <Badge key={index} variant="outline" className="flex items-center gap-1">
+                            {recurso}
+                            <button
+                              onClick={() => {
+                                const nuevosRecursos = prestamoEditando.recursosNecesarios.filter((_, i) => i !== index);
+                                setPrestamoEditando({ ...prestamoEditando, recursosNecesarios: nuevosRecursos });
+                              }}
+                              className="ml-1 hover:text-red-600"
+                            >
+                              <XIcon className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))
+                      ) : (
+                        prestamo.recursosNecesarios.map((recurso, index) => (
+                          <Badge key={index} variant="outline">{recurso}</Badge>
+                        ))
+                      )}
+                    </div>
+                    {modoEdicion && prestamoEditando && (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Agregar recurso..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const nuevoRecurso = e.currentTarget.value.trim();
+                              setPrestamoEditando({
+                                ...prestamoEditando,
+                                recursosNecesarios: [...prestamoEditando.recursosNecesarios, nuevoRecurso]
+                              });
+                              e.currentTarget.value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              const nuevoRecurso = input.value.trim();
+                              setPrestamoEditando({
+                                ...prestamoEditando,
+                                recursosNecesarios: [...prestamoEditando.recursosNecesarios, nuevoRecurso]
+                              });
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {prestamo.comentariosAdmin && (
+                  <div>
+                    <Label className="text-slate-600 dark:text-slate-400">Comentarios del Administrador</Label>
+                    <p className="text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 p-3 rounded-lg mt-2">
+                      {prestamo.comentariosAdmin}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-slate-600 dark:text-slate-400">Estado</Label>
+                  <div className="mt-2">{getEstadoBadge(prestamo.estado)}</div>
+                </div>
+                {modoEdicion && prestamoEditando && (
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <Button
+                      onClick={cancelarEdicion}
+                      variant="outline"
+                    >
+                      <XIcon className="w-4 h-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={guardarEdicion}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Guardar Cambios
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       <Toaster />
     </div>
   );
