@@ -53,7 +53,8 @@ export function useConsultaEspacios() {
     const [filterTipo, setFilterTipo] = useState('todos');
     const [filterEstado, setFilterEstado] = useState('todos');
     const [filterSede, setFilterSede] = useState('todas');
-    const [filterFecha, setFilterFecha] = useState<string>(''); // Filtro de fecha
+    const [filterFechaInicio, setFilterFechaInicio] = useState<string>('');
+    const [filterFechaFin, setFilterFechaFin] = useState<string>('');
     const [vistaActual, setVistaActual] = useState<'tarjetas' | 'cronograma'>('tarjetas');
 
     const [espacios, setEspacios] = useState<EspacioView[]>([]);
@@ -243,10 +244,69 @@ export function useConsultaEspacios() {
         loadData();
     }, [user]); // Recargar si cambia el usuario
 
-    // Cargar préstamos aprobados cuando cambia la fecha
+    // Funciones auxiliares para manejo de fechas
+    const getProximoSabado = (fecha: Date): Date => {
+        const dia = fecha.getDay();
+        const diasHastaSabado = 6 - dia; // Sábado = 6
+        const resultado = new Date(fecha);
+        resultado.setDate(fecha.getDate() + diasHastaSabado);
+        return resultado;
+    };
+
+    const esDomingo = (fechaStr: string): boolean => {
+        const fecha = new Date(fechaStr + 'T00:00:00');
+        return fecha.getDay() === 0;
+    };
+
+    // Manejar cambio de fecha inicio
+    const handleFechaInicioChange = (fecha: string) => {
+        if (!fecha) {
+            setFilterFechaInicio('');
+            setFilterFechaFin('');
+            return;
+        }
+
+        if (esDomingo(fecha)) return;
+
+        const fechaInicio = new Date(fecha + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        if (fechaInicio < hoy) return;
+
+        setFilterFechaInicio(fecha);
+        // Calcular el sábado de la semana seleccionada (no solo de la semana actual)
+        const diaSemana = fechaInicio.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+        const diasHastaSabado = 6 - diaSemana; // Días hasta sábado
+        const sabado = new Date(fechaInicio);
+        sabado.setDate(fechaInicio.getDate() + diasHastaSabado);
+        setFilterFechaFin(sabado.toISOString().split('T')[0]);
+    };
+
+    // Manejar cambio de fecha fin
+    const handleFechaFinChange = (fecha: string) => {
+        if (!fecha) {
+            setFilterFechaFin('');
+            return;
+        }
+
+        if (esDomingo(fecha)) return;
+
+        const fechaFin = new Date(fecha + 'T00:00:00');
+        const fechaInicio = filterFechaInicio ? new Date(filterFechaInicio + 'T00:00:00') : null;
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        if (fechaFin < hoy) return;
+        if (fechaInicio && fechaFin < fechaInicio) return;
+
+        setFilterFechaFin(fecha);
+    };
+
+    // Cargar préstamos aprobados cuando cambian las fechas
     useEffect(() => {
         const loadPrestamos = async () => {
-            if (!filterFecha) {
+            if (!filterFechaInicio) {
                 setPrestamos([]);
                 return;
             }
@@ -254,12 +314,14 @@ export function useConsultaEspacios() {
             try {
                 const { prestamos: todosLosPrestamos } = await prestamoService.listarPrestamos();
                 
-                // Filtrar solo préstamos aprobados de la fecha seleccionada
-                const prestamosAprobadosFecha = todosLosPrestamos.filter(p => 
-                    p.estado === 'Aprobado' && p.fecha === filterFecha
+                // Filtrar préstamos aprobados y pendientes entre las fechas seleccionadas
+                const prestamosFiltrados = todosLosPrestamos.filter(p => 
+                    (p.estado === 'Aprobado' || p.estado === 'Pendiente') && 
+                    p.fecha >= filterFechaInicio &&
+                    p.fecha <= (filterFechaFin || filterFechaInicio)
                 );
                 
-                setPrestamos(prestamosAprobadosFecha);
+                setPrestamos(prestamosFiltrados);
             } catch (error) {
                 console.error("Error loading prestamos:", error);
                 setPrestamos([]);
@@ -267,7 +329,7 @@ export function useConsultaEspacios() {
         };
 
         loadPrestamos();
-    }, [filterFecha]);
+    }, [filterFechaInicio, filterFechaFin]);
 
     // Función auxiliar para convertir fecha a día de la semana
     const getFechaDiaSemana = (fecha: string): string => {
@@ -352,29 +414,30 @@ export function useConsultaEspacios() {
         mantenimiento: espacios.filter(e => e.estado === 'mantenimiento').length
     }), [espacios]);
 
-    // Combinar horarios con préstamos si hay fecha seleccionada
+    // Combinar horarios con préstamos si hay fechas seleccionadas
     const horariosConPrestamos = useMemo(() => {
-        if (!filterFecha || prestamos.length === 0) {
+        if (!filterFechaInicio || prestamos.length === 0) {
             return horarios;
         }
 
-        const diaSemana = getFechaDiaSemana(filterFecha);
-        const prestamosComoOcupacion: OcupacionView[] = prestamos.map(p => ({
-            espacioId: p.espacio_id.toString(),
-            dia: diaSemana,
-            horaInicio: horaANumero(p.hora_inicio),
-            horaFin: horaANumero(p.hora_fin),
-            materia: p.tipo_actividad_nombre || 'Préstamo',
-            docente: p.usuario_nombre || p.solicitante_publico_nombre,
-            grupo: p.motivo,
-            estado: 'prestamo',
-            tipo: 'prestamo',
-            prestamo: p
-        }));
+        const prestamosComoOcupacion: OcupacionView[] = prestamos.map(p => {
+            const diaSemana = getFechaDiaSemana(p.fecha);
+            return {
+                espacioId: p.espacio_id.toString(),
+                dia: diaSemana,
+                horaInicio: horaANumero(p.hora_inicio),
+                horaFin: horaANumero(p.hora_fin),
+                materia: p.tipo_actividad_nombre || 'Préstamo',
+                docente: p.usuario_nombre || p.solicitante_publico_nombre,
+                grupo: p.motivo,
+                estado: 'prestamo',
+                tipo: 'prestamo',
+                prestamo: p
+            };
+        });
 
-        // Combinar horarios y préstamos
         return [...horarios, ...prestamosComoOcupacion];
-    }, [horarios, prestamos, filterFecha]);
+    }, [horarios, prestamos, filterFechaInicio]);
 
     const getOcupacionPorHora = (espacioId: string, dia: string, hora: number) => {
         return horariosConPrestamos.find(h =>
@@ -612,15 +675,31 @@ export function useConsultaEspacios() {
         // Preparar datos para la nueva solicitud
         const espacio = espacios.find(e => e.id === seleccionRango.espacioId);
         if (espacio) {
-            // Calcular fecha del próximo día seleccionado
+            let fechaBase: Date;
+            
+            // Si hay fechas seleccionadas, usar la fecha inicio como base
+            if (filterFechaInicio) {
+                fechaBase = new Date(filterFechaInicio + 'T00:00:00');
+            } else {
+                // Si no hay filtro, usar la fecha de hoy
+                fechaBase = new Date();
+            }
+
+            // Calcular la fecha exacta según el día seleccionado en el horario
             const diasMap: { [key: string]: number } = {
                 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6
             };
-            const hoy = new Date();
-            const diaSemana = diasMap[seleccionRango.dia] || 1;
-            const diasHasta = (diaSemana - hoy.getDay() + 7) % 7;
-            const fecha = new Date(hoy);
-            fecha.setDate(hoy.getDate() + (diasHasta === 0 ? 7 : diasHasta));
+            const diaSeleccionado = diasMap[seleccionRango.dia];
+            const diaBase = fechaBase.getDay(); // 0 = domingo, 1 = lunes, etc.
+            
+            // Calcular diferencia de días para llegar al día seleccionado
+            let diferenciaDias = diaSeleccionado - diaBase;
+            if (diferenciaDias < 0) {
+                diferenciaDias += 7; // Ir a la próxima semana si el día ya pasó
+            }
+            
+            const fecha = new Date(fechaBase);
+            fecha.setDate(fechaBase.getDate() + diferenciaDias);
 
             setNuevaSolicitudData({
                 espacio_id: parseInt(espacio.id),
@@ -636,7 +715,7 @@ export function useConsultaEspacios() {
         setIsDragging(false);
         setSeleccionInicio(null);
         setSeleccionRango(null);
-    }, [isDragging, seleccionRango, espacios]);
+    }, [isDragging, seleccionRango, espacios, filterFechaInicio]);
 
     const cancelarSeleccion = useCallback(() => {
         setIsDragging(false);
@@ -649,7 +728,10 @@ export function useConsultaEspacios() {
         setFilterTipo('todos');
         setFilterEstado('todos');
         setFilterSede('todas');
-        setFilterFecha('');
+        const hoy = new Date();
+        const sabado = getProximoSabado(hoy);
+        setFilterFechaInicio('');
+        setFilterFechaFin('');
     }, []);
 
     const verCronogramaIndividual = useCallback((espacio: EspacioView) => {
@@ -671,8 +753,10 @@ export function useConsultaEspacios() {
         setFilterEstado,
         filterSede,
         setFilterSede,
-        filterFecha,
-        setFilterFecha,
+        filterFechaInicio,
+        filterFechaFin,
+        handleFechaInicioChange,
+        handleFechaFinChange,
         vistaActual,
         setVistaActual,
         tiposEspacio,

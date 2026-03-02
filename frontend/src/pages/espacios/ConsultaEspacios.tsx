@@ -35,8 +35,10 @@ export default function ConsultaEspacios() {
     setFilterEstado,
     filterSede,
     setFilterSede,
-    filterFecha,
-    setFilterFecha,
+    filterFechaInicio,
+    filterFechaFin,
+    handleFechaInicioChange,
+    handleFechaFinChange,
     vistaActual,
     setVistaActual,
     tiposEspacio,
@@ -389,18 +391,18 @@ export default function ConsultaEspacios() {
       {/* Filtros - ocultos cuando se selecciona un espacio */}
       {!espacioSeleccionado && (
         <div className="space-y-4">
-          <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap'} gap-4`}>
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap items-end'} gap-4`}>
             <div className={`${isMobile ? 'w-full' : 'flex-1 min-w-[200px]'} relative`}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
               <Input
                 placeholder="Buscar espacio..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-10 ${isMobile ? 'text-sm' : ''}`}
+                className={`pl-10 h-9 ${isMobile ? 'text-sm' : ''}`}
               />
             </div>
             <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -411,7 +413,7 @@ export default function ConsultaEspacios() {
               </SelectContent>
             </Select>
             <Select value={filterEstado} onValueChange={setFilterEstado}>
-              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -421,40 +423,54 @@ export default function ConsultaEspacios() {
                 <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={filterSede} onValueChange={setFilterSede}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
+                <SelectValue placeholder="Sede" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las sedes</SelectItem>
+                {sedes.map(sede => (
+                  <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
-              <Select value={filterSede} onValueChange={setFilterSede}>
-                <SelectTrigger className={`${isMobile ? 'flex-1' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}>
-                  <SelectValue placeholder="Sede" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas las sedes</SelectItem>
-                  {sedes.map(sede => (
-                    <SelectItem key={sede} value={sede}>{sede}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="date"
-                value={filterFecha}
-                onChange={(e) => setFilterFecha(e.target.value)}
-                className={`${isMobile ? 'flex-1' : 'w-[180px]'} ${isMobile ? 'text-sm' : ''}`}
-                placeholder="Filtrar por fecha"
-                title="Filtrar por fecha para ver préstamos aprobados"
-              />
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-slate-500">Desde</Label>
+                <Input
+                  type="date"
+                  value={filterFechaInicio}
+                  onChange={(e) => handleFechaInicioChange(e.target.value)}
+                  className={`${isMobile ? 'flex-1' : 'w-[150px]'} h-9 ${isMobile ? 'text-sm' : ''}`}
+                  placeholder="Fecha inicio"
+                  title="Fecha inicio del rango"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-slate-500">Hasta</Label>
+                <Input
+                  type="date"
+                  value={filterFechaFin}
+                  onChange={(e) => handleFechaFinChange(e.target.value)}
+                  className={`${isMobile ? 'flex-1' : 'w-[150px]'} h-9 ${isMobile ? 'text-sm' : ''}`}
+                  placeholder="Fecha fin"
+                  title="Fecha fin del rango"
+                />
+              </div>
               <Button
                 variant="outline"
                 onClick={limpiarFiltros}
-                className="border-slate-300 text-slate-600 hover:bg-slate-100"
+                className="border-slate-300 text-slate-600 hover:bg-slate-100 self-end h-9"
                 title="Limpiar filtros"
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
           </div>
-          {filterFecha && (
+          {filterFechaInicio && (
             <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3">
               <p className="text-blue-700 dark:text-blue-300 text-sm">
-                <strong>Vista con fecha seleccionada:</strong> Mostrando horarios académicos y préstamos aprobados para {new Date(filterFecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                <strong>Rango de fechas:</strong> Mostrando horarios académicos y préstamos aprobados del {new Date(filterFechaInicio + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} al {filterFechaFin ? new Date(filterFechaFin + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'sábado de esa semana'}
                 {prestamos.length > 0 && <span className="ml-2">({prestamos.length} préstamo{prestamos.length !== 1 ? 's' : ''} aprobado{prestamos.length !== 1 ? 's' : ''})</span>}
               </p>
             </div>
@@ -527,15 +543,11 @@ export default function ConsultaEspacios() {
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-green-500 rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Disponible</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-blue-600 rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Horario Académico</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-purple-600 rounded"></div>
                   <span className="text-sm text-slate-700 dark:text-slate-300">Préstamo Aprobado</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-yellow-300 rounded"></div>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Préstamo Pendiente</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-yellow-600 rounded"></div>
@@ -596,7 +608,7 @@ export default function ConsultaEspacios() {
                     <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
                       {diasSemana.map((dia) => (
-                        <div key={dia} className="text-sm text-center text-white font-semibold p-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded">
+                        <div key={dia} className="text-sm text-center text-white font-semibold p-2 bg-slate-800 rounded">
                           {dia}
                         </div>
                       ))}
@@ -668,12 +680,25 @@ export default function ConsultaEspacios() {
 
                           // Determinar si es un préstamo o un horario académico
                           const isPrestamo = ocupacion.tipo === 'prestamo';
+                          const isPrestamoPendiente = isPrestamo && ocupacion.prestamo?.estado === 'Pendiente';
+                          const isPrestamoAprobado = isPrestamo && ocupacion.prestamo?.estado === 'Aprobado';
                           
-                          const colorClass = isPrestamo
-                            ? 'bg-purple-600 hover:bg-purple-700' // Color morado para préstamos
-                            : ocupacion.estado === 'ocupado'
-                              ? 'bg-blue-600 hover:bg-blue-700'
-                              : 'bg-yellow-600 hover:bg-yellow-700';
+                          let colorClass = '';
+                          let labelText = '';
+                          
+                          if (isPrestamoPendiente) {
+                            colorClass = 'bg-gradient-to-br from-yellow-300 to-yellow-400 hover:from-yellow-400 hover:to-yellow-500 text-slate-900';
+                            labelText = 'PENDIENTE';
+                          } else if (isPrestamoAprobado) {
+                            colorClass = 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white';
+                            labelText = 'APROBADO';
+                          } else if (ocupacion.estado === 'ocupado') {
+                            colorClass = 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white';
+                            labelText = '';
+                          } else {
+                            colorClass = 'bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white';
+                            labelText = '';
+                          }
 
                           return (
                             <TooltipProvider key={`ocup-${idx}`}>
@@ -690,8 +715,8 @@ export default function ConsultaEspacios() {
                                       minHeight: `${rowSpan * 60}px`
                                     }}
                                   >
-                                    {isPrestamo && (
-                                      <p className="text-[8px] opacity-75 mb-1">PRÉSTAMO</p>
+                                    {isPrestamo && labelText && (
+                                      <p className="text-[8px] font-bold mb-1 bg-white/30 px-1.5 py-0.5 rounded">{labelText}</p>
                                     )}
                                     <p className="font-bold truncate text-xs leading-tight">{ocupacion.materia}</p>
                                     <p className="truncate opacity-90 text-[9px] leading-tight">{ocupacion.docente}</p>
@@ -702,7 +727,9 @@ export default function ConsultaEspacios() {
                                   <div className="space-y-1">
                                     {isPrestamo ? (
                                       <>
-                                        <p className="font-semibold text-sm text-purple-600">PRÉSTAMO APROBADO</p>
+                                        <p className={`font-semibold text-sm ${isPrestamoPendiente ? 'text-yellow-600' : 'text-green-600'}`}>
+                                          PRÉSTAMO {isPrestamoPendiente ? 'PENDIENTE' : 'APROBADO'}
+                                        </p>
                                         <p className="text-xs">Actividad: {ocupacion.materia}</p>
                                         <p className="text-xs">Solicitante: {ocupacion.docente || 'No especificado'}</p>
                                         {ocupacion.grupo && <p className="text-xs">Motivo: {ocupacion.grupo}</p>}
