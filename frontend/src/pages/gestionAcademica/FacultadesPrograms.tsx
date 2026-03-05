@@ -832,7 +832,7 @@ export default function FacultadesPrograms() {
               <Label>Asignatura <span className="text-red-600">*</span></Label>
               <SearchableSelect
                 items={availableAsignaturas}
-                value={asignaturaForm.asignaturaId}
+                value={asignaturaForm.asignaturaId ? parseInt(asignaturaForm.asignaturaId) : null}
                 onSelect={(asignatura) => setAsignaturaForm({ ...asignaturaForm, asignaturaId: asignatura.id?.toString() || '' })}
                 getItemId={(a) => a.id || 0}
                 getItemLabel={(a) => `${a.codigo} - ${a.nombre}`}

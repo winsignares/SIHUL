@@ -42,6 +42,4 @@ CMD until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER}; do \
     done && \
     echo "Database is ready!" && \
     python manage.py migrate --fake-initial --noinput && \
-    echo "Running initial data seed..." && \
-    python manage.py seed_initial_data && \
     python manage.py runserver 0.0.0.0:8000
