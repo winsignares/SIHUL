@@ -9,6 +9,12 @@ import type {
     CapacidadUtilizada,
     ReporteDisponible
 } from '../../models';
+
+export interface Docente {
+    id: number | string;
+    nombre: string;
+    correo?: string;
+}
 import { reporteOcupacionService } from '../../services/reporte/reporteOcupacionAPI';
 import { disponibilidadService } from '../../services/reporte/disponibilidadAPI';
 import { capacidadService } from '../../services/reporte/capacidadAPI';
@@ -98,7 +104,7 @@ export function useReportes() {
     const [horariosPrograma, setHorariosPrograma] = useState<HorarioPrograma[]>([]);
     const [programas, setProgramas] = useState<string[]>([]);
     const [horariosDocenteData, setHorariosDocenteData] = useState<HorarioDocente[]>([]);
-    const [docentes, setDocentes] = useState<string[]>([]);
+    const [docentes, setDocentes] = useState<Docente[]>([]);
     const [docenteSeleccionado, setDocenteSeleccionado] = useState<string | null>(null);
     const [showHorarioDocenteModal, setShowHorarioDocenteModal] = useState(false);
 
@@ -160,9 +166,35 @@ export function useReportes() {
 
                 setHorariosDocenteData(horariosDocenteTransformados);
 
-                // Obtener lista única de docentes
-                const docentesUnicos = ['Todos', ...new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))];
-                setDocentes(docentesUnicos);
+                // Cargar docentes completos desde el endpoint
+                try {
+                    const apiUrl = import.meta.env.VITE_API_URL;
+                    const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
+                    if (docentesResponse.ok) {
+                        const docentesData = await docentesResponse.json();
+                        const docentesList: Docente[] = [
+                            { id: 'todos', nombre: 'Todos', correo: '' },
+                            ...docentesData.usuarios.map((u: any) => ({
+                                id: u.id,
+                                nombre: u.nombre,
+                                correo: u.correo
+                            }))
+                        ];
+                        setDocentes(docentesList);
+                    }
+                } catch (error) {
+                    console.error('Error al cargar docentes:', error);
+                    // Fallback: usar nombres únicos de horarios
+                    const docentesUnicos: Docente[] = [
+                        { id: 'todos', nombre: 'Todos', correo: '' },
+                        ...Array.from(new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))).map((nombre, idx) => ({
+                            id: `docente-${idx}`,
+                            nombre,
+                            correo: ''
+                        }))
+                    ];
+                    setDocentes(docentesUnicos);
+                }
             } catch (error) {
                 console.error('Error al cargar horarios:', error);
             }

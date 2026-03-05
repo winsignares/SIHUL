@@ -1,6 +1,7 @@
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
 import { Download, Calendar, FileSpreadsheet, Eye, Clock, MapPin, Search } from 'lucide-react';
 import { Badge } from '../../share/badge';
@@ -65,16 +66,21 @@ export default function PublicConsultaHorario() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Docente</CardTitle>
-              <Select value={filtroDocente} onValueChange={setFiltroDocente}>
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="Seleccionar docente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {docentes.map(doc => (
-                    <SelectItem key={doc} value={doc}>{doc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-[300px]">
+                <SearchableSelect
+                  items={docentes}
+                  value={filtroDocente}
+                  onSelect={(docente) => setFiltroDocente(docente.nombre)}
+                  getItemId={(docente) => docente.nombre}
+                  getItemLabel={(docente) => docente.nombre}
+                  getItemSecondary={(docente) => docente.correo}
+                  placeholder="Seleccionar docente..."
+                  searchPlaceholder="Buscar docente..."
+                  emptyMessage="No se encontró ningún docente"
+                  clearable
+                  onClear={() => setFiltroDocente('Todos')}
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
