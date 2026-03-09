@@ -24,7 +24,7 @@ import type { Sede } from '../../services/sedes/sedeAPI';
 
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, hasEditPermission } = useAuth();
   
   const {
     searchTerm,
@@ -59,7 +59,7 @@ export default function ConsultaEspacios() {
     iniciarSeleccion,
     actualizarSeleccion,
     finalizarSeleccion,
-    esSupervisor,
+    puedeCrearSolicitudes,
     // Modal solicitud
     dialogSolicitudOpen,
     setDialogSolicitudOpen,
@@ -213,6 +213,10 @@ export default function ConsultaEspacios() {
     setFormError(null);
 
     try {
+      // Verificar si el usuario tiene permiso de EDITAR para auto-aprobar
+      const puedeAutoAprobar = hasEditPermission('Disponibilidad de Espacios');
+      const estadoInicial = puedeAutoAprobar ? 'Aprobado' : 'Pendiente';
+
       await prestamoService.crearPrestamo({
         espacio_id: formData.espacio_id,
         usuario_id: user.id,
@@ -224,14 +228,14 @@ export default function ConsultaEspacios() {
         motivo: formData.motivo,
         asistentes: asistentesNum,
         telefono: formData.telefono,
-        estado: 'Pendiente',
+        estado: estadoInicial,
         recursos: recursosSeleccionados.map(r => ({
           recurso_id: r.recurso_id,
           cantidad: r.cantidad
         }))
       });
 
-      toast.success('Solicitud enviada exitosamente');
+      toast.success(puedeAutoAprobar ? 'Solicitud aprobada automáticamente' : 'Solicitud enviada exitosamente');
       setDialogSolicitudOpen(false);
       setNuevaSolicitudData(null);
       setFormData({
@@ -553,7 +557,7 @@ export default function ConsultaEspacios() {
                   <div className="w-6 h-6 bg-yellow-600 rounded"></div>
                   <span className="text-sm text-slate-700 dark:text-slate-300">Mantenimiento</span>
                 </div>
-                {esSupervisor && (
+                {puedeCrearSolicitudes && (
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-purple-500 rounded border-2 border-purple-700"></div>
                     <span className="text-sm text-slate-700 dark:text-slate-300">Seleccionar (drag para solicitud)</span>
@@ -564,7 +568,7 @@ export default function ConsultaEspacios() {
           </Card>
 
           {/* Indicador de selección activa */}
-          {isDragging && esSupervisor && (
+          {isDragging && puedeCrearSolicitudes && (
             <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-3 text-center">
               <p className="text-purple-700 dark:text-purple-300 text-sm font-medium">
                 Suelta el mouse para crear una nueva solicitud de préstamo
@@ -638,7 +642,7 @@ export default function ConsultaEspacios() {
                               className={`border rounded transition-all ${
                                 ocupado 
                                   ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50' 
-                                  : esSupervisor
+                                  : puedeCrearSolicitudes
                                     ? estaSeleccionada
                                       ? 'bg-purple-500 border-purple-700 cursor-grabbing'
                                       : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
@@ -649,17 +653,17 @@ export default function ConsultaEspacios() {
                                 gridRow: horaIdx + 2
                               }}
                               onMouseDown={() => {
-                                if (!ocupado && esSupervisor) {
+                                if (!ocupado && puedeCrearSolicitudes) {
                                   iniciarSeleccion(espacio.id, dia, hora);
                                 }
                               }}
                               onMouseEnter={() => {
-                                if (!ocupado && esSupervisor) {
+                                if (!ocupado && puedeCrearSolicitudes) {
                                   actualizarSeleccion(espacio.id, dia, hora);
                                 }
                               }}
                               onMouseUp={() => {
-                                if (esSupervisor) {
+                                if (puedeCrearSolicitudes) {
                                   finalizarSeleccion();
                                 }
                               }}

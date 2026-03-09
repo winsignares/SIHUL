@@ -12,6 +12,7 @@ import {
     MapPin,
     DoorOpen,
     Wrench,
+    ShieldCheck,
     type LucideIcon
 } from 'lucide-react';
 
@@ -49,6 +50,7 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Asistentes Virtuales': '/admin/asistente-virtual',
     'Reportes Generales': '/admin/reportes',
     'Gestión de Usuarios': '/admin/usuarios',
+    'Componentes y Roles': '/admin/componentes-roles',
     'Asignación Automática': '/admin/asignacion',
 
     // Supervisor General
@@ -115,6 +117,7 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Ocupación Semanal': BarChart3,
     'Reportes Generales': FileText,
     'Gestión de Usuarios': Shield,
+    'Componentes y Roles': ShieldCheck,
     'Disponibilidad de Espacios': MapPin,
     'Apertura y Cierre de Salones': DoorOpen,
     'Mi Horario': Clock,

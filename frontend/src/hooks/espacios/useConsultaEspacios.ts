@@ -75,8 +75,8 @@ export function useConsultaEspacios() {
     // Obtener usuario del contexto de autenticación
     const { user } = useAuth();
 
-    // Verificar si es supervisor
-    const esSupervisor = user?.rol?.nombre === 'supervisor_general';
+    // Verificar si puede crear solicitudes de préstamo (cualquier usuario autenticado)
+    const puedeCrearSolicitudes = !!user;
 
     // Función para normalizar días
     const normalizarDia = (dia: string): string => {
@@ -640,9 +640,9 @@ export function useConsultaEspacios() {
         XLSX.writeFile(wb, nombreArchivo);
     };
 
-    // Funciones para drag-to-select (solo supervisor)
+    // Funciones para drag-to-select (cualquier usuario autenticado)
     const iniciarSeleccion = useCallback((espacioId: string, dia: string, hora: number) => {
-        if (!esSupervisor) return;
+        if (!puedeCrearSolicitudes) return;
         
         const ocupado = getOcupacionPorHora(espacioId, dia, hora);
         if (ocupado) return; // No permitir seleccionar horarios ocupados
@@ -650,7 +650,7 @@ export function useConsultaEspacios() {
         setIsDragging(true);
         setSeleccionInicio({ espacioId, dia, hora });
         setSeleccionRango({ espacioId, dia, horaInicio: hora, horaFin: hora + 1 });
-    }, [esSupervisor]);
+    }, [puedeCrearSolicitudes]);
 
     const actualizarSeleccion = useCallback((espacioId: string, dia: string, hora: number) => {
         if (!isDragging || !seleccionInicio) return;
@@ -773,14 +773,14 @@ export function useConsultaEspacios() {
         calcularProximaClaseYEstado,
         exportarCronogramaPDF,
         exportarCronogramaExcel,
-        // Drag-to-select (supervisor)
+        // Drag-to-select (cualquier usuario autenticado)
         isDragging,
         seleccionRango,
         iniciarSeleccion,
         actualizarSeleccion,
         finalizarSeleccion,
         cancelarSeleccion,
-        esSupervisor,
+        puedeCrearSolicitudes,
         // Modal solicitud
         dialogSolicitudOpen,
         setDialogSolicitudOpen,

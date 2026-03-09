@@ -6,6 +6,7 @@ interface AuthContextType extends AuthState {
     login: (payload: LoginPayload) => Promise<LoginResponse>;
     logout: () => void;
     hasPermission: (componentCode: string) => boolean;
+    hasEditPermission: (componentName: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,17 +104,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return state.components.some(c => c.nombre === componentName);
     };
 
+    const hasEditPermission = (componentName: string): boolean => {
+        return state.components.some(c => 
+            c.nombre === componentName && 
+            (c.permiso === 'EDITAR' || c.permiso === 'Editar')
+        );
+    };
+
     return (
-        <AuthContext.Provider value={{ ...state, login, logout, hasPermission }}>
+        <AuthContext.Provider value={{ ...state, login, logout, hasPermission, hasEditPermission }}>
             {children}
         </AuthContext.Provider>
     );
 }
 
-export function useAuth() {
+export const useAuth = () => {
     const context = useContext(AuthContext);
     if (context === undefined) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-}
+};

@@ -29,6 +29,7 @@ const Register = lazy(() => import('../pages/users/Register'));
 const DocentePrestamos = lazy(() => import('../pages/prestamos/DocentePrestamos'));
 const EnConstruccion = lazy(() => import('../pages/shared/EnConstruccion'));
 const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/SolicitudesEspacio'));
+const ComponentesRoles = lazy(() => import('../pages/permisos/ComponentesRoles'));
 
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
@@ -217,6 +218,12 @@ export default function AppRouter() {
         <Route path="admin/solicitudes-espacio" element={
           <ProtectedRoute>
             <SolicitudesEspacio />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/componentes-roles" element={
+          <ProtectedRoute requiredComponent="Gestión de Usuarios">
+            <ComponentesRoles />
           </ProtectedRoute>
         } />
 

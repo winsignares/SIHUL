@@ -268,7 +268,7 @@ def login(request):
                     "id": cr.componente.id,
                     "nombre": cr.componente.nombre,
                     "descripcion": cr.componente.descripcion,
-                    "permiso": cr.get_permiso_display()
+                    "permiso": cr.permiso  # Enviar valor crudo ('VER' o 'EDITAR')
                 }
                 for cr in componentes_rol
             ]

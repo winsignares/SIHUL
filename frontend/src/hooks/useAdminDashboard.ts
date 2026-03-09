@@ -273,16 +273,29 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         const adminNames = ['Gestión de Usuarios'];
         const adminComponents = components.filter(c => adminNames.includes(c.nombre));
         if (adminComponents.length > 0) {
+            const adminItems = adminComponents.map(c => ({
+                id: c.nombre,
+                icon: getIconForComponent(c.nombre),
+                label: cleanLabel(c.nombre),
+                route: getRouteForComponent(c.nombre),
+                code: c.nombre
+            }));
+            
+            // Agregar Componentes y Roles si tiene acceso a Gestión de Usuarios
+            if (adminComponents.some(c => c.nombre === 'Gestión de Usuarios')) {
+                adminItems.push({
+                    id: 'componentes-roles',
+                    icon: getIconForComponent('Componentes y Roles'),
+                    label: 'Componentes y Roles',
+                    route: '/admin/componentes-roles',
+                    code: 'componentes-roles'
+                });
+            }
+            
             sections.push({
                 id: 'administracion',
                 label: 'Administración',
-                items: adminComponents.map(c => ({
-                    id: c.nombre,
-                    icon: getIconForComponent(c.nombre),
-                    label: cleanLabel(c.nombre),
-                    route: getRouteForComponent(c.nombre),
-                    code: c.nombre
-                }))
+                items: adminItems
             });
         }
 
