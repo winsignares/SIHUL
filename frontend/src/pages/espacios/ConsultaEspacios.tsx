@@ -236,20 +236,13 @@ export default function ConsultaEspacios() {
       });
 
       toast.success(puedeAutoAprobar ? 'Solicitud aprobada automáticamente' : 'Solicitud enviada exitosamente');
-      setDialogSolicitudOpen(false);
-      setNuevaSolicitudData(null);
-      setFormData({
-        sede_id: 0,
-        espacio_id: 0,
-        tipo_actividad_id: 0,
-        asistentes: '',
-        motivo: '',
-        telefono: ''
-      });
-      setRecursosSeleccionados([]);
+      
+      // Recargar la página para actualizar los datos
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000); // Dar tiempo para que se muestre el toast
     } catch (err: any) {
       setFormError(err.message || 'Error al crear la solicitud');
-    } finally {
       setSubmitting(false);
     }
   };

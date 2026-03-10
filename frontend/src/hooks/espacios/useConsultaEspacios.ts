@@ -244,6 +244,40 @@ export function useConsultaEspacios() {
         loadData();
     }, [user]); // Recargar si cambia el usuario
 
+    // Función para obtener la fecha actual en hora de Colombia (UTC-5)
+    const getFechaColombia = (): Date => {
+        const ahora = new Date();
+        // Colombia está en UTC-5
+        const utc = ahora.getTime() + (ahora.getTimezoneOffset() * 60000);
+        const colombiaTime = new Date(utc + (3600000 * -5));
+        return colombiaTime;
+    };
+
+    // Establecer fechas predeterminadas si no hay ninguna seleccionada
+    useEffect(() => {
+        if (!filterFechaInicio) {
+            const hoy = getFechaColombia();
+            hoy.setHours(0, 0, 0, 0);
+            
+            // Si es domingo, no establecer fechas predeterminadas
+            if (hoy.getDay() === 0) {
+                return;
+            }
+            
+            const fechaInicioStr = hoy.toISOString().split('T')[0];
+            
+            // Calcular el sábado de la semana actual
+            const diaSemana = hoy.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+            const diasHastaSabado = 6 - diaSemana; // Días hasta sábado
+            const sabado = new Date(hoy);
+            sabado.setDate(hoy.getDate() + diasHastaSabado);
+            const fechaFinStr = sabado.toISOString().split('T')[0];
+            
+            setFilterFechaInicio(fechaInicioStr);
+            setFilterFechaFin(fechaFinStr);
+        }
+    }, []); // Solo ejecutar al montar el componente
+
     // Funciones auxiliares para manejo de fechas
     const getProximoSabado = (fecha: Date): Date => {
         const dia = fecha.getDay();
