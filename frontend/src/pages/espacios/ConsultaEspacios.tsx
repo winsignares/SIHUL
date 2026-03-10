@@ -271,16 +271,6 @@ export default function ConsultaEspacios() {
               : 'Consulta la disponibilidad de aulas, laboratorios y espacios'}
           </p>
         </div>
-        {espacioSeleccionado && (
-          <Button
-            variant="outline"
-            onClick={volverALista}
-            className="border-blue-600 text-blue-600 hover:bg-blue-50"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver a la lista
-          </Button>
-        )}
       </div>
 
       {/* Estadísticas */}
@@ -395,6 +385,16 @@ export default function ConsultaEspacios() {
             <RefreshCw className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
             {isMobile ? 'Recargar' : 'Recargar Datos'}
           </Button>
+          {espacioSeleccionado && (
+            <Button
+              variant="outline"
+              onClick={volverALista}
+              className="flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+            >
+              <ArrowLeft className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+              {isMobile ? 'Volver' : 'Volver a la lista'}
+            </Button>
+          )}
         </div>
       </div>
 
