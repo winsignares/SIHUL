@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { espacioPermitidoService, espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
-import { getEspaciosFromCache, setEspaciosInCache, getCacheKey } from '../../services/cache/cacheService';
+import { getEspaciosFromCache, setEspaciosInCache, getCacheKey, clearEspaciosCache } from '../../services/cache/cacheService';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
 import jsPDF from 'jspdf';
@@ -778,6 +778,13 @@ export function useConsultaEspacios() {
         setVistaActual('tarjetas');
     }, []);
 
+    // Función para recargar datos limpiando el caché
+    const recargarDatos = useCallback(() => {
+        const cacheKey = getCacheKey(user);
+        clearEspaciosCache(cacheKey);
+        window.location.reload();
+    }, [user]);
+
     return {
         searchTerm,
         setSearchTerm,
@@ -825,6 +832,8 @@ export function useConsultaEspacios() {
         verCronogramaIndividual,
         volverALista,
         // Filtros
-        limpiarFiltros
+        limpiarFiltros,
+        // Recarga
+        recargarDatos
     };
 }

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/di
 import { Label } from '../../share/label';
 import { Textarea } from '../../share/textarea';
 import { Alert, AlertDescription } from '../../share/alert';
-import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet, Plus, Trash2, AlertCircle, ArrowLeft, X } from 'lucide-react';
+import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet, Plus, Trash2, AlertCircle, ArrowLeft, X, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
@@ -70,7 +70,9 @@ export default function ConsultaEspacios() {
     verCronogramaIndividual,
     volverALista,
     // Filtros
-    limpiarFiltros
+    limpiarFiltros,
+    // Recarga
+    recargarDatos
   } = useConsultaEspacios();
 
   // Estados para el formulario de solicitud
@@ -365,24 +367,35 @@ export default function ConsultaEspacios() {
             </>
           )}
         </div>
-        {vistaActual === 'cronograma' && (
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              onClick={() => exportarCronogramaPDF(espacioSeleccionado ? [espacioSeleccionado] : undefined)}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-            >
-              <FileDown className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-              {isMobile ? 'PDF' : 'Exportar PDF'}
-            </Button>
-            <Button
-              onClick={() => exportarCronogramaExcel(espacioSeleccionado ? [espacioSeleccionado] : undefined)}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-            >
-              <FileSpreadsheet className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-              {isMobile ? 'Excel' : 'Exportar Excel'}
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-2 w-full sm:w-auto">
+          {vistaActual === 'cronograma' && (
+            <>
+              <Button
+                onClick={() => exportarCronogramaPDF(espacioSeleccionado ? [espacioSeleccionado] : undefined)}
+                className="flex-1 sm:flex-none bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              >
+                <FileDown className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+                {isMobile ? 'PDF' : 'Exportar PDF'}
+              </Button>
+              <Button
+                onClick={() => exportarCronogramaExcel(espacioSeleccionado ? [espacioSeleccionado] : undefined)}
+                className="flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+              >
+                <FileSpreadsheet className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+                {isMobile ? 'Excel' : 'Exportar Excel'}
+              </Button>
+            </>
+          )}
+          <Button
+            onClick={recargarDatos}
+            variant="outline"
+            className="flex-1 sm:flex-none border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
+            title="Limpiar caché y recargar datos"
+          >
+            <RefreshCw className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
+            {isMobile ? 'Recargar' : 'Recargar Datos'}
+          </Button>
+        </div>
       </div>
 
       {/* Filtros - ocultos cuando se selecciona un espacio */}
