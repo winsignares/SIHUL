@@ -14,11 +14,18 @@ export interface Usuario {
   contrasena?: string;
   rol_id?: number | null;
   facultad_id?: number | null;
+  sede_id?: number | null;
   activo: boolean;
   rol?: Rol;
   facultad?: {
     id: number;
     nombre: string;
+  } | null;
+  sede?: {
+    id: number;
+    nombre: string;
+    ciudad?: string;
+    direccion?: string;
   } | null;
   espacios_permitidos?: number[];
 }

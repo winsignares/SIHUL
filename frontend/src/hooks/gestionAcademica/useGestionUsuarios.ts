@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { apiClient } from '../../core/apiClient';
 import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
@@ -26,10 +26,16 @@ export function useGestionUsuarios() {
         activo: true
     });
 
+    // Estados de validación para creación
+    const [confirmarCorreo, setConfirmarCorreo] = useState('');
+    const [confirmarPassword, setConfirmarPassword] = useState('');
+    const [sedeSeleccionada, setSedeSeleccionada] = useState('');
+
     // Estados para datos dinámicos desde backend
     const [rolesDisponibles, setRolesDisponibles] = useState<Rol[]>([]);
     const [facultadesDisponibles, setFacultadesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
+    const [sedesDisponibles, setSedesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
 
     // Estados para espacios permitidos (solo supervisor_general)
     const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
@@ -41,6 +47,11 @@ export function useGestionUsuarios() {
     const [facultadSeleccionada, setFacultadSeleccionada] = useState<number | null>(null);
     const [facultadSeleccionadaEdit, setFacultadSeleccionadaEdit] = useState<number | null>(null);
 
+    // Callbacks memorizados para actualizar campos del formulario
+    const updateNuevoUsuarioField = useCallback((field: string, value: any) => {
+        setNuevoUsuario(prev => ({ ...prev, [field]: value }));
+    }, []);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -50,7 +61,8 @@ export function useGestionUsuarios() {
             loadUsuarios(),
             loadRoles(),
             loadFacultades(),
-            loadEspacios()
+            loadEspacios(),
+            loadSedes()
         ]);
     };
 
@@ -95,34 +107,63 @@ export function useGestionUsuarios() {
         }
     };
 
+    // Cargar sedes desde backend
+    const loadSedes = async () => {
+        try {
+            const response = await apiClient.get<{ sedes: Array<{ id: number, nombre: string }> }>('/sedes/list/');
+            setSedesDisponibles(response.sedes || []);
+        } catch (error) {
+            console.error('Error cargando sedes:', error);
+        }
+    };
+
     // Funciones para manejar espacios permitidos (Creación)
-    const agregarEspacioPermitido = () => {
+    const agregarEspacioPermitido = useCallback(() => {
         if (espacioSeleccionado && !espaciosPermitidos.includes(parseInt(espacioSeleccionado))) {
             setEspaciosPermitidos([...espaciosPermitidos, parseInt(espacioSeleccionado)]);
             setEspacioSeleccionado('');
         }
-    };
+    }, [espacioSeleccionado, espaciosPermitidos]);
 
-    const eliminarEspacioPermitido = (espacioId: number) => {
+    const eliminarEspacioPermitido = useCallback((espacioId: number) => {
         setEspaciosPermitidos(espaciosPermitidos.filter(id => id !== espacioId));
-    };
+    }, [espaciosPermitidos]);
 
     // Funciones para manejar espacios permitidos (Edición)
-    const agregarEspacioPermitidoEdit = () => {
+    const agregarEspacioPermitidoEdit = useCallback(() => {
         if (espacioSeleccionadoEdit && !espaciosPermitidosEdit.includes(parseInt(espacioSeleccionadoEdit))) {
             setEspaciosPermitidosEdit([...espaciosPermitidosEdit, parseInt(espacioSeleccionadoEdit)]);
             setEspacioSeleccionadoEdit('');
         }
-    };
+    }, [espacioSeleccionadoEdit, espaciosPermitidosEdit]);
 
-    const eliminarEspacioPermitidoEdit = (espacioId: number) => {
+    const eliminarEspacioPermitidoEdit = useCallback((espacioId: number) => {
         setEspaciosPermitidosEdit(espaciosPermitidosEdit.filter(id => id !== espacioId));
-    };
+    }, [espaciosPermitidosEdit]);
 
     // Crear usuario
     const crearUsuario = async () => {
+        // Validaciones
         if (!nuevoUsuario.nombre || !nuevoUsuario.correo || !nuevoUsuario.contrasena || !nuevoUsuario.rol_id) {
             showNotification('Por favor complete todos los campos obligatorios', 'error');
+            return;
+        }
+
+        // Validar correos coinciden
+        if (nuevoUsuario.correo !== confirmarCorreo) {
+            showNotification('Los correos no coinciden', 'error');
+            return;
+        }
+
+        // Validar contraseñas coinciden
+        if (nuevoUsuario.contrasena !== confirmarPassword) {
+            showNotification('Las contraseñas no coinciden', 'error');
+            return;
+        }
+
+        // Validar sede seleccionada
+        if (!sedeSeleccionada) {
+            showNotification('Por favor seleccione una sede', 'error');
             return;
         }
 
@@ -138,7 +179,8 @@ export function useGestionUsuarios() {
                 rol_id: nuevoUsuario.rol_id,
                 facultad_id: facultadSeleccionada,
                 activo: true,
-                espacios_permitidos: espaciosPayload
+                espacios_permitidos: espaciosPayload,
+                sede_id: parseInt(sedeSeleccionada)
             });
 
             showNotification('Usuario creado exitosamente', 'success');
@@ -255,6 +297,9 @@ export function useGestionUsuarios() {
             rol_id: null,
             activo: true
         });
+        setConfirmarCorreo('');
+        setConfirmarPassword('');
+        setSedeSeleccionada('');
         setEspaciosPermitidos([]);
         setFacultadSeleccionada(null);
     };
@@ -265,13 +310,15 @@ export function useGestionUsuarios() {
         setFacultadSeleccionadaEdit(null);
     };
 
-    // Usuarios filtrados
-    const filteredUsuarios = usuarios.filter(user => {
-        const matchesSearch = user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.correo.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRol = filterRol === 'todos' || user.rol?.nombre === filterRol;
-        return matchesSearch && matchesRol;
-    });
+    // Usuarios filtrados (memoizado para evitar recálculos innecesarios)
+    const filteredUsuarios = useMemo(() => {
+        return usuarios.filter(user => {
+            const matchesSearch = user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.correo.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesRol = filterRol === 'todos' || user.rol?.nombre === filterRol;
+            return matchesSearch && matchesRol;
+        });
+    }, [usuarios, searchTerm, filterRol]);
 
     return {
         searchTerm, setSearchTerm,
@@ -282,6 +329,7 @@ export function useGestionUsuarios() {
         userToDelete, setUserToDelete,
         editingUser, setEditingUser,
         nuevoUsuario, setNuevoUsuario,
+        updateNuevoUsuarioField,
         crearUsuario,
         resetNuevoUsuario,
         actualizarUsuario,
@@ -295,6 +343,7 @@ export function useGestionUsuarios() {
         rolesDisponibles,
         facultadesDisponibles,
         espaciosDisponibles,
+        sedesDisponibles,
         espacioSeleccionado, setEspacioSeleccionado,
         espaciosPermitidos,
         espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
@@ -304,6 +353,10 @@ export function useGestionUsuarios() {
         agregarEspacioPermitido,
         eliminarEspacioPermitido,
         agregarEspacioPermitidoEdit,
-        eliminarEspacioPermitidoEdit
+        eliminarEspacioPermitidoEdit,
+        // Campos de validación
+        confirmarCorreo, setConfirmarCorreo,
+        confirmarPassword, setConfirmarPassword,
+        sedeSeleccionada, setSedeSeleccionada
     };
 }

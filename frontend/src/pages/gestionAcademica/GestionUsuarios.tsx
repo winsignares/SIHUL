@@ -7,13 +7,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Switch } from '../../share/switch';
-import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useState } from 'react';
 
 export default function GestionUsuarios() {
   const isMobile = useIsMobile();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const {
     searchTerm, setSearchTerm,
     filterRol, setFilterRol,
@@ -35,6 +38,7 @@ export default function GestionUsuarios() {
     rolesDisponibles,
     facultadesDisponibles,
     espaciosDisponibles,
+    sedesDisponibles,
     espacioSeleccionado, setEspacioSeleccionado,
     espaciosPermitidos,
     espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
@@ -44,7 +48,10 @@ export default function GestionUsuarios() {
     agregarEspacioPermitido,
     eliminarEspacioPermitido,
     agregarEspacioPermitidoEdit,
-    eliminarEspacioPermitidoEdit
+    eliminarEspacioPermitidoEdit,
+    confirmarCorreo, setConfirmarCorreo,
+    confirmarPassword, setConfirmarPassword,
+    sedeSeleccionada, setSedeSeleccionada
   } = useGestionUsuarios();
 
   const getRolBadge = (usuario: any) => {
@@ -115,7 +122,11 @@ export default function GestionUsuarios() {
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) resetNuevoUsuario();
+          if (!open) {
+            resetNuevoUsuario();
+            setShowPassword(false);
+            setShowConfirmPassword(false);
+          }
         }}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white">
@@ -136,31 +147,104 @@ export default function GestionUsuarios() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre Completo *</Label>
-                    <Input
-                      placeholder="Ej: Juan Pérez"
-                      value={nuevoUsuario.nombre}
-                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        placeholder="Juan Pérez García"
+                        value={nuevoUsuario.nombre}
+                        onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sede Universitaria *</Label>
+                    <div className="relative group">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <Select
+                        value={sedeSeleccionada}
+                        onValueChange={(value) => setSedeSeleccionada(value)}
+                      >
+                        <SelectTrigger className="pl-10">
+                          <SelectValue placeholder="Seleccione una sede" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sedesDisponibles.map(sede => (
+                            <SelectItem key={sede.id} value={sede.id.toString()}>
+                              {sede.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Correo Institucional *</Label>
-                    <Input
-                      type="email"
-                      placeholder="usuario@unilibre.edu.co"
-                      value={nuevoUsuario.correo}
-                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, correo: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type="email"
+                        placeholder="correo@unilibre.edu.co"
+                        value={nuevoUsuario.correo}
+                        onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, correo: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirmar Correo *</Label>
+                    <div className="relative group">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type="email"
+                        placeholder="correo@unilibre.edu.co"
+                        value={confirmarCorreo}
+                        onChange={(e) => setConfirmarCorreo(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Contraseña *</Label>
-                    <Input
-                      type="password"
-                      placeholder="********"
-                      value={nuevoUsuario.contrasena}
-                      onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, contrasena: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={nuevoUsuario.contrasena}
+                        onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, contrasena: e.target.value })}
+                        className="pl-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
+                    <Label>Confirmar Contraseña *</Label>
+                    <div className="relative group">
+                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={confirmarPassword}
+                        onChange={(e) => setConfirmarPassword(e.target.value)}
+                        className="pl-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2 col-span-2">
                     <Label>Rol *</Label>
                     <Select
                       value={nuevoUsuario.rol_id?.toString() || ''}
@@ -268,6 +352,8 @@ export default function GestionUsuarios() {
               <Button variant="outline" onClick={() => {
                 setDialogOpen(false);
                 resetNuevoUsuario();
+                setShowPassword(false);
+                setShowConfirmPassword(false);
               }}>
                 Cancelar
               </Button>
