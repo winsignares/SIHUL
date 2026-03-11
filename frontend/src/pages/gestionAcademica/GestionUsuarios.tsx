@@ -419,8 +419,7 @@ export default function GestionUsuarios() {
                   <TableRow key={usuario.id}>
                     <TableCell>
                       <div>
-                        <p className="text-slate-900">{usuario.nombre}</p>
-                        <p className="text-xs text-slate-500">ID: {usuario.id}</p>
+                        <p className="text-slate-900">{usuario.nombre}</p> 
                       </div>
                     </TableCell>
                     <TableCell className="text-slate-700">{usuario.correo}</TableCell>
