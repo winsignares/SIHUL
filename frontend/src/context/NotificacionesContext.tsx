@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuthOptional } from './AuthContext';
 import { obtenerEstadisticas } from '../services/notificaciones/notificacionesAPI';
 
 interface NotificacionesContextType {
@@ -10,7 +10,9 @@ interface NotificacionesContextType {
 const NotificacionesContext = createContext<NotificacionesContextType | undefined>(undefined);
 
 export function NotificacionesProvider({ children }: { children: ReactNode }) {
-    const { user, isAuthenticated } = useAuth();
+    const auth = useAuthOptional();
+    const user = auth?.user;
+    const isAuthenticated = auth?.isAuthenticated ?? false;
     const [contadorNoLeidas, setContadorNoLeidas] = useState(0);
 
     /**
