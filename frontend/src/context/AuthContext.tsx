@@ -9,7 +9,7 @@ interface AuthContextType extends AuthState {
     hasEditPermission: (componentName: string) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const authSignatureRef = useRef<string>(localStorage.getItem('auth_signature') || '');
@@ -193,3 +193,5 @@ export const useAuth = () => {
     }
     return context;
 };
+
+export const useAuthOptional = () => useContext(AuthContext);

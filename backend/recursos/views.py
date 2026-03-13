@@ -70,10 +70,17 @@ def get_recurso(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            r = Recurso.objects.filter(id=id, espacio_recursos__espacio__sede__ciudad=user_sede.ciudad).first()
-            if not r:
-                return JsonResponse({"error": "Recurso no encontrado o no accesible."}, status=404)
+        if user_sede and user_sede.ciudad:
+            r = Recurso.objects.filter(
+                id=id,
+                recurso_espacios__espacio__sede__ciudad=user_sede.ciudad
+            ).first()
+        else:
+            r = Recurso.objects.filter(id=id).first()
+
+        if not r:
+            return JsonResponse({"error": "Recurso no encontrado o no accesible."}, status=404)
+
         return JsonResponse({"id": r.id, "nombre": r.nombre, "descripcion": r.descripcion}, status=200)
     except Recurso.DoesNotExist:
         return JsonResponse({"error": "Recurso no encontrado."}, status=404)
@@ -84,8 +91,10 @@ def get_recurso(request, id=None):
 def list_recursos(request):
     if request.method == 'GET':
         user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            items = Recurso.objects.filter(espacio_recursos__espacio__sede__ciudad=user_sede.ciudad).distinct()
+        if user_sede and user_sede.ciudad:
+            items = Recurso.objects.filter(
+                recurso_espacios__espacio__sede__ciudad=user_sede.ciudad
+            ).distinct()
         else:
             items = Recurso.objects.all()
         lst = [{"id": i.id, "nombre": i.nombre, "descripcion": i.descripcion} for i in items]
