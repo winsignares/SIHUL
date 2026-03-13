@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getRouteForComponent } from '../config/componentRoutes';
 
 // Lazy load de componentes para mejorar el rendimiento
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
@@ -30,6 +31,7 @@ const DocentePrestamos = lazy(() => import('../pages/prestamos/DocentePrestamos'
 const EnConstruccion = lazy(() => import('../pages/shared/EnConstruccion'));
 const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/SolicitudesEspacio'));
 const ComponentesRoles = lazy(() => import('../pages/permisos/ComponentesRoles'));
+const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
 
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
@@ -105,7 +107,9 @@ function ProtectedRoute({
 }
 
 export default function AppRouter() {
-  const { isAuthenticated, components } = useAuth();
+  const { isAuthenticated, components, role } = useAuth();
+
+  const hasComponentByName = (name: string) => components.some(c => c.nombre === name);
 
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
@@ -130,14 +134,41 @@ export default function AppRouter() {
     );
   }
 
-  // Obtener el primer componente dashboard para redirección inicial
-  const dashboardComponent = components.find(c => c.nombre.toLowerCase().includes('dashboard'));
-  const homeRoute = dashboardComponent ?
-    (dashboardComponent.nombre === 'Dashboard' ? '/admin/dashboard' :
-      dashboardComponent.nombre === 'Dashboard Supervisor' ? '/supervisor/dashboard' :
-        dashboardComponent.nombre === 'Dashboard Docente' ? '/docente/dashboard' :
-          dashboardComponent.nombre === 'Dashboard Estudiante' ? '/estudiante/dashboard' :
-            '/admin/dashboard') : '/admin/dashboard';
+  // Definir redirección inicial según rol y componentes exactos del backend
+  const homeRoute = (() => {
+    const roleName = role?.nombre;
+
+    if (roleName === 'admin') {
+      if (hasComponentByName('Gestión de Usuarios')) return '/admin/usuarios';
+      if (hasComponentByName('Gestión de Roles')) return '/admin/roles';
+      if (hasComponentByName('Gestión de Componentes')) return '/admin/componentes-roles';
+    }
+
+    if (roleName === 'admin_planeacion' || roleName === 'planeacion_facultad') {
+      if (hasComponentByName('Dashboard')) return '/admin/dashboard';
+    }
+
+    if (roleName === 'supervisor_general') {
+      if (hasComponentByName('Dashboard Supervisor')) return '/supervisor/dashboard';
+    }
+
+    if (roleName === 'docente') {
+      if (hasComponentByName('Dashboard Docente')) return '/docente/dashboard';
+    }
+
+    if (roleName === 'estudiante') {
+      if (hasComponentByName('Dashboard Estudiante')) return '/estudiante/dashboard';
+    }
+
+    for (const component of components) {
+      const route = getRouteForComponent(component.nombre);
+      if (route !== '/') {
+        return route;
+      }
+    }
+
+    return '/notificaciones';
+  })();
 
   // Rutas protegidas con layout compartido
   return (
@@ -222,8 +253,14 @@ export default function AppRouter() {
         } />
 
         <Route path="admin/componentes-roles" element={
-          <ProtectedRoute requiredComponent="Gestión de Usuarios">
+          <ProtectedRoute requiredComponent="Gestión de Componentes">
             <ComponentesRoles />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/roles" element={
+          <ProtectedRoute requiredComponent="Gestión de Roles">
+            <GestionRoles />
           </ProtectedRoute>
         } />
 

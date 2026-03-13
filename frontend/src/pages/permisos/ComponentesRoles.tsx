@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useComponentesRoles } from '../../hooks/permisos/useComponentesRoles';
 import type { ComponenteRol, Componente } from '../../services/componentes/componentesAPI';
 import type { Rol } from '../../services/users/authService';
-import { Search, Edit, Shield, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type PermisoType = 'VER' | 'EDITAR';
 
@@ -24,92 +24,17 @@ export default function ComponentesRoles() {
     cambiarPagina,
     terminoBusqueda,
     setTerminoBusqueda,
-    crearRol,
-    actualizarRol,
-    eliminarRol,
     obtenerAsignacionesPorRol,
     crearAsignacion,
     actualizarAsignacion,
     eliminarAsignacion
   } = useComponentesRoles();
 
-  // Estados para modal de Rol
-  const [mostrarModalRol, setMostrarModalRol] = useState(false);
-  const [modoEdicionRol, setModoEdicionRol] = useState(false);
-  const [rolEdicion, setRolEdicion] = useState<Rol | null>(null);
-  const [nombreRol, setNombreRol] = useState('');
-  const [descripcionRol, setDescripcionRol] = useState('');
-
   // Estados para modal de Permisos
   const [mostrarModalPermisos, setMostrarModalPermisos] = useState(false);
   const [rolPermisos, setRolPermisos] = useState<Rol | null>(null);
   const [permisosComponentes, setPermisosComponentes] = useState<PermisoComponente[]>([]);
   const [busquedaComponentes, setBusquedaComponentes] = useState('');
-
-  /**
-   * Abrir modal para crear nuevo rol
-   */
-  const abrirModalCrearRol = () => {
-    setModoEdicionRol(false);
-    setRolEdicion(null);
-    setNombreRol('');
-    setDescripcionRol('');
-    setMostrarModalRol(true);
-  };
-
-  /**
-   * Abrir modal para editar rol
-   */
-  const abrirModalEditarRol = (rol: Rol) => {
-    setModoEdicionRol(true);
-    setRolEdicion(rol);
-    setNombreRol(rol.nombre);
-    setDescripcionRol(rol.descripcion);
-    setMostrarModalRol(true);
-  };
-
-  /**
-   * Guardar rol (crear o actualizar)
-   */
-  const handleGuardarRol = async () => {
-    if (!nombreRol.trim()) {
-      alert('El nombre del rol es obligatorio');
-      return;
-    }
-
-    try {
-      if (modoEdicionRol && rolEdicion) {
-        await actualizarRol({
-          id: rolEdicion.id,
-          nombre: nombreRol,
-          descripcion: descripcionRol
-        });
-      } else {
-        await crearRol({
-          nombre: nombreRol,
-          descripcion: descripcionRol
-        });
-      }
-      setMostrarModalRol(false);
-    } catch (err) {
-      console.error('Error al guardar rol:', err);
-    }
-  };
-
-  /**
-   * Eliminar rol
-   */
-  const handleEliminarRol = async (rol: Rol) => {
-    if (!confirm(`¿Está seguro de eliminar el rol "${rol.nombre}"?`)) {
-      return;
-    }
-
-    try {
-      await eliminarRol(rol.id);
-    } catch (err) {
-      console.error('Error al eliminar rol:', err);
-    }
-  };
 
   /**
    * Abrir modal de gestión de permisos
@@ -215,11 +140,12 @@ export default function ComponentesRoles() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Gestión de Roles y Permisos
+          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+            <Shield className="w-8 h-8 text-red-600" />
+            Gestión de Componentes
           </h1>
           <p className="text-gray-600">
-            Administra roles de usuarios y sus permisos de acceso a componentes del sistema
+            Asigna componentes del sistema a cada rol y configura sus permisos de acceso
           </p>
         </div>
 
@@ -230,7 +156,7 @@ export default function ComponentesRoles() {
           </div>
         )}
 
-        {/* Barra de acciones: Búsqueda + Botón Nuevo */}
+        {/* Barra de búsqueda */}
         <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           {/* Búsqueda */}
           <div className="relative flex-1 max-w-md">
@@ -243,15 +169,6 @@ export default function ComponentesRoles() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             />
           </div>
-
-          {/* Botón Nuevo Rol */}
-          <button
-            onClick={abrirModalCrearRol}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <Shield className="w-5 h-5" />
-            Nuevo Rol
-          </button>
         </div>
 
         {/* Tabla de Roles */}
@@ -267,7 +184,7 @@ export default function ComponentesRoles() {
                     Descripción
                   </th>
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
-                    Permisos
+                    Componentes Asignados
                   </th>
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
                     Acciones
@@ -293,31 +210,13 @@ export default function ComponentesRoles() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          {/* Botón Editar Rol */}
-                          <button
-                            onClick={() => abrirModalEditarRol(rol)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Editar rol"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          
                           {/* Botón Gestionar Permisos */}
                           <button
                             onClick={() => abrirModalPermisos(rol)}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Gestionar permisos"
+                            title="Gestionar componentes"
                           >
                             <Shield className="w-4 h-4" />
-                          </button>
-                          
-                          {/* Botón Eliminar */}
-                          <button
-                            onClick={() => handleEliminarRol(rol)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Eliminar rol"
-                          >
-                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -377,64 +276,6 @@ export default function ComponentesRoles() {
             </div>
           )}
         </div>
-
-        {/* Modal: Crear/Editar Rol */}
-        {mostrarModalRol && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border-2 border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                {modoEdicionRol ? 'Editar Rol' : 'Nuevo Rol'}
-              </h2>
-
-              <div className="space-y-4">
-                {/* Nombre */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre del Rol *
-                  </label>
-                  <input
-                    type="text"
-                    value={nombreRol}
-                    onChange={(e) => setNombreRol(e.target.value)}
-                    placeholder="Ej: Administrador, Supervisor, etc."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Descripción */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    value={descripcionRol}
-                    onChange={(e) => setDescripcionRol(e.target.value)}
-                    placeholder="Describe las responsabilidades de este rol..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-                  />
-                </div>
-              </div>
-
-              {/* Botones */}
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setMostrarModalRol(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleGuardarRol}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal: Gestionar Permisos */}
         {mostrarModalPermisos && rolPermisos && (

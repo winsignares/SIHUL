@@ -32,11 +32,8 @@ interface UseComponentesRolesReturn {
   setTerminoBusqueda: (termino: string) => void;
   rolesFiltrados: Rol[];
   
-  // CRUD Roles
+  // Carga de datos
   cargarDatos: () => Promise<void>;
-  crearRol: (rol: Omit<Rol, 'id'>) => Promise<void>;
-  actualizarRol: (rol: Rol) => Promise<void>;
-  eliminarRol: (id: number) => Promise<void>;
   
   // CRUD Asignaciones (ComponenteRol)
   crearAsignacion: (payload: CreateComponenteRolPayload) => Promise<void>;
@@ -127,63 +124,6 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     } catch (err) {
       console.error('Error al cargar datos:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar datos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Crear un nuevo rol
-   */
-  const crearRol = async (rol: Omit<Rol, 'id'>) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await rolService.crearRol(rol);
-      await cargarDatos();
-    } catch (err) {
-      console.error('Error al crear rol:', err);
-      setError(err instanceof Error ? err.message : 'Error al crear rol');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Actualizar un rol existente
-   */
-  const actualizarRol = async (rol: Rol) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await rolService.actualizarRol(rol);
-      await cargarDatos();
-    } catch (err) {
-      console.error('Error al actualizar rol:', err);
-      setError(err instanceof Error ? err.message : 'Error al actualizar rol');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Eliminar un rol
-   */
-  const eliminarRol = async (id: number) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await rolService.eliminarRol(id);
-      await cargarDatos();
-    } catch (err) {
-      console.error('Error al eliminar rol:', err);
-      setError(err instanceof Error ? err.message : 'Error al eliminar rol');
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -294,11 +234,8 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     setTerminoBusqueda,
     rolesFiltrados,
     
-    // CRUD Roles
+    // Carga de datos
     cargarDatos,
-    crearRol,
-    actualizarRol,
-    eliminarRol,
     
     // CRUD Asignaciones
     crearAsignacion,
