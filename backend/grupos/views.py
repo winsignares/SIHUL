@@ -91,7 +91,17 @@ def get_grupo(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        g = Grupo.objects.get(id=id)
+        #buscamos el grupo solo si su programa está en la misma ciudad de la sede del usuario (a través de programa -> facultad -> sede)
+        #obtenemos la sede del usuario desde el middleware
+        user_sede = getattr(request, 'sede', None)
+        #si el usuario tiene una sede con ciudad, filtramos el grupo por esa ciudad
+        if user_sede and user_sede.ciudad:
+            g = Grupo.objects.filter(id=id, programa__facultad__sede__ciudad=user_sede.ciudad).first()
+            if not g:
+                return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
+        else:
+            #si no tiene sede o ciudad, buscamos el grupo sin filtro de ciudad
+            g = Grupo.objects.get(id=id)
         return JsonResponse({"id": g.id, "nombre": g.nombre, "programa_id": g.programa.id, "periodo_id": g.periodo.id, "semestre": g.semestre, "activo": g.activo}, status=200)
     except Grupo.DoesNotExist:
         return JsonResponse({"error": "Grupo no encontrado."}, status=404)

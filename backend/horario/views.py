@@ -314,7 +314,12 @@ def get_horario(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        h = Horario.objects.get(id=id)
+        #obtenemos la sede del usuario autenticado
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            h = Horario.objects.filter(id=id, espacio__sede__ciudad=user_sede.ciudad).first()
+        else: 
+            h = Horario.objects.get(id=id)
         return JsonResponse({
             "id": h.id,
             "grupo_id": h.grupo.id,
@@ -334,7 +339,12 @@ def get_horario(request, id=None):
 @csrf_exempt
 def list_horarios(request):
     if request.method == 'GET':
-        items = Horario.objects.filter(estado='aprobado')
+        #obtenemos sede del usuario autenticado
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            items = Horario.objects.filter(estado='aprobado', espacio__sede__ciudad=user_sede.ciudad)
+        else:
+            items = Horario.objects.filter(estado='aprobado')
         lst = [{
             "id": i.id,
             "grupo_id": i.grupo.id,
@@ -352,8 +362,14 @@ def list_horarios(request):
 def list_horarios_extendidos(request):
     """Lista horarios con información extendida (nombres de relaciones) - Solo aprobados"""
     if request.method == 'GET':
+        #obtener sede de usuario autenticado
+        user_sede = getattr(request, 'sede', None)
+        #validar que la sede tenga ciudad para filtrar por ciudad, si no tiene ciudad, no se filtra por ciudad
+        if user_sede and user_sede.ciudad:
+            items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__ciudad=user_sede.ciudad)
+        else:
+            items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
         # Traer solo horarios aprobados
-        items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
         lst = []
         for i in items:
             lst.append({
@@ -487,7 +503,12 @@ def get_horario_fusionado(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        h = HorarioFusionado.objects.get(id=id)
+        #obtener sede del usuario autenticado
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            h = HorarioFusionado.objects.filter(id=id, espacio__sede__ciudad=user_sede.ciudad).first()
+        else:
+             h = HorarioFusionado.objects.get(id=id)
         return JsonResponse({
             "id": h.id,
             "grupo1_id": h.grupo1.id,
@@ -509,7 +530,12 @@ def get_horario_fusionado(request, id=None):
 
 def list_horarios_fusionados(request):
     if request.method == 'GET':
-        items = HorarioFusionado.objects.all()
+        #obtener sede del usuario autenticado
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            items = HorarioFusionado.objects.filter(espacio__sede__ciudad=user_sede.ciudad)
+        else:
+            items = HorarioFusionado.objects.all()
         lst = [{
             "id": i.id,
             "grupo1_id": i.grupo1.id,

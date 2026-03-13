@@ -165,7 +165,21 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
     if espacio_id is None or recurso_id is None:
         return JsonResponse({"error": "espacio_id y recurso_id son requeridos en la URL"}, status=400)
     try:
-        er = EspacioRecurso.objects.get(espacio_id=espacio_id, recurso_id=recurso_id)
+        usuario_actual = getattr(request, 'user_obj', None)
+        sede_actual = getattr(request, 'sede', None)
+
+        if usuario_actual and sede_actual and sede_actual.ciudad:
+            er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
+                espacio_id=espacio_id,
+                recurso_id=recurso_id,
+                espacio__sede__ciudad=sede_actual.ciudad
+            )
+        else:
+            er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
+                espacio_id=espacio_id,
+                recurso_id=recurso_id
+            )
+
         return JsonResponse({"espacio_id": er.espacio.id, "recurso_id": er.recurso.id, "estado": er.estado}, status=200)
     except EspacioRecurso.DoesNotExist:
         return JsonResponse({"error": "Relación Espacio-Recurso no encontrada."}, status=404)
@@ -175,6 +189,15 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
 @csrf_exempt
 def list_espacio_recursos(request):
     if request.method == 'GET':
-        items = EspacioRecurso.objects.all()
+        usuario_actual = getattr(request, 'user_obj', None)
+        sede_actual = getattr(request, 'sede', None)
+
+        if usuario_actual and sede_actual and sede_actual.ciudad:
+            items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').filter(
+                espacio__sede__ciudad=sede_actual.ciudad
+            )
+        else:
+            items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').all()
+
         lst = [{"espacio_id": i.espacio.id, "recurso_id": i.recurso.id, "estado": i.estado} for i in items]
         return JsonResponse({"espacio_recursos": lst}, status=200)

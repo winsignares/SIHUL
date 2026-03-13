@@ -92,7 +92,19 @@ def get_notificacion(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        notif = Notificacion.objects.get(id=id)
+        #obtenemos la sede del usuario autenticado
+        user_sede = getattr(request, 'sede', None)
+        #buscamos la notificación solo si pertenece a un usuario de la misma ciudad que la sede del usuario autenticado
+        if user_sede and user_sede.ciudad:
+            from usuarios.models import Usuario
+            #obtenemos los ids de los usuarios que pertenecen a la misma ciudad que la sede del usuario autenticado
+            usuarios_misma_ciudad = Usuario.objects.filter(
+                sede__ciudad=user_sede.ciudad
+            ).values_list('id', flat=True)
+            #buscamos la notificación solo si su id_usuario está en la lista de usuarios de la misma ciudad
+            notif = Notificacion.objects.get(id=id, id_usuario__in=usuarios_misma_ciudad)
+        else:
+            notif = Notificacion.objects.get(id=id)
         return JsonResponse({
             "id": notif.id,
             "id_usuario": notif.id_usuario,
@@ -110,7 +122,7 @@ def get_notificacion(request, id=None):
 
 @csrf_exempt
 def list_notificaciones(request):
-    if request.method == 'GET':
+    if request.method == 'GET': 
         # Filtros opcionales
         id_usuario = request.GET.get('id_usuario')
         no_leidas = request.GET.get('no_leidas', 'false').lower() == 'true'
