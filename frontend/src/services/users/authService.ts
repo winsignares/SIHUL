@@ -106,6 +106,22 @@ export interface ChangePasswordPayload {
   new_contrasena: string;
 }
 
+export interface SessionAuthStateResponse {
+  changed: boolean;
+  signature: string;
+  rol?: {
+    id: number;
+    nombre: string;
+    descripcion: string;
+  } | null;
+  componentes?: Array<{
+    id: number;
+    nombre: string;
+    descripcion: string;
+    permiso: string;
+  }>;
+}
+
 const resolveSedeValue = async (usuario: CreateUsuarioPayload): Promise<string | undefined> => {
   if (typeof usuario.sede === 'string' && usuario.sede.trim()) {
     return usuario.sede.trim();
@@ -165,6 +181,15 @@ export const authService = {
     }
 
     return apiClient.get(`/usuarios/${userId}/`);
+  },
+
+  /**
+   * Sincroniza rol y componentes de la sesión actual.
+   * Si se envía la firma previa y no hay cambios, backend responde payload mínimo.
+   */
+  getSessionAuthState: async (since?: string): Promise<SessionAuthStateResponse> => {
+    const query = since ? `?since=${encodeURIComponent(since)}` : '';
+    return apiClient.get<SessionAuthStateResponse>(`/usuarios/session-auth-state/${query}`);
   }
 };
 

@@ -290,6 +290,28 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             });
         }
 
+        // Sección dinámica para cualquier componente nuevo asignado desde backend
+        // que todavía no tenga una categoría fija en frontend.
+        const usedComponentNames = new Set(
+            sections.flatMap(section => section.items.map(item => item.code))
+        );
+
+        const dynamicComponents = components.filter(c => !usedComponentNames.has(c.nombre));
+
+        if (dynamicComponents.length > 0) {
+            sections.push({
+                id: 'modulos-dinamicos',
+                label: 'Módulos Asignados',
+                items: dynamicComponents.map(c => ({
+                    id: c.nombre,
+                    icon: getIconForComponent(c.nombre),
+                    label: cleanLabel(c.nombre),
+                    route: getRouteForComponent(c.nombre),
+                    code: c.nombre
+                }))
+            });
+        }
+
         return sections;
     };
 

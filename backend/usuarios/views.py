@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 import secrets
+import hashlib
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -354,6 +355,67 @@ def logout(request):
     try:
         request.session.flush()
         return JsonResponse({"message": "Logout exitoso"}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def session_auth_state(request):
+    """
+    GET: retorna estado de rol/componentes del usuario en sesión.
+    Query opcional: ?since=<signature>
+    Si no hubo cambios, responde changed=false sin enviar lista completa.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return JsonResponse({"error": "No autenticado"}, status=401)
+
+        u = Usuario.objects.select_related('rol').get(id=user_id)
+
+        componentes = []
+        if u.rol:
+            from componentes.models import ComponenteRol
+            componentes_rol = ComponenteRol.objects.filter(rol=u.rol).select_related('componente')
+            componentes = [
+                {
+                    "id": cr.componente.id,
+                    "nombre": cr.componente.nombre,
+                    "descripcion": cr.componente.descripcion,
+                    "permiso": cr.permiso
+                }
+                for cr in componentes_rol
+            ]
+
+        # Firma estable para detectar cambios sin transferir payload completo.
+        parts = []
+        for c in sorted(componentes, key=lambda x: (x['id'], x['permiso'])):
+            parts.append(f"{c['id']}:{c['permiso']}")
+        role_part = str(u.rol.id) if u.rol else 'no-role'
+        signature_source = f"{role_part}|{'|'.join(parts)}"
+        signature = hashlib.sha256(signature_source.encode('utf-8')).hexdigest()[:16]
+
+        since = request.GET.get('since')
+        if since and since == signature:
+            return JsonResponse({
+                "changed": False,
+                "signature": signature
+            }, status=200)
+
+        return JsonResponse({
+            "changed": True,
+            "signature": signature,
+            "rol": {
+                "id": u.rol.id,
+                "nombre": u.rol.nombre,
+                "descripcion": u.rol.descripcion
+            } if u.rol else None,
+            "componentes": componentes
+        }, status=200)
+    except Usuario.DoesNotExist:
+        return JsonResponse({"error": "Usuario no encontrado"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
