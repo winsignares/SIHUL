@@ -12,6 +12,14 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db.models import Count
 
+
+def _filtrar_espacios_por_sede_usuario(request, queryset):
+    """Filtra espacios por la ciudad de la sede del usuario logueado."""
+    user_sede = getattr(request, 'sede', None)
+    if user_sede and user_sede.ciudad:
+        return queryset.filter(sede__ciudad=user_sede.ciudad)
+    return queryset
+
 # ---------- TipoEspacio CRUD ----------
 @csrf_exempt
 def list_tipos_espacio(request):
@@ -904,7 +912,13 @@ def get_horario_espacio(request, espacio_id=None):
         # Verificar que el espacio existe
         if not EspacioFisico.objects.filter(id=espacio_id).exists():
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
-
+        #Obtener sede del usuario logueado
+        user_sede = getattr(request, 'sede', None)
+        if user_sede and user_sede.ciudad:
+            # Verificar que el espacio pertenece a la misma sede
+            if not EspacioFisico.objects.filter(id=espacio_id, sede__ciudad=user_sede.ciudad).exists():
+                return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403) 
+            
         # Obtener todos los horarios del espacio
         horarios = Horario.objects.filter(
             espacio_id=espacio_id,
@@ -979,6 +993,7 @@ def ocupacion_semanal(request):
         
         # Obtener espacios
         espacios_query = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios_query = _filtrar_espacios_por_sede_usuario(request, espacios_query)
         
         if tipo_espacio_id:
             espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
@@ -1215,23 +1230,32 @@ def debug_ocupacion(request):
             'Saturday': 'Sábado'
         }
         
+        espacios_base = _filtrar_espacios_por_sede_usuario(
+            request,
+            EspacioFisico.objects.all()
+        )
+        espacios_ids = list(espacios_base.values_list('id', flat=True))
+
+        horarios_qs = Horario.objects.filter(espacio_id__in=espacios_ids)
+        prestamos_qs = PrestamoEspacio.objects.filter(espacio_id__in=espacios_ids)
+
         debug_data = {
             'semana': {
                 'lunes': lunes.isoformat(),
                 'sabado': sabado.isoformat(),
             },
             'totales': {
-                'horarios': Horario.objects.count(),
-                'prestamos': PrestamoEspacio.objects.count(),
-                'prestamos_aprobados': PrestamoEspacio.objects.filter(estado='Aprobado').count(),
-                'espacios': EspacioFisico.objects.count(),
+                'horarios': horarios_qs.count(),
+                'prestamos': prestamos_qs.count(),
+                'prestamos_aprobados': prestamos_qs.filter(estado='Aprobado').count(),
+                'espacios': espacios_base.count(),
             },
             'horarios_por_espacio': {},
             'prestamos_por_espacio': {},
         }
         
         # Ver horarios agrupados por espacio
-        horarios_por_espacio = Horario.objects.values('espacio__id', 'espacio__nombre', 'dia_semana').annotate(
+        horarios_por_espacio = horarios_qs.values('espacio__id', 'espacio__nombre', 'dia_semana').annotate(
             count=Count('id')
         ).order_by('espacio__nombre')
         
@@ -1245,9 +1269,9 @@ def debug_ocupacion(request):
             })
         
         # Ver préstamos agrupados por espacio
-        prestamos_por_espacio = PrestamoEspacio.objects.filter(
-            estado='Aprobado'
-        ).values('espacio__id', 'espacio__nombre').annotate(
+        prestamos_por_espacio = prestamos_qs.filter(estado='Aprobado').values(
+            'espacio__id', 'espacio__nombre'
+        ).annotate(
             count=Count('id')
         ).order_by('espacio__nombre')
         
@@ -1257,7 +1281,7 @@ def debug_ocupacion(request):
         
         # Mostrar detalles de algunos horarios específicos
         debug_data['muestra_horarios_detallados'] = []
-        horarios_muestra = Horario.objects.select_related('espacio')[:5]
+        horarios_muestra = horarios_qs.select_related('espacio')[:5]
         for h in horarios_muestra:
             debug_data['muestra_horarios_detallados'].append({
                 'espacio_id': h.espacio.id,
@@ -1269,7 +1293,7 @@ def debug_ocupacion(request):
         
         # Mostrar detalles de algunos préstamos
         debug_data['muestra_prestamos_detallados'] = []
-        prestamos_muestra = PrestamoEspacio.objects.filter(estado='Aprobado').select_related('espacio')[:5]
+        prestamos_muestra = prestamos_qs.filter(estado='Aprobado').select_related('espacio')[:5]
         for p in prestamos_muestra:
             debug_data['muestra_prestamos_detallados'].append({
                 'espacio_id': p.espacio.id,
@@ -1280,7 +1304,7 @@ def debug_ocupacion(request):
             })
         
         # Ver valores únicos de dia_semana en BD
-        dias_en_bd = list(Horario.objects.values_list('dia_semana', flat=True).distinct())
+        dias_en_bd = list(horarios_qs.values_list('dia_semana', flat=True).distinct())
         debug_data['dias_semana_unicos_en_bd'] = dias_en_bd
         
         return JsonResponse(debug_data, status=200)
@@ -1329,6 +1353,7 @@ def generar_pdf_ocupacion_semanal(request):
         
         # Obtener espacios filtrados
         espacios_query = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios_query = _filtrar_espacios_por_sede_usuario(request, espacios_query)
         if tipo_espacio_id:
             espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
         
@@ -1634,6 +1659,7 @@ def reporte_ocupacion(request):
         
         # Obtener todos los espacios
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
         
         if not espacios.exists():
             return JsonResponse({
@@ -1973,6 +1999,7 @@ def generar_pdf_reporte_ocupacion(request):
         }
 
         espacios_qs = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios_qs = _filtrar_espacios_por_sede_usuario(request, espacios_qs)
 
         if isinstance(espacios_nombres, list) and len(espacios_nombres) > 0:
             espacios_qs = espacios_qs.filter(nombre__in=espacios_nombres)
@@ -2189,6 +2216,7 @@ def reporte_disponibilidad(request):
         
         # Obtener todos los espacios
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
         
         if not espacios.exists():
             return JsonResponse({
@@ -2365,6 +2393,7 @@ def reporte_capacidad(request):
         
         # Obtener todos los espacios
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
         
         if not espacios.exists():
             return JsonResponse({
@@ -2435,6 +2464,7 @@ def generar_pdf_reporte_disponibilidad(request):
         }
 
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
         disponibilidad, resumen = _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre)
 
         buffer = BytesIO()
@@ -2605,6 +2635,7 @@ def generar_pdf_reporte_capacidad(request):
         }
 
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
+        espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
         capacidad = _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre)
 
         buffer = BytesIO()
