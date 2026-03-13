@@ -222,7 +222,14 @@ def get_usuario(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        u = Usuario.objects.get(id=id)
+        usuario_actual = getattr(request, 'user_obj', None)
+        sede_actual = getattr(request, 'sede', None)
+
+        if usuario_actual and sede_actual and sede_actual.ciudad:
+            u = Usuario.objects.select_related('sede').get(id=id, sede__ciudad=sede_actual.ciudad)
+        else:
+            u = Usuario.objects.select_related('sede').get(id=id)
+
         return JsonResponse({"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol_id": (u.rol.id if u.rol else None), "facultad_id": (u.facultad.id if u.facultad else None), "activo": u.activo}, status=200)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
@@ -232,7 +239,14 @@ def get_usuario(request, id=None):
 @csrf_exempt
 def list_usuarios(request):
     if request.method == 'GET':
-        items = Usuario.objects.all()
+        usuario_actual = getattr(request, 'user_obj', None)
+        sede_actual = getattr(request, 'sede', None)
+
+        if usuario_actual and sede_actual and sede_actual.ciudad:
+            items = Usuario.objects.select_related('sede').filter(sede__ciudad=sede_actual.ciudad)
+        else:
+            items = Usuario.objects.all()
+
         lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
         return JsonResponse({"usuarios": lst}, status=200)
 

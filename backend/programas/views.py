@@ -82,7 +82,11 @@ def get_programa(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        p = Programa.objects.get(id=id)
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            p = Programa.objects.filter(id=id, facultad__sede__ciudad=user_sede.ciudad).first()
+            if not p:
+                return JsonResponse({"error": "Programa no encontrado o no accesible."}, status=404)
         return JsonResponse({
             "id": p.id, 
             "nombre": p.nombre, 

@@ -170,7 +170,14 @@ def get_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        e = EspacioFisico.objects.get(id=id)
+        usuario_actual = getattr(request, 'user_obj', None)
+        sede_actual = getattr(request, 'sede', None)
+
+        if usuario_actual and sede_actual and sede_actual.ciudad:
+            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id, sede__ciudad=sede_actual.ciudad)
+        else:
+            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id)
+
         # Obtener recursos del espacio
         recursos = []
         for er in e.espacio_recursos.all():
@@ -203,16 +210,15 @@ def get_espacio(request, id=None):
 @csrf_exempt
 def list_espacios(request):
     if request.method == 'GET':
-        # Obtener sede del usuario desde middleware
-        user_sede = getattr(request, 'sede', None)
-        
-        # Filtrar espacios por la misma ciudad de la sede del usuario
-        if user_sede and user_sede.ciudad:
-            items = EspacioFisico.objects.select_related('sede').filter(
-                sede__ciudad=user_sede.ciudad
+        usuario_actual = getattr(request, 'user_obj', None)
+        sede_actual = getattr(request, 'sede', None)
+
+        if usuario_actual and sede_actual and sede_actual.ciudad:
+            items = EspacioFisico.objects.select_related('sede', 'tipo').filter(
+                sede__ciudad=sede_actual.ciudad
             )
         else:
-            items = EspacioFisico.objects.all()
+            items = EspacioFisico.objects.select_related('sede', 'tipo').all()
         
         lst = []
         for i in items:

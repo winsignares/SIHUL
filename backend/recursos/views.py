@@ -69,7 +69,11 @@ def get_recurso(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        r = Recurso.objects.get(id=id)
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            r = Recurso.objects.filter(id=id, espacio_recursos__espacio__sede__ciudad=user_sede.ciudad).first()
+            if not r:
+                return JsonResponse({"error": "Recurso no encontrado o no accesible."}, status=404)
         return JsonResponse({"id": r.id, "nombre": r.nombre, "descripcion": r.descripcion}, status=200)
     except Recurso.DoesNotExist:
         return JsonResponse({"error": "Recurso no encontrado."}, status=404)
@@ -79,7 +83,11 @@ def get_recurso(request, id=None):
 @csrf_exempt
 def list_recursos(request):
     if request.method == 'GET':
-        items = Recurso.objects.all()
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            items = Recurso.objects.filter(espacio_recursos__espacio__sede__ciudad=user_sede.ciudad).distinct()
+        else:
+            items = Recurso.objects.all()
         lst = [{"id": i.id, "nombre": i.nombre, "descripcion": i.descripcion} for i in items]
         return JsonResponse({"recursos": lst}, status=200)
 

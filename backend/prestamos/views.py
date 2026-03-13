@@ -304,9 +304,14 @@ def get_prestamo(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        p = PrestamoEspacio.objects.select_related(
+        user_sede = getattr(request, 'sede', None)
+        if user_sede:
+            p = PrestamoEspacio.objects.select_related(
             'espacio', 'usuario', 'administrador', 'tipo_actividad'
-        ).prefetch_related('prestamo_recursos__recurso').get(id=id)
+        ).prefetch_related('prestamo_recursos__recurso').get(id=id, espacio__sede__ciudad=user_sede.ciudad)
+            if not p:
+                return JsonResponse({"error": "Prestamo no encontrado o no accesible."}, status=404)
+        
         
         # Obtener recursos asociados
         recursos = [{
