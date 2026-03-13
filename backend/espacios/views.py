@@ -273,17 +273,34 @@ def list_all_espacios_with_horarios(request):
         
         # Optimizar consulta con select_related y prefetch_related
         # Solo mostrar horarios aprobados
-        espacios = EspacioFisico.objects.all().select_related(
-            'sede', 'tipo'
-        ).prefetch_related(
-            Prefetch('horarios',
-                queryset=Horario.objects.filter(
-                    estado='aprobado'
-                ).select_related(
-                    'asignatura', 'docente', 'grupo'
+        #obtener sede del usuario autenticado en la request del middleware
+        user_sede = getattr(request, 'sede', None)
+        if user_sede and user_sede.ciudad:
+            espacios = EspacioFisico.objects.filter(
+                sede__ciudad=user_sede.ciudad
+            ).select_related(
+                'sede', 'tipo'
+            ).prefetch_related(
+                Prefetch('horarios',
+                    queryset=Horario.objects.filter(
+                        estado='aprobado'
+                    ).select_related(
+                        'asignatura', 'docente', 'grupo'
+                    )
                 )
             )
-        )
+        else:
+            espacios = EspacioFisico.objects.all().select_related(
+                'sede', 'tipo'
+            ).prefetch_related(
+                Prefetch('horarios',
+                    queryset=Horario.objects.filter(
+                        estado='aprobado'
+                    ).select_related(
+                        'asignatura', 'docente', 'grupo'
+                    )
+                )
+            )
         
         lista = []
         for espacio in espacios:
