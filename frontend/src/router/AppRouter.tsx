@@ -29,6 +29,7 @@ const Login = lazy(() => import('../pages/users/Login'));
 const Register = lazy(() => import('../pages/users/Register'));
 const DocentePrestamos = lazy(() => import('../pages/prestamos/DocentePrestamos'));
 const EnConstruccion = lazy(() => import('../pages/shared/EnConstruccion'));
+const DynamicComponentPage = lazy(() => import('../pages/shared/DynamicComponentPage'));
 const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/SolicitudesEspacio'));
 const ComponentesRoles = lazy(() => import('../pages/permisos/ComponentesRoles'));
 const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
@@ -349,6 +350,13 @@ export default function AppRouter() {
         <Route path="ajustes" element={
           <ProtectedRoute>
             <Ajustes />
+          </ProtectedRoute>
+        } />
+
+        {/* Ruta dinámica para componentes nuevos asignados desde backend */}
+        <Route path="componentes/:slug" element={
+          <ProtectedRoute>
+            <DynamicComponentPage />
           </ProtectedRoute>
         } />
 

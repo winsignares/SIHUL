@@ -17,5 +17,6 @@ urlpatterns = [
     path('list/', views.list_usuarios, name='list_usuarios'),
     path('login/', views.login, name='login_usuario'),
     path('logout/', views.logout, name='logout_usuario'),
+    path('session-auth-state/', views.session_auth_state, name='session_auth_state'),
     path('change-password/', views.change_password, name='change_password'),
 ]

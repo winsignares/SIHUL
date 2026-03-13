@@ -79,6 +79,16 @@ export interface LoginResponse extends User {
 }
 
 /**
+ * Estado de sincronización de autenticación en sesión
+ */
+export interface SessionAuthStateResponse {
+    changed: boolean;
+    signature: string;
+    rol?: Role | null;
+    componentes?: Component[];
+}
+
+/**
  * Estado de autenticación en el contexto
  */
 export interface AuthState {

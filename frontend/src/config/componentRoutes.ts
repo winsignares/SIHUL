@@ -129,14 +129,34 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
+ * Convierte nombre de componente en slug de URL estable.
+ */
+export function toComponentSlug(name: string): string {
+    return name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Ruta dinámica para componentes no mapeados manualmente.
+ */
+export function getDynamicRouteForComponent(name: string): string {
+    return `/componentes/${toComponentSlug(name)}`;
+}
+
+/**
  * Obtiene la ruta del frontend para un nombre de componente
  */
 export function getRouteForComponent(name: string): string {
     const route = COMPONENT_ROUTES[name];
 
     if (!route) {
-        console.warn(`[componentRoutes] No route found for component: ${name}`);
-        return '/';
+        const dynamicRoute = getDynamicRouteForComponent(name);
+        console.info(`[componentRoutes] Dynamic route used for component: ${name} -> ${dynamicRoute}`);
+        return dynamicRoute;
     }
 
     return route;

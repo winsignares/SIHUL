@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getRouteForComponent } from '../../config/componentRoutes';
 
 export function useLogin() {
     const [email, setEmail] = useState('');
@@ -51,29 +50,10 @@ export function useLogin() {
         if (isAuthenticated && role && components.length > 0 && !hasNavigated) {
             console.log('[useLogin] Usuario autenticado, redirigiendo...', { role, components });
 
-            // Redireccionar según el rol y componentes
-            if (role.nombre === 'admin' || role.nombre === 'planeacion_facultad') {
-                navigate('/admin/dashboard');
-            } else if (role.nombre === 'supervisor_general') {
-                navigate('/supervisor/dashboard');
-            } else {
-                // Buscar el componente de dashboard para este rol
-                const dashboardComponent = components.find(c => c.nombre.toLowerCase().includes('dashboard'));
-
-                if (dashboardComponent) {
-                    const route = getRouteForComponent(dashboardComponent.nombre);
-                    console.log('[useLogin] Redirigiendo a:', route);
-                    setHasNavigated(true);
-                    navigate(route, { replace: true });
-                } else {
-                    // Fallback: usar el primer componente disponible
-                    const firstComponent = components[0];
-                    const route = getRouteForComponent(firstComponent.nombre);
-                    console.log('[useLogin] No dashboard found, redirigiendo a primer componente:', route);
-                    setHasNavigated(true);
-                    navigate(route, { replace: true });
-                }
-            }
+            // Delegar selección de home al router central.
+            // Así evitamos forzar al rol admin al dashboard de planeación.
+            setHasNavigated(true);
+            navigate('/', { replace: true });
         }
     }, [isAuthenticated, role, components, navigate, hasNavigated]);
 
