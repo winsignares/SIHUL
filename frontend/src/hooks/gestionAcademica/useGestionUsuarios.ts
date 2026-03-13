@@ -195,7 +195,10 @@ export function useGestionUsuarios() {
 
     // Actualizar usuario
     const actualizarUsuario = async () => {
-        if (!editingUser) return;
+        if (!editingUser?.id) {
+            showNotification('No se pudo identificar el usuario a actualizar', 'error');
+            return;
+        }
 
         try {
             // Si es supervisor_general, incluir espacios permitidos
@@ -204,8 +207,14 @@ export function useGestionUsuarios() {
             const espaciosPayload = (rol?.nombre === 'supervisor_general') ? espaciosPermitidosEdit : [];
 
             await userService.actualizarUsuario({
-                ...editingUser,
+                id: editingUser.id,
+                nombre: editingUser.nombre,
+                correo: editingUser.correo,
+                contrasena: editingUser.contrasena,
+                contrasena_hash: editingUser.contrasena_hash,
+                rol_id: editingUser.rol_id,
                 facultad_id: facultadSeleccionadaEdit,
+                activo: editingUser.activo,
                 espacios_permitidos: espaciosPayload
             });
 
@@ -225,7 +234,7 @@ export function useGestionUsuarios() {
             const usuario = usuarios.find(u => u.id === id);
             if (!usuario) return;
 
-            await userService.actualizarUsuario({ ...usuario, activo: !usuario.activo });
+            await userService.actualizarUsuario({ id, activo: !usuario.activo });
             showNotification(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'} exitosamente`, 'success');
             loadUsuarios();
         } catch (error) {
