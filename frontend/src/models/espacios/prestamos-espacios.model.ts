@@ -18,6 +18,7 @@ export interface PrestamoEspacioUI {
     comentariosAdmin?: string;
     administradorNombre?: string;
     administrador_id?: number;
+    identificacionSolicitante?: string;
 }
 
 export interface StatsData {

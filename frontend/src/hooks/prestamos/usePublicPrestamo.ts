@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { prestamosPublicAPI, type SolicitudPrestamoPublico, type TipoActividadAPI, type EspacioDisponibleAPI } from '../../services/prestamos/prestamosPublicAPI';
+import {
+    prestamosPublicAPI,
+    type SolicitudPrestamoPublico,
+    type TipoActividadAPI,
+    type EspacioDisponibleAPI,
+    type PrestamoPublicoItem
+} from '../../services/prestamos/prestamosPublicAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 
 export function usePublicPrestamo() {
@@ -31,6 +37,16 @@ export function usePublicPrestamo() {
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioDisponibleAPI[]>([]);
     const [sedeSeleccionada, setSedeSeleccionada] = useState<number>(0);
     const [loadingEspacios, setLoadingEspacios] = useState(false);
+
+    // Estado CRUD solicitudes públicas
+    const [misSolicitudes, setMisSolicitudes] = useState<PrestamoPublicoItem[]>([]);
+    const [loadingSolicitudes, setLoadingSolicitudes] = useState(false);
+    const [consultaCredenciales, setConsultaCredenciales] = useState({
+        identificacion: '',
+        correo: ''
+    });
+    const [modoEdicion, setModoEdicion] = useState(false);
+    const [solicitudEditando, setSolicitudEditando] = useState<PrestamoPublicoItem | null>(null);
 
     // Cargar catálogos iniciales
     useEffect(() => {
@@ -114,6 +130,105 @@ export function usePublicPrestamo() {
         setSedeSeleccionada(sedeId);
         // Limpiar selección de espacio cuando cambie la sede
         setFormData(prev => ({ ...prev, espacio_id: 0 }));
+    };
+
+    const cargarMisSolicitudes = async (identificacion?: string, correo?: string) => {
+        const identificacionFinal = (identificacion ?? consultaCredenciales.identificacion).trim();
+        const correoFinal = (correo ?? consultaCredenciales.correo).trim().toLowerCase();
+
+        if (!identificacionFinal || !correoFinal) {
+            setErrors(prev => ({
+                ...prev,
+                consulta: 'Debe ingresar identificación y correo para consultar solicitudes'
+            }));
+            return;
+        }
+
+        setLoadingSolicitudes(true);
+        try {
+            const response = await prestamosPublicAPI.listarMisSolicitudes(identificacionFinal, correoFinal);
+            setMisSolicitudes(response.prestamos || []);
+            setConsultaCredenciales({ identificacion: identificacionFinal, correo: correoFinal });
+            setErrors(prev => {
+                const next = { ...prev };
+                delete next.consulta;
+                return next;
+            });
+        } catch (error: any) {
+            setErrors(prev => ({
+                ...prev,
+                consulta: error?.message || 'No fue posible consultar las solicitudes'
+            }));
+        } finally {
+            setLoadingSolicitudes(false);
+        }
+    };
+
+    const iniciarEdicionSolicitud = (solicitud: PrestamoPublicoItem) => {
+        setModoEdicion(true);
+        setSolicitudEditando({ ...solicitud });
+    };
+
+    const cancelarEdicionSolicitud = () => {
+        setModoEdicion(false);
+        setSolicitudEditando(null);
+    };
+
+    const guardarEdicionSolicitud = async () => {
+        if (!solicitudEditando) return;
+
+        try {
+            setSubmitting(true);
+
+            await prestamosPublicAPI.actualizarSolicitud({
+                id: solicitudEditando.id,
+                espacio_id: solicitudEditando.espacio_id,
+                nombre_solicitante: solicitudEditando.usuario_nombre,
+                correo_solicitante: solicitudEditando.usuario_correo,
+                telefono_solicitante: solicitudEditando.telefono,
+                identificacion_solicitante: solicitudEditando.identificacion,
+                tipo_actividad_id: solicitudEditando.tipo_actividad_id,
+                fecha: solicitudEditando.fecha,
+                hora_inicio: solicitudEditando.hora_inicio,
+                hora_fin: solicitudEditando.hora_fin,
+                motivo: solicitudEditando.motivo,
+                asistentes: solicitudEditando.asistentes,
+                estado: solicitudEditando.estado
+            });
+
+            await cargarMisSolicitudes();
+            cancelarEdicionSolicitud();
+            setSuccessMessage('Solicitud actualizada correctamente');
+            setShowSuccess(true);
+        } catch (error: any) {
+            setErrors(prev => ({
+                ...prev,
+                submit: error?.message || 'Error al actualizar la solicitud'
+            }));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const eliminarSolicitud = async (id: number) => {
+        try {
+            setSubmitting(true);
+            await prestamosPublicAPI.eliminarSolicitud(
+                id,
+                consultaCredenciales.identificacion,
+                consultaCredenciales.correo
+            );
+            await cargarMisSolicitudes();
+            setSuccessMessage('Solicitud eliminada correctamente');
+            setShowSuccess(true);
+        } catch (error: any) {
+            setErrors(prev => ({
+                ...prev,
+                submit: error?.message || 'Error al eliminar la solicitud'
+            }));
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const validarFormulario = (): boolean => {
@@ -219,6 +334,11 @@ export function usePublicPrestamo() {
             });
             setSedeSeleccionada(0);
             setEspaciosDisponibles([]);
+            setConsultaCredenciales({
+                identificacion: formData.identificacion || '',
+                correo: formData.correo_institucional || ''
+            });
+            await cargarMisSolicitudes(formData.identificacion || '', formData.correo_institucional || '');
             
             // Ocultar mensaje de éxito después de 5 segundos
             setTimeout(() => {
@@ -249,6 +369,18 @@ export function usePublicPrestamo() {
         handleChange,
         handleSedeChange,
         handleSubmit,
-        setShowSuccess
+        setShowSuccess,
+        misSolicitudes,
+        loadingSolicitudes,
+        consultaCredenciales,
+        setConsultaCredenciales,
+        cargarMisSolicitudes,
+        modoEdicion,
+        solicitudEditando,
+        setSolicitudEditando,
+        iniciarEdicionSolicitud,
+        cancelarEdicionSolicitud,
+        guardarEdicionSolicitud,
+        eliminarSolicitud
     };
 }

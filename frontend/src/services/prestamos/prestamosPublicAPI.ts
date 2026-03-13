@@ -35,6 +35,60 @@ export interface SolicitudPrestamoPublico {
     asistentes: number;
 }
 
+export interface PrestamoPublicoItem {
+    id: number;
+    espacio_id: number;
+    espacio_nombre: string;
+    espacio_tipo: string;
+    usuario_nombre: string;
+    usuario_correo: string;
+    administrador_id?: number | null;
+    administrador_nombre?: string | null;
+    tipo_actividad_id: number;
+    tipo_actividad_nombre: string;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    motivo: string;
+    asistentes: number;
+    telefono: string;
+    identificacion: string;
+    estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+}
+
+export interface ActualizarPrestamoPublicoPayload {
+    id: number;
+    espacio_id: number;
+    nombre_solicitante: string;
+    correo_solicitante: string;
+    telefono_solicitante: string;
+    identificacion_solicitante?: string;
+    administrador_id?: number | null;
+    tipo_actividad_id: number;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    motivo: string;
+    asistentes: number;
+    estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+}
+
+export interface PrestamoPublicoDetalle {
+    id: number;
+    espacio_id: number;
+    tipo_actividad_id: number;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    motivo: string;
+    asistentes: number;
+    telefono: string;
+    estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    usuario_nombre?: string;
+    usuario_correo?: string;
+    administrador_id?: number | null;
+}
+
 export const prestamosPublicAPI = {
     /**
      * Obtiene la lista de tipos de actividad
@@ -66,5 +120,51 @@ export const prestamosPublicAPI = {
      */
     crearSolicitud: async (solicitud: SolicitudPrestamoPublico): Promise<{ message: string; id: number }> => {
         return apiClient.post('/prestamos/public/solicitar/', solicitud);
+    },
+
+    /**
+     * Lista las solicitudes públicas por identificación y correo
+     */
+    listarMisSolicitudes: async (
+        identificacion: string,
+        correo: string
+    ): Promise<{ prestamos: PrestamoPublicoItem[] }> => {
+        const params = new URLSearchParams({
+            identificacion,
+            correo
+        });
+
+        return apiClient.get(`/prestamos/public/mis-solicitudes/?${params}`);
+    },
+
+    /**
+     * Actualiza una solicitud pública
+     */
+    actualizarSolicitud: async (
+        payload: ActualizarPrestamoPublicoPayload
+    ): Promise<{ message: string; id: number }> => {
+        return apiClient.put('/prestamos/public/update/', payload);
+    },
+
+    /**
+     * Obtiene el detalle de una solicitud pública por ID
+     */
+    obtenerSolicitud: async (id: number): Promise<PrestamoPublicoDetalle> => {
+        return apiClient.get(`/prestamos/public/${id}/`);
+    },
+
+    /**
+     * Elimina una solicitud pública
+     */
+    eliminarSolicitud: async (
+        id: number,
+        identificacion?: string,
+        correo?: string
+    ): Promise<{ message: string }> => {
+        return apiClient.delete('/prestamos/public/delete/', {
+            id,
+            identificacion,
+            correo
+        });
     }
 };

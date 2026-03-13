@@ -826,3 +826,92 @@ def update_prestamo_publico(request):
         return JsonResponse({"error": "Espacio no encontrado."}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def list_prestamos_publicos_by_identificacion(request):
+    """
+    Lista préstamos públicos por identificación y correo institucional.
+    Permite que el solicitante público consulte sus solicitudes.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        identificacion = (request.GET.get('identificacion') or '').strip()
+        correo = (request.GET.get('correo') or '').strip().lower()
+
+        if not identificacion or not correo:
+            return JsonResponse({
+                "error": "identificacion y correo son requeridos"
+            }, status=400)
+
+        items = PrestamoEspacioPublico.objects.select_related(
+            'espacio', 'administrador', 'tipo_actividad'
+        ).filter(
+            identificacion_solicitante=identificacion,
+            correo_solicitante__iexact=correo
+        ).order_by('-fecha', '-hora_inicio')
+
+        lst = []
+        for i in items:
+            lst.append({
+                "id": i.id,
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "usuario_id": None,
+                "usuario_nombre": i.nombre_solicitante,
+                "usuario_correo": i.correo_solicitante,
+                "administrador_id": i.administrador.id if i.administrador else None,
+                "administrador_nombre": i.administrador.nombre if i.administrador else None,
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono_solicitante,
+                "identificacion": i.identificacion_solicitante,
+                "estado": i.estado,
+                "recursos": []
+            })
+
+        return JsonResponse({"prestamos": lst}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def delete_prestamo_publico(request):
+    """
+    Elimina un préstamo público. Si se envían identificación y correo,
+    valida pertenencia del préstamo al solicitante.
+    """
+    if request.method != 'DELETE':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        prestamo_id = data.get('id')
+        identificacion = (data.get('identificacion') or '').strip()
+        correo = (data.get('correo') or '').strip().lower()
+
+        if not prestamo_id:
+            return JsonResponse({"error": "ID es requerido"}, status=400)
+
+        p = PrestamoEspacioPublico.objects.get(id=prestamo_id)
+
+        if identificacion and correo:
+            if p.identificacion_solicitante != identificacion or p.correo_solicitante.lower() != correo:
+                return JsonResponse({"error": "No autorizado para eliminar esta solicitud"}, status=403)
+
+        p.delete()
+        return JsonResponse({"message": "Prestamo público eliminado"}, status=200)
+    except PrestamoEspacioPublico.DoesNotExist:
+        return JsonResponse({"error": "Prestamo público no encontrado."}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

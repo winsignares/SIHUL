@@ -20,4 +20,6 @@ urlpatterns = [
     path('public/espacios-disponibles/', views.list_espacios_disponibles_publico, name='list_espacios_disponibles_publico'),
     path('public/<int:id>/', views.get_prestamo_publico, name='get_prestamo_publico'),
     path('public/update/', views.update_prestamo_publico, name='update_prestamo_publico'),
+    path('public/mis-solicitudes/', views.list_prestamos_publicos_by_identificacion, name='list_prestamos_publicos_by_identificacion'),
+    path('public/delete/', views.delete_prestamo_publico, name='delete_prestamo_publico'),
 ]

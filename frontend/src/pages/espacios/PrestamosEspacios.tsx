@@ -6,14 +6,16 @@ import { Textarea } from '../../share/textarea';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PrestamosEspacios() {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const {
     searchTerm,
     setSearchTerm,
@@ -25,10 +27,17 @@ export default function PrestamosEspacios() {
     setVerSolicitudDialog,
     comentariosAccion,
     setComentariosAccion,
+    modoEdicion,
+    prestamoEditando,
+    setPrestamoEditando,
     filteredPrestamos,
     statsData,
     aprobarSolicitud,
-    rechazarSolicitud
+    rechazarSolicitud,
+    iniciarEdicion,
+    cancelarEdicion,
+    guardarEdicion,
+    eliminarSolicitud
   } = usePrestamosEspacios();
 
   const getEstadoBadge = (estado: string) => {
@@ -152,6 +161,18 @@ export default function PrestamosEspacios() {
             >
               <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
+                  {(() => {
+                    const solicitanteEsAdmin = Boolean(
+                      user?.correo &&
+                      prestamo.email &&
+                      prestamo.email.toLowerCase() === user.correo.toLowerCase()
+                    );
+                    const puedeEditarEliminar =
+                      prestamo.estado === 'pendiente' ||
+                      prestamo.estado === 'rechazado' ||
+                      solicitanteEsAdmin;
+
+                    return (
                   <div className="flex items-start justify-between gap-6">
                     {/* Left Section */}
                     <div className="flex-1 space-y-4">
@@ -255,6 +276,7 @@ export default function PrestamosEspacios() {
                         if (!open) {
                           setVerSolicitudDialog(null);
                           setComentariosAccion('');
+                          cancelarEdicion();
                         }
                       }}>
                         <DialogTrigger asChild>
@@ -267,6 +289,37 @@ export default function PrestamosEspacios() {
                             Ver Solicitud
                           </Button>
                         </DialogTrigger>
+                        <div className="flex gap-2 mt-2">
+                          {puedeEditarEliminar && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                                onClick={() => {
+                                  setVerSolicitudDialog(prestamo.id);
+                                  iniciarEdicion(prestamo);
+                                }}
+                                title="Editar solicitud"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                onClick={() => {
+                                  if (window.confirm('¿Está seguro de eliminar esta solicitud?')) {
+                                    eliminarSolicitud(prestamo.id);
+                                  }
+                                }}
+                                title="Eliminar solicitud"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="text-2xl flex items-center gap-2">
@@ -281,10 +334,17 @@ export default function PrestamosEspacios() {
                           </DialogHeader>
 
                           <div className="space-y-6 py-4">
+                            {(() => {
+                              const prestamoActual = modoEdicion && prestamoEditando && prestamoEditando.id === prestamo.id
+                                ? prestamoEditando
+                                : prestamo;
+
+                              return (
+                                <>
                             {/* Estado */}
                             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                               <span className="text-sm text-slate-600 dark:text-slate-400">Estado actual</span>
-                              {getEstadoBadge(prestamo.estado)}
+                              {getEstadoBadge(prestamoActual.estado)}
                             </div>
 
                             {/* Información del Solicitante */}
@@ -296,19 +356,19 @@ export default function PrestamosEspacios() {
                               <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Nombre</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.solicitante}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.solicitante}</p>
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Email</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.email}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.email}</p>
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Teléfono</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.telefono}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.telefono}</p>
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha de Solicitud</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.fechaSolicitud}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.fechaSolicitud}</p>
                                 </div>
                               </div>
                             </div>
@@ -322,23 +382,58 @@ export default function PrestamosEspacios() {
                               <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Espacio Solicitado</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.espacio}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.espacio}</p>
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Tipo de Evento</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.tipoEvento}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.tipoEvento}</p>
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.fecha}</p>
+                                  {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                    <Input
+                                      type="date"
+                                      value={prestamoEditando.fecha}
+                                      onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fecha: e.target.value })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="text-slate-900 dark:text-slate-100">{prestamoActual.fecha}</p>
+                                  )}
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Horario</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.horaInicio} - {prestamo.horaFin}</p>
+                                  {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                    <div className="flex gap-2 items-center mt-1">
+                                      <Input
+                                        type="time"
+                                        value={prestamoEditando.horaInicio}
+                                        onChange={(e) => setPrestamoEditando({ ...prestamoEditando, horaInicio: e.target.value })}
+                                      />
+                                      <span>-</span>
+                                      <Input
+                                        type="time"
+                                        value={prestamoEditando.horaFin}
+                                        onChange={(e) => setPrestamoEditando({ ...prestamoEditando, horaFin: e.target.value })}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="text-slate-900 dark:text-slate-100">{prestamoActual.horaInicio} - {prestamoActual.horaFin}</p>
+                                  )}
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Número de Asistentes</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.asistentes}</p>
+                                  {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={prestamoEditando.asistentes}
+                                      onChange={(e) => setPrestamoEditando({ ...prestamoEditando, asistentes: parseInt(e.target.value) || 1 })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="text-slate-900 dark:text-slate-100">{prestamoActual.asistentes}</p>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -350,19 +445,27 @@ export default function PrestamosEspacios() {
                                 Motivo de la Solicitud
                               </h3>
                               <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                <p className="text-slate-900 dark:text-slate-100">{prestamo.motivo}</p>
+                                {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  <Textarea
+                                    value={prestamoEditando.motivo}
+                                    onChange={(e) => setPrestamoEditando({ ...prestamoEditando, motivo: e.target.value })}
+                                    rows={3}
+                                  />
+                                ) : (
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.motivo}</p>
+                                )}
                               </div>
                             </div>
 
                             {/* Recursos Necesarios */}
-                            {prestamo.recursosNecesarios.length > 0 && (
+                            {prestamoActual.recursosNecesarios.length > 0 && (
                               <div className="space-y-3">
                                 <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                   <Package className="w-5 h-5 text-green-600" />
                                   Recursos Necesarios
                                 </h3>
                                 <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                  {prestamo.recursosNecesarios.map((recurso) => (
+                                  {prestamoActual.recursosNecesarios.map((recurso) => (
                                     <Badge
                                       key={recurso}
                                       variant="outline"
@@ -376,33 +479,33 @@ export default function PrestamosEspacios() {
                             )}
 
                             {/* Información del Administrador (si existe) */}
-                            {prestamo.administradorNombre && (prestamo.estado === 'aprobado' || prestamo.estado === 'rechazado') && (
+                            {prestamoActual.administradorNombre && (prestamoActual.estado === 'aprobado' || prestamoActual.estado === 'rechazado') && (
                               <div className="space-y-3">
                                 <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                   <User className="w-5 h-5 text-indigo-600" />
-                                  {prestamo.estado === 'aprobado' ? 'Aprobado por' : 'Rechazado por'}
+                                  {prestamoActual.estado === 'aprobado' ? 'Aprobado por' : 'Rechazado por'}
                                 </h3>
                                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                  <p className="text-slate-900 dark:text-slate-100 font-medium">{prestamo.administradorNombre}</p>
+                                  <p className="text-slate-900 dark:text-slate-100 font-medium">{prestamoActual.administradorNombre}</p>
                                 </div>
                               </div>
                             )}
 
                             {/* Comentarios del Admin (si existen) */}
-                            {prestamo.comentariosAdmin && (
+                            {prestamoActual.comentariosAdmin && (
                               <div className="space-y-3">
                                 <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                   <AlertCircle className="w-5 h-5 text-slate-600" />
                                   Comentarios del Administrador
                                 </h3>
                                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamo.comentariosAdmin}</p>
+                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.comentariosAdmin}</p>
                                 </div>
                               </div>
                             )}
 
                             {/* Acciones (solo para pendientes) */}
-                            {prestamo.estado === 'pendiente' && (
+                            {prestamoActual.estado === 'pendiente' && !modoEdicion && (
                               <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                                 <Label htmlFor="comentarios">Comentarios (opcional para aprobar, obligatorio para rechazar)</Label>
                                 <Textarea
@@ -431,6 +534,21 @@ export default function PrestamosEspacios() {
                                 </div>
                               </div>
                             )}
+                            {modoEdicion && prestamoEditando?.id === prestamo.id && (
+                              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                <Button onClick={cancelarEdicion} variant="outline">
+                                  <XIcon className="w-4 h-4 mr-2" />
+                                  Cancelar
+                                </Button>
+                                <Button onClick={guardarEdicion} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                  <Save className="w-4 h-4 mr-2" />
+                                  Guardar Cambios
+                                </Button>
+                              </div>
+                            )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -440,6 +558,8 @@ export default function PrestamosEspacios() {
                       </span>
                     </div>
                   </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </motion.div>

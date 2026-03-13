@@ -2,8 +2,22 @@ import { useState, useEffect, useMemo } from 'react';
 import type { PrestamoEspacioUI as PrestamoEspacio } from '../../models';
 import { Clock, Check, X, TrendingUp } from 'lucide-react';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
+import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object' && 'message' in error) {
+        const msg = (error as { message?: unknown }).message;
+        if (typeof msg === 'string' && msg.trim()) {
+            return msg;
+        }
+    }
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+    return fallback;
+};
 
 // Helper para extraer el ID numérico y el tipo de préstamo del ID único
 const parseUniqueId = (uniqueId: string): { tipo: 'autenticado' | 'publico', id: number } | null => {
@@ -22,9 +36,15 @@ export function usePrestamosEspacios() {
     const [filterFechaHora, setFilterFechaHora] = useState('todos');
     const [verSolicitudDialog, setVerSolicitudDialog] = useState<string | null>(null);
     const [comentariosAccion, setComentariosAccion] = useState('');
+    const [modoEdicion, setModoEdicion] = useState(false);
+    const [prestamoEditando, setPrestamoEditando] = useState<PrestamoEspacio | null>(null);
     const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]);
     const [loading, setLoading] = useState(false);
     const { user } = useAuth();
+
+    const normalizarEstado = (estado: PrestamoEspacio['estado']) => {
+        return estado.charAt(0).toUpperCase() + estado.slice(1);
+    };
 
     // Cargar datos iniciales
     useEffect(() => {
@@ -46,17 +66,21 @@ export function usePrestamosEspacios() {
                     email: p.usuario_correo || '',
                     telefono: p.telefono || '',
                     espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
+                    espacio_id: p.espacio_id,
                     fecha: p.fecha,
                     horaInicio: p.hora_inicio.substring(0, 5), // HH:MM
                     horaFin: p.hora_fin.substring(0, 5), // HH:MM
                     motivo: p.motivo || '',
                     tipoEvento: p.tipo_actividad_nombre || 'Evento',
+                    tipo_actividad_id: p.tipo_actividad_id,
                     asistentes: p.asistentes || 0,
                     recursosNecesarios: p.recursos?.map(r => r.recurso_nombre || '') || [],
                     estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
                     fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
                     comentariosAdmin: '', // No disponible en el backend actual
-                    administradorNombre: p.administrador_nombre || undefined
+                    administradorNombre: p.administrador_nombre || undefined,
+                    administrador_id: p.administrador_id ?? undefined,
+                    identificacionSolicitante: p.solicitante_publico_identificacion || undefined
                 };
             });
 
@@ -269,6 +293,139 @@ export function usePrestamosEspacios() {
         }
     };
 
+    const iniciarEdicion = (prestamo: PrestamoEspacio) => {
+        setModoEdicion(true);
+        setPrestamoEditando({ ...prestamo });
+        setVerSolicitudDialog(prestamo.id);
+    };
+
+    const cancelarEdicion = () => {
+        setModoEdicion(false);
+        setPrestamoEditando(null);
+    };
+
+    const guardarEdicion = async () => {
+        if (!prestamoEditando) return;
+
+        try {
+            setLoading(true);
+
+            const parsed = parseUniqueId(prestamoEditando.id);
+            if (!parsed) {
+                throw new Error('ID de préstamo inválido');
+            }
+
+            const { tipo, id: numericId } = parsed;
+            let espacioId = prestamoEditando.espacio_id;
+            let tipoActividadId = prestamoEditando.tipo_actividad_id;
+
+            // Recuperar IDs críticos cuando no vienen en el estado local del préstamo editando.
+            if (!espacioId || !tipoActividadId) {
+                if (tipo === 'publico') {
+                    const detallePublico = await prestamosPublicAPI.obtenerSolicitud(numericId);
+                    espacioId = detallePublico.espacio_id;
+                    tipoActividadId = detallePublico.tipo_actividad_id;
+                } else {
+                    const detalleAuth = await prestamoService.obtenerPrestamo(numericId);
+                    espacioId = detalleAuth.espacio_id;
+                    tipoActividadId = detalleAuth.tipo_actividad_id;
+                }
+            }
+
+            if (!espacioId || !tipoActividadId) {
+                throw new Error('No fue posible resolver espacio y tipo de actividad para actualizar el préstamo');
+            }
+
+            if (tipo === 'publico') {
+                await prestamosPublicAPI.actualizarSolicitud({
+                    id: numericId,
+                    espacio_id: espacioId,
+                    nombre_solicitante: prestamoEditando.solicitante,
+                    correo_solicitante: prestamoEditando.email,
+                    telefono_solicitante: prestamoEditando.telefono || '',
+                    identificacion_solicitante: prestamoEditando.identificacionSolicitante,
+                    administrador_id: prestamoEditando.administrador_id || null,
+                    tipo_actividad_id: tipoActividadId,
+                    fecha: prestamoEditando.fecha,
+                    hora_inicio: `${prestamoEditando.horaInicio}:00`,
+                    hora_fin: `${prestamoEditando.horaFin}:00`,
+                    motivo: prestamoEditando.motivo,
+                    asistentes: prestamoEditando.asistentes,
+                    estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido'
+                });
+            } else {
+                const prestamoActual = await prestamoService.obtenerPrestamo(numericId);
+
+                await prestamoService.actualizarPrestamo({
+                    id: numericId,
+                    espacio_id: espacioId,
+                    usuario_id: prestamoActual.usuario_id,
+                    administrador_id: prestamoActual.administrador_id || user?.id || null,
+                    tipo_actividad_id: tipoActividadId,
+                    fecha: prestamoEditando.fecha,
+                    hora_inicio: `${prestamoEditando.horaInicio}:00`,
+                    hora_fin: `${prestamoEditando.horaFin}:00`,
+                    motivo: prestamoEditando.motivo,
+                    asistentes: prestamoEditando.asistentes,
+                    telefono: prestamoEditando.telefono || '',
+                    estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido'
+                });
+            }
+
+            await loadData();
+            cancelarEdicion();
+            showNotification({
+                message: '✅ Solicitud actualizada correctamente',
+                type: 'success'
+            });
+        } catch (error) {
+            showNotification({
+                message: `Error al actualizar solicitud: ${getErrorMessage(error, 'Error desconocido')}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const eliminarSolicitud = async (id: string) => {
+        try {
+            setLoading(true);
+
+            const parsed = parseUniqueId(id);
+            if (!parsed) {
+                throw new Error('ID de préstamo inválido');
+            }
+
+            const { tipo, id: numericId } = parsed;
+
+            if (tipo === 'publico') {
+                await prestamosPublicAPI.eliminarSolicitud(numericId);
+            } else {
+                await prestamoService.eliminarPrestamo(numericId);
+            }
+
+            await loadData();
+
+            if (verSolicitudDialog === id) {
+                setVerSolicitudDialog(null);
+            }
+            cancelarEdicion();
+
+            showNotification({
+                message: '✅ Solicitud eliminada correctamente',
+                type: 'success'
+            });
+        } catch (error) {
+            showNotification({
+                message: `Error al eliminar solicitud: ${getErrorMessage(error, 'Error desconocido')}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredPrestamos = useMemo(() => {
         return prestamos.filter(p => {
             const matchesSearch = p.solicitante.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -348,11 +505,18 @@ export function usePrestamosEspacios() {
         setVerSolicitudDialog,
         comentariosAccion,
         setComentariosAccion,
+        modoEdicion,
+        prestamoEditando,
+        setPrestamoEditando,
         prestamos,
         filteredPrestamos,
         statsData,
         aprobarSolicitud,
         rechazarSolicitud,
+        iniciarEdicion,
+        cancelarEdicion,
+        guardarEdicion,
+        eliminarSolicitud,
         loading,
         reloadData: loadData
     };
