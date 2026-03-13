@@ -140,6 +140,7 @@ export default function AppRouter() {
     const roleName = role?.nombre;
 
     if (roleName === 'admin') {
+      if (hasComponentByName('Dashboard')) return '/admin/dashboard';
       if (hasComponentByName('Gestión de Usuarios')) return '/admin/usuarios';
       if (hasComponentByName('Gestión de Roles')) return '/admin/roles';
       if (hasComponentByName('Gestión de Componentes')) return '/admin/componentes-roles';
