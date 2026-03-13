@@ -11,6 +11,7 @@ def create_roles(stdout, style):
     
     roles_data = [
         {'nombre': 'admin', 'descripcion': 'Administrador del Sistema'},
+        {'nombre': 'admin_planeacion', 'descripcion': 'Administrador de Planeación'},
         {'nombre': 'planeacion_facultad', 'descripcion': 'Planeación de Facultad'},
         {'nombre': 'supervisor_general', 'descripcion': 'Supervisor General'},
         {'nombre': 'docente', 'descripcion': 'Docente'},

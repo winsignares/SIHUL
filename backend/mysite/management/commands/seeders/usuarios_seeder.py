@@ -13,6 +13,7 @@ def create_usuarios_sistema(stdout, style):
     # Obtener roles
     try:
         rol_admin = Rol.objects.get(nombre='admin')
+        rol_admin_planeacion = Rol.objects.get(nombre='admin_planeacion')
         rol_planeacion = Rol.objects.get(nombre='planeacion_facultad')
         rol_supervisor = Rol.objects.get(nombre='supervisor_general')
         rol_docente = Rol.objects.get(nombre='docente')
@@ -23,6 +24,14 @@ def create_usuarios_sistema(stdout, style):
     
     # Usuarios del sistema
     usuarios_data = [
+        {
+            'nombre': 'Administrador de Planeación',
+            'correo': 'admin_planeacion@unilibre.edu.co',
+            'rol': rol_admin_planeacion,
+            'contrasena_hash': 'scrypt:32768:8:1$kiG9tp2Zn62F5Y17$fe8d82d4b9fe0c16bec841eceff1639a964b1c4b5b1959c16ea2e06209cc61e865c605e19f7fb02729e95733238478246fd53f8d86aa501e5b14e0f0706fb702',
+            'activo': True,
+            'sede': Sede.objects.get(nombre='Sede Centro')
+        },
         {
             'nombre': 'Administrador del Sistema',
             'correo': 'admin@unilibre.edu.co',

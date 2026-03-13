@@ -11,18 +11,22 @@ def create_componentes_rol(stdout, style):
     
     # Definir asignaciones: (nombre_rol, nombre_componente, permiso)
     asignaciones_data = [
-        # Admin - tiene acceso a todos los componentes de administración
-        ('admin', 'Dashboard', 'EDITAR'),
-        ('admin', 'Centro Institucional', 'EDITAR'),
-        ('admin', 'Centro de Horarios', 'EDITAR'),
-        ('admin', 'Asignación Automática', 'EDITAR'),
-        ('admin', 'Préstamos de Espacios', 'EDITAR'),
-        ('admin', 'Periodos Académicos', 'EDITAR'),
-        ('admin', 'Asistentes Virtuales', 'EDITAR'),
-        ('admin', 'Ocupación Semanal', 'VER'),
-        ('admin', 'Reportes Generales', 'VER'),
+        # Administrador de sistema - tiene acceso a todos los componentes de administración
         ('admin', 'Gestión de Usuarios', 'EDITAR'),
-        ('admin', 'Estado de Recursos', 'EDITAR'),
+        ('admin', 'Gestión de Roles', 'EDITAR'),
+        ('admin', 'Gestión de Componentes', 'EDITAR'),
+
+        # Administrador de planeacion - tiene acceso a todos los componentes de administración
+        ('admin_planeacion', 'Dashboard', 'EDITAR'),
+        ('admin_planeacion', 'Centro Institucional', 'EDITAR'),
+        ('admin_planeacion', 'Centro de Horarios', 'EDITAR'),
+        ('admin_planeacion', 'Asignación Automática', 'EDITAR'),
+        ('admin_planeacion', 'Préstamos de Espacios', 'EDITAR'),
+        ('admin_planeacion', 'Periodos Académicos', 'EDITAR'),
+        ('admin_planeacion', 'Asistentes Virtuales', 'EDITAR'),
+        ('admin_planeacion', 'Ocupación Semanal', 'VER'),
+        ('admin_planeacion', 'Reportes Generales', 'VER'),
+        ('admin_planeacion', 'Estado de Recursos', 'EDITAR'),
         
         # Planeación de Facultad - similar a admin pero enfocado en su facultad
         ('planeacion_facultad', 'Dashboard', 'EDITAR'),

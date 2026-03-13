@@ -20,7 +20,6 @@ def create_componentes(stdout, style):
         {'nombre': 'Asistentes Virtuales', 'descripcion': 'Chatbots y asistentes virtuales'},
         {'nombre': 'Ocupación Semanal', 'descripcion': 'Reporte de ocupación semanal'},
         {'nombre': 'Reportes Generales', 'descripcion': 'Reportes y estadísticas generales'},
-        {'nombre': 'Gestión de Usuarios', 'descripcion': 'Administración de usuarios del sistema'},
         {'nombre': 'Estado de Recursos', 'descripcion': 'Monitoreo de recursos físicos'},
         
         # Componentes para Supervisor General
@@ -39,6 +38,11 @@ def create_componentes(stdout, style):
         {'nombre': 'Dashboard Estudiante', 'descripcion': 'Panel principal del estudiante'},
         {'nombre': 'Mi Horario Estudiante', 'descripcion': 'Visualización de horario de clases'},
         {'nombre': 'Asistentes Virtuales Estudiante', 'descripcion': 'Asistentes virtuales para estudiantes'},
+
+        # Componentes para Sistema
+        {'nombre': 'Gestión de Usuarios', 'descripcion': 'Administración de usuarios del sistema'},
+        {'nombre': 'Gestión de Roles', 'descripcion': 'Administración de roles y permisos'},
+        {'nombre': 'Gestión de Componentes', 'descripcion': 'Administración de componentes del sistema'},
     ]
     
     created_count = 0
