@@ -5,6 +5,7 @@ import { tipoActividadService, type TipoActividad } from '../../services/prestam
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import { prestamosPublicAPI, type EspacioDisponibleAPI } from '../../services/prestamos/prestamosPublicAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 import type { Prestamo } from '../../models/index';
 import type { Sede } from '../../models/institucional/sede.model';
 
@@ -33,12 +34,14 @@ const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
 
 export function useDocentePrestamos() {
     const { user } = useAuth();
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Estado para datos dinámicos de la API
     const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
@@ -353,6 +356,34 @@ export function useDocentePrestamos() {
         }
     };
 
+    // ==================== PAGINACIÓN ====================
+
+    const totalFilteredPrestamos = filteredPrestamos.length;
+    const totalPages = getTotalPages(totalFilteredPrestamos, PAGE_SIZE);
+    const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
+
+    const paginatedPrestamos = getPageSlice(filteredPrestamos, currentPage, PAGE_SIZE);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterEstado]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
+
     return {
         dialogOpen,
         setDialogOpen,
@@ -373,6 +404,15 @@ export function useDocentePrestamos() {
         actualizarCantidadRecurso,
         crearSolicitud,
         filteredPrestamos,
+        paginatedPrestamos,
+        totalFilteredPrestamos,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         estadisticas,
         loading,
         error,

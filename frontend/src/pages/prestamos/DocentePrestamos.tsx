@@ -9,7 +9,7 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft, Edit, Save, X as XIcon } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft, Edit, Save, X as XIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../share/alert';
@@ -41,6 +41,15 @@ export default function DocentePrestamos() {
     actualizarCantidadRecurso,
     crearSolicitud,
     prestamos,
+    paginatedPrestamos,
+    totalFilteredPrestamos,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
     filteredPrestamos,
     estadisticas,
     error,
@@ -454,14 +463,14 @@ export default function DocentePrestamos() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPrestamos.length === 0 ? (
+              {totalFilteredPrestamos === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-slate-500 dark:text-slate-400">
                     No hay solicitudes que mostrar
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPrestamos.map((prestamo) => (
+                paginatedPrestamos.map((prestamo) => (
                   <TableRow key={prestamo.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -535,6 +544,56 @@ export default function DocentePrestamos() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalFilteredPrestamos > 0 && (
+        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {totalFilteredPrestamos === 0 ? 0 : (currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalFilteredPrestamos)} de {totalFilteredPrestamos} solicitudes
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {pageNumbers.map((page) => (
+                    <Button
+                      key={page}
+                      type="button"
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dialog de Detalles del Préstamo */}
       <Dialog 
