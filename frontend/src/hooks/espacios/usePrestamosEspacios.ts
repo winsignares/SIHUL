@@ -5,6 +5,7 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object' && 'message' in error) {
@@ -31,6 +32,7 @@ const parseUniqueId = (uniqueId: string): { tipo: 'autenticado' | 'publico', id:
 };
 
 export function usePrestamosEspacios() {
+    const PAGE_SIZE = 5;
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
     const [filterFechaHora, setFilterFechaHora] = useState('todos');
@@ -40,6 +42,7 @@ export function usePrestamosEspacios() {
     const [prestamoEditando, setPrestamoEditando] = useState<PrestamoEspacio | null>(null);
     const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]);
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
     const { user } = useAuth();
 
     const normalizarEstado = (estado: PrestamoEspacio['estado']) => {
@@ -494,6 +497,36 @@ export function usePrestamosEspacios() {
         }
     ], [prestamos]);
 
+    // ==================== PAGINACIÓN ====================
+
+    const totalFilteredPrestamos = filteredPrestamos.length;
+    const totalPages = getTotalPages(totalFilteredPrestamos, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginatedPrestamos = useMemo(() => {
+        return getPageSlice(filteredPrestamos, currentPage, PAGE_SIZE);
+    }, [filteredPrestamos, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterEstado, filterFechaHora]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
+
     return {
         searchTerm,
         setSearchTerm,
@@ -510,6 +543,15 @@ export function usePrestamosEspacios() {
         setPrestamoEditando,
         prestamos,
         filteredPrestamos,
+        paginatedPrestamos,
+        totalFilteredPrestamos,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         statsData,
         aprobarSolicitud,
         rechazarSolicitud,

@@ -6,7 +6,7 @@ import { Textarea } from '../../share/textarea';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon } from 'lucide-react';
+import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
 import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios';
@@ -30,7 +30,15 @@ export default function PrestamosEspacios() {
     modoEdicion,
     prestamoEditando,
     setPrestamoEditando,
-    filteredPrestamos,
+    paginatedPrestamos,
+    totalFilteredPrestamos,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
     statsData,
     aprobarSolicitud,
     rechazarSolicitud,
@@ -144,7 +152,7 @@ export default function PrestamosEspacios() {
 
       {/* Solicitudes Grid */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredPrestamos.length === 0 ? (
+        {totalFilteredPrestamos === 0 ? (
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <CardContent className="p-12 text-center">
               <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
@@ -152,7 +160,7 @@ export default function PrestamosEspacios() {
             </CardContent>
           </Card>
         ) : (
-          filteredPrestamos.map((prestamo) => (
+          paginatedPrestamos.map((prestamo) => (
             <motion.div
               key={prestamo.id}
               initial={{ opacity: 0, y: 10 }}
@@ -566,6 +574,57 @@ export default function PrestamosEspacios() {
           ))
         )}
       </div>
+
+      {totalFilteredPrestamos > 0 && (
+        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {totalFilteredPrestamos === 0 ? 0 : (currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalFilteredPrestamos)} de {totalFilteredPrestamos} solicitudes
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {pageNumbers.map((page) => (
+                    <Button
+                      key={page}
+                      type="button"
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Toaster />
     </div>
   );
