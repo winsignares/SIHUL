@@ -5,6 +5,7 @@ import { getEspaciosFromCache, setEspaciosInCache, getCacheKey, clearEspaciosCac
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 
@@ -50,6 +51,7 @@ export interface NuevaSolicitudData {
 }
 
 export function useConsultaEspacios() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState('todos');
     const [filterEstado, setFilterEstado] = useState('todos');
@@ -57,6 +59,7 @@ export function useConsultaEspacios() {
     const [filterFechaInicio, setFilterFechaInicio] = useState<string>('');
     const [filterFechaFin, setFilterFechaFin] = useState<string>('');
     const [vistaActual, setVistaActual] = useState<'tarjetas' | 'cronograma'>('tarjetas');
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [espacios, setEspacios] = useState<EspacioView[]>([]);
     const [horarios, setHorarios] = useState<OcupacionView[]>([]);
@@ -450,6 +453,34 @@ export function useConsultaEspacios() {
         });
     }, [espacios, searchTerm, filterTipo, filterEstado, filterSede]);
 
+    const totalFilteredEspacios = filteredEspacios.length;
+    const totalPages = getTotalPages(totalFilteredEspacios, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginatedEspacios = useMemo(() => {
+        return getPageSlice(filteredEspacios, currentPage, PAGE_SIZE);
+    }, [filteredEspacios, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterTipo, filterEstado, filterSede]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
+
     const estadisticas = useMemo(() => ({
         total: espacios.length,
         disponibles: espacios.filter(e => e.estado === 'disponible').length,
@@ -814,6 +845,15 @@ export function useConsultaEspacios() {
         diasSemana,
         horas,
         filteredEspacios,
+        paginatedEspacios,
+        totalFilteredEspacios,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         estadisticas,
         getOcupacionPorHora,
         getColorEstado,

@@ -46,6 +46,15 @@ export default function ConsultaEspacios() {
     diasSemana,
     horas,
     filteredEspacios,
+    paginatedEspacios,
+    totalFilteredEspacios,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
     estadisticas,
     horarios,
     prestamos,
@@ -53,6 +62,7 @@ export default function ConsultaEspacios() {
     exportarCronogramaPDF,
     exportarCronogramaExcel,
     getOcupacionPorHora,
+    getColorEstado,
     // Drag-to-select
     isDragging,
     seleccionRango,
@@ -74,6 +84,10 @@ export default function ConsultaEspacios() {
     // Recarga
     recargarDatos
   } = useConsultaEspacios();
+
+  // Calcular índices de paginación
+  const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredEspacios);
 
   // Estados para el formulario de solicitud
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
@@ -491,7 +505,7 @@ export default function ConsultaEspacios() {
       {/* Vista Tarjetas */}
       {vistaActual === 'tarjetas' && !espacioSeleccionado && (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
-          {filteredEspacios.map(espacio => {
+          {paginatedEspacios.map(espacio => {
             const { proximaClase, estado } = calcularProximaClaseYEstado(espacio.id);
             return (
               <motion.div
@@ -542,6 +556,53 @@ export default function ConsultaEspacios() {
             );
           })}
         </div>
+      )}
+
+      {/* Paginación - Solo en vista tarjetas */}
+      {vistaActual === 'tarjetas' && !espacioSeleccionado && totalFilteredEspacios > 0 && (
+        <Card className="border-slate-200 dark:border-slate-700 shadow-lg bg-white dark:bg-slate-800">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {firstItemIndex}-{lastItemIndex} de {totalFilteredEspacios} espacios
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+
+                <div className="flex gap-1">
+                  {pageNumbers.map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                      className={currentPage === page ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800' : ''}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Vista Cronograma */}
