@@ -30,7 +30,7 @@ export const recursoService = {
    * @param recurso Datos del recurso a crear
    */
   crearRecurso: async (recurso: Omit<Recurso, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/recursos/create/', recurso);
+    return apiClient.post('/recursos/', recurso);
   },
 
   /**

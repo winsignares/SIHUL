@@ -20,7 +20,7 @@ interface Programa {
     activo: boolean;
 }
 
-export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos';
+export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos' | 'gestion-recursos';
 
 export function useFacultadesPrograms() {
     const [searchTerm, setSearchTerm] = useState('');

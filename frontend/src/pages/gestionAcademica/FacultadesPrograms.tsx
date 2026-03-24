@@ -35,6 +35,7 @@ import { useFacultadesPrograms, type TabOption } from '../../hooks/gestionAcadem
 import Asignaturas from './Asignaturas';
 import EspaciosFisicos from './EspaciosFisicos';
 import EstadoRecursos from './EstadoRecursos';
+import GestionRecursos from './GestionRecursos';
 import Grupos from './Grupos';
 import Sedes from './Sedes';
 
@@ -180,6 +181,16 @@ export default function FacultadesPrograms() {
           <Boxes className="w-5 h-5 inline mr-2" />
           Estado de Recursos
         </button>
+        <button
+          onClick={() => setActiveTab('gestion-recursos')}
+          className={`px-6 py-3 border-b-2 transition-colors ${activeTab === 'gestion-recursos'
+            ? 'border-red-600 text-red-600'
+            : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+        >
+          <Boxes className="w-5 h-5 inline mr-2" />
+          Gestión de Recursos
+        </button>
       </div>
 
       {/* Content */}
@@ -193,6 +204,8 @@ export default function FacultadesPrograms() {
         <EspaciosFisicos key={reloadKey} />
       ) : activeTab === 'recursos' ? (
         <EstadoRecursos key={reloadKey} />
+      ) : activeTab === 'gestion-recursos' ? (
+        <GestionRecursos key={reloadKey} />
       ) : (
         <>
           {/* Search and Actions - Solo para Facultades y Programas */}

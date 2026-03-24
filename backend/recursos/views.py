@@ -90,13 +90,7 @@ def get_recurso(request, id=None):
 @csrf_exempt
 def list_recursos(request):
     if request.method == 'GET':
-        user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.ciudad:
-            items = Recurso.objects.filter(
-                recurso_espacios__espacio__sede__ciudad=user_sede.ciudad
-            ).distinct()
-        else:
-            items = Recurso.objects.all()
+        items = Recurso.objects.all()
         lst = [{"id": i.id, "nombre": i.nombre, "descripcion": i.descripcion} for i in items]
         return JsonResponse({"recursos": lst}, status=200)
 
