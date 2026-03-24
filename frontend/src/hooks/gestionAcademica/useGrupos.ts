@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { grupoService } from '../../services/grupos/gruposAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { Grupo } from '../../services/grupos/gruposAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 
 export interface GrupoAcademico {
     id?: number;
@@ -15,6 +16,7 @@ export interface GrupoAcademico {
 }
 
 export function useGrupos() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [grupos, setGrupos] = useState<GrupoAcademico[]>([]);
@@ -22,6 +24,7 @@ export function useGrupos() {
     const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
     const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
     const [selectedSemestreFilter, setSelectedSemestreFilter] = useState<string>('all');
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Estados de modales
     const [showCreateGrupo, setShowCreateGrupo] = useState(false);
@@ -228,12 +231,42 @@ export function useGrupos() {
 
     // ==================== FILTROS ====================
 
-    const filteredGrupos = grupos.filter(grupo => {
-        const matchesSearch = grupo.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programa_id.toString() === selectedProgramaFilter;
-        const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre.toString() === selectedSemestreFilter;
-        return matchesSearch && matchesPrograma && matchesSemestre;
-    });
+    const filteredGrupos = useMemo(() => {
+        return grupos.filter(grupo => {
+            const matchesSearch = grupo.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programa_id.toString() === selectedProgramaFilter;
+            const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre.toString() === selectedSemestreFilter;
+            return matchesSearch && matchesPrograma && matchesSemestre;
+        });
+    }, [grupos, searchTerm, selectedProgramaFilter, selectedSemestreFilter]);
+
+    const totalFilteredGrupos = filteredGrupos.length;
+    const totalPages = getTotalPages(totalFilteredGrupos, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginatedGrupos = useMemo(() => {
+        return getPageSlice(filteredGrupos, currentPage, PAGE_SIZE);
+    }, [filteredGrupos, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedProgramaFilter, selectedSemestreFilter]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
 
     const semestresDisponibles = Array.from(new Set(grupos.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
 
@@ -283,6 +316,15 @@ export function useGrupos() {
         toggleGrupoActivo,
         resetForm,
         filteredGrupos,
+        paginatedGrupos,
+        totalFilteredGrupos,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         semestresDisponibles,
         getProgramaNombre,
         getPeriodoNombre,

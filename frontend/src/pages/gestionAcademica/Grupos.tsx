@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGrupos } from '../../hooks/gestionAcademica/useGrupos';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -33,11 +33,23 @@ export default function Grupos() {
     toggleGrupoActivo,
     resetForm,
     filteredGrupos,
+    paginatedGrupos,
+    totalFilteredGrupos,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
     semestresDisponibles,
     getProgramaNombre,
     getPeriodoNombre,
     getSemestresDisponiblesPorPrograma
   } = useGrupos();
+
+  const firstItemIndex = totalFilteredGrupos === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredGrupos);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -121,14 +133,14 @@ export default function Grupos() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredGrupos.length === 0 ? (
+              {totalFilteredGrupos === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-slate-500 py-8">
                     No se encontraron grupos
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredGrupos.map((grupo) => (
+                paginatedGrupos.map((grupo) => (
                   <TableRow key={grupo.id}>
                     <TableCell>
                       <Badge className="bg-yellow-500 text-slate-900 hover:bg-yellow-600">
@@ -184,6 +196,57 @@ export default function Grupos() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalFilteredGrupos > 0 && (
+        <Card className="border-slate-200 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Mostrando {firstItemIndex}-{lastItemIndex} de {totalFilteredGrupos} grupos
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {pageNumbers.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      type="button"
+                      variant={pageNumber === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(pageNumber)}
+                      className={pageNumber === currentPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ==================== MODALES ==================== */}
 
