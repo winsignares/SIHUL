@@ -720,6 +720,62 @@ def list_espacios_disponibles_publico(request):
     else:
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
+
+@csrf_exempt
+def list_prestamos_publicos(request):
+    """
+    Lista todos los préstamos públicos.
+    Respeta el alcance de sede/ciudad del usuario cuando aplica middleware de sede.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        user_sede = getattr(request, 'sede', None)
+
+        if user_sede and user_sede.ciudad:
+            items = PrestamoEspacioPublico.objects.select_related(
+                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad'
+            ).filter(
+                espacio__sede__ciudad=user_sede.ciudad
+            )
+        else:
+            items = PrestamoEspacioPublico.objects.select_related(
+                'espacio', 'administrador', 'tipo_actividad'
+            ).all()
+
+        lst = []
+        for i in items:
+            lst.append({
+                "id": i.id,
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "usuario_id": None,
+                "usuario_nombre": i.nombre_solicitante,
+                "usuario_correo": i.correo_solicitante,
+                "solicitante_publico_nombre": i.nombre_solicitante,
+                "solicitante_publico_correo": i.correo_solicitante,
+                "solicitante_publico_telefono": i.telefono_solicitante,
+                "solicitante_publico_identificacion": i.identificacion_solicitante,
+                "administrador_id": i.administrador.id if i.administrador else None,
+                "administrador_nombre": i.administrador.nombre if i.administrador else None,
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono_solicitante,
+                "estado": i.estado,
+                "recursos": []
+            })
+
+        return JsonResponse({"prestamos": lst}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 @csrf_exempt
 def get_prestamo_publico(request, id=None):
     """

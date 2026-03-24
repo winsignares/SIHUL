@@ -17,6 +17,7 @@ urlpatterns = [
     
     # Endpoints públicos
     path('public/solicitar/', views.create_prestamo_publico, name='create_prestamo_publico'),
+    path('public/list/', views.list_prestamos_publicos, name='list_prestamos_publicos'),
     path('public/espacios-disponibles/', views.list_espacios_disponibles_publico, name='list_espacios_disponibles_publico'),
     path('public/<int:id>/', views.get_prestamo_publico, name='get_prestamo_publico'),
     path('public/update/', views.update_prestamo_publico, name='update_prestamo_publico'),

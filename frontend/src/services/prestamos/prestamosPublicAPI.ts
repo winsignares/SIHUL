@@ -89,6 +89,32 @@ export interface PrestamoPublicoDetalle {
     administrador_id?: number | null;
 }
 
+export interface PrestamoPublicoListado {
+    id: number;
+    espacio_id: number;
+    espacio_nombre: string;
+    espacio_tipo: string;
+    usuario_id: null;
+    usuario_nombre: string;
+    usuario_correo: string;
+    solicitante_publico_nombre?: string;
+    solicitante_publico_correo?: string;
+    solicitante_publico_telefono?: string;
+    solicitante_publico_identificacion?: string;
+    administrador_id?: number | null;
+    administrador_nombre?: string | null;
+    tipo_actividad_id: number;
+    tipo_actividad_nombre: string;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    motivo: string;
+    asistentes: number;
+    telefono: string;
+    estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    recursos: [];
+}
+
 export const prestamosPublicAPI = {
     /**
      * Obtiene la lista de tipos de actividad
@@ -120,6 +146,13 @@ export const prestamosPublicAPI = {
      */
     crearSolicitud: async (solicitud: SolicitudPrestamoPublico): Promise<{ message: string; id: number }> => {
         return apiClient.post('/prestamos/public/solicitar/', solicitud);
+    },
+
+    /**
+     * Lista todos los préstamos públicos
+     */
+    listarPrestamosPublicos: async (): Promise<{ prestamos: PrestamoPublicoListado[] }> => {
+        return apiClient.get('/prestamos/public/list/');
     },
 
     /**

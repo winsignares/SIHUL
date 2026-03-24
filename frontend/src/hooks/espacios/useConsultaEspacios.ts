@@ -3,6 +3,7 @@ import { espacioPermitidoService, espacioService, espacioHorariosService } from 
 import { useAuth } from '../../context/AuthContext';
 import { getEspaciosFromCache, setEspaciosInCache, getCacheKey, clearEspaciosCache } from '../../services/cache/cacheService';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
+import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -346,7 +347,15 @@ export function useConsultaEspacios() {
             }
 
             try {
-                const { prestamos: todosLosPrestamos } = await prestamoService.listarPrestamos();
+                const [prestamosAuthResponse, prestamosPublicosResponse] = await Promise.all([
+                    prestamoService.listarPrestamos(),
+                    prestamosPublicAPI.listarPrestamosPublicos()
+                ]);
+
+                const todosLosPrestamos: PrestamoEspacio[] = [
+                    ...(prestamosAuthResponse.prestamos || []),
+                    ...((prestamosPublicosResponse.prestamos || []) as unknown as PrestamoEspacio[])
+                ];
                 
                 // Filtrar préstamos aprobados y pendientes entre las fechas seleccionadas
                 const prestamosFiltrados = todosLosPrestamos.filter(p => 
