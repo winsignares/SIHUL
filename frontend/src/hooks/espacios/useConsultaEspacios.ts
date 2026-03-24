@@ -55,6 +55,11 @@ export interface MensajeFiltroFecha {
     texto: string;
 }
 
+export interface EncabezadoDiaCronograma {
+    dia: string;
+    fecha: string;
+}
+
 export function useConsultaEspacios() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
@@ -496,6 +501,43 @@ export function useConsultaEspacios() {
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     // Horas de 6am a 10pm (22:00)
     const horas = Array.from({ length: 17 }, (_, i) => i + 6);
+
+    const formatearFechaEncabezado = (fecha: Date): string => {
+        const partes = new Intl.DateTimeFormat('es-CO', {
+            timeZone: 'America/Bogota',
+            day: 'numeric',
+            month: 'long'
+        }).formatToParts(fecha);
+
+        const dia = partes.find(p => p.type === 'day')?.value ?? '';
+        const mesRaw = partes.find(p => p.type === 'month')?.value ?? '';
+        const mes = mesRaw ? mesRaw.charAt(0).toUpperCase() + mesRaw.slice(1) : '';
+
+        return `${dia} ${mes}`.trim();
+    };
+
+    const encabezadosDiasCronograma = useMemo<EncabezadoDiaCronograma[]>(() => {
+        const referencia = filterFechaInicio
+            ? new Date(filterFechaInicio + 'T12:00:00')
+            : getFechaColombia();
+
+        referencia.setHours(12, 0, 0, 0);
+
+        const diaSemana = referencia.getDay();
+        const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+        const lunes = new Date(referencia);
+        lunes.setDate(referencia.getDate() + diasHastaLunes);
+
+        return diasSemana.map((dia, index) => {
+            const fechaDia = new Date(lunes);
+            fechaDia.setDate(lunes.getDate() + index);
+
+            return {
+                dia,
+                fecha: formatearFechaEncabezado(fechaDia)
+            };
+        });
+    }, [diasSemana, filterFechaInicio]);
 
     const getFechaColombiaISO = (): string => {
         return new Intl.DateTimeFormat('en-CA', {
@@ -998,6 +1040,7 @@ export function useConsultaEspacios() {
         tiposEspacio,
         sedes,
         diasSemana,
+        encabezadosDiasCronograma,
         horas,
         isDiaBloqueado,
         isCeldaBloqueada,

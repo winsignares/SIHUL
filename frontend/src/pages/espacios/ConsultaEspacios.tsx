@@ -45,6 +45,7 @@ export default function ConsultaEspacios() {
     tiposEspacio,
     sedes,
     diasSemana,
+    encabezadosDiasCronograma,
     horas,
     isDiaBloqueado,
     isCeldaBloqueada,
@@ -689,7 +690,7 @@ export default function ConsultaEspacios() {
                   >
                     <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
-                      {diasSemana.map((dia) => {
+                      {encabezadosDiasCronograma.map(({ dia, fecha }) => {
                         const diaBloqueado = isDiaBloqueado(dia);
                         return (
                         <div
@@ -700,7 +701,8 @@ export default function ConsultaEspacios() {
                               : 'bg-slate-800'
                           }`}
                         >
-                          {dia}
+                          <div>{dia}</div>
+                          <div className="text-[11px] font-medium opacity-90">{fecha}</div>
                         </div>
                       )})}
 
@@ -719,7 +721,7 @@ export default function ConsultaEspacios() {
 
                       {/* Celdas vacías / disponibles - con interacción de selección */}
                       {horas.flatMap((hora, horaIdx) =>
-                        diasSemana.map((dia, diaIdx) => {
+                        encabezadosDiasCronograma.map(({ dia }, diaIdx) => {
                           const ocupado = getOcupacionPorHora(espacio.id, dia, hora);
                           const estaSeleccionada = estaEnRangoSeleccion(espacio.id, dia, hora);
                           const celdaBloqueada = isCeldaBloqueada(dia, hora);
