@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, Check, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as React from 'react';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -82,13 +82,35 @@ export default function FacultadesPrograms() {
     handleRemoveAsignatura,
     handleUpdateAsignaturaPrograma,
     filteredFacultades,
+    paginatedFacultades,
+    totalFilteredFacultades,
+    currentFacultadPage,
+    totalFacultadPages,
+    facultadPageNumbers,
+    goToFacultadPage,
+    goToNextFacultadPage,
+    goToPrevFacultadPage,
     filteredProgramas,
+    paginatedProgramas,
+    totalFilteredProgramas,
+    currentProgramaPage,
+    totalProgramaPages,
+    programaPageNumbers,
+    goToProgramaPage,
+    goToNextProgramaPage,
+    goToPrevProgramaPage,
+    pageSize,
     getProgramasCount,
     getFacultadNombre,
     activeFacultades,
     availableAsignaturas,
     asignaturasBySemestre
   } = useFacultadesPrograms();
+
+  const firstFacultadItemIndex = totalFilteredFacultades === 0 ? 0 : (currentFacultadPage - 1) * pageSize + 1;
+  const lastFacultadItemIndex = Math.min(currentFacultadPage * pageSize, totalFilteredFacultades);
+  const firstProgramaItemIndex = totalFilteredProgramas === 0 ? 0 : (currentProgramaPage - 1) * pageSize + 1;
+  const lastProgramaItemIndex = Math.min(currentProgramaPage * pageSize, totalFilteredProgramas);
 
   // Generar lista de semestres una sola vez
   const semestresList = useMemo(() => {
@@ -276,14 +298,14 @@ export default function FacultadesPrograms() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredFacultades.length === 0 ? (
+                    {totalFilteredFacultades === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center text-slate-500 py-8">
                           No se encontraron facultades
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredFacultades.map((facultad) => (
+                      paginatedFacultades.map((facultad) => (
                         <TableRow key={facultad.id}>
                           <TableCell className="text-slate-900">{facultad.nombre}</TableCell>
                           <TableCell className="text-slate-600">
@@ -345,14 +367,14 @@ export default function FacultadesPrograms() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProgramas.length === 0 ? (
+                    {totalFilteredProgramas === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-slate-500 py-8">
                           No se encontraron programas
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredProgramas.map((programa) => (
+                      paginatedProgramas.map((programa) => (
                         <TableRow key={programa.id}>
                           <TableCell className="text-slate-900">{programa.nombre}</TableCell>
                           <TableCell className="text-slate-600">{getFacultadNombre(programa.facultadId)}</TableCell>
@@ -413,6 +435,108 @@ export default function FacultadesPrograms() {
               )}
             </CardContent>
           </Card>
+
+          {activeTab === 'facultades' && totalFilteredFacultades > 0 && (
+            <Card className="border-slate-200 shadow-lg">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-sm text-slate-600">
+                    Mostrando {firstFacultadItemIndex}-{lastFacultadItemIndex} de {totalFilteredFacultades} facultades
+                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevFacultadPage}
+                      disabled={currentFacultadPage <= 1}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Anterior
+                    </Button>
+
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {facultadPageNumbers.map((pageNumber) => (
+                        <Button
+                          key={pageNumber}
+                          type="button"
+                          variant={pageNumber === currentFacultadPage ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => goToFacultadPage(pageNumber)}
+                          className={pageNumber === currentFacultadPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextFacultadPage}
+                      disabled={currentFacultadPage >= totalFacultadPages}
+                    >
+                      Siguiente
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'programas' && totalFilteredProgramas > 0 && (
+            <Card className="border-slate-200 shadow-lg">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-sm text-slate-600">
+                    Mostrando {firstProgramaItemIndex}-{lastProgramaItemIndex} de {totalFilteredProgramas} programas
+                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevProgramaPage}
+                      disabled={currentProgramaPage <= 1}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Anterior
+                    </Button>
+
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {programaPageNumbers.map((pageNumber) => (
+                        <Button
+                          key={pageNumber}
+                          type="button"
+                          variant={pageNumber === currentProgramaPage ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => goToProgramaPage(pageNumber)}
+                          className={pageNumber === currentProgramaPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextProgramaPage}
+                      disabled={currentProgramaPage >= totalProgramaPages}
+                    >
+                      Siguiente
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 

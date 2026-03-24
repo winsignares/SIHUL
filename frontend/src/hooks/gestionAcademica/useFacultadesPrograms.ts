@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '../../services/database';
 import { toast } from 'sonner';
 import { facultadService } from '../../services/facultades/facultadesAPI';
@@ -7,6 +7,7 @@ import { programaService } from '../../services/programas/programaAPI';
 import type { Programa as ProgramaAPI } from '../../services/programas/programaAPI';
 import { asignaturaService, asignaturaProgramaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura, AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 
 // Mapear tipos de API a modelo del frontend
 type Facultad = FacultadAPI;
@@ -23,8 +24,11 @@ interface Programa {
 export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos' | 'gestion-recursos';
 
 export function useFacultadesPrograms() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<TabOption>('sedes');
+    const [currentFacultadPage, setCurrentFacultadPage] = useState(1);
+    const [currentProgramaPage, setCurrentProgramaPage] = useState(1);
 
     // Estados de datos
     const [facultades, setFacultades] = useState<Facultad[]>([]);
@@ -502,15 +506,74 @@ export function useFacultadesPrograms() {
 
     // ==================== FILTROS ====================
 
-    const filteredFacultades = facultades.filter(f =>
-        f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredFacultades = useMemo(() => {
+        return facultades.filter(f =>
+            f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [facultades, searchTerm]);
 
-    const filteredProgramas = programas.filter(p => {
-        const matchSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchFacultad = selectedFacultadFilter === 'all' || p.facultadId?.toString() === selectedFacultadFilter;
-        return matchSearch && matchFacultad;
-    });
+    const filteredProgramas = useMemo(() => {
+        return programas.filter(p => {
+            const matchSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchFacultad = selectedFacultadFilter === 'all' || p.facultadId?.toString() === selectedFacultadFilter;
+            return matchSearch && matchFacultad;
+        });
+    }, [programas, searchTerm, selectedFacultadFilter]);
+
+    const totalFilteredFacultades = filteredFacultades.length;
+    const totalFacultadPages = getTotalPages(totalFilteredFacultades, PAGE_SIZE);
+    const facultadPageNumbers = useMemo(() => getPageNumbers(totalFacultadPages), [totalFacultadPages]);
+    const paginatedFacultades = useMemo(() => {
+        return getPageSlice(filteredFacultades, currentFacultadPage, PAGE_SIZE);
+    }, [filteredFacultades, currentFacultadPage, PAGE_SIZE]);
+
+    const totalFilteredProgramas = filteredProgramas.length;
+    const totalProgramaPages = getTotalPages(totalFilteredProgramas, PAGE_SIZE);
+    const programaPageNumbers = useMemo(() => getPageNumbers(totalProgramaPages), [totalProgramaPages]);
+    const paginatedProgramas = useMemo(() => {
+        return getPageSlice(filteredProgramas, currentProgramaPage, PAGE_SIZE);
+    }, [filteredProgramas, currentProgramaPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentFacultadPage(1);
+        setCurrentProgramaPage(1);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setCurrentProgramaPage(1);
+    }, [selectedFacultadFilter]);
+
+    useEffect(() => {
+        setCurrentFacultadPage((prev) => normalizePage(prev, totalFacultadPages));
+    }, [totalFacultadPages]);
+
+    useEffect(() => {
+        setCurrentProgramaPage((prev) => normalizePage(prev, totalProgramaPages));
+    }, [totalProgramaPages]);
+
+    const goToFacultadPage = (page: number) => {
+        setCurrentFacultadPage(normalizePage(page, totalFacultadPages));
+    };
+
+    const goToNextFacultadPage = () => {
+        goToFacultadPage(currentFacultadPage + 1);
+    };
+
+    const goToPrevFacultadPage = () => {
+        goToFacultadPage(currentFacultadPage - 1);
+    };
+
+    const goToProgramaPage = (page: number) => {
+        setCurrentProgramaPage(normalizePage(page, totalProgramaPages));
+    };
+
+    const goToNextProgramaPage = () => {
+        goToProgramaPage(currentProgramaPage + 1);
+    };
+
+    const goToPrevProgramaPage = () => {
+        goToProgramaPage(currentProgramaPage - 1);
+    };
 
     // Contar programas por facultad
     const getProgramasCount = (facultadId: number | string) => {
@@ -585,7 +648,24 @@ export function useFacultadesPrograms() {
         handleRemoveAsignatura,
         handleUpdateAsignaturaPrograma,
         filteredFacultades,
+        paginatedFacultades,
+        totalFilteredFacultades,
+        currentFacultadPage,
+        totalFacultadPages,
+        facultadPageNumbers,
+        goToFacultadPage,
+        goToNextFacultadPage,
+        goToPrevFacultadPage,
         filteredProgramas,
+        paginatedProgramas,
+        totalFilteredProgramas,
+        currentProgramaPage,
+        totalProgramaPages,
+        programaPageNumbers,
+        goToProgramaPage,
+        goToNextProgramaPage,
+        goToPrevProgramaPage,
+        pageSize: PAGE_SIZE,
         getProgramasCount,
         getFacultadNombre,
         reloadAllData,
