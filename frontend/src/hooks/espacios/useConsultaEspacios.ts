@@ -50,6 +50,11 @@ export interface NuevaSolicitudData {
     diaSemana: string;
 }
 
+export interface MensajeFiltroFecha {
+    tipo: 'error' | 'info';
+    texto: string;
+}
+
 export function useConsultaEspacios() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
@@ -58,6 +63,7 @@ export function useConsultaEspacios() {
     const [filterSede, setFilterSede] = useState('todas');
     const [filterFechaInicio, setFilterFechaInicio] = useState<string>('');
     const [filterFechaFin, setFilterFechaFin] = useState<string>('');
+    const [mensajeFiltroFecha, setMensajeFiltroFecha] = useState<MensajeFiltroFecha | null>(null);
     const [vistaActual, setVistaActual] = useState<'tarjetas' | 'cronograma'>('tarjetas');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -301,16 +307,29 @@ export function useConsultaEspacios() {
         if (!fecha) {
             setFilterFechaInicio('');
             setFilterFechaFin('');
+            setMensajeFiltroFecha(null);
             return;
         }
 
-        if (esDomingo(fecha)) return;
+        if (esDomingo(fecha)) {
+            setMensajeFiltroFecha({
+                tipo: 'error',
+                texto: 'No se permite seleccionar domingo como fecha de inicio. Elige tu día actual o un día futuro.'
+            });
+            return;
+        }
 
         const fechaInicio = new Date(fecha + 'T00:00:00');
-        const hoy = new Date();
+        const hoy = getFechaColombia();
         hoy.setHours(0, 0, 0, 0);
 
-        if (fechaInicio < hoy) return;
+        if (fechaInicio < hoy) {
+            setMensajeFiltroFecha({
+                tipo: 'error',
+                texto: 'La fecha de inicio ya pasó. Debes seleccionar tu día actual o una fecha futura.'
+            });
+            return;
+        }
 
         setFilterFechaInicio(fecha);
         // Calcular el sábado de la semana seleccionada (no solo de la semana actual)
@@ -319,26 +338,62 @@ export function useConsultaEspacios() {
         const sabado = new Date(fechaInicio);
         sabado.setDate(fechaInicio.getDate() + diasHastaSabado);
         setFilterFechaFin(sabado.toISOString().split('T')[0]);
+        setMensajeFiltroFecha({
+            tipo: 'info',
+            texto: 'Rango actualizado. Puedes ajustar la fecha fin si necesitas un día posterior dentro del rango permitido.'
+        });
     };
 
     // Manejar cambio de fecha fin
     const handleFechaFinChange = (fecha: string) => {
         if (!fecha) {
             setFilterFechaFin('');
+            setMensajeFiltroFecha(null);
             return;
         }
 
-        if (esDomingo(fecha)) return;
+        if (!filterFechaInicio) {
+            setMensajeFiltroFecha({
+                tipo: 'error',
+                texto: 'Primero selecciona la fecha de inicio. Luego podrás elegir la fecha fin.'
+            });
+            return;
+        }
+
+        if (esDomingo(fecha)) {
+            setMensajeFiltroFecha({
+                tipo: 'error',
+                texto: 'No se permite seleccionar domingo como fecha fin. Elige el día actual o un día futuro válido.'
+            });
+            return;
+        }
 
         const fechaFin = new Date(fecha + 'T00:00:00');
         const fechaInicio = filterFechaInicio ? new Date(filterFechaInicio + 'T00:00:00') : null;
-        const hoy = new Date();
+        const hoy = getFechaColombia();
         hoy.setHours(0, 0, 0, 0);
 
-        if (fechaFin < hoy) return;
-        if (fechaInicio && fechaFin < fechaInicio) return;
+        if (fechaFin < hoy) {
+            setMensajeFiltroFecha({
+                tipo: 'error',
+                texto: 'La fecha fin no puede estar en el pasado. Selecciona el día actual o una fecha futura.'
+            });
+            return;
+        }
+
+        if (fechaInicio && fechaFin < fechaInicio) {
+            setMensajeFiltroFecha({
+                tipo: 'error',
+                texto: 'La fecha fin no puede ser menor que la fecha de inicio. Ajusta el rango para continuar.'
+            });
+            return;
+        }
 
         setFilterFechaFin(fecha);
+        setMensajeFiltroFecha({
+            tipo: 'info',
+            texto: 'Fecha fin actualizada correctamente.'
+        });
     };
 
     // Cargar préstamos aprobados cuando cambian las fechas
@@ -838,10 +893,9 @@ export function useConsultaEspacios() {
         setFilterTipo('todos');
         setFilterEstado('todos');
         setFilterSede('todas');
-        const hoy = new Date();
-        const sabado = getProximoSabado(hoy);
         setFilterFechaInicio('');
         setFilterFechaFin('');
+        setMensajeFiltroFecha(null);
     }, []);
 
     const verCronogramaIndividual = useCallback((espacio: EspacioView) => {
@@ -872,6 +926,7 @@ export function useConsultaEspacios() {
         setFilterSede,
         filterFechaInicio,
         filterFechaFin,
+        mensajeFiltroFecha,
         handleFechaInicioChange,
         handleFechaFinChange,
         vistaActual,

@@ -37,6 +37,7 @@ export default function ConsultaEspacios() {
     setFilterSede,
     filterFechaInicio,
     filterFechaFin,
+    mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
     vistaActual,
@@ -547,6 +548,14 @@ export default function ConsultaEspacios() {
               </Button>
             </div>
           </div>
+
+          {mensajeFiltroFecha && (
+            <Alert variant={mensajeFiltroFecha.tipo === 'error' ? 'destructive' : 'default'}>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{mensajeFiltroFecha.texto}</AlertDescription>
+            </Alert>
+          )}
+
           {filterFechaInicio && (
             <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3">
               <p className="text-blue-700 dark:text-blue-300 text-sm">
