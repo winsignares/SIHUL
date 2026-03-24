@@ -768,6 +768,7 @@ export function useConsultaEspacios() {
             const diaBase = fechaBase.getDay(); // 0 = domingo, 1 = lunes, etc.
             const hoyColombia = getFechaColombia();
             hoyColombia.setHours(0, 0, 0, 0);
+            const horaActualColombia = getFechaColombia().getHours();
             const fechaBaseNormalizada = new Date(fechaBase);
             fechaBaseNormalizada.setHours(0, 0, 0, 0);
             
@@ -776,6 +777,18 @@ export function useConsultaEspacios() {
 
             // Si la base es hoy, no permitir seleccionar días anteriores de la semana actual.
             if (fechaBaseNormalizada.getTime() === hoyColombia.getTime() && diferenciaDias < 0) {
+                setIsDragging(false);
+                setSeleccionInicio(null);
+                setSeleccionRango(null);
+                return;
+            }
+
+            // Si la base es hoy y se selecciona hoy, bloquear horas anteriores a la actual.
+            if (
+                fechaBaseNormalizada.getTime() === hoyColombia.getTime() &&
+                diferenciaDias === 0 &&
+                seleccionRango.horaInicio < horaActualColombia
+            ) {
                 setIsDragging(false);
                 setSeleccionInicio(null);
                 setSeleccionRango(null);

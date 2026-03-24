@@ -135,13 +135,31 @@ export default function ConsultaEspacios() {
     return mapaDias[diaSemana] ?? -1;
   };
 
+  const getHoraColombia = () => {
+    const hora = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit',
+      hour12: false
+    }).format(new Date());
+
+    return parseInt(hora, 10);
+  };
+
   const hoyColombia = getFechaColombiaISO();
   const indiceDiaActual = getIndiceDiaColombia();
+  const horaActualColombia = getHoraColombia();
   const semanaActual = !filterFechaInicio || filterFechaInicio === hoyColombia;
   const isDiaBloqueado = (dia: string) => {
     if (!semanaActual || indiceDiaActual < 0) return false;
     const indiceDia = diasSemana.indexOf(dia);
     return indiceDia !== -1 && indiceDia < indiceDiaActual;
+  };
+  const isCeldaBloqueada = (dia: string, hora: number) => {
+    if (isDiaBloqueado(dia)) return true;
+    if (!semanaActual || indiceDiaActual < 0) return false;
+
+    const indiceDia = diasSemana.indexOf(dia);
+    return indiceDia === indiceDiaActual && hora < horaActualColombia;
   };
 
   // Cargar datos para el formulario
@@ -749,13 +767,13 @@ export default function ConsultaEspacios() {
                         diasSemana.map((dia, diaIdx) => {
                           const ocupado = getOcupacionPorHora(espacio.id, dia, hora);
                           const estaSeleccionada = estaEnRangoSeleccion(espacio.id, dia, hora);
-                          const diaBloqueado = isDiaBloqueado(dia);
+                          const celdaBloqueada = isCeldaBloqueada(dia, hora);
                           
                           return (
                             <div
                               key={`cell-${espacio.id}-${dia}-${hora}`}
                               className={`border rounded transition-all ${
-                                diaBloqueado
+                                celdaBloqueada
                                   ? 'border-slate-300 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-900/60 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.06)] cursor-not-allowed'
                                   :
                                 ocupado 
@@ -771,12 +789,12 @@ export default function ConsultaEspacios() {
                                 gridRow: horaIdx + 2
                               }}
                               onMouseDown={() => {
-                                if (!diaBloqueado && !ocupado && puedeCrearSolicitudes) {
+                                if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes) {
                                   iniciarSeleccion(espacio.id, dia, hora);
                                 }
                               }}
                               onMouseEnter={() => {
-                                if (!diaBloqueado && !ocupado && puedeCrearSolicitudes) {
+                                if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes) {
                                   actualizarSeleccion(espacio.id, dia, hora);
                                 }
                               }}
