@@ -766,15 +766,37 @@ export function useConsultaEspacios() {
             };
             const diaSeleccionado = diasMap[seleccionRango.dia];
             const diaBase = fechaBase.getDay(); // 0 = domingo, 1 = lunes, etc.
+            const hoyColombia = getFechaColombia();
+            hoyColombia.setHours(0, 0, 0, 0);
+            const fechaBaseNormalizada = new Date(fechaBase);
+            fechaBaseNormalizada.setHours(0, 0, 0, 0);
             
             // Calcular diferencia de días para llegar al día seleccionado
             let diferenciaDias = diaSeleccionado - diaBase;
+
+            // Si la base es hoy, no permitir seleccionar días anteriores de la semana actual.
+            if (fechaBaseNormalizada.getTime() === hoyColombia.getTime() && diferenciaDias < 0) {
+                setIsDragging(false);
+                setSeleccionInicio(null);
+                setSeleccionRango(null);
+                return;
+            }
+
             if (diferenciaDias < 0) {
                 diferenciaDias += 7; // Ir a la próxima semana si el día ya pasó
             }
             
             const fecha = new Date(fechaBase);
             fecha.setDate(fechaBase.getDate() + diferenciaDias);
+            fecha.setHours(0, 0, 0, 0);
+
+            // Evitar solicitudes en fechas anteriores al día actual.
+            if (fecha < hoyColombia) {
+                setIsDragging(false);
+                setSeleccionInicio(null);
+                setSeleccionRango(null);
+                return;
+            }
 
             setNuevaSolicitudData({
                 espacio_id: parseInt(espacio.id),

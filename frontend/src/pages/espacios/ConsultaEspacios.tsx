@@ -106,6 +106,44 @@ export default function ConsultaEspacios() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const getFechaColombiaISO = () => {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+  };
+
+  const getIndiceDiaColombia = () => {
+    const diaSemana = new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      weekday: 'long'
+    }).format(new Date()).toLowerCase();
+
+    const mapaDias: { [key: string]: number } = {
+      lunes: 0,
+      martes: 1,
+      'miercoles': 2,
+      'miércoles': 2,
+      jueves: 3,
+      viernes: 4,
+      sabado: 5,
+      'sábado': 5
+    };
+
+    return mapaDias[diaSemana] ?? -1;
+  };
+
+  const hoyColombia = getFechaColombiaISO();
+  const indiceDiaActual = getIndiceDiaColombia();
+  const semanaActual = !filterFechaInicio || filterFechaInicio === hoyColombia;
+  const isDiaBloqueado = (dia: string) => {
+    if (!semanaActual || indiceDiaActual < 0) return false;
+    const indiceDia = diasSemana.indexOf(dia);
+    return indiceDia !== -1 && indiceDia < indiceDiaActual;
+  };
+
   // Cargar datos para el formulario
   useEffect(() => {
     const loadFormData = async () => {
@@ -678,11 +716,20 @@ export default function ConsultaEspacios() {
                   >
                     <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
-                      {diasSemana.map((dia) => (
-                        <div key={dia} className="text-sm text-center text-white font-semibold p-2 bg-slate-800 rounded">
+                      {diasSemana.map((dia) => {
+                        const diaBloqueado = isDiaBloqueado(dia);
+                        return (
+                        <div
+                          key={dia}
+                          className={`text-sm text-center text-white font-semibold p-2 rounded ${
+                            diaBloqueado
+                              ? 'bg-slate-500 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.25)]'
+                              : 'bg-slate-800'
+                          }`}
+                        >
                           {dia}
                         </div>
-                      ))}
+                      )})}
 
                       {horas.map((hora, idx) => (
                         <div
@@ -702,11 +749,15 @@ export default function ConsultaEspacios() {
                         diasSemana.map((dia, diaIdx) => {
                           const ocupado = getOcupacionPorHora(espacio.id, dia, hora);
                           const estaSeleccionada = estaEnRangoSeleccion(espacio.id, dia, hora);
+                          const diaBloqueado = isDiaBloqueado(dia);
                           
                           return (
                             <div
                               key={`cell-${espacio.id}-${dia}-${hora}`}
                               className={`border rounded transition-all ${
+                                diaBloqueado
+                                  ? 'border-slate-300 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-900/60 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.06)] cursor-not-allowed'
+                                  :
                                 ocupado 
                                   ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50' 
                                   : puedeCrearSolicitudes
@@ -720,12 +771,12 @@ export default function ConsultaEspacios() {
                                 gridRow: horaIdx + 2
                               }}
                               onMouseDown={() => {
-                                if (!ocupado && puedeCrearSolicitudes) {
+                                if (!diaBloqueado && !ocupado && puedeCrearSolicitudes) {
                                   iniciarSeleccion(espacio.id, dia, hora);
                                 }
                               }}
                               onMouseEnter={() => {
-                                if (!ocupado && puedeCrearSolicitudes) {
+                                if (!diaBloqueado && !ocupado && puedeCrearSolicitudes) {
                                   actualizarSeleccion(espacio.id, dia, hora);
                                 }
                               }}
