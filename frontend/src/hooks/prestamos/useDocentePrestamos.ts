@@ -7,7 +7,7 @@ import { sedeService } from '../../services/sedes/sedeAPI';
 import { prestamosPublicAPI, type EspacioDisponibleAPI } from '../../services/prestamos/prestamosPublicAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 import type { Prestamo } from '../../models/index';
-import type { Sede } from '../../models/institucional/sede.model';
+import type { Sede } from '../../services/sedes/sedeAPI';
 
 // Helper function to map backend PrestamoEspacio to UI Prestamo model
 const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
@@ -293,6 +293,11 @@ export function useDocentePrestamos() {
         setDialogPrestamoId(null);
     };
 
+    const normalizarEstado = (estado: string): 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido' => {
+        const estadoCapitalizado = estado.charAt(0).toUpperCase() + estado.slice(1);
+        return estadoCapitalizado as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    };
+
     const guardarEdicion = async () => {
         if (!prestamoEditando) return;
 
@@ -318,7 +323,7 @@ export function useDocentePrestamos() {
                 motivo: prestamoEditando.motivo,
                 asistentes: prestamoEditando.asistentes,
                 telefono: prestamoEditando.telefono,
-                estado: prestamoEditando.estado.charAt(0).toUpperCase() + prestamoEditando.estado.slice(1)
+                estado: normalizarEstado(prestamoEditando.estado)
             });
 
             // Recargar datos
