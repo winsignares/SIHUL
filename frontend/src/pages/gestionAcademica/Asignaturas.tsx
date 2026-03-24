@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, BookOpen, AlertTriangle, Check, X, Eye, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, BookOpen, AlertTriangle, Check, X, Eye, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAsignaturas, tiposAsignatura } from '../../hooks/gestionAcademica/useAsignaturas';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -27,8 +27,20 @@ export default function Asignaturas() {
     openDeleteDialog,
     handleDeleteAsignatura,
     resetForm,
-    filteredAsignaturas
+    filteredAsignaturas,
+    paginatedAsignaturas,
+    totalFilteredAsignaturas,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage
   } = useAsignaturas();
+
+  const firstItemIndex = totalFilteredAsignaturas === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredAsignaturas);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -80,7 +92,7 @@ export default function Asignaturas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAsignaturas.length === 0 ? (
+              {totalFilteredAsignaturas === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
@@ -99,7 +111,7 @@ export default function Asignaturas() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAsignaturas.map((asignatura) => (
+                paginatedAsignaturas.map((asignatura) => (
                   <TableRow key={asignatura.id}>
                     <TableCell>
                       <Badge variant="outline" className="border-red-600 text-red-600">
@@ -150,6 +162,57 @@ export default function Asignaturas() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalFilteredAsignaturas > 0 && (
+        <Card className="border-slate-200 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Mostrando {firstItemIndex}-{lastItemIndex} de {totalFilteredAsignaturas} asignaturas
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {pageNumbers.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      type="button"
+                      variant={pageNumber === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(pageNumber)}
+                      className={pageNumber === currentPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ==================== MODAL: CREAR ASIGNATURA ==================== */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

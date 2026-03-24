@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import type { Programa } from '../../services/programas/programaAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 
 export const tiposAsignatura = [
     { value: 'teórica', label: 'Teórica' },
@@ -12,8 +13,10 @@ export const tiposAsignatura = [
 ];
 
 export function useAsignaturas() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Estados de datos
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
@@ -222,14 +225,44 @@ export function useAsignaturas() {
 
     // ==================== FILTROS ====================
 
-    const filteredAsignaturas = asignaturas.filter(asignatura => {
-        // Búsqueda por texto
-        const matchSearch =
-            asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const filteredAsignaturas = useMemo(() => {
+        return asignaturas.filter(asignatura => {
+            // Búsqueda por texto
+            const matchSearch =
+                asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return matchSearch;
-    });
+            return matchSearch;
+        });
+    }, [asignaturas, searchTerm]);
+
+    const totalFilteredAsignaturas = filteredAsignaturas.length;
+    const totalPages = getTotalPages(totalFilteredAsignaturas, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginatedAsignaturas = useMemo(() => {
+        return getPageSlice(filteredAsignaturas, currentPage, PAGE_SIZE);
+    }, [filteredAsignaturas, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
 
     return {
         searchTerm, setSearchTerm,
@@ -247,6 +280,15 @@ export function useAsignaturas() {
         openDeleteDialog,
         handleDeleteAsignatura,
         resetForm,
-        filteredAsignaturas
+        filteredAsignaturas,
+        paginatedAsignaturas,
+        totalFilteredAsignaturas,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage
     };
 }
