@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = PAGE_SIZE_DEFAULT;
 
 export function useGestionRecursos() {
   const [recursos, setRecursos] = useState<Recurso[]>([]);
@@ -50,12 +51,11 @@ export function useGestionRecursos() {
   }, [recursos, searchTerm]);
 
   const totalRecursos = recursosFiltrados.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecursos / PAGE_SIZE));
+  const totalPages = getTotalPages(totalRecursos, PAGE_SIZE);
+  const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
 
   const paginaActualRecursos = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return recursosFiltrados.slice(start, end);
+    return getPageSlice(recursosFiltrados, currentPage, PAGE_SIZE);
   }, [currentPage, recursosFiltrados]);
 
   const abrirCrearRecursoModal = () => {
@@ -101,8 +101,7 @@ export function useGestionRecursos() {
   };
 
   const goToPage = (page: number) => {
-    if (page < 1 || page > totalPages) return;
-    setCurrentPage(page);
+    setCurrentPage(normalizePage(page, totalPages));
   };
 
   const goToNextPage = () => {
@@ -124,6 +123,7 @@ export function useGestionRecursos() {
     totalRecursos,
     currentPage,
     totalPages,
+    pageNumbers,
     pageSize: PAGE_SIZE,
     goToPage,
     goToNextPage,

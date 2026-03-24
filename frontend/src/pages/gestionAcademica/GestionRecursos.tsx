@@ -24,7 +24,9 @@ export default function GestionRecursos() {
     totalRecursos,
     currentPage,
     totalPages,
+    pageNumbers,
     pageSize,
+    goToPage,
     goToNextPage,
     goToPrevPage,
     showCrearRecursoModal,
@@ -134,9 +136,20 @@ export default function GestionRecursos() {
                     Anterior
                   </Button>
 
-                  <span className="text-sm text-slate-700 px-2">
-                    Pagina {currentPage} de {totalPages}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {pageNumbers.map((pageNumber) => (
+                      <Button
+                        key={pageNumber}
+                        type="button"
+                        variant={pageNumber === currentPage ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => goToPage(pageNumber)}
+                        className={pageNumber === currentPage ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+                      >
+                        {pageNumber}
+                      </Button>
+                    ))}
+                  </div>
 
                   <Button
                     type="button"
