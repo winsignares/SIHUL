@@ -4,7 +4,7 @@ import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../../share/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import SearchableSelect from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Switch } from '../../share/switch';
 import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin } from 'lucide-react';
@@ -161,21 +161,17 @@ export default function GestionUsuarios() {
                     <Label>Sede Universitaria *</Label>
                     <div className="relative group">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
-                      <Select
+                      <SearchableSelect
+                        items={sedesDisponibles}
                         value={sedeSeleccionada}
-                        onValueChange={(value) => setSedeSeleccionada(value)}
-                      >
-                        <SelectTrigger className="pl-10">
-                          <SelectValue placeholder="Seleccione una sede" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sedesDisponibles.map(sede => (
-                            <SelectItem key={sede.id} value={sede.id.toString()}>
-                              {sede.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onSelect={(sede) => setSedeSeleccionada(sede.id.toString())}
+                        getItemId={(sede) => sede.id.toString()}
+                        getItemLabel={(sede) => sede.nombre}
+                        placeholder="Seleccione una sede"
+                        searchPlaceholder="Buscar sede..."
+                        emptyMessage="No se encontraron sedes."
+                        className="pl-10"
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -246,21 +242,16 @@ export default function GestionUsuarios() {
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Rol *</Label>
-                    <Select
+                    <SearchableSelect
+                      items={rolesDisponibles}
                       value={nuevoUsuario.rol_id?.toString() || ''}
-                      onValueChange={(value) => setNuevoUsuario({ ...nuevoUsuario, rol_id: parseInt(value) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un rol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rolesDisponibles.map(rol => (
-                          <SelectItem key={rol.id} value={rol.id.toString()}>
-                            {rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSelect={(rol) => setNuevoUsuario({ ...nuevoUsuario, rol_id: rol.id })}
+                      getItemId={(rol) => rol.id.toString()}
+                      getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                      placeholder="Seleccione un rol"
+                      searchPlaceholder="Buscar rol..."
+                      emptyMessage="No se encontraron roles."
+                    />
                   </div>
                 </div>
               </div>
@@ -271,21 +262,16 @@ export default function GestionUsuarios() {
                   <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Facultad</h3>
                   <div className="space-y-2">
                     <Label>Facultad Asignada *</Label>
-                    <Select
+                    <SearchableSelect
+                      items={facultadesDisponibles}
                       value={facultadSeleccionada?.toString() || ''}
-                      onValueChange={(value) => setFacultadSeleccionada(parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccione una facultad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {facultadesDisponibles.map(facultad => (
-                          <SelectItem key={facultad.id} value={facultad.id.toString()}>
-                            {facultad.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSelect={(facultad) => setFacultadSeleccionada(facultad.id)}
+                      getItemId={(facultad) => facultad.id.toString()}
+                      getItemLabel={(facultad) => facultad.nombre}
+                      placeholder="Seleccione una facultad"
+                      searchPlaceholder="Buscar facultad..."
+                      emptyMessage="No se encontraron facultades."
+                    />
                   </div>
                 </div>
               )}
@@ -297,20 +283,17 @@ export default function GestionUsuarios() {
 
                   <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
                     <div className="flex gap-2">
-                      <Select value={espacioSeleccionado} onValueChange={setEspacioSeleccionado}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Seleccione un espacio..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {espaciosDisponibles
-                            .filter(e => !espaciosPermitidos.includes(e.id))
-                            .map(espacio => (
-                              <SelectItem key={espacio.id} value={espacio.id.toString()}>
-                                {espacio.nombre}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        items={espaciosDisponibles.filter(e => !espaciosPermitidos.includes(e.id))}
+                        value={espacioSeleccionado}
+                        onSelect={(espacio) => setEspacioSeleccionado(espacio.id.toString())}
+                        getItemId={(espacio) => espacio.id.toString()}
+                        getItemLabel={(espacio) => espacio.nombre}
+                        placeholder="Seleccione un espacio..."
+                        searchPlaceholder="Buscar espacio..."
+                        emptyMessage="No hay espacios disponibles."
+                        className="flex-1"
+                      />
                       <Button
                         type="button"
                         variant="outline"
@@ -376,19 +359,17 @@ export default function GestionUsuarios() {
             className="pl-10"
           />
         </div>
-        <Select value={filterRol} onValueChange={setFilterRol}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtrar por rol" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los roles</SelectItem>
-            {rolesDisponibles.map(rol => (
-              <SelectItem key={rol.id} value={rol.nombre}>
-                {rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          items={[{ id: 'todos', nombre: 'Todos los roles' }, ...rolesDisponibles.map(rol => ({ id: rol.nombre, nombre: rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ') }))]}
+          value={filterRol}
+          onSelect={(item) => setFilterRol(item.id)}
+          getItemId={(item) => item.id}
+          getItemLabel={(item) => item.nombre}
+          placeholder="Filtrar por rol"
+          searchPlaceholder="Buscar rol..."
+          emptyMessage="No se encontraron roles."
+          className="w-[200px]"
+        />
       </div>
 
       {/* Tabla de Usuarios */}
@@ -515,21 +496,16 @@ export default function GestionUsuarios() {
                   </div>
                   <div className="space-y-2">
                     <Label>Rol *</Label>
-                    <Select
+                    <SearchableSelect
+                      items={rolesDisponibles}
                       value={editingUser.rol_id?.toString() || ''}
-                      onValueChange={(value) => setEditingUser({ ...editingUser, rol_id: parseInt(value) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rolesDisponibles.map(rol => (
-                          <SelectItem key={rol.id} value={rol.id.toString()}>
-                            {rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSelect={(rol) => setEditingUser({ ...editingUser, rol_id: rol.id })}
+                      getItemId={(rol) => rol.id.toString()}
+                      getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                      placeholder="Seleccione un rol"
+                      searchPlaceholder="Buscar rol..."
+                      emptyMessage="No se encontraron roles."
+                    />
                   </div>
                 </div>
               </div>
@@ -538,21 +514,16 @@ export default function GestionUsuarios() {
               {getRolNombreEdit() === 'planeacion_facultad' && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Facultad</h3>
-                  <Select
+                  <SearchableSelect
+                    items={facultadesDisponibles}
                     value={facultadSeleccionadaEdit?.toString() || ''}
-                    onValueChange={(value) => setFacultadSeleccionadaEdit(parseInt(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione una facultad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facultadesDisponibles.map(facultad => (
-                        <SelectItem key={facultad.id} value={facultad.id.toString()}>
-                          {facultad.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onSelect={(facultad) => setFacultadSeleccionadaEdit(facultad.id)}
+                    getItemId={(facultad) => facultad.id.toString()}
+                    getItemLabel={(facultad) => facultad.nombre}
+                    placeholder="Seleccione una facultad"
+                    searchPlaceholder="Buscar facultad..."
+                    emptyMessage="No se encontraron facultades."
+                  />
                 </div>
               )}
 
@@ -563,20 +534,17 @@ export default function GestionUsuarios() {
 
                   <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
                     <div className="flex gap-2">
-                      <Select value={espacioSeleccionadoEdit} onValueChange={setEspacioSeleccionadoEdit}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Seleccione un espacio..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {espaciosDisponibles
-                            .filter(e => !espaciosPermitidosEdit.includes(e.id))
-                            .map(espacio => (
-                              <SelectItem key={espacio.id} value={espacio.id.toString()}>
-                                {espacio.nombre}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        items={espaciosDisponibles.filter(e => !espaciosPermitidosEdit.includes(e.id))}
+                        value={espacioSeleccionadoEdit}
+                        onSelect={(espacio) => setEspacioSeleccionadoEdit(espacio.id.toString())}
+                        getItemId={(espacio) => espacio.id.toString()}
+                        getItemLabel={(espacio) => espacio.nombre}
+                        placeholder="Seleccione un espacio..."
+                        searchPlaceholder="Buscar espacio..."
+                        emptyMessage="No hay espacios disponibles."
+                        className="flex-1"
+                      />
                       <Button
                         type="button"
                         variant="outline"
