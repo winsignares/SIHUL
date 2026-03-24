@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, Check, Package, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Check, Package, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEspaciosFisicos } from '../../hooks/gestionAcademica/useEspaciosFisicos';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -37,8 +37,20 @@ export default function EspaciosFisicos() {
     resetForm,
     resetTipoEspacioForm,
     filteredEspacios,
+    paginatedEspacios,
+    totalFilteredEspacios,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
     getEstadoBadge
   } = useEspaciosFisicos();
+
+  const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredEspacios);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -180,7 +192,7 @@ export default function EspaciosFisicos() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEspacios.map((espacio) => {
+                paginatedEspacios.map((espacio) => {
                   const sede = sedes.find(s => s.id === espacio.sede_id);
                   return (
                     <TableRow key={espacio.id}>
@@ -235,6 +247,57 @@ export default function EspaciosFisicos() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalFilteredEspacios > 0 && (
+        <Card className="border-slate-200 dark:border-slate-700 shadow-lg bg-white dark:bg-slate-800">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {firstItemIndex}-{lastItemIndex} de {totalFilteredEspacios} espacios
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {pageNumbers.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      type="button"
+                      variant={pageNumber === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(pageNumber)}
+                      className={pageNumber === currentPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ==================== MODAL: CREAR ESPACIO ==================== */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

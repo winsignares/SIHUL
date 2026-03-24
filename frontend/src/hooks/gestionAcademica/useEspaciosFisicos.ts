@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { tipoEspacioService, type TipoEspacio } from '../../services/espacios/tipoEspacioAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 
 export function useEspaciosFisicos() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState<string>('all');
     const [filterSede, setFilterSede] = useState<string>('all');
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Estados de datos
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
@@ -327,22 +330,52 @@ export function useEspaciosFisicos() {
 
     // ==================== FILTROS ====================
 
-    const filteredEspacios = espacios.filter(espacio => {
-        // Find sede name for search
-        const sede = sedes.find(s => s.id === espacio.sede_id);
-        const sedeNombre = sede ? sede.nombre : '';
-        const tipoNombre = espacio.tipo_espacio?.nombre || '';
+    const filteredEspacios = useMemo(() => {
+        return espacios.filter(espacio => {
+            // Find sede name for search
+            const sede = sedes.find(s => s.id === espacio.sede_id);
+            const sedeNombre = sede ? sede.nombre : '';
+            const tipoNombre = espacio.tipo_espacio?.nombre || '';
 
-        const matchSearch =
-            (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (sedeNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (tipoNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+            const matchSearch =
+                (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (sedeNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (tipoNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
-        const matchTipo = filterTipo === 'all' || espacio.tipo_id.toString() === filterTipo;
-        const matchSede = filterSede === 'all' || espacio.sede_id.toString() === filterSede;
+            const matchTipo = filterTipo === 'all' || espacio.tipo_id.toString() === filterTipo;
+            const matchSede = filterSede === 'all' || espacio.sede_id.toString() === filterSede;
 
-        return matchSearch && matchTipo && matchSede;
-    });
+            return matchSearch && matchTipo && matchSede;
+        });
+    }, [espacios, sedes, searchTerm, filterTipo, filterSede]);
+
+    const totalFilteredEspacios = filteredEspacios.length;
+    const totalPages = getTotalPages(totalFilteredEspacios, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginatedEspacios = useMemo(() => {
+        return getPageSlice(filteredEspacios, currentPage, PAGE_SIZE);
+    }, [filteredEspacios, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterTipo, filterSede]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
 
     // Badge de estado
     const getEstadoBadge = (estado: string) => {
@@ -385,6 +418,15 @@ export function useEspaciosFisicos() {
         resetForm,
         resetTipoEspacioForm,
         filteredEspacios,
+        paginatedEspacios,
+        totalFilteredEspacios,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         getEstadoBadge,
         loadEspacios
     };
