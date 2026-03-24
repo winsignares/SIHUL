@@ -497,6 +497,70 @@ export function useConsultaEspacios() {
     // Horas de 6am a 10pm (22:00)
     const horas = Array.from({ length: 17 }, (_, i) => i + 6);
 
+    const getFechaColombiaISO = (): string => {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Bogota',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+    };
+
+    const getIndiceDiaColombia = (): number => {
+        const diaSemana = new Intl.DateTimeFormat('es-CO', {
+            timeZone: 'America/Bogota',
+            weekday: 'long'
+        }).format(new Date()).toLowerCase();
+
+        const mapaDias: { [key: string]: number } = {
+            lunes: 0,
+            martes: 1,
+            miercoles: 2,
+            'miércoles': 2,
+            jueves: 3,
+            viernes: 4,
+            sabado: 5,
+            'sábado': 5
+        };
+
+        return mapaDias[diaSemana] ?? -1;
+    };
+
+    const getHoraColombia = (): number => {
+        const hora = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Bogota',
+            hour: '2-digit',
+            hour12: false
+        }).format(new Date());
+
+        return parseInt(hora, 10);
+    };
+
+    const isDiaBloqueado = (dia: string): boolean => {
+        const hoyColombia = getFechaColombiaISO();
+        const indiceDiaActual = getIndiceDiaColombia();
+        const semanaActual = !filterFechaInicio || filterFechaInicio === hoyColombia;
+
+        if (!semanaActual || indiceDiaActual < 0) return false;
+
+        const indiceDia = diasSemana.indexOf(dia);
+        return indiceDia !== -1 && indiceDia < indiceDiaActual;
+    };
+
+    const isCeldaBloqueada = (dia: string, hora: number): boolean => {
+        if (isDiaBloqueado(dia)) return true;
+
+        const hoyColombia = getFechaColombiaISO();
+        const indiceDiaActual = getIndiceDiaColombia();
+        const horaActualColombia = getHoraColombia();
+        const semanaActual = !filterFechaInicio || filterFechaInicio === hoyColombia;
+
+        if (!semanaActual || indiceDiaActual < 0) return false;
+
+        const indiceDia = diasSemana.indexOf(dia);
+        return indiceDia === indiceDiaActual && hora < horaActualColombia;
+    };
+
     const filteredEspacios = useMemo(() => {
         return espacios.filter(e => {
             const matchesSearch = e.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -935,6 +999,8 @@ export function useConsultaEspacios() {
         sedes,
         diasSemana,
         horas,
+        isDiaBloqueado,
+        isCeldaBloqueada,
         filteredEspacios,
         paginatedEspacios,
         totalFilteredEspacios,
