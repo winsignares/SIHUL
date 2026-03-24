@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { espacioService, espacioPermitidoService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 import {
     CheckCircle2,
     AlertTriangle,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export function useEstadoRecursos() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
     const [sedes, setSedes] = useState<Sede[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +25,7 @@ export function useEstadoRecursos() {
     const [showDetallesModal, setShowDetallesModal] = useState(false);
     const [espacioSeleccionado, setEspacioSeleccionado] = useState<EspacioFisico | null>(null);
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         loadData();
@@ -107,16 +110,46 @@ export function useEstadoRecursos() {
     };
 
     // Filtrar espacios
-    const espaciosFiltrados = espacios.filter(espacio => {
-        const matchSearch =
-            (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (espacio.tipo_espacio?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    const espaciosFiltrados = useMemo(() => {
+        return espacios.filter(espacio => {
+            const matchSearch =
+                (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (espacio.tipo_espacio?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
-        const matchEstado = filtroEstado === 'all' || espacio.estado === filtroEstado;
-        const matchTipo = filtroTipo === 'all' || espacio.tipo_espacio?.nombre === filtroTipo;
+            const matchEstado = filtroEstado === 'all' || espacio.estado === filtroEstado;
+            const matchTipo = filtroTipo === 'all' || espacio.tipo_espacio?.nombre === filtroTipo;
 
-        return matchSearch && matchEstado && matchTipo;
-    });
+            return matchSearch && matchEstado && matchTipo;
+        });
+    }, [espacios, searchTerm, filtroEstado, filtroTipo]);
+
+    const totalEspaciosFiltrados = espaciosFiltrados.length;
+    const totalPages = getTotalPages(totalEspaciosFiltrados, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginaActualEspacios = useMemo(() => {
+        return getPageSlice(espaciosFiltrados, currentPage, PAGE_SIZE);
+    }, [espaciosFiltrados, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filtroEstado, filtroTipo]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
 
     // Estadísticas
     const estadisticas = {
@@ -204,6 +237,15 @@ export function useEstadoRecursos() {
         loadData,
         getRecursoIcon,
         espaciosFiltrados,
+        paginaActualEspacios,
+        totalEspaciosFiltrados,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         estadisticas,
         getEstadoIcon,
         getEstadoRecursoBadge,
