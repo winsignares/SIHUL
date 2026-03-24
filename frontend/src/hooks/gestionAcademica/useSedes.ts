@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
+import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
 
 export function useSedes() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [sedes, setSedes] = useState<Sede[]>([]);
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Estados de modales
     const [showCreate, setShowCreate] = useState(false);
@@ -150,10 +153,41 @@ export function useSedes() {
         setShowDelete(true);
     };
 
-    // Filtros
-    const filteredSedes = sedes.filter(s =>
-        s.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // ==================== FILTROS ====================
+
+    const filteredSedes = useMemo(() => {
+        return sedes.filter(s =>
+            s.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [sedes, searchTerm]);
+
+    const totalFilteredSedes = filteredSedes.length;
+    const totalPages = getTotalPages(totalFilteredSedes, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+
+    const paginatedSedes = useMemo(() => {
+        return getPageSlice(filteredSedes, currentPage, PAGE_SIZE);
+    }, [filteredSedes, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
 
     return {
         searchTerm, setSearchTerm,
@@ -170,6 +204,15 @@ export function useSedes() {
         toggleActiva,
         openEdit,
         openDelete,
-        filteredSedes
+        filteredSedes,
+        paginatedSedes,
+        totalFilteredSedes,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage
     };
 }

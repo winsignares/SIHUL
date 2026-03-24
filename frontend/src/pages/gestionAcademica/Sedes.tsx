@@ -24,8 +24,20 @@ export default function Sedes() {
     toggleActiva,
     openEdit,
     openDelete,
-    filteredSedes
+    filteredSedes,
+    paginatedSedes,
+    totalFilteredSedes,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage
   } = useSedes();
+
+  const firstItemIndex = totalFilteredSedes === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredSedes);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -76,14 +88,14 @@ export default function Sedes() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSedes.length === 0 ? (
+              {totalFilteredSedes === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-slate-500 py-8">
                     No se encontraron sedes
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredSedes.map((sede) => (
+                paginatedSedes.map((sede) => (
                   <TableRow key={sede.id}>
                     <TableCell className="text-slate-900">{sede.nombre}</TableCell>
                     <TableCell className="text-slate-600">{sede.direccion || 'Sin dirección'}</TableCell>
@@ -134,6 +146,52 @@ export default function Sedes() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalFilteredSedes > 0 && (
+        <Card className="border-slate-200 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Mostrando {firstItemIndex}-{lastItemIndex} de {totalFilteredSedes} sedes
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+
+                <div className="flex gap-1">
+                  {pageNumbers.map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                      className={currentPage === page ? 'bg-red-600 hover:bg-red-700' : ''}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Modal: Crear Sede */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
