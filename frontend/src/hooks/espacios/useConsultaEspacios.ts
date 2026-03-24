@@ -756,7 +756,8 @@ export function useConsultaEspacios() {
                 fechaBase = new Date(filterFechaInicio + 'T00:00:00');
             } else {
                 // Si no hay filtro, usar la fecha de hoy
-                fechaBase = new Date();
+                const hoyColombia = getFechaColombia().toISOString().split('T')[0];
+                fechaBase = new Date(hoyColombia + 'T00:00:00');
             }
 
             // Calcular la fecha exacta según el día seleccionado en el horario
