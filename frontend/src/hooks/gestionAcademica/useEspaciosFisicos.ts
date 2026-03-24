@@ -19,8 +19,14 @@ export function useEspaciosFisicos() {
 
     // Modales
     const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showCreateTipoDialog, setShowCreateTipoDialog] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+    const [tipoEspacioForm, setTipoEspacioForm] = useState({
+        nombre: '',
+        descripcion: ''
+    });
 
     // Formulario
     const [espacioForm, setEspacioForm] = useState({
@@ -138,6 +144,45 @@ export function useEspaciosFisicos() {
         } catch (error) {
             console.error('Error creating espacio:', error);
             toast.error('Error al crear el espacio');
+        }
+    };
+
+    // ==================== CREAR TIPO DE ESPACIO ====================
+
+    const handleCreateTipoEspacio = async () => {
+        const nombre = tipoEspacioForm.nombre.trim();
+        const descripcion = tipoEspacioForm.descripcion.trim();
+
+        if (!nombre) {
+            toast.error('El nombre del tipo es obligatorio');
+            return;
+        }
+
+        const existeTipo = tiposEspacio.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
+        if (existeTipo) {
+            toast.error('Ya existe un tipo de espacio con ese nombre');
+            return;
+        }
+
+        try {
+            const response = await tipoEspacioService.crearTipoEspacio({
+                nombre,
+                descripcion: descripcion || undefined
+            });
+
+            await loadData();
+
+            setTipoEspacioForm({ nombre: '', descripcion: '' });
+            setShowCreateTipoDialog(false);
+
+            if (response?.id) {
+                setEspacioForm(prev => ({ ...prev, tipo_id: String(response.id) }));
+            }
+
+            toast.success('Tipo de espacio creado exitosamente');
+        } catch (error) {
+            console.error('Error creating tipo espacio:', error);
+            toast.error('Error al crear el tipo de espacio');
         }
     };
 
@@ -276,6 +321,10 @@ export function useEspaciosFisicos() {
         setMostrandoRecursos(true);
     };
 
+    const resetTipoEspacioForm = () => {
+        setTipoEspacioForm({ nombre: '', descripcion: '' });
+    };
+
     // ==================== FILTROS ====================
 
     const filteredEspacios = espacios.filter(espacio => {
@@ -318,19 +367,23 @@ export function useEspaciosFisicos() {
         tiposEspacio,
         recursosDisponibles,
         showCreateDialog, setShowCreateDialog,
+        showCreateTipoDialog, setShowCreateTipoDialog,
         showEditDialog, setShowEditDialog,
         showDeleteDialog, setShowDeleteDialog,
         espacioForm, setEspacioForm,
+        tipoEspacioForm, setTipoEspacioForm,
         recursoSeleccionado, setRecursoSeleccionado,
         recursosAgregados, setRecursosAgregados,
         mostrandoRecursos, setMostrandoRecursos,
         selectedEspacio, setSelectedEspacio,
         handleCreateEspacio,
+        handleCreateTipoEspacio,
         openEditDialog,
         handleEditEspacio,
         openDeleteDialog,
         handleDeleteEspacio,
         resetForm,
+        resetTipoEspacioForm,
         filteredEspacios,
         getEstadoBadge,
         loadEspacios

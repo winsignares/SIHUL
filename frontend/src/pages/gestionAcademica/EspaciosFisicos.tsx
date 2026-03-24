@@ -17,9 +17,11 @@ export default function EspaciosFisicos() {
     filterTipo, setFilterTipo,
     filterSede, setFilterSede,
     showCreateDialog, setShowCreateDialog,
+    showCreateTipoDialog, setShowCreateTipoDialog,
     showEditDialog, setShowEditDialog,
     showDeleteDialog, setShowDeleteDialog,
     espacioForm, setEspacioForm,
+    tipoEspacioForm, setTipoEspacioForm,
     recursoSeleccionado, setRecursoSeleccionado,
     recursosAgregados, setRecursosAgregados,
     mostrandoRecursos, setMostrandoRecursos,
@@ -27,11 +29,13 @@ export default function EspaciosFisicos() {
     sedes,
     recursosDisponibles,
     handleCreateEspacio,
+    handleCreateTipoEspacio,
     openEditDialog,
     handleEditEspacio,
     openDeleteDialog,
     handleDeleteEspacio,
     resetForm,
+    resetTipoEspacioForm,
     filteredEspacios,
     getEstadoBadge
   } = useEspaciosFisicos();
@@ -43,14 +47,70 @@ export default function EspaciosFisicos() {
         <div>
           <h2 className="text-slate-900 dark:text-slate-100 text-lg font-semibold">Gestión de Espacios Físicos</h2>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Espacio
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowCreateTipoDialog(true)}
+            variant="outline"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Tipo
+          </Button>
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Espacio
+          </Button>
+        </div>
       </div>
+
+      {/* ==================== MODAL: CREAR TIPO DE ESPACIO ==================== */}
+      <Dialog open={showCreateTipoDialog} onOpenChange={setShowCreateTipoDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-slate-100">Registrar Tipo de Espacio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tipo-nombre">Nombre *</Label>
+              <Input
+                id="tipo-nombre"
+                placeholder="Ej: Auditorio"
+                value={tipoEspacioForm.nombre}
+                onChange={(e) => setTipoEspacioForm({ ...tipoEspacioForm, nombre: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tipo-descripcion">Descripción</Label>
+              <Input
+                id="tipo-descripcion"
+                placeholder="Descripción opcional"
+                value={tipoEspacioForm.descripcion}
+                onChange={(e) => setTipoEspacioForm({ ...tipoEspacioForm, descripcion: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateTipoDialog(false);
+                resetTipoEspacioForm();
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateTipoEspacio}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+            >
+              Guardar Tipo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Filtros */}
       <Card className="border-slate-200 dark:border-slate-700 shadow-lg bg-white dark:bg-slate-800">

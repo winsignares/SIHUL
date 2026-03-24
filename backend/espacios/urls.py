@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     # TipoEspacio routes
+    path('tipos/', views.create_tipo_espacio, name='create_tipo_espacio'),
     path('tipos/list/', views.list_tipos_espacio, name='list_tipos_espacio'),
     path('tipos/<int:id>/', views.get_tipo_espacio, name='get_tipo_espacio'),
     

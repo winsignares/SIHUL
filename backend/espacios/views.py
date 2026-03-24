@@ -42,6 +42,37 @@ def get_tipo_espacio(request, id=None):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@csrf_exempt
+def create_tipo_espacio(request):
+    """Crea un nuevo tipo de espacio"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        nombre = (data.get('nombre') or '').strip()
+        descripcion = (data.get('descripcion') or '').strip()
+
+        if not nombre:
+            return JsonResponse({"error": "El nombre es requerido"}, status=400)
+
+        if TipoEspacio.objects.filter(nombre__iexact=nombre).exists():
+            return JsonResponse({"error": "Ya existe un tipo de espacio con ese nombre"}, status=409)
+
+        tipo = TipoEspacio.objects.create(
+            nombre=nombre,
+            descripcion=descripcion or None
+        )
+
+        return JsonResponse({
+            "message": "Tipo de espacio creado",
+            "id": tipo.id
+        }, status=201)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 # ---------- EspacioFisico CRUD ----------
 @csrf_exempt
 def create_espacio(request):

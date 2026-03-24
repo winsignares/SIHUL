@@ -6,10 +6,22 @@ export interface TipoEspacio {
     descripcion?: string;
 }
 
+export interface CreateTipoEspacioPayload {
+    nombre: string;
+    descripcion?: string;
+}
+
 /**
  * Servicio para la gestión de tipos de espacio
  */
 export const tipoEspacioService = {
+    /**
+     * Crea un nuevo tipo de espacio
+     */
+    crearTipoEspacio: async (payload: CreateTipoEspacioPayload): Promise<{ message: string; id: number }> => {
+        return apiClient.post('/espacios/tipos/', payload);
+    },
+
     /**
      * Obtiene la lista de todos los tipos de espacio
      */
