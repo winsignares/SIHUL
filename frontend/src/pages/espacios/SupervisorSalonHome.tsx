@@ -14,12 +14,20 @@ export default function SupervisorSalonHome() {
   const isMobile = useIsMobile();
   const {
     espacios,
+    horariosPaginados,
+    totalHorariosPendientes,
     horaActual,
     diaActual,
     fechaActual,
     loading,
     error,
-    refrescar
+    refrescar,
+    currentPage,
+    totalPages,
+    pageNumbers,
+    goToPage,
+    goToNextPage,
+    goToPrevPage
   } = useAperturaCierre();
 
   // Estado para manejar botones de carga individual
@@ -183,7 +191,7 @@ export default function SupervisorSalonHome() {
       )}
 
       {/* Lista de Horarios Pendientes - Una tarjeta por horario */}
-      {espacios && espacios.length > 0 && (
+      {totalHorariosPendientes > 0 && (
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardHeader className="border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
             <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -197,14 +205,13 @@ export default function SupervisorSalonHome() {
           <CardContent className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <AnimatePresence>
-                {espacios.flatMap((espacio) => 
-                  espacio.horarios?.map((horario, horarioIndex) => {
+                {horariosPaginados.map(({ key, espacio, horario }, horarioIndex) => {
                     const isLoading = loadingAcciones[espacio.idEspacio] || false;
                     const isApertura = horario.proximaAccion === 'apertura';
                     
                     return (
                       <motion.div
-                        key={`${espacio.idEspacio}-${horarioIndex}`}
+                        key={key}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
@@ -342,16 +349,58 @@ export default function SupervisorSalonHome() {
                         </Card>
                       </motion.div>
                     );
-                  }) || []
-                )}
+                  })}
               </AnimatePresence>
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Mostrando pagina <span className="font-semibold text-blue-600 dark:text-blue-400">{currentPage}</span> de <span className="font-semibold text-blue-600 dark:text-blue-400">{totalPages}</span>
+                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevPage}
+                      disabled={currentPage === 1 || loading}
+                    >
+                      Anterior
+                    </Button>
+
+                    {pageNumbers.map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => goToPage(pageNum)}
+                        disabled={loading}
+                        className={currentPage === pageNum ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages || loading}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Estado Vacío */}
-      {!loading && !error && (!espacios || espacios.length === 0) && (
+      {!loading && !error && totalHorariosPendientes === 0 && (
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-12">
             <div className="text-center">
@@ -370,7 +419,7 @@ export default function SupervisorSalonHome() {
       )}
 
       {/* Loading State */}
-      {loading && (!espacios || espacios.length === 0) && (
+      {loading && totalHorariosPendientes === 0 && (
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-12">
             <div className="text-center">
