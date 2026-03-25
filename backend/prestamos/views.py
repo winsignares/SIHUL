@@ -182,71 +182,11 @@ def _add_years(base_date, years):
 
 
 def _generar_fechas_ocurrencias(fecha_base, recurrencia):
-    if not recurrencia['es_recurrente']:
-        return [fecha_base]
-
-    frecuencia = recurrencia['frecuencia']
-    intervalo = recurrencia['intervalo']
-    fin_tipo = recurrencia['fin_repeticion_tipo']
-    fin_fecha = recurrencia['fin_repeticion_fecha']
-    fin_ocurrencias = recurrencia['fin_repeticion_ocurrencias']
-    dias_semana = recurrencia['dias_semana']
-
-    if fin_tipo == 'count':
-        max_items = min(fin_ocurrencias, 365)
-    elif fin_tipo == 'until_date':
-        max_items = 365
-    else:
-        max_items = 90
-
-    fechas = []
-
-    if frecuencia == 'daily':
-        cursor = fecha_base
-        while len(fechas) < max_items:
-            if fin_tipo == 'until_date' and cursor > fin_fecha:
-                break
-            fechas.append(cursor)
-            cursor += datetime.timedelta(days=intervalo)
-
-    elif frecuencia == 'weekly':
-        cursor = fecha_base
-        lunes_base = fecha_base - datetime.timedelta(days=fecha_base.weekday())
-        while len(fechas) < max_items:
-            if fin_tipo == 'until_date' and cursor > fin_fecha:
-                break
-            lunes_actual = cursor - datetime.timedelta(days=cursor.weekday())
-            delta_semanas = (lunes_actual - lunes_base).days // 7
-            if delta_semanas % intervalo == 0 and cursor.weekday() in dias_semana:
-                fechas.append(cursor)
-            cursor += datetime.timedelta(days=1)
-
-    elif frecuencia == 'monthly':
-        cursor = fecha_base
-        while len(fechas) < max_items:
-            if fin_tipo == 'until_date' and cursor > fin_fecha:
-                break
-            fechas.append(cursor)
-            cursor = _add_months(cursor, intervalo)
-
-    elif frecuencia == 'yearly':
-        cursor = fecha_base
-        while len(fechas) < max_items:
-            if fin_tipo == 'until_date' and cursor > fin_fecha:
-                break
-            fechas.append(cursor)
-            cursor = _add_years(cursor, intervalo)
-
-    elif frecuencia == 'weekdays':
-        cursor = fecha_base
-        while len(fechas) < max_items:
-            if fin_tipo == 'until_date' and cursor > fin_fecha:
-                break
-            if cursor.weekday() < 5:
-                fechas.append(cursor)
-            cursor += datetime.timedelta(days=1)
-
-    return sorted(set(fechas))
+    # Política de negocio actual:
+    # siempre se persiste un único registro por préstamo,
+    # incluso cuando es recurrente.
+    # La recurrencia se mantiene como metadatos en ese mismo registro.
+    return [fecha_base]
 
 
 def _recurrencia_payload(prestamo):
