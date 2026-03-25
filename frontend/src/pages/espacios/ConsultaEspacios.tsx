@@ -22,6 +22,20 @@ import { prestamoService, type RecursoPrestamo } from '../../services/prestamos/
 import { toast } from 'sonner';
 import type { Sede } from '../../services/sedes/sedeAPI';
 
+type RepeatQuickOption =
+  | 'none'
+  | 'daily'
+  | 'weekly_current'
+  | 'monthly_ordinal_weekday'
+  | 'monthly_last_weekday'
+  | 'yearly_date'
+  | 'custom';
+
+type CustomPeriod = 'day' | 'week' | 'month' | 'year';
+
+const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
@@ -105,10 +119,217 @@ export default function ConsultaEspacios() {
     tipo_actividad_id: 0,
     asistentes: '',
     motivo: '',
-    telefono: ''
+    telefono: '',
+    es_recurrente: false,
+    frecuencia: 'none' as 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays',
+    intervalo: 1,
+    dias_semana: [] as number[],
+    fin_repeticion_tipo: 'never' as 'never' | 'until_date' | 'count',
+    fin_repeticion_fecha: '',
+    fin_repeticion_ocurrencias: ''
   });
+  const [repeatOption, setRepeatOption] = useState<RepeatQuickOption>('none');
+  const [customPeriod, setCustomPeriod] = useState<CustomPeriod>('week');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const FIN_REPETICION_OPTIONS = [
+    { value: 'never', label: 'Nunca' },
+    { value: 'until_date', label: 'Hasta una fecha' },
+    { value: 'count', label: 'Después de N repeticiones' }
+  ] as const;
+
+  const DIAS_SEMANA_OPTIONS = [
+    { value: 0, label: 'Lunes' },
+    { value: 1, label: 'Martes' },
+    { value: 2, label: 'Miércoles' },
+    { value: 3, label: 'Jueves' },
+    { value: 4, label: 'Viernes' },
+    { value: 5, label: 'Sábado' },
+    { value: 6, label: 'Domingo' }
+  ] as const;
+
+  const getWeekdayMondayIndex = (dateStr?: string): number => {
+    if (!dateStr) return 0;
+    const jsDay = new Date(`${dateStr}T00:00:00`).getDay();
+    return jsDay === 0 ? 6 : jsDay - 1;
+  };
+
+  const getOrdinalWeekdayText = (dateStr?: string): string => {
+    if (!dateStr) return 'primer lunes';
+    const date = new Date(`${dateStr}T00:00:00`);
+    const day = date.getDate();
+    const ordinalNum = Math.floor((day - 1) / 7) + 1;
+    const ordinals = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto'];
+    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(dateStr)];
+    return `${ordinals[Math.min(ordinalNum - 1, 4)]} ${weekdayName}`;
+  };
+
+  const repeatOptions = (() => {
+    const fechaBase = nuevaSolicitudData?.fecha;
+    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(fechaBase)] || 'lunes';
+    const yearlyText = fechaBase
+      ? (() => {
+          const date = new Date(`${fechaBase}T00:00:00`);
+          return `${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}`;
+        })()
+      : 'la fecha seleccionada';
+
+    return [
+      { value: 'none' as const, label: 'No se repite' },
+      { value: 'daily' as const, label: 'Cada día' },
+      { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
+      { value: 'monthly_ordinal_weekday' as const, label: `Cada mes el ${getOrdinalWeekdayText(fechaBase)}` },
+      { value: 'monthly_last_weekday' as const, label: `Cada mes el último ${weekdayName}` },
+      { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
+      { value: 'custom' as const, label: 'Personalizar' }
+    ];
+  })();
+
+  const toggleDiaSemana = (dayValue: number) => {
+    setFormData((prev) => {
+      const exists = prev.dias_semana.includes(dayValue);
+      return {
+        ...prev,
+        dias_semana: exists
+          ? prev.dias_semana.filter((d) => d !== dayValue)
+          : [...prev.dias_semana, dayValue].sort((a, b) => a - b)
+      };
+    });
+  };
+
+  const buildRecurrenceFromSelection = () => {
+    const baseEnd = {
+      fin_repeticion_tipo: formData.fin_repeticion_tipo,
+      fin_repeticion_fecha: formData.fin_repeticion_tipo === 'until_date' ? formData.fin_repeticion_fecha : '',
+      fin_repeticion_ocurrencias:
+        formData.fin_repeticion_tipo === 'count' ? formData.fin_repeticion_ocurrencias : ''
+    };
+
+    if (repeatOption === 'none') {
+      return {
+        es_recurrente: false,
+        frecuencia: 'none' as const,
+        intervalo: 1,
+        dias_semana: [] as number[],
+        ...baseEnd
+      };
+    }
+
+    if (repeatOption === 'daily') {
+      return {
+        es_recurrente: true,
+        frecuencia: 'daily' as const,
+        intervalo: 1,
+        dias_semana: [] as number[],
+        ...baseEnd
+      };
+    }
+
+    if (repeatOption === 'weekly_current') {
+      return {
+        es_recurrente: true,
+        frecuencia: 'weekly' as const,
+        intervalo: 1,
+        dias_semana: [getWeekdayMondayIndex(nuevaSolicitudData?.fecha)],
+        ...baseEnd
+      };
+    }
+
+    if (repeatOption === 'monthly_ordinal_weekday' || repeatOption === 'monthly_last_weekday') {
+      return {
+        es_recurrente: true,
+        frecuencia: 'monthly' as const,
+        intervalo: 1,
+        dias_semana: [] as number[],
+        ...baseEnd
+      };
+    }
+
+    if (repeatOption === 'yearly_date') {
+      return {
+        es_recurrente: true,
+        frecuencia: 'yearly' as const,
+        intervalo: 1,
+        dias_semana: [] as number[],
+        ...baseEnd
+      };
+    }
+
+    const customFrequency =
+      customPeriod === 'day'
+        ? 'daily'
+        : customPeriod === 'week'
+          ? 'weekly'
+          : customPeriod === 'month'
+            ? 'monthly'
+            : 'yearly';
+
+    return {
+      es_recurrente: true,
+      frecuencia: customFrequency,
+      intervalo: Math.max(1, formData.intervalo),
+      dias_semana: customFrequency === 'weekly' ? formData.dias_semana : [],
+      ...baseEnd
+    };
+  };
+
+  const recurrenceSummary = () => {
+    const finishText =
+      formData.fin_repeticion_tipo === 'until_date' && formData.fin_repeticion_fecha
+        ? ` hasta el ${new Date(`${formData.fin_repeticion_fecha}T00:00:00`).toLocaleDateString('es-CO')}`
+        : formData.fin_repeticion_tipo === 'count' && formData.fin_repeticion_ocurrencias
+          ? ` durante ${formData.fin_repeticion_ocurrencias} repeticiones`
+          : '';
+
+    if (repeatOption === 'none') return 'No se repetirá.';
+    if (repeatOption === 'daily') return `Se repetirá cada día${finishText}.`;
+    if (repeatOption === 'weekly_current') {
+      return `Se repetirá cada semana el ${WEEKDAY_NAMES[getWeekdayMondayIndex(nuevaSolicitudData?.fecha)]}${finishText}.`;
+    }
+    if (repeatOption === 'monthly_ordinal_weekday') {
+      return `Se repetirá cada mes el ${getOrdinalWeekdayText(nuevaSolicitudData?.fecha)}${finishText}.`;
+    }
+    if (repeatOption === 'monthly_last_weekday') {
+      return `Se repetirá cada mes el último ${WEEKDAY_NAMES[getWeekdayMondayIndex(nuevaSolicitudData?.fecha)]}${finishText}.`;
+    }
+    if (repeatOption === 'yearly_date' && nuevaSolicitudData?.fecha) {
+      const d = new Date(`${nuevaSolicitudData.fecha}T00:00:00`);
+      return `Se repetirá anualmente el ${d.getDate()} de ${MONTH_NAMES[d.getMonth()]}${finishText}.`;
+    }
+
+    const periodText = customPeriod === 'day' ? 'día' : customPeriod === 'week' ? 'semana' : customPeriod === 'month' ? 'mes' : 'año';
+    const daysText =
+      customPeriod === 'week' && formData.dias_semana.length > 0
+        ? ` los ${formData.dias_semana.map((d) => WEEKDAY_NAMES[d]).join(', ')}`
+        : '';
+    return `Se repetirá cada ${Math.max(1, formData.intervalo)} ${periodText}${Math.max(1, formData.intervalo) > 1 ? 's' : ''}${daysText}${finishText}.`;
+  };
+
+  useEffect(() => {
+    if (!dialogSolicitudOpen) {
+      setFormError(null);
+      setSubmitting(false);
+      setRecursosSeleccionados([]);
+      setFormData({
+        sede_id: 0,
+        espacio_id: 0,
+        tipo_actividad_id: 0,
+        asistentes: '',
+        motivo: '',
+        telefono: '',
+        es_recurrente: false,
+        frecuencia: 'none',
+        intervalo: 1,
+        dias_semana: [],
+        fin_repeticion_tipo: 'never',
+        fin_repeticion_fecha: '',
+        fin_repeticion_ocurrencias: ''
+      });
+      setRepeatOption('none');
+      setCustomPeriod('week');
+    }
+  }, [dialogSolicitudOpen]);
 
   // Cargar datos para el formulario
   useEffect(() => {
@@ -220,6 +441,35 @@ export default function ConsultaEspacios() {
       return;
     }
 
+    if (nuevaSolicitudData.horaFin <= nuevaSolicitudData.horaInicio) {
+      setFormError('La hora fin debe ser mayor que la hora inicio');
+      return;
+    }
+
+    const recurrenceData = buildRecurrenceFromSelection();
+
+    if (recurrenceData.es_recurrente) {
+      if (recurrenceData.intervalo < 1) {
+        setFormError('El intervalo debe ser mayor o igual a 1');
+        return;
+      }
+      if (recurrenceData.frecuencia === 'weekly' && recurrenceData.dias_semana.length < 1) {
+        setFormError('Seleccione al menos un día de la semana para la repetición semanal');
+        return;
+      }
+      if (formData.fin_repeticion_tipo === 'until_date' && !formData.fin_repeticion_fecha) {
+        setFormError('Debe seleccionar una fecha de finalización de repetición');
+        return;
+      }
+      if (
+        formData.fin_repeticion_tipo === 'count' &&
+        (!formData.fin_repeticion_ocurrencias || Number(formData.fin_repeticion_ocurrencias) < 1)
+      ) {
+        setFormError('El número de repeticiones debe ser mayor que 0');
+        return;
+      }
+    }
+
     const asistentesNum = parseInt(formData.asistentes) || 0;
     if (asistentesNum > 0) {
       const espacioSeleccionado = espaciosDisponibles.find(e => e.id === formData.espacio_id);
@@ -237,7 +487,7 @@ export default function ConsultaEspacios() {
       const puedeAutoAprobar = hasEditPermission('Disponibilidad de Espacios');
       const estadoInicial = puedeAutoAprobar ? 'Aprobado' : 'Pendiente';
 
-      await prestamoService.crearPrestamo({
+      const payloadBase = {
         espacio_id: formData.espacio_id,
         usuario_id: user.id,
         administrador_id: null,
@@ -253,6 +503,24 @@ export default function ConsultaEspacios() {
           recurso_id: r.recurso_id,
           cantidad: r.cantidad
         }))
+      };
+
+      const payloadRecurrencia = recurrenceData.es_recurrente
+        ? {
+            es_recurrente: true,
+            frecuencia: recurrenceData.frecuencia,
+            intervalo: recurrenceData.intervalo,
+            dias_semana: recurrenceData.frecuencia === 'weekly' ? recurrenceData.dias_semana : undefined,
+            fin_repeticion_tipo: recurrenceData.fin_repeticion_tipo,
+            fin_repeticion_fecha: recurrenceData.fin_repeticion_tipo === 'until_date' ? recurrenceData.fin_repeticion_fecha : undefined,
+            fin_repeticion_ocurrencias:
+              recurrenceData.fin_repeticion_tipo === 'count' ? Number(recurrenceData.fin_repeticion_ocurrencias) : undefined
+          }
+        : {};
+
+      await prestamoService.crearPrestamo({
+        ...payloadBase,
+        ...payloadRecurrencia
       });
 
       toast.success(puedeAutoAprobar ? 'Préstamo registrado exitosamente' : 'Solicitud enviada exitosamente');
@@ -1011,6 +1279,145 @@ export default function ConsultaEspacios() {
                   placeholder="Describa el motivo de la solicitud (clase adicional, tutoría, evento, etc.)"
                   rows={3}
                 />
+              </div>
+            </div>
+
+            {/* Configuración de repetición */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 border-b pb-2">
+                Configuración de repetición
+              </h3>
+
+              <div className="space-y-4 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50">
+                <div className="space-y-2">
+                  <Label>Repetición</Label>
+                  <Select value={repeatOption} onValueChange={(v: RepeatQuickOption) => setRepeatOption(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="No se repite" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {repeatOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {repeatOption === 'custom' && (
+                  <div className="space-y-4 border rounded-md p-3 bg-white dark:bg-slate-900/40">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Repetir cada *</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={formData.intervalo}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              intervalo: Math.max(1, Number(e.target.value) || 1)
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Periodo *</Label>
+                        <Select value={customPeriod} onValueChange={(v: CustomPeriod) => setCustomPeriod(v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Periodo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="day">Día</SelectItem>
+                            <SelectItem value="week">Semana</SelectItem>
+                            <SelectItem value="month">Mes</SelectItem>
+                            <SelectItem value="year">Año</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {customPeriod === 'week' && (
+                      <div className="space-y-2">
+                        <Label>Días de la semana *</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {DIAS_SEMANA_OPTIONS.map((dia) => {
+                            const selected = formData.dias_semana.includes(dia.value);
+                            return (
+                              <button
+                                key={dia.value}
+                                type="button"
+                                onClick={() => toggleDiaSemana(dia.value)}
+                                className={`px-3 py-2 rounded-md border text-sm text-left transition-colors ${selected
+                                  ? 'bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-950/40 dark:border-blue-700 dark:text-blue-200'
+                                  : 'bg-white border-slate-300 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
+                                }`}
+                              >
+                                {dia.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {repeatOption !== 'none' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Finaliza repetición</Label>
+                      <Select
+                        value={formData.fin_repeticion_tipo}
+                        onValueChange={(v: 'never' | 'until_date' | 'count') =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            fin_repeticion_tipo: v,
+                            fin_repeticion_fecha: v === 'until_date' ? prev.fin_repeticion_fecha : '',
+                            fin_repeticion_ocurrencias: v === 'count' ? prev.fin_repeticion_ocurrencias : ''
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar fin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FIN_REPETICION_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.fin_repeticion_tipo === 'until_date' && (
+                      <div className="space-y-2">
+                        <Label>Fecha de finalización *</Label>
+                        <Input
+                          type="date"
+                          value={formData.fin_repeticion_fecha}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, fin_repeticion_fecha: e.target.value }))}
+                        />
+                      </div>
+                    )}
+
+                    {formData.fin_repeticion_tipo === 'count' && (
+                      <div className="space-y-2">
+                        <Label>Número de repeticiones *</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={formData.fin_repeticion_ocurrencias}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, fin_repeticion_ocurrencias: e.target.value }))}
+                          placeholder="Ej: 10"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2">
+                  {recurrenceSummary()}
+                </p>
               </div>
             </div>
 

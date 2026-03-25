@@ -83,7 +83,17 @@ export function usePrestamosEspacios() {
                     comentariosAdmin: '', // No disponible en el backend actual
                     administradorNombre: p.administrador_nombre || undefined,
                     administrador_id: p.administrador_id ?? undefined,
-                    identificacionSolicitante: p.solicitante_publico_identificacion || undefined
+                    identificacionSolicitante: p.solicitante_publico_identificacion || undefined,
+                    es_recurrente: Boolean(p.es_recurrente),
+                    frecuencia: p.frecuencia || 'none',
+                    intervalo: p.intervalo || 1,
+                    dias_semana: Array.isArray(p.dias_semana) ? p.dias_semana : [],
+                    fin_repeticion_tipo: p.fin_repeticion_tipo || 'never',
+                    fin_repeticion_fecha: p.fin_repeticion_fecha || null,
+                    fin_repeticion_ocurrencias: p.fin_repeticion_ocurrencias ?? null,
+                    serie_id: p.serie_id || null,
+                    es_ocurrencia_generada: Boolean(p.es_ocurrencia_generada),
+                    prestamo_padre_id: p.prestamo_padre_id ?? null
                 };
             });
 
@@ -339,6 +349,43 @@ export function usePrestamosEspacios() {
                 throw new Error('No fue posible resolver espacio y tipo de actividad para actualizar el préstamo');
             }
 
+            if (prestamoEditando.horaFin <= prestamoEditando.horaInicio) {
+                throw new Error('La hora fin debe ser mayor a la hora inicio');
+            }
+
+            if (prestamoEditando.es_recurrente) {
+                if (!prestamoEditando.frecuencia || prestamoEditando.frecuencia === 'none') {
+                    throw new Error('Debe seleccionar una frecuencia de repetición');
+                }
+                if ((prestamoEditando.intervalo || 0) < 1) {
+                    throw new Error('El intervalo debe ser mayor o igual a 1');
+                }
+                if (prestamoEditando.frecuencia === 'weekly' && (!prestamoEditando.dias_semana || prestamoEditando.dias_semana.length < 1)) {
+                    throw new Error('Seleccione al menos un día para repetición semanal');
+                }
+                if (prestamoEditando.fin_repeticion_tipo === 'until_date' && !prestamoEditando.fin_repeticion_fecha) {
+                    throw new Error('Debe seleccionar fecha de fin de repetición');
+                }
+                if (
+                    prestamoEditando.fin_repeticion_tipo === 'count' &&
+                    (!prestamoEditando.fin_repeticion_ocurrencias || prestamoEditando.fin_repeticion_ocurrencias < 1)
+                ) {
+                    throw new Error('El número de repeticiones debe ser mayor que 0');
+                }
+            }
+
+            const recurrencePayload = prestamoEditando.es_recurrente
+                ? {
+                    es_recurrente: true,
+                    frecuencia: prestamoEditando.frecuencia,
+                    intervalo: prestamoEditando.intervalo,
+                    dias_semana: prestamoEditando.frecuencia === 'weekly' ? (prestamoEditando.dias_semana || []) : undefined,
+                    fin_repeticion_tipo: prestamoEditando.fin_repeticion_tipo,
+                    fin_repeticion_fecha: prestamoEditando.fin_repeticion_tipo === 'until_date' ? prestamoEditando.fin_repeticion_fecha : undefined,
+                    fin_repeticion_ocurrencias: prestamoEditando.fin_repeticion_tipo === 'count' ? prestamoEditando.fin_repeticion_ocurrencias : undefined,
+                  }
+                : { es_recurrente: false };
+
             if (tipo === 'publico') {
                 await prestamosPublicAPI.actualizarSolicitud({
                     id: numericId,
@@ -354,7 +401,8 @@ export function usePrestamosEspacios() {
                     hora_fin: `${prestamoEditando.horaFin}:00`,
                     motivo: prestamoEditando.motivo,
                     asistentes: prestamoEditando.asistentes,
-                    estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido'
+                    estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido',
+                    ...recurrencePayload
                 });
             } else {
                 const prestamoActual = await prestamoService.obtenerPrestamo(numericId);
@@ -371,7 +419,8 @@ export function usePrestamosEspacios() {
                     motivo: prestamoEditando.motivo,
                     asistentes: prestamoEditando.asistentes,
                     telefono: prestamoEditando.telefono || '',
-                    estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido'
+                    estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido',
+                    ...recurrencePayload
                 });
             }
 

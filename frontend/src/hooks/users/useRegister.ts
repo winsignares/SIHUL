@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../../services/users/authService';
-import { sedesAPI } from '../../services/sedes/sedesAPI';
-import type { Sede } from '../../services/sedes/sedesAPI';
+import { sedeService } from '../../services/sedes/sedeAPI';
+import type { Sede } from '../../services/sedes/sedeAPI';
 
 export interface RegisterFormData {
   nombreCompleto: string;
@@ -25,8 +25,8 @@ export function useRegister() {
   useEffect(() => {
     const cargarSedes = async () => {
       try {
-        const sedesData = await sedesAPI.listarSedes();
-        setSedes(sedesData.filter(sede => sede.activa)); // Solo sedes activas
+        const sedesData = await sedeService.listarSedes();
+        setSedes((sedesData.sedes || []).filter(sede => sede.activa)); // Solo sedes activas
       } catch (error) {
         console.error('Error al cargar sedes:', error);
         // Si hay error, usamos sedes por defecto

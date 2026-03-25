@@ -16,4 +16,14 @@ export interface Prestamo {
     estado: 'pendiente' | 'aprobado' | 'rechazado';
     fechaSolicitud: string;
     comentariosAdmin?: string;
+    es_recurrente?: boolean;
+    frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+    intervalo?: number;
+    dias_semana?: number[];
+    fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+    fin_repeticion_fecha?: string | null;
+    fin_repeticion_ocurrencias?: number | null;
+    serie_id?: string | null;
+    es_ocurrencia_generada?: boolean;
+    prestamo_padre_id?: number | null;
 }
