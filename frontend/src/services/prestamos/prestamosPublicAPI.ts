@@ -33,6 +33,13 @@ export interface SolicitudPrestamoPublico {
     hora_fin: string;
     motivo: string;
     asistentes: number;
+    es_recurrente?: boolean;
+    frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+    intervalo?: number;
+    dias_semana?: number[];
+    fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+    fin_repeticion_fecha?: string;
+    fin_repeticion_ocurrencias?: number;
 }
 
 export interface PrestamoPublicoItem {
@@ -54,6 +61,16 @@ export interface PrestamoPublicoItem {
     telefono: string;
     identificacion: string;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    es_recurrente?: boolean;
+    frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+    intervalo?: number;
+    dias_semana?: number[];
+    fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+    fin_repeticion_fecha?: string | null;
+    fin_repeticion_ocurrencias?: number | null;
+    serie_id?: string | null;
+    es_ocurrencia_generada?: boolean;
+    prestamo_padre_id?: number | null;
 }
 
 export interface ActualizarPrestamoPublicoPayload {
@@ -71,6 +88,13 @@ export interface ActualizarPrestamoPublicoPayload {
     motivo: string;
     asistentes: number;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    es_recurrente?: boolean;
+    frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+    intervalo?: number;
+    dias_semana?: number[];
+    fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+    fin_repeticion_fecha?: string | null;
+    fin_repeticion_ocurrencias?: number | null;
 }
 
 export interface PrestamoPublicoDetalle {
@@ -87,6 +111,16 @@ export interface PrestamoPublicoDetalle {
     usuario_nombre?: string;
     usuario_correo?: string;
     administrador_id?: number | null;
+    es_recurrente?: boolean;
+    frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+    intervalo?: number;
+    dias_semana?: number[];
+    fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+    fin_repeticion_fecha?: string | null;
+    fin_repeticion_ocurrencias?: number | null;
+    serie_id?: string | null;
+    es_ocurrencia_generada?: boolean;
+    prestamo_padre_id?: number | null;
 }
 
 export interface PrestamoPublicoListado {
@@ -113,6 +147,16 @@ export interface PrestamoPublicoListado {
     telefono: string;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
     recursos: [];
+    es_recurrente?: boolean;
+    frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+    intervalo?: number;
+    dias_semana?: number[];
+    fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+    fin_repeticion_fecha?: string | null;
+    fin_repeticion_ocurrencias?: number | null;
+    serie_id?: string | null;
+    es_ocurrencia_generada?: boolean;
+    prestamo_padre_id?: number | null;
 }
 
 export const prestamosPublicAPI = {

@@ -31,7 +31,48 @@ export interface PrestamoEspacio {
   telefono?: string;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
   recursos?: RecursoPrestamo[];
+  es_recurrente?: boolean;
+  frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+  intervalo?: number;
+  dias_semana?: number[];
+  fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+  fin_repeticion_fecha?: string | null;
+  fin_repeticion_ocurrencias?: number | null;
+  serie_id?: string | null;
+  es_ocurrencia_generada?: boolean;
+  prestamo_padre_id?: number | null;
 }
+
+const buildRecurrencePayload = (prestamo: Partial<PrestamoEspacio>) => {
+  if (!prestamo.es_recurrente) {
+    return {};
+  }
+
+  const payload: Record<string, unknown> = {
+    es_recurrente: true,
+    frecuencia: prestamo.frecuencia || 'weekly',
+    intervalo: prestamo.intervalo && prestamo.intervalo >= 1 ? prestamo.intervalo : 1,
+    fin_repeticion_tipo: prestamo.fin_repeticion_tipo || 'never'
+  };
+
+  if (prestamo.frecuencia === 'weekly' && Array.isArray(prestamo.dias_semana) && prestamo.dias_semana.length > 0) {
+    payload.dias_semana = prestamo.dias_semana;
+  }
+
+  if (prestamo.fin_repeticion_tipo === 'until_date' && prestamo.fin_repeticion_fecha) {
+    payload.fin_repeticion_fecha = prestamo.fin_repeticion_fecha;
+  }
+
+  if (
+    prestamo.fin_repeticion_tipo === 'count' &&
+    typeof prestamo.fin_repeticion_ocurrencias === 'number' &&
+    prestamo.fin_repeticion_ocurrencias > 0
+  ) {
+    payload.fin_repeticion_ocurrencias = prestamo.fin_repeticion_ocurrencias;
+  }
+
+  return payload;
+};
 
 /**
  * Servicio para la gestión de préstamos de espacios
@@ -84,7 +125,8 @@ export const prestamoService = {
       asistentes: prestamo.asistentes,
       telefono: prestamo.telefono,
       estado: prestamo.estado || 'Pendiente',
-      recursos: prestamo.recursos || []
+      recursos: prestamo.recursos || [],
+      ...buildRecurrencePayload(prestamo)
     });
   },
 
@@ -109,7 +151,8 @@ export const prestamoService = {
       motivo: prestamo.motivo,
       asistentes: prestamo.asistentes,
       telefono: prestamo.telefono,
-      estado: prestamo.estado
+      estado: prestamo.estado,
+      ...buildRecurrencePayload(prestamo)
     });
   },
 

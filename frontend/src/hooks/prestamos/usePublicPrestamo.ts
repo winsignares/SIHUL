@@ -8,6 +8,43 @@ import {
 } from '../../services/prestamos/prestamosPublicAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 
+type RepeatQuickOption =
+    | 'none'
+    | 'daily'
+    | 'weekly_current'
+    | 'monthly_ordinal_weekday'
+    | 'monthly_last_weekday'
+    | 'yearly_date'
+    | 'custom';
+
+type CustomPeriod = 'day' | 'week' | 'month' | 'year';
+
+const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+const getWeekdayMondayIndex = (dateStr?: string): number => {
+    if (!dateStr) return 0;
+    const jsDay = new Date(`${dateStr}T00:00:00`).getDay();
+    return jsDay === 0 ? 6 : jsDay - 1;
+};
+
+const getOrdinalWeekdayText = (dateStr?: string): string => {
+    if (!dateStr) return 'primer lunes';
+    const date = new Date(`${dateStr}T00:00:00`);
+    const day = date.getDate();
+    const ordinalNum = Math.floor((day - 1) / 7) + 1;
+    const ordinals = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto'];
+    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(dateStr)];
+    return `${ordinals[Math.min(ordinalNum - 1, 4)]} ${weekdayName}`;
+};
+
+const isLastWeekdayOfMonth = (dateStr?: string): boolean => {
+    if (!dateStr) return false;
+    const date = new Date(`${dateStr}T00:00:00`);
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    return date.getDate() + 7 > lastDay;
+};
+
 export function usePublicPrestamo() {
     // Estado del formulario
     const [formData, setFormData] = useState<Partial<SolicitudPrestamoPublico>>({
@@ -23,6 +60,14 @@ export function usePublicPrestamo() {
         motivo: '',
         asistentes: 1
     });
+
+    const [repeatOption, setRepeatOption] = useState<RepeatQuickOption>('none');
+    const [customPeriod, setCustomPeriod] = useState<CustomPeriod>('week');
+    const [intervalo, setIntervalo] = useState(1);
+    const [diasSemana, setDiasSemana] = useState<number[]>([]);
+    const [finRepeticionTipo, setFinRepeticionTipo] = useState<'never' | 'until_date' | 'count'>('never');
+    const [finRepeticionFecha, setFinRepeticionFecha] = useState('');
+    const [finRepeticionOcurrencias, setFinRepeticionOcurrencias] = useState<number | ''>('');
 
     // Estados de UI
     const [loading, setLoading] = useState(false);
@@ -112,6 +157,120 @@ export function usePublicPrestamo() {
         } finally {
             setLoadingEspacios(false);
         }
+    };
+
+    const toggleDiaSemana = (dayIndex: number) => {
+        setDiasSemana((prev) => {
+            const exists = prev.includes(dayIndex);
+            return exists ? prev.filter((d) => d !== dayIndex) : [...prev, dayIndex].sort((a, b) => a - b);
+        });
+    };
+
+    const repeatOptions = (() => {
+        const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(formData.fecha)] || 'lunes';
+        const yearlyText = formData.fecha
+            ? (() => {
+                const date = new Date(`${formData.fecha}T00:00:00`);
+                return `${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}`;
+            })()
+            : 'la fecha seleccionada';
+
+        const monthlyOrdinal = getOrdinalWeekdayText(formData.fecha);
+        const monthlyLast = `último ${weekdayName}`;
+
+        return [
+            { value: 'none' as const, label: 'No se repite' },
+            { value: 'daily' as const, label: 'Cada día' },
+            { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
+            { value: 'monthly_ordinal_weekday' as const, label: `Cada mes el ${monthlyOrdinal}` },
+            { value: 'monthly_last_weekday' as const, label: `Cada mes el ${monthlyLast}` },
+            { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
+            { value: 'custom' as const, label: 'Personalizar' },
+        ];
+    })();
+
+    const recurrenceSummary = (() => {
+        const date = formData.fecha ? new Date(`${formData.fecha}T00:00:00`) : null;
+        const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(formData.fecha)] || 'lunes';
+        const yearlyText = date ? `${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}` : 'fecha seleccionada';
+
+        const getFinishText = () => {
+            if (finRepeticionTipo === 'until_date' && finRepeticionFecha) {
+                return ` hasta el ${new Date(`${finRepeticionFecha}T00:00:00`).toLocaleDateString('es-CO')}`;
+            }
+            if (finRepeticionTipo === 'count' && finRepeticionOcurrencias) {
+                return ` durante ${finRepeticionOcurrencias} repeticiones`;
+            }
+            return '';
+        };
+
+        if (repeatOption === 'none') return 'No se repetirá.';
+        if (repeatOption === 'daily') return `Se repetirá cada día a la misma hora${getFinishText()}.`;
+        if (repeatOption === 'weekly_current') return `Se repetirá cada semana los ${weekdayName}${getFinishText()}.`;
+        if (repeatOption === 'monthly_ordinal_weekday') return `Se repetirá cada mes el ${getOrdinalWeekdayText(formData.fecha)}${getFinishText()}.`;
+        if (repeatOption === 'monthly_last_weekday') return `Se repetirá cada mes el último ${weekdayName}${getFinishText()}.`;
+        if (repeatOption === 'yearly_date') return `Se repetirá anualmente el ${yearlyText}${getFinishText()}.`;
+
+        const periodText =
+            customPeriod === 'day' ? 'día' :
+            customPeriod === 'week' ? 'semana' :
+            customPeriod === 'month' ? 'mes' : 'año';
+
+        let detail = `Se repetirá cada ${intervalo} ${periodText}${intervalo > 1 ? 's' : ''}`;
+        if (customPeriod === 'week' && diasSemana.length > 0) {
+            detail += ` los ${diasSemana.map((d) => WEEKDAY_NAMES[d]).join(' y ')}`;
+        }
+        detail += getFinishText();
+        return `${detail}.`;
+    })();
+
+    const buildRecurrencePayload = (): Partial<SolicitudPrestamoPublico> => {
+        const baseEnd: Partial<SolicitudPrestamoPublico> = {
+            fin_repeticion_tipo: finRepeticionTipo,
+        };
+        if (finRepeticionTipo === 'until_date' && finRepeticionFecha) {
+            baseEnd.fin_repeticion_fecha = finRepeticionFecha;
+        }
+        if (finRepeticionTipo === 'count' && finRepeticionOcurrencias) {
+            baseEnd.fin_repeticion_ocurrencias = Number(finRepeticionOcurrencias);
+        }
+
+        if (repeatOption === 'none') {
+            return { es_recurrente: false };
+        }
+
+        if (repeatOption === 'daily') {
+            return { es_recurrente: true, frecuencia: 'daily', intervalo: 1, ...baseEnd };
+        }
+        if (repeatOption === 'weekly_current') {
+            return {
+                es_recurrente: true,
+                frecuencia: 'weekly',
+                intervalo: 1,
+                dias_semana: [getWeekdayMondayIndex(formData.fecha)],
+                ...baseEnd,
+            };
+        }
+        if (repeatOption === 'monthly_ordinal_weekday' || repeatOption === 'monthly_last_weekday') {
+            // El backend actual no soporta patrón ordinal/último; se mapea a mensual simple.
+            return { es_recurrente: true, frecuencia: 'monthly', intervalo: 1, ...baseEnd };
+        }
+        if (repeatOption === 'yearly_date') {
+            return { es_recurrente: true, frecuencia: 'yearly', intervalo: 1, ...baseEnd };
+        }
+
+        const freq =
+            customPeriod === 'day' ? 'daily' :
+            customPeriod === 'week' ? 'weekly' :
+            customPeriod === 'month' ? 'monthly' : 'yearly';
+
+        return {
+            es_recurrente: true,
+            frecuencia: freq,
+            intervalo: Math.max(1, intervalo),
+            dias_semana: customPeriod === 'week' ? diasSemana : undefined,
+            ...baseEnd,
+        };
     };
 
     const handleChange = (field: keyof SolicitudPrestamoPublico, value: any) => {
@@ -302,6 +461,22 @@ export function usePublicPrestamo() {
             newErrors.asistentes = 'El número de asistentes debe ser al menos 1';
         }
 
+        if (repeatOption === 'custom') {
+            if (intervalo < 1) {
+                newErrors.recurrencia_intervalo = 'El intervalo debe ser mayor o igual a 1';
+            }
+            if (customPeriod === 'week' && diasSemana.length < 1) {
+                newErrors.recurrencia_dias_semana = 'Seleccione al menos un día de la semana';
+            }
+        }
+
+        if (finRepeticionTipo === 'until_date' && !finRepeticionFecha) {
+            newErrors.recurrencia_fin_fecha = 'Debe seleccionar fecha de finalización';
+        }
+        if (finRepeticionTipo === 'count' && (!finRepeticionOcurrencias || Number(finRepeticionOcurrencias) < 1)) {
+            newErrors.recurrencia_fin_ocurrencias = 'Debe indicar un número de repeticiones mayor que 0';
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -313,7 +488,11 @@ export function usePublicPrestamo() {
 
         setSubmitting(true);
         try {
-            const response = await prestamosPublicAPI.crearSolicitud(formData as SolicitudPrestamoPublico);
+            const recurrencePayload = buildRecurrencePayload();
+            const response = await prestamosPublicAPI.crearSolicitud({
+                ...(formData as SolicitudPrestamoPublico),
+                ...recurrencePayload,
+            });
             
             setSuccessMessage(response.message);
             setShowSuccess(true);
@@ -332,6 +511,13 @@ export function usePublicPrestamo() {
                 motivo: '',
                 asistentes: 1
             });
+            setRepeatOption('none');
+            setCustomPeriod('week');
+            setIntervalo(1);
+            setDiasSemana([]);
+            setFinRepeticionTipo('never');
+            setFinRepeticionFecha('');
+            setFinRepeticionOcurrencias('');
             setSedeSeleccionada(0);
             setEspaciosDisponibles([]);
             setConsultaCredenciales({
@@ -381,6 +567,23 @@ export function usePublicPrestamo() {
         iniciarEdicionSolicitud,
         cancelarEdicionSolicitud,
         guardarEdicionSolicitud,
-        eliminarSolicitud
+        eliminarSolicitud,
+        repeatOption,
+        setRepeatOption,
+        customPeriod,
+        setCustomPeriod,
+        intervalo,
+        setIntervalo,
+        diasSemana,
+        setDiasSemana,
+        toggleDiaSemana,
+        finRepeticionTipo,
+        setFinRepeticionTipo,
+        finRepeticionFecha,
+        setFinRepeticionFecha,
+        finRepeticionOcurrencias,
+        setFinRepeticionOcurrencias,
+        repeatOptions,
+        recurrenceSummary
     };
 }

@@ -6,6 +6,7 @@ import { Textarea } from '../../share/textarea';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { Checkbox } from '../../share/checkbox';
 import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Toaster } from '../../share/sonner';
@@ -47,6 +48,49 @@ export default function PrestamosEspacios() {
     guardarEdicion,
     eliminarSolicitud
   } = usePrestamosEspacios();
+
+  const FRECUENCIA_LABELS: Record<string, string> = {
+    none: 'No se repite',
+    daily: 'Diario',
+    weekly: 'Semanal',
+    monthly: 'Mensual',
+    yearly: 'Anual',
+    weekdays: 'Días laborales'
+  };
+
+  const FIN_LABELS: Record<string, string> = {
+    never: 'Nunca',
+    until_date: 'Hasta una fecha',
+    count: 'Después de N repeticiones'
+  };
+
+  const DIAS_LABELS: Record<number, string> = {
+    0: 'Lunes',
+    1: 'Martes',
+    2: 'Miércoles',
+    3: 'Jueves',
+    4: 'Viernes',
+    5: 'Sábado',
+    6: 'Domingo'
+  };
+
+  const recurrenceSummary = (prestamo: any) => {
+    if (!prestamo?.es_recurrente) return 'No se repite';
+    const freq = FRECUENCIA_LABELS[prestamo.frecuencia || 'none']?.toLowerCase() || 'semanal';
+    const interval = prestamo.intervalo || 1;
+    const cada = `Cada ${interval} ${freq}`;
+    const dias = prestamo.frecuencia === 'weekly' && Array.isArray(prestamo.dias_semana) && prestamo.dias_semana.length > 0
+      ? ` (${prestamo.dias_semana.map((d: number) => DIAS_LABELS[d]).join(', ')})`
+      : '';
+    let fin = FIN_LABELS[prestamo.fin_repeticion_tipo || 'never'] || 'Nunca';
+    if (prestamo.fin_repeticion_tipo === 'until_date' && prestamo.fin_repeticion_fecha) {
+      fin = `Hasta ${new Date(prestamo.fin_repeticion_fecha + 'T00:00:00').toLocaleDateString('es-CO')}`;
+    }
+    if (prestamo.fin_repeticion_tipo === 'count' && prestamo.fin_repeticion_ocurrencias) {
+      fin = `${prestamo.fin_repeticion_ocurrencias} repeticiones`;
+    }
+    return `${cada}${dias}. ${fin}.`;
+  };
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -443,6 +487,163 @@ export default function PrestamosEspacios() {
                                     <p className="text-slate-900 dark:text-slate-100">{prestamoActual.asistentes}</p>
                                   )}
                                 </div>
+                              </div>
+                            </div>
+
+                            {/* Repetición */}
+                            <div className="space-y-3">
+                              <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                <Calendar className="w-5 h-5 text-indigo-600" />
+                                Repetición
+                              </h3>
+                              <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700 space-y-4">
+                                {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  <>
+                                    <div className="flex items-center gap-3">
+                                      <Checkbox
+                                        id="edit-es-recurrente"
+                                        checked={Boolean(prestamoEditando.es_recurrente)}
+                                        onCheckedChange={(checked) => setPrestamoEditando({
+                                          ...prestamoEditando,
+                                          es_recurrente: Boolean(checked),
+                                          frecuencia: Boolean(checked) ? (prestamoEditando.frecuencia || 'weekly') : 'none',
+                                          intervalo: Boolean(checked) ? (prestamoEditando.intervalo || 1) : 1,
+                                          dias_semana: Boolean(checked) ? (prestamoEditando.dias_semana || []) : [],
+                                          fin_repeticion_tipo: Boolean(checked) ? (prestamoEditando.fin_repeticion_tipo || 'never') : 'never',
+                                          fin_repeticion_fecha: Boolean(checked) ? (prestamoEditando.fin_repeticion_fecha || null) : null,
+                                          fin_repeticion_ocurrencias: Boolean(checked) ? (prestamoEditando.fin_repeticion_ocurrencias || null) : null,
+                                        })}
+                                      />
+                                      <Label htmlFor="edit-es-recurrente">Repetir préstamo</Label>
+                                    </div>
+
+                                    {prestamoEditando.es_recurrente && (
+                                      <>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                          <div>
+                                            <Label className="text-slate-600 dark:text-slate-400 text-xs">Frecuencia</Label>
+                                            <Select
+                                              value={prestamoEditando.frecuencia || 'weekly'}
+                                              onValueChange={(v: any) => setPrestamoEditando({
+                                                ...prestamoEditando,
+                                                frecuencia: v,
+                                                dias_semana: v === 'weekly' ? (prestamoEditando.dias_semana || []) : []
+                                              })}
+                                            >
+                                              <SelectTrigger className="mt-1">
+                                                <SelectValue placeholder="Frecuencia" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="none">No se repite</SelectItem>
+                                                <SelectItem value="daily">Diario</SelectItem>
+                                                <SelectItem value="weekly">Semanal</SelectItem>
+                                                <SelectItem value="monthly">Mensual</SelectItem>
+                                                <SelectItem value="yearly">Anual</SelectItem>
+                                                <SelectItem value="weekdays">Días laborales</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div>
+                                            <Label className="text-slate-600 dark:text-slate-400 text-xs">Intervalo</Label>
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              value={prestamoEditando.intervalo || 1}
+                                              onChange={(e) => setPrestamoEditando({
+                                                ...prestamoEditando,
+                                                intervalo: Math.max(1, Number(e.target.value) || 1)
+                                              })}
+                                              className="mt-1"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {prestamoEditando.frecuencia === 'weekly' && (
+                                          <div className="space-y-2">
+                                            <Label className="text-slate-600 dark:text-slate-400 text-xs">Días de la semana</Label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                              {[0, 1, 2, 3, 4, 5, 6].map((dia) => {
+                                                const selected = (prestamoEditando.dias_semana || []).includes(dia);
+                                                return (
+                                                  <button
+                                                    key={dia}
+                                                    type="button"
+                                                    className={`px-2 py-1 rounded-md border text-xs text-left ${selected
+                                                      ? 'bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-950/40 dark:border-blue-700 dark:text-blue-200'
+                                                      : 'bg-white border-slate-300 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
+                                                    }`}
+                                                    onClick={() => {
+                                                      const current = prestamoEditando.dias_semana || [];
+                                                      const exists = current.includes(dia);
+                                                      const updated = exists ? current.filter((d) => d !== dia) : [...current, dia].sort((a, b) => a - b);
+                                                      setPrestamoEditando({ ...prestamoEditando, dias_semana: updated });
+                                                    }}
+                                                  >
+                                                    {DIAS_LABELS[dia]}
+                                                  </button>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                          <div>
+                                            <Label className="text-slate-600 dark:text-slate-400 text-xs">Finaliza repetición</Label>
+                                            <Select
+                                              value={prestamoEditando.fin_repeticion_tipo || 'never'}
+                                              onValueChange={(v: any) => setPrestamoEditando({
+                                                ...prestamoEditando,
+                                                fin_repeticion_tipo: v,
+                                                fin_repeticion_fecha: v === 'until_date' ? prestamoEditando.fin_repeticion_fecha : null,
+                                                fin_repeticion_ocurrencias: v === 'count' ? prestamoEditando.fin_repeticion_ocurrencias : null
+                                              })}
+                                            >
+                                              <SelectTrigger className="mt-1">
+                                                <SelectValue placeholder="Finaliza" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="never">Nunca</SelectItem>
+                                                <SelectItem value="until_date">Hasta una fecha</SelectItem>
+                                                <SelectItem value="count">Después de N repeticiones</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          {prestamoEditando.fin_repeticion_tipo === 'until_date' && (
+                                            <div>
+                                              <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha fin</Label>
+                                              <Input
+                                                type="date"
+                                                value={prestamoEditando.fin_repeticion_fecha || ''}
+                                                onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fin_repeticion_fecha: e.target.value })}
+                                                className="mt-1"
+                                              />
+                                            </div>
+                                          )}
+                                          {prestamoEditando.fin_repeticion_tipo === 'count' && (
+                                            <div>
+                                              <Label className="text-slate-600 dark:text-slate-400 text-xs">N repeticiones</Label>
+                                              <Input
+                                                type="number"
+                                                min="1"
+                                                value={prestamoEditando.fin_repeticion_ocurrencias || ''}
+                                                onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fin_repeticion_ocurrencias: Number(e.target.value) || null })}
+                                                className="mt-1"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-sm text-slate-900 dark:text-slate-100">{recurrenceSummary(prestamoActual)}</p>
+                                    {prestamoActual.es_recurrente && prestamoActual.serie_id && (
+                                      <p className="text-xs text-slate-600 dark:text-slate-400">Serie: {prestamoActual.serie_id}</p>
+                                    )}
+                                  </>
+                                )}
                               </div>
                             </div>
 
