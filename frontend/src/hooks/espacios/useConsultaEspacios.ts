@@ -727,8 +727,9 @@ export function useConsultaEspacios() {
             const cellWidth = (pageWidth - 30) / 7; // 1 columna hora + 6 días
             const startX = 15;
             const startY = 30;
-            const headerHeight = 10;
-            const baseCellHeight = 12; // Altura base más grande para contenido
+            const headerHeight = 8;
+            const minEmptyCellHeight = 4; // Altura mínima para celdas vacías
+            const contentCellHeight = 12; // Altura base para celdas con contenido
             
             // Dibujar encabezado (días)
             doc.setFillColor(30, 41, 59); // slate-800
@@ -747,9 +748,11 @@ export function useConsultaEspacios() {
             
             // Primera pasada: calcular alturas de celdas para cada fila de hora
             const rowHeights: number[] = [];
+            const pageAvailableHeight = pageHeight - startY - headerHeight - 10; // Espacio disponible
             
             horasIntervalos.forEach((hora) => {
-                let maxLines = 1; // Mínimo una línea
+                let hasContent = false;
+                let maxLines = 0;
                 
                 diasNombres.forEach((dia) => {
                     const horarioEnCelda = horariosConPrestamos.find(h =>
@@ -760,6 +763,7 @@ export function useConsultaEspacios() {
                     );
                     
                     if (horarioEnCelda) {
+                        hasContent = true;
                         const isPrestamo = horarioEnCelda.tipo === 'prestamo';
                         let lines = 0;
                         
@@ -788,10 +792,27 @@ export function useConsultaEspacios() {
                     }
                 });
                 
-                // Altura = espacio para texto + padding
-                const calculatedHeight = Math.max(baseCellHeight, maxLines * 2.5 + 3);
-                rowHeights.push(calculatedHeight);
+                // Si la fila tiene contenido, calcular altura según líneas. Si está vacía, altura mínima
+                if (hasContent) {
+                    const calculatedHeight = Math.max(contentCellHeight, maxLines * 2.5 + 3);
+                    rowHeights.push(calculatedHeight);
+                } else {
+                    rowHeights.push(minEmptyCellHeight);
+                }
             });
+            
+            // Calcular altura total y ajustar si excede la página
+            const totalHeight = rowHeights.reduce((sum, h) => sum + h, 0);
+            if (totalHeight > pageAvailableHeight) {
+                // Factor de escala para comprimir proporcionalmente
+                const scaleFactor = pageAvailableHeight / totalHeight;
+                for (let i = 0; i < rowHeights.length; i++) {
+                    // Las celdas vacías ya son pequeñas, solo comprimir las que tienen contenido
+                    if (rowHeights[i] > minEmptyCellHeight) {
+                        rowHeights[i] = Math.max(minEmptyCellHeight, rowHeights[i] * scaleFactor);
+                    }
+                }
+            }
             
             // Segunda pasada: dibujar filas con alturas calculadas
             let currentY = startY + headerHeight;
