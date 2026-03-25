@@ -457,7 +457,7 @@ export default function GestionUsuarios() {
 
       {/* Filtros */}
       <div className="flex gap-4">
-        <div className="flex-1 relative">
+        <div className="flex-[3] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <Input
             placeholder="Buscar por nombre o email..."
@@ -466,17 +466,26 @@ export default function GestionUsuarios() {
             className="pl-10"
           />
         </div>
-        <SearchableSelect
-          items={[{ id: 'todos', nombre: 'Todos los roles' }, ...rolesDisponibles.map(rol => ({ id: rol.nombre, nombre: rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ') }))]}
-          value={filterRol}
-          onSelect={(item) => setFilterRol(item.id)}
-          getItemId={(item) => item.id}
-          getItemLabel={(item) => item.nombre}
-          placeholder="Filtrar por rol"
-          searchPlaceholder="Buscar rol..."
-          emptyMessage="No se encontraron roles."
-          className="w-[200px]"
-        />
+
+        <div className="flex-[1]">
+          <SearchableSelect
+            items={[
+              { id: 'todos', nombre: 'Todos los roles' },
+              ...rolesDisponibles.map(rol => ({
+                id: rol.nombre,
+                nombre: rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')
+              }))
+            ]}
+            value={filterRol}
+            onSelect={(item) => setFilterRol(item.id)}
+            getItemId={(item) => item.id}
+            getItemLabel={(item) => item.nombre}
+            placeholder="Filtrar por rol"
+            searchPlaceholder="Buscar rol..."
+            emptyMessage="No se encontraron roles."
+            className="w-full"
+          />
+        </div>
       </div>
 
       {/* Tabla de Usuarios */}
