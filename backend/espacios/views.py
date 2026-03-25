@@ -843,6 +843,27 @@ def get_estado_espacio(request, espacio_id=None):
                 return JsonResponse({
                     "error": f"Estado inválido. Debe ser uno de: {', '.join(estados_validos)}"
                 }, status=400)
+
+            # Regla operativa: solo permitir "Disponible" si no hay clases
+            # aprobadas en el rango [ahora, ahora + 1 hora).
+            if nuevo_estado == 'Disponible':
+                ahora = datetime.now()
+                hora_actual = ahora.time()
+                hora_limite = (ahora + timedelta(hours=1)).time()
+                dia_actual = get_dia_semana_actual()
+
+                hay_clase_proxima_hora = Horario.objects.filter(
+                    espacio_id=espacio_id,
+                    dia_semana=dia_actual,
+                    estado='aprobado',
+                    hora_inicio__lt=hora_limite,
+                    hora_fin__gt=hora_actual
+                ).exists()
+
+                if hay_clase_proxima_hora:
+                    return JsonResponse({
+                        "error": "No se puede cerrar porque hay clases en la próxima hora."
+                    }, status=400)
             
             # Obtener y actualizar espacio
             espacio = EspacioFisico.objects.get(id=espacio_id)

@@ -62,12 +62,16 @@ export interface EspacioRecurso {
   estado: 'disponible' | 'no_disponible' | 'en_mantenimiento';
 }
 
+export interface EstadoRecurso extends EspacioRecurso {
+  nombre: string;
+}
+
 export const espacioRecursoService = {
   /**
    * Obtiene la lista de todas las relaciones espacio-recurso
    */
   listarEspacioRecursos: async (): Promise<{ espacio_recursos: EspacioRecurso[] }> => {
-    return apiClient.get('/espacio-recursos/list/');
+    return apiClient.get('/recursos/espacio-recurso/list/');
   },
 
   /**
@@ -76,7 +80,7 @@ export const espacioRecursoService = {
    * @param recurso_id ID del recurso
    */
   obtenerEspacioRecurso: async (espacio_id: number, recurso_id: number): Promise<EspacioRecurso> => {
-    return apiClient.get(`/espacio-recursos/${espacio_id}/${recurso_id}/`);
+    return apiClient.get(`/recursos/espacio-recurso/${espacio_id}/${recurso_id}/`);
   },
 
   /**
@@ -84,7 +88,7 @@ export const espacioRecursoService = {
    * @param espacioRecurso Datos de la relación a crear
    */
   crearEspacioRecurso: async (espacioRecurso: EspacioRecurso): Promise<{ message: string }> => {
-    return apiClient.post('/espacio-recursos/create/', {
+    return apiClient.post('/recursos/espacio-recurso/', {
       espacio_id: espacioRecurso.espacio_id,
       recurso_id: espacioRecurso.recurso_id,
       estado: espacioRecurso.estado ?? 'disponible'
@@ -96,7 +100,7 @@ export const espacioRecursoService = {
    * @param espacioRecurso Datos actualizados de la relación
    */
   actualizarEspacioRecurso: async (espacioRecurso: EspacioRecurso): Promise<{ message: string }> => {
-    return apiClient.put('/espacio-recursos/update/', {
+    return apiClient.put('/recursos/espacio-recurso/update/', {
       espacio_id: espacioRecurso.espacio_id,
       recurso_id: espacioRecurso.recurso_id,
       estado: espacioRecurso.estado
@@ -109,9 +113,35 @@ export const espacioRecursoService = {
    * @param recurso_id ID del recurso
    */
   eliminarEspacioRecurso: async (espacio_id: number, recurso_id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/espacio-recursos/delete/', {
+    return apiClient.delete('/recursos/espacio-recurso/delete/', {
       espacio_id,
       recurso_id
     });
+  },
+
+  /**
+   * Obtiene recursos asociados a un espacio con nombre y estado actual.
+   */
+  listarPorEspacio: async (espacioId: number): Promise<{ recursos: EstadoRecurso[] }> => {
+    const [relacionesResponse, recursosResponse] = await Promise.all([
+      espacioRecursoService.listarEspacioRecursos(),
+      recursoService.listarRecursos()
+    ]);
+
+    const nombrePorRecursoId = new Map<number, string>();
+    (recursosResponse.recursos || []).forEach((recurso) => {
+      if (recurso.id) {
+        nombrePorRecursoId.set(recurso.id, recurso.nombre);
+      }
+    });
+
+    const recursos = (relacionesResponse.espacio_recursos || [])
+      .filter((item) => item.espacio_id === espacioId)
+      .map((item) => ({
+        ...item,
+        nombre: nombrePorRecursoId.get(item.recurso_id) || `Recurso #${item.recurso_id}`
+      }));
+
+    return { recursos };
   }
 };

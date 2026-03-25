@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Badge } from '../../share/badge';
 import { Input } from '../../share/input';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,7 +11,6 @@ import { toast, Toaster } from 'sonner';
 import { useAperturaCierre } from '../../hooks/espacios/useAperturaCierre';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import CountdownTimer from '../../components/espacios/CountdownTimer';
-import { espaciosAPI } from '../../services/espacios/espaciosAPI';
 
 export default function SupervisorSalonHome() {
   const isMobile = useIsMobile();
@@ -40,7 +40,17 @@ export default function SupervisorSalonHome() {
     pageNumbers,
     goToPage,
     goToNextPage,
-    goToPrevPage
+    goToPrevPage,
+    abrirSalon,
+    cerrarSalon,
+    modalRecursosAbierto,
+    espacioEnRevision,
+    recursosPendientes,
+    cargandoRecursos,
+    guardandoRecursos,
+    actualizarEstadoRecurso,
+    cerrarPopupRecursos,
+    confirmarRevisionRecursos
   } = useAperturaCierre();
 
   // Estado para manejar botones de carga individual
@@ -49,15 +59,12 @@ export default function SupervisorSalonHome() {
   // Función para abrir un salón
   const handleAbrirSalon = async (espacioId: number, nombreEspacio: string) => {
     setLoadingAcciones(prev => ({ ...prev, [espacioId]: true }));
-    
+
     try {
-      await espaciosAPI.cambiarEstado(espacioId, 'Disponible');
-      toast.success(`✅ ${nombreEspacio} abierto correctamente`);
-      // Refrescar datos después de la acción
-      await refrescar();
-    } catch (err: any) {
-      console.error('Error abriendo salón:', err);
-      toast.error(`❌ Error al abrir ${nombreEspacio}: ${err.message || 'Error desconocido'}`);
+      const result = await abrirSalon(espacioId);
+      if (result.ok) {
+        toast.success(`✅ ${nombreEspacio} abierto correctamente`);
+      }
     } finally {
       setLoadingAcciones(prev => ({ ...prev, [espacioId]: false }));
     }
@@ -66,15 +73,14 @@ export default function SupervisorSalonHome() {
   // Función para cerrar un salón
   const handleCerrarSalon = async (espacioId: number, nombreEspacio: string) => {
     setLoadingAcciones(prev => ({ ...prev, [espacioId]: true }));
-    
+
     try {
-      await espaciosAPI.cambiarEstado(espacioId, 'No Disponible');
-      toast.success(`✅ ${nombreEspacio} cerrado correctamente`);
-      // Refrescar datos después de la acción
-      await refrescar();
-    } catch (err: any) {
-      console.error('Error cerrando salón:', err);
-      toast.error(`❌ Error al cerrar ${nombreEspacio}: ${err.message || 'Error desconocido'}`);
+      const result = await cerrarSalon(espacioId);
+      if (result.ok) {
+        toast.success(`✅ ${nombreEspacio} cambio de estado aplicado`);
+      } else if (result.message && result.status !== 400) {
+        toast.error(`❌ Error al cerrar ${nombreEspacio}: ${result.message}`);
+      }
     } finally {
       setLoadingAcciones(prev => ({ ...prev, [espacioId]: false }));
     }
@@ -496,6 +502,55 @@ export default function SupervisorSalonHome() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={modalRecursosAbierto} onOpenChange={(open) => { if (!open) cerrarPopupRecursos(); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Revision de recursos - {espacioEnRevision?.nombre || 'Espacio'}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            {cargandoRecursos ? (
+              <p className="text-sm text-slate-500">Cargando recursos...</p>
+            ) : recursosPendientes.length === 0 ? (
+              <p className="text-sm text-slate-500">Este espacio no tiene recursos asociados. Puedes confirmar el cierre.</p>
+            ) : (
+              recursosPendientes.map((recurso) => (
+                <div key={`${recurso.espacio_id}-${recurso.recurso_id}`} className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-900/40">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{recurso.nombre}</p>
+                      <p className="text-xs text-slate-500">Estado actual: {recurso.estadoOriginal}</p>
+                    </div>
+                    <Select
+                      value={recurso.estado}
+                      onValueChange={(value) => actualizarEstadoRecurso(recurso.recurso_id, value as 'disponible' | 'no_disponible' | 'en_mantenimiento')}
+                    >
+                      <SelectTrigger className="w-full md:w-[220px]">
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="disponible">Disponible</SelectItem>
+                        <SelectItem value="no_disponible">No disponible</SelectItem>
+                        <SelectItem value="en_mantenimiento">En mantenimiento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={cerrarPopupRecursos} disabled={guardandoRecursos}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarRevisionRecursos} disabled={guardandoRecursos || cargandoRecursos}>
+              {guardandoRecursos ? 'Guardando...' : 'Confirmar revision'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Toaster />
     </div>

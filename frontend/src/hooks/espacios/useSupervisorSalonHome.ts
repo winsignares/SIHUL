@@ -3,7 +3,14 @@ import { db } from '../../services/database';
 import type { ChecklistCierre, EstadoSalon, SalonEnriquecido } from '../../models';
 import type { EspacioFisico, HorarioAcademico } from '../../models/index';
 import { AlertCircle, DoorOpen, Users, Clock, Lock, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { espacioService } from '../../services/espacios/espaciosAPI';
+import { espacioRecursoService, type EspacioRecurso } from '../../services/recursos/recursoAPI';
+
+interface ResultadoAccion {
+    ok: boolean;
+    message?: string;
+}
 
 export function useSupervisorSalonHome() {
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
@@ -26,7 +33,17 @@ export function useSupervisorSalonHome() {
 
     // Modal de cierre
     const [modalCierreAbierto, setModalCierreAbierto] = useState(false);
+    const [modalRecursosAbierto, setModalRecursosAbierto] = useState(false);
     const [salonParaCerrar, setSalonParaCerrar] = useState<SalonEnriquecido | null>(null);
+    const [recursosPendientes, setRecursosPendientes] = useState<Array<{
+        espacio_id: number;
+        recurso_id: number;
+        nombre: string;
+        estado: EspacioRecurso['estado'];
+        estadoOriginal: EspacioRecurso['estado'];
+    }>>([]);
+    const [cargandoRecursos, setCargandoRecursos] = useState(false);
+    const [guardandoRecursos, setGuardandoRecursos] = useState(false);
     const [checklist, setChecklist] = useState<ChecklistCierre>({
         lucesApagadas: false,
         aireApagado: false,
@@ -236,16 +253,21 @@ export function useSupervisorSalonHome() {
     ]);
 
     // Abrir salón
-    const abrirSalon = (espacioId: number) => {
-        const nuevoEstado = new Map(estadosSalones);
-        nuevoEstado.set(espacioId, {
-            abierto: true,
-            cerrado: false,
-            horaApertura: obtenerHoraActual()
-        });
-        setEstadosSalones(nuevoEstado);
+    const abrirSalon = async (espacioId: number) => {
+        try {
+            // Regla solicitada: al abrir, pasar de Disponible a No Disponible.
+            await espacioService.cambiarEstado(espacioId, 'No Disponible');
 
-        // Mostrar notificación: Salón abierto
+            const nuevoEstado = new Map(estadosSalones);
+            nuevoEstado.set(espacioId, {
+                abierto: true,
+                cerrado: false,
+                horaApertura: obtenerHoraActual()
+            });
+            setEstadosSalones(nuevoEstado);
+        } catch (error) {
+            console.error('Error al abrir salon:', error);
+        }
     };
 
     // Abrir modal de cierre
@@ -264,8 +286,63 @@ export function useSupervisorSalonHome() {
         setModalCierreAbierto(true);
     };
 
+    const cargarRecursosDeSalon = async (espacioId: number) => {
+        setCargandoRecursos(true);
+        try {
+            const { recursos } = await espacioRecursoService.listarPorEspacio(espacioId);
+            setRecursosPendientes(recursos.map((recurso) => ({
+                ...recurso,
+                estadoOriginal: recurso.estado
+            })));
+            setModalRecursosAbierto(true);
+        } catch (error: any) {
+            toast.error(error?.message || 'No se pudieron cargar recursos del salon');
+            setRecursosPendientes([]);
+            setModalRecursosAbierto(true);
+        } finally {
+            setCargandoRecursos(false);
+        }
+    };
+
+    const actualizarEstadoRecurso = (recursoId: number, estado: EspacioRecurso['estado']) => {
+        setRecursosPendientes((prev) => prev.map((recurso) => (
+            recurso.recurso_id === recursoId ? { ...recurso, estado } : recurso
+        )));
+    };
+
+    const confirmarRevisionRecursos = async (): Promise<ResultadoAccion> => {
+        if (!salonParaCerrar) {
+            setModalRecursosAbierto(false);
+            return { ok: true as const };
+        }
+
+        setGuardandoRecursos(true);
+        try {
+            const cambios = recursosPendientes.filter((recurso) => recurso.estado !== recurso.estadoOriginal);
+
+            if (cambios.length > 0) {
+                await Promise.all(cambios.map((recurso) => espacioRecursoService.actualizarEspacioRecurso({
+                    espacio_id: recurso.espacio_id,
+                    recurso_id: recurso.recurso_id,
+                    estado: recurso.estado
+                })));
+            }
+
+            setModalRecursosAbierto(false);
+            setSalonParaCerrar(null);
+            toast.success('Revision de recursos completada');
+            return { ok: true as const };
+        } catch (error: any) {
+            const message = error?.message || 'No se pudieron guardar los cambios de recursos';
+            toast.error(message);
+            return { ok: false as const, message };
+        } finally {
+            setGuardandoRecursos(false);
+        }
+    };
+
     // Cerrar salón con checklist
-    const cerrarSalon = () => {
+    const cerrarSalon = async () => {
         if (!salonParaCerrar) return;
 
         const todoCompleto =
@@ -282,21 +359,32 @@ export function useSupervisorSalonHome() {
             return;
         }
 
-        const estadoActual = estadosSalones.get(salonParaCerrar.id);
-        const nuevoEstado = new Map(estadosSalones);
-        nuevoEstado.set(salonParaCerrar.id, {
-            ...estadoActual!,
-            abierto: false,
-            cerrado: true,
-            horaCierre: obtenerHoraActual(),
-            checklistCierre: { ...checklist }
-        });
-        setEstadosSalones(nuevoEstado);
+        try {
+            // Regla solicitada: al cerrar, pasar de No Disponible a Disponible.
+            await espacioService.cambiarEstado(salonParaCerrar.id, 'Disponible');
 
-        // Mostrar notificación: Salón cerrado correctamente
+            const estadoActual = estadosSalones.get(salonParaCerrar.id);
+            const nuevoEstado = new Map(estadosSalones);
+            nuevoEstado.set(salonParaCerrar.id, {
+                ...estadoActual!,
+                abierto: false,
+                cerrado: true,
+                horaCierre: obtenerHoraActual(),
+                checklistCierre: { ...checklist }
+            });
+            setEstadosSalones(nuevoEstado);
 
-        setModalCierreAbierto(false);
-        setSalonParaCerrar(null);
+            setModalCierreAbierto(false);
+            await cargarRecursosDeSalon(salonParaCerrar.id);
+        } catch (error: any) {
+            if (error?.status === 400) {
+                toast.error(error?.message || 'No fue posible cerrar el salon');
+                return;
+            }
+
+            console.error('Error al cerrar salon:', error);
+            toast.error(error?.message || 'Error al cerrar salon');
+        }
     };
 
     // Estadísticas
@@ -374,9 +462,16 @@ export function useSupervisorSalonHome() {
         estadosSalones,
         modalCierreAbierto,
         setModalCierreAbierto,
+        modalRecursosAbierto,
+        setModalRecursosAbierto,
         salonParaCerrar,
         checklist,
         setChecklist,
+        recursosPendientes,
+        cargandoRecursos,
+        guardandoRecursos,
+        actualizarEstadoRecurso,
+        confirmarRevisionRecursos,
         buscarSalones,
         abrirSalon,
         abrirModalCierre,
