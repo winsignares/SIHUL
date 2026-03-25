@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { apiClient } from '../../core/apiClient';
 import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
+import { espacioService, type TipoEspacio } from '../../services/espacios/espaciosAPI';
 
 export function useGestionUsuarios() {
     const { notification, showNotification } = useNotification();
@@ -34,7 +35,7 @@ export function useGestionUsuarios() {
     // Estados para datos dinámicos desde backend
     const [rolesDisponibles, setRolesDisponibles] = useState<Rol[]>([]);
     const [facultadesDisponibles, setFacultadesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
-    const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number, nombre: string, tipo_id: number }>>([]);
     const [sedesDisponibles, setSedesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
 
     // Estados para espacios permitidos (solo supervisor_general)
@@ -56,13 +57,26 @@ export function useGestionUsuarios() {
         loadData();
     }, []);
 
+    // Estados agregados para asignacion por tipo de espacio.
+    // Se declaran despues de los hooks originales para mantener orden estable en Fast Refresh.
+    const [tiposEspacioDisponibles, setTiposEspacioDisponibles] = useState<TipoEspacio[]>([]);
+    const [modoAsignacionSupervisor, setModoAsignacionSupervisor] = useState<'individual' | 'tipo'>('individual');
+    const [modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit] = useState<'individual' | 'tipo'>('individual');
+    const [tipoEspacioSeleccionado, setTipoEspacioSeleccionado] = useState('');
+    const [tiposEspacioPermitidos, setTiposEspacioPermitidos] = useState<number[]>([]);
+    const [asignarTodosEspaciosPorTipo, setAsignarTodosEspaciosPorTipo] = useState(false);
+    const [tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit] = useState('');
+    const [tiposEspacioPermitidosEdit, setTiposEspacioPermitidosEdit] = useState<number[]>([]);
+    const [asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit] = useState(false);
+
     const loadData = async () => {
         await Promise.all([
             loadUsuarios(),
             loadRoles(),
             loadFacultades(),
             loadEspacios(),
-            loadSedes()
+            loadSedes(),
+            loadTiposEspacio()
         ]);
     };
 
@@ -100,10 +114,25 @@ export function useGestionUsuarios() {
     // Cargar espacios desde backend
     const loadEspacios = async () => {
         try {
-            const response = await apiClient.get<{ espacios: Array<{ id: number, nombre: string }> }>('/espacios/list/');
-            setEspaciosDisponibles(response.espacios || []);
+            const response = await espacioService.list();
+            const espacios = (response.espacios || []).map((espacio) => ({
+                id: espacio.id as number,
+                nombre: espacio.nombre,
+                tipo_id: espacio.tipo_id
+            }));
+            setEspaciosDisponibles(espacios);
         } catch (error) {
             console.error('Error cargando espacios:', error);
+        }
+    };
+
+    // Cargar tipos de espacio desde backend
+    const loadTiposEspacio = async () => {
+        try {
+            const response = await espacioService.listTipos();
+            setTiposEspacioDisponibles(response.tipos_espacio || []);
+        } catch (error) {
+            console.error('Error cargando tipos de espacio:', error);
         }
     };
 
@@ -129,6 +158,27 @@ export function useGestionUsuarios() {
         setEspaciosPermitidos(espaciosPermitidos.filter(id => id !== espacioId));
     }, [espaciosPermitidos]);
 
+    // Funciones para manejar tipos de espacio permitidos (Creacion)
+    const agregarTipoEspacioPermitido = useCallback(() => {
+        if (!tipoEspacioSeleccionado) return;
+
+        if (tipoEspacioSeleccionado === 'todos') {
+            setAsignarTodosEspaciosPorTipo(true);
+            setTipoEspacioSeleccionado('');
+            return;
+        }
+
+        const tipoId = parseInt(tipoEspacioSeleccionado, 10);
+        if (!tiposEspacioPermitidos.includes(tipoId)) {
+            setTiposEspacioPermitidos([...tiposEspacioPermitidos, tipoId]);
+        }
+        setTipoEspacioSeleccionado('');
+    }, [tipoEspacioSeleccionado, tiposEspacioPermitidos]);
+
+    const eliminarTipoEspacioPermitido = useCallback((tipoId: number) => {
+        setTiposEspacioPermitidos(tiposEspacioPermitidos.filter(id => id !== tipoId));
+    }, [tiposEspacioPermitidos]);
+
     // Funciones para manejar espacios permitidos (Edición)
     const agregarEspacioPermitidoEdit = useCallback(() => {
         if (espacioSeleccionadoEdit && !espaciosPermitidosEdit.includes(parseInt(espacioSeleccionadoEdit))) {
@@ -140,6 +190,41 @@ export function useGestionUsuarios() {
     const eliminarEspacioPermitidoEdit = useCallback((espacioId: number) => {
         setEspaciosPermitidosEdit(espaciosPermitidosEdit.filter(id => id !== espacioId));
     }, [espaciosPermitidosEdit]);
+
+    // Funciones para manejar tipos de espacio permitidos (Edicion)
+    const agregarTipoEspacioPermitidoEdit = useCallback(() => {
+        if (!tipoEspacioSeleccionadoEdit) return;
+
+        if (tipoEspacioSeleccionadoEdit === 'todos') {
+            setAsignarTodosEspaciosPorTipoEdit(true);
+            setTipoEspacioSeleccionadoEdit('');
+            return;
+        }
+
+        const tipoId = parseInt(tipoEspacioSeleccionadoEdit, 10);
+        if (!tiposEspacioPermitidosEdit.includes(tipoId)) {
+            setTiposEspacioPermitidosEdit([...tiposEspacioPermitidosEdit, tipoId]);
+        }
+        setTipoEspacioSeleccionadoEdit('');
+    }, [tipoEspacioSeleccionadoEdit, tiposEspacioPermitidosEdit]);
+
+    const eliminarTipoEspacioPermitidoEdit = useCallback((tipoId: number) => {
+        setTiposEspacioPermitidosEdit(tiposEspacioPermitidosEdit.filter(id => id !== tipoId));
+    }, [tiposEspacioPermitidosEdit]);
+
+    const buildEspaciosPayloadPorTipo = useCallback((tiposIds: number[], asignarTodos: boolean) => {
+        if (asignarTodos) {
+            return espaciosDisponibles.map(e => e.id);
+        }
+
+        if (tiposIds.length === 0) {
+            return [];
+        }
+
+        return espaciosDisponibles
+            .filter(e => tiposIds.includes(e.tipo_id))
+            .map(e => e.id);
+    }, [espaciosDisponibles]);
 
     // Crear usuario
     const crearUsuario = async () => {
@@ -170,7 +255,13 @@ export function useGestionUsuarios() {
         try {
             // Si es supervisor_general, incluir espacios permitidos
             const rol = rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
-            const espaciosPayload = (rol?.nombre === 'supervisor_general') ? espaciosPermitidos : [];
+            let espaciosPayload: number[] = [];
+
+            if (rol?.nombre === 'supervisor_general') {
+                espaciosPayload = modoAsignacionSupervisor === 'individual'
+                    ? espaciosPermitidos
+                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo);
+            }
 
             await userService.crearUsuario({
                 nombre: nuevoUsuario.nombre,
@@ -204,7 +295,13 @@ export function useGestionUsuarios() {
             // Si es supervisor_general, incluir espacios permitidos
             const rolId = editingUser.rol_id || editingUser.rol?.id;
             const rol = rolesDisponibles.find(r => r.id === rolId);
-            const espaciosPayload = (rol?.nombre === 'supervisor_general') ? espaciosPermitidosEdit : [];
+            let espaciosPayload: number[] = [];
+
+            if (rol?.nombre === 'supervisor_general') {
+                espaciosPayload = modoAsignacionSupervisorEdit === 'individual'
+                    ? espaciosPermitidosEdit
+                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit);
+            }
 
             await userService.actualizarUsuario({
                 id: editingUser.id,
@@ -286,12 +383,17 @@ export function useGestionUsuarios() {
                 // El endpoint retorna objetos de espacio completos con ID, nombre, etc.
                 const espaciosIds = response.espacios.map(e => e.id);
                 setEspaciosPermitidosEdit(espaciosIds);
+                setModoAsignacionSupervisorEdit('individual');
+                setTiposEspacioPermitidosEdit([]);
+                setAsignarTodosEspaciosPorTipoEdit(false);
             } catch (error) {
                 console.error('Error cargando espacios permitidos:', error);
                 setEspaciosPermitidosEdit([]);
             }
         } else {
             setEspaciosPermitidosEdit([]);
+            setTiposEspacioPermitidosEdit([]);
+            setAsignarTodosEspaciosPorTipoEdit(false);
         }
 
         setEditDialogOpen(true);
@@ -310,12 +412,20 @@ export function useGestionUsuarios() {
         setConfirmarPassword('');
         setSedeSeleccionada('');
         setEspaciosPermitidos([]);
+        setModoAsignacionSupervisor('individual');
+        setTipoEspacioSeleccionado('');
+        setTiposEspacioPermitidos([]);
+        setAsignarTodosEspaciosPorTipo(false);
         setFacultadSeleccionada(null);
     };
 
     const resetEditStates = () => {
         setEditingUser(null);
         setEspaciosPermitidosEdit([]);
+        setModoAsignacionSupervisorEdit('individual');
+        setTipoEspacioSeleccionadoEdit('');
+        setTiposEspacioPermitidosEdit([]);
+        setAsignarTodosEspaciosPorTipoEdit(false);
         setFacultadSeleccionadaEdit(null);
     };
 
@@ -353,10 +463,23 @@ export function useGestionUsuarios() {
         facultadesDisponibles,
         espaciosDisponibles,
         sedesDisponibles,
+        tiposEspacioDisponibles,
         espacioSeleccionado, setEspacioSeleccionado,
         espaciosPermitidos,
+        modoAsignacionSupervisor, setModoAsignacionSupervisor,
+        tipoEspacioSeleccionado, setTipoEspacioSeleccionado,
+        tiposEspacioPermitidos,
+        asignarTodosEspaciosPorTipo, setAsignarTodosEspaciosPorTipo,
+        agregarTipoEspacioPermitido,
+        eliminarTipoEspacioPermitido,
         espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
         espaciosPermitidosEdit,
+        modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit,
+        tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit,
+        tiposEspacioPermitidosEdit,
+        asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit,
+        agregarTipoEspacioPermitidoEdit,
+        eliminarTipoEspacioPermitidoEdit,
         facultadSeleccionada, setFacultadSeleccionada,
         facultadSeleccionadaEdit, setFacultadSeleccionadaEdit,
         agregarEspacioPermitido,

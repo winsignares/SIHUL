@@ -39,10 +39,23 @@ export default function GestionUsuarios() {
     facultadesDisponibles,
     espaciosDisponibles,
     sedesDisponibles,
+    tiposEspacioDisponibles,
     espacioSeleccionado, setEspacioSeleccionado,
     espaciosPermitidos,
+    modoAsignacionSupervisor, setModoAsignacionSupervisor,
+    tipoEspacioSeleccionado, setTipoEspacioSeleccionado,
+    tiposEspacioPermitidos,
+    asignarTodosEspaciosPorTipo, setAsignarTodosEspaciosPorTipo,
+    agregarTipoEspacioPermitido,
+    eliminarTipoEspacioPermitido,
     espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
     espaciosPermitidosEdit,
+    modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit,
+    tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit,
+    tiposEspacioPermitidosEdit,
+    asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit,
+    agregarTipoEspacioPermitidoEdit,
+    eliminarTipoEspacioPermitidoEdit,
     facultadSeleccionada, setFacultadSeleccionada,
     facultadSeleccionadaEdit, setFacultadSeleccionadaEdit,
     agregarEspacioPermitido,
@@ -108,6 +121,11 @@ export default function GestionUsuarios() {
     const rolActual = rolesDisponibles.find(r => r.id === rolId);
     return rolActual?.nombre || '';
   };
+
+  const tiposEspacioOpciones = [
+    { id: 'todos', nombre: 'Todos' },
+    ...tiposEspacioDisponibles.map((tipo) => ({ id: tipo.id.toString(), nombre: tipo.nombre }))
+  ];
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
@@ -281,51 +299,140 @@ export default function GestionUsuarios() {
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Espacios Permitidos</h3>
 
-                  <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <div className="flex gap-2">
-                      <SearchableSelect
-                        items={espaciosDisponibles.filter(e => !espaciosPermitidos.includes(e.id))}
-                        value={espacioSeleccionado}
-                        onSelect={(espacio) => setEspacioSeleccionado(espacio.id.toString())}
-                        getItemId={(espacio) => espacio.id.toString()}
-                        getItemLabel={(espacio) => espacio.nombre}
-                        placeholder="Seleccione un espacio..."
-                        searchPlaceholder="Buscar espacio..."
-                        emptyMessage="No hay espacios disponibles."
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={agregarEspacioPermitido}
-                        disabled={!espacioSeleccionado}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant={modoAsignacionSupervisor === 'individual' ? 'default' : 'outline'}
+                      onClick={() => setModoAsignacionSupervisor('individual')}
+                      className={modoAsignacionSupervisor === 'individual' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      Asignacion Individual
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={modoAsignacionSupervisor === 'tipo' ? 'default' : 'outline'}
+                      onClick={() => setModoAsignacionSupervisor('tipo')}
+                      className={modoAsignacionSupervisor === 'tipo' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      Asignacion por Tipo
+                    </Button>
                   </div>
 
-                  {espaciosPermitidos.length > 0 && (
-                    <div className="bg-white border border-slate-200 rounded-lg p-3">
-                      <p className="text-xs text-slate-600 mb-2">Espacios asignados (Click en X para eliminar)</p>
-                      <div className="flex flex-wrap gap-2">
-                        {espaciosPermitidos.map(espacioId => {
-                          const espacio = espaciosDisponibles.find(e => e.id === espacioId);
-                          return espacio ? (
-                            <Badge key={espacioId} className="bg-purple-600 text-white px-3 py-2">
-                              {espacio.nombre}
-                              <button
-                                type="button"
-                                onClick={() => eliminarEspacioPermitido(espacioId)}
-                                className="ml-2 hover:text-red-200"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ) : null;
-                        })}
+                  {modoAsignacionSupervisor === 'individual' && (
+                    <>
+                      <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="flex gap-2">
+                          <SearchableSelect
+                            items={espaciosDisponibles.filter(e => !espaciosPermitidos.includes(e.id))}
+                            value={espacioSeleccionado}
+                            onSelect={(espacio) => setEspacioSeleccionado(espacio.id.toString())}
+                            getItemId={(espacio) => espacio.id.toString()}
+                            getItemLabel={(espacio) => espacio.nombre}
+                            placeholder="Seleccione un espacio..."
+                            searchPlaceholder="Buscar espacio..."
+                            emptyMessage="No hay espacios disponibles."
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={agregarEspacioPermitido}
+                            disabled={!espacioSeleccionado}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+
+                      {espaciosPermitidos.length > 0 && (
+                        <div className="bg-white border border-slate-200 rounded-lg p-3">
+                          <p className="text-xs text-slate-600 mb-2">Espacios asignados (Click en X para eliminar)</p>
+                          <div className="flex flex-wrap gap-2">
+                            {espaciosPermitidos.map(espacioId => {
+                              const espacio = espaciosDisponibles.find(e => e.id === espacioId);
+                              return espacio ? (
+                                <Badge key={espacioId} className="bg-purple-600 text-white px-3 py-2">
+                                  {espacio.nombre}
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarEspacioPermitido(espacioId)}
+                                    className="ml-2 hover:text-red-200"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {modoAsignacionSupervisor === 'tipo' && (
+                    <>
+                      <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="flex gap-2">
+                          <SearchableSelect
+                            items={tiposEspacioOpciones.filter((tipo) => {
+                              if (tipo.id === 'todos') return !asignarTodosEspaciosPorTipo;
+                              return !tiposEspacioPermitidos.includes(parseInt(tipo.id, 10));
+                            })}
+                            value={tipoEspacioSeleccionado}
+                            onSelect={(tipo) => setTipoEspacioSeleccionado(tipo.id)}
+                            getItemId={(tipo) => tipo.id}
+                            getItemLabel={(tipo) => tipo.nombre}
+                            placeholder="Seleccione un tipo de espacio..."
+                            searchPlaceholder="Buscar tipo de espacio..."
+                            emptyMessage="No hay tipos disponibles."
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={agregarTipoEspacioPermitido}
+                            disabled={!tipoEspacioSeleccionado}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {(asignarTodosEspaciosPorTipo || tiposEspacioPermitidos.length > 0) && (
+                        <div className="bg-white border border-slate-200 rounded-lg p-3">
+                          <p className="text-xs text-slate-600 mb-2">Tipos asignados (Click en X para eliminar)</p>
+                          <div className="flex flex-wrap gap-2">
+                            {asignarTodosEspaciosPorTipo && (
+                              <Badge className="bg-emerald-600 text-white px-3 py-2">
+                                Todos
+                                <button
+                                  type="button"
+                                  onClick={() => setAsignarTodosEspaciosPorTipo(false)}
+                                  className="ml-2 hover:text-red-200"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            )}
+                            {tiposEspacioPermitidos.map((tipoId) => {
+                              const tipo = tiposEspacioDisponibles.find(t => t.id === tipoId);
+                              return tipo ? (
+                                <Badge key={tipoId} className="bg-blue-600 text-white px-3 py-2">
+                                  {tipo.nombre}
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarTipoEspacioPermitido(tipoId)}
+                                    className="ml-2 hover:text-red-200"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -532,50 +639,138 @@ export default function GestionUsuarios() {
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Espacios Permitidos</h3>
 
-                  <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <div className="flex gap-2">
-                      <SearchableSelect
-                        items={espaciosDisponibles.filter(e => !espaciosPermitidosEdit.includes(e.id))}
-                        value={espacioSeleccionadoEdit}
-                        onSelect={(espacio) => setEspacioSeleccionadoEdit(espacio.id.toString())}
-                        getItemId={(espacio) => espacio.id.toString()}
-                        getItemLabel={(espacio) => espacio.nombre}
-                        placeholder="Seleccione un espacio..."
-                        searchPlaceholder="Buscar espacio..."
-                        emptyMessage="No hay espacios disponibles."
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={agregarEspacioPermitidoEdit}
-                        disabled={!espacioSeleccionadoEdit}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant={modoAsignacionSupervisorEdit === 'individual' ? 'default' : 'outline'}
+                      onClick={() => setModoAsignacionSupervisorEdit('individual')}
+                      className={modoAsignacionSupervisorEdit === 'individual' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      Asignacion Individual
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={modoAsignacionSupervisorEdit === 'tipo' ? 'default' : 'outline'}
+                      onClick={() => setModoAsignacionSupervisorEdit('tipo')}
+                      className={modoAsignacionSupervisorEdit === 'tipo' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                    >
+                      Asignacion por Tipo
+                    </Button>
                   </div>
 
-                  {espaciosPermitidosEdit.length > 0 && (
-                    <div className="bg-white border border-slate-200 rounded-lg p-3">
-                      <div className="flex flex-wrap gap-2">
-                        {espaciosPermitidosEdit.map(espacioId => {
-                          const espacio = espaciosDisponibles.find(e => e.id === espacioId);
-                          return espacio ? (
-                            <Badge key={espacioId} className="bg-purple-600 text-white px-3 py-2">
-                              {espacio.nombre}
-                              <button
-                                type="button"
-                                onClick={() => eliminarEspacioPermitidoEdit(espacioId)}
-                                className="ml-2 hover:text-red-200"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ) : null;
-                        })}
+                  {modoAsignacionSupervisorEdit === 'individual' && (
+                    <>
+                      <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="flex gap-2">
+                          <SearchableSelect
+                            items={espaciosDisponibles.filter(e => !espaciosPermitidosEdit.includes(e.id))}
+                            value={espacioSeleccionadoEdit}
+                            onSelect={(espacio) => setEspacioSeleccionadoEdit(espacio.id.toString())}
+                            getItemId={(espacio) => espacio.id.toString()}
+                            getItemLabel={(espacio) => espacio.nombre}
+                            placeholder="Seleccione un espacio..."
+                            searchPlaceholder="Buscar espacio..."
+                            emptyMessage="No hay espacios disponibles."
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={agregarEspacioPermitidoEdit}
+                            disabled={!espacioSeleccionadoEdit}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+
+                      {espaciosPermitidosEdit.length > 0 && (
+                        <div className="bg-white border border-slate-200 rounded-lg p-3">
+                          <div className="flex flex-wrap gap-2">
+                            {espaciosPermitidosEdit.map(espacioId => {
+                              const espacio = espaciosDisponibles.find(e => e.id === espacioId);
+                              return espacio ? (
+                                <Badge key={espacioId} className="bg-purple-600 text-white px-3 py-2">
+                                  {espacio.nombre}
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarEspacioPermitidoEdit(espacioId)}
+                                    className="ml-2 hover:text-red-200"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {modoAsignacionSupervisorEdit === 'tipo' && (
+                    <>
+                      <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="flex gap-2">
+                          <SearchableSelect
+                            items={tiposEspacioOpciones.filter((tipo) => {
+                              if (tipo.id === 'todos') return !asignarTodosEspaciosPorTipoEdit;
+                              return !tiposEspacioPermitidosEdit.includes(parseInt(tipo.id, 10));
+                            })}
+                            value={tipoEspacioSeleccionadoEdit}
+                            onSelect={(tipo) => setTipoEspacioSeleccionadoEdit(tipo.id)}
+                            getItemId={(tipo) => tipo.id}
+                            getItemLabel={(tipo) => tipo.nombre}
+                            placeholder="Seleccione un tipo de espacio..."
+                            searchPlaceholder="Buscar tipo de espacio..."
+                            emptyMessage="No hay tipos disponibles."
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={agregarTipoEspacioPermitidoEdit}
+                            disabled={!tipoEspacioSeleccionadoEdit}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {(asignarTodosEspaciosPorTipoEdit || tiposEspacioPermitidosEdit.length > 0) && (
+                        <div className="bg-white border border-slate-200 rounded-lg p-3">
+                          <div className="flex flex-wrap gap-2">
+                            {asignarTodosEspaciosPorTipoEdit && (
+                              <Badge className="bg-emerald-600 text-white px-3 py-2">
+                                Todos
+                                <button
+                                  type="button"
+                                  onClick={() => setAsignarTodosEspaciosPorTipoEdit(false)}
+                                  className="ml-2 hover:text-red-200"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            )}
+                            {tiposEspacioPermitidosEdit.map((tipoId) => {
+                              const tipo = tiposEspacioDisponibles.find(t => t.id === tipoId);
+                              return tipo ? (
+                                <Badge key={tipoId} className="bg-blue-600 text-white px-3 py-2">
+                                  {tipo.nombre}
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarTipoEspacioPermitidoEdit(tipoId)}
+                                    className="ml-2 hover:text-red-200"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
