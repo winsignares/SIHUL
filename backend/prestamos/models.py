@@ -29,12 +29,41 @@ class PrestamoEspacio(models.Model):
         ('Rechazado', 'Rechazado'),
         ('Vencido', 'Vencido'),
     ]
+    FRECUENCIA_CHOICES = [
+        ('none', 'No se repite'),
+        ('daily', 'Diario'),
+        ('weekly', 'Semanal'),
+        ('monthly', 'Mensual'),
+        ('yearly', 'Anual'),
+        ('weekdays', 'Dias laborales'),
+    ]
+    FIN_REPETICION_CHOICES = [
+        ('never', 'Nunca'),
+        ('until_date', 'Hasta una fecha'),
+        ('count', 'Por numero de ocurrencias'),
+    ]
 
     id = models.AutoField(primary_key=True)
     espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='prestamos')
     usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='prestamos_solicitados')
     administrador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='prestamos_admin')
     tipo_actividad = models.ForeignKey(TipoActividad, on_delete=models.PROTECT, related_name='prestamos')
+    prestamo_padre = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='ocurrencias_generadas'
+    )
+    serie_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    es_ocurrencia_generada = models.BooleanField(default=False)
+    es_recurrente = models.BooleanField(default=False)
+    frecuencia = models.CharField(max_length=20, choices=FRECUENCIA_CHOICES, default='none')
+    intervalo = models.PositiveIntegerField(default=1)
+    dias_semana = models.JSONField(default=list, blank=True)
+    fin_repeticion_tipo = models.CharField(max_length=20, choices=FIN_REPETICION_CHOICES, default='never')
+    fin_repeticion_fecha = models.DateField(null=True, blank=True)
+    fin_repeticion_ocurrencias = models.PositiveIntegerField(null=True, blank=True)
     fecha = models.DateField()
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
@@ -52,6 +81,7 @@ class PrestamoEspacio(models.Model):
         ]
         indexes = [
             Index(fields=['espacio', 'fecha'], name='idx_prestamo_espacio_fecha'),
+            Index(fields=['prestamo_padre', 'fecha'], name='idx_prestamo_padre_fecha'),
         ]
         verbose_name = 'Préstamo de Espacio'
         verbose_name_plural = 'Préstamos de Espacios'
@@ -70,6 +100,19 @@ class PrestamoEspacioPublico(models.Model):
         ('Rechazado', 'Rechazado'),
         ('Vencido', 'Vencido'),
     ]
+    FRECUENCIA_CHOICES = [
+        ('none', 'No se repite'),
+        ('daily', 'Diario'),
+        ('weekly', 'Semanal'),
+        ('monthly', 'Mensual'),
+        ('yearly', 'Anual'),
+        ('weekdays', 'Dias laborales'),
+    ]
+    FIN_REPETICION_CHOICES = [
+        ('never', 'Nunca'),
+        ('until_date', 'Hasta una fecha'),
+        ('count', 'Por numero de ocurrencias'),
+    ]
 
     id = models.AutoField(primary_key=True)
     espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='prestamos_publicos')
@@ -81,6 +124,22 @@ class PrestamoEspacioPublico(models.Model):
     # Datos del préstamo
     administrador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='prestamos_publicos_admin')
     tipo_actividad = models.ForeignKey(TipoActividad, on_delete=models.PROTECT, related_name='prestamos_publicos')
+    prestamo_padre = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='ocurrencias_generadas_publicas'
+    )
+    serie_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    es_ocurrencia_generada = models.BooleanField(default=False)
+    es_recurrente = models.BooleanField(default=False)
+    frecuencia = models.CharField(max_length=20, choices=FRECUENCIA_CHOICES, default='none')
+    intervalo = models.PositiveIntegerField(default=1)
+    dias_semana = models.JSONField(default=list, blank=True)
+    fin_repeticion_tipo = models.CharField(max_length=20, choices=FIN_REPETICION_CHOICES, default='never')
+    fin_repeticion_fecha = models.DateField(null=True, blank=True)
+    fin_repeticion_ocurrencias = models.PositiveIntegerField(null=True, blank=True)
     fecha = models.DateField()
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
@@ -97,6 +156,7 @@ class PrestamoEspacioPublico(models.Model):
         ]
         indexes = [
             Index(fields=['espacio', 'fecha'], name='idx_pub_espacio_fecha'),
+            Index(fields=['prestamo_padre', 'fecha'], name='idx_pub_padre_fecha'),
         ]
         verbose_name = 'Préstamo Público de Espacio'
         verbose_name_plural = 'Préstamos Públicos de Espacios'
