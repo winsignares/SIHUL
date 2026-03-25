@@ -804,7 +804,7 @@ export default function ConsultaEspacios() {
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className={`${colorClass} text-white rounded p-2 text-xs cursor-pointer shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center`}
+                                    className={`${colorClass} text-white rounded p-1 sm:p-1.5 md:p-2 text-[10px] sm:text-[11px] md:text-xs cursor-pointer shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight`}
                                     style={{
                                       gridColumn: `${colStart} / span 1`,
                                       gridRow: `${rowStart} / span ${rowSpan}`,
@@ -813,11 +813,13 @@ export default function ConsultaEspacios() {
                                     }}
                                   >
                                     {isPrestamo && labelText && (
-                                      <p className="text-[8px] font-bold mb-1 bg-white/30 px-1.5 py-0.5 rounded">{labelText}</p>
+                                      <p className="text-[8px] sm:text-[9px] font-bold mb-0.5 bg-white/30 px-1 py-0.5 rounded shrink-0">{labelText}</p>
                                     )}
-                                    <p className="font-bold truncate text-xs leading-tight">{ocupacion.materia}</p>
-                                    <p className="truncate opacity-90 text-[9px] leading-tight">{ocupacion.docente}</p>
-                                    <p className="truncate opacity-75 text-[8px] leading-tight mt-1">{ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                    <p className="font-semibold text-[9px] sm:text-[10px] md:text-[11px] leading-tight break-words w-full line-clamp-2">{ocupacion.materia}</p>
+                                    <p className="text-[8px] sm:text-[9px] opacity-90 leading-tight break-words w-full line-clamp-1">{ocupacion.docente}</p>
+                                    {rowSpan > 1 && (
+                                      <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">{ocupacion.horaInicio}:00-{ocupacion.horaFin}:00</p>
+                                    )}
                                   </motion.div>
                                 </TooltipTrigger>
                                 <TooltipContent>
