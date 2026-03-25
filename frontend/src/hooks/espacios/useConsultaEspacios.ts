@@ -706,6 +706,12 @@ export function useConsultaEspacios() {
         
         const espaciosAExportar = espaciosToExport || filteredEspacios;
         
+        // Función auxiliar para calcular líneas de texto
+        const getTextLines = (text: string, maxWidth: number, fontSize: number): string[] => {
+            doc.setFontSize(fontSize);
+            return doc.splitTextToSize(text, maxWidth);
+        };
+        
         espaciosAExportar.forEach((espacio, espacioIndex) => {
             if (espacioIndex > 0) doc.addPage();
             
@@ -717,45 +723,36 @@ export function useConsultaEspacios() {
             doc.setFont('helvetica', 'normal');
             doc.text(`Capacidad: ${espacio.capacidad} | Sede: ${espacio.sede} | Edificio: ${espacio.edificio}`, pageWidth / 2, 22, { align: 'center' });
             
-            // Construir cuadrícula
+            // Dimensiones base
             const cellWidth = (pageWidth - 30) / 7; // 1 columna hora + 6 días
-            const cellHeight = (pageHeight - 40) / (horasIntervalos.length + 1);
             const startX = 15;
             const startY = 30;
+            const headerHeight = 10;
+            const baseCellHeight = 12; // Altura base más grande para contenido
             
             // Dibujar encabezado (días)
-            doc.setFillColor(139, 0, 0);
-            doc.rect(startX, startY, cellWidth, cellHeight, 'F');
+            doc.setFillColor(30, 41, 59); // slate-800
+            doc.rect(startX, startY, cellWidth, headerHeight, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(9);
             doc.setFont('helvetica', 'bold');
-            doc.text('Hora', startX + cellWidth / 2, startY + cellHeight / 2 + 2, { align: 'center' });
+            doc.text('Hora', startX + cellWidth / 2, startY + headerHeight / 2 + 2, { align: 'center' });
             
             diasNombres.forEach((dia, idx) => {
-                doc.setFillColor(139, 0, 0);
-                doc.rect(startX + cellWidth * (idx + 1), startY, cellWidth, cellHeight, 'F');
+                doc.setFillColor(30, 41, 59); // slate-800
+                doc.rect(startX + cellWidth * (idx + 1), startY, cellWidth, headerHeight, 'F');
                 doc.setTextColor(255, 255, 255);
-                doc.text(dia, startX + cellWidth * (idx + 1) + cellWidth / 2, startY + cellHeight / 2 + 2, { align: 'center' });
+                doc.text(dia, startX + cellWidth * (idx + 1) + cellWidth / 2, startY + headerHeight / 2 + 2, { align: 'center' });
             });
             
-            // Dibujar filas de horas
-            horasIntervalos.forEach((hora, horaIdx) => {
-                const y = startY + cellHeight * (horaIdx + 1);
+            // Primera pasada: calcular alturas de celdas para cada fila de hora
+            const rowHeights: number[] = [];
+            
+            horasIntervalos.forEach((hora) => {
+                let maxLines = 1; // Mínimo una línea
                 
-                // Columna de hora
-                doc.setFillColor(243, 244, 246);
-                doc.rect(startX, y, cellWidth, cellHeight, 'FD');
-                doc.setTextColor(0, 0, 0);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7);
-                doc.text(`${hora}:00-${hora + 1}:00`, startX + cellWidth / 2, y + cellHeight / 2 + 1, { align: 'center' });
-                
-                // Celdas de días
-                diasNombres.forEach((dia, diaIdx) => {
-                    const x = startX + cellWidth * (diaIdx + 1);
-                    
-                    // Buscar horario para esta hora y día
-                    const horarioEnCelda = horarios.find(h =>
+                diasNombres.forEach((dia) => {
+                    const horarioEnCelda = horariosConPrestamos.find(h =>
                         h.espacioId === espacio.id &&
                         h.dia === dia &&
                         hora >= h.horaInicio &&
@@ -763,34 +760,150 @@ export function useConsultaEspacios() {
                     );
                     
                     if (horarioEnCelda) {
-                        // Celda ocupada
-                        doc.setFillColor(219, 234, 254);
-                        doc.rect(x, y, cellWidth, cellHeight, 'FD');
-                        doc.setTextColor(0, 0, 0);
+                        const isPrestamo = horarioEnCelda.tipo === 'prestamo';
+                        let lines = 0;
+                        
+                        // Contar líneas para etiqueta de préstamo
+                        if (isPrestamo) lines += 1;
+                        
+                        // Contar líneas para materia
+                        if (horarioEnCelda.materia) {
+                            const materiaLines = getTextLines(horarioEnCelda.materia, cellWidth - 4, 5);
+                            lines += materiaLines.length;
+                        }
+                        
+                        // Contar líneas para docente
+                        if (horarioEnCelda.docente) {
+                            const docenteLines = getTextLines(horarioEnCelda.docente.toUpperCase(), cellWidth - 4, 5);
+                            lines += docenteLines.length;
+                        }
+                        
+                        // Contar líneas para grupo
+                        if (horarioEnCelda.grupo) {
+                            const grupoLines = getTextLines(horarioEnCelda.grupo, cellWidth - 4, 5);
+                            lines += grupoLines.length;
+                        }
+                        
+                        maxLines = Math.max(maxLines, lines);
+                    }
+                });
+                
+                // Altura = espacio para texto + padding
+                const calculatedHeight = Math.max(baseCellHeight, maxLines * 2.5 + 3);
+                rowHeights.push(calculatedHeight);
+            });
+            
+            // Segunda pasada: dibujar filas con alturas calculadas
+            let currentY = startY + headerHeight;
+            
+            horasIntervalos.forEach((hora, horaIdx) => {
+                const cellHeight = rowHeights[horaIdx];
+                
+                // Columna de hora
+                doc.setFillColor(243, 244, 246);
+                doc.rect(startX, currentY, cellWidth, cellHeight, 'FD');
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                doc.text(`${hora}:00-${hora + 1}:00`, startX + cellWidth / 2, currentY + cellHeight / 2 + 1, { align: 'center' });
+                
+                // Celdas de días
+                diasNombres.forEach((dia, diaIdx) => {
+                    const x = startX + cellWidth * (diaIdx + 1);
+                    
+                    const horarioEnCelda = horariosConPrestamos.find(h =>
+                        h.espacioId === espacio.id &&
+                        h.dia === dia &&
+                        hora >= h.horaInicio &&
+                        hora < h.horaFin
+                    );
+                    
+                    if (horarioEnCelda) {
+                        const isPrestamo = horarioEnCelda.tipo === 'prestamo';
+                        const isPrestamoPendiente = isPrestamo && horarioEnCelda.prestamo?.estado === 'Pendiente';
+                        const isPrestamoAprobado = isPrestamo && horarioEnCelda.prestamo?.estado === 'Aprobado';
+                        const isOcupado = horarioEnCelda.estado === 'ocupado';
+                        const isMantenimiento = horarioEnCelda.estado === 'mantenimiento';
+                        
+                        // Colores según tipo
+                        if (isPrestamoPendiente) {
+                            doc.setFillColor(253, 224, 71); // yellow-300
+                            doc.rect(x, currentY, cellWidth, cellHeight, 'FD');
+                            doc.setTextColor(15, 23, 42); // slate-900
+                        } else if (isPrestamoAprobado) {
+                            doc.setFillColor(34, 197, 94); // green-500
+                            doc.rect(x, currentY, cellWidth, cellHeight, 'FD');
+                            doc.setTextColor(255, 255, 255);
+                        } else if (isOcupado) {
+                            doc.setFillColor(239, 68, 68); // red-500
+                            doc.rect(x, currentY, cellWidth, cellHeight, 'FD');
+                            doc.setTextColor(255, 255, 255);
+                        } else if (isMantenimiento) {
+                            doc.setFillColor(234, 179, 8); // yellow-600
+                            doc.rect(x, currentY, cellWidth, cellHeight, 'FD');
+                            doc.setTextColor(255, 255, 255);
+                        } else {
+                            doc.setFillColor(219, 234, 254);
+                            doc.rect(x, currentY, cellWidth, cellHeight, 'FD');
+                            doc.setTextColor(0, 0, 0);
+                        }
+                        
+                        // Dibujar texto ajustado
+                        let textY = currentY + 2.5;
+                        const maxTextWidth = cellWidth - 4;
+                        
+                        // Etiqueta de estado para préstamos
+                        if (isPrestamo) {
+                            const estadoLabel = isPrestamoPendiente ? 'PENDIENTE' : 'APROBADO';
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(5);
+                            doc.text(estadoLabel, x + cellWidth / 2, textY, { align: 'center' });
+                            textY += 2.2;
+                        }
+                        
                         doc.setFont('helvetica', 'normal');
-                        doc.setFontSize(6);
+                        doc.setFontSize(5);
                         
                         const materia = horarioEnCelda.materia || '';
                         const docente = horarioEnCelda.docente ? horarioEnCelda.docente.toUpperCase() : '';
                         const grupo = horarioEnCelda.grupo || '';
                         
-                        let textY = y + 4;
                         if (materia) {
-                            doc.text(materia, x + cellWidth / 2, textY, { align: 'center', maxWidth: cellWidth - 2 });
-                            textY += 3;
+                            const lines = getTextLines(materia, maxTextWidth, 5);
+                            lines.forEach((line: string) => {
+                                if (textY < currentY + cellHeight - 1) {
+                                    doc.text(line, x + cellWidth / 2, textY, { align: 'center' });
+                                    textY += 2.2;
+                                }
+                            });
                         }
+                        
                         if (docente) {
-                            doc.text(docente, x + cellWidth / 2, textY, { align: 'center', maxWidth: cellWidth - 2 });
-                            textY += 3;
+                            const lines = getTextLines(docente, maxTextWidth, 5);
+                            lines.forEach((line: string) => {
+                                if (textY < currentY + cellHeight - 1) {
+                                    doc.text(line, x + cellWidth / 2, textY, { align: 'center' });
+                                    textY += 2.2;
+                                }
+                            });
                         }
+                        
                         if (grupo) {
-                            doc.text(grupo, x + cellWidth / 2, textY, { align: 'center', maxWidth: cellWidth - 2 });
+                            const lines = getTextLines(grupo, maxTextWidth, 5);
+                            lines.forEach((line: string) => {
+                                if (textY < currentY + cellHeight - 1) {
+                                    doc.text(line, x + cellWidth / 2, textY, { align: 'center' });
+                                    textY += 2.2;
+                                }
+                            });
                         }
                     } else {
                         // Celda vacía
-                        doc.rect(x, y, cellWidth, cellHeight, 'D');
+                        doc.rect(x, currentY, cellWidth, cellHeight, 'D');
                     }
                 });
+                
+                currentY += cellHeight;
             });
         });
         
@@ -820,8 +933,8 @@ export function useConsultaEspacios() {
                 
                 // Para cada día
                 diasNombres.slice(1).forEach(dia => {
-                    // Buscar horario para esta hora y día
-                    const horarioEnCelda = horarios.find(h =>
+                    // Buscar horario para esta hora y día - usar horariosConPrestamos
+                    const horarioEnCelda = horariosConPrestamos.find(h =>
                         h.espacioId === espacio.id &&
                         h.dia === dia &&
                         hora >= h.horaInicio &&
@@ -829,11 +942,22 @@ export function useConsultaEspacios() {
                     );
                     
                     if (horarioEnCelda) {
+                        const isPrestamo = horarioEnCelda.tipo === 'prestamo';
+                        const isPrestamoPendiente = isPrestamo && horarioEnCelda.prestamo?.estado === 'Pendiente';
+                        const isPrestamoAprobado = isPrestamo && horarioEnCelda.prestamo?.estado === 'Aprobado';
+                        
                         const materia = horarioEnCelda.materia || '';
                         const docente = horarioEnCelda.docente ? horarioEnCelda.docente.toUpperCase() : '';
                         const grupo = horarioEnCelda.grupo || '';
                         
-                        let cellText = materia;
+                        let cellText = '';
+                        
+                        // Agregar etiqueta de estado para préstamos
+                        if (isPrestamo) {
+                            cellText = `[${isPrestamoPendiente ? 'PENDIENTE' : 'APROBADO'}] `;
+                        }
+                        
+                        cellText += materia;
                         if (docente) cellText += ` / ${docente}`;
                         if (grupo) cellText += `\n${grupo}`;
                         
