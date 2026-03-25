@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Badge } from '../../share/badge';
-import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw } from 'lucide-react';
+import { Input } from '../../share/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast, Toaster } from 'sonner';
 import { useAperturaCierre } from '../../hooks/espacios/useAperturaCierre';
@@ -14,6 +16,17 @@ export default function SupervisorSalonHome() {
   const isMobile = useIsMobile();
   const {
     espacios,
+    espaciosFiltrados,
+    sedes,
+    tiposUso,
+    searchTerm,
+    setSearchTerm,
+    filterTipo,
+    setFilterTipo,
+    filterEstado,
+    setFilterEstado,
+    filterSede,
+    setFilterSede,
     horariosPaginados,
     totalHorariosPendientes,
     horaActual,
@@ -68,11 +81,11 @@ export default function SupervisorSalonHome() {
   };
 
   // Calcular estadísticas (contar horarios totales, no espacios)
-  const totalSalones = espacios?.reduce((count, esp) => 
+  const totalSalones = espaciosFiltrados?.reduce((count, esp) => 
     count + (esp.horarios?.length || 0), 0) || 0;
-  const salonesPorAbrir = espacios?.reduce((count, esp) => 
+  const salonesPorAbrir = espaciosFiltrados?.reduce((count, esp) => 
     count + (esp.horarios?.filter(h => h.proximaAccion === 'apertura').length || 0), 0) || 0;
-  const salonesPorCerrar = espacios?.reduce((count, esp) => 
+  const salonesPorCerrar = espaciosFiltrados?.reduce((count, esp) => 
     count + (esp.horarios?.filter(h => h.proximaAccion === 'cierre').length || 0), 0) || 0;
 
   return (
@@ -173,6 +186,55 @@ export default function SupervisorSalonHome() {
             </CardContent>
           </Card>
         </motion.div>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Buscar espacio..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <Select value={filterTipo} onValueChange={setFilterTipo}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los tipos</SelectItem>
+            {tiposUso.map((tipo) => (
+              <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterEstado} onValueChange={setFilterEstado}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los estados</SelectItem>
+            <SelectItem value="disponible">Disponible</SelectItem>
+            <SelectItem value="no disponible">No Disponible</SelectItem>
+            <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterSede} onValueChange={setFilterSede}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Sede" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas las sedes</SelectItem>
+            {sedes.map((sede) => (
+              <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Error State */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { aperturaCierreService, type EspacioConHorarios, type HorarioEspacio } from '../../services/espacios/espaciosAPI';
+import { aperturaCierreService, espacioService, type EspacioConHorarios, type HorarioEspacio, type TipoEspacio } from '../../services/espacios/espaciosAPI';
 import { toast } from 'sonner';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 
@@ -22,6 +22,12 @@ export interface HorarioPendientePaginado {
 export function useAperturaCierre() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [espacios, setEspacios] = useState<EspacioConHorarios[]>([]);
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [filterTipo, setFilterTipo] = useState<string>('todos');
+    const [filterEstado, setFilterEstado] = useState<string>('todos');
+    const [filterSede, setFilterSede] = useState<string>('todas');
+    const [tiposEspacioDisponibles, setTiposEspacioDisponibles] = useState<TipoEspacio[]>([]);
+    const [tipoEspacioPorId, setTipoEspacioPorId] = useState<Record<number, string>>({});
     const [horaActual, setHoraActual] = useState<string>('');
     const [diaActual, setDiaActual] = useState<string>('');
     const [fechaActual, setFechaActual] = useState<string>('');
@@ -60,6 +66,32 @@ export function useAperturaCierre() {
             toast.error(errorMsg);
         } finally {
             setLoading(false);
+        }
+    }, []);
+
+    const cargarCatalogosEspacios = useCallback(async () => {
+        try {
+            const [espaciosResponse, tiposResponse] = await Promise.all([
+                espacioService.list(),
+                espacioService.listTipos()
+            ]);
+
+            const tipos = tiposResponse.tipos_espacio || [];
+            const tipoNombrePorTipoId: Record<number, string> = {};
+            tipos.forEach((tipo) => {
+                tipoNombrePorTipoId[tipo.id] = tipo.nombre;
+            });
+
+            const tipoPorEspacioId: Record<number, string> = {};
+            (espaciosResponse.espacios || []).forEach((espacio) => {
+                if (!espacio.id) return;
+                tipoPorEspacioId[espacio.id] = espacio.tipo_espacio?.nombre || tipoNombrePorTipoId[espacio.tipo_id] || 'Sin tipo';
+            });
+
+            setTiposEspacioDisponibles(tipos);
+            setTipoEspacioPorId(tipoPorEspacioId);
+        } catch (error) {
+            console.error('Error cargando catalogos de espacios:', error);
         }
     }, []);
 
@@ -126,6 +158,10 @@ export function useAperturaCierre() {
         cargarDatos();
     }, [cargarDatos]);
 
+    useEffect(() => {
+        cargarCatalogosEspacios();
+    }, [cargarCatalogosEspacios]);
+
     // Auto-refresh cada 30 segundos (más frecuente para contador en tiempo real)
     useEffect(() => {
         const interval = setInterval(() => {
@@ -140,19 +176,56 @@ export function useAperturaCierre() {
      */
     const refrescar = async () => {
         setLoading(true);
-        await cargarDatos();
+        await Promise.all([
+            cargarDatos(),
+            cargarCatalogosEspacios()
+        ]);
     };
+
+    const tiposUso = useMemo(() => {
+        return tiposEspacioDisponibles.map((tipo) => tipo.nombre);
+    }, [tiposEspacioDisponibles]);
+
+    const sedes = useMemo(() => {
+        const sedesUnicas = new Set<string>();
+        espacios.forEach((espacio) => {
+            if (espacio.sede) {
+                sedesUnicas.add(espacio.sede);
+            }
+        });
+        return Array.from(sedesUnicas);
+    }, [espacios]);
+
+    const espaciosFiltrados = useMemo(() => {
+        return espacios.filter((espacio) => {
+            const q = searchTerm.trim().toLowerCase();
+            const matchesSearch = q === ''
+                || espacio.nombreEspacio.toLowerCase().includes(q)
+                || espacio.sede.toLowerCase().includes(q)
+                || (espacio.piso || '').toLowerCase().includes(q);
+
+            const matchesEstado = filterEstado === 'todos'
+                || espacio.estadoActual.toLowerCase() === filterEstado.toLowerCase();
+
+            const matchesSede = filterSede === 'todas' || espacio.sede === filterSede;
+
+            const matchesTipo = filterTipo === 'todos'
+                || (tipoEspacioPorId[espacio.idEspacio] || '').toLowerCase() === filterTipo.toLowerCase();
+
+            return matchesSearch && matchesEstado && matchesSede && matchesTipo;
+        });
+    }, [espacios, searchTerm, filterEstado, filterSede, filterTipo, tipoEspacioPorId]);
 
     // Aplanar espacios/horarios para paginar una tarjeta por horario
     const horariosPendientes = useMemo<HorarioPendientePaginado[]>(() => {
-        return espacios.flatMap((espacio) => {
+        return espaciosFiltrados.flatMap((espacio) => {
             return (espacio.horarios || []).map((horario, index) => ({
                 key: `${espacio.idEspacio}-${horario.horaInicio}-${horario.horaFin}-${index}`,
                 espacio,
                 horario
             }));
         });
-    }, [espacios]);
+    }, [espaciosFiltrados]);
 
     const totalHorariosPendientes = horariosPendientes.length;
     const totalPages = getTotalPages(totalHorariosPendientes, PAGE_SIZE);
@@ -165,6 +238,10 @@ export function useAperturaCierre() {
     useEffect(() => {
         setCurrentPage((prev) => normalizePage(prev, totalPages));
     }, [totalPages]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterTipo, filterEstado, filterSede]);
 
     const goToPage = (page: number) => {
         setCurrentPage(normalizePage(page, totalPages));
@@ -180,6 +257,17 @@ export function useAperturaCierre() {
 
     return {
         espacios,
+        espaciosFiltrados,
+        sedes,
+        tiposUso,
+        searchTerm,
+        setSearchTerm,
+        filterTipo,
+        setFilterTipo,
+        filterEstado,
+        setFilterEstado,
+        filterSede,
+        setFilterSede,
         horariosPaginados,
         totalHorariosPendientes,
         horaActual,

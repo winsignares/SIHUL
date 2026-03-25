@@ -3,6 +3,7 @@ import { db } from '../../services/database';
 import type { ChecklistCierre, EstadoSalon, SalonEnriquecido } from '../../models';
 import type { EspacioFisico, HorarioAcademico } from '../../models/index';
 import { AlertCircle, DoorOpen, Users, Clock, Lock, XCircle } from 'lucide-react';
+import { espacioService } from '../../services/espacios/espaciosAPI';
 
 export function useSupervisorSalonHome() {
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
@@ -14,6 +15,11 @@ export function useSupervisorSalonHome() {
     const [pisoSeleccionado, setPisoSeleccionado] = useState('');
     const [horaSeleccionada, setHoraSeleccionada] = useState('08:00');
     const [busquedaActiva, setBusquedaActiva] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterTipo, setFilterTipo] = useState('todos');
+    const [filterEstado, setFilterEstado] = useState('todos');
+    const [filterSede, setFilterSede] = useState('todas');
+    const [tiposEspacioBackend, setTiposEspacioBackend] = useState<string[]>([]);
 
     // Estados de salones (apertura y cierre)
     const [estadosSalones, setEstadosSalones] = useState<Map<number, EstadoSalon>>(new Map());
@@ -37,15 +43,27 @@ export function useSupervisorSalonHome() {
         cargarDatos();
     }, []);
 
-    const cargarDatos = () => {
+    const cargarDatos = async () => {
         const espaciosDB = db.getEspacios();
         const horariosDB = db.getHorarios();
         setEspacios(espaciosDB);
         setHorarios(horariosDB);
+
+        try {
+            const response = await espacioService.listTipos();
+            setTiposEspacioBackend((response.tipos_espacio || []).map((tipo) => tipo.nombre));
+        } catch (error) {
+            console.error('Error cargando tipos de espacio desde API:', error);
+            setTiposEspacioBackend([]);
+        }
     };
 
     // Obtener sedes y pisos únicos
     const sedes = useMemo(() => Array.from(new Set(espacios.map(e => e.sede))), [espacios]);
+    const tiposEspacio = useMemo(() => {
+        const tiposLocales = espacios.map(e => e.tipo);
+        return Array.from(new Set([...tiposEspacioBackend, ...tiposLocales]));
+    }, [espacios, tiposEspacioBackend]);
     const pisos = useMemo(() => sedeSeleccionada
         ? Array.from(new Set(espacios.filter(e => e.sede === sedeSeleccionada).map(e => e.piso)))
         : [], [espacios, sedeSeleccionada]);
@@ -184,8 +202,38 @@ export function useSupervisorSalonHome() {
             return prioridad[a.estadoSalon] - prioridad[b.estadoSalon];
         });
 
-        setSalonesFiltrados(salonesConInfo);
-    }, [sedeSeleccionada, pisoSeleccionado, horaSeleccionada, espacios, horarios, estadosSalones, busquedaActiva, tieneClaseEnHora, obtenerInfoGrupo, obtenerEstadoSalon]);
+        // Filtros estilo ConsultaEspacios (sin fecha)
+        const salonesConFiltros = salonesConInfo.filter((salon) => {
+            const q = searchTerm.trim().toLowerCase();
+            const matchesSearch = q === ''
+                || salon.nombre.toLowerCase().includes(q)
+                || salon.sede.toLowerCase().includes(q)
+                || salon.piso.toLowerCase().includes(q);
+
+            const matchesTipo = filterTipo === 'todos' || salon.tipo.toLowerCase() === filterTipo.toLowerCase();
+            const matchesEstado = filterEstado === 'todos' || salon.estadoSalon === filterEstado;
+            const matchesSede = filterSede === 'todas' || salon.sede === filterSede;
+
+            return matchesSearch && matchesTipo && matchesEstado && matchesSede;
+        });
+
+        setSalonesFiltrados(salonesConFiltros);
+    }, [
+        sedeSeleccionada,
+        pisoSeleccionado,
+        horaSeleccionada,
+        espacios,
+        horarios,
+        estadosSalones,
+        busquedaActiva,
+        tieneClaseEnHora,
+        obtenerInfoGrupo,
+        obtenerEstadoSalon,
+        searchTerm,
+        filterTipo,
+        filterEstado,
+        filterSede
+    ]);
 
     // Abrir salón
     const abrirSalon = (espacioId: number) => {
@@ -304,7 +352,16 @@ export function useSupervisorSalonHome() {
 
     return {
         sedes,
+        tiposEspacio,
         pisos,
+        searchTerm,
+        setSearchTerm,
+        filterTipo,
+        setFilterTipo,
+        filterEstado,
+        setFilterEstado,
+        filterSede,
+        setFilterSede,
         sedeSeleccionada,
         setSedeSeleccionada,
         pisoSeleccionado,
