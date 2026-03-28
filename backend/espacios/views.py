@@ -845,7 +845,8 @@ def get_estado_espacio(request, espacio_id=None):
                 }, status=400)
 
             # Regla operativa: solo permitir "Disponible" si no hay clases
-            # aprobadas en el rango [ahora, ahora + 1 hora).
+            # aprobadas FUTURAS en el rango (ahora, ahora + 1 hora].
+            # La clase actual NO bloquea el cambio de estado.
             if nuevo_estado == 'Disponible':
                 ahora = datetime.now()
                 hora_actual = ahora.time()
@@ -856,13 +857,13 @@ def get_estado_espacio(request, espacio_id=None):
                     espacio_id=espacio_id,
                     dia_semana=dia_actual,
                     estado='aprobado',
-                    hora_inicio__lt=hora_limite,
-                    hora_fin__gt=hora_actual
+                    hora_inicio__gte=hora_actual,  # Solo clases que AÚN NO han comenzado
+                    hora_inicio__lt=hora_limite
                 ).exists()
 
                 if hay_clase_proxima_hora:
                     return JsonResponse({
-                        "error": "No se puede cerrar porque hay clases en la próxima hora."
+                        "error": "No se puede cambiar a Disponible porque hay clases programadas en la próxima hora."
                     }, status=400)
             
             # Obtener y actualizar espacio
