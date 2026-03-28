@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { DatoOcupacionJornada, EspacioMasUsado } from '../../models';
+import { toast } from 'sonner';
 
 const datosOcupacion: DatoOcupacionJornada[] = [
     { jornada: 'Mañana (07:00 - 12:00)', ocupacion: 85, espacios: 45, color: 'bg-blue-600' },
@@ -16,8 +17,12 @@ const espaciosMasUsados: EspacioMasUsado[] = [
 
 export function useConsultaReportes() {
     const [periodo, setPeriodo] = useState('2025-1');
+    const [isExporting, setIsExporting] = useState(false);
 
-    const exportarPDF = async () => {
+    const exportarPDF = useCallback(async () => {
+        if (isExporting) return;
+        
+        setIsExporting(true);
         try {
             const { jsPDF } = await import('jspdf');
             const doc = new jsPDF();
@@ -74,14 +79,19 @@ export function useConsultaReportes() {
             doc.text('Sistema de Planeación y Gestión de Espacios Académicos', 20, 285);
 
             doc.save(`reporte-consulta-${periodo}.pdf`);
-            // pdf generado exitosamente notificación
+            toast.success('PDF generado exitosamente');
         } catch (error) {
             console.error('Error al generar PDF:', error);
-            // error al generar pdf notificación
+            toast.error('Error al generar el PDF');
+        } finally {
+            setIsExporting(false);
         }
-    };
+    }, [periodo, isExporting]);
 
-    const exportarExcel = async () => {
+    const exportarExcel = useCallback(async () => {
+        if (isExporting) return;
+        
+        setIsExporting(true);
         try {
             const XLSX = await import('xlsx');
 
@@ -123,12 +133,14 @@ export function useConsultaReportes() {
             XLSX.utils.book_append_sheet(workbook, ws4, 'Distribución Semanal');
 
             XLSX.writeFile(workbook, `reporte-consulta-${periodo}.xlsx`);
-            // reporte excel generado exitosamente notificación
+            toast.success('Excel generado exitosamente');
         } catch (error) {
             console.error('Error al generar Excel:', error);
-            // error al generar excel notificación
+            toast.error('Error al generar el Excel');
+        } finally {
+            setIsExporting(false);
         }
-    };
+    }, [periodo, isExporting]);
 
     return {
         periodo,
@@ -136,6 +148,7 @@ export function useConsultaReportes() {
         datosOcupacion,
         espaciosMasUsados,
         exportarPDF,
-        exportarExcel
+        exportarExcel,
+        isExporting
     };
 }

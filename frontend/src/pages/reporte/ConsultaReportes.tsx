@@ -15,7 +15,8 @@ export default function ConsultaReportes() {
     datosOcupacion,
     espaciosMasUsados,
     exportarPDF,
-    exportarExcel
+    exportarExcel,
+    isExporting
   } = useConsultaReportes();
 
   return (
@@ -27,7 +28,7 @@ export default function ConsultaReportes() {
           <p className="text-slate-600">Visualiza estadísticas y reportes del sistema</p>
         </div>
         <div className="flex gap-3">
-          <Select value={periodo} onValueChange={setPeriodo}>
+          <Select value={periodo} onValueChange={setPeriodo} disabled={isExporting}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Periodo" />
             </SelectTrigger>
@@ -37,18 +38,20 @@ export default function ConsultaReportes() {
             </SelectContent>
           </Select>
           <Button
-            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={exportarPDF}
+            disabled={isExporting}
           >
             <Download className="w-4 h-4 mr-2" />
-            PDF
+            {isExporting ? 'Generando...' : 'PDF'}
           </Button>
           <Button
-            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={exportarExcel}
+            disabled={isExporting}
           >
             <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Excel
+            {isExporting ? 'Generando...' : 'Excel'}
           </Button>
         </div>
       </div>
