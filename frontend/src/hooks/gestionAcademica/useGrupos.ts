@@ -5,6 +5,11 @@ import { programaService, type Programa } from '../../services/programas/program
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { Grupo } from '../../services/grupos/gruposAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const GRUPOS_CACHE_KEY = 'gestion-academica-grupos';
+const GRUPOS_PROGRAMAS_CACHE_KEY = 'gestion-academica-grupos-programas';
+const GRUPOS_PERIODOS_CACHE_KEY = 'gestion-academica-grupos-periodos';
 
 export interface GrupoAcademico {
     id?: number;
@@ -42,11 +47,20 @@ export function useGrupos() {
     // Estados de selección
     const [selectedGrupo, setSelectedGrupo] = useState<GrupoAcademico | null>(null);
 
-    const loadGrupos = async () => {
+    const loadGrupos = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedGrupos = force ? null : getSessionCacheData<GrupoAcademico[]>(GRUPOS_CACHE_KEY, activeToken);
+
+            if (cachedGrupos) {
+                setGrupos(cachedGrupos);
+                return;
+            }
+
             setLoading(true);
             const response = await grupoService.list();
             setGrupos(response.grupos);
+            setSessionCacheData(GRUPOS_CACHE_KEY, activeToken, response.grupos);
         } catch (error) {
             toast.error(`Error al cargar grupos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
@@ -54,19 +68,37 @@ export function useGrupos() {
         }
     };
 
-    const loadProgramas = async () => {
+    const loadProgramas = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedProgramas = force ? null : getSessionCacheData<Programa[]>(GRUPOS_PROGRAMAS_CACHE_KEY, activeToken);
+
+            if (cachedProgramas) {
+                setProgramas(cachedProgramas);
+                return;
+            }
+
             const response = await programaService.listarProgramas();
             setProgramas(response.programas);
+            setSessionCacheData(GRUPOS_PROGRAMAS_CACHE_KEY, activeToken, response.programas);
         } catch (error) {
             toast.error(`Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
-    const loadPeriodos = async () => {
+    const loadPeriodos = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedPeriodos = force ? null : getSessionCacheData<PeriodoAcademico[]>(GRUPOS_PERIODOS_CACHE_KEY, activeToken);
+
+            if (cachedPeriodos) {
+                setPeriodos(cachedPeriodos);
+                return;
+            }
+
             const response = await periodoService.listarPeriodos();
             setPeriodos(response.periodos);
+            setSessionCacheData(GRUPOS_PERIODOS_CACHE_KEY, activeToken, response.periodos);
         } catch (error) {
             toast.error(`Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
@@ -109,7 +141,7 @@ export function useGrupos() {
                 activo: true
             });
 
-            await loadGrupos();
+            await loadGrupos({ force: true });
             resetForm();
             setShowCreateGrupo(false);
 
@@ -162,7 +194,7 @@ export function useGrupos() {
                 semestre: Number(grupoForm.semestre)
             });
 
-            await loadGrupos();
+            await loadGrupos({ force: true });
             setShowEditGrupo(false);
             setSelectedGrupo(null);
             resetForm();
@@ -187,7 +219,7 @@ export function useGrupos() {
             setLoading(true);
             await grupoService.delete({ id: selectedGrupo.id });
 
-            await loadGrupos();
+            await loadGrupos({ force: true });
             setShowDeleteGrupo(false);
             setSelectedGrupo(null);
 
@@ -209,7 +241,7 @@ export function useGrupos() {
                 activo: !grupo.activo
             });
 
-            await loadGrupos();
+            await loadGrupos({ force: true });
             toast.warning(grupo.activo ? 'Grupo inactivado correctamente' : 'Grupo activado correctamente');
         } catch (error) {
             toast.error(`Error al cambiar estado del grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`);

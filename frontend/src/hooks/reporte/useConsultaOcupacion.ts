@@ -2,6 +2,10 @@ import { useState, useMemo, useEffect } from 'react';
 import type { EspacioOcupacion } from '../../models';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const CONSULTA_OCUPACION_SEDES_CACHE_KEY = 'reporte-consulta-ocupacion-sedes';
+const CONSULTA_OCUPACION_ESPACIOS_CACHE_KEY = 'reporte-consulta-ocupacion-espacios';
 
 const espaciosOcupacion: EspacioOcupacion[] = [
     {
@@ -84,8 +88,17 @@ export function useConsultaOcupacion() {
     useEffect(() => {
         const cargarSedes = async () => {
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const cachedSedes = getSessionCacheData<Sede[]>(CONSULTA_OCUPACION_SEDES_CACHE_KEY, activeToken);
+
+                if (cachedSedes) {
+                    setSedes(cachedSedes);
+                    return;
+                }
+
                 const response = await sedeService.listarSedes();
                 setSedes(response.sedes);
+                setSessionCacheData(CONSULTA_OCUPACION_SEDES_CACHE_KEY, activeToken, response.sedes);
             } catch (error) {
                 console.error('Error al cargar sedes:', error);
             }
@@ -98,6 +111,15 @@ export function useConsultaOcupacion() {
         const cargarEspacios = async () => {
             setCargando(true);
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const cacheKey = `${CONSULTA_OCUPACION_ESPACIOS_CACHE_KEY}-${sedeId}`;
+                const cachedEspacios = getSessionCacheData<EspacioOcupacion[]>(cacheKey, activeToken);
+
+                if (cachedEspacios) {
+                    setEspaciosReales(cachedEspacios);
+                    return;
+                }
+
                 const response = await espacioService.list();
                 // Filtrar por sede si se seleccionó una específica
                 const espaciosFiltradosPorSede = sedeId === 'todas'
@@ -128,6 +150,7 @@ export function useConsultaOcupacion() {
                 });
 
                 setEspaciosReales(espaciosConOcupacion);
+                setSessionCacheData(cacheKey, activeToken, espaciosConOcupacion);
             } catch (error) {
                 console.error('Error al cargar espacios:', error);
                 // Si falla, usar datos de muestra

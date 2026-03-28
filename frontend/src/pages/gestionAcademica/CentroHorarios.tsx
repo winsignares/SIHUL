@@ -228,7 +228,7 @@ export default function CentroHorarios() {
                   Limpiar Filtros
                 </Button>
                 <Button
-                  onClick={loadData}
+                  onClick={() => loadData()}
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
@@ -393,7 +393,7 @@ export default function CentroHorarios() {
                   Limpiar Filtros
                 </Button>
                 <Button
-                  onClick={loadData}
+                  onClick={() => loadData()}
                   className="flex-1 bg-orange-600 hover:bg-orange-700"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />

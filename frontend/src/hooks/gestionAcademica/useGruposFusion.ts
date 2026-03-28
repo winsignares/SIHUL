@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotification } from '../../share/notificationBanner';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const GRUPOS_FUSION_CACHE_KEY = 'gestion-academica-grupos-fusion';
 
 export interface Grupo {
     id: string;
@@ -51,6 +54,24 @@ export function useGruposFusion() {
         { id: 'lab1', nombre: 'Laboratorio 401', capacidad: 50 },
         { id: 'aula1', nombre: 'Aula Magna 501', capacidad: 100 }
     ];
+
+    useEffect(() => {
+        const activeToken = localStorage.getItem('auth_token');
+        const cachedData = getSessionCacheData<{
+            gruposFusionados: GrupoFusionado[];
+        }>(GRUPOS_FUSION_CACHE_KEY, activeToken);
+
+        if (cachedData?.gruposFusionados) {
+            setGruposFusionados(cachedData.gruposFusionados);
+        }
+    }, []);
+
+    useEffect(() => {
+        const activeToken = localStorage.getItem('auth_token');
+        setSessionCacheData(GRUPOS_FUSION_CACHE_KEY, activeToken, {
+            gruposFusionados
+        });
+    }, [gruposFusionados]);
 
     // Obtener asignaturas comunes entre grupos seleccionados
     const getAsignaturasComunes = () => {

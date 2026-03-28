@@ -3,6 +3,11 @@ import type { EspacioOcupacion } from '../../models/index';
 import { ocupacionSemanalService } from '../../services/reporte/ocupacionSemanalAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { toast } from 'sonner';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const OCUPACION_SEMANAL_PERIODO_CACHE_KEY = 'reporte-ocupacion-semanal-periodo';
+const OCUPACION_SEMANAL_TIPOS_CACHE_KEY = 'reporte-ocupacion-semanal-tipos';
+const OCUPACION_SEMANAL_DATA_CACHE_KEY = 'reporte-ocupacion-semanal-data';
 
 export function useOcupacionSemanal() {
   const [tipoEspacio, setTipoEspacio] = useState<string>('todos');
@@ -21,13 +26,30 @@ export function useOcupacionSemanal() {
   useEffect(() => {
     const cargarPeriodo = async () => {
       try {
+        const activeToken = localStorage.getItem('auth_token');
+        const cachedPeriodo = getSessionCacheData<{
+          periodoActual: string;
+          periodoInfo: { nombre: string; inicio: string; fin: string };
+        }>(OCUPACION_SEMANAL_PERIODO_CACHE_KEY, activeToken);
+
+        if (cachedPeriodo) {
+          setPeriodoActual(cachedPeriodo.periodoActual);
+          setPeriodoInfo(cachedPeriodo.periodoInfo);
+          return;
+        }
+
         const periodo = await periodoActivoService.getPeriodoActivo();
         if (periodo && periodo.nombre) {
           setPeriodoActual(periodo.nombre);
-          setPeriodoInfo({
+          const periodoInfoData = {
             nombre: periodo.nombre,
             inicio: periodo.fecha_inicio,
             fin: periodo.fecha_fin
+          };
+          setPeriodoInfo(periodoInfoData);
+          setSessionCacheData(OCUPACION_SEMANAL_PERIODO_CACHE_KEY, activeToken, {
+            periodoActual: periodo.nombre,
+            periodoInfo: periodoInfoData
           });
         }
       } catch (error) {
@@ -41,8 +63,20 @@ export function useOcupacionSemanal() {
   useEffect(() => {
     const cargarTipos = async () => {
       try {
+        const activeToken = localStorage.getItem('auth_token');
+        const cachedTipos = getSessionCacheData<Array<{ id: number; nombre: string }>>(
+          OCUPACION_SEMANAL_TIPOS_CACHE_KEY,
+          activeToken
+        );
+
+        if (cachedTipos) {
+          setTiposEspacioOptions(cachedTipos);
+          return;
+        }
+
         const tipos = await ocupacionSemanalService.getTiposEspacio();
         setTiposEspacioOptions(tipos);
+        setSessionCacheData(OCUPACION_SEMANAL_TIPOS_CACHE_KEY, activeToken, tipos);
       } catch (error) {
         console.error('Error loading tipos de espacio:', error);
       }
@@ -67,7 +101,24 @@ export function useOcupacionSemanal() {
     const cargarOcupacion = async () => {
       setLoading(true);
       try {
+        const activeToken = localStorage.getItem('auth_token');
         const tipoId = obtenerTipoIdSeleccionado();
+        const dataCacheKey = `${OCUPACION_SEMANAL_DATA_CACHE_KEY}-${tipoEspacio}-${periodoInfo.nombre || 'sin-periodo'}`;
+        const cachedData = getSessionCacheData<{
+          espaciosOcupacion: EspacioOcupacion[];
+          semanaInfo: { inicio: string; fin: string };
+          ultimaActualizacion: string;
+        }>(dataCacheKey, activeToken);
+
+        if (cachedData) {
+          setEspaciosOcupacion(cachedData.espaciosOcupacion);
+          setSemanaInfo(cachedData.semanaInfo);
+          setUltimaActualizacion(new Date(cachedData.ultimaActualizacion));
+          const validacion = validarDatosPeriodo();
+          setValidacionPeriodo(validacion);
+          return;
+        }
+
         const response = await ocupacionSemanalService.getOcupacionSemanal(tipoId, 0);
         
         // Validar que los datos corresponden al período actual
@@ -96,7 +147,16 @@ export function useOcupacionSemanal() {
           inicio: response.semana_inicio,
           fin: response.semana_fin
         });
-        setUltimaActualizacion(new Date());
+        const now = new Date();
+        setUltimaActualizacion(now);
+        setSessionCacheData(dataCacheKey, activeToken, {
+          espaciosOcupacion: ocupacionMapeada,
+          semanaInfo: {
+            inicio: response.semana_inicio,
+            fin: response.semana_fin
+          },
+          ultimaActualizacion: now.toISOString()
+        });
       } catch (error) {
         console.error('Error loading ocupación semanal:', error);
         toast.error('Error cargando datos de ocupación semanal');

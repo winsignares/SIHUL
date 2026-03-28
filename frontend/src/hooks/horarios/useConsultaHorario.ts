@@ -3,6 +3,7 @@ import type { HorarioDocente, HorarioPrograma } from '../../models';
 import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 export interface Docente {
     id: number | string;
@@ -11,6 +12,8 @@ export interface Docente {
 }
 
 const PERIODO_DEFAULT = '2025-2';
+const CONSULTA_HORARIO_PERIODO_CACHE_KEY = 'horarios-consulta-periodo';
+const CONSULTA_HORARIO_DATA_CACHE_KEY = 'horarios-consulta-data';
 
 export function useConsultaHorario() {
     const [tipoConsulta, setTipoConsulta] = useState('horarios-programa');
@@ -26,97 +29,141 @@ export function useConsultaHorario() {
     const [docenteSeleccionado, setDocenteSeleccionado] = useState<string | null>(null);
     const [showHorarioDocenteModal, setShowHorarioDocenteModal] = useState(false);
 
-    // Cargar período académico activo
-    useEffect(() => {
-        const cargarPeriodo = async () => {
+    const cargarPeriodo = async ({ force = false }: { force?: boolean } = {}) => {
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ periodoActual: string }>(CONSULTA_HORARIO_PERIODO_CACHE_KEY, activeToken);
+
+            if (cachedData?.periodoActual) {
+                setPeriodoActual(cachedData.periodoActual);
+                return;
+            }
+
+            const periodo = await periodoActivoService.getPeriodoActivo();
+            if (periodo && periodo.nombre) {
+                setPeriodoActual(periodo.nombre);
+                setSessionCacheData(CONSULTA_HORARIO_PERIODO_CACHE_KEY, activeToken, {
+                    periodoActual: periodo.nombre
+                });
+            }
+        } catch (error) {
+            console.error('Error al cargar período activo:', error);
+        }
+    };
+
+    const cargarHorarios = async ({ force = false }: { force?: boolean } = {}) => {
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    horariosPrograma: HorarioPrograma[];
+                    programas: string[];
+                    horariosDocenteData: HorarioDocente[];
+                    docentes: Docente[];
+                }>(CONSULTA_HORARIO_DATA_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setHorariosPrograma(cachedData.horariosPrograma);
+                setProgramas(cachedData.programas);
+                setHorariosDocenteData(cachedData.horariosDocenteData);
+                setDocentes(cachedData.docentes);
+                return;
+            }
+
+            // Cargar horarios extendidos
+            const horariosResponse = await horarioService.listExtendidos();
+            const horariosExtendidos = horariosResponse.horarios;
+
+            // Cargar programas
+            const programasResponse = await programaService.listarProgramas();
+            const nombresProgramas = ['Todos', ...programasResponse.programas.map(p => p.nombre)];
+            setProgramas(nombresProgramas);
+
+            // Transformar horarios a formato HorarioPrograma
+            const horariosTransformados: HorarioPrograma[] = horariosExtendidos.map(h => ({
+                grupo: h.grupo_nombre,
+                dia: h.dia_semana.charAt(0).toUpperCase() + h.dia_semana.slice(1).toLowerCase(),
+                hora: `${h.hora_inicio}-${h.hora_fin}`,
+                asignatura: h.asignatura_nombre,
+                docente: h.docente_nombre,
+                espacio: h.espacio_nombre,
+                programa: h.programa_nombre,
+                semestre: h.semestre
+            }));
+
+            setHorariosPrograma(horariosTransformados);
+
+            // Transformar horarios a formato HorarioDocente
+            const horariosDocenteTransformados: HorarioDocente[] = horariosExtendidos.map(h => ({
+                dia: h.dia_semana.charAt(0).toUpperCase() + h.dia_semana.slice(1).toLowerCase(),
+                hora: `${h.hora_inicio}-${h.hora_fin}`,
+                asignatura: h.asignatura_nombre,
+                grupo: h.grupo_nombre,
+                espacio: h.espacio_nombre,
+                docente: h.docente_nombre,
+                docente_id: h.docente_id,
+                facultad: h.programa_nombre
+            }));
+
+            setHorariosDocenteData(horariosDocenteTransformados);
+
+            let docentesFinales: Docente[] = [];
+            // Cargar docentes completos desde el endpoint
             try {
-                const periodo = await periodoActivoService.getPeriodoActivo();
-                if (periodo && periodo.nombre) {
-                    setPeriodoActual(periodo.nombre);
+                const apiUrl = import.meta.env.VITE_API_URL;
+                const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
+                if (docentesResponse.ok) {
+                    const docentesData = await docentesResponse.json();
+                    docentesFinales = [
+                        { id: 'todos', nombre: 'Todos', correo: '' },
+                        ...docentesData.usuarios.map((u: any) => ({
+                            id: u.id,
+                            nombre: u.nombre,
+                            correo: u.correo
+                        }))
+                    ];
+                    setDocentes(docentesFinales);
                 }
             } catch (error) {
-                console.error('Error al cargar período activo:', error);
+                console.error('Error al cargar docentes:', error);
+                // Fallback: usar nombres únicos de horarios
+                docentesFinales = [
+                    { id: 'todos', nombre: 'Todos', correo: '' },
+                    ...Array.from(new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))).map((nombre, idx) => ({
+                        id: `docente-${idx}`,
+                        nombre,
+                        correo: ''
+                    }))
+                ];
+                setDocentes(docentesFinales);
             }
-        };
 
+            if (docentesFinales.length === 0) {
+                docentesFinales = [{ id: 'todos', nombre: 'Todos', correo: '' }];
+                setDocentes(docentesFinales);
+            }
+
+            setSessionCacheData(CONSULTA_HORARIO_DATA_CACHE_KEY, activeToken, {
+                horariosPrograma: horariosTransformados,
+                programas: nombresProgramas,
+                horariosDocenteData: horariosDocenteTransformados,
+                docentes: docentesFinales
+            });
+        } catch (error) {
+            console.error('Error al cargar horarios:', error);
+        }
+    };
+
+    // Cargar período académico activo
+    useEffect(() => {
         cargarPeriodo();
     }, []);
 
     // Cargar horarios del backend cuando el componente monta
     useEffect(() => {
-        const cargarHorarios = async () => {
-            try {
-                // Cargar horarios extendidos
-                const horariosResponse = await horarioService.listExtendidos();
-                const horariosExtendidos = horariosResponse.horarios;
-
-                // Cargar programas
-                const programasResponse = await programaService.listarProgramas();
-                const nombresProgramas = ['Todos', ...programasResponse.programas.map(p => p.nombre)];
-                setProgramas(nombresProgramas);
-
-                // Transformar horarios a formato HorarioPrograma
-                const horariosTransformados: HorarioPrograma[] = horariosExtendidos.map(h => ({
-                    grupo: h.grupo_nombre,
-                    dia: h.dia_semana.charAt(0).toUpperCase() + h.dia_semana.slice(1).toLowerCase(),
-                    hora: `${h.hora_inicio}-${h.hora_fin}`,
-                    asignatura: h.asignatura_nombre,
-                    docente: h.docente_nombre,
-                    espacio: h.espacio_nombre,
-                    programa: h.programa_nombre,
-                    semestre: h.semestre
-                }));
-
-                setHorariosPrograma(horariosTransformados);
-
-                // Transformar horarios a formato HorarioDocente
-                const horariosDocenteTransformados: HorarioDocente[] = horariosExtendidos.map(h => ({
-                    dia: h.dia_semana.charAt(0).toUpperCase() + h.dia_semana.slice(1).toLowerCase(),
-                    hora: `${h.hora_inicio}-${h.hora_fin}`,
-                    asignatura: h.asignatura_nombre,
-                    grupo: h.grupo_nombre,
-                    espacio: h.espacio_nombre,
-                    docente: h.docente_nombre,
-                    docente_id: h.docente_id,
-                    facultad: h.programa_nombre
-                }));
-
-                setHorariosDocenteData(horariosDocenteTransformados);
-
-                // Cargar docentes completos desde el endpoint
-                try {
-                    const apiUrl = import.meta.env.VITE_API_URL;
-                    const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
-                    if (docentesResponse.ok) {
-                        const docentesData = await docentesResponse.json();
-                        const docentesList: Docente[] = [
-                            { id: 'todos', nombre: 'Todos', correo: '' },
-                            ...docentesData.usuarios.map((u: any) => ({
-                                id: u.id,
-                                nombre: u.nombre,
-                                correo: u.correo
-                            }))
-                        ];
-                        setDocentes(docentesList);
-                    }
-                } catch (error) {
-                    console.error('Error al cargar docentes:', error);
-                    // Fallback: usar nombres únicos de horarios
-                    const docentesUnicos: Docente[] = [
-                        { id: 'todos', nombre: 'Todos', correo: '' },
-                        ...Array.from(new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))).map((nombre, idx) => ({
-                            id: `docente-${idx}`,
-                            nombre,
-                            correo: ''
-                        }))
-                    ];
-                    setDocentes(docentesUnicos);
-                }
-            } catch (error) {
-                console.error('Error al cargar horarios:', error);
-            }
-        };
-
         cargarHorarios();
     }, []);
 

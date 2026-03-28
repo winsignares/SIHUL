@@ -5,6 +5,9 @@ import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { tipoEspacioService, type TipoEspacio } from '../../services/espacios/tipoEspacioAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
 
 export function useEspaciosFisicos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -54,9 +57,27 @@ export function useEspaciosFisicos() {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         setLoading(true);
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    espacios: EspacioFisico[];
+                    sedes: Sede[];
+                    tiposEspacio: TipoEspacio[];
+                    recursosDisponibles: Recurso[];
+                }>(ESPACIOS_FISICOS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setEspacios(cachedData.espacios);
+                setSedes(cachedData.sedes);
+                setTiposEspacio(cachedData.tiposEspacio);
+                setRecursosDisponibles(cachedData.recursosDisponibles);
+                return;
+            }
+
             const [espaciosRes, sedesRes, tiposRes, recursosRes] = await Promise.all([
                 espacioService.list(),
                 sedeService.listarSedes(),
@@ -73,6 +94,12 @@ export function useEspaciosFisicos() {
             setSedes(sedesData);
             setTiposEspacio(tiposData);
             setRecursosDisponibles(recursosData);
+            setSessionCacheData(ESPACIOS_FISICOS_CACHE_KEY, activeToken, {
+                espacios: espaciosData,
+                sedes: sedesData,
+                tiposEspacio: tiposData,
+                recursosDisponibles: recursosData
+            });
         } catch (error) {
             console.error('Error loading data:', error);
             toast.error('Error al cargar los datos');
@@ -81,11 +108,22 @@ export function useEspaciosFisicos() {
         }
     };
 
-    const loadEspacios = async () => {
+    const loadEspacios = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedEspacios = force
+                ? null
+                : getSessionCacheData<EspacioFisico[]>(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`, activeToken);
+
+            if (cachedEspacios) {
+                setEspacios(cachedEspacios);
+                return;
+            }
+
             const response = await espacioService.list();
             const data = (response as any).espacios || (Array.isArray(response) ? response : []);
             setEspacios(data);
+            setSessionCacheData(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`, activeToken, data);
         } catch (error) {
             console.error('Error loading espacios:', error);
         }
@@ -136,7 +174,7 @@ export function useEspaciosFisicos() {
             });
 
             // Actualizar lista
-            await loadEspacios();
+            await loadData({ force: true });
 
             // Limpiar y cerrar
             resetForm();
@@ -173,7 +211,7 @@ export function useEspaciosFisicos() {
                 descripcion: descripcion || undefined
             });
 
-            await loadData();
+            await loadData({ force: true });
 
             setTipoEspacioForm({ nombre: '', descripcion: '' });
             setShowCreateTipoDialog(false);
@@ -265,7 +303,7 @@ export function useEspaciosFisicos() {
             });
 
             // Actualizar lista
-            await loadEspacios();
+            await loadData({ force: true });
 
             // Cerrar y limpiar
             setShowEditDialog(false);
@@ -294,7 +332,7 @@ export function useEspaciosFisicos() {
             await espacioService.delete({ id: selectedEspacio.id! });
 
             // Actualizar lista
-            await loadEspacios();
+            await loadData({ force: true });
 
             // Cerrar
             setShowDeleteDialog(false);

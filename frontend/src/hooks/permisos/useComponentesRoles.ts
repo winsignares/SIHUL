@@ -11,6 +11,9 @@ import type {
 } from '../../services/componentes/componentesAPI';
 import { rolService } from '../../services/users/authService';
 import type { Rol } from '../../services/users/authService';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const COMPONENTES_ROLES_CACHE_KEY = 'permisos-componentes-roles';
 
 interface UseComponentesRolesReturn {
   // Estados
@@ -33,7 +36,7 @@ interface UseComponentesRolesReturn {
   rolesFiltrados: Rol[];
   
   // Carga de datos
-  cargarDatos: () => Promise<void>;
+  cargarDatos: (options?: { force?: boolean }) => Promise<void>;
   
   // CRUD Asignaciones (ComponenteRol)
   crearAsignacion: (payload: CreateComponenteRolPayload) => Promise<void>;
@@ -106,21 +109,46 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
   /**
    * Cargar todos los datos necesarios
    */
-  const cargarDatos = async () => {
+  const cargarDatos = async ({ force = false }: { force?: boolean } = {}) => {
     setLoading(true);
     setError(null);
     
     try {
+      const activeToken = localStorage.getItem('auth_token');
+      const cachedData = force
+        ? null
+        : getSessionCacheData<{
+            componentes: Componente[];
+            roles: Rol[];
+            asignaciones: ComponenteRol[];
+          }>(COMPONENTES_ROLES_CACHE_KEY, activeToken);
+
+      if (cachedData) {
+        setComponentes(cachedData.componentes);
+        setRoles(cachedData.roles);
+        setAsignaciones(cachedData.asignaciones);
+        return;
+      }
+
       // Cargar en paralelo componentes, roles y asignaciones
       const [componentesRes, rolesRes, asignacionesRes] = await Promise.all([
         componenteService.list(),
         rolService.listarRoles(),
         componenteRolService.list()
       ]);
-      
-      setComponentes(componentesRes.componentes || []);
-      setRoles(rolesRes.roles || []);
-      setAsignaciones(asignacionesRes.componente_roles || []);
+
+      const componentesData = componentesRes.componentes || [];
+      const rolesData = rolesRes.roles || [];
+      const asignacionesData = asignacionesRes.componente_roles || [];
+
+      setComponentes(componentesData);
+      setRoles(rolesData);
+      setAsignaciones(asignacionesData);
+      setSessionCacheData(COMPONENTES_ROLES_CACHE_KEY, activeToken, {
+        componentes: componentesData,
+        roles: rolesData,
+        asignaciones: asignacionesData
+      });
     } catch (err) {
       console.error('Error al cargar datos:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar datos');
@@ -138,7 +166,7 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     
     try {
       await componenteRolService.create(payload);
-      await cargarDatos();
+      await cargarDatos({ force: true });
     } catch (err) {
       console.error('Error al crear asignación:', err);
       setError(err instanceof Error ? err.message : 'Error al crear asignación');
@@ -157,7 +185,7 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     
     try {
       await componenteRolService.update(payload);
-      await cargarDatos();
+      await cargarDatos({ force: true });
     } catch (err) {
       console.error('Error al actualizar asignación:', err);
       setError(err instanceof Error ? err.message : 'Error al actualizar asignación');
@@ -176,7 +204,7 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     
     try {
       await componenteRolService.delete({ id });
-      await cargarDatos();
+      await cargarDatos({ force: true });
     } catch (err) {
       console.error('Error al eliminar asignación:', err);
       setError(err instanceof Error ? err.message : 'Error al eliminar asignación');

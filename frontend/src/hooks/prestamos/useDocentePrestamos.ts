@@ -8,6 +8,10 @@ import { prestamosPublicAPI, type EspacioDisponibleAPI } from '../../services/pr
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 import type { Prestamo } from '../../models/index';
 import type { Sede } from '../../services/sedes/sedeAPI';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const DOCENTE_PRESTAMOS_INITIAL_CACHE_KEY = 'prestamos-docente-initial-data';
+const DOCENTE_PRESTAMOS_LIST_CACHE_KEY = 'prestamos-docente-list';
 
 // Helper function to map backend PrestamoEspacio to UI Prestamo model
 const mapPrestamoEspacioToPrestamo = (prestamo: PrestamoEspacio): Prestamo => {
@@ -72,8 +76,23 @@ export function useDocentePrestamos() {
     });
 
     // Fetch initial data (tipos de actividad, recursos, sedes)
-    const fetchInitialData = async () => {
+    const fetchInitialData = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedInitialData = force
+                ? null
+                : getSessionCacheData<{ tiposActividad: TipoActividad[]; recursosDisponibles: Recurso[]; sedes: Sede[] }>(
+                    DOCENTE_PRESTAMOS_INITIAL_CACHE_KEY,
+                    activeToken
+                );
+
+            if (cachedInitialData) {
+                setTiposActividad(cachedInitialData.tiposActividad);
+                setRecursosDisponibles(cachedInitialData.recursosDisponibles);
+                setSedes(cachedInitialData.sedes);
+                return;
+            }
+
             const [tiposResp, recursosResp, sedesResp] = await Promise.all([
                 tipoActividadService.listarTiposActividad(),
                 recursoService.listarRecursos(),
@@ -83,6 +102,11 @@ export function useDocentePrestamos() {
             setTiposActividad(tiposResp.tipos_actividad);
             setRecursosDisponibles(recursosResp.recursos);
             setSedes(sedesResp.sedes);
+            setSessionCacheData(DOCENTE_PRESTAMOS_INITIAL_CACHE_KEY, activeToken, {
+                tiposActividad: tiposResp.tipos_actividad,
+                recursosDisponibles: recursosResp.recursos,
+                sedes: sedesResp.sedes
+            });
         } catch (err) {
             console.error('Error fetching initial data:', err);
             setError('Error al cargar datos iniciales');
@@ -114,16 +138,28 @@ export function useDocentePrestamos() {
     };
 
     // Fetch prestamos when component mounts or user changes
-    const fetchPrestamos = async () => {
+    const fetchPrestamos = async ({ force = false }: { force?: boolean } = {}) => {
         if (!user?.id) return;
 
         setLoading(true);
         setError(null);
 
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cacheKey = `${DOCENTE_PRESTAMOS_LIST_CACHE_KEY}-${user.id}`;
+            const cachedPrestamos = force
+                ? null
+                : getSessionCacheData<Prestamo[]>(cacheKey, activeToken);
+
+            if (cachedPrestamos) {
+                setPrestamos(cachedPrestamos);
+                return;
+            }
+
             const response = await prestamoService.listarPrestamosPorUsuario(user.id);
             const mappedPrestamos = response.prestamos.map(mapPrestamoEspacioToPrestamo);
             setPrestamos(mappedPrestamos);
+            setSessionCacheData(cacheKey, activeToken, mappedPrestamos);
         } catch (err) {
             console.error('Error fetching prestamos:', err);
             setError('Error al cargar los préstamos');
@@ -249,7 +285,7 @@ export function useDocentePrestamos() {
             setDialogOpen(false);
 
             // Refresh prestamos list
-            await fetchPrestamos();
+            await fetchPrestamos({ force: true });
 
             // TODO: Show success notification
             console.log('Solicitud enviada exitosamente');
@@ -327,7 +363,7 @@ export function useDocentePrestamos() {
             });
 
             // Recargar datos
-            await fetchPrestamos();
+            await fetchPrestamos({ force: true });
 
             setModoEdicion(false);
             setPrestamoEditando(null);
@@ -350,7 +386,7 @@ export function useDocentePrestamos() {
             await prestamoService.eliminarPrestamo(parseInt(id));
             
             // Recargar datos
-            await fetchPrestamos();
+            await fetchPrestamos({ force: true });
 
             console.log('✅ Préstamo eliminado correctamente');
         } catch (err) {
@@ -421,7 +457,7 @@ export function useDocentePrestamos() {
         estadisticas,
         loading,
         error,
-        refetch: fetchPrestamos,
+        refetch: () => fetchPrestamos({ force: true }),
         // Funciones de edición
         modoEdicion,
         prestamoEditando,

@@ -6,6 +6,9 @@ import { AlertCircle, DoorOpen, Users, Clock, Lock, XCircle } from 'lucide-react
 import { toast } from 'sonner';
 import { espacioService } from '../../services/espacios/espaciosAPI';
 import { espacioRecursoService, type EspacioRecurso } from '../../services/recursos/recursoAPI';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const SUPERVISOR_SALON_HOME_CACHE_KEY = 'espacios-supervisor-salon-home';
 
 interface ResultadoAccion {
     ok: boolean;
@@ -60,7 +63,23 @@ export function useSupervisorSalonHome() {
         cargarDatos();
     }, []);
 
-    const cargarDatos = async () => {
+    const cargarDatos = async ({ force = false }: { force?: boolean } = {}) => {
+        const activeToken = localStorage.getItem('auth_token');
+        const cachedData = force
+            ? null
+            : getSessionCacheData<{
+                espacios: EspacioFisico[];
+                horarios: HorarioAcademico[];
+                tiposEspacioBackend: string[];
+            }>(SUPERVISOR_SALON_HOME_CACHE_KEY, activeToken);
+
+        if (cachedData) {
+            setEspacios(cachedData.espacios);
+            setHorarios(cachedData.horarios);
+            setTiposEspacioBackend(cachedData.tiposEspacioBackend);
+            return;
+        }
+
         const espaciosDB = db.getEspacios();
         const horariosDB = db.getHorarios();
         setEspacios(espaciosDB);
@@ -68,10 +87,21 @@ export function useSupervisorSalonHome() {
 
         try {
             const response = await espacioService.listTipos();
-            setTiposEspacioBackend((response.tipos_espacio || []).map((tipo) => tipo.nombre));
+            const tipos = (response.tipos_espacio || []).map((tipo) => tipo.nombre);
+            setTiposEspacioBackend(tipos);
+            setSessionCacheData(SUPERVISOR_SALON_HOME_CACHE_KEY, activeToken, {
+                espacios: espaciosDB,
+                horarios: horariosDB,
+                tiposEspacioBackend: tipos
+            });
         } catch (error) {
             console.error('Error cargando tipos de espacio desde API:', error);
             setTiposEspacioBackend([]);
+            setSessionCacheData(SUPERVISOR_SALON_HOME_CACHE_KEY, activeToken, {
+                espacios: espaciosDB,
+                horarios: horariosDB,
+                tiposEspacioBackend: []
+            });
         }
     };
 
@@ -265,6 +295,7 @@ export function useSupervisorSalonHome() {
                 horaApertura: obtenerHoraActual()
             });
             setEstadosSalones(nuevoEstado);
+            await cargarDatos({ force: true });
         } catch (error) {
             console.error('Error al abrir salon:', error);
         }
@@ -375,6 +406,7 @@ export function useSupervisorSalonHome() {
             setEstadosSalones(nuevoEstado);
 
             setModalCierreAbierto(false);
+            await cargarDatos({ force: true });
             await cargarRecursosDeSalon(salonParaCerrar.id);
         } catch (error: any) {
             if (error?.status === 400) {

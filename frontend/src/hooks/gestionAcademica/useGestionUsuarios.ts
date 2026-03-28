@@ -3,6 +3,14 @@ import { useNotification } from '../../share/notificationBanner';
 import { apiClient } from '../../core/apiClient';
 import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
 import { espacioService, type TipoEspacio } from '../../services/espacios/espaciosAPI';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
+const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles';
+const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
+const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios';
+const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios';
+const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
 
 export function useGestionUsuarios() {
     const { notification, showNotification } = useNotification();
@@ -69,22 +77,31 @@ export function useGestionUsuarios() {
     const [tiposEspacioPermitidosEdit, setTiposEspacioPermitidosEdit] = useState<number[]>([]);
     const [asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit] = useState(false);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         await Promise.all([
-            loadUsuarios(),
-            loadRoles(),
-            loadFacultades(),
-            loadEspacios(),
-            loadSedes(),
-            loadTiposEspacio()
+            loadUsuarios({ force }),
+            loadRoles({ force }),
+            loadFacultades({ force }),
+            loadEspacios({ force }),
+            loadSedes({ force }),
+            loadTiposEspacio({ force })
         ]);
     };
 
     // Cargar usuarios desde backend
-    const loadUsuarios = async () => {
+    const loadUsuarios = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedUsuarios = force ? null : getSessionCacheData<Usuario[]>(GESTION_USUARIOS_CACHE_KEY, activeToken);
+
+            if (cachedUsuarios) {
+                setUsuarios(cachedUsuarios);
+                return;
+            }
+
             const response = await userService.listarUsuarios();
             setUsuarios(response.usuarios || []);
+            setSessionCacheData(GESTION_USUARIOS_CACHE_KEY, activeToken, response.usuarios || []);
         } catch (error) {
             console.error('Error cargando usuarios:', error);
             showNotification('Error al cargar usuarios', 'error');
@@ -92,28 +109,58 @@ export function useGestionUsuarios() {
     };
 
     // Cargar roles desde backend
-    const loadRoles = async () => {
+    const loadRoles = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedRoles = force ? null : getSessionCacheData<Rol[]>(GESTION_ROLES_CACHE_KEY, activeToken);
+
+            if (cachedRoles) {
+                setRolesDisponibles(cachedRoles);
+                return;
+            }
+
             const response = await rolService.listarRoles();
             setRolesDisponibles(response.roles || []);
+            setSessionCacheData(GESTION_ROLES_CACHE_KEY, activeToken, response.roles || []);
         } catch (error) {
             console.error('Error cargando roles:', error);
         }
     };
 
     // Cargar facultades desde backend
-    const loadFacultades = async () => {
+    const loadFacultades = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedFacultades = force
+                ? null
+                : getSessionCacheData<Array<{ id: number, nombre: string }>>(GESTION_FACULTADES_CACHE_KEY, activeToken);
+
+            if (cachedFacultades) {
+                setFacultadesDisponibles(cachedFacultades);
+                return;
+            }
+
             const response = await apiClient.get<{ facultades: Array<{ id: number, nombre: string }> }>('/facultades/list/');
             setFacultadesDisponibles(response.facultades || []);
+            setSessionCacheData(GESTION_FACULTADES_CACHE_KEY, activeToken, response.facultades || []);
         } catch (error) {
             console.error('Error cargando facultades:', error);
         }
     };
 
     // Cargar espacios desde backend
-    const loadEspacios = async () => {
+    const loadEspacios = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedEspacios = force
+                ? null
+                : getSessionCacheData<Array<{ id: number, nombre: string, tipo_id: number }>>(GESTION_ESPACIOS_CACHE_KEY, activeToken);
+
+            if (cachedEspacios) {
+                setEspaciosDisponibles(cachedEspacios);
+                return;
+            }
+
             const response = await espacioService.list();
             const espacios = (response.espacios || []).map((espacio) => ({
                 id: espacio.id as number,
@@ -121,26 +168,49 @@ export function useGestionUsuarios() {
                 tipo_id: espacio.tipo_id
             }));
             setEspaciosDisponibles(espacios);
+            setSessionCacheData(GESTION_ESPACIOS_CACHE_KEY, activeToken, espacios);
         } catch (error) {
             console.error('Error cargando espacios:', error);
         }
     };
 
     // Cargar tipos de espacio desde backend
-    const loadTiposEspacio = async () => {
+    const loadTiposEspacio = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedTiposEspacio = force
+                ? null
+                : getSessionCacheData<TipoEspacio[]>(GESTION_TIPOS_ESPACIO_CACHE_KEY, activeToken);
+
+            if (cachedTiposEspacio) {
+                setTiposEspacioDisponibles(cachedTiposEspacio);
+                return;
+            }
+
             const response = await espacioService.listTipos();
             setTiposEspacioDisponibles(response.tipos_espacio || []);
+            setSessionCacheData(GESTION_TIPOS_ESPACIO_CACHE_KEY, activeToken, response.tipos_espacio || []);
         } catch (error) {
             console.error('Error cargando tipos de espacio:', error);
         }
     };
 
     // Cargar sedes desde backend
-    const loadSedes = async () => {
+    const loadSedes = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedSedes = force
+                ? null
+                : getSessionCacheData<Array<{ id: number, nombre: string }>>(GESTION_SEDES_CACHE_KEY, activeToken);
+
+            if (cachedSedes) {
+                setSedesDisponibles(cachedSedes);
+                return;
+            }
+
             const response = await apiClient.get<{ sedes: Array<{ id: number, nombre: string }> }>('/sedes/list/');
             setSedesDisponibles(response.sedes || []);
+            setSessionCacheData(GESTION_SEDES_CACHE_KEY, activeToken, response.sedes || []);
         } catch (error) {
             console.error('Error cargando sedes:', error);
         }
@@ -277,7 +347,7 @@ export function useGestionUsuarios() {
             showNotification('Usuario creado exitosamente', 'success');
             setDialogOpen(false);
             resetNuevoUsuario();
-            loadUsuarios();
+            loadUsuarios({ force: true });
         } catch (error: any) {
             console.error('Error creando usuario:', error);
             showNotification(error.message || 'Error al crear usuario', 'error');
@@ -318,7 +388,7 @@ export function useGestionUsuarios() {
             showNotification('Usuario actualizado exitosamente', 'success');
             setEditDialogOpen(false);
             resetEditStates();
-            loadUsuarios();
+            loadUsuarios({ force: true });
         } catch (error: any) {
             console.error('Error actualizando usuario:', error);
             showNotification(error.message || 'Error al actualizar usuario', 'error');
@@ -333,7 +403,7 @@ export function useGestionUsuarios() {
 
             await userService.actualizarUsuario({ id, activo: !usuario.activo });
             showNotification(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'} exitosamente`, 'success');
-            loadUsuarios();
+            loadUsuarios({ force: true });
         } catch (error) {
             console.error('Error cambiando estado:', error);
             showNotification('Error al cambiar estado del usuario', 'error');
@@ -349,7 +419,7 @@ export function useGestionUsuarios() {
             showNotification('Usuario eliminado exitosamente', 'success');
             setDeleteDialogOpen(false);
             setUserToDelete(null);
-            loadUsuarios();
+            loadUsuarios({ force: true });
         } catch (error) {
             console.error('Error eliminando usuario:', error);
             showNotification('Error al eliminar usuario', 'error');

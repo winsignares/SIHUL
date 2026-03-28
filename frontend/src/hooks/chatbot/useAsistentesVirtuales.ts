@@ -9,6 +9,9 @@ import {
 import type { Asistente, Mensaje } from '../../models/index';
 import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
 import { useAuth } from '../../context/AuthContext';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
 
 // Mapeo de nombres de iconos a componentes de icono
 const iconMap: Record<string, any> = {
@@ -123,6 +126,25 @@ export function useAsistentesVirtuales() {
                 const mensajesGuardados = cargarMensajesDesdeStorage();
                 setMensajes(mensajesGuardados);
 
+                const activeToken = localStorage.getItem('auth_token');
+                const userScope = `${user?.id || 'guest'}-${user?.rol || 'public'}`;
+                const cacheKey = `${ASISTENTES_VIRTUALES_CACHE_KEY}-${userScope}`;
+                const cachedData = getSessionCacheData<{
+                    asistentes: Asistente[];
+                    asistenteActivoId?: string;
+                }>(cacheKey, activeToken);
+
+                if (cachedData?.asistentes?.length) {
+                    setAsistentes(cachedData.asistentes);
+                    const cachedActive = cachedData.asistenteActivoId
+                        ? cachedData.asistentes.find((a) => a.id === cachedData.asistenteActivoId)
+                        : cachedData.asistentes[0];
+                    if (cachedActive) {
+                        setAsistenteActivo(cachedActive);
+                    }
+                    return;
+                }
+
                 // Usar endpoint público si no hay usuario autenticado
                 const response = user?.id 
                     ? await chatbotAPI.listarAgentes()
@@ -148,6 +170,11 @@ export function useAsistentesVirtuales() {
                     // Si hay mensajes guardados, seleccionar el primer agente pero no sobrescribir mensajes
                     setAsistenteActivo(agentesUI[0]);
                 }
+
+                setSessionCacheData(cacheKey, activeToken, {
+                    asistentes: agentesUI,
+                    asistenteActivoId: agentesUI[0]?.id
+                });
             } catch (error) {
                 console.error('Error al cargar agentes:', error);
             } finally {

@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { rolService } from '../../services/users/authService';
 import type { Rol } from '../../services/users/authService';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const GESTION_ROLES_CACHE_KEY = 'permisos-gestion-roles';
 
 interface UseGestionRolesReturn {
   roles: Rol[];
@@ -12,7 +15,7 @@ interface UseGestionRolesReturn {
   cambiarPagina: (pagina: number) => void;
   terminoBusqueda: string;
   setTerminoBusqueda: (termino: string) => void;
-  cargarRoles: () => Promise<void>;
+  cargarRoles: (options?: { force?: boolean }) => Promise<void>;
   crearRol: (rol: Omit<Rol, 'id'>) => Promise<void>;
   actualizarRol: (rol: Rol) => Promise<void>;
   eliminarRol: (id: number) => Promise<void>;
@@ -49,12 +52,26 @@ export function useGestionRoles(): UseGestionRolesReturn {
     if (pagina >= 1 && pagina <= totalPaginas) setPaginaActual(pagina);
   };
 
-  const cargarRoles = async () => {
+  const cargarRoles = async ({ force = false }: { force?: boolean } = {}) => {
     setLoading(true);
     setError(null);
     try {
+      const activeToken = localStorage.getItem('auth_token');
+      const cachedData = force
+        ? null
+        : getSessionCacheData<{ roles: Rol[] }>(GESTION_ROLES_CACHE_KEY, activeToken);
+
+      if (cachedData) {
+        setRoles(cachedData.roles);
+        return;
+      }
+
       const res = await rolService.listarRoles();
-      setRoles(res.roles || []);
+      const rolesData = res.roles || [];
+      setRoles(rolesData);
+      setSessionCacheData(GESTION_ROLES_CACHE_KEY, activeToken, {
+        roles: rolesData
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar roles');
     } finally {
@@ -67,7 +84,7 @@ export function useGestionRoles(): UseGestionRolesReturn {
     setError(null);
     try {
       await rolService.crearRol(rol);
-      await cargarRoles();
+      await cargarRoles({ force: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear rol');
       throw err;
@@ -81,7 +98,7 @@ export function useGestionRoles(): UseGestionRolesReturn {
     setError(null);
     try {
       await rolService.actualizarRol(rol);
-      await cargarRoles();
+      await cargarRoles({ force: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al actualizar rol');
       throw err;
@@ -95,7 +112,7 @@ export function useGestionRoles(): UseGestionRolesReturn {
     setError(null);
     try {
       await rolService.eliminarRol(id);
-      await cargarRoles();
+      await cargarRoles({ force: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar rol');
       throw err;

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { useNotification } from '../../share/notificationBanner';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const PERIODOS_ACADEMICOS_CACHE_KEY = 'gestion-academica-periodos';
 
 export interface PeriodoUI {
     id?: number;
@@ -33,9 +36,19 @@ export function usePeriodosAcademicos() {
     const [periodoAEditar, setPeriodoAEditar] = useState<PeriodoUI | null>(null);
     const [periodoAEliminar, setPeriodoAEliminar] = useState<PeriodoUI | null>(null);
 
-    const loadPeriodos = async () => {
+    const loadPeriodos = async ({ force = false }: { force?: boolean } = {}) => {
         try {
             setLoading(true);
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ periodos: PeriodoUI[] }>(PERIODOS_ACADEMICOS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setPeriodos(cachedData.periodos);
+                return;
+            }
+
             const response = await periodoService.listarPeriodos();
             
             // Mapear de API a UI
@@ -85,6 +98,9 @@ export function usePeriodosAcademicos() {
             });
             
             setPeriodos(periodosUI);
+            setSessionCacheData(PERIODOS_ACADEMICOS_CACHE_KEY, activeToken, {
+                periodos: periodosUI
+            });
         } catch (error) {
             showNotification(
                 `Error al cargar periodos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -192,7 +208,7 @@ export function usePeriodosAcademicos() {
                 activo: debeSerActivo
             });
 
-            await loadPeriodos();
+            await loadPeriodos({ force: true });
             setShowCreateDialog(false);
             showNotification('✅ Periodo creado exitosamente', 'success');
         } catch (error) {
@@ -268,7 +284,7 @@ export function usePeriodosAcademicos() {
                 activo: debeSerActivo
             });
 
-            await loadPeriodos();
+            await loadPeriodos({ force: true });
             setShowEditDialog(false);
             setPeriodoAEditar(null);
             showNotification('✅ Periodo actualizado correctamente', 'success');
@@ -366,7 +382,7 @@ export function usePeriodosAcademicos() {
                 }
             );
 
-            await loadPeriodos();
+            await loadPeriodos({ force: true });
             setShowCopyDialog(false);
             setPeriodoACopiar(null);
             showNotification(
@@ -399,7 +415,7 @@ export function usePeriodosAcademicos() {
             setLoading(true);
             await periodoService.eliminarPeriodo(periodoAEliminar.id);
 
-            await loadPeriodos();
+            await loadPeriodos({ force: true });
             setShowDeleteDialog(false);
             setPeriodoAEliminar(null);
             showNotification('✅ Periodo eliminado exitosamente', 'success');

@@ -3,6 +3,7 @@ import { espacioService, espacioPermitidoService, type EspacioFisico } from '../
 import type { Sede } from '../../services/sedes/sedeAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import {
     CheckCircle2,
     AlertTriangle,
@@ -14,6 +15,8 @@ import {
     AirVent,
     Lightbulb
 } from 'lucide-react';
+
+const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
 
 export function useEstadoRecursos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -31,9 +34,20 @@ export function useEstadoRecursos() {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         setLoading(true);
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ espacios: EspacioFisico[]; sedes: Sede[] }>(ESTADO_RECURSOS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setEspacios(cachedData.espacios);
+                setSedes(cachedData.sedes);
+                return;
+            }
+
             // Obtener usuario y rol del localStorage (la clave correcta es 'auth_user')
             const userStr = localStorage.getItem('auth_user');
             const user = userStr ? JSON.parse(userStr) : null;
@@ -80,6 +94,10 @@ export function useEstadoRecursos() {
 
             setEspacios(espaciosData || []);
             setSedes(sedesData);
+            setSessionCacheData(ESTADO_RECURSOS_CACHE_KEY, activeToken, {
+                espacios: espaciosData || [],
+                sedes: sedesData
+            });
         } catch (error) {
             console.error('Error loading data:', error);
             setEspacios([]);

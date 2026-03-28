@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../share/notificationBanner';
 import { apiClient } from '../../core/apiClient';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const MI_HORARIO_CACHE_KEY = 'horarios-mi-horario';
 
 export interface HorarioExtendido {
     id: number;
@@ -44,7 +47,7 @@ export function useMiHorario() {
         }
     }, [user?.id]);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         if (!user?.id) {
             setLoading(false);
             return;
@@ -52,6 +55,17 @@ export function useMiHorario() {
 
         try {
             setLoading(true);
+            const activeToken = localStorage.getItem('auth_token');
+            const userScope = `${user.rol?.nombre || 'sin-rol'}-${user.id}`;
+            const cacheKey = `${MI_HORARIO_CACHE_KEY}-${userScope}`;
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ horarios: HorarioExtendido[] }>(cacheKey, activeToken);
+
+            if (cachedData) {
+                setHorarios(cachedData.horarios);
+                return;
+            }
 
             // Determinar endpoint basado en el rol
             const endpoint = esEstudiante
@@ -60,7 +74,11 @@ export function useMiHorario() {
 
             const response = await apiClient.get<HorarioResponse>(endpoint);
 
-            setHorarios(response.horarios || []);
+            const horariosData = response.horarios || [];
+            setHorarios(horariosData);
+            setSessionCacheData(cacheKey, activeToken, {
+                horarios: horariosData
+            });
         } catch (error) {
             console.error('Error cargando horario:', error);
             showNotification('Error al cargar el horario', 'error');

@@ -5,6 +5,9 @@ import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import type { Programa } from '../../services/programas/programaAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas';
 
 export const tiposAsignatura = [
     { value: 'teórica', label: 'Teórica' },
@@ -46,8 +49,19 @@ export function useAsignaturas() {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ asignaturas: Asignatura[]; programas: Programa[] }>(ASIGNATURAS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setAsignaturas(cachedData.asignaturas);
+                setProgramas(cachedData.programas);
+                return;
+            }
+
             setLoading(true);
             const [asignaturasRes, programasRes] = await Promise.all([
                 asignaturaService.list(),
@@ -55,6 +69,10 @@ export function useAsignaturas() {
             ]);
             setAsignaturas(asignaturasRes.asignaturas);
             setProgramas(programasRes.programas);
+            setSessionCacheData(ASIGNATURAS_CACHE_KEY, activeToken, {
+                asignaturas: asignaturasRes.asignaturas,
+                programas: programasRes.programas
+            });
         } catch (error) {
             toast.error(`Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
@@ -63,12 +81,7 @@ export function useAsignaturas() {
     };
 
     const loadAsignaturas = async () => {
-        try {
-            const response = await asignaturaService.list();
-            setAsignaturas(response.asignaturas);
-        } catch (error) {
-            console.error("Error reloading asignaturas", error);
-        }
+        await loadData({ force: true });
     };
 
     // ==================== CREAR ASIGNATURA ====================

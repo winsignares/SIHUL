@@ -3,6 +3,10 @@ import { aperturaCierreService, espacioService, type EspacioConHorarios, type Ho
 import { espacioRecursoService, type EstadoRecurso, type EspacioRecurso } from '../../services/recursos/recursoAPI';
 import { toast } from 'sonner';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const APERTURA_CIERRE_CACHE_KEY = 'espacios-apertura-cierre';
+const APERTURA_CIERRE_CATALOGOS_CACHE_KEY = 'espacios-apertura-cierre-catalogos';
 
 export interface HorarioPendientePaginado {
     key: string;
@@ -63,15 +67,40 @@ export function useAperturaCierre() {
      * - Filtrar horarios y préstamos pendientes
      * - Ordenar por urgencia (tiempo restante)
      */
-    const cargarDatos = useCallback(async () => {
+    const cargarDatos = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
         try {
             setError(null);
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    espacios: EspacioConHorarios[];
+                    horaActual: string;
+                    diaActual: string;
+                    fechaActual: string;
+                }>(APERTURA_CIERRE_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setEspacios(cachedData.espacios);
+                setHoraActual(cachedData.horaActual);
+                setDiaActual(cachedData.diaActual);
+                setFechaActual(cachedData.fechaActual);
+                procesarNotificaciones(cachedData.espacios);
+                return;
+            }
+
             const data = await aperturaCierreService.getProximos();
 
             setEspacios(data.espacios || []);
             setHoraActual(data.horaActual);
             setDiaActual(data.diaActual);
             setFechaActual(data.fechaActual);
+            setSessionCacheData(APERTURA_CIERRE_CACHE_KEY, activeToken, {
+                espacios: data.espacios || [],
+                horaActual: data.horaActual,
+                diaActual: data.diaActual,
+                fechaActual: data.fechaActual
+            });
 
             // Procesar notificaciones basadas en tiempo restante
             procesarNotificaciones(data.espacios || []);
@@ -85,8 +114,22 @@ export function useAperturaCierre() {
         }
     }, []);
 
-    const cargarCatalogosEspacios = useCallback(async () => {
+    const cargarCatalogosEspacios = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    tiposEspacioDisponibles: TipoEspacio[];
+                    tipoEspacioPorId: Record<number, string>;
+                }>(APERTURA_CIERRE_CATALOGOS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setTiposEspacioDisponibles(cachedData.tiposEspacioDisponibles);
+                setTipoEspacioPorId(cachedData.tipoEspacioPorId);
+                return;
+            }
+
             const [espaciosResponse, tiposResponse] = await Promise.all([
                 espacioService.list(),
                 espacioService.listTipos()
@@ -106,6 +149,10 @@ export function useAperturaCierre() {
 
             setTiposEspacioDisponibles(tipos);
             setTipoEspacioPorId(tipoPorEspacioId);
+            setSessionCacheData(APERTURA_CIERRE_CATALOGOS_CACHE_KEY, activeToken, {
+                tiposEspacioDisponibles: tipos,
+                tipoEspacioPorId: tipoPorEspacioId
+            });
         } catch (error) {
             console.error('Error cargando catalogos de espacios:', error);
         }
@@ -181,7 +228,7 @@ export function useAperturaCierre() {
     // Auto-refresh cada 30 segundos (más frecuente para contador en tiempo real)
     useEffect(() => {
         const interval = setInterval(() => {
-            cargarDatos();
+            cargarDatos({ force: true });
         }, 30000);
 
         return () => clearInterval(interval);
@@ -193,8 +240,8 @@ export function useAperturaCierre() {
     const refrescar = async () => {
         setLoading(true);
         await Promise.all([
-            cargarDatos(),
-            cargarCatalogosEspacios()
+            cargarDatos({ force: true }),
+            cargarCatalogosEspacios({ force: true })
         ]);
     };
 

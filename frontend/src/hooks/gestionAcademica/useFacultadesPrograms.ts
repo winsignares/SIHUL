@@ -8,6 +8,12 @@ import type { Programa as ProgramaAPI } from '../../services/programas/programaA
 import { asignaturaService, asignaturaProgramaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura, AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const FACULTADES_CACHE_KEY = 'gestion-academica-facultades';
+const PROGRAMAS_CACHE_KEY = 'gestion-academica-programas';
+const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas-list';
+const ASIGNATURAS_PROGRAMA_CACHE_KEY = 'gestion-academica-asignaturas-programa';
 
 // Mapear tipos de API a modelo del frontend
 type Facultad = FacultadAPI;
@@ -84,11 +90,22 @@ export function useFacultadesPrograms() {
         loadAsignaturas();
     }, [activeTab]);
 
-    const loadFacultades = async () => {
+    const loadFacultades = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedFacultades = force
+                ? null
+                : getSessionCacheData<Facultad[]>(FACULTADES_CACHE_KEY, activeToken);
+
+            if (cachedFacultades) {
+                setFacultades(cachedFacultades);
+                return;
+            }
+
             setLoading(true);
             const response = await facultadService.list();
             setFacultades(response.facultades);
+            setSessionCacheData(FACULTADES_CACHE_KEY, activeToken, response.facultades);
         } catch (error) {
             toast.error(`Error al cargar facultades: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
@@ -96,8 +113,18 @@ export function useFacultadesPrograms() {
         }
     };
 
-    const loadProgramas = async () => {
+    const loadProgramas = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedProgramas = force
+                ? null
+                : getSessionCacheData<Programa[]>(PROGRAMAS_CACHE_KEY, activeToken);
+
+            if (cachedProgramas) {
+                setProgramas(cachedProgramas);
+                return;
+            }
+
             setLoading(true);
             const response = await programaService.listarProgramas();
             // Mapear facultad_id (snake_case) a facultadId (camelCase)
@@ -112,6 +139,7 @@ export function useFacultadesPrograms() {
                     activo: p.activo
                 }));
             setProgramas(mappedProgramas);
+            setSessionCacheData(PROGRAMAS_CACHE_KEY, activeToken, mappedProgramas);
         } catch (error) {
             toast.error(`Error al cargar programas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
@@ -119,20 +147,43 @@ export function useFacultadesPrograms() {
         }
     };
 
-    const loadAsignaturas = async () => {
+    const loadAsignaturas = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedAsignaturas = force
+                ? null
+                : getSessionCacheData<Asignatura[]>(ASIGNATURAS_CACHE_KEY, activeToken);
+
+            if (cachedAsignaturas) {
+                setAsignaturas(cachedAsignaturas);
+                return;
+            }
+
             const response = await asignaturaService.list();
             setAsignaturas(response.asignaturas);
+            setSessionCacheData(ASIGNATURAS_CACHE_KEY, activeToken, response.asignaturas);
         } catch (error) {
             toast.error(`Error al cargar asignaturas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
-    const loadAsignaturasPrograma = async (programaId: number) => {
+    const loadAsignaturasPrograma = async (programaId: number, { force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cacheKey = `${ASIGNATURAS_PROGRAMA_CACHE_KEY}-${programaId}`;
+            const cachedAsignaturasPrograma = force
+                ? null
+                : getSessionCacheData<AsignaturaPrograma[]>(cacheKey, activeToken);
+
+            if (cachedAsignaturasPrograma) {
+                setAsignaturasPrograma(cachedAsignaturasPrograma);
+                return;
+            }
+
             setLoading(true);
             const response = await asignaturaProgramaService.list(programaId);
             setAsignaturasPrograma(response.asignaturas_programa);
+            setSessionCacheData(cacheKey, activeToken, response.asignaturas_programa);
         } catch (error) {
             toast.error(`Error al cargar asignaturas del programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
@@ -142,9 +193,9 @@ export function useFacultadesPrograms() {
 
     // Función para recargar todos los datos
     const reloadAllData = () => {
-        loadFacultades();
-        loadProgramas();
-        loadAsignaturas();
+        loadFacultades({ force: true });
+        loadProgramas({ force: true });
+        loadAsignaturas({ force: true });
         setReloadKey(prev => prev + 1); // Forzar recarga de componentes hijos
     };
 
@@ -195,7 +246,7 @@ export function useFacultadesPrograms() {
                 componente_formativo: asignaturaForm.componente_formativo
             });
 
-            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
+            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
             setShowAddAsignaturaModal(false);
             setAsignaturaForm({
                 asignaturaId: '',
@@ -222,7 +273,7 @@ export function useFacultadesPrograms() {
             setLoading(true);
             await asignaturaProgramaService.delete({ id: asignaturaPrograma.id });
 
-            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
+            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
 
             toast.error('Asignatura eliminada del programa correctamente');
         } catch (error) {
@@ -242,7 +293,7 @@ export function useFacultadesPrograms() {
                 ...updates
             });
 
-            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id);
+            await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
 
             toast.info('Asignatura actualizada correctamente');
         } catch (error) {
@@ -268,7 +319,7 @@ export function useFacultadesPrograms() {
                 activa: true
             });
 
-            await loadFacultades();
+            await loadFacultades({ force: true });
             setFacultadForm({ nombre: '' });
             setShowCreateFacultad(false);
 
@@ -297,8 +348,8 @@ export function useFacultadesPrograms() {
                 activa: selectedFacultad.activa
             });
 
-            await loadFacultades();
-            loadProgramas(); // Por si el nombre cambió en programas
+            await loadFacultades({ force: true });
+            loadProgramas({ force: true }); // Por si el nombre cambió en programas
 
             setShowEditFacultad(false);
             setSelectedFacultad(null);
@@ -319,8 +370,8 @@ export function useFacultadesPrograms() {
             setLoading(true);
             await facultadService.delete({ id: selectedFacultad.id });
 
-            await loadFacultades();
-            loadProgramas();
+            await loadFacultades({ force: true });
+            loadProgramas({ force: true });
 
             setShowDeleteFacultad(false);
             setSelectedFacultad(null);
@@ -355,7 +406,7 @@ export function useFacultadesPrograms() {
                 activa: !facultad.activa
             });
 
-            await loadFacultades();
+            await loadFacultades({ force: true });
 
             toast.warning(facultad.activa ? 'Facultad inactivada correctamente' : 'Facultad activada correctamente');
         } catch (error) {
@@ -393,7 +444,7 @@ export function useFacultadesPrograms() {
                 activo: true
             });
 
-            await loadProgramas();
+            await loadProgramas({ force: true });
             setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
             setShowCreatePrograma(false);
 
@@ -434,7 +485,7 @@ export function useFacultadesPrograms() {
                 activo: selectedPrograma.activo
             });
 
-            await loadProgramas();
+            await loadProgramas({ force: true });
             setShowEditPrograma(false);
             setSelectedPrograma(null);
             setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
@@ -454,7 +505,7 @@ export function useFacultadesPrograms() {
             setLoading(true);
             await programaService.eliminarPrograma(selectedPrograma.id);
 
-            await loadProgramas();
+            await loadProgramas({ force: true });
             setShowDeletePrograma(false);
             setSelectedPrograma(null);
 
@@ -494,7 +545,7 @@ export function useFacultadesPrograms() {
                 activo: !programa.activo
             });
 
-            await loadProgramas();
+            await loadProgramas({ force: true });
 
             toast.warning(programa.activo ? 'Programa inactivado correctamente' : 'Programa activado correctamente');
         } catch (error) {

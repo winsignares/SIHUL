@@ -25,6 +25,9 @@ import {
     AlertCircle,
     Bell
 } from 'lucide-react';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const DASHBOARD_HOME_CACHE_KEY = 'dashboard-home';
 
 export function useDashboardHome() {
     const { showNotification } = useTheme();
@@ -49,154 +52,193 @@ export function useDashboardHome() {
     // Derived state
     const recentActivities = activities.slice(0, 4);
 
+    const loadDashboardData = async ({ force = false }: { force?: boolean } = {}) => {
+        try {
+            setIsLoadingStats(true);
+            setIsLoadingOccupation(true);
+            setIsLoadingActivities(true);
+            setIsLoadingPeriodo(true);
+
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    stats: DashboardStat[];
+                    activities: typeof dashboardHomeActivities;
+                    occupationStats: typeof dashboardHomeOccupationStats;
+                    occupationDetails: typeof dashboardHomeOccupationDetails;
+                    topEspaciosOcupados: EspacioOcupacion[];
+                    periodoActivo: PeriodoAcademico | null;
+                }>(DASHBOARD_HOME_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setStats(cachedData.stats);
+                setActivities(cachedData.activities);
+                setOccupationStats(cachedData.occupationStats);
+                setOccupationDetails(cachedData.occupationDetails);
+                setTopEspaciosOcupados(cachedData.topEspaciosOcupados);
+                setPeriodoActivo(cachedData.periodoActivo);
+                setIsLoadingStats(false);
+                setIsLoadingOccupation(false);
+                setIsLoadingActivities(false);
+                setIsLoadingPeriodo(false);
+                return;
+            }
+
+            // Fetch all data in parallel
+            const [
+                facultadesResponse,
+                programasResponse,
+                espaciosResponse,
+                asignaturasResponse,
+                dashboardStats,
+                ocupacionSemanalResponse,
+                periodosResponse
+            ] = await Promise.all([
+                facultadService.list(),
+                programaService.listarProgramas(),
+                espacioService.list(),
+                asignaturaService.list(),
+                obtenerEstadisticasDashboard(),
+                ocupacionSemanalService.getOcupacionSemanal(undefined, 0),
+                periodoService.listarPeriodos()
+            ]);
+
+            const facultades = facultadesResponse.facultades || [];
+            const programas = programasResponse.programas || [];
+            const espacios = espaciosResponse.espacios || [];
+            const asignaturas = asignaturasResponse.asignaturas || [];
+
+            // Obtener período activo
+            const periodos = periodosResponse.periodos || [];
+            const periodoActual = periodos.find(p => p.activo) || periodos[0] || null;
+            setPeriodoActivo(periodoActual);
+            setIsLoadingPeriodo(false);
+
+            // Update stats with real data
+            const updatedStats: DashboardStat[] = [
+                {
+                    label: 'Total Facultades',
+                    value: facultades.length.toString(),
+                    change: '+12.5%',
+                    icon: dashboardHomeStats[0].icon,
+                    gradient: 'from-violet-500 to-violet-600',
+                    bgGradient: 'from-violet-500/10 to-violet-600/10',
+                    iconBg: 'bg-violet-500',
+                    changePositive: true
+                },
+                {
+                    label: 'Espacios Activos',
+                    value: espacios.length.toString(),
+                    change: '+8.2%',
+                    icon: dashboardHomeStats[1].icon,
+                    gradient: 'from-blue-500 to-blue-600',
+                    bgGradient: 'from-blue-500/10 to-blue-600/10',
+                    iconBg: 'bg-blue-500',
+                    changePositive: true
+                },
+                {
+                    label: 'Asignaturas',
+                    value: asignaturas.length.toString(),
+                    change: '+23.1%',
+                    icon: dashboardHomeStats[2].icon,
+                    gradient: 'from-emerald-500 to-emerald-600',
+                    bgGradient: 'from-emerald-500/10 to-emerald-600/10',
+                    iconBg: 'bg-emerald-500',
+                    changePositive: true
+                },
+                {
+                    label: 'Programas Activos',
+                    value: programas.length.toString(),
+                    change: '+5.4%',
+                    icon: dashboardHomeStats[3].icon,
+                    gradient: 'from-amber-500 to-amber-600',
+                    bgGradient: 'from-amber-500/10 to-amber-600/10',
+                    iconBg: 'bg-amber-500',
+                    changePositive: true
+                }
+            ];
+
+            setStats(updatedStats);
+            setIsLoadingStats(false);
+
+            // Procesar espacios más ocupados
+            let topEspacios: EspacioOcupacion[] = [];
+            if (ocupacionSemanalResponse?.ocupacion) {
+                const espaciosMapeados: EspacioOcupacion[] = ocupacionSemanalResponse.ocupacion.map((espacio: any) => ({
+                    id: espacio.id.toString(),
+                    nombre: espacio.nombre,
+                    tipo: espacio.tipo,
+                    capacidad: espacio.capacidad,
+                    horasOcupadas: espacio.horasOcupadasSemana,
+                    horasDisponibles: espacio.horasDisponibles,
+                    porcentajeOcupacion: espacio.porcentajeOcupacion,
+                    edificio: espacio.edificio,
+                    jornada: {
+                        manana: Math.round(espacio.porcentajeManana),
+                        tarde: Math.round(espacio.porcentajeTarde),
+                        noche: Math.round(espacio.porcentajeNoche)
+                    }
+                }));
+
+                topEspacios = espaciosMapeados
+                    .sort((a, b) => b.porcentajeOcupacion - a.porcentajeOcupacion)
+                    .slice(0, 10);
+
+                setTopEspaciosOcupados(topEspacios);
+            }
+
+            // Actualizar estadísticas de ocupación
+            const nextOccupationStats = dashboardStats.ocupacionSemanal.length > 0
+                ? dashboardStats.ocupacionSemanal
+                : dashboardHomeOccupationStats;
+            const nextOccupationDetails = dashboardStats.ocupacionDetallada.length > 0
+                ? dashboardStats.ocupacionDetallada
+                : dashboardHomeOccupationDetails;
+
+            setOccupationStats(nextOccupationStats);
+            setOccupationDetails(nextOccupationDetails);
+            setIsLoadingOccupation(false);
+
+            // Actualizar actividades recientes con iconos
+            const nextActivities = dashboardStats.actividadesRecientes.length > 0
+                ? dashboardStats.actividadesRecientes.map(act => {
+                    let icon = Clock;
+                    if (act.title.toLowerCase().includes('aprobado')) icon = CheckCircle2;
+                    else if (act.title.toLowerCase().includes('rechazado')) icon = AlertCircle;
+                    else if (act.title.toLowerCase().includes('espacio')) icon = MapPin;
+                    else if (act.title.toLowerCase().includes('notificación')) icon = Bell;
+                    else if (act.title.toLowerCase().includes('asignatura')) icon = BookOpen;
+                    else if (act.title.toLowerCase().includes('reporte')) icon = FileText;
+
+                    return { ...act, icon };
+                })
+                : dashboardHomeActivities;
+
+            setActivities(nextActivities as any);
+            setIsLoadingActivities(false);
+
+            setSessionCacheData(DASHBOARD_HOME_CACHE_KEY, activeToken, {
+                stats: updatedStats,
+                activities: nextActivities as any,
+                occupationStats: nextOccupationStats,
+                occupationDetails: nextOccupationDetails,
+                topEspaciosOcupados: topEspacios,
+                periodoActivo: periodoActual
+            });
+
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            setIsLoadingStats(false);
+            setIsLoadingOccupation(false);
+            setIsLoadingActivities(false);
+            setIsLoadingPeriodo(false);
+            // Keep default stats if API fails
+        }
+    };
+
     // Load real data from API
     useEffect(() => {
-        const loadDashboardData = async () => {
-            try {
-                setIsLoadingStats(true);
-                setIsLoadingOccupation(true);
-                setIsLoadingActivities(true);
-                setIsLoadingPeriodo(true);
-
-                // Fetch all data in parallel
-                const [
-                    facultadesResponse, 
-                    programasResponse, 
-                    espaciosResponse, 
-                    asignaturasResponse,
-                    dashboardStats,
-                    ocupacionSemanalResponse,
-                    periodosResponse
-                ] = await Promise.all([
-                    facultadService.list(),
-                    programaService.listarProgramas(),
-                    espacioService.list(),
-                    asignaturaService.list(),
-                    obtenerEstadisticasDashboard(),
-                    ocupacionSemanalService.getOcupacionSemanal(undefined, 0),
-                    periodoService.listarPeriodos()
-                ]);
-
-                const facultades = facultadesResponse.facultades || [];
-                const programas = programasResponse.programas || [];
-                const espacios = espaciosResponse.espacios || [];
-                const asignaturas = asignaturasResponse.asignaturas || [];
-
-                // Obtener período activo
-                const periodos = periodosResponse.periodos || [];
-                const periodoActual = periodos.find(p => p.activo) || periodos[0] || null;
-                setPeriodoActivo(periodoActual);
-                setIsLoadingPeriodo(false);
-
-                // Update stats with real data
-                const updatedStats: DashboardStat[] = [
-                    {
-                        label: 'Total Facultades',
-                        value: facultades.length.toString(),
-                        change: '+12.5%',
-                        icon: dashboardHomeStats[0].icon,
-                        gradient: 'from-violet-500 to-violet-600',
-                        bgGradient: 'from-violet-500/10 to-violet-600/10',
-                        iconBg: 'bg-violet-500',
-                        changePositive: true
-                    },
-                    {
-                        label: 'Espacios Activos',
-                        value: espacios.length.toString(),
-                        change: '+8.2%',
-                        icon: dashboardHomeStats[1].icon,
-                        gradient: 'from-blue-500 to-blue-600',
-                        bgGradient: 'from-blue-500/10 to-blue-600/10',
-                        iconBg: 'bg-blue-500',
-                        changePositive: true
-                    },
-                    {
-                        label: 'Asignaturas',
-                        value: asignaturas.length.toString(),
-                        change: '+23.1%',
-                        icon: dashboardHomeStats[2].icon,
-                        gradient: 'from-emerald-500 to-emerald-600',
-                        bgGradient: 'from-emerald-500/10 to-emerald-600/10',
-                        iconBg: 'bg-emerald-500',
-                        changePositive: true
-                    },
-                    {
-                        label: 'Programas Activos',
-                        value: programas.length.toString(),
-                        change: '+5.4%',
-                        icon: dashboardHomeStats[3].icon,
-                        gradient: 'from-amber-500 to-amber-600',
-                        bgGradient: 'from-amber-500/10 to-amber-600/10',
-                        iconBg: 'bg-amber-500',
-                        changePositive: true
-                    }
-                ];
-
-                setStats(updatedStats);
-                setIsLoadingStats(false);
-
-                // Procesar espacios más ocupados
-                if (ocupacionSemanalResponse?.ocupacion) {
-                    const espaciosMapeados: EspacioOcupacion[] = ocupacionSemanalResponse.ocupacion.map((espacio: any) => ({
-                        id: espacio.id.toString(),
-                        nombre: espacio.nombre,
-                        tipo: espacio.tipo,
-                        capacidad: espacio.capacidad,
-                        horasOcupadas: espacio.horasOcupadasSemana,
-                        horasDisponibles: espacio.horasDisponibles,
-                        porcentajeOcupacion: espacio.porcentajeOcupacion,
-                        edificio: espacio.edificio,
-                        jornada: {
-                            manana: Math.round(espacio.porcentajeManana),
-                            tarde: Math.round(espacio.porcentajeTarde),
-                            noche: Math.round(espacio.porcentajeNoche)
-                        }
-                    }));
-                    
-                    // Ordenar por porcentaje de ocupación y tomar los top 10
-                    const topEspacios = espaciosMapeados
-                        .sort((a, b) => b.porcentajeOcupacion - a.porcentajeOcupacion)
-                        .slice(0, 10);
-                    
-                    setTopEspaciosOcupados(topEspacios);
-                }
-
-                // Actualizar estadísticas de ocupación
-                if (dashboardStats.ocupacionSemanal.length > 0) {
-                    setOccupationStats(dashboardStats.ocupacionSemanal);
-                }
-                if (dashboardStats.ocupacionDetallada.length > 0) {
-                    setOccupationDetails(dashboardStats.ocupacionDetallada);
-                }
-                setIsLoadingOccupation(false);
-
-                // Actualizar actividades recientes con iconos
-                if (dashboardStats.actividadesRecientes.length > 0) {
-                    const actividadesConIconos = dashboardStats.actividadesRecientes.map(act => {
-                        let icon = Clock;
-                        if (act.title.toLowerCase().includes('aprobado')) icon = CheckCircle2;
-                        else if (act.title.toLowerCase().includes('rechazado')) icon = AlertCircle;
-                        else if (act.title.toLowerCase().includes('espacio')) icon = MapPin;
-                        else if (act.title.toLowerCase().includes('notificación')) icon = Bell;
-                        else if (act.title.toLowerCase().includes('asignatura')) icon = BookOpen;
-                        else if (act.title.toLowerCase().includes('reporte')) icon = FileText;
-                        
-                        return { ...act, icon };
-                    });
-                    setActivities(actividadesConIconos as any);
-                }
-                setIsLoadingActivities(false);
-
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                setIsLoadingStats(false);
-                setIsLoadingOccupation(false);
-                setIsLoadingActivities(false);
-                setIsLoadingPeriodo(false);
-                // Keep default stats if API fails
-            }
-        };
-
         loadDashboardData();
     }, []);
 

@@ -21,6 +21,13 @@ import { capacidadService } from '../../services/reporte/capacidadAPI';
 import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const REPORTES_PERIODO_CACHE_KEY = 'reporte-reportes-periodo';
+const REPORTES_HORARIOS_CACHE_KEY = 'reporte-reportes-horarios';
+const REPORTES_OCUPACION_CACHE_KEY = 'reporte-reportes-ocupacion';
+const REPORTES_DISPONIBILIDAD_CACHE_KEY = 'reporte-reportes-disponibilidad';
+const REPORTES_CAPACIDAD_CACHE_KEY = 'reporte-reportes-capacidad';
 
 const PERIODO_DEFAULT = '2025-1';
 
@@ -112,9 +119,20 @@ export function useReportes() {
     useEffect(() => {
         const cargarPeriodo = async () => {
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const cachedData = getSessionCacheData<{ periodoActual: string }>(REPORTES_PERIODO_CACHE_KEY, activeToken);
+
+                if (cachedData?.periodoActual) {
+                    setPeriodoActual(cachedData.periodoActual);
+                    return;
+                }
+
                 const periodo = await periodoActivoService.getPeriodoActivo();
                 if (periodo && periodo.nombre) {
                     setPeriodoActual(periodo.nombre);
+                    setSessionCacheData(REPORTES_PERIODO_CACHE_KEY, activeToken, {
+                        periodoActual: periodo.nombre
+                    });
                 }
             } catch (error) {
                 console.error('Error al cargar período activo:', error);
@@ -129,6 +147,24 @@ export function useReportes() {
     useEffect(() => {
         const cargarHorarios = async () => {
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const userScope = `${role?.nombre || 'sin-rol'}-${user?.id || 'anonimo'}-${user?.facultad?.id || 'sin-facultad'}`;
+                const cacheKey = `${REPORTES_HORARIOS_CACHE_KEY}-${userScope}`;
+                const cachedData = getSessionCacheData<{
+                    horariosPrograma: HorarioPrograma[];
+                    programas: string[];
+                    horariosDocenteData: HorarioDocente[];
+                    docentes: Docente[];
+                }>(cacheKey, activeToken);
+
+                if (cachedData) {
+                    setHorariosPrograma(cachedData.horariosPrograma);
+                    setProgramas(cachedData.programas);
+                    setHorariosDocenteData(cachedData.horariosDocenteData);
+                    setDocentes(cachedData.docentes);
+                    return;
+                }
+
                 // Cargar horarios extendidos
                 const horariosResponse = await horarioService.listExtendidos();
                 const horariosExtendidos = horariosResponse.horarios;
@@ -166,6 +202,8 @@ export function useReportes() {
 
                 setHorariosDocenteData(horariosDocenteTransformados);
 
+                let docentesFinales: Docente[] = [];
+
                 // Cargar docentes completos desde el endpoint
                 try {
                     const apiUrl = import.meta.env.VITE_API_URL;
@@ -181,6 +219,7 @@ export function useReportes() {
                             }))
                         ];
                         setDocentes(docentesList);
+                        docentesFinales = docentesList;
                     }
                 } catch (error) {
                     console.error('Error al cargar docentes:', error);
@@ -194,7 +233,20 @@ export function useReportes() {
                         }))
                     ];
                     setDocentes(docentesUnicos);
+                    docentesFinales = docentesUnicos;
                 }
+
+                if (docentesFinales.length === 0) {
+                    docentesFinales = [{ id: 'todos', nombre: 'Todos', correo: '' }];
+                    setDocentes(docentesFinales);
+                }
+
+                setSessionCacheData(cacheKey, activeToken, {
+                    horariosPrograma: horariosTransformados,
+                    programas: nombresProgramas,
+                    horariosDocenteData: horariosDocenteTransformados,
+                    docentes: docentesFinales
+                });
             } catch (error) {
                 console.error('Error al cargar horarios:', error);
             }
@@ -209,6 +261,18 @@ export function useReportes() {
             setCargandoOcupacion(true);
             setErrorOcupacion(null);
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const cachedData = getSessionCacheData<{
+                    datosOcupacion: DatoOcupacionJornada[];
+                    espaciosMasUsados: EspacioMasUsado[];
+                }>(REPORTES_OCUPACION_CACHE_KEY, activeToken);
+
+                if (cachedData) {
+                    setDatosOcupacion(cachedData.datosOcupacion);
+                    setEspaciosMasUsados(cachedData.espaciosMasUsados);
+                    return;
+                }
+
                 const response = await reporteOcupacionService.getOcupacionReporte(0);
                 
                 // Mapear datos con colores
@@ -219,6 +283,10 @@ export function useReportes() {
                 
                 setDatosOcupacion(datosConColor);
                 setEspaciosMasUsados(response.espacios_mas_usados);
+                setSessionCacheData(REPORTES_OCUPACION_CACHE_KEY, activeToken, {
+                    datosOcupacion: datosConColor,
+                    espaciosMasUsados: response.espacios_mas_usados
+                });
             } catch (error) {
                 console.error('Error al cargar datos de ocupación:', error);
                 setErrorOcupacion('Error al cargar los datos de ocupación');
@@ -237,8 +305,22 @@ export function useReportes() {
             setCargandoDisponibilidad(true);
             setErrorDisponibilidad(null);
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const cachedData = getSessionCacheData<{ disponibilidadEspacios: DisponibilidadEspacio[] }>(
+                    REPORTES_DISPONIBILIDAD_CACHE_KEY,
+                    activeToken
+                );
+
+                if (cachedData) {
+                    setDisponibilidadEspacios(cachedData.disponibilidadEspacios);
+                    return;
+                }
+
                 const response = await disponibilidadService.getDisponibilidad(0);
                 setDisponibilidadEspacios(response.disponibilidad);
+                setSessionCacheData(REPORTES_DISPONIBILIDAD_CACHE_KEY, activeToken, {
+                    disponibilidadEspacios: response.disponibilidad
+                });
             } catch (error) {
                 console.error('Error al cargar datos de disponibilidad:', error);
                 setErrorDisponibilidad('Error al cargar los datos de disponibilidad');
@@ -256,8 +338,22 @@ export function useReportes() {
             setCargandoCapacidad(true);
             setErrorCapacidad(null);
             try {
+                const activeToken = localStorage.getItem('auth_token');
+                const cachedData = getSessionCacheData<{ capacidadUtilizada: CapacidadUtilizada[] }>(
+                    REPORTES_CAPACIDAD_CACHE_KEY,
+                    activeToken
+                );
+
+                if (cachedData) {
+                    setCapacidadUtilizada(cachedData.capacidadUtilizada);
+                    return;
+                }
+
                 const response = await capacidadService.getCapacidad(0);
                 setCapacidadUtilizada(response.capacidad);
+                setSessionCacheData(REPORTES_CAPACIDAD_CACHE_KEY, activeToken, {
+                    capacidadUtilizada: response.capacidad
+                });
             } catch (error) {
                 console.error('Error al cargar datos de capacidad:', error);
                 setErrorCapacidad('Error al cargar los datos de capacidad');

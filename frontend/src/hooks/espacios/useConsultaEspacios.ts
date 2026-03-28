@@ -1,13 +1,15 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { espacioPermitidoService, espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
+import { espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { useAuth } from '../../context/AuthContext';
-import { getEspaciosFromCache, setEspaciosInCache, getCacheKey, clearEspaciosCache } from '../../services/cache/cacheService';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const CONSULTA_ESPACIOS_CACHE_KEY = 'espacios-consulta-espacios';
 
 export interface EspacioView {
     id: string;
@@ -173,91 +175,92 @@ export function useConsultaEspacios() {
         };
     };
 
-    // Cargar espacios y su estado
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                // Obtener clave de caché según el usuario
-                const cacheKey = getCacheKey(user);
-                
-                // Intentar obtener del caché primero
-                const cachedData = getEspaciosFromCache(cacheKey);
-                if (cachedData) {
-                    setEspacios(cachedData.espacios);
-                    setHorarios(cachedData.horarios);
-                    setLoading(false);
-                    return;
-                }
+    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+        setLoading(true);
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const userScope = `${String(user?.rol ?? 'publico')}-${user?.id ?? 'anonimo'}-${user?.facultad?.id ?? 'sin-facultad'}`;
+            const cacheKey = `${CONSULTA_ESPACIOS_CACHE_KEY}-${userScope}`;
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ espacios: EspacioView[]; horarios: OcupacionView[] }>(cacheKey, activeToken);
 
-                // Usar los nuevos endpoints bulk para obtener espacios con horarios
-                let espaciosConHorarios;
-                
-                // Supervisor general: solo espacios permitidos
-                if (user?.id && String(user.rol) === 'supervisor_general') {
-                    const response = await espacioHorariosService.getSupervisorHorarios(user.id);
-                    espaciosConHorarios = response.espacios;
-                }
-                // Acceso público o cualquier otro rol: todos los espacios
-                else {
-                    const response = await espacioHorariosService.getAllWithHorarios();
-                    espaciosConHorarios = response.espacios;
-                }
+            if (cachedData) {
+                setEspacios(cachedData.espacios);
+                setHorarios(cachedData.horarios);
+                return;
+            }
 
-                // Procesar espacios y horarios
-                const allHorarios: OcupacionView[] = [];
-                const espaciosView: EspacioView[] = [];
+            // Usar los nuevos endpoints bulk para obtener espacios con horarios
+            let espaciosConHorarios;
 
-                espaciosConHorarios.forEach(espacio => {
-                    // Agregar horarios
-                    espacio.horarios.forEach(h => {
-                        allHorarios.push({
-                            espacioId: espacio.id!.toString(),
-                            dia: normalizarDia(h.dia),
-                            horaInicio: h.hora_inicio,
-                            horaFin: h.hora_fin,
-                            materia: h.materia,
-                            docente: h.docente,
-                            grupo: h.grupo,
-                            estado: 'ocupado'
-                        });
-                    });
+            // Supervisor general: solo espacios permitidos
+            if (user?.id && String(user.rol) === 'supervisor_general') {
+                const response = await espacioHorariosService.getSupervisorHorarios(user.id);
+                espaciosConHorarios = response.espacios;
+            }
+            // Acceso público o cualquier otro rol: todos los espacios
+            else {
+                const response = await espacioHorariosService.getAllWithHorarios();
+                espaciosConHorarios = response.espacios;
+            }
 
-                    // Calcular estado basado en horarios
-                    const { proximaClase, estado } = calcularProximaClaseYEstadoPrevio(
-                        espacio.id!.toString(),
-                        allHorarios
-                    );
+            // Procesar espacios y horarios
+            const allHorarios: OcupacionView[] = [];
+            const espaciosView: EspacioView[] = [];
 
-                    // Crear vista de espacio
-                    espaciosView.push({
-                        id: espacio.id!.toString(),
-                        nombre: espacio.nombre,
-                        tipo: espacio.tipo || 'Sin Tipo',
-                        capacidad: espacio.capacidad,
-                        sede: espacio.sede || 'Sede Principal',
-                        edificio: espacio.ubicacion || 'Sin Ubicación',
-                        estado: estado,
-                        proximaClase: proximaClase,
-                        ubicacion: espacio.ubicacion
+            espaciosConHorarios.forEach(espacio => {
+                // Agregar horarios
+                espacio.horarios.forEach(h => {
+                    allHorarios.push({
+                        espacioId: espacio.id!.toString(),
+                        dia: normalizarDia(h.dia),
+                        horaInicio: h.hora_inicio,
+                        horaFin: h.hora_fin,
+                        materia: h.materia,
+                        docente: h.docente,
+                        grupo: h.grupo,
+                        estado: 'ocupado'
                     });
                 });
 
-                setEspacios(espaciosView);
-                setHorarios(allHorarios);
+                // Calcular estado basado en horarios
+                const { proximaClase, estado } = calcularProximaClaseYEstadoPrevio(
+                    espacio.id!.toString(),
+                    allHorarios
+                );
 
-                // Guardar en caché
-                setEspaciosInCache(cacheKey, espaciosView, allHorarios);
+                // Crear vista de espacio
+                espaciosView.push({
+                    id: espacio.id!.toString(),
+                    nombre: espacio.nombre,
+                    tipo: espacio.tipo || 'Sin Tipo',
+                    capacidad: espacio.capacidad,
+                    sede: espacio.sede || 'Sede Principal',
+                    edificio: espacio.ubicacion || 'Sin Ubicación',
+                    estado: estado,
+                    proximaClase: proximaClase,
+                    ubicacion: espacio.ubicacion
+                });
+            });
 
-            } catch (error) {
-                console.error("Error loading spaces", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+            setEspacios(espaciosView);
+            setHorarios(allHorarios);
+            setSessionCacheData(cacheKey, activeToken, {
+                espacios: espaciosView,
+                horarios: allHorarios
+            });
+        } catch (error) {
+            console.error('Error loading spaces', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
 
+    // Cargar espacios y su estado
+    useEffect(() => {
         loadData();
-    }, [user]); // Recargar si cambia el usuario
+    }, [loadData]);
 
     // Función para obtener la fecha actual en hora de Colombia (UTC-5)
     const getFechaColombia = (): Date => {
@@ -1160,11 +1163,9 @@ export function useConsultaEspacios() {
     }, []);
 
     // Función para recargar datos limpiando el caché
-    const recargarDatos = useCallback(() => {
-        const cacheKey = getCacheKey(user);
-        clearEspaciosCache(cacheKey);
-        window.location.reload();
-    }, [user]);
+    const recargarDatos = useCallback(async () => {
+        await loadData({ force: true });
+    }, [loadData]);
 
     return {
         searchTerm,

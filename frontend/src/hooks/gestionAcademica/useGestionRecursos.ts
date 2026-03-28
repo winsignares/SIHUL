@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const PAGE_SIZE = PAGE_SIZE_DEFAULT;
+const GESTION_RECURSOS_CACHE_KEY = 'gestion-academica-recursos';
 
 export function useGestionRecursos() {
   const [recursos, setRecursos] = useState<Recurso[]>([]);
@@ -18,11 +20,20 @@ export function useGestionRecursos() {
     descripcion: ''
   });
 
-  const loadRecursos = async () => {
+  const loadRecursos = async ({ force = false }: { force?: boolean } = {}) => {
     try {
+      const activeToken = localStorage.getItem('auth_token');
+      const cachedRecursos = force ? null : getSessionCacheData<Recurso[]>(GESTION_RECURSOS_CACHE_KEY, activeToken);
+
+      if (cachedRecursos) {
+        setRecursos(cachedRecursos);
+        return;
+      }
+
       setLoading(true);
       const response = await recursoService.listarRecursos();
       setRecursos(response.recursos || []);
+      setSessionCacheData(GESTION_RECURSOS_CACHE_KEY, activeToken, response.recursos || []);
     } catch (error) {
       toast.error(`Error al cargar recursos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       setRecursos([]);
@@ -91,7 +102,7 @@ export function useGestionRecursos() {
       toast.success('Recurso creado correctamente');
       setShowCrearRecursoModal(false);
       setNuevoRecurso({ nombre: '', descripcion: '' });
-      await loadRecursos();
+      await loadRecursos({ force: true });
       setCurrentPage(1);
     } catch (error) {
       toast.error(`Error al crear recurso: ${error instanceof Error ? error.message : 'Error desconocido'}`);

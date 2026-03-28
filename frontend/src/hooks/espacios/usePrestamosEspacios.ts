@@ -6,6 +6,9 @@ import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI'
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const PRESTAMOS_CACHE_KEY = 'prestamos-espacios-admin';
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object' && 'message' in error) {
@@ -54,8 +57,19 @@ export function usePrestamosEspacios() {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedPrestamos = force
+                ? null
+                : getSessionCacheData<PrestamoEspacio[]>(PRESTAMOS_CACHE_KEY, activeToken);
+
+            // Reutilizar datos cargados en esta sesión si no se fuerza recarga.
+            if (cachedPrestamos) {
+                setPrestamos(cachedPrestamos);
+                return;
+            }
+
             setLoading(true);
 
             // Cargar TODOS los préstamos (autenticados + públicos) desde la API combinada
@@ -98,6 +112,7 @@ export function usePrestamosEspacios() {
             });
 
             setPrestamos(prestamosUI);
+            setSessionCacheData(PRESTAMOS_CACHE_KEY, activeToken, prestamosUI);
         } catch (error) {
             showNotification({
                 message: `Error al cargar préstamos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -184,7 +199,7 @@ export function usePrestamosEspacios() {
             }
 
             // Recargar datos para obtener el estado actualizado
-            await loadData();
+            await loadData({ force: true });
 
             setVerSolicitudDialog(null);
             setComentariosAccion('');
@@ -287,7 +302,7 @@ export function usePrestamosEspacios() {
             }
 
             // Recargar datos para obtener el estado actualizado
-            await loadData();
+            await loadData({ force: true });
 
             setVerSolicitudDialog(null);
             setComentariosAccion('');
@@ -424,7 +439,7 @@ export function usePrestamosEspacios() {
                 });
             }
 
-            await loadData();
+            await loadData({ force: true });
             cancelarEdicion();
             showNotification({
                 message: '✅ Solicitud actualizada correctamente',
@@ -457,7 +472,7 @@ export function usePrestamosEspacios() {
                 await prestamoService.eliminarPrestamo(numericId);
             }
 
-            await loadData();
+            await loadData({ force: true });
 
             if (verSolicitudDialog === id) {
                 setVerSolicitudDialog(null);
@@ -609,6 +624,6 @@ export function usePrestamosEspacios() {
         guardarEdicion,
         eliminarSolicitud,
         loading,
-        reloadData: loadData
+        reloadData: () => loadData({ force: true })
     };
 }

@@ -7,6 +7,9 @@ import { programaService, type Programa } from '../../services/programas/program
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios';
 
 export interface Docente {
     id: number;
@@ -126,8 +129,38 @@ export function useCentroHorarios() {
         }
     }, [searchParams]);
 
-    const loadData = async () => {
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
+            const cacheKey = `${CENTRO_HORARIOS_CACHE_KEY}-${userScope}`;
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    horarios: HorarioExtendido[];
+                    horariosFusionados: HorarioFusionadoExtendido[];
+                    grupos: Grupo[];
+                    facultades: Facultad[];
+                    programas: Programa[];
+                    espacios: EspacioFisico[];
+                    docentes: Docente[];
+                    filtroFacultad?: string;
+                }>(cacheKey, activeToken);
+
+            if (cachedData) {
+                setHorarios(cachedData.horarios);
+                setHorariosFusionados(cachedData.horariosFusionados);
+                setGrupos(cachedData.grupos);
+                setFacultades(cachedData.facultades);
+                setProgramas(cachedData.programas);
+                setEspacios(cachedData.espacios);
+                setDocentes(cachedData.docentes);
+                if (cachedData.filtroFacultad) {
+                    setFiltroFacultad(cachedData.filtroFacultad);
+                }
+                return;
+            }
+
             setLoading(true);
             
             // Cargar horarios extendidos
@@ -207,6 +240,19 @@ export function useCentroHorarios() {
                     correo: u.correo
                 }));
                 setDocentes(docentesList);
+
+                setSessionCacheData(cacheKey, activeToken, {
+                    horarios: horariosResponse.horarios,
+                    horariosFusionados: fusionadosConInfo,
+                    grupos: gruposResponse.grupos,
+                    facultades: allFacultades,
+                    programas: programasResponse.programas,
+                    espacios: espaciosResponse.espacios,
+                    docentes: docentesList,
+                    filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
+                        ? user.facultad.id.toString()
+                        : undefined
+                });
             }
             
         } catch (error) {
@@ -490,7 +536,7 @@ export function useCentroHorarios() {
             });
             
             showNotification('✅ Horario actualizado correctamente', 'success');
-            await loadData();
+            await loadData({ force: true });
             setShowEditModal(false);
             setHorarioEditar(null);
         } catch (error) {
@@ -509,7 +555,7 @@ export function useCentroHorarios() {
                 setLoading(true);
                 await horarioService.delete({ id });
                 showNotification('✅ Horario eliminado correctamente', 'success');
-                await loadData();
+                await loadData({ force: true });
             } catch (error) {
                 showNotification(
                     `Error al eliminar el horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -553,7 +599,7 @@ export function useCentroHorarios() {
             
             setShowDeleteGrupoModal(false);
             setGrupoAEliminar(null);
-            await loadData();
+            await loadData({ force: true });
         } catch (error) {
             showNotification(
                 `Error al eliminar el grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -623,7 +669,7 @@ export function useCentroHorarios() {
 
                 if (eliminados > 0) {
                     showNotification(`✅ ${eliminados} horario(s) eliminado(s) correctamente`, 'success');
-                    await loadData();
+                    await loadData({ force: true });
                     setHorariosSeleccionados(new Set());
                     setSeleccionarTodos(false);
                 } else {

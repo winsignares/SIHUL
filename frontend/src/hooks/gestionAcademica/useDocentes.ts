@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { db } from '../../services/database';
 import type { Facultad, Asignatura } from '../../models/index';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const DOCENTES_CACHE_KEY = 'gestion-academica-docentes';
 
 // Interfaz extendida para Docente
 export interface DocenteExtendido {
@@ -54,10 +57,39 @@ export function useDocentes() {
 
     // Cargar datos
     useEffect(() => {
-        loadFacultades();
-        loadAsignaturas();
-        loadDocentes();
+        loadData();
     }, []);
+
+    const loadData = ({ force = false }: { force?: boolean } = {}) => {
+        const activeToken = localStorage.getItem('auth_token');
+        const cachedData = force
+            ? null
+            : getSessionCacheData<{
+                facultades: Facultad[];
+                asignaturas: Asignatura[];
+                docentes: DocenteExtendido[];
+            }>(DOCENTES_CACHE_KEY, activeToken);
+
+        if (cachedData) {
+            setFacultades(cachedData.facultades);
+            setAsignaturas(cachedData.asignaturas);
+            setDocentes(cachedData.docentes);
+            return;
+        }
+
+        const facultadesData = db.getFacultades();
+        const asignaturasData = db.getAsignaturas();
+        const docentesData = db.getDocentes() as unknown as DocenteExtendido[];
+
+        setFacultades(facultadesData);
+        setAsignaturas(asignaturasData);
+        setDocentes(docentesData);
+        setSessionCacheData(DOCENTES_CACHE_KEY, activeToken, {
+            facultades: facultadesData,
+            asignaturas: asignaturasData,
+            docentes: docentesData
+        });
+    };
 
     const loadFacultades = () => {
         setFacultades(db.getFacultades());
@@ -199,7 +231,7 @@ export function useDocentes() {
         db.createDocente(newDocente);
 
         // Actualizar lista
-        loadDocentes();
+        loadData({ force: true });
 
         // Limpiar formulario
         resetForm();
@@ -270,7 +302,7 @@ export function useDocentes() {
         db.updateDocente(selectedDocente.id, updatedDocente);
 
         // Actualizar lista
-        loadDocentes();
+        loadData({ force: true });
 
         // Cerrar modal
         setShowEditDialog(false);
@@ -293,7 +325,7 @@ export function useDocentes() {
         db.deleteDocente(selectedDocente.id);
 
         // Actualizar lista
-        loadDocentes();
+        loadData({ force: true });
 
         // Cerrar modal
         setShowDeleteDialog(false);

@@ -3,6 +3,9 @@ import { toast } from 'sonner';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
 import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+
+const SEDES_CACHE_KEY = 'gestion-academica-sedes';
 
 export function useSedes() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -25,11 +28,20 @@ export function useSedes() {
         loadSedes();
     }, []);
 
-    const loadSedes = async () => {
+    const loadSedes = async ({ force = false }: { force?: boolean } = {}) => {
         try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedSedes = force ? null : getSessionCacheData<Sede[]>(SEDES_CACHE_KEY, activeToken);
+
+            if (cachedSedes) {
+                setSedes(cachedSedes);
+                return;
+            }
+
             setLoading(true);
             const response = await sedeService.listarSedes();
             setSedes(response.sedes);
+            setSessionCacheData(SEDES_CACHE_KEY, activeToken, response.sedes);
         } catch (error) {
             toast.error(`Error al cargar sedes: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
@@ -53,7 +65,7 @@ export function useSedes() {
                 activa: true
             });
 
-            await loadSedes();
+            await loadSedes({ force: true });
             setSedeForm({ nombre: '', direccion: '', ciudad: '' });
             setShowCreate(false);
 
@@ -84,7 +96,7 @@ export function useSedes() {
                 activa: selectedSede.activa
             });
 
-            await loadSedes();
+            await loadSedes({ force: true });
             setShowEdit(false);
             setSelectedSede(null);
             setSedeForm({ nombre: '', direccion: '', ciudad: '' });
@@ -105,7 +117,7 @@ export function useSedes() {
             setLoading(true);
             await sedeService.eliminarSede(selectedSede.id);
 
-            await loadSedes();
+            await loadSedes({ force: true });
             setShowDelete(false);
             setSelectedSede(null);
 
@@ -128,7 +140,7 @@ export function useSedes() {
                 activa: !sede.activa
             });
             
-            await loadSedes();
+            await loadSedes({ force: true });
 
             toast.warning(sede.activa ? 'Sede inactivada correctamente' : 'Sede activada correctamente');
         } catch (error) {
