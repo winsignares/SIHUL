@@ -1,13 +1,13 @@
 export interface RecursoConEstado {
     nombre: string;
-    estado: 'Disponible' | 'Mantenimiento' | 'Perdido' | 'No Disponible';
+    estado: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
 export interface EspacioFisico {
     id: string;
     codigo: string;
     nombre: string;
-    tipo: 'aula' | 'laboratorio' | 'auditorio' | 'sala' | 'otro';
+    tipo: string;
     sede: string;
     piso?: string;
     capacidad: number;
@@ -21,7 +21,7 @@ export interface EspacioFisico {
 export interface EquipamientoEspacio {
     item: string;
     cantidad: number;
-    estado: 'bueno' | 'regular' | 'malo';
+    estado: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
 export interface PrestamoEspacio {

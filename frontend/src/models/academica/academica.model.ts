@@ -1,11 +1,3 @@
-export interface Sede {
-    id: string;
-    codigo: string;
-    nombre: string;
-    activa: boolean;
-    fechaCreacion: string;
-}
-
 export interface Facultad {
     id: string;
     codigo: string;

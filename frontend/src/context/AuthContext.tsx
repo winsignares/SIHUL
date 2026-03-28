@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { authService } from '../services/users/authService';
 import type { LoginPayload, LoginResponse, AuthState } from '../models/auth/auth.model';
+import { useMemo } from 'react';
 
 interface AuthContextType extends AuthState {
     login: (payload: LoginPayload) => Promise<LoginResponse>;
@@ -104,15 +105,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    // Uso de useMemo para evitar recalcular permisos en cada render y disminuir complejidad de hasPermission y hasEditPermission
+    // Mapa de componentes por nombre para acceso rápido
+    const componentsByName = useMemo(() => {
+        const map = new Map<string, (typeof state.components)[number]>();
+        for (const c of state.components) {
+            map.set(c.nombre, c);
+        }
+        return map;
+    }, [state.components]);
+
+    // Set de componentes editables para acceso rápido en hasEditPermission
+    const editableComponents = useMemo(() => {
+        const set = new Set<string>();
+        for (const c of state.components) {
+            if (c.permiso?.toUpperCase() === 'EDITAR') {
+                set.add(c.nombre);
+            }
+        }
+        return set;
+    }, [state.components]);
+
     const hasPermission = (componentName: string): boolean => {
-        return state.components.some(c => c.nombre === componentName);
+        return componentsByName.has(componentName);
     };
 
     const hasEditPermission = (componentName: string): boolean => {
-        return state.components.some(c => 
-            c.nombre === componentName && 
-            (c.permiso === 'EDITAR' || c.permiso === 'Editar')
-        );
+        return editableComponents.has(componentName);
     };
 
     useEffect(() => {
