@@ -12,8 +12,7 @@ type RepeatQuickOption =
     | 'none'
     | 'daily'
     | 'weekly_current'
-    | 'monthly_ordinal_weekday'
-    | 'monthly_last_weekday'
+    | 'monthly_date'
     | 'yearly_date'
     | 'custom';
 
@@ -168,22 +167,17 @@ export function usePublicPrestamo() {
 
     const repeatOptions = (() => {
         const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(formData.fecha)] || 'lunes';
-        const yearlyText = formData.fecha
-            ? (() => {
-                const date = new Date(`${formData.fecha}T00:00:00`);
-                return `${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}`;
-            })()
+        const date = formData.fecha ? new Date(`${formData.fecha}T00:00:00`) : null;
+        const dayOfMonth = date ? date.getDate() : null;
+        const yearlyText = date
+            ? `${dayOfMonth} de ${MONTH_NAMES[date.getMonth()]}`
             : 'la fecha seleccionada';
-
-        const monthlyOrdinal = getOrdinalWeekdayText(formData.fecha);
-        const monthlyLast = `último ${weekdayName}`;
 
         return [
             { value: 'none' as const, label: 'No se repite' },
             { value: 'daily' as const, label: 'Cada día' },
             { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
-            { value: 'monthly_ordinal_weekday' as const, label: `Cada mes el ${monthlyOrdinal}` },
-            { value: 'monthly_last_weekday' as const, label: `Cada mes el ${monthlyLast}` },
+            { value: 'monthly_date' as const, label: `Cada mes el día ${dayOfMonth || 'X'}` },
             { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
             { value: 'custom' as const, label: 'Personalizar' },
         ];
@@ -207,8 +201,10 @@ export function usePublicPrestamo() {
         if (repeatOption === 'none') return 'No se repetirá.';
         if (repeatOption === 'daily') return `Se repetirá cada día a la misma hora${getFinishText()}.`;
         if (repeatOption === 'weekly_current') return `Se repetirá cada semana los ${weekdayName}${getFinishText()}.`;
-        if (repeatOption === 'monthly_ordinal_weekday') return `Se repetirá cada mes el ${getOrdinalWeekdayText(formData.fecha)}${getFinishText()}.`;
-        if (repeatOption === 'monthly_last_weekday') return `Se repetirá cada mes el último ${weekdayName}${getFinishText()}.`;
+        if (repeatOption === 'monthly_date') {
+            const dayOfMonth = date ? date.getDate() : 'X';
+            return `Se repetirá cada mes el día ${dayOfMonth}${getFinishText()}.`;
+        }
         if (repeatOption === 'yearly_date') return `Se repetirá anualmente el ${yearlyText}${getFinishText()}.`;
 
         const periodText =
@@ -251,9 +247,16 @@ export function usePublicPrestamo() {
                 ...baseEnd,
             };
         }
-        if (repeatOption === 'monthly_ordinal_weekday' || repeatOption === 'monthly_last_weekday') {
-            // El backend actual no soporta patrón ordinal/último; se mapea a mensual simple.
-            return { es_recurrente: true, frecuencia: 'monthly', intervalo: 1, ...baseEnd };
+        if (repeatOption === 'monthly_date') {
+            const dayOfMonth = formData.fecha ? new Date(`${formData.fecha}T12:00:00`).getDate() : 1;
+            return {
+                es_recurrente: true,
+                frecuencia: 'monthly',
+                intervalo: 1,
+                dias_semana: [],
+                dia_mes: dayOfMonth,
+                ...baseEnd,
+            };
         }
         if (repeatOption === 'yearly_date') {
             return { es_recurrente: true, frecuencia: 'yearly', intervalo: 1, ...baseEnd };

@@ -34,6 +34,7 @@ export interface PrestamoEspacio {
   es_recurrente?: boolean;
   frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
   intervalo?: number;
+  /** Semanal: Lunes=0…Domingo=6. Mensual: `[patrón, weekdayJS]` con patrón 0=énésimo, 1=último; weekdayJS 0=dom…6=sáb (Date.getDay). */
   dias_semana?: number[];
   fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
   fin_repeticion_fecha?: string | null;
@@ -59,6 +60,13 @@ const buildRecurrencePayload = (prestamo: Partial<PrestamoEspacio>) => {
     payload.dias_semana = prestamo.dias_semana;
   }
 
+  if (prestamo.frecuencia === 'monthly' && Array.isArray(prestamo.dias_semana) && prestamo.dias_semana.length === 2) {
+    const [a, b] = prestamo.dias_semana;
+    if ((a === 0 || a === 1) && typeof b === 'number' && b >= 0 && b <= 6) {
+      payload.dias_semana = prestamo.dias_semana;
+    }
+  }
+
   if (prestamo.fin_repeticion_tipo === 'until_date' && prestamo.fin_repeticion_fecha) {
     payload.fin_repeticion_fecha = prestamo.fin_repeticion_fecha;
   }
@@ -79,10 +87,12 @@ const buildRecurrencePayload = (prestamo: Partial<PrestamoEspacio>) => {
  */
 export const prestamoService = {
   /**
-   * Obtiene la lista de todos los préstamos
+   * Obtiene la lista de todos los préstamos.
+   * @param includeOcurrencias Si es true, incluye cada ocurrencia de series recurrentes (filas hijas en BD).
    */
-  listarPrestamos: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
-    return apiClient.get('/prestamos/list/');
+  listarPrestamos: async (options?: { includeOcurrencias?: boolean }): Promise<{ prestamos: PrestamoEspacio[] }> => {
+    const q = options?.includeOcurrencias ? '?include_ocurrencias=true' : '';
+    return apiClient.get(`/prestamos/list/${q}`);
   },
 
   /**

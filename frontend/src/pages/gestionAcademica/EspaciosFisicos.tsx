@@ -395,7 +395,7 @@ export default function EspaciosFisicos() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ubicacion">Ubicación *</Label>
+              <Label htmlFor="ubicacion">Ubicación (opcional)</Label>
               <Input
                 id="ubicacion"
                 placeholder="Ej: Edificio A, Pasillo 2"
@@ -596,7 +596,7 @@ export default function EspaciosFisicos() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-ubicacion">Ubicación *</Label>
+              <Label htmlFor="edit-ubicacion">Ubicación (opcional)</Label>
               <Input
                 id="edit-ubicacion"
                 placeholder="Ej: Edificio A, Pasillo 2"

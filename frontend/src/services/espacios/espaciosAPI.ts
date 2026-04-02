@@ -16,7 +16,7 @@ export interface EspacioFisico {
     capacidad: number;
     descripcion?: string;
     recursos?: { id: number; nombre: string; estado: string }[];
-    ubicacion?: string;
+    ubicacion?: string | null;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -30,7 +30,7 @@ export interface CreateEspacioPayload {
     capacidad: number;
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
-    ubicacion?: string;
+    ubicacion?: string | null;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -45,7 +45,7 @@ export interface UpdateEspacioPayload {
     capacidad?: number;
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
-    ubicacion?: string;
+    ubicacion?: string | null;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 

@@ -26,8 +26,7 @@ type RepeatQuickOption =
   | 'none'
   | 'daily'
   | 'weekly_current'
-  | 'monthly_ordinal_weekday'
-  | 'monthly_last_weekday'
+  | 'monthly_date'
   | 'yearly_date'
   | 'custom';
 
@@ -35,6 +34,17 @@ type CustomPeriod = 'day' | 'week' | 'month' | 'year';
 
 const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/** Nombre de columna del cronograma → Date.getDay() (0=dom … 6=sáb). */
+const GRID_DIA_A_JS_WEEKDAY: Record<string, number> = {
+  Domingo: 0,
+  Lunes: 1,
+  Martes: 2,
+  Miércoles: 3,
+  Jueves: 4,
+  Viernes: 5,
+  Sábado: 6
+};
 
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
@@ -153,38 +163,50 @@ export default function ConsultaEspacios() {
     { value: 6, label: 'Domingo' }
   ] as const;
 
-  const getWeekdayMondayIndex = (dateStr?: string): number => {
+  const getWeekdayMondayIndex = (dateStr?: string, diaSemanaGrid?: string): number => {
+    if (diaSemanaGrid && diaSemanaGrid in GRID_DIA_A_JS_WEEKDAY) {
+      const js = GRID_DIA_A_JS_WEEKDAY[diaSemanaGrid];
+      return js === 0 ? 6 : js - 1;
+    }
     if (!dateStr) return 0;
-    const jsDay = new Date(`${dateStr}T00:00:00`).getDay();
+    const jsDay = new Date(`${dateStr}T12:00:00`).getDay();
     return jsDay === 0 ? 6 : jsDay - 1;
   };
 
-  const getOrdinalWeekdayText = (dateStr?: string): string => {
+  const getWeekdayJSForRecurrence = (diaSemanaGrid?: string, dateStr?: string): number => {
+    if (diaSemanaGrid && diaSemanaGrid in GRID_DIA_A_JS_WEEKDAY) {
+      return GRID_DIA_A_JS_WEEKDAY[diaSemanaGrid];
+    }
+    return dateStr ? new Date(`${dateStr}T12:00:00`).getDay() : 0;
+  };
+
+  const getOrdinalWeekdayText = (dateStr?: string, diaSemanaGrid?: string): string => {
     if (!dateStr) return 'primer lunes';
-    const date = new Date(`${dateStr}T00:00:00`);
+    const date = new Date(`${dateStr}T12:00:00`);
     const day = date.getDate();
     const ordinalNum = Math.floor((day - 1) / 7) + 1;
     const ordinals = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto'];
-    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(dateStr)];
+    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(dateStr, diaSemanaGrid)];
     return `${ordinals[Math.min(ordinalNum - 1, 4)]} ${weekdayName}`;
   };
 
   const repeatOptions = (() => {
     const fechaBase = nuevaSolicitudData?.fecha;
-    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(fechaBase)] || 'lunes';
-    const yearlyText = fechaBase
-      ? (() => {
-          const date = new Date(`${fechaBase}T00:00:00`);
-          return `${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}`;
-        })()
+    const diaG = nuevaSolicitudData?.diaSemana;
+    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(fechaBase, diaG)] || 'lunes';
+    const date = fechaBase ? new Date(`${fechaBase}T12:00:00`) : null;
+    const dayOfMonth = date ? date.getDate() : null;
+    const yearlyText = date
+      ? `${dayOfMonth} de ${MONTH_NAMES[date.getMonth()]}`
       : 'la fecha seleccionada';
+
+    const ordinalWeekdayText = getOrdinalWeekdayText(fechaBase, diaG);
 
     return [
       { value: 'none' as const, label: 'No se repite' },
       { value: 'daily' as const, label: 'Cada día' },
       { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
-      { value: 'monthly_ordinal_weekday' as const, label: `Cada mes el ${getOrdinalWeekdayText(fechaBase)}` },
-      { value: 'monthly_last_weekday' as const, label: `Cada mes el último ${weekdayName}` },
+      { value: 'monthly_date' as const, label: `Cada mes el ${ordinalWeekdayText}` },
       { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
       { value: 'custom' as const, label: 'Personalizar' }
     ];
@@ -235,17 +257,26 @@ export default function ConsultaEspacios() {
         es_recurrente: true,
         frecuencia: 'weekly' as const,
         intervalo: 1,
-        dias_semana: [getWeekdayMondayIndex(nuevaSolicitudData?.fecha)],
+        dias_semana: [getWeekdayMondayIndex(nuevaSolicitudData?.fecha, nuevaSolicitudData?.diaSemana)],
         ...baseEnd
       };
     }
 
-    if (repeatOption === 'monthly_ordinal_weekday' || repeatOption === 'monthly_last_weekday') {
+    if (repeatOption === 'monthly_date') {
+      const fechaBase = nuevaSolicitudData?.fecha;
+      const diaG = nuevaSolicitudData?.diaSemana;
+      const date = fechaBase ? new Date(`${fechaBase}T12:00:00`) : null;
+      const day = date ? date.getDate() : 1;
+      // ordinalNum: 1=primer, 2=segundo, 3=tercer, 4=cuarto, 5=quinto
+      const ordinalNum = Math.floor((day - 1) / 7) + 1;
+      // weekdayJS: 0=domingo ... 6=sábado
+      const weekdayJS = getWeekdayJSForRecurrence(diaG, fechaBase);
+      // dias_semana para mensual: [patrón, weekdayJS] donde patrón 0=énésimo
       return {
         es_recurrente: true,
         frecuencia: 'monthly' as const,
         intervalo: 1,
-        dias_semana: [] as number[],
+        dias_semana: [ordinalNum - 1, weekdayJS] as [number, number],
         ...baseEnd
       };
     }
@@ -262,12 +293,12 @@ export default function ConsultaEspacios() {
 
     const customFrequency =
       customPeriod === 'day'
-        ? 'daily'
+        ? 'daily' as const
         : customPeriod === 'week'
-          ? 'weekly'
+          ? 'weekly' as const
           : customPeriod === 'month'
-            ? 'monthly'
-            : 'yearly';
+            ? 'monthly' as const
+            : 'yearly' as const;
 
     return {
       es_recurrente: true,
@@ -289,13 +320,11 @@ export default function ConsultaEspacios() {
     if (repeatOption === 'none') return 'No se repetirá.';
     if (repeatOption === 'daily') return `Se repetirá cada día${finishText}.`;
     if (repeatOption === 'weekly_current') {
-      return `Se repetirá cada semana el ${WEEKDAY_NAMES[getWeekdayMondayIndex(nuevaSolicitudData?.fecha)]}${finishText}.`;
+      return `Se repetirá cada semana el ${WEEKDAY_NAMES[getWeekdayMondayIndex(nuevaSolicitudData?.fecha, nuevaSolicitudData?.diaSemana)]}${finishText}.`;
     }
-    if (repeatOption === 'monthly_ordinal_weekday') {
-      return `Se repetirá cada mes el ${getOrdinalWeekdayText(nuevaSolicitudData?.fecha)}${finishText}.`;
-    }
-    if (repeatOption === 'monthly_last_weekday') {
-      return `Se repetirá cada mes el último ${WEEKDAY_NAMES[getWeekdayMondayIndex(nuevaSolicitudData?.fecha)]}${finishText}.`;
+    if (repeatOption === 'monthly_date') {
+      const ordinalText = getOrdinalWeekdayText(nuevaSolicitudData?.fecha, nuevaSolicitudData?.diaSemana);
+      return `Se repetirá cada mes el ${ordinalText}${finishText}.`;
     }
     if (repeatOption === 'yearly_date' && nuevaSolicitudData?.fecha) {
       const d = new Date(`${nuevaSolicitudData.fecha}T00:00:00`);
@@ -489,7 +518,7 @@ export default function ConsultaEspacios() {
     try {
       // Verificar si el usuario tiene permiso de EDITAR para auto-aprobar
       const puedeAutoAprobar = hasEditPermission('Disponibilidad de Espacios');
-      const estadoInicial = puedeAutoAprobar ? 'Aprobado' : 'Pendiente';
+      const estadoInicial: 'Aprobado' | 'Pendiente' = puedeAutoAprobar ? 'Aprobado' : 'Pendiente';
 
       const payloadBase = {
         espacio_id: formData.espacio_id,
@@ -514,7 +543,12 @@ export default function ConsultaEspacios() {
             es_recurrente: true,
             frecuencia: recurrenceData.frecuencia,
             intervalo: recurrenceData.intervalo,
-            dias_semana: recurrenceData.frecuencia === 'weekly' ? recurrenceData.dias_semana : undefined,
+            dias_semana:
+              recurrenceData.frecuencia === 'weekly'
+                ? recurrenceData.dias_semana
+                : recurrenceData.frecuencia === 'monthly' && recurrenceData.dias_semana.length >= 2
+                  ? recurrenceData.dias_semana
+                  : undefined,
             fin_repeticion_tipo: recurrenceData.fin_repeticion_tipo,
             fin_repeticion_fecha: recurrenceData.fin_repeticion_tipo === 'until_date' ? recurrenceData.fin_repeticion_fecha : undefined,
             fin_repeticion_ocurrencias:

@@ -18,8 +18,40 @@ import {
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import {
+    expandirPrestamosParaCronograma,
+    getDiaSemanaEspanolDesdeISO,
+    prestamoIntersectsRangoCronograma
+} from './prestamosCronogramaUtils';
 
 const CONSULTA_ESPACIOS_CACHE_KEY = 'espacios-consulta-espacios';
+
+/** Fecha calendario en zona local; evita que medianoche local pase a “ayer” con toISOString() (UTC). */
+function formatFechaLocalYYYYMMDD(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+/**
+ * Semana Lun–Sáb mostrada en el cronograma (misma lógica que `encabezadosDiasCronograma`).
+ * Si solo se usa `filterFechaFin || filterFechaInicio` y el fin queda en un solo día (p. ej. viernes),
+ * los préstamos del sábado de esa misma semana no se expanden aunque la columna sea visible.
+ */
+function rangoSemanaVisibleCronograma(fechaInicioISO: string): { desde: string; hasta: string } {
+    const referencia = new Date(fechaInicioISO + 'T12:00:00');
+    const diaSemana = referencia.getDay();
+    const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+    const lunes = new Date(referencia);
+    lunes.setDate(referencia.getDate() + diasHastaLunes);
+    const sabado = new Date(lunes);
+    sabado.setDate(lunes.getDate() + 5);
+    return {
+        desde: formatFechaLocalYYYYMMDD(lunes),
+        hasta: formatFechaLocalYYYYMMDD(sabado)
+    };
+}
 
 export interface EspacioView {
     id: string;
@@ -292,14 +324,14 @@ export function useConsultaEspacios() {
                 return;
             }
             
-            const fechaInicioStr = hoy.toISOString().split('T')[0];
-            
+            const fechaInicioStr = formatFechaLocalYYYYMMDD(hoy);
+
             // Calcular el sábado de la semana actual
             const diaSemana = hoy.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
             const diasHastaSabado = 6 - diaSemana; // Días hasta sábado
             const sabado = new Date(hoy);
             sabado.setDate(hoy.getDate() + diasHastaSabado);
-            const fechaFinStr = sabado.toISOString().split('T')[0];
+            const fechaFinStr = formatFechaLocalYYYYMMDD(sabado);
             
             setFilterFechaInicio(fechaInicioStr);
             setFilterFechaFin(fechaFinStr);
@@ -355,7 +387,7 @@ export function useConsultaEspacios() {
         const diasHastaSabado = 6 - diaSemana; // Días hasta sábado
         const sabado = new Date(fechaInicio);
         sabado.setDate(fechaInicio.getDate() + diasHastaSabado);
-        setFilterFechaFin(sabado.toISOString().split('T')[0]);
+        setFilterFechaFin(formatFechaLocalYYYYMMDD(sabado));
         setMensajeFiltroFecha({
             tipo: 'info',
             texto: 'Rango actualizado. Puedes ajustar la fecha fin si necesitas un día posterior dentro del rango permitido.'
@@ -424,8 +456,8 @@ export function useConsultaEspacios() {
 
             try {
                 const [prestamosAuthResponse, prestamosPublicosResponse] = await Promise.all([
-                    prestamoService.listarPrestamos(),
-                    prestamosPublicAPI.listarPrestamosPublicos()
+                    prestamoService.listarPrestamos({ includeOcurrencias: true }),
+                    prestamosPublicAPI.listarPrestamosPublicos({ includeOcurrencias: true })
                 ]);
 
                 const todosLosPrestamos: PrestamoEspacio[] = [
@@ -433,11 +465,10 @@ export function useConsultaEspacios() {
                     ...((prestamosPublicosResponse.prestamos || []) as unknown as PrestamoEspacio[])
                 ];
                 
-                // Filtrar préstamos aprobados y pendientes entre las fechas seleccionadas
-                const prestamosFiltrados = todosLosPrestamos.filter(p => 
-                    (p.estado === 'Aprobado' || p.estado === 'Pendiente') && 
-                    p.fecha >= filterFechaInicio &&
-                    p.fecha <= (filterFechaFin || filterFechaInicio)
+                // Misma ventana Lun–Sáb que la grilla (no acotar al solo día de inicio/fin del filtro)
+                const { desde, hasta } = rangoSemanaVisibleCronograma(filterFechaInicio);
+                const prestamosFiltrados = todosLosPrestamos.filter((p) =>
+                    prestamoIntersectsRangoCronograma(p, desde, hasta)
                 );
                 
                 setPrestamos(prestamosFiltrados);
@@ -448,14 +479,7 @@ export function useConsultaEspacios() {
         };
 
         loadPrestamos();
-    }, [filterFechaInicio, filterFechaFin]);
-
-    // Función auxiliar para convertir fecha a día de la semana
-    const getFechaDiaSemana = (fecha: string): string => {
-        const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        const date = new Date(fecha + 'T00:00:00'); // Agregar tiempo para evitar problemas de zona horaria
-        return dias[date.getDay()];
-    };
+    }, [filterFechaInicio]);
 
     // Función auxiliar para convertir hora HH:MM:SS a número
     const horaANumero = (hora: string): number => {
@@ -672,38 +696,41 @@ export function useConsultaEspacios() {
         mantenimiento: espacios.filter(e => e.estado === 'mantenimiento').length
     }), [espacios]);
 
-    // Combinar horarios con préstamos si hay fechas seleccionadas
+    // Combinar horarios con préstamos si hay fechas seleccionadas (expande series semanales en la semana visible)
     const horariosConPrestamos = useMemo(() => {
         if (!filterFechaInicio || prestamos.length === 0) {
             return horarios;
         }
 
-        const prestamosComoOcupacion: OcupacionView[] = prestamos.map(p => {
-            const diaSemana = getFechaDiaSemana(p.fecha);
-            return {
-                espacioId: p.espacio_id.toString(),
-                dia: diaSemana,
-                horaInicio: horaANumero(p.hora_inicio),
-                horaFin: horaANumero(p.hora_fin),
-                materia: p.tipo_actividad_nombre || 'Préstamo',
-                docente: p.usuario_nombre || p.solicitante_publico_nombre,
-                grupo: p.motivo,
-                estado: 'prestamo',
-                tipo: 'prestamo',
-                prestamo: p
-            };
-        });
+        const { desde, hasta } = rangoSemanaVisibleCronograma(filterFechaInicio);
+        const prestamosVisibles = expandirPrestamosParaCronograma(prestamos, desde, hasta);
+
+        const prestamosComoOcupacion: OcupacionView[] = prestamosVisibles.map((p) => ({
+            espacioId: p.espacio_id.toString(),
+            dia: getDiaSemanaEspanolDesdeISO(p.fecha),
+            horaInicio: horaANumero(p.hora_inicio),
+            horaFin: horaANumero(p.hora_fin),
+            materia: p.tipo_actividad_nombre || 'Préstamo',
+            docente: p.usuario_nombre || p.solicitante_publico_nombre,
+            grupo: p.motivo,
+            estado: 'prestamo',
+            tipo: 'prestamo',
+            prestamo: p
+        }));
 
         return [...horarios, ...prestamosComoOcupacion];
     }, [horarios, prestamos, filterFechaInicio]);
 
     const getOcupacionPorHora = (espacioId: string, dia: string, hora: number) => {
-        return horariosConPrestamos.find(h =>
-            h.espacioId === espacioId &&
-            h.dia === dia &&
-            hora >= h.horaInicio &&
-            hora < h.horaFin
+        const matches = horariosConPrestamos.filter(
+            (h) =>
+                h.espacioId === espacioId &&
+                h.dia === dia &&
+                hora >= h.horaInicio &&
+                hora < h.horaFin
         );
+        // Si hay clase y préstamo solapados, mostrar el préstamo (antes `find` devolvía solo el horario).
+        return matches.find((h) => h.tipo === 'prestamo') ?? matches[0];
     };
 
     const getColorEstado = (estado: 'ocupado' | 'mantenimiento' | 'disponible') => {
@@ -778,12 +805,7 @@ export function useConsultaEspacios() {
                 let maxLines = 0;
                 
                 diasNombres.forEach((dia) => {
-                    const horarioEnCelda = horariosConPrestamos.find(h =>
-                        h.espacioId === espacio.id &&
-                        h.dia === dia &&
-                        hora >= h.horaInicio &&
-                        hora < h.horaFin
-                    );
+                    const horarioEnCelda = getOcupacionPorHora(espacio.id, dia, hora);
                     
                     if (horarioEnCelda) {
                         hasContent = true;
@@ -855,12 +877,7 @@ export function useConsultaEspacios() {
                 diasNombres.forEach((dia, diaIdx) => {
                     const x = startX + cellWidth * (diaIdx + 1);
                     
-                    const horarioEnCelda = horariosConPrestamos.find(h =>
-                        h.espacioId === espacio.id &&
-                        h.dia === dia &&
-                        hora >= h.horaInicio &&
-                        hora < h.horaFin
-                    );
+                    const horarioEnCelda = getOcupacionPorHora(espacio.id, dia, hora);
                     
                     if (horarioEnCelda) {
                         const isPrestamo = horarioEnCelda.tipo === 'prestamo';
@@ -977,13 +994,7 @@ export function useConsultaEspacios() {
                 
                 // Para cada día
                 diasNombres.slice(1).forEach(dia => {
-                    // Buscar horario para esta hora y día - usar horariosConPrestamos
-                    const horarioEnCelda = horariosConPrestamos.find(h =>
-                        h.espacioId === espacio.id &&
-                        h.dia === dia &&
-                        hora >= h.horaInicio &&
-                        hora < h.horaFin
-                    );
+                    const horarioEnCelda = getOcupacionPorHora(espacio.id, dia, hora);
                     
                     if (horarioEnCelda) {
                         const isPrestamo = horarioEnCelda.tipo === 'prestamo';
@@ -1084,9 +1095,9 @@ export function useConsultaEspacios() {
             if (filterFechaInicio) {
                 fechaBase = new Date(filterFechaInicio + 'T00:00:00');
             } else {
-                // Si no hay filtro, usar la fecha de hoy
-                const hoyColombia = getFechaColombia().toISOString().split('T')[0];
-                fechaBase = new Date(hoyColombia + 'T00:00:00');
+                const hoy = getFechaColombia();
+                hoy.setHours(0, 0, 0, 0);
+                fechaBase = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
             }
 
             // Calcular la fecha exacta según el día seleccionado en el horario
@@ -1143,7 +1154,7 @@ export function useConsultaEspacios() {
             setNuevaSolicitudData({
                 espacio_id: parseInt(espacio.id),
                 espacio_nombre: espacio.nombre,
-                fecha: fecha.toISOString().split('T')[0],
+                fecha: formatFechaLocalYYYYMMDD(fecha),
                 horaInicio: `${seleccionRango.horaInicio.toString().padStart(2, '0')}:00`,
                 horaFin: `${seleccionRango.horaFin.toString().padStart(2, '0')}:00`,
                 diaSemana: seleccionRango.dia

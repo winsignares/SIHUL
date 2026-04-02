@@ -37,6 +37,7 @@ export interface SolicitudPrestamoPublico {
     frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
     intervalo?: number;
     dias_semana?: number[];
+    dia_mes?: number;
     fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
     fin_repeticion_fecha?: string;
     fin_repeticion_ocurrencias?: number;
@@ -194,9 +195,11 @@ export const prestamosPublicAPI = {
 
     /**
      * Lista todos los préstamos públicos
+     * @param includeOcurrencias Si es true, incluye cada ocurrencia de series recurrentes
      */
-    listarPrestamosPublicos: async (): Promise<{ prestamos: PrestamoPublicoListado[] }> => {
-        return apiClient.get('/prestamos/public/list/');
+    listarPrestamosPublicos: async (options?: { includeOcurrencias?: boolean }): Promise<{ prestamos: PrestamoPublicoListado[] }> => {
+        const q = options?.includeOcurrencias ? '?include_ocurrencias=true' : '';
+        return apiClient.get(`/prestamos/public/list/${q}`);
     },
 
     /**

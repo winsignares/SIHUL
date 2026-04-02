@@ -159,10 +159,6 @@ export function useEspaciosFisicos() {
             toast.error('Debe seleccionar una sede');
             return;
         }
-        if (!espacioForm.ubicacion.trim()) {
-            toast.error('La ubicación es obligatoria');
-            return;
-        }
 
         try {
             // Preparar recursos para el payload
@@ -171,13 +167,14 @@ export function useEspaciosFisicos() {
                 estado: 'disponible' // Estado por defecto al crear
             }));
 
+            const ubicacionTrim = espacioForm.ubicacion.trim();
             // 1. Crear el espacio con recursos
             await espacioService.create({
                 nombre: espacioForm.nombre.trim(),
                 tipo_id: Number(espacioForm.tipo_id),
                 capacidad: Number(espacioForm.capacidad),
                 sede_id: Number(espacioForm.sede_id),
-                ubicacion: espacioForm.ubicacion.trim(),
+                ubicacion: ubicacionTrim.length > 0 ? ubicacionTrim : null,
                 estado: 'Disponible',
                 descripcion: espacioForm.descripcion,
                 recursos: recursosPayload
@@ -287,10 +284,6 @@ export function useEspaciosFisicos() {
             toast.error('Debe seleccionar una sede');
             return;
         }
-        if (!espacioForm.ubicacion.trim()) {
-            toast.error('La ubicación es obligatoria');
-            return;
-        }
 
         try {
             // Preparar recursos para el payload
@@ -299,6 +292,7 @@ export function useEspaciosFisicos() {
                 estado: 'disponible'
             }));
 
+            const ubicacionTrim = espacioForm.ubicacion.trim();
             // 1. Actualizar espacio con recursos
             await espacioService.update({
                 id: selectedEspacio.id!,
@@ -306,7 +300,7 @@ export function useEspaciosFisicos() {
                 tipo_id: Number(espacioForm.tipo_id),
                 capacidad: Number(espacioForm.capacidad),
                 sede_id: Number(espacioForm.sede_id),
-                ubicacion: espacioForm.ubicacion.trim(),
+                ubicacion: ubicacionTrim.length > 0 ? ubicacionTrim : null,
                 descripcion: espacioForm.descripcion.trim(),
                 estado: espacioForm.estado,
                 recursos: recursosPayload
