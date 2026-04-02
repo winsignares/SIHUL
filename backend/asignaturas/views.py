@@ -12,12 +12,16 @@ from programas.models import Programa
 @require_http_methods(["POST"])
 def create_asignatura(request):
     try:
+        #sede del usuario actual
+        sede_actual = getattr(request, 'sede', None)
+        
         data = json.loads(request.body)
         nombre = data.get('nombre')
         codigo = data.get('codigo')
         creditos = data.get('creditos')
         tipo = data.get('tipo', 'teórica')
         horas = data.get('horas', 0)
+        sede = sede_actual  
 
         if not all([nombre, codigo, creditos]):
             return JsonResponse({'error': 'Faltan campos obligatorios'}, status=400)
@@ -27,7 +31,8 @@ def create_asignatura(request):
             codigo=codigo,
             creditos=int(creditos),
             tipo=tipo,
-            horas=int(horas)
+            horas=int(horas),
+            sede=sede
         )
         asignatura.save()
 
@@ -118,7 +123,15 @@ def get_asignatura(request, id):
 @require_http_methods(["GET"])
 def list_asignaturas(request):
     try:
-        asignaturas = Asignatura.objects.all()
+        #sede del usuario actual
+        sede_actual = getattr(request, 'sede', None)
+        
+        #se compara que la ciudad de la sede del usuario actual sea igual a la ciudad de la sede de cada asignatura, si sede_actual es None se listan todas las asignaturas
+        if sede_actual:
+            asignaturas = Asignatura.objects.filter(sede__ciudad=sede_actual.ciudad)
+        else:
+            asignaturas = Asignatura.objects.all()
+            
         data = []
         for asignatura in asignaturas:
             data.append({

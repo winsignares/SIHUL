@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 
 from programas.models import Programa
+from sedes.models import Sede
 
 class Asignatura(models.Model):
     id = models.AutoField(primary_key=True)
@@ -11,6 +12,7 @@ class Asignatura(models.Model):
     creditos = models.PositiveIntegerField()
     tipo = models.CharField(max_length=20, choices=[('teórica', 'Teórica'), ('práctica', 'Práctica'), ('mixta', 'Mixta')], default='presencial')
     horas = models.PositiveIntegerField(default=0)
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='asignaturas_sede', blank=True, null=True)
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre} ({self.tipo})"
