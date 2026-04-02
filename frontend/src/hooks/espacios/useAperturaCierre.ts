@@ -2,7 +2,17 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { aperturaCierreService, espacioService, type EspacioConHorarios, type HorarioEspacio, type TipoEspacio } from '../../services/espacios/espaciosAPI';
 import { espacioRecursoService, type EstadoRecurso, type EspacioRecurso } from '../../services/recursos/recursoAPI';
 import { toast } from 'sonner';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from '../gestionAcademica/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const APERTURA_CIERRE_CACHE_KEY = 'espacios-apertura-cierre';
@@ -292,7 +302,7 @@ export function useAperturaCierre() {
 
     const totalHorariosPendientes = horariosPendientes.length;
     const totalPages = getTotalPages(totalHorariosPendientes, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const horariosPaginados = useMemo(() => {
         return getPageSlice(horariosPendientes, currentPage, PAGE_SIZE);
@@ -316,6 +326,16 @@ export function useAperturaCierre() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     const abrirPopupRevisionRecursos = useCallback(async (espacioId: number) => {
@@ -446,6 +466,10 @@ export function useAperturaCierre() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         abrirSalon,
         cerrarSalon,
         modalRecursosAbierto,

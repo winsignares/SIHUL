@@ -1,11 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { prestamoService, type PrestamoEspacio, type RecursoPrestamo } from '../../services/prestamos/prestamoAPI';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import { prestamosPublicAPI, type EspacioDisponibleAPI } from '../../services/prestamos/prestamosPublicAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from '../gestionAcademica/paginacion';
 import type { Prestamo } from '../../models/index';
 import type { Sede } from '../../services/sedes/sedeAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
@@ -401,7 +411,7 @@ export function useDocentePrestamos() {
 
     const totalFilteredPrestamos = filteredPrestamos.length;
     const totalPages = getTotalPages(totalFilteredPrestamos, PAGE_SIZE);
-    const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedPrestamos = getPageSlice(filteredPrestamos, currentPage, PAGE_SIZE);
 
@@ -423,6 +433,16 @@ export function useDocentePrestamos() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     return {
@@ -454,6 +474,10 @@ export function useDocentePrestamos() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         estadisticas,
         loading,
         error,

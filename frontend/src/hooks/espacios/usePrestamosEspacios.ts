@@ -5,7 +5,17 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from '../gestionAcademica/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const PRESTAMOS_CACHE_KEY = 'prestamos-espacios-admin';
@@ -565,7 +575,7 @@ export function usePrestamosEspacios() {
 
     const totalFilteredPrestamos = filteredPrestamos.length;
     const totalPages = getTotalPages(totalFilteredPrestamos, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedPrestamos = useMemo(() => {
         return getPageSlice(filteredPrestamos, currentPage, PAGE_SIZE);
@@ -589,6 +599,16 @@ export function usePrestamosEspacios() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     return {
@@ -616,6 +636,10 @@ export function usePrestamosEspacios() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         statsData,
         aprobarSolicitud,
         rechazarSolicitud,

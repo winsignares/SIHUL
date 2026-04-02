@@ -4,7 +4,17 @@ import { espacioService, type EspacioFisico } from '../../services/espacios/espa
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { tipoEspacioService, type TipoEspacio } from '../../services/espacios/tipoEspacioAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
@@ -389,7 +399,7 @@ export function useEspaciosFisicos() {
 
     const totalFilteredEspacios = filteredEspacios.length;
     const totalPages = getTotalPages(totalFilteredEspacios, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedEspacios = useMemo(() => {
         return getPageSlice(filteredEspacios, currentPage, PAGE_SIZE);
@@ -413,6 +423,16 @@ export function useEspaciosFisicos() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     // Badge de estado
@@ -465,6 +485,10 @@ export function useEspaciosFisicos() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         getEstadoBadge,
         loadEspacios
     };

@@ -4,7 +4,17 @@ import { useAuth } from '../../context/AuthContext';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from '../gestionAcademica/paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from '../gestionAcademica/paginacion';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
@@ -619,7 +629,7 @@ export function useConsultaEspacios() {
 
     const totalFilteredEspacios = filteredEspacios.length;
     const totalPages = getTotalPages(totalFilteredEspacios, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedEspacios = useMemo(() => {
         return getPageSlice(filteredEspacios, currentPage, PAGE_SIZE);
@@ -643,6 +653,16 @@ export function useConsultaEspacios() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     const estadisticas = useMemo(() => ({
@@ -1200,6 +1220,10 @@ export function useConsultaEspacios() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         estadisticas,
         getOcupacionPorHora,
         getColorEstado,

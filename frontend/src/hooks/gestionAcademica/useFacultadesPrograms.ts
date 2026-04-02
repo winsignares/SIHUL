@@ -7,7 +7,17 @@ import { programaService } from '../../services/programas/programaAPI';
 import type { Programa as ProgramaAPI } from '../../services/programas/programaAPI';
 import { asignaturaService, asignaturaProgramaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura, AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const FACULTADES_CACHE_KEY = 'gestion-academica-facultades';
@@ -573,14 +583,20 @@ export function useFacultadesPrograms() {
 
     const totalFilteredFacultades = filteredFacultades.length;
     const totalFacultadPages = getTotalPages(totalFilteredFacultades, PAGE_SIZE);
-    const facultadPageNumbers = useMemo(() => getPageNumbers(totalFacultadPages), [totalFacultadPages]);
+    const facultadPageNumbers = useMemo(
+        () => getPageNumbers(totalFacultadPages, currentFacultadPage),
+        [totalFacultadPages, currentFacultadPage]
+    );
     const paginatedFacultades = useMemo(() => {
         return getPageSlice(filteredFacultades, currentFacultadPage, PAGE_SIZE);
     }, [filteredFacultades, currentFacultadPage, PAGE_SIZE]);
 
     const totalFilteredProgramas = filteredProgramas.length;
     const totalProgramaPages = getTotalPages(totalFilteredProgramas, PAGE_SIZE);
-    const programaPageNumbers = useMemo(() => getPageNumbers(totalProgramaPages), [totalProgramaPages]);
+    const programaPageNumbers = useMemo(
+        () => getPageNumbers(totalProgramaPages, currentProgramaPage),
+        [totalProgramaPages, currentProgramaPage]
+    );
     const paginatedProgramas = useMemo(() => {
         return getPageSlice(filteredProgramas, currentProgramaPage, PAGE_SIZE);
     }, [filteredProgramas, currentProgramaPage, PAGE_SIZE]);
@@ -624,6 +640,26 @@ export function useFacultadesPrograms() {
 
     const goToPrevProgramaPage = () => {
         goToProgramaPage(currentProgramaPage - 1);
+    };
+
+    const goToPrevFacultadPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentFacultadPage, totalFacultadPages);
+        if (target != null) goToFacultadPage(target);
+    };
+
+    const goToNextFacultadPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentFacultadPage, totalFacultadPages);
+        if (target != null) goToFacultadPage(target);
+    };
+
+    const goToPrevProgramaPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentProgramaPage, totalProgramaPages);
+        if (target != null) goToProgramaPage(target);
+    };
+
+    const goToNextProgramaPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentProgramaPage, totalProgramaPages);
+        if (target != null) goToProgramaPage(target);
     };
 
     // Contar programas por facultad
@@ -707,6 +743,10 @@ export function useFacultadesPrograms() {
         goToFacultadPage,
         goToNextFacultadPage,
         goToPrevFacultadPage,
+        hasPrevFacultadPageWindow: hasPrevPageWindow(currentFacultadPage, totalFacultadPages),
+        hasNextFacultadPageWindow: hasNextPageWindow(currentFacultadPage, totalFacultadPages),
+        goToPrevFacultadPageWindow,
+        goToNextFacultadPageWindow,
         filteredProgramas,
         paginatedProgramas,
         totalFilteredProgramas,
@@ -716,6 +756,10 @@ export function useFacultadesPrograms() {
         goToProgramaPage,
         goToNextProgramaPage,
         goToPrevProgramaPage,
+        hasPrevProgramaPageWindow: hasPrevPageWindow(currentProgramaPage, totalProgramaPages),
+        hasNextProgramaPageWindow: hasNextPageWindow(currentProgramaPage, totalProgramaPages),
+        goToPrevProgramaPageWindow,
+        goToNextProgramaPageWindow,
         pageSize: PAGE_SIZE,
         getProgramasCount,
         getFacultadNombre,

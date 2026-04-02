@@ -2,7 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { espacioService, espacioPermitidoService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import {
     CheckCircle2,
@@ -143,7 +153,7 @@ export function useEstadoRecursos() {
 
     const totalEspaciosFiltrados = espaciosFiltrados.length;
     const totalPages = getTotalPages(totalEspaciosFiltrados, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginaActualEspacios = useMemo(() => {
         return getPageSlice(espaciosFiltrados, currentPage, PAGE_SIZE);
@@ -167,6 +177,16 @@ export function useEstadoRecursos() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     // Estadísticas
@@ -264,6 +284,10 @@ export function useEstadoRecursos() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         estadisticas,
         getEstadoIcon,
         getEstadoRecursoBadge,

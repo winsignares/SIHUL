@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import * as React from 'react';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -90,6 +90,10 @@ export default function FacultadesPrograms() {
     goToFacultadPage,
     goToNextFacultadPage,
     goToPrevFacultadPage,
+    hasPrevFacultadPageWindow,
+    hasNextFacultadPageWindow,
+    goToPrevFacultadPageWindow,
+    goToNextFacultadPageWindow,
     filteredProgramas,
     paginatedProgramas,
     totalFilteredProgramas,
@@ -99,6 +103,10 @@ export default function FacultadesPrograms() {
     goToProgramaPage,
     goToNextProgramaPage,
     goToPrevProgramaPage,
+    hasPrevProgramaPageWindow,
+    hasNextProgramaPageWindow,
+    goToPrevProgramaPageWindow,
+    goToNextProgramaPageWindow,
     pageSize,
     getProgramasCount,
     getFacultadNombre,
@@ -457,18 +465,44 @@ export default function FacultadesPrograms() {
                     </Button>
 
                     <div className="flex items-center gap-1 flex-wrap">
-                      {facultadPageNumbers.map((pageNumber) => (
-                        <Button
-                          key={pageNumber}
-                          type="button"
-                          variant={pageNumber === currentFacultadPage ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => goToFacultadPage(pageNumber)}
-                          className={pageNumber === currentFacultadPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
-                        >
-                          {pageNumber}
-                        </Button>
-                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevFacultadPageWindow}
+                        disabled={!hasPrevFacultadPageWindow}
+                        className="px-2"
+                        title="Ver números de página anteriores"
+                        aria-label="Grupo anterior de páginas"
+                      >
+                        <ChevronsLeft className="w-4 h-4" />
+                      </Button>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {facultadPageNumbers.map((pageNumber) => (
+                          <Button
+                            key={pageNumber}
+                            type="button"
+                            variant={pageNumber === currentFacultadPage ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => goToFacultadPage(pageNumber)}
+                            className={pageNumber === currentFacultadPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                          >
+                            {pageNumber}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextFacultadPageWindow}
+                        disabled={!hasNextFacultadPageWindow}
+                        className="px-2"
+                        title="Ver números de página siguientes"
+                        aria-label="Grupo siguiente de páginas"
+                      >
+                        <ChevronsRight className="w-4 h-4" />
+                      </Button>
                     </div>
 
                     <Button
@@ -508,18 +542,44 @@ export default function FacultadesPrograms() {
                     </Button>
 
                     <div className="flex items-center gap-1 flex-wrap">
-                      {programaPageNumbers.map((pageNumber) => (
-                        <Button
-                          key={pageNumber}
-                          type="button"
-                          variant={pageNumber === currentProgramaPage ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => goToProgramaPage(pageNumber)}
-                          className={pageNumber === currentProgramaPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
-                        >
-                          {pageNumber}
-                        </Button>
-                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevProgramaPageWindow}
+                        disabled={!hasPrevProgramaPageWindow}
+                        className="px-2"
+                        title="Ver números de página anteriores"
+                        aria-label="Grupo anterior de páginas"
+                      >
+                        <ChevronsLeft className="w-4 h-4" />
+                      </Button>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {programaPageNumbers.map((pageNumber) => (
+                          <Button
+                            key={pageNumber}
+                            type="button"
+                            variant={pageNumber === currentProgramaPage ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => goToProgramaPage(pageNumber)}
+                            className={pageNumber === currentProgramaPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                          >
+                            {pageNumber}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextProgramaPageWindow}
+                        disabled={!hasNextProgramaPageWindow}
+                        className="px-2"
+                        title="Ver números de página siguientes"
+                        aria-label="Grupo siguiente de páginas"
+                      >
+                        <ChevronsRight className="w-4 h-4" />
+                      </Button>
                     </div>
 
                     <Button

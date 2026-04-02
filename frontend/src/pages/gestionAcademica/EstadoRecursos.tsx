@@ -14,7 +14,9 @@ import {
   Boxes,
   Eye,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { useEstadoRecursos } from '../../hooks/gestionAcademica/useEstadoRecursos';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -37,6 +39,10 @@ export default function EstadoRecursos() {
     goToPage,
     goToNextPage,
     goToPrevPage,
+    hasPrevPageWindow,
+    hasNextPageWindow,
+    goToPrevPageWindow,
+    goToNextPageWindow,
     estadisticas,
     getEstadoIcon,
     getEstadoRecursoBadge,
@@ -301,18 +307,44 @@ export default function EstadoRecursos() {
                   </Button>
 
                   <div className="flex items-center gap-1 flex-wrap">
-                    {pageNumbers.map((pageNumber) => (
-                      <Button
-                        key={pageNumber}
-                        type="button"
-                        variant={pageNumber === currentPage ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => goToPage(pageNumber)}
-                        className={pageNumber === currentPage ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
-                      >
-                        {pageNumber}
-                      </Button>
-                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevPageWindow}
+                      disabled={!hasPrevPageWindow}
+                      className="px-2"
+                      title="Ver números de página anteriores"
+                      aria-label="Grupo anterior de páginas"
+                    >
+                      <ChevronsLeft className="w-4 h-4" />
+                    </Button>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {pageNumbers.map((pageNumber) => (
+                        <Button
+                          key={pageNumber}
+                          type="button"
+                          variant={pageNumber === currentPage ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => goToPage(pageNumber)}
+                          className={pageNumber === currentPage ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextPageWindow}
+                      disabled={!hasNextPageWindow}
+                      className="px-2"
+                      title="Ver números de página siguientes"
+                      aria-label="Grupo siguiente de páginas"
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                    </Button>
                   </div>
 
                   <Button

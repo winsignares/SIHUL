@@ -2,7 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const SEDES_CACHE_KEY = 'gestion-academica-sedes';
@@ -175,7 +185,7 @@ export function useSedes() {
 
     const totalFilteredSedes = filteredSedes.length;
     const totalPages = getTotalPages(totalFilteredSedes, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedSedes = useMemo(() => {
         return getPageSlice(filteredSedes, currentPage, PAGE_SIZE);
@@ -199,6 +209,16 @@ export function useSedes() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     return {
@@ -225,6 +245,10 @@ export function useSedes() {
         pageSize: PAGE_SIZE,
         goToPage,
         goToNextPage,
-        goToPrevPage
+        goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow
     };
 }

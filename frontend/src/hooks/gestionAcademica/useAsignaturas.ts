@@ -4,7 +4,17 @@ import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import type { Programa } from '../../services/programas/programaAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas';
@@ -251,7 +261,7 @@ export function useAsignaturas() {
 
     const totalFilteredAsignaturas = filteredAsignaturas.length;
     const totalPages = getTotalPages(totalFilteredAsignaturas, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedAsignaturas = useMemo(() => {
         return getPageSlice(filteredAsignaturas, currentPage, PAGE_SIZE);
@@ -275,6 +285,16 @@ export function useAsignaturas() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     return {
@@ -302,6 +322,10 @@ export function useAsignaturas() {
         pageSize: PAGE_SIZE,
         goToPage,
         goToNextPage,
-        goToPrevPage
+        goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow
     };
 }

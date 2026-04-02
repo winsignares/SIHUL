@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -63,7 +73,7 @@ export function useGestionRecursos() {
 
   const totalRecursos = recursosFiltrados.length;
   const totalPages = getTotalPages(totalRecursos, PAGE_SIZE);
-  const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+  const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
   const paginaActualRecursos = useMemo(() => {
     return getPageSlice(recursosFiltrados, currentPage, PAGE_SIZE);
@@ -123,6 +133,16 @@ export function useGestionRecursos() {
     goToPage(currentPage - 1);
   };
 
+  const goToPrevPageWindow = () => {
+    const target = getTargetPageForPrevWindow(currentPage, totalPages);
+    if (target != null) goToPage(target);
+  };
+
+  const goToNextPageWindow = () => {
+    const target = getTargetPageForNextWindow(currentPage, totalPages);
+    if (target != null) goToPage(target);
+  };
+
   return {
     recursos,
     searchTerm,
@@ -139,6 +159,10 @@ export function useGestionRecursos() {
     goToPage,
     goToNextPage,
     goToPrevPage,
+    hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+    hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+    goToPrevPageWindow,
+    goToNextPageWindow,
     showCrearRecursoModal,
     setShowCrearRecursoModal,
     abrirCrearRecursoModal,

@@ -4,7 +4,7 @@ import { Label } from '../../share/label';
 import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { useSedes } from '../../hooks/gestionAcademica/useSedes';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -33,7 +33,11 @@ export default function Sedes() {
     pageSize,
     goToPage,
     goToNextPage,
-    goToPrevPage
+    goToPrevPage,
+    hasPrevPageWindow,
+    hasNextPageWindow,
+    goToPrevPageWindow,
+    goToNextPageWindow
   } = useSedes();
 
   const firstItemIndex = totalFilteredSedes === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -165,18 +169,44 @@ export default function Sedes() {
                   Anterior
                 </Button>
 
-                <div className="flex gap-1">
-                  {pageNumbers.map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => goToPage(page)}
-                      className={currentPage === page ? 'bg-red-600 hover:bg-red-700' : ''}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPrevPageWindow}
+                    disabled={!hasPrevPageWindow}
+                    className="px-2"
+                    title="Ver números de página anteriores"
+                    aria-label="Grupo anterior de páginas"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="flex gap-1 flex-wrap">
+                    {pageNumbers.map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => goToPage(page)}
+                        className={currentPage === page ? 'bg-red-600 hover:bg-red-700' : ''}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPageWindow}
+                    disabled={!hasNextPageWindow}
+                    className="px-2"
+                    title="Ver números de página siguientes"
+                    aria-label="Grupo siguiente de páginas"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 <Button

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/di
 import { Label } from '../../share/label';
 import { Textarea } from '../../share/textarea';
 import { Alert, AlertDescription } from '../../share/alert';
-import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet, Plus, Trash2, AlertCircle, ArrowLeft, X, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Users, Home, Grid3x3, CalendarDays, FileDown, FileSpreadsheet, Plus, Trash2, AlertCircle, ArrowLeft, X, RefreshCw, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
@@ -73,6 +73,10 @@ export default function ConsultaEspacios() {
     goToPage,
     goToNextPage,
     goToPrevPage,
+    hasPrevPageWindow,
+    hasNextPageWindow,
+    goToPrevPageWindow,
+    goToNextPageWindow,
     estadisticas,
     horarios,
     prestamos,
@@ -857,18 +861,44 @@ export default function ConsultaEspacios() {
                   Anterior
                 </Button>
 
-                <div className="flex gap-1">
-                  {pageNumbers.map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => goToPage(page)}
-                      className={currentPage === page ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800' : ''}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPrevPageWindow}
+                    disabled={!hasPrevPageWindow}
+                    className="px-2"
+                    title="Ver números de página anteriores"
+                    aria-label="Grupo anterior de páginas"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="flex gap-1 flex-wrap">
+                    {pageNumbers.map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => goToPage(page)}
+                        className={currentPage === page ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800' : ''}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPageWindow}
+                    disabled={!hasNextPageWindow}
+                    className="px-2"
+                    title="Ver números de página siguientes"
+                    aria-label="Grupo siguiente de páginas"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 <Button

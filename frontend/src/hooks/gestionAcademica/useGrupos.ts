@@ -4,7 +4,17 @@ import { grupoService } from '../../services/grupos/gruposAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { Grupo } from '../../services/grupos/gruposAPI';
-import { getPageNumbers, getPageSlice, getTotalPages, normalizePage, PAGE_SIZE_DEFAULT } from './paginacion';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const GRUPOS_CACHE_KEY = 'gestion-academica-grupos';
@@ -274,7 +284,7 @@ export function useGrupos() {
 
     const totalFilteredGrupos = filteredGrupos.length;
     const totalPages = getTotalPages(totalFilteredGrupos, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages), [totalPages]);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
 
     const paginatedGrupos = useMemo(() => {
         return getPageSlice(filteredGrupos, currentPage, PAGE_SIZE);
@@ -298,6 +308,16 @@ export function useGrupos() {
 
     const goToPrevPage = () => {
         goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
     };
 
     const semestresDisponibles = Array.from(new Set(grupos.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
@@ -357,6 +377,10 @@ export function useGrupos() {
         goToPage,
         goToNextPage,
         goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
         semestresDisponibles,
         getProgramaNombre,
         getPeriodoNombre,

@@ -5,7 +5,7 @@ import { Badge } from '../../share/badge';
 import { Input } from '../../share/input';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
-import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw, Search } from 'lucide-react';
+import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast, Toaster } from 'sonner';
 import { useAperturaCierre } from '../../hooks/espacios/useAperturaCierre';
@@ -41,6 +41,10 @@ export default function SupervisorSalonHome() {
     goToPage,
     goToNextPage,
     goToPrevPage,
+    hasPrevPageWindow,
+    hasNextPageWindow,
+    goToPrevPageWindow,
+    goToNextPageWindow,
     abrirSalon,
     cerrarSalon,
     modalRecursosAbierto,
@@ -438,6 +442,18 @@ export default function SupervisorSalonHome() {
                       Anterior
                     </Button>
 
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevPageWindow}
+                      disabled={!hasPrevPageWindow || loading}
+                      className="px-2"
+                      title="Ver números de página anteriores"
+                      aria-label="Grupo anterior de páginas"
+                    >
+                      <ChevronsLeft className="w-4 h-4" />
+                    </Button>
                     {pageNumbers.map((pageNum) => (
                       <Button
                         key={pageNum}
@@ -450,6 +466,18 @@ export default function SupervisorSalonHome() {
                         {pageNum}
                       </Button>
                     ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextPageWindow}
+                      disabled={!hasNextPageWindow || loading}
+                      className="px-2"
+                      title="Ver números de página siguientes"
+                      aria-label="Grupo siguiente de páginas"
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                    </Button>
 
                     <Button
                       variant="outline"

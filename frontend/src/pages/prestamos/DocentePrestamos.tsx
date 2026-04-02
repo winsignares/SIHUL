@@ -9,7 +9,7 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft, Edit, Save, X as XIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, Eye, ArrowLeft, Edit, Save, X as XIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../share/alert';
@@ -50,6 +50,10 @@ export default function DocentePrestamos() {
     goToPage,
     goToNextPage,
     goToPrevPage,
+    hasPrevPageWindow,
+    hasNextPageWindow,
+    goToPrevPageWindow,
+    goToNextPageWindow,
     filteredPrestamos,
     estadisticas,
     error,
@@ -566,17 +570,43 @@ export default function DocentePrestamos() {
                 </Button>
 
                 <div className="flex items-center gap-1 flex-wrap">
-                  {pageNumbers.map((page) => (
-                    <Button
-                      key={page}
-                      type="button"
-                      variant={page === currentPage ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => goToPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPrevPageWindow}
+                    disabled={!hasPrevPageWindow}
+                    className="px-2"
+                    title="Ver números de página anteriores"
+                    aria-label="Grupo anterior de páginas"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {pageNumbers.map((page) => (
+                      <Button
+                        key={page}
+                        type="button"
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPageWindow}
+                    disabled={!hasNextPageWindow}
+                    className="px-2"
+                    title="Ver números de página siguientes"
+                    aria-label="Grupo siguiente de páginas"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 <Button
