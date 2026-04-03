@@ -42,6 +42,12 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/periodos/', include('periodos.api_urls')),
+    path('api/recursos/', include('recursos.api_urls')),
+    path('api/componentes/', include('componentes.api_urls')),
+    path('api/prestamos/', include('prestamos.api_urls')),
+    path('api/chatbot/', include('chatbot.api_urls')),
+    path('api/notificaciones/', include('notificaciones.api_urls')),
     path('usuarios/', include('usuarios.urls')),
     path('sedes/', include('sedes.urls')),
     path('facultades/', include('facultades.urls')),
