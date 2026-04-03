@@ -249,7 +249,6 @@ export const espacioPermitidoService = {
         return apiClient.get<ListEspaciosByUsuarioResponse>(`/espacios/permitido/usuario/${usuario_id}/`);
     }
 };
-
 /**
  * Servicio para obtener espacios con horarios (bulk endpoints)
  */
@@ -260,6 +259,7 @@ export const espacioHorariosService = {
     getAllWithHorarios: async (): Promise<{
         espacios: (EspacioFisico & {
             horarios: {
+                id: number;
                 dia: string;
                 hora_inicio: number;
                 hora_fin: number;
@@ -278,6 +278,7 @@ export const espacioHorariosService = {
     getSupervisorHorarios: async (usuarioId: number): Promise<{
         espacios: (EspacioFisico & {
             horarios: {
+                id: number;
                 dia: string;
                 hora_inicio: number;
                 hora_fin: number;
@@ -290,10 +291,6 @@ export const espacioHorariosService = {
         return apiClient.get(`/espacios/horarios/supervisor/${usuarioId}/`);
     }
 };
-
-/**
- * Interfaz para un horario/préstamo dentro de un espacio
- */
 export interface HorarioEspacio {
     tipoUso: 'Clase' | 'Préstamo';
     asignatura?: string;

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { espacioService, espacioHorariosService } from '../../services/espacios/espaciosAPI';
+import { horarioService } from '../../services/horarios/horariosAPI';
 import { useAuth } from '../../context/AuthContext';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
@@ -66,6 +67,7 @@ export interface EspacioView {
 }
 
 export interface OcupacionView {
+    id?: number;
     espacioId: string;
     dia: string;
     horaInicio: number;
@@ -247,14 +249,58 @@ export function useConsultaEspacios() {
                 espaciosConHorarios = response.espacios;
             }
 
+            // Cargar horarios extendidos con IDs desde el endpoint de horarios
+            let horariosExtendidos: { id: number; espacio_id: number; dia_semana: string; hora_inicio: string; hora_fin: string; asignatura_nombre: string; docente_nombre: string; grupo_nombre: string }[] = [];
+            try {
+                const horariosResponse = await horarioService.listExtendidos();
+                horariosExtendidos = horariosResponse.horarios.map(h => ({
+                    id: h.id,
+                    espacio_id: h.espacio_id,
+                    dia_semana: h.dia_semana,
+                    hora_inicio: h.hora_inicio,
+                    hora_fin: h.hora_fin,
+                    asignatura_nombre: h.asignatura_nombre,
+                    docente_nombre: h.docente_nombre,
+                    grupo_nombre: h.grupo_nombre
+                }));
+            } catch (error) {
+                console.warn('No se pudieron cargar los horarios extendidos con IDs:', error);
+            }
+
+            // Función para buscar el ID de un horario por sus características
+            const findHorarioId = (espacioId: string, dia: string, horaInicio: number, horaFin: number, materia: string): number | undefined => {
+                const diaNormalizado = normalizarDia(dia);
+                const match = horariosExtendidos.find(h => {
+                    const hDiaNormalizado = normalizarDia(h.dia_semana);
+                    const hHoraInicio = parseInt(h.hora_inicio.split(':')[0]);
+                    const hHoraFin = parseInt(h.hora_fin.split(':')[0]);
+                    return String(h.espacio_id) === espacioId &&
+                           hDiaNormalizado === diaNormalizado &&
+                           hHoraInicio === horaInicio &&
+                           hHoraFin === horaFin &&
+                           h.asignatura_nombre === materia;
+                });
+                return match?.id;
+            };
+
             // Procesar espacios y horarios
             const allHorarios: OcupacionView[] = [];
             const espaciosView: EspacioView[] = [];
 
             espaciosConHorarios.forEach(espacio => {
-                // Agregar horarios
+                // Agregar horarios con IDs buscados desde horariosExtendidos
                 espacio.horarios.forEach(h => {
+                    // Buscar el ID del horario
+                    const horarioId = findHorarioId(
+                        espacio.id!.toString(),
+                        h.dia,
+                        h.hora_inicio,
+                        h.hora_fin,
+                        h.materia
+                    );
+
                     allHorarios.push({
+                        id: horarioId,
                         espacioId: espacio.id!.toString(),
                         dia: normalizarDia(h.dia),
                         horaInicio: h.hora_inicio,
@@ -262,7 +308,8 @@ export function useConsultaEspacios() {
                         materia: h.materia,
                         docente: h.docente,
                         grupo: h.grupo,
-                        estado: 'ocupado'
+                        estado: 'ocupado',
+                        tipo: 'horario'
                     });
                 });
 
