@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.contrib.auth.hashers import make_password
 from usuarios.models import Usuario, Rol
 from facultades.models import Facultad
 
@@ -63,7 +64,7 @@ class Command(BaseCommand):
                     correo=u_data['correo'],
                     defaults={
                         'nombre': u_data['nombre'],
-                        'contrasena_hash': u_data['contrasena'],
+                        'contrasena_hash': make_password(u_data['contrasena']),
                         'rol': rol,
                         'facultad': facultad,
                         'activo': True
@@ -75,7 +76,7 @@ class Command(BaseCommand):
                 else:
                     # Actualizar si ya existe para asegurar consistencia
                     user.nombre = u_data['nombre']
-                    user.contrasena_hash = u_data['contrasena']
+                    user.contrasena_hash = make_password(u_data['contrasena'])
                     user.rol = rol
                     user.facultad = facultad
                     user.save()

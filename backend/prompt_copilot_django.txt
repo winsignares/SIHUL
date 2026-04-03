@@ -1,0 +1,59 @@
+Estoy desarrollando un backend en Django + Django REST Framework para un sistema de gestión de horarios y espacios de una universidad.
+
+Necesito que me ayudes a estructurar correctamente el proyecto siguiendo buenas prácticas, evitando duplicación de código y aplicando filtrado automático por seccional (ciudad).
+
+### Contexto del sistema:
+- Una universidad tiene múltiples seccionales (ciudades).
+- Cada seccional tiene una o más sedes.
+- Todas las entidades (Espacio, Horario, Usuario, Asignatura, etc.) pertenecen indirectamente a una seccional a través de la sede.
+- Cada usuario solo debe acceder a la información de su seccional.
+
+### Requisitos:
+
+1. Modelos (models.py)
+- Crear modelo Seccional
+- Modificar modelo Sede para que tenga FK a Seccional
+- Asegurar que modelos como:
+  - Espacio
+  - Horario
+  - Asignatura
+  - Usuario (custom)
+  tengan relación con Sede (FK)
+- El modelo Usuario debe extender de AbstractUser y tener:
+  - FK a Seccional
+
+2. Serializers (serializers.py)
+- Crear serializers para todos los modelos
+- Usar ModelSerializer
+- Incluir relaciones correctamente (FKs)
+
+3. Filtro automático por seccional (IMPORTANTE)
+Crear un mixin reutilizable llamado SeccionalMixin que:
+- Sobrescriba get_queryset()
+- Obtenga el usuario desde request.user
+- Si el usuario es superuser, retorna todos los registros
+- Si no, filtre así:
+  queryset.filter(sede__seccional=user.seccional)
+
+4. ViewSets (views.py)
+- Crear ViewSets usando ModelViewSet
+- Todos deben heredar de SeccionalMixin
+- Usar los serializers correspondientes
+- Definir queryset = Model.objects.all()
+
+5. Evitar repetición de código
+- No repetir lógica de filtrado en cada endpoint
+- Todo el filtrado debe estar centralizado en el mixin
+
+6. Extras (si puedes incluirlos)
+- Permitir que al crear registros se asigne automáticamente la sede/seccional del usuario
+- Agregar permisos básicos (IsAuthenticated)
+- Código limpio, reutilizable y bien organizado
+
+### Objetivo final:
+Quiero un backend limpio, escalable y seguro donde:
+- No tenga que repetir filtros por seccional
+- Cada usuario solo vea su información
+- Sea fácil de mantener y extender
+
+Genera el código completo listo para usar.

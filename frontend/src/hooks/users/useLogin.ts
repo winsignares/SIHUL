@@ -54,6 +54,11 @@ export function useLogin() {
             // Así evitamos forzar al rol admin al dashboard de planeación.
             setHasNavigated(true);
             navigate('/', { replace: true });
+            return;
+        }
+
+        if (isAuthenticated && role && components.length === 0) {
+            setError('Tu cuenta no tiene componentes asignados todavía. Contacta a un administrador para habilitar tus módulos de acceso.');
         }
     }, [isAuthenticated, role, components, navigate, hasNavigated]);
 
