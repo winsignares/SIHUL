@@ -1,0 +1,47 @@
+Estoy desarrollando un backend en Django + Django REST Framework y ya tengo un sistema de roles personalizado mediante un modelo llamado Rol.
+
+Necesito que me ayudes a integrar correctamente el sistema de roles con el sistema de autenticación de Django, sin romper las buenas prácticas.
+
+### Contexto:
+- Uso un modelo Usuario personalizado que extiende de AbstractUser
+- Tengo un modelo Rol que define permisos de negocio (ej: ADMIN_GLOBAL, COORDINADOR, DOCENTE, etc.)
+- Cada usuario tiene un rol (FK a Rol)
+- También existe el campo is_superuser de Django
+
+---
+
+### Requisitos:
+
+1. Explicar brevemente la diferencia entre:
+   - is_superuser (Django)
+   - Rol (modelo personalizado)
+
+2. No eliminar ni reemplazar is_superuser, debe seguir funcionando
+
+3. Implementar una función helper reutilizable:
+
+def is_admin_global(user):
+    return user.is_superuser or user.rol.nombre == "ADMIN_GLOBAL"
+
+4. Modificar el SeccionalMixin para que:
+
+- Si el usuario es admin global (según la función), pueda ver todos los datos
+- Si no, filtre por:
+  queryset.filter(sede__seccional=user.seccional)
+
+5. (Opcional pero recomendado)
+Crear un archivo permissions.py con permisos personalizados usando DRF:
+- Ejemplo: IsAdminGlobal, IsCoordinador, etc.
+
+6. Mantener el código limpio, reutilizable y escalable
+
+---
+
+### Objetivo:
+Tener un sistema donde:
+- is_superuser funcione como acceso total técnico
+- Rol controle la lógica de negocio
+- Ambos trabajen juntos sin conflictos
+- El filtrado por seccional siga funcionando automáticamente
+
+Genera el código completo listo para usar.

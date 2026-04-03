@@ -25,15 +25,18 @@ class SedeFilterMiddleware(MiddlewareMixin):
                 # Agregar información de sede al request
                 request.sede_id = usuario.sede_id if usuario.sede else None
                 request.sede = usuario.sede
+                request.seccional = usuario.seccional if getattr(usuario, 'seccional_id', None) else getattr(usuario.sede, 'seccional', None)
                 request.user_obj = usuario  # También agregar el usuario completo
                 
             except Usuario.DoesNotExist:
                 # Usuario no encontrado, establecer valores por defecto
                 request.sede_id = None
                 request.sede = None
+                request.seccional = None
                 request.user_obj = None
         else:
             # No hay usuario autenticado
             request.sede_id = None
             request.sede = None
+            request.seccional = None
             request.user_obj = None
