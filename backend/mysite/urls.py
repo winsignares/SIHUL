@@ -13,6 +13,8 @@ from mysite.api_views import (
     HorarioFusionadoViewSet,
     HorarioViewSet,
     ProgramaViewSet,
+    RecursoViewSet,
+    EspacioRecursoViewSet,
     RolViewSet,
     SeccionalViewSet,
     SedeViewSet,
@@ -36,6 +38,8 @@ router.register(r'horarios', HorarioViewSet, basename='horario-api')
 router.register(r'horarios-fusionados', HorarioFusionadoViewSet, basename='horario-fusionado-api')
 router.register(r'horarios-estudiante', HorarioEstudianteViewSet, basename='horario-estudiante-api')
 router.register(r'solicitudes-espacio', SolicitudEspacioViewSet, basename='solicitud-espacio-api')
+router.register(r'recursos', RecursoViewSet, basename='recurso-api')
+router.register(r'espacios-recursos', EspacioRecursoViewSet, basename='espacio-recurso-api')
 router.register(r'roles', RolViewSet, basename='rol-api')
 router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 
