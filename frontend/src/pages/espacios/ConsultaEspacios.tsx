@@ -146,6 +146,7 @@ export default function ConsultaEspacios() {
   const [customPeriod, setCustomPeriod] = useState<CustomPeriod>('week');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [recurrencePreviewDates, setRecurrencePreviewDates] = useState<Date[]>([]);
 
   const FIN_REPETICION_OPTIONS = [
     { value: 'never', label: 'Nunca' },
@@ -339,6 +340,127 @@ export default function ConsultaEspacios() {
     return `Se repetirá cada ${Math.max(1, formData.intervalo)} ${periodText}${Math.max(1, formData.intervalo) > 1 ? 's' : ''}${daysText}${finishText}.`;
   };
 
+  // Función para generar las fechas de repetición según la configuración
+  const generateRecurrenceDates = (): Date[] => {
+    if (!nuevaSolicitudData?.fecha) return [];
+
+    const startDate = new Date(`${nuevaSolicitudData.fecha}T12:00:00`);
+    const dates: Date[] = [new Date(startDate)];
+
+    // Si no hay repetición, solo retornar la fecha inicial
+    if (repeatOption === 'none') return dates;
+
+    let interval = 1;
+    let frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'daily';
+    let selectedDays: number[] = [];
+
+    // Configurar parámetros según la opción seleccionada
+    switch (repeatOption) {
+      case 'daily':
+        frequency = 'daily';
+        interval = 1;
+        break;
+      case 'weekly_current':
+        frequency = 'weekly';
+        interval = 1;
+        selectedDays = [getWeekdayMondayIndex(nuevaSolicitudData.fecha, nuevaSolicitudData.diaSemana)];
+        break;
+      case 'monthly_date':
+        frequency = 'monthly';
+        interval = 1;
+        break;
+      case 'yearly_date':
+        frequency = 'yearly';
+        interval = 1;
+        break;
+      case 'custom':
+        frequency = customPeriod === 'day' ? 'daily' : 
+                   customPeriod === 'week' ? 'weekly' : 
+                   customPeriod === 'month' ? 'monthly' : 'yearly';
+        interval = Math.max(1, formData.intervalo);
+        selectedDays = frequency === 'weekly' ? formData.dias_semana : [];
+        break;
+    }
+
+    // Calcular fecha límite
+    let maxOccurrences = 100; // Límite de seguridad por defecto
+    let endDate: Date | null = null;
+
+    if (formData.fin_repeticion_tipo === 'count' && formData.fin_repeticion_ocurrencias) {
+      maxOccurrences = parseInt(formData.fin_repeticion_ocurrencias);
+    } else if (formData.fin_repeticion_tipo === 'until_date' && formData.fin_repeticion_fecha) {
+      endDate = new Date(`${formData.fin_repeticion_fecha}T23:59:59`);
+      maxOccurrences = 365; // Límite para búsqueda por fecha
+    }
+
+    // Generar fechas
+    let currentDate = new Date(startDate);
+    const safetyLimit = 365; // Límite máximo de iteraciones
+
+    for (let i = 0; i < safetyLimit && dates.length < maxOccurrences + 1; i++) {
+      let nextDate: Date | null = null;
+
+      switch (frequency) {
+        case 'daily':
+          nextDate = new Date(currentDate);
+          nextDate.setDate(nextDate.getDate() + interval);
+          break;
+
+        case 'weekly':
+          if (selectedDays.length === 0) {
+            // Si no hay días seleccionados, usar el día de la fecha inicial
+            nextDate = new Date(currentDate);
+            nextDate.setDate(nextDate.getDate() + (interval * 7));
+          } else {
+            // Encontrar el siguiente día seleccionado
+            const currentWeekday = currentDate.getDay(); // 0=dom, 1=lun, ..., 6=sáb
+            const currentMondayIndex = currentWeekday === 0 ? 6 : currentWeekday - 1; // 0=lun, ..., 6=dom
+
+            // Ordenar días seleccionados
+            const sortedDays = [...selectedDays].sort((a, b) => a - b);
+
+            // Buscar el siguiente día en la semana actual
+            let nextDay = sortedDays.find(d => d > currentMondayIndex);
+
+            if (nextDay !== undefined) {
+              // Hay un día posterior en esta semana
+              const daysToAdd = nextDay - currentMondayIndex;
+              nextDate = new Date(currentDate);
+              nextDate.setDate(nextDate.getDate() + daysToAdd);
+            } else {
+              // Pasar a la siguiente semana
+              const firstDayOfWeek = sortedDays[0];
+              const daysToAdd = (7 - currentMondayIndex) + firstDayOfWeek + ((interval - 1) * 7);
+              nextDate = new Date(currentDate);
+              nextDate.setDate(nextDate.getDate() + daysToAdd);
+            }
+          }
+          break;
+
+        case 'monthly':
+          nextDate = new Date(currentDate);
+          nextDate.setMonth(nextDate.getMonth() + interval);
+          break;
+
+        case 'yearly':
+          nextDate = new Date(currentDate);
+          nextDate.setFullYear(nextDate.getFullYear() + interval);
+          break;
+      }
+
+      if (!nextDate) break;
+
+      // Verificar si excede la fecha límite
+      if (endDate && nextDate > endDate) break;
+
+      // Agregar la fecha
+      dates.push(nextDate);
+      currentDate = nextDate;
+    }
+
+    return dates;
+  };
+
   useEffect(() => {
     if (!dialogSolicitudOpen) {
       setFormError(null);
@@ -361,8 +483,17 @@ export default function ConsultaEspacios() {
       });
       setRepeatOption('none');
       setCustomPeriod('week');
+      setRecurrencePreviewDates([]);
     }
   }, [dialogSolicitudOpen]);
+
+  // Actualizar preview de fechas cuando cambian los parámetros de repetición
+  useEffect(() => {
+    if (nuevaSolicitudData?.fecha) {
+      const dates = generateRecurrenceDates();
+      setRecurrencePreviewDates(dates);
+    }
+  }, [repeatOption, customPeriod, formData.intervalo, formData.dias_semana, formData.fin_repeticion_tipo, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, nuevaSolicitudData?.fecha]);
 
   // Cargar datos para el formulario
   useEffect(() => {
@@ -1375,14 +1506,20 @@ export default function ConsultaEspacios() {
                         <Input
                           type="number"
                           min="1"
+                          max={customPeriod === 'day' ? 31 : customPeriod === 'week' ? 3 : customPeriod === 'month' ? 11 : 5}
                           value={formData.intervalo}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const maxValue = customPeriod === 'day' ? 31 : customPeriod === 'week' ? 3 : customPeriod === 'month' ? 11 : 5;
+                            const value = Math.max(1, Math.min(maxValue, Number(e.target.value) || 1));
                             setFormData((prev) => ({
                               ...prev,
-                              intervalo: Math.max(1, Number(e.target.value) || 1)
-                            }))
-                          }
+                              intervalo: value
+                            }));
+                          }}
                         />
+                        <p className="text-xs text-slate-500">
+                          Máximo: {customPeriod === 'day' ? '31 días' : customPeriod === 'week' ? '3 semanas' : customPeriod === 'month' ? '11 meses' : '5 años'}
+                        </p>
                       </div>
 
                       <div className="space-y-2">
@@ -1482,6 +1619,59 @@ export default function ConsultaEspacios() {
                 <p className="text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2">
                   {recurrenceSummary()}
                 </p>
+
+                {/* Preview visual de fechas generadas */}
+                {recurrencePreviewDates.length > 0 && repeatOption !== 'none' && (
+                  <div className="mt-4 border rounded-lg overflow-hidden bg-white dark:bg-slate-900/40">
+                    <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Vista previa de horarios ({recurrencePreviewDates.length} fechas)
+                      </span>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto p-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                        {recurrencePreviewDates.map((date, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-2 p-2 rounded-md text-sm ${
+                              idx === 0
+                                ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
+                                : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                              idx === 0
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                            }`}>
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1">
+                              <p className={`font-medium ${idx === 0 ? 'text-blue-800 dark:text-blue-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                                {date.toLocaleDateString('es-CO', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {nuevaSolicitudData?.horaInicio} - {nuevaSolicitudData?.horaFin}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {recurrencePreviewDates.length >= 100 && (
+                      <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-200 dark:border-yellow-800">
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                          Se muestran las primeras 100 ocurrencias. Hay más fechas que se generarán según la configuración.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
