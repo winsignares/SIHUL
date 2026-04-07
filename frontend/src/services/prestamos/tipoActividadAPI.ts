@@ -14,7 +14,8 @@ export const tipoActividadService = {
      * Obtiene la lista de todos los tipos de actividad
      */
     listarTiposActividad: async (): Promise<{ tipos_actividad: TipoActividad[] }> => {
-        return apiClient.get('/prestamos/tipos-actividad/');
+        const tipos_actividad = await apiClient.get<TipoActividad[]>('/prestamos/tipos-actividad/');
+        return { tipos_actividad };
     },
 
     /**
@@ -22,6 +23,7 @@ export const tipoActividadService = {
      * @param data Datos del tipo de actividad
      */
     crearTipoActividad: async (data: Omit<TipoActividad, 'id'>): Promise<{ message: string; id: number }> => {
-        return apiClient.post('/prestamos/tipos-actividad/create/', data);
+        const created = await apiClient.post<TipoActividad>('/prestamos/tipos-actividad/', data);
+        return { message: 'Tipo de actividad creado', id: created.id ?? 0 };
     }
 };

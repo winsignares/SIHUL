@@ -19,14 +19,16 @@ export const tipoEspacioService = {
      * Crea un nuevo tipo de espacio
      */
     crearTipoEspacio: async (payload: CreateTipoEspacioPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post('/espacios/tipos/', payload);
+        const creado = await apiClient.post<TipoEspacio>('/tipos-espacio/', payload);
+        return { message: 'Tipo de espacio creado', id: creado.id ?? 0 };
     },
 
     /**
      * Obtiene la lista de todos los tipos de espacio
      */
     listarTiposEspacio: async (): Promise<{ tipos_espacio: TipoEspacio[] }> => {
-        return apiClient.get('/espacios/tipos/list/');
+        const tipos_espacio = await apiClient.get<TipoEspacio[]>('/tipos-espacio/');
+        return { tipos_espacio };
     },
 
     /**
@@ -34,6 +36,6 @@ export const tipoEspacioService = {
      * @param id ID del tipo de espacio
      */
     obtenerTipoEspacio: async (id: number): Promise<TipoEspacio> => {
-        return apiClient.get(`/espacios/tipos/${id}/`);
+        return apiClient.get(`/tipos-espacio/${id}/`);
     }
 };

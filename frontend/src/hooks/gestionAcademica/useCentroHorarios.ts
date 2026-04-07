@@ -171,6 +171,10 @@ export function useCentroHorarios() {
             const fusionadosResponse = await horarioFusionadoService.list();
             const fusionadosConInfo: HorarioFusionadoExtendido[] = await Promise.all(
                 fusionadosResponse.horarios_fusionados.map(async (hf): Promise<HorarioFusionadoExtendido> => {
+                    if (!hf.grupo1_id || !hf.grupo2_id) {
+                        throw new Error(`Horario fusionado inválido (id=${hf.id ?? 'sin-id'}): grupo1_id/grupo2_id requeridos`);
+                    }
+
                     // Obtener información de los grupos
                     const [grupo1, grupo2, grupo3] = await Promise.all([
                         grupoService.get(hf.grupo1_id),

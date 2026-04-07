@@ -18,7 +18,8 @@ export const periodoService = {
    * Obtiene la lista de todos los períodos académicos
    */
   listarPeriodos: async (): Promise<{ periodos: PeriodoAcademico[] }> => {
-    return apiClient.get('/periodos/list/');
+    const periodos = await apiClient.get<PeriodoAcademico[]>('/periodos/');
+    return { periodos };
   },
 
   /**
@@ -42,13 +43,17 @@ export const periodoService = {
    * @param periodo Datos del período académico a actualizar
    */
   actualizarPeriodo: async (periodo: PeriodoAcademico): Promise<{ message: string; id: number }> => {
-    return apiClient.put('/periodos/update/', {
-      id: periodo.id,
+    if (!periodo.id) {
+      throw new Error('Se requiere el ID del período para actualizar');
+    }
+
+    const actualizado = await apiClient.put<PeriodoAcademico>(`/periodos/${periodo.id}/`, {
       nombre: periodo.nombre,
       fecha_inicio: periodo.fecha_inicio,
       fecha_fin: periodo.fecha_fin,
       activo: periodo.activo
     });
+    return { message: 'Período actualizado', id: actualizado.id ?? periodo.id };
   },
 
   /**
@@ -56,7 +61,8 @@ export const periodoService = {
    * @param id ID del período académico a eliminar
    */
   eliminarPeriodo: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/periodos/delete/', { id });
+    await apiClient.delete(`/periodos/${id}/`);
+    return { message: 'Período eliminado' };
   },
 
   /**

@@ -10,6 +10,10 @@ class TipoEspacioSerializer(serializers.ModelSerializer):
 
 
 class EspacioFisicoSerializer(serializers.ModelSerializer):
+    sede_id = serializers.IntegerField(source='sede.id', read_only=True)
+    tipo_id = serializers.IntegerField(source='tipo.id', read_only=True)
+    tipo_espacio = TipoEspacioSerializer(source='tipo', read_only=True)
+
     class Meta:
         model = EspacioFisico
         fields = '__all__'

@@ -136,14 +136,16 @@ export const espacioService = {
      * Actualiza un espacio físico existente
      */
     update: async (payload: UpdateEspacioPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/espacios/update/', payload);
+        const updated = await apiClient.put<EspacioFisico>(`/espacios/${payload.id}/`, payload);
+        return { message: 'Espacio actualizado', id: updated.id ?? payload.id };
     },
 
     /**
      * Elimina un espacio físico
      */
     delete: async (payload: DeleteEspacioPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/espacios/delete/', payload);
+        await apiClient.delete(`/espacios/${payload.id}/`);
+        return { message: 'Espacio eliminado' };
     },
 
     /**
@@ -157,14 +159,16 @@ export const espacioService = {
      * Lista todos los espacios físicos
      */
     list: async (): Promise<ListEspaciosResponse> => {
-        return apiClient.get<ListEspaciosResponse>('/espacios/list/');
+        const espacios = await apiClient.get<EspacioFisico[]>('/espacios/');
+        return { espacios };
     },
 
     /**
      * Lista todos los tipos de espacios
      */
     listTipos: async (): Promise<ListTiposEspacioResponse> => {
-        return apiClient.get<ListTiposEspacioResponse>('/espacios/tipos/list/');
+        const tipos_espacio = await apiClient.get<TipoEspacio[]>('/tipos-espacio/');
+        return { tipos_espacio };
     },
 
     /**
@@ -218,35 +222,43 @@ export const espacioPermitidoService = {
      * Crea un nuevo EspacioPermitido
      */
     create: async (payload: CreateEspacioPermitidoPayload): Promise<{ message: string; id: number; espacio_id: number; usuario_id: number }> => {
-        return apiClient.post<{ message: string; id: number; espacio_id: number; usuario_id: number }>('/espacios/permitido/', payload);
+        const created = await apiClient.post<EspacioPermitido>('/espacios-permitidos/', payload);
+        return {
+            message: 'Espacio permitido creado',
+            id: created.id ?? 0,
+            espacio_id: created.espacio_id,
+            usuario_id: created.usuario_id,
+        };
     },
 
     /**
      * Lista todos los EspaciosPermitidos
      */
     list: async (): Promise<ListEspaciosPermitidosResponse> => {
-        return apiClient.get<ListEspaciosPermitidosResponse>('/espacios/permitido/list/');
+        const espacios_permitidos = await apiClient.get<EspacioPermitido[]>('/espacios-permitidos/');
+        return { espacios_permitidos };
     },
 
     /**
      * Obtiene un EspacioPermitido por ID
      */
     get: async (id: number): Promise<EspacioPermitido> => {
-        return apiClient.get<EspacioPermitido>(`/espacios/permitido/${id}/`);
+        return apiClient.get<EspacioPermitido>(`/espacios-permitidos/${id}/`);
     },
 
     /**
      * Elimina un EspacioPermitido
      */
     delete: async (payload: DeleteEspacioPermitidoPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/espacios/permitido/delete/', payload);
+        await apiClient.delete(`/espacios-permitidos/${payload.id}/`);
+        return { message: 'Espacio permitido eliminado' };
     },
 
     /**
      * Lista todos los espacios permitidos para un usuario específico
      */
     listByUsuario: async (usuario_id: number): Promise<ListEspaciosByUsuarioResponse> => {
-        return apiClient.get<ListEspaciosByUsuarioResponse>(`/espacios/permitido/usuario/${usuario_id}/`);
+        return apiClient.get<ListEspaciosByUsuarioResponse>(`/espacios-permitidos/usuario/${usuario_id}/`);
     }
 };
 /**

@@ -16,7 +16,8 @@ export const sedeService = {
    * Obtiene la lista de todas las sedes
    */
   listarSedes: async (): Promise<{ sedes: Sede[] }> => {
-    return apiClient.get('/sedes/list/');
+    const sedes = await apiClient.get<Sede[]>('/sedes/');
+    return { sedes };
   },
 
   /**
@@ -49,13 +50,14 @@ export const sedeService = {
       throw new Error('Se requiere el ID de la sede para actualizar');
     }
 
-    return apiClient.put('/sedes/update/', {
-      id: sede.id,
+    const actualizada = await apiClient.put<Sede>(`/sedes/${sede.id}/`, {
       nombre: sede.nombre,
       direccion: sede.direccion,
       ciudad: sede.ciudad,
       activa: sede.activa
     });
+
+    return { message: 'Sede actualizada', id: actualizada.id ?? sede.id };
   },
 
   /**
@@ -63,6 +65,7 @@ export const sedeService = {
    * @param id ID de la sede a eliminar
    */
   eliminarSede: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/sedes/delete/', { id });
+    await apiClient.delete(`/sedes/${id}/`);
+    return { message: 'Sede eliminada' };
   }
 };

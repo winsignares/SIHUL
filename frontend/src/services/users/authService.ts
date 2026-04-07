@@ -201,7 +201,8 @@ export const userService = {
    * Obtiene la lista de todos los usuarios
    */
   listarUsuarios: async (): Promise<{ usuarios: Usuario[] }> => {
-    return apiClient.get('/usuarios/list/');
+    const usuarios = await apiClient.get<Usuario[]>('/usuarios/');
+    return { usuarios };
   },
 
   /**
@@ -238,8 +239,7 @@ export const userService = {
       throw new Error('Se requiere el ID del usuario para actualizar');
     }
 
-    return apiClient.put('/usuarios/update/', {
-      id: usuario.id,
+    const actualizado = await apiClient.put<Usuario>(`/usuarios/${usuario.id}/`, {
       nombre: usuario.nombre,
       correo: usuario.correo,
       contrasena: usuario.contrasena,
@@ -249,13 +249,15 @@ export const userService = {
       activo: usuario.activo,
       espacios_permitidos: usuario.espacios_permitidos
     });
+    return { message: 'Usuario actualizado', id: actualizado.id ?? usuario.id };
   },
 
   /**
    * Elimina un usuario
    */
   eliminarUsuario: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/usuarios/delete/', { id });
+    await apiClient.delete(`/usuarios/${id}/`);
+    return { message: 'Usuario eliminado' };
   }
 };
 
@@ -267,24 +269,26 @@ export const rolService = {
    * Obtiene la lista de todos los roles
    */
   listarRoles: async (): Promise<{ roles: Rol[] }> => {
-    return apiClient.get('/usuarios/roles/list/');
+    const roles = await apiClient.get<Rol[]>('/roles/');
+    return { roles };
   },
 
   /**
    * Obtiene un rol por su ID
    */
   obtenerRol: async (id: number): Promise<Rol> => {
-    return apiClient.get(`/usuarios/roles/${id}/`);
+    return apiClient.get(`/roles/${id}/`);
   },
 
   /**
    * Crea un nuevo rol
    */
   crearRol: async (rol: Omit<Rol, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/usuarios/roles/', {
+    const creado = await apiClient.post<Rol>('/roles/', {
       nombre: rol.nombre,
       descripcion: rol.descripcion
     });
+    return { message: 'Rol creado', id: creado.id ?? 0 };
   },
 
   /**
@@ -295,17 +299,18 @@ export const rolService = {
       throw new Error('Se requiere el ID del rol para actualizar');
     }
 
-    return apiClient.put('/usuarios/roles/update/', {
-      id: rol.id,
+    const actualizado = await apiClient.put<Rol>(`/roles/${rol.id}/`, {
       nombre: rol.nombre,
       descripcion: rol.descripcion
     });
+    return { message: 'Rol actualizado', id: actualizado.id ?? rol.id };
   },
 
   /**
    * Elimina un rol
    */
   eliminarRol: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/usuarios/roles/delete/', { id });
+    await apiClient.delete(`/roles/${id}/`);
+    return { message: 'Rol eliminado' };
   }
 };

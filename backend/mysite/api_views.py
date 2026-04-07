@@ -1,7 +1,12 @@
-from rest_framework import permissions, viewsets
+import hashlib
+import secrets
+
+from django.contrib.auth.hashers import check_password, make_password
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from werkzeug.security import check_password_hash
 
 from asignaturas.models import Asignatura, AsignaturaPrograma
 from asignaturas.serializers import AsignaturaProgramaSerializer, AsignaturaSerializer
@@ -33,6 +38,20 @@ from .permissions import IsAdminGlobal
 
 from espacios import views as espacios_legacy_views
 from horario import views as horario_legacy_views
+
+
+def _password_valida(usuario, password_plano):
+    hash_actual = usuario.contrasena_hash or ''
+
+    if check_password(password_plano, hash_actual):
+        return True, False
+
+    try:
+        legacy_ok = check_password_hash(hash_actual, password_plano)
+    except Exception:
+        legacy_ok = False
+
+    return legacy_ok, legacy_ok
 
 
 class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -98,10 +117,12 @@ class TipoEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
 
 class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
-    queryset = EspacioFisico.objects.select_related('sede', 'tipo')
     serializer_class = EspacioFisicoSerializer
     seccional_lookup = 'sede__seccional'
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return EspacioFisico.objects.select_related('sede', 'tipo')
 
     @action(detail=False, methods=['get'], url_path='horarios/all')
     def horarios_all(self, request):
@@ -255,6 +276,164 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     serializer_class = UsuarioSerializer
     seccional_lookup = 'seccional'
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'login':
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
+    def _build_componentes(self, usuario):
+        if not usuario.rol:
+            return []
+
+        from componentes.models import ComponenteRol
+
+        componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
+        return [
+            {
+                'id': cr.componente.id,
+                'nombre': cr.componente.nombre,
+                'descripcion': cr.componente.descripcion,
+                'permiso': cr.permiso,
+            }
+            for cr in componentes_rol
+        ]
+
+    def _build_espacios_permitidos(self, usuario):
+        from espacios.models import EspacioPermitido
+
+        espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        return [
+            {
+                'id': ep.espacio.id,
+                'tipo': ep.espacio.tipo.nombre if ep.espacio.tipo else None,
+                'capacidad': ep.espacio.capacidad,
+                'ubicacion': ep.espacio.ubicacion,
+                'disponible': ep.espacio.estado == 'Disponible',
+                'sede_id': ep.espacio.sede.id,
+                'sede_nombre': ep.espacio.sede.nombre,
+            }
+            for ep in espacios_permisos
+        ]
+
+    @action(detail=False, methods=['post'], url_path='login')
+    def login(self, request):
+        correo = request.data.get('correo')
+        contrasena = request.data.get('contrasena')
+
+        if not correo or not contrasena:
+            return Response({'error': 'correo y contrasena son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            usuario = Usuario.objects.select_related('sede', 'rol', 'facultad').get(correo=correo)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        password_ok, es_legacy = _password_valida(usuario, contrasena)
+        if not password_ok:
+            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if es_legacy:
+            nuevo_hash = make_password(contrasena)
+            usuario.contrasena_hash = nuevo_hash
+            usuario.password = nuevo_hash
+            usuario.save(update_fields=['contrasena_hash', 'password'])
+
+        componentes = self._build_componentes(usuario)
+        espacios_permitidos = self._build_espacios_permitidos(usuario)
+
+        request.session['user_id'] = usuario.id
+        request.session['correo'] = usuario.correo
+        request.session['is_authenticated'] = True
+        token = secrets.token_urlsafe(32)
+        request.session['token'] = token
+        request.session['rol'] = usuario.rol.nombre if usuario.rol else None
+        request.session['id_rol'] = usuario.rol.id if usuario.rol else None
+
+        return Response({
+            'message': 'Login exitoso',
+            'id': usuario.id,
+            'nombre': usuario.nombre,
+            'correo': usuario.correo,
+            'rol': {
+                'id': usuario.rol.id,
+                'nombre': usuario.rol.nombre,
+                'descripcion': usuario.rol.descripcion,
+            } if usuario.rol else None,
+            'facultad': {
+                'id': usuario.facultad.id,
+                'nombre': usuario.facultad.nombre,
+            } if usuario.facultad else None,
+            'sede': {
+                'id': usuario.sede.id,
+                'nombre': usuario.sede.nombre,
+                'ciudad': usuario.sede.ciudad,
+                'direccion': usuario.sede.direccion,
+            } if usuario.sede else None,
+            'componentes': componentes,
+            'espacios_permitidos': espacios_permitidos,
+            'token': token,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get', 'post'], url_path='logout')
+    def logout(self, request):
+        request.session.flush()
+        return Response({'message': 'Logout exitoso'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='session-auth-state')
+    def session_auth_state(self, request):
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return Response({'error': 'No autenticado'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            usuario = Usuario.objects.select_related('rol').get(id=user_id)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        componentes = self._build_componentes(usuario)
+        parts = [f"{c['id']}:{c['permiso']}" for c in sorted(componentes, key=lambda item: (item['id'], item['permiso']))]
+        role_part = str(usuario.rol.id) if usuario.rol else 'no-role'
+        signature_source = f"{role_part}|{'|'.join(parts)}"
+        signature = hashlib.sha256(signature_source.encode('utf-8')).hexdigest()[:16]
+
+        since = request.query_params.get('since')
+        if since and since == signature:
+            return Response({'changed': False, 'signature': signature}, status=status.HTTP_200_OK)
+
+        return Response({
+            'changed': True,
+            'signature': signature,
+            'rol': {
+                'id': usuario.rol.id,
+                'nombre': usuario.rol.nombre,
+                'descripcion': usuario.rol.descripcion,
+            } if usuario.rol else None,
+            'componentes': componentes,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['put'], url_path='change-password')
+    def change_password(self, request):
+        correo = request.data.get('correo')
+        old_contrasena = request.data.get('old_contrasena')
+        new_contrasena = request.data.get('new_contrasena')
+
+        if not correo or not old_contrasena or not new_contrasena:
+            return Response({'error': 'correo, old_contrasena y new_contrasena son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            usuario = Usuario.objects.get(correo=correo)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        password_ok, _ = _password_valida(usuario, old_contrasena)
+        if not password_ok:
+            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        usuario.contrasena_hash = make_password(new_contrasena)
+        usuario.password = usuario.contrasena_hash
+        usuario.save()
+        return Response({'message': 'Contraseña cambiada exitosamente'}, status=status.HTTP_200_OK)
 
 
 class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):

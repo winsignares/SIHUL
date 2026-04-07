@@ -61,28 +61,31 @@ export const solicitudEspacioService = {
      * Lista todas las solicitudes de espacio con filtro opcional
      */
     list: async (estado?: string): Promise<ListSolicitudesResponse> => {
-        const params = estado ? `?estado=${estado}` : '';
-        return apiClient.get<ListSolicitudesResponse>(`/horario/solicitudes/${params}`);
+        const solicitudes = await apiClient.get<SolicitudEspacio[]>('/solicitudes-espacio/');
+        return {
+            solicitudes: estado ? solicitudes.filter((item) => item.estado === estado) : solicitudes,
+        };
     },
 
     /**
      * Lista solicitudes pendientes
      */
     listPendientes: async (): Promise<ListSolicitudesResponse> => {
-        return apiClient.get<ListSolicitudesResponse>('/horario/solicitudes/?estado=pendiente');
+        const solicitudes = await apiClient.get<SolicitudEspacio[]>('/solicitudes-espacio/');
+        return { solicitudes: solicitudes.filter((item) => item.estado === 'pendiente') };
     },
 
     /**
      * Aprueba una solicitud de espacio
      */
     aprobar: async (payload: AprobarSolicitudPayload): Promise<{ message: string; solicitud_id: number; horario_id: number }> => {
-        return apiClient.post<{ message: string; solicitud_id: number; horario_id: number }>('/horario/solicitudes/aprobar/', payload);
+        return apiClient.post<{ message: string; solicitud_id: number; horario_id: number }>('/solicitudes-espacio/aprobar/', payload);
     },
 
     /**
      * Rechaza una solicitud de espacio
      */
     rechazar: async (payload: RechazarSolicitudPayload): Promise<{ message: string; solicitud_id: number }> => {
-        return apiClient.post<{ message: string; solicitud_id: number }>('/horario/solicitudes/rechazar/', payload);
+        return apiClient.post<{ message: string; solicitud_id: number }>('/solicitudes-espacio/rechazar/', payload);
     }
 };

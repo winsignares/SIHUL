@@ -12,6 +12,24 @@ export interface Grupo {
     activo?: boolean;
 }
 
+interface GrupoApi {
+    id?: number;
+    nombre: string;
+    programa: number;
+    periodo: number;
+    semestre: number;
+    activo?: boolean;
+}
+
+const toFrontendGrupo = (grupo: GrupoApi): Grupo => ({
+    id: grupo.id,
+    nombre: grupo.nombre,
+    programa_id: grupo.programa,
+    periodo_id: grupo.periodo,
+    semestre: grupo.semestre,
+    activo: grupo.activo,
+});
+
 /**
  * Payload para crear un grupo
  */
@@ -57,34 +75,52 @@ export const grupoService = {
      * Crea un nuevo grupo
      */
     create: async (payload: CreateGrupoPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post<{ message: string; id: number }>('/grupos/', payload);
+        const created = await apiClient.post<GrupoApi>('/grupos/', {
+            nombre: payload.nombre,
+            programa: payload.programa_id,
+            periodo: payload.periodo_id,
+            semestre: payload.semestre,
+            activo: payload.activo,
+        });
+        return { message: 'Grupo creado', id: created.id ?? 0 };
     },
 
     /**
      * Actualiza un grupo existente
      */
     update: async (payload: UpdateGrupoPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/grupos/update/', payload);
+        const updated = await apiClient.put<GrupoApi>(`/grupos/${payload.id}/`, {
+            ...(payload.nombre !== undefined ? { nombre: payload.nombre } : {}),
+            ...(payload.programa_id !== undefined ? { programa: payload.programa_id } : {}),
+            ...(payload.periodo_id !== undefined ? { periodo: payload.periodo_id } : {}),
+            ...(payload.semestre !== undefined ? { semestre: payload.semestre } : {}),
+            ...(payload.activo !== undefined ? { activo: payload.activo } : {}),
+        });
+        return { message: 'Grupo actualizado', id: updated.id ?? payload.id };
     },
 
     /**
      * Elimina un grupo
      */
     delete: async (payload: DeleteGrupoPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/grupos/delete/', payload);
+        await apiClient.delete(`/grupos/${payload.id}/`);
+        return { message: 'Grupo eliminado' };
     },
 
     /**
      * Obtiene un grupo por ID
      */
     get: async (id: number): Promise<Grupo> => {
-        return apiClient.get<Grupo>(`/grupos/${id}/`);
+        const grupoApi = await apiClient.get<GrupoApi>(`/grupos/${id}/`);
+        return toFrontendGrupo(grupoApi);
     },
 
     /**
      * Lista todos los grupos
      */
     list: async (): Promise<ListGruposResponse> => {
-        return apiClient.get<ListGruposResponse>('/grupos/list/');
+        const gruposApi = await apiClient.get<GrupoApi[]>('/grupos/');
+        const grupos = gruposApi.map(toFrontendGrupo);
+        return { grupos };
     }
 };
