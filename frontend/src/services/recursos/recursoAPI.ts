@@ -9,13 +9,49 @@ export interface Recurso {
   descripcion?: string;
 }
 
+type RecursoListResponse = Recurso[] | { recursos?: Recurso[]; results?: Recurso[] };
+type RecursoCreateResponse = Recurso | { message?: string; id?: number };
+
+const normalizeRecurso = (item: Recurso): Recurso => ({
+  id: item.id,
+  nombre: item.nombre,
+  descripcion: item.descripcion ?? ''
+});
+
+const normalizeRecursoList = (payload: RecursoListResponse): Recurso[] => {
+  if (Array.isArray(payload)) {
+    return payload.map(normalizeRecurso);
+  }
+
+  if (Array.isArray(payload.recursos)) {
+    return payload.recursos.map(normalizeRecurso);
+  }
+
+  if (Array.isArray(payload.results)) {
+    return payload.results.map(normalizeRecurso);
+  }
+
+  return [];
+};
+
+const normalizeCreateRecursoResponse = (payload: RecursoCreateResponse): { message: string; id: number } => {
+  if ('nombre' in payload) {
+    return { message: 'Recurso creado', id: payload.id ?? 0 };
+  }
+
+  return {
+    message: payload.message || 'Recurso creado',
+    id: payload.id ?? 0
+  };
+};
+
 export const recursoService = {
   /**
    * Obtiene la lista de todos los recursos
    */
   listarRecursos: async (): Promise<{ recursos: Recurso[] }> => {
-    const recursos = await apiClient.get<Recurso[]>('/recursos/');
-    return { recursos };
+    const payload = await apiClient.get<RecursoListResponse>('/recursos/');
+    return { recursos: normalizeRecursoList(payload) };
   },
 
   /**
@@ -31,7 +67,8 @@ export const recursoService = {
    * @param recurso Datos del recurso a crear
    */
   crearRecurso: async (recurso: Omit<Recurso, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/recursos/', recurso);
+    const creado = await apiClient.post<RecursoCreateResponse>('/recursos/', recurso);
+    return normalizeCreateRecursoResponse(creado);
   },
 
   /**
@@ -42,7 +79,7 @@ export const recursoService = {
     if (!recurso.id) {
       throw new Error('Se requiere el ID del recurso para actualizar');
     }
-    const actualizado = await apiClient.put<Recurso>(`/recursos/${recurso.id}/`, recurso);
+    const actualizado = await apiClient.patch<Recurso>(`/recursos/${recurso.id}/`, recurso);
     return { message: 'Recurso actualizado', id: actualizado.id ?? recurso.id };
   },
 
@@ -66,12 +103,27 @@ export interface EspacioRecurso {
   estado: 'disponible' | 'no_disponible' | 'en_mantenimiento';
 }
 
+interface EspacioRecursoApi {
+  id?: number;
+  espacio: number;
+  recurso: number;
+  estado: 'disponible' | 'no_disponible' | 'en_mantenimiento';
+}
+
+const toFrontendEspacioRecurso = (item: EspacioRecursoApi): EspacioRecurso => ({
+  id: item.id,
+  espacio_id: item.espacio,
+  recurso_id: item.recurso,
+  estado: item.estado,
+});
+
 export interface EstadoRecurso extends EspacioRecurso {
   nombre: string;
 }
 
 const getEspacioRecursoByIds = async (espacio_id: number, recurso_id: number): Promise<EspacioRecurso> => {
-  return apiClient.get(`/espacios-recursos/por-ids/${espacio_id}/${recurso_id}/`);
+  const item = await apiClient.get<EspacioRecursoApi>(`/espacios-recursos/por-ids/${espacio_id}/${recurso_id}/`);
+  return toFrontendEspacioRecurso(item);
 };
 
 export const espacioRecursoService = {
@@ -79,8 +131,8 @@ export const espacioRecursoService = {
    * Obtiene la lista de todas las relaciones espacio-recurso
    */
   listarEspacioRecursos: async (): Promise<{ espacio_recursos: EspacioRecurso[] }> => {
-    const espacio_recursos = await apiClient.get<EspacioRecurso[]>('/espacios-recursos/');
-    return { espacio_recursos };
+    const espacioRecursosApi = await apiClient.get<EspacioRecursoApi[]>('/espacios-recursos/');
+    return { espacio_recursos: espacioRecursosApi.map(toFrontendEspacioRecurso) };
   },
 
   /**
@@ -98,8 +150,8 @@ export const espacioRecursoService = {
    */
   crearEspacioRecurso: async (espacioRecurso: EspacioRecurso): Promise<{ message: string }> => {
     await apiClient.post('/espacios-recursos/', {
-      espacio_id: espacioRecurso.espacio_id,
-      recurso_id: espacioRecurso.recurso_id,
+      espacio: espacioRecurso.espacio_id,
+      recurso: espacioRecurso.recurso_id,
       estado: espacioRecurso.estado ?? 'disponible'
     });
     return { message: 'EspacioRecurso creado' };
@@ -116,8 +168,8 @@ export const espacioRecursoService = {
     }
 
     await apiClient.put(`/espacios-recursos/${actual.id}/`, {
-      espacio_id: espacioRecurso.espacio_id,
-      recurso_id: espacioRecurso.recurso_id,
+      espacio: espacioRecurso.espacio_id,
+      recurso: espacioRecurso.recurso_id,
       estado: espacioRecurso.estado
     });
     return { message: 'EspacioRecurso actualizado' };

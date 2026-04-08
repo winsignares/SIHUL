@@ -129,14 +129,32 @@ export const espacioService = {
      * Crea un nuevo espacio físico
      */
     create: async (payload: CreateEspacioPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post<{ message: string; id: number }>('/espacios/', payload);
+        return apiClient.post<{ message: string; id: number }>('/espacios/', {
+            nombre: payload.nombre,
+            sede: payload.sede_id,
+            tipo: payload.tipo_id,
+            capacidad: payload.capacidad,
+            descripcion: payload.descripcion,
+            ubicacion: payload.ubicacion,
+            estado: payload.estado,
+            recursos: payload.recursos,
+        });
     },
 
     /**
      * Actualiza un espacio físico existente
      */
     update: async (payload: UpdateEspacioPayload): Promise<{ message: string; id: number }> => {
-        const updated = await apiClient.put<EspacioFisico>(`/espacios/${payload.id}/`, payload);
+        const updated = await apiClient.put<EspacioFisico>(`/espacios/${payload.id}/`, {
+            ...(payload.nombre !== undefined ? { nombre: payload.nombre } : {}),
+            ...(payload.sede_id !== undefined ? { sede: payload.sede_id } : {}),
+            ...(payload.tipo_id !== undefined ? { tipo: payload.tipo_id } : {}),
+            ...(payload.capacidad !== undefined ? { capacidad: payload.capacidad } : {}),
+            ...(payload.descripcion !== undefined ? { descripcion: payload.descripcion } : {}),
+            ...(payload.ubicacion !== undefined ? { ubicacion: payload.ubicacion } : {}),
+            ...(payload.estado !== undefined ? { estado: payload.estado } : {}),
+            ...(payload.recursos !== undefined ? { recursos: payload.recursos } : {}),
+        });
         return { message: 'Espacio actualizado', id: updated.id ?? payload.id };
     },
 

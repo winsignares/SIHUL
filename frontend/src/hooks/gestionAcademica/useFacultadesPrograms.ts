@@ -37,6 +37,25 @@ interface Programa {
     activo: boolean;
 }
 
+const enrichAsignaturasPrograma = (
+    items: AsignaturaPrograma[],
+    asignaturasCatalogo: Asignatura[]
+): AsignaturaPrograma[] => {
+    const asignaturasPorId = new Map(asignaturasCatalogo.map((asignatura) => [asignatura.id, asignatura]));
+
+    return items.map((item) => {
+        const asignatura = asignaturasPorId.get(item.asignatura_id);
+
+        return {
+            ...item,
+            asignatura_codigo: asignatura?.codigo,
+            asignatura_nombre: asignatura?.nombre,
+            creditos: asignatura?.creditos,
+            horas: asignatura?.horas,
+        };
+    });
+};
+
 export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos' | 'gestion-recursos';
 
 export function useFacultadesPrograms() {
@@ -186,13 +205,14 @@ export function useFacultadesPrograms() {
                 : getSessionCacheData<AsignaturaPrograma[]>(cacheKey, activeToken);
 
             if (cachedAsignaturasPrograma) {
-                setAsignaturasPrograma(cachedAsignaturasPrograma);
+                setAsignaturasPrograma(enrichAsignaturasPrograma(cachedAsignaturasPrograma, asignaturas));
                 return;
             }
 
             setLoading(true);
             const response = await asignaturaProgramaService.list(programaId);
-            setAsignaturasPrograma(response.asignaturas_programa);
+            const enrichedAsignaturasPrograma = enrichAsignaturasPrograma(response.asignaturas_programa, asignaturas);
+            setAsignaturasPrograma(enrichedAsignaturasPrograma);
             setSessionCacheData(cacheKey, activeToken, response.asignaturas_programa);
         } catch (error) {
             toast.error(`Error al cargar asignaturas del programa: ${error instanceof Error ? error.message : 'Error desconocido'}`);
@@ -200,6 +220,14 @@ export function useFacultadesPrograms() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (asignaturasPrograma.length === 0 || asignaturas.length === 0) {
+            return;
+        }
+
+        setAsignaturasPrograma((current) => enrichAsignaturasPrograma(current, asignaturas));
+    }, [asignaturas]);
 
     // Función para recargar todos los datos
     const reloadAllData = () => {

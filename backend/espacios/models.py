@@ -32,6 +32,18 @@ class EspacioFisico(models.Model):
     # Manager con sincronización automática de estado al consultar
     objects = EspacioFisicoManager()
 
+    @property
+    def recursos_con_estado(self):
+        """Lista de recursos asociados con su estado actual."""
+        return [
+            {
+                'id': relacion.recurso_id,
+                'nombre': relacion.recurso.nombre,
+                'estado': relacion.estado,
+            }
+            for relacion in self.espacio_recursos.select_related('recurso').all()
+        ]
+
     def __str__(self):
         return f"{self.nombre} - {self.tipo.nombre} ({self.ubicacion or 'sin ubicación'})"
     

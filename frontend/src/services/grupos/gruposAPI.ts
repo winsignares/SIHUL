@@ -89,7 +89,7 @@ export const grupoService = {
      * Actualiza un grupo existente
      */
     update: async (payload: UpdateGrupoPayload): Promise<{ message: string; id: number }> => {
-        const updated = await apiClient.put<GrupoApi>(`/grupos/${payload.id}/`, {
+        const updated = await apiClient.patch<GrupoApi>(`/grupos/${payload.id}/`, {
             ...(payload.nombre !== undefined ? { nombre: payload.nombre } : {}),
             ...(payload.programa_id !== undefined ? { programa: payload.programa_id } : {}),
             ...(payload.periodo_id !== undefined ? { periodo: payload.periodo_id } : {}),

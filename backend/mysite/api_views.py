@@ -122,7 +122,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return EspacioFisico.objects.select_related('sede', 'tipo')
+        return EspacioFisico.objects.select_related('sede', 'tipo').prefetch_related('espacio_recursos__recurso')
 
     @action(detail=False, methods=['get'], url_path='horarios/all')
     def horarios_all(self, request):
@@ -439,7 +439,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Recurso.objects.all()
     serializer_class = RecursoSerializer
-    seccional_lookup = 'recurso_espacios__espacio__sede__seccional'
+    seccional_lookup = None
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
