@@ -364,7 +364,7 @@ def list_horarios_extendidos(request):
     if request.method == 'GET':
         #obtener sede de usuario autenticado
         user_sede = getattr(request, 'sede', None)
-        #validar que la sede tenga ciudad para filtrar por ciudad, si no tiene ciudad, no se filtra por ciudad
+        #validar que la sede tenga seccional para filtrar por seccional; si no tiene seccional, no se filtra
         if user_sede and user_sede.seccional_id:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
         else:

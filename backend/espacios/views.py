@@ -14,7 +14,7 @@ from django.db.models import Count
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
-    """Filtra espacios por la ciudad de la sede del usuario logueado."""
+    """Filtra espacios por la seccional de la sede del usuario logueado."""
     user_sede = getattr(request, 'sede', None)
     if user_sede and user_sede.seccional_id:
         return queryset.filter(sede__seccional_id=user_sede.seccional_id)

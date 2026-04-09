@@ -270,6 +270,11 @@ class RolViewSet(SeccionalMixin, viewsets.ModelViewSet):
     seccional_lookup = None
     permission_classes = [permissions.IsAuthenticated, IsAdminGlobal]
 
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [permissions.IsAuthenticated()]
+        return [permission() for permission in self.permission_classes]
+
 
 class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')

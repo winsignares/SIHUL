@@ -126,7 +126,7 @@ def list_asignaturas(request):
         #sede del usuario actual
         sede_actual = getattr(request, 'sede', None)
         
-        #se compara que la ciudad de la sede del usuario actual sea igual a la ciudad de la sede de cada asignatura, si sede_actual es None se listan todas las asignaturas
+        #se compara que la seccional de la sede del usuario actual sea igual a la seccional de la sede de cada asignatura; si sede_actual es None se listan todas las asignaturas
         if sede_actual:
             asignaturas = Asignatura.objects.filter(sede__seccional_id=sede_actual.seccional_id)
         else:

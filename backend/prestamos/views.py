@@ -726,7 +726,7 @@ def list_prestamos(request):
         
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        # Filtrar prestamos por la misma ciudad de la sede del usuario (a través de espacio -> sede)
+        # Filtrar prestamos por la misma seccional de la sede del usuario (a través de espacio -> sede)
         if user_sede and user_sede.seccional_id:
             items = PrestamoEspacio.objects.select_related(
                 'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
@@ -1178,7 +1178,7 @@ def list_espacios_disponibles_publico(request):
 def list_prestamos_publicos(request):
     """
     Lista todos los préstamos públicos.
-    Respeta el alcance de sede/ciudad del usuario cuando aplica middleware de sede.
+    Respeta el alcance de sede/seccional del usuario cuando aplica middleware de sede.
     """
     if request.method != 'GET':
         return JsonResponse({"error": "Método no permitido"}, status=405)

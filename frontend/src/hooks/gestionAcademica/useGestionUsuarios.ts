@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNotification } from '../../share/notificationBanner';
-import { apiClient } from '../../core/apiClient';
 import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
-import { espacioService, type TipoEspacio } from '../../services/espacios/espaciosAPI';
+import { espacioService, espacioPermitidoService, type TipoEspacio } from '../../services/espacios/espaciosAPI';
+import { facultadService } from '../../services/facultades/facultadesAPI';
+import { sedeService } from '../../services/sedes/sedeAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
@@ -140,9 +141,13 @@ export function useGestionUsuarios() {
                 return;
             }
 
-            const response = await apiClient.get<{ facultades: Array<{ id: number, nombre: string }> }>('/facultades/list/');
-            setFacultadesDisponibles(response.facultades || []);
-            setSessionCacheData(GESTION_FACULTADES_CACHE_KEY, activeToken, response.facultades || []);
+            const response = await facultadService.list();
+            const facultades = (response.facultades || []).map((f) => ({
+                id: f.id as number,
+                nombre: f.nombre,
+            }));
+            setFacultadesDisponibles(facultades);
+            setSessionCacheData(GESTION_FACULTADES_CACHE_KEY, activeToken, facultades);
         } catch (error) {
             console.error('Error cargando facultades:', error);
         }
@@ -208,9 +213,13 @@ export function useGestionUsuarios() {
                 return;
             }
 
-            const response = await apiClient.get<{ sedes: Array<{ id: number, nombre: string }> }>('/sedes/list/');
-            setSedesDisponibles(response.sedes || []);
-            setSessionCacheData(GESTION_SEDES_CACHE_KEY, activeToken, response.sedes || []);
+            const response = await sedeService.listarSedes();
+            const sedes = (response.sedes || []).map((sede) => ({
+                id: sede.id as number,
+                nombre: sede.nombre,
+            }));
+            setSedesDisponibles(sedes);
+            setSessionCacheData(GESTION_SEDES_CACHE_KEY, activeToken, sedes);
         } catch (error) {
             console.error('Error cargando sedes:', error);
         }
@@ -448,10 +457,10 @@ export function useGestionUsuarios() {
         // Cargar espacios permitidos si es supervisor_general
         if (rolNombre === 'supervisor_general') {
             try {
-                // Usar el endpoint correcto: /espacios/permitido/usuario/<id>/
-                const response = await apiClient.get<{ espacios: any[] }>(`/espacios/permitido/usuario/${usuario.id}/`);
-                // El endpoint retorna objetos de espacio completos con ID, nombre, etc.
-                const espaciosIds = response.espacios.map(e => e.id);
+                const response = await espacioPermitidoService.listByUsuario(usuario.id as number);
+                const espaciosIds = (response.espacios || [])
+                    .map((espacio) => espacio.id)
+                    .filter((id): id is number => typeof id === 'number');
                 setEspaciosPermitidosEdit(espaciosIds);
                 setModoAsignacionSupervisorEdit('individual');
                 setTiposEspacioPermitidosEdit([]);

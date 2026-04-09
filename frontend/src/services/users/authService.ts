@@ -20,6 +20,8 @@ export interface Usuario {
     id: number;
     nombre: string;
     ciudad?: string;
+    seccional_id?: number | null;
+    seccional_ciudad?: string | null;
     direccion?: string;
   } | null;
   activo: boolean;
@@ -28,6 +30,29 @@ export interface Usuario {
     id: number;
     nombre: string;
   } | null;
+  espacios_permitidos?: number[];
+}
+
+interface UsuarioApi {
+  id?: number;
+  nombre: string;
+  correo: string;
+  contrasena?: string;
+  contrasena_hash?: string;
+  rol?: number | Rol | null;
+  rol_id?: number | null;
+  facultad?: number | { id: number; nombre?: string } | null;
+  facultad_id?: number | null;
+  sede?: number | string | {
+    id: number;
+    nombre: string;
+    ciudad?: string;
+    seccional_id?: number | null;
+    seccional_ciudad?: string | null;
+    direccion?: string;
+  } | null;
+  sede_id?: number | null;
+  activo: boolean;
   espacios_permitidos?: number[];
 }
 
@@ -79,7 +104,9 @@ export interface LoginResponse {
   sede: {
     id: number;
     nombre: string;
-    ciudad: string;
+    ciudad?: string;
+    seccional_id?: number | null;
+    seccional_ciudad?: string | null;
     direccion?: string;
   } | null;
   componentes: Array<{
@@ -141,6 +168,39 @@ const resolveSedeValue = async (usuario: CreateUsuarioPayload): Promise<string |
   return undefined;
 };
 
+const toFrontendUsuario = (usuario: UsuarioApi): Usuario => {
+  const rolId = usuario.rol_id ?? (typeof usuario.rol === 'number' ? usuario.rol : usuario.rol?.id ?? null);
+  const facultadId = usuario.facultad_id ?? (typeof usuario.facultad === 'number' ? usuario.facultad : usuario.facultad?.id ?? null);
+  const sedeId = usuario.sede_id ?? (typeof usuario.sede === 'object' && usuario.sede && 'id' in usuario.sede ? usuario.sede.id : null);
+
+  const rolObj = typeof usuario.rol === 'object' && usuario.rol !== null ? usuario.rol : undefined;
+  const facultadObj =
+    typeof usuario.facultad === 'object' && usuario.facultad !== null && 'id' in usuario.facultad
+      ? { id: usuario.facultad.id, nombre: usuario.facultad.nombre || '' }
+      : null;
+
+  const sedeObj =
+    typeof usuario.sede === 'object' && usuario.sede !== null && 'id' in usuario.sede
+      ? usuario.sede
+      : (typeof usuario.sede === 'string' ? usuario.sede : undefined);
+
+  return {
+    id: usuario.id,
+    nombre: usuario.nombre,
+    correo: usuario.correo,
+    contrasena: usuario.contrasena,
+    contrasena_hash: usuario.contrasena_hash,
+    rol_id: rolId,
+    facultad_id: facultadId,
+    sede_id: sedeId,
+    sede: sedeObj,
+    activo: usuario.activo,
+    rol: rolObj,
+    facultad: facultadObj,
+    espacios_permitidos: usuario.espacios_permitidos,
+  };
+};
+
 /**
  * Servicio de autenticación y gestión de usuarios
  */
@@ -149,9 +209,16 @@ export const authService = {
    * Inicia sesión con el backend
    */
   login: async (payload: LoginPayload): Promise<LoginResponse> => {
-    return apiClient.post<LoginResponse>('/usuarios/login/', payload, {
+    const response = await apiClient.post<LoginResponse>('/usuarios/login/', payload, {
       requiresAuth: false
     });
+
+    // Compatibilidad: algunos consumidores del frontend aun leen `sede.ciudad` como alias de seccional.
+    if (response?.sede && !response.sede.ciudad && response.sede.seccional_ciudad) {
+      response.sede.ciudad = response.sede.seccional_ciudad;
+    }
+
+    return response;
   },
 
   /**
@@ -201,7 +268,11 @@ export const userService = {
    * Obtiene la lista de todos los usuarios
    */
   listarUsuarios: async (): Promise<{ usuarios: Usuario[] }> => {
-    const usuarios = await apiClient.get<Usuario[]>('/usuarios/');
+    const response = await apiClient.get<UsuarioApi[] | { usuarios?: UsuarioApi[]; results?: UsuarioApi[] }>('/usuarios/');
+    const usuariosRaw = Array.isArray(response)
+      ? response
+      : (response.usuarios ?? response.results ?? []);
+    const usuarios = usuariosRaw.map(toFrontendUsuario);
     return { usuarios };
   },
 
@@ -209,7 +280,8 @@ export const userService = {
    * Obtiene un usuario por su ID
    */
   obtenerUsuario: async (id: number): Promise<Usuario> => {
-    return apiClient.get(`/usuarios/${id}/`);
+    const usuario = await apiClient.get<UsuarioApi>(`/usuarios/${id}/`);
+    return toFrontendUsuario(usuario);
   },
 
   /**

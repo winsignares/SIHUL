@@ -9,7 +9,8 @@ export interface Facultad {
     activa?: boolean;
     sede_id?: number;
     sede_nombre?: string;
-    sede_ciudad?: string;
+    sede_seccional_id?: number;
+    sede_seccional_ciudad?: string;
 }
 
 interface FacultadApi {
@@ -17,13 +18,20 @@ interface FacultadApi {
     nombre: string;
     activa?: boolean;
     sede?: number | null;
+    sede_id?: number;
+    sede_nombre?: string;
+    sede_seccional_id?: number;
+    sede_seccional_ciudad?: string;
 }
 
 const toFrontendFacultad = (facultad: FacultadApi): Facultad => ({
     id: facultad.id,
     nombre: facultad.nombre,
     activa: facultad.activa,
-    sede_id: facultad.sede ?? undefined,
+    sede_id: facultad.sede_id ?? facultad.sede ?? undefined,
+    sede_nombre: facultad.sede_nombre,
+    sede_seccional_id: facultad.sede_seccional_id,
+    sede_seccional_ciudad: facultad.sede_seccional_ciudad,
 });
 
 /**
