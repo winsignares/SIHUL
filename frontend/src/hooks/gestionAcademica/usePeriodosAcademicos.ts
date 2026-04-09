@@ -35,6 +35,7 @@ export function usePeriodosAcademicos() {
     const [periodoACopiar, setPeriodoACopiar] = useState<PeriodoUI | null>(null);
     const [periodoAEditar, setPeriodoAEditar] = useState<PeriodoUI | null>(null);
     const [periodoAEliminar, setPeriodoAEliminar] = useState<PeriodoUI | null>(null);
+    const [periodoAnteriorAEliminar, setPeriodoAnteriorAEliminar] = useState<PeriodoUI | null>(null);
 
     const loadPeriodos = async ({ force = false }: { force?: boolean } = {}) => {
         try {
@@ -116,6 +117,27 @@ export function usePeriodosAcademicos() {
     });
 
     const periodoActivo = periodos.find(p => p.estado === 'Activo');
+
+    const getPeriodoAnterior = (periodo: PeriodoUI): PeriodoUI | null => {
+        const fechaInicio = new Date(periodo.fecha_inicio + 'T00:00:00').getTime();
+
+        const anteriores = periodos.filter((p) => {
+            if (p.id === periodo.id) return false;
+            const fechaFin = new Date(p.fecha_fin + 'T23:59:59').getTime();
+            return fechaFin < fechaInicio;
+        });
+
+        if (anteriores.length === 0) return null;
+
+        return anteriores.sort((a, b) => {
+            return new Date(b.fecha_fin + 'T23:59:59').getTime() - new Date(a.fecha_fin + 'T23:59:59').getTime();
+        })[0];
+    };
+
+    const canDeletePeriodo = (periodo: PeriodoUI): boolean => {
+        if (periodo.estado === 'Activo') return false;
+        return !!getPeriodoAnterior(periodo);
+    };
 
     const calcularSiguientePeriodo = (nombreActual: string): string => {
         const match = nombreActual.match(/(\d{4})-(\d+)/);
@@ -404,6 +426,14 @@ export function usePeriodosAcademicos() {
             showNotification('No se puede eliminar el periodo activo', 'error');
             return;
         }
+
+        const periodoAnterior = getPeriodoAnterior(periodo);
+        if (!periodoAnterior) {
+            showNotification('No se puede eliminar: no existe un período anterior para trasladar los datos asociados.', 'error');
+            return;
+        }
+
+        setPeriodoAnteriorAEliminar(periodoAnterior);
         setPeriodoAEliminar(periodo);
         setShowDeleteDialog(true);
     };
@@ -418,6 +448,7 @@ export function usePeriodosAcademicos() {
             await loadPeriodos({ force: true });
             setShowDeleteDialog(false);
             setPeriodoAEliminar(null);
+            setPeriodoAnteriorAEliminar(null);
             showNotification('✅ Periodo eliminado exitosamente', 'success');
         } catch (error) {
             showNotification(
@@ -446,6 +477,8 @@ export function usePeriodosAcademicos() {
         periodoACopiar,
         periodoAEditar,
         periodoAEliminar,
+        periodoAnteriorAEliminar,
+        canDeletePeriodo,
         handleOpenCreateDialog,
         handleCreatePeriodo,
         handleOpenEditDialog,

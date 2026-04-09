@@ -26,6 +26,8 @@ export default function PeriodosAcademicos() {
     periodoForm, setPeriodoForm,
     periodoACopiar,
     periodoAEliminar,
+    periodoAnteriorAEliminar,
+    canDeletePeriodo,
     handleOpenCreateDialog,
     handleCreatePeriodo,
     handleOpenEditDialog,
@@ -169,12 +171,12 @@ export default function PeriodosAcademicos() {
                         variant="outline"
                         size="sm"
                         className={
-                          periodo.estado === 'Activo'
+                          !canDeletePeriodo(periodo)
                             ? 'border-slate-300 text-slate-400 cursor-not-allowed'
                             : 'border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950'
                         }
                         onClick={() => handleOpenDeleteDialog(periodo)}
-                        disabled={periodo.estado === 'Activo'}
+                        disabled={!canDeletePeriodo(periodo)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -298,9 +300,9 @@ export default function PeriodosAcademicos() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`h-8 ${periodo.estado === 'Activo' ? 'text-slate-400 cursor-not-allowed' : 'text-red-600 hover:text-red-700'}`}
+                          className={`h-8 ${!canDeletePeriodo(periodo) ? 'text-slate-400 cursor-not-allowed' : 'text-red-600 hover:text-red-700'}`}
                           onClick={() => handleOpenDeleteDialog(periodo)}
-                          disabled={periodo.estado === 'Activo'}
+                          disabled={!canDeletePeriodo(periodo)}
                         >
                           <Trash2 className="w-3 h-3" />
                         </Button>
@@ -510,8 +512,13 @@ export default function PeriodosAcademicos() {
                 ¿Está seguro de eliminar el periodo "{periodoAEliminar?.nombre}"?
               </p>
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                Se eliminarán todos los datos asociados a este periodo académico.
+                Los datos asociados se trasladarán al período anterior y luego se eliminará este período.
               </p>
+              {periodoAnteriorAEliminar && (
+                <p className="text-slate-700 dark:text-slate-300 text-sm mt-2">
+                  Período de destino: <strong>{periodoAnteriorAEliminar.nombre}</strong>
+                </p>
+              )}
             </div>
             {periodoAEliminar?.programasActivos && periodoAEliminar.programasActivos > 0 && (
               <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">

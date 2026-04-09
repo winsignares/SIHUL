@@ -18,7 +18,7 @@ import {
 } from '../gestionAcademica/paginacion';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import {
     expandirPrestamosParaCronograma,
     getDiaSemanaEspanolDesdeISO,
@@ -26,6 +26,10 @@ import {
 } from './prestamosCronogramaUtils';
 
 const CONSULTA_ESPACIOS_CACHE_KEY = 'espacios-consulta-espacios';
+
+function getConsultaEspaciosCacheKey(userId?: number, rol?: string, facultadId?: number | null): string {
+    return `${CONSULTA_ESPACIOS_CACHE_KEY}-${String(rol ?? 'publico')}-${userId ?? 'anonimo'}-${facultadId ?? 'sin-facultad'}`;
+}
 
 /** Fecha calendario en zona local; evita que medianoche local pase a “ayer” con toISOString() (UTC). */
 function formatFechaLocalYYYYMMDD(d: Date): string {
@@ -223,8 +227,7 @@ export function useConsultaEspacios() {
         setLoading(true);
         try {
             const activeToken = localStorage.getItem('auth_token');
-            const userScope = `${String(user?.rol ?? 'publico')}-${user?.id ?? 'anonimo'}-${user?.facultad?.id ?? 'sin-facultad'}`;
-            const cacheKey = `${CONSULTA_ESPACIOS_CACHE_KEY}-${userScope}`;
+            const cacheKey = getConsultaEspaciosCacheKey(user?.id, String(user?.rol ?? 'publico'), user?.facultad?.id ?? null);
             const cachedData = force
                 ? null
                 : getSessionCacheData<{ espacios: EspacioView[]; horarios: OcupacionView[] }>(cacheKey, activeToken);
@@ -1242,8 +1245,9 @@ export function useConsultaEspacios() {
 
     // Función para recargar datos limpiando el caché
     const recargarDatos = useCallback(async () => {
+        clearSessionCache(getConsultaEspaciosCacheKey(user?.id, String(user?.rol ?? 'publico'), user?.facultad?.id ?? null));
         await loadData({ force: true });
-    }, [loadData]);
+    }, [loadData, user?.facultad?.id, user?.id, user?.rol]);
 
     return {
         searchTerm,

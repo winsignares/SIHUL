@@ -22,6 +22,31 @@ const iconMap: Record<string, any> = {
     'Bot': Bot
 };
 
+const normalizarAgentes = (response: unknown): AgenteAPI[] => {
+    if (Array.isArray(response)) {
+        return response as AgenteAPI[];
+    }
+
+    if (!response || typeof response !== 'object') {
+        return [];
+    }
+
+    const data = response as {
+        agentes?: unknown;
+        results?: unknown;
+        data?: unknown;
+    };
+
+    const candidatos = [data.agentes, data.results, data.data];
+    for (const candidato of candidatos) {
+        if (Array.isArray(candidato)) {
+            return candidato as AgenteAPI[];
+        }
+    }
+
+    return [];
+};
+
 // Función para convertir agente del API a formato UI
 const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
     return {
@@ -29,15 +54,15 @@ const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
         nombre: agenteAPI.nombre,
         subtitulo: agenteAPI.subtitulo || '',
         descripcion: agenteAPI.descripcion,
-        icon: iconMap[agenteAPI.icono] || Bot,
-        color: agenteAPI.color,
-        bgGradient: agenteAPI.bgGradient,
+        icon: iconMap[agenteAPI.icono || 'Bot'] || Bot,
+        color: agenteAPI.color || 'blue',
+        bgGradient: agenteAPI.bgGradient || 'from-blue-500 via-blue-600 to-indigo-600',
         ultimoMensaje: '¿En qué puedo ayudarte?',
         timestamp: 'Ahora',
         online: true,
-        mensajeBienvenida: agenteAPI.mensajeBienvenida,
+        mensajeBienvenida: agenteAPI.mensajeBienvenida || '',
         prompt: agenteAPI.id.toString(),
-        preguntasRapidas: agenteAPI.preguntasRapidas
+        preguntasRapidas: agenteAPI.preguntasRapidas || []
     };
 };
 
@@ -149,8 +174,14 @@ export function useAsistentesVirtuales() {
                 const response = user?.id 
                     ? await chatbotAPI.listarAgentes()
                     : await chatbotAPI.listarAgentesPublico();
-                    
-                const agentesUI = response.agentes.map(convertirAgenteAPI);
+
+                const agentes = normalizarAgentes(response);
+
+                if (agentes.length === 0) {
+                    console.warn('La respuesta de agentes no contiene una lista válida:', response);
+                }
+
+                const agentesUI = agentes.map(convertirAgenteAPI);
                 setAsistentes(agentesUI);
 
                 // Seleccionar el primer agente por defecto SI NO HAY MENSAJES GUARDADOS
@@ -183,7 +214,7 @@ export function useAsistentesVirtuales() {
         };
 
         cargarAgentes();
-    }, [user?.id]); // Recargar cuando cambie el usuario
+    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol
 
     // Guardar mensajes en localStorage cada vez que cambien
     useEffect(() => {

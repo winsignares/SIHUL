@@ -137,7 +137,8 @@ export default function ConsultaEspacios() {
     // Filtros
     limpiarFiltros,
     // Recarga
-    recargarDatos
+    recargarDatos,
+    loading
   } = useConsultaEspacios();
 
   // Calcular índices de paginación
@@ -1122,9 +1123,10 @@ export default function ConsultaEspacios() {
             variant="outline"
             className="flex-1 sm:flex-none border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
             title="Limpiar caché y recargar datos"
+            disabled={loading}
           >
-            <RefreshCw className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-            {isMobile ? 'Recargar' : 'Recargar Datos'}
+            <RefreshCw className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Recargando...' : isMobile ? 'Recargar' : 'Recargar Datos'}
           </Button>
           {espacioSeleccionado && (
             <Button

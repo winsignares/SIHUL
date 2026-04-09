@@ -73,6 +73,7 @@ class ApiClient {
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(endpoint, {
       ...config,
+      cache: config?.cache ?? 'no-store',
       method: 'GET',
     });
   }
