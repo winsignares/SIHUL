@@ -12,11 +12,11 @@ def create_sede(request):
             data = json.loads(request.body)
             nombre = data.get('nombre')
             direccion = data.get('direccion')
-            ciudad = data.get('ciudad')
+            seccional_id = data.get('seccional_id')
             activa = data.get('activa', True)
             if not nombre:
                 return JsonResponse({"error": "El nombre es requerido"}, status=400)
-            s = Sede(nombre=nombre, direccion=direccion, ciudad=ciudad, activa=bool(activa))
+            s = Sede(nombre=nombre, direccion=direccion, seccional_id=seccional_id, activa=bool(activa))
             s.save()
             return JsonResponse({"message": "Sede creada", "id": s.id}, status=201)
         except json.JSONDecodeError:
@@ -36,7 +36,8 @@ def update_sede(request):
             sede = Sede.objects.get(id=id)
             sede.nombre = data.get('nombre', sede.nombre)
             sede.direccion = data.get('direccion', sede.direccion)
-            sede.ciudad = data.get('ciudad', sede.ciudad)
+            if 'seccional_id' in data:
+                sede.seccional_id = data.get('seccional_id')
             if 'activa' in data:
                 sede.activa = bool(data.get('activa'))
             sede.save()
@@ -74,7 +75,14 @@ def get_sede(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         sede = Sede.objects.get(id=id)
-        return JsonResponse({"id": sede.id, "nombre": sede.nombre, "direccion": sede.direccion, "ciudad": sede.ciudad, "activa": sede.activa}, status=200)
+        return JsonResponse({
+            "id": sede.id,
+            "nombre": sede.nombre,
+            "direccion": sede.direccion,
+            "seccional_id": sede.seccional_id,
+            "seccional_ciudad": sede.seccional.ciudad if sede.seccional else None,
+            "activa": sede.activa,
+        }, status=200)
     except Sede.DoesNotExist:
         return JsonResponse({"error": "Sede no encontrada."}, status=404)
     except Exception as e:
@@ -85,8 +93,16 @@ def list_sedes(request):
     if request.method == 'GET':
         user_sede = getattr(request, 'sede', None)
         if user_sede:
-            sedes = Sede.objects.filter(ciudad=user_sede.ciudad)
+            sedes = Sede.objects.filter(seccional_id=user_sede.seccional_id)
         else:
             sedes = Sede.objects.all()
-        lst = [{"id": s.id, "nombre": s.nombre, "direccion": s.direccion, "ciudad": s.ciudad, "activa": s.activa} for s in sedes]
+        lst = [{
+            "id": s.id,
+            "nombre": s.nombre,
+            "direccion": s.direccion,
+            "seccional_id": s.seccional_id,
+            "seccional_ciudad": s.seccional.ciudad if s.seccional else None,
+            "activa": s.activa,
+        } for s in sedes]
         return JsonResponse({"sedes": lst}, status=200)
+

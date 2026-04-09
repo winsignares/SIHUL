@@ -95,11 +95,11 @@ def get_notificacion(request, id=None):
         #obtenemos la sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         #buscamos la notificación solo si pertenece a un usuario de la misma ciudad que la sede del usuario autenticado
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             from usuarios.models import Usuario
             #obtenemos los ids de los usuarios que pertenecen a la misma ciudad que la sede del usuario autenticado
             usuarios_misma_ciudad = Usuario.objects.filter(
-                sede__ciudad=user_sede.ciudad
+                sede__seccional_id=user_sede.seccional_id
             ).values_list('id', flat=True)
             #buscamos la notificación solo si su id_usuario está en la lista de usuarios de la misma ciudad
             notif = Notificacion.objects.get(id=id, id_usuario__in=usuarios_misma_ciudad)
@@ -131,10 +131,10 @@ def list_notificaciones(request):
         user_sede = getattr(request, 'sede', None)
         
         # Filtrar notificaciones por usuarios de la misma ciudad
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             from usuarios.models import Usuario
             usuarios_misma_ciudad = Usuario.objects.filter(
-                sede__ciudad=user_sede.ciudad
+                sede__seccional_id=user_sede.seccional_id
             ).values_list('id', flat=True)
             notificaciones = Notificacion.objects.filter(id_usuario__in=usuarios_misma_ciudad)
         else:
@@ -343,3 +343,4 @@ def marcar_todas_como_leidas(request):
             return JsonResponse({"error": "JSON inválido."}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+

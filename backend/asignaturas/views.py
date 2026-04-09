@@ -128,7 +128,7 @@ def list_asignaturas(request):
         
         #se compara que la ciudad de la sede del usuario actual sea igual a la ciudad de la sede de cada asignatura, si sede_actual es None se listan todas las asignaturas
         if sede_actual:
-            asignaturas = Asignatura.objects.filter(sede__ciudad=sede_actual.ciudad)
+            asignaturas = Asignatura.objects.filter(sede__seccional_id=sede_actual.seccional_id)
         else:
             asignaturas = Asignatura.objects.all()
             
@@ -305,3 +305,4 @@ def list_asignaturas_programa(request):
         return JsonResponse({'asignaturas_programa': data}, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+

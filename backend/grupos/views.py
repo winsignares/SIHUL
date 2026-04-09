@@ -95,8 +95,8 @@ def get_grupo(request, id=None):
         #obtenemos la sede del usuario desde el middleware
         user_sede = getattr(request, 'sede', None)
         #si el usuario tiene una sede con ciudad, filtramos el grupo por esa ciudad
-        if user_sede and user_sede.ciudad:
-            g = Grupo.objects.filter(id=id, programa__facultad__sede__ciudad=user_sede.ciudad).first()
+        if user_sede and user_sede.seccional_id:
+            g = Grupo.objects.filter(id=id, programa__facultad__sede__seccional_id=user_sede.seccional_id).first()
             if not g:
                 return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
         else:
@@ -115,12 +115,13 @@ def list_grupos(request):
         user_sede = getattr(request, 'sede', None)
         
         # Filtrar grupos por la misma ciudad de la sede del usuario (a través de programa -> facultad -> sede)
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             items = Grupo.objects.select_related('programa__facultad__sede').filter(
-                programa__facultad__sede__ciudad=user_sede.ciudad
+                programa__facultad__sede__seccional_id=user_sede.seccional_id
             )
         else:
             items = Grupo.objects.all()
         
         lst = [{"id": i.id, "nombre": i.nombre, "programa_id": i.programa.id, "periodo_id": i.periodo.id, "semestre": i.semestre, "activo": i.activo} for i in items]
         return JsonResponse({"grupos": lst}, status=200)
+

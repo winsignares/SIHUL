@@ -241,8 +241,8 @@ def get_usuario(request, id=None):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
-            u = Usuario.objects.select_related('sede').get(id=id, sede__ciudad=sede_actual.ciudad)
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            u = Usuario.objects.select_related('sede').get(id=id, sede__seccional_id=sede_actual.seccional_id)
         else:
             u = Usuario.objects.select_related('sede').get(id=id)
 
@@ -258,8 +258,8 @@ def list_usuarios(request):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
-            items = Usuario.objects.select_related('sede').filter(sede__ciudad=sede_actual.ciudad)
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            items = Usuario.objects.select_related('sede').filter(sede__seccional_id=sede_actual.seccional_id)
         else:
             items = Usuario.objects.all()
 
@@ -281,7 +281,7 @@ def login(request):
         if not correo or not contrasena:
             return JsonResponse({"error": "correo y contrasena son requeridos"}, status=400)
         try:
-            u = Usuario.objects.select_related('sede', 'rol', 'facultad').get(correo=correo)
+            u = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         password_ok, es_legacy = _password_valida(u, contrasena)
@@ -354,7 +354,8 @@ def login(request):
             "sede": {
                 "id": u.sede.id,
                 "nombre": u.sede.nombre,
-                "ciudad": u.sede.ciudad,
+                "seccional_id": u.sede.seccional_id,
+                "seccional_ciudad": u.sede.seccional.ciudad if u.sede.seccional else None,
                 "direccion": u.sede.direccion
             } if u.sede else None,
             "componentes": componentes,
@@ -470,3 +471,4 @@ def change_password(request):
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+

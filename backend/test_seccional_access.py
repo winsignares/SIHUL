@@ -46,41 +46,37 @@ def ensure_user(correo, nombre, rol, sede, seccional, is_superuser=False):
 failures = []
 
 seccional_a, _ = Seccional.objects.get_or_create(
-    nombre='QA Seccional Norte',
-    defaults={'ciudad': 'QA Ciudad Norte', 'activa': True},
+    ciudad='QA Ciudad Norte',
+    defaults={'activa': True},
 )
 seccional_b, _ = Seccional.objects.get_or_create(
-    nombre='QA Seccional Sur',
-    defaults={'ciudad': 'QA Ciudad Sur', 'activa': True},
+    ciudad='QA Ciudad Sur',
+    defaults={'activa': True},
 )
 
 sede_a, _ = Sede.objects.get_or_create(
     nombre='QA Sede Norte',
     defaults={
         'direccion': 'QA Calle 1',
-        'ciudad': seccional_a.ciudad,
         'seccional': seccional_a,
         'activa': True,
     },
 )
 if sede_a.seccional_id != seccional_a.id:
     sede_a.seccional = seccional_a
-    sede_a.ciudad = seccional_a.ciudad
-    sede_a.save(update_fields=['seccional', 'ciudad'])
+    sede_a.save(update_fields=['seccional'])
 
 sede_b, _ = Sede.objects.get_or_create(
     nombre='QA Sede Sur',
     defaults={
         'direccion': 'QA Calle 2',
-        'ciudad': seccional_b.ciudad,
         'seccional': seccional_b,
         'activa': True,
     },
 )
 if sede_b.seccional_id != seccional_b.id:
     sede_b.seccional = seccional_b
-    sede_b.ciudad = seccional_b.ciudad
-    sede_b.save(update_fields=['seccional', 'ciudad'])
+    sede_b.save(update_fields=['seccional'])
 
 tipo, _ = TipoEspacio.objects.get_or_create(nombre='QA Aula', defaults={'descripcion': 'Espacio QA'})
 

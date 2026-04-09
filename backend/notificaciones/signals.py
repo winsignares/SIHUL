@@ -160,7 +160,7 @@ def sede_post_save(sender, instance, created, **kwargs):
         crear_notificacion(
             id_usuario=id_usuario,
             tipo='SEDE_CREADA',
-            mensaje=f'Se ha creado la sede: {instance.nombre} en {instance.ciudad}',
+            mensaje=f"Se ha creado la sede: {instance.nombre} en {instance.seccional.ciudad if instance.seccional else 'Sin seccional'}",
             prioridad='alta'
         )
     else:

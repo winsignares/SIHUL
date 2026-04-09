@@ -16,8 +16,8 @@ from django.db.models import Count
 def _filtrar_espacios_por_sede_usuario(request, queryset):
     """Filtra espacios por la ciudad de la sede del usuario logueado."""
     user_sede = getattr(request, 'sede', None)
-    if user_sede and user_sede.ciudad:
-        return queryset.filter(sede__ciudad=user_sede.ciudad)
+    if user_sede and user_sede.seccional_id:
+        return queryset.filter(sede__seccional_id=user_sede.seccional_id)
     return queryset
 
 # ---------- TipoEspacio CRUD ----------
@@ -212,8 +212,8 @@ def get_espacio(request, id=None):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
-            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id, sede__ciudad=sede_actual.ciudad)
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id, sede__seccional_id=sede_actual.seccional_id)
         else:
             e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id)
 
@@ -252,9 +252,9 @@ def list_espacios(request):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
             items = EspacioFisico.objects.select_related('sede', 'tipo').filter(
-                sede__ciudad=sede_actual.ciudad
+                sede__seccional_id=sede_actual.seccional_id
             )
         else:
             items = EspacioFisico.objects.select_related('sede', 'tipo').all()
@@ -306,9 +306,9 @@ def list_all_espacios_with_horarios(request):
         # Solo mostrar horarios aprobados
         #obtener sede del usuario autenticado en la request del middleware
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             espacios = EspacioFisico.objects.filter(
-                sede__ciudad=user_sede.ciudad
+                sede__seccional_id=user_sede.seccional_id
             ).select_related(
                 'sede', 'tipo'
             ).prefetch_related(
@@ -984,9 +984,9 @@ def get_horario_espacio(request, espacio_id=None):
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
         #Obtener sede del usuario logueado
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             # Verificar que el espacio pertenece a la misma sede
-            if not EspacioFisico.objects.filter(id=espacio_id, sede__ciudad=user_sede.ciudad).exists():
+            if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
                 return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403) 
             
         # Obtener todos los horarios del espacio
@@ -3043,4 +3043,5 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
     except Exception as e:
         print(f"Error en _calcular_capacidad_reporte: {str(e)}")
         return []
+
 

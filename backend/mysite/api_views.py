@@ -36,8 +36,8 @@ from .auth_helpers import is_admin_global
 from .seccional_auth import SeccionalMixin
 from .permissions import IsAdminGlobal
 
-from espacios import views as espacios_legacy_views
-from horario import views as horario_legacy_views
+from espacios import api_adapters as espacios_api
+from horario import api_adapters as horario_api
 
 
 def _password_valida(usuario, password_plano):
@@ -126,55 +126,55 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='horarios/all')
     def horarios_all(self, request):
-        return espacios_legacy_views.list_all_espacios_with_horarios(request._request)
+        return espacios_api.list_all_espacios_with_horarios(request._request)
 
     @action(detail=False, methods=['get'], url_path=r'horarios/supervisor/(?P<usuario_id>\d+)')
     def horarios_supervisor(self, request, usuario_id=None):
-        return espacios_legacy_views.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
+        return espacios_api.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
 
     @action(detail=False, methods=['get'], url_path='apertura-cierre/proximos')
     def apertura_cierre_proximos(self, request):
-        return espacios_legacy_views.proximos_apertura_cierre(request._request)
+        return espacios_api.proximos_apertura_cierre(request._request)
 
     @action(detail=True, methods=['get'], url_path='estado')
     def estado(self, request, pk=None):
-        return espacios_legacy_views.get_estado_espacio(request._request, espacio_id=pk)
+        return espacios_api.get_estado_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['get'], url_path='horario')
     def horario(self, request, pk=None):
-        return espacios_legacy_views.get_horario_espacio(request._request, espacio_id=pk)
+        return espacios_api.get_horario_espacio(request._request, espacio_id=pk)
 
     @action(detail=False, methods=['get'], url_path='ocupacion/semanal')
     def ocupacion_semanal(self, request):
-        return espacios_legacy_views.ocupacion_semanal(request._request)
+        return espacios_api.ocupacion_semanal(request._request)
 
     @action(detail=False, methods=['post'], url_path='ocupacion/pdf')
     def ocupacion_pdf(self, request):
-        return espacios_legacy_views.generar_pdf_ocupacion_semanal(request._request)
+        return espacios_api.generar_pdf_ocupacion_semanal(request._request)
 
     @action(detail=False, methods=['get'], url_path='reporte/ocupacion')
     def reporte_ocupacion(self, request):
-        return espacios_legacy_views.reporte_ocupacion(request._request)
+        return espacios_api.reporte_ocupacion(request._request)
 
     @action(detail=False, methods=['get'], url_path='reporte/ocupacion/pdf')
     def reporte_ocupacion_pdf(self, request):
-        return espacios_legacy_views.generar_pdf_reporte_ocupacion(request._request)
+        return espacios_api.generar_pdf_reporte_ocupacion(request._request)
 
     @action(detail=False, methods=['get'], url_path='reporte/disponibilidad')
     def reporte_disponibilidad(self, request):
-        return espacios_legacy_views.reporte_disponibilidad(request._request)
+        return espacios_api.reporte_disponibilidad(request._request)
 
     @action(detail=False, methods=['get'], url_path='reporte/disponibilidad/pdf')
     def reporte_disponibilidad_pdf(self, request):
-        return espacios_legacy_views.generar_pdf_reporte_disponibilidad(request._request)
+        return espacios_api.generar_pdf_reporte_disponibilidad(request._request)
 
     @action(detail=False, methods=['get'], url_path='reporte/capacidad')
     def reporte_capacidad(self, request):
-        return espacios_legacy_views.reporte_capacidad(request._request)
+        return espacios_api.reporte_capacidad(request._request)
 
     @action(detail=False, methods=['get'], url_path='reporte/capacidad/pdf')
     def reporte_capacidad_pdf(self, request):
-        return espacios_legacy_views.generar_pdf_reporte_capacidad(request._request)
+        return espacios_api.generar_pdf_reporte_capacidad(request._request)
 
 
 class EspacioPermitidoViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -185,7 +185,7 @@ class EspacioPermitidoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path=r'usuario/(?P<usuario_id>\d+)')
     def por_usuario(self, request, usuario_id=None):
-        return espacios_legacy_views.list_espacios_by_usuario(request._request, usuario_id=usuario_id)
+        return espacios_api.list_espacios_by_usuario(request._request, usuario_id=usuario_id)
 
 
 class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -196,43 +196,43 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='list/extendidos')
     def list_extendidos(self, request):
-        return horario_legacy_views.list_horarios_extendidos(request._request)
+        return horario_api.list_horarios_extendidos(request._request)
 
     @action(detail=False, methods=['get'], url_path='mi-horario')
     def mi_horario(self, request):
-        return horario_legacy_views.mi_horario_docente(request._request)
+        return horario_api.mi_horario_docente(request._request)
 
     @action(detail=False, methods=['get'], url_path='mi-horario-estudiante')
     def mi_horario_estudiante(self, request):
-        return horario_legacy_views.mi_horario_estudiante(request._request)
+        return horario_api.mi_horario_estudiante(request._request)
 
     @action(detail=False, methods=['post'], url_path='inscribir-estudiante')
     def inscribir_estudiante(self, request):
-        return horario_legacy_views.inscribir_estudiante(request._request)
+        return horario_api.inscribir_estudiante(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-pdf')
     def exportar_pdf(self, request):
-        return horario_legacy_views.exportar_horarios_pdf_post(request._request)
+        return horario_api.exportar_horarios_pdf_post(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-excel')
     def exportar_excel(self, request):
-        return horario_legacy_views.exportar_horarios_excel_post(request._request)
+        return horario_api.exportar_horarios_excel_post(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-pdf-docente')
     def exportar_pdf_docente(self, request):
-        return horario_legacy_views.exportar_horarios_pdf_docente(request._request)
+        return horario_api.exportar_horarios_pdf_docente(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-excel-docente')
     def exportar_excel_docente(self, request):
-        return horario_legacy_views.exportar_horarios_excel_docente(request._request)
+        return horario_api.exportar_horarios_excel_docente(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-pdf-usuario')
     def exportar_pdf_usuario(self, request):
-        return horario_legacy_views.exportar_pdf_usuario(request._request)
+        return horario_api.exportar_pdf_usuario(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-excel-usuario')
     def exportar_excel_usuario(self, request):
-        return horario_legacy_views.exportar_excel_usuario(request._request)
+        return horario_api.exportar_excel_usuario(request._request)
 
 
 class HorarioFusionadoViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -257,11 +257,11 @@ class SolicitudEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='aprobar')
     def aprobar(self, request):
-        return horario_legacy_views.aprobar_solicitud_espacio(request._request)
+        return horario_api.aprobar_solicitud_espacio(request._request)
 
     @action(detail=False, methods=['post'], url_path='rechazar')
     def rechazar(self, request):
-        return horario_legacy_views.rechazar_solicitud_espacio(request._request)
+        return horario_api.rechazar_solicitud_espacio(request._request)
 
 
 class RolViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -325,7 +325,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return Response({'error': 'correo y contrasena son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            usuario = Usuario.objects.select_related('sede', 'rol', 'facultad').get(correo=correo)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo)
         except Usuario.DoesNotExist:
             return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -367,7 +367,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             'sede': {
                 'id': usuario.sede.id,
                 'nombre': usuario.sede.nombre,
-                'ciudad': usuario.sede.ciudad,
+                'seccional_id': usuario.sede.seccional_id,
+                'seccional_ciudad': usuario.sede.seccional.ciudad if usuario.sede.seccional else None,
                 'direccion': usuario.sede.direccion,
             } if usuario.sede else None,
             'componentes': componentes,

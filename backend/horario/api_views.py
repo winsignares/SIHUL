@@ -1,0 +1,290 @@
+import datetime
+import json
+
+from django.core.exceptions import ValidationError
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from notificaciones.signals import crear_notificacion
+from usuarios.models import Usuario
+
+from .models import Horario, HorarioEstudiante, SolicitudEspacio
+
+
+@csrf_exempt
+def mi_horario_docente(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        usuario_id = request.GET.get('usuario_id') or request.headers.get('X-Usuario-Id')
+        if not usuario_id:
+            return JsonResponse({'error': 'usuario_id es requerido'}, status=400)
+
+        try:
+            docente = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+        horarios = Horario.objects.filter(docente=docente, estado='aprobado').select_related(
+            'grupo', 'asignatura', 'espacio', 'grupo__programa'
+        )
+
+        lst = []
+        for h in horarios:
+            lst.append(
+                {
+                    'id': h.id,
+                    'diaSemana': h.dia_semana,
+                    'horaInicio': str(h.hora_inicio),
+                    'horaFin': str(h.hora_fin),
+                    'asignaturaId': h.asignatura.id,
+                    'asignatura': h.asignatura.nombre,
+                    'grupoId': h.grupo.id,
+                    'grupo': h.grupo.nombre,
+                    'espacioId': h.espacio.id,
+                    'espacio': h.espacio.nombre,
+                    'docenteId': h.docente.id if h.docente else None,
+                    'docente': h.docente.nombre if h.docente else 'Sin asignar',
+                    'cantidadEstudiantes': h.cantidad_estudiantes,
+                    'programa': h.grupo.programa.nombre if h.grupo.programa else None,
+                    'semestre': h.grupo.semestre,
+                }
+            )
+
+        return JsonResponse({'horarios': lst}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def mi_horario_estudiante(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        usuario_id = request.GET.get('usuario_id') or request.headers.get('X-Usuario-Id')
+        if not usuario_id:
+            return JsonResponse({'error': 'usuario_id es requerido'}, status=400)
+
+        try:
+            estudiante = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+        inscripciones = HorarioEstudiante.objects.filter(estudiante=estudiante).select_related(
+            'horario',
+            'horario__grupo',
+            'horario__asignatura',
+            'horario__espacio',
+            'horario__docente',
+            'horario__grupo__programa',
+        )
+
+        lst = []
+        for insc in inscripciones:
+            h = insc.horario
+            lst.append(
+                {
+                    'id': h.id,
+                    'diaSemana': h.dia_semana,
+                    'horaInicio': str(h.hora_inicio),
+                    'horaFin': str(h.hora_fin),
+                    'asignaturaId': h.asignatura.id,
+                    'asignatura': h.asignatura.nombre,
+                    'grupoId': h.grupo.id,
+                    'grupo': h.grupo.nombre,
+                    'espacioId': h.espacio.id,
+                    'espacio': h.espacio.nombre,
+                    'docenteId': h.docente.id if h.docente else None,
+                    'docente': h.docente.nombre if h.docente else 'Sin asignar',
+                    'cantidadEstudiantes': h.cantidad_estudiantes,
+                    'programa': h.grupo.programa.nombre if h.grupo.programa else None,
+                    'semestre': h.grupo.semestre,
+                }
+            )
+
+        return JsonResponse({'horarios': lst}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def inscribir_estudiante(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        usuario_id = data.get('usuario_id')
+        horario_id = data.get('horario_id')
+
+        if not usuario_id or not horario_id:
+            return JsonResponse({'error': 'usuario_id y horario_id son requeridos'}, status=400)
+
+        estudiante = Usuario.objects.get(id=usuario_id)
+        horario = Horario.objects.get(id=horario_id)
+        _, created = HorarioEstudiante.objects.get_or_create(estudiante=estudiante, horario=horario)
+
+        if created:
+            return JsonResponse({'message': 'Estudiante inscrito correctamente'}, status=201)
+        return JsonResponse({'message': 'El estudiante ya estaba inscrito'}, status=200)
+
+    except Usuario.DoesNotExist:
+        return JsonResponse({'error': 'Estudiante no encontrado'}, status=404)
+    except Horario.DoesNotExist:
+        return JsonResponse({'error': 'Horario no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def list_horarios_extendidos(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    user_sede = getattr(request, 'sede', None)
+    qs = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
+    if user_sede and user_sede.seccional_id:
+        qs = qs.filter(espacio__sede__seccional_id=user_sede.seccional_id)
+
+    lst = []
+    for i in qs:
+        lst.append(
+            {
+                'id': i.id,
+                'grupo_id': i.grupo.id,
+                'grupo_nombre': i.grupo.nombre,
+                'programa_id': i.grupo.programa.id,
+                'programa_nombre': i.grupo.programa.nombre,
+                'semestre': i.grupo.semestre,
+                'asignatura_id': i.asignatura.id,
+                'asignatura_nombre': i.asignatura.nombre,
+                'docente_id': (i.docente.id if i.docente else None),
+                'docente_nombre': i.docente.nombre if i.docente else 'Sin asignar',
+                'espacio_id': i.espacio.id,
+                'espacio_nombre': i.espacio.nombre,
+                'dia_semana': i.dia_semana,
+                'hora_inicio': str(i.hora_inicio),
+                'hora_fin': str(i.hora_fin),
+                'cantidad_estudiantes': i.cantidad_estudiantes,
+                'estado': i.estado,
+            }
+        )
+
+    return JsonResponse({'horarios': lst}, status=200)
+
+
+@csrf_exempt
+def aprobar_solicitud_espacio(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        admin_id = data.get('admin_id')
+        comentario = data.get('comentario', '')
+
+        if not solicitud_id or not admin_id:
+            return JsonResponse({'error': 'solicitud_id y admin_id son requeridos'}, status=400)
+
+        solicitud = SolicitudEspacio.objects.get(id=solicitud_id)
+        admin = Usuario.objects.get(id=admin_id)
+
+        if solicitud.horario_generado:
+            solicitud.horario_generado.delete()
+            solicitud.horario_generado = None
+
+        horario = Horario(
+            grupo=solicitud.grupo,
+            asignatura=solicitud.asignatura,
+            docente=solicitud.docente,
+            espacio=solicitud.espacio_solicitado,
+            dia_semana=solicitud.dia_semana,
+            hora_inicio=solicitud.hora_inicio,
+            hora_fin=solicitud.hora_fin,
+            cantidad_estudiantes=solicitud.cantidad_estudiantes,
+            estado='aprobado',
+        )
+        horario.save()
+
+        solicitud.estado = 'aprobada'
+        solicitud.horario_generado = horario
+        solicitud.aprobado_por = admin
+        solicitud.fecha_aprobacion = datetime.datetime.now()
+        solicitud.comentario = comentario
+        solicitud.save()
+
+        if solicitud.planificador:
+            crear_notificacion(
+                id_usuario=solicitud.planificador.id,
+                tipo='solicitud_aprobada',
+                mensaje=f'✅ Tu solicitud de espacio para {solicitud.asignatura.nombre} - Grupo {solicitud.grupo.nombre} ha sido aprobada',
+                prioridad='alta',
+            )
+
+        return JsonResponse({'message': 'Solicitud aprobada y horario creado', 'solicitud_id': solicitud.id, 'horario_id': horario.id}, status=200)
+    except ValidationError as e:
+        return JsonResponse({'error': str(e.message)}, status=400)
+    except SolicitudEspacio.DoesNotExist:
+        return JsonResponse({'error': 'Solicitud no encontrada'}, status=404)
+    except Usuario.DoesNotExist:
+        return JsonResponse({'error': 'Admin no encontrado'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def rechazar_solicitud_espacio(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        admin_id = data.get('admin_id')
+        comentario = data.get('comentario', '')
+
+        if not solicitud_id or not admin_id:
+            return JsonResponse({'error': 'solicitud_id y admin_id son requeridos'}, status=400)
+
+        solicitud = SolicitudEspacio.objects.get(id=solicitud_id)
+        admin = Usuario.objects.get(id=admin_id)
+
+        if solicitud.horario_generado:
+            solicitud.horario_generado.delete()
+            solicitud.horario_generado = None
+
+        solicitud.estado = 'rechazada'
+        solicitud.aprobado_por = admin
+        solicitud.fecha_aprobacion = datetime.datetime.now()
+        solicitud.comentario = comentario
+        solicitud.save()
+
+        if solicitud.planificador:
+            mensaje_rechazo = (
+                f'❌ Tu solicitud de espacio para {solicitud.asignatura.nombre} - Grupo {solicitud.grupo.nombre} ha sido rechazada'
+            )
+            if comentario:
+                mensaje_rechazo += f'\n\n📋 Motivo:\n{comentario}'
+
+            crear_notificacion(
+                id_usuario=solicitud.planificador.id,
+                tipo='solicitud_rechazada',
+                mensaje=mensaje_rechazo,
+                prioridad='alta',
+            )
+
+        return JsonResponse({'message': 'Solicitud rechazada', 'solicitud_id': solicitud.id}, status=200)
+    except SolicitudEspacio.DoesNotExist:
+        return JsonResponse({'error': 'Solicitud no encontrada'}, status=404)
+    except Usuario.DoesNotExist:
+        return JsonResponse({'error': 'Admin no encontrado'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+

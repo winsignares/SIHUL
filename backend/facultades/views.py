@@ -72,12 +72,20 @@ def get_facultad(request, id=None):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
-            f = Facultad.objects.select_related('sede').get(id=id, sede__ciudad=sede_actual.ciudad)
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            f = Facultad.objects.select_related('sede').get(id=id, sede__seccional_id=sede_actual.seccional_id)
         else:
             f = Facultad.objects.select_related('sede').get(id=id)
 
-        return JsonResponse({"id": f.id, "nombre": f.nombre, "activa": f.activa, "sede_id": f.sede_id, "sede_nombre": f.sede.nombre if f.sede else None, "sede_ciudad": f.sede.ciudad if f.sede else None}, status=200)
+        return JsonResponse({
+            "id": f.id,
+            "nombre": f.nombre,
+            "activa": f.activa,
+            "sede_id": f.sede_id,
+            "sede_nombre": f.sede.nombre if f.sede else None,
+            "sede_seccional_id": f.sede.seccional_id if f.sede else None,
+            "sede_seccional_ciudad": f.sede.seccional.ciudad if f.sede and f.sede.seccional else None,
+        }, status=200)
     except Facultad.DoesNotExist:
         return JsonResponse({"error": "Facultad no encontrada."}, status=404)
     except Exception as e:
@@ -89,8 +97,8 @@ def list_facultades(request):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
-            items = Facultad.objects.filter(sede__ciudad=sede_actual.ciudad).select_related('sede')
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            items = Facultad.objects.filter(sede__seccional_id=sede_actual.seccional_id).select_related('sede')
         else:
             items = Facultad.objects.all().select_related('sede')
 
@@ -100,6 +108,8 @@ def list_facultades(request):
             "activa": i.activa,
             "sede_id": i.sede_id,
             "sede_nombre": i.sede.nombre if i.sede else None,
-            "sede_ciudad": i.sede.ciudad if i.sede else None
+            "sede_seccional_id": i.sede.seccional_id if i.sede else None,
+            "sede_seccional_ciudad": i.sede.seccional.ciudad if i.sede and i.sede.seccional else None
         } for i in items]
         return JsonResponse({"facultades": lst}, status=200)
+

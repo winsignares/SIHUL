@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Q
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -80,32 +79,6 @@ class SeccionalMixin:
         if seccional is not None:
             return queryset.filter(**{lookup: seccional})
 
-        # Compatibilidad con datos legacy: si no hay seccional asignada,
-        # filtrar por ciudad de la sede del usuario (comportamiento previo).
-        sede = getattr(user, 'sede', None)
-        ciudad = getattr(sede, 'ciudad', None)
-        if not ciudad:
-            return queryset.none()
-
-        if lookup == 'seccional':
-            model_fields = {field.name for field in queryset.model._meta.fields}
-
-            query = Q()
-            if 'seccional' in model_fields:
-                query |= Q(seccional__ciudad=ciudad)
-            if 'sede' in model_fields:
-                query |= Q(sede__ciudad=ciudad)
-            if 'ciudad' in model_fields:
-                query |= Q(ciudad=ciudad)
-
-            if query:
-                return queryset.filter(query)
-            return queryset.none()
-
-        if lookup.endswith('__seccional'):
-            city_lookup = f"{lookup[:-len('__seccional')]}__ciudad"
-            return queryset.filter(**{city_lookup: ciudad})
-
         return queryset.none()
 
     def get_create_defaults(self, serializer):
@@ -130,3 +103,4 @@ class SeccionalMixin:
     def perform_create(self, serializer):
         defaults = self.get_create_defaults(serializer)
         serializer.save(**defaults)
+
