@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from .auth_helpers import is_admin_global
 
@@ -100,7 +102,25 @@ class SeccionalMixin:
 
         return defaults
 
+    def _normalize_django_validation_error(self, exc: DjangoValidationError):
+        if hasattr(exc, 'message_dict') and exc.message_dict:
+            return exc.message_dict
+        if hasattr(exc, 'messages') and exc.messages:
+            if len(exc.messages) == 1:
+                return exc.messages[0]
+            return exc.messages
+        return str(exc)
+
     def perform_create(self, serializer):
         defaults = self.get_create_defaults(serializer)
-        serializer.save(**defaults)
+        try:
+            serializer.save(**defaults)
+        except DjangoValidationError as exc:
+            raise DRFValidationError(self._normalize_django_validation_error(exc)) from exc
+
+    def perform_update(self, serializer):
+        try:
+            serializer.save()
+        except DjangoValidationError as exc:
+            raise DRFValidationError(self._normalize_django_validation_error(exc)) from exc
 

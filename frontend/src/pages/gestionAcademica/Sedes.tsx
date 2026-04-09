@@ -38,7 +38,7 @@ export default function Sedes() {
     hasPrevPageWindow,
     hasNextPageWindow,
     goToPrevPageWindow,
-    goToNextPageWindow
+    goToNextPageWindow,
     seccionales,
   } = useSedes();
 

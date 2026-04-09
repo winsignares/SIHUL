@@ -28,6 +28,21 @@ export interface CrearHorariosHookProps {
     onHorarioCreado?: () => void;
 }
 
+const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    if (error && typeof error === 'object') {
+        const maybeMessage = (error as { message?: unknown }).message;
+        if (typeof maybeMessage === 'string' && maybeMessage.trim()) {
+            return maybeMessage;
+        }
+    }
+
+    return 'Error desconocido';
+};
+
 export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {}) {
     const { user, role } = useAuth();
     const { notification, showNotification } = useNotification();
@@ -108,7 +123,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             setLoading(true);
             
             // Cargar horarios extendidos
-            const horariosResponse = await horarioService.listExtendidos();
+            const horariosResponse = await horarioService.listExtendidos({ includePending: true });
             console.log('📋 Horarios cargados:', horariosResponse.horarios.slice(0, 2)); // Mostrar primeros 2
             
             // Si es planeacion_facultad, también cargar sus solicitudes pendientes
@@ -216,7 +231,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             
         } catch (error) {
             showNotification(
-                `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                `Error al cargar datos: ${getErrorMessage(error)}`,
                 'error'
             );
             return { todosHorarios: [] as HorarioExtendido[] };
@@ -547,7 +562,8 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                     hora_inicio: horas.inicio,
                     hora_fin: horas.fin,
                     cantidad_estudiantes: cantidadEstudiantes as number,
-                    usuario_id: user?.id
+                    usuario_id: user?.id,
+                    estado: role?.nombre === 'admin' ? 'aprobado' : 'pendiente'
                 });
 
                 // El HorarioFusionado se crea automáticamente en el backend mediante un signal
@@ -572,7 +588,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             }
         } catch (error) {
             showNotification(
-                `Error al guardar horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                `Error al guardar horario: ${getErrorMessage(error)}`,
                 'error'
             );
         } finally {
@@ -602,7 +618,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 }
             } catch (error) {
                 showNotification(
-                    `Error al eliminar horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                    `Error al eliminar horario: ${getErrorMessage(error)}`,
                     'error'
                 );
             } finally {
@@ -715,7 +731,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             }
         } catch (error) {
             showNotification(
-                `Error al mover horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                `Error al mover horario: ${getErrorMessage(error)}`,
                 'error'
             );
         } finally {

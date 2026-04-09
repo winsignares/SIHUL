@@ -28,6 +28,11 @@ export interface CreateHorarioPayload {
     docente_id?: number | null;
     cantidad_estudiantes?: number | null;
     usuario_id?: number | null;
+    estado?: 'pendiente' | 'aprobado' | 'rechazado';
+}
+
+interface ListHorariosExtendidosOptions {
+    includePending?: boolean;
 }
 
 /**
@@ -230,6 +235,7 @@ export const horarioService = {
             hora_fin: payload.hora_fin,
             cantidad_estudiantes: payload.cantidad_estudiantes,
             usuario_id: payload.usuario_id,
+            estado: payload.estado,
         });
         return { message: 'Horario creado', id: created.id ?? 0 };
     },
@@ -238,7 +244,7 @@ export const horarioService = {
      * Actualiza un horario existente
      */
     update: async (payload: UpdateHorarioPayload): Promise<{ message: string; id: number }> => {
-        const updated = await apiClient.put<HorarioApi>(`/horarios/${payload.id}/`, {
+        const updated = await apiClient.patch<HorarioApi>(`/horarios/${payload.id}/`, {
             ...(payload.grupo_id !== undefined ? { grupo: payload.grupo_id } : {}),
             ...(payload.asignatura_id !== undefined ? { asignatura: payload.asignatura_id } : {}),
             ...(payload.docente_id !== undefined ? { docente: payload.docente_id } : {}),
@@ -279,8 +285,9 @@ export const horarioService = {
     /**
      * Lista todos los horarios con información extendida
      */
-    listExtendidos: async (): Promise<ListHorariosExtendidosResponse> => {
-        return apiClient.get<ListHorariosExtendidosResponse>('/horarios/list/extendidos/');
+    listExtendidos: async (options: ListHorariosExtendidosOptions = {}): Promise<ListHorariosExtendidosResponse> => {
+        const query = options.includePending ? '?include_pending=1' : '';
+        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`);
     }
 };
 
@@ -312,7 +319,7 @@ export const horarioFusionadoService = {
      * Actualiza un horario fusionado existente
      */
     update: async (payload: UpdateHorarioFusionadoPayload): Promise<{ message: string; id: number }> => {
-        const updated = await apiClient.put<HorarioFusionadoApi>(`/horarios-fusionados/${payload.id}/`, {
+        const updated = await apiClient.patch<HorarioFusionadoApi>(`/horarios-fusionados/${payload.id}/`, {
             ...(payload.grupo1_id !== undefined ? { grupo1: payload.grupo1_id } : {}),
             ...(payload.grupo2_id !== undefined ? { grupo2: payload.grupo2_id } : {}),
             ...(payload.grupo3_id !== undefined ? { grupo3: payload.grupo3_id } : {}),

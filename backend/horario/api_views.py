@@ -144,7 +144,14 @@ def list_horarios_extendidos(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     user_sede = getattr(request, 'sede', None)
-    qs = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
+    include_pending = request.GET.get('include_pending', '').lower() in ('1', 'true', 'yes')
+
+    qs = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa')
+    if include_pending:
+        qs = qs.filter(estado__in=['aprobado', 'pendiente'])
+    else:
+        qs = qs.filter(estado='aprobado')
+
     if user_sede and user_sede.seccional_id:
         qs = qs.filter(espacio__sede__seccional_id=user_sede.seccional_id)
 
