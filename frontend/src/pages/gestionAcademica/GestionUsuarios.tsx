@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import SearchableSelect from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Switch } from '../../share/switch';
-import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -33,6 +33,19 @@ export default function GestionUsuarios() {
     abrirEdicion,
     cambiarEstadoUsuario,
     confirmarEliminarUsuario,
+    paginatedUsuarios,
+    totalFilteredUsuarios,
+    currentUsuarioPage,
+    totalUsuarioPages,
+    usuarioPageNumbers,
+    goToUsuarioPage,
+    goToNextUsuarioPage,
+    goToPrevUsuarioPage,
+    hasPrevUsuarioPageWindow,
+    hasNextUsuarioPageWindow,
+    goToPrevUsuarioPageWindow,
+    goToNextUsuarioPageWindow,
+    pageSize,
     filteredUsuarios,
     notification,
     rolesDisponibles,
@@ -66,6 +79,9 @@ export default function GestionUsuarios() {
     confirmarPassword, setConfirmarPassword,
     sedeSeleccionada, setSedeSeleccionada
   } = useGestionUsuarios();
+
+  const firstUsuarioItemIndex = totalFilteredUsuarios === 0 ? 0 : (currentUsuarioPage - 1) * pageSize + 1;
+  const lastUsuarioItemIndex = Math.min(currentUsuarioPage * pageSize, totalFilteredUsuarios);
 
   const getRolBadge = (usuario: any) => {
     // Intentar obtener el nombre del rol del objeto anidado o buscarlo por ID
@@ -505,14 +521,14 @@ export default function GestionUsuarios() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsuarios.length === 0 ? (
+              {totalFilteredUsuarios === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                     No se encontraron usuarios
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsuarios.map((usuario) => (
+                paginatedUsuarios.map((usuario) => (
                   <TableRow key={usuario.id}>
                     <TableCell>
                       <div>
@@ -563,6 +579,79 @@ export default function GestionUsuarios() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalFilteredUsuarios > 0 && (
+        <Card className="border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Mostrando {firstUsuarioItemIndex}-{lastUsuarioItemIndex} de {totalFilteredUsuarios} usuarios
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevUsuarioPage}
+                  disabled={currentUsuarioPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {hasPrevUsuarioPageWindow && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevUsuarioPageWindow}
+                    >
+                      ...
+                    </Button>
+                  )}
+
+                  {usuarioPageNumbers.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      type="button"
+                      size="sm"
+                      variant={pageNumber === currentUsuarioPage ? 'default' : 'outline'}
+                      className={pageNumber === currentUsuarioPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                      onClick={() => goToUsuarioPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+
+                  {hasNextUsuarioPageWindow && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextUsuarioPageWindow}
+                    >
+                      ...
+                    </Button>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextUsuarioPage}
+                  disabled={currentUsuarioPage >= totalUsuarioPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dialog: Editar Usuario */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {

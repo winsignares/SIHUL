@@ -295,8 +295,8 @@ export const userService = {
       correo: usuario.correo,
       contrasena: usuario.contrasena,
       contrasena_hash: usuario.contrasena_hash,
-      rol_id: usuario.rol_id,
-      facultad_id: usuario.facultad_id,
+      rol: usuario.rol_id,
+      facultad: usuario.facultad_id,
       activo: usuario.activo ?? true,
       espacios_permitidos: usuario.espacios_permitidos,
       sede
@@ -316,8 +316,8 @@ export const userService = {
       correo: usuario.correo,
       contrasena: usuario.contrasena,
       contrasena_hash: usuario.contrasena_hash,
-      rol_id: usuario.rol_id,
-      facultad_id: usuario.facultad_id,
+      rol: usuario.rol_id,
+      facultad: usuario.facultad_id,
       activo: usuario.activo,
       espacios_permitidos: usuario.espacios_permitidos
     });

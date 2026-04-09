@@ -5,6 +5,17 @@ import { espacioService, espacioPermitidoService, type TipoEspacio } from '../..
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import {
+    PAGE_SIZE_DEFAULT,
+    getPageNumbers,
+    getPageSlice,
+    getTotalPages,
+    hasNextPageWindow,
+    hasPrevPageWindow,
+    normalizePage,
+    getTargetPageForNextWindow,
+    getTargetPageForPrevWindow,
+} from './paginacion';
 
 const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
 const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles';
@@ -14,11 +25,13 @@ const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios';
 const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
 
 export function useGestionUsuarios() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const { notification, showNotification } = useNotification();
 
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterRol, setFilterRol] = useState('todos');
+    const [currentUsuarioPage, setCurrentUsuarioPage] = useState(1);
 
     // Estados de diálogos
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -356,7 +369,7 @@ export function useGestionUsuarios() {
             showNotification('Usuario creado exitosamente', 'success');
             setDialogOpen(false);
             resetNuevoUsuario();
-            loadUsuarios({ force: true });
+            await loadUsuarios({ force: true });
         } catch (error: any) {
             console.error('Error creando usuario:', error);
             showNotification(error.message || 'Error al crear usuario', 'error');
@@ -394,10 +407,24 @@ export function useGestionUsuarios() {
                 espacios_permitidos: espaciosPayload
             });
 
+            // Reflejar cambio local de inmediato para mejor feedback en UI.
+            setUsuarios((prev) => prev.map((u) => (
+                u.id === editingUser.id
+                    ? {
+                        ...u,
+                        nombre: editingUser.nombre,
+                        correo: editingUser.correo,
+                        rol_id: editingUser.rol_id,
+                        facultad_id: facultadSeleccionadaEdit,
+                        activo: editingUser.activo,
+                    }
+                    : u
+            )));
+
             showNotification('Usuario actualizado exitosamente', 'success');
             setEditDialogOpen(false);
             resetEditStates();
-            loadUsuarios({ force: true });
+            await loadUsuarios({ force: true });
         } catch (error: any) {
             console.error('Error actualizando usuario:', error);
             showNotification(error.message || 'Error al actualizar usuario', 'error');
@@ -412,7 +439,7 @@ export function useGestionUsuarios() {
 
             await userService.actualizarUsuario({ id, activo: !usuario.activo });
             showNotification(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'} exitosamente`, 'success');
-            loadUsuarios({ force: true });
+            await loadUsuarios({ force: true });
         } catch (error) {
             console.error('Error cambiando estado:', error);
             showNotification('Error al cambiar estado del usuario', 'error');
@@ -428,7 +455,7 @@ export function useGestionUsuarios() {
             showNotification('Usuario eliminado exitosamente', 'success');
             setDeleteDialogOpen(false);
             setUserToDelete(null);
-            loadUsuarios({ force: true });
+            await loadUsuarios({ force: true });
         } catch (error) {
             console.error('Error eliminando usuario:', error);
             showNotification('Error al eliminar usuario', 'error');
@@ -513,10 +540,52 @@ export function useGestionUsuarios() {
         return usuarios.filter(user => {
             const matchesSearch = user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 user.correo.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesRol = filterRol === 'todos' || user.rol?.nombre === filterRol;
+            const rolNombre = user.rol?.nombre || rolesDisponibles.find(r => r.id === user.rol_id)?.nombre;
+            const matchesRol = filterRol === 'todos' || rolNombre === filterRol;
             return matchesSearch && matchesRol;
         });
-    }, [usuarios, searchTerm, filterRol]);
+    }, [usuarios, searchTerm, filterRol, rolesDisponibles]);
+
+    const totalFilteredUsuarios = filteredUsuarios.length;
+    const totalUsuarioPages = getTotalPages(totalFilteredUsuarios, PAGE_SIZE);
+    const usuarioPageNumbers = useMemo(
+        () => getPageNumbers(totalUsuarioPages, currentUsuarioPage),
+        [totalUsuarioPages, currentUsuarioPage]
+    );
+
+    const paginatedUsuarios = useMemo(() => {
+        return getPageSlice(filteredUsuarios, currentUsuarioPage, PAGE_SIZE);
+    }, [filteredUsuarios, currentUsuarioPage]);
+
+    useEffect(() => {
+        setCurrentUsuarioPage(1);
+    }, [searchTerm, filterRol]);
+
+    useEffect(() => {
+        setCurrentUsuarioPage((prev) => normalizePage(prev, totalUsuarioPages));
+    }, [totalUsuarioPages]);
+
+    const goToUsuarioPage = (page: number) => {
+        setCurrentUsuarioPage(normalizePage(page, totalUsuarioPages));
+    };
+
+    const goToNextUsuarioPage = () => {
+        goToUsuarioPage(currentUsuarioPage + 1);
+    };
+
+    const goToPrevUsuarioPage = () => {
+        goToUsuarioPage(currentUsuarioPage - 1);
+    };
+
+    const goToPrevUsuarioPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentUsuarioPage, totalUsuarioPages);
+        if (target != null) goToUsuarioPage(target);
+    };
+
+    const goToNextUsuarioPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentUsuarioPage, totalUsuarioPages);
+        if (target != null) goToUsuarioPage(target);
+    };
 
     return {
         searchTerm, setSearchTerm,
@@ -536,6 +605,19 @@ export function useGestionUsuarios() {
         cambiarEstadoUsuario,
         confirmarEliminarUsuario,
         filteredUsuarios,
+        paginatedUsuarios,
+        totalFilteredUsuarios,
+        currentUsuarioPage,
+        totalUsuarioPages,
+        usuarioPageNumbers,
+        goToUsuarioPage,
+        goToNextUsuarioPage,
+        goToPrevUsuarioPage,
+        hasPrevUsuarioPageWindow: hasPrevPageWindow(currentUsuarioPage, totalUsuarioPages),
+        hasNextUsuarioPageWindow: hasNextPageWindow(currentUsuarioPage, totalUsuarioPages),
+        goToPrevUsuarioPageWindow,
+        goToNextUsuarioPageWindow,
+        pageSize: PAGE_SIZE,
         notification,
         // Datos dinámicos
         rolesDisponibles,
