@@ -53,6 +53,7 @@ export function useAperturaCierre() {
     const [filterSede, setFilterSede] = useState<string>('todas');
     const [tiposEspacioDisponibles, setTiposEspacioDisponibles] = useState<TipoEspacio[]>([]);
     const [tipoEspacioPorId, setTipoEspacioPorId] = useState<Record<number, string>>({});
+    const [estaAbiertoPorEspacioId, setEstaAbiertoPorEspacioId] = useState<Record<number, boolean>>({});
     const [horaActual, setHoraActual] = useState<string>('');
     const [diaActual, setDiaActual] = useState<string>('');
     const [fechaActual, setFechaActual] = useState<string>('');
@@ -132,11 +133,13 @@ export function useAperturaCierre() {
                 : getSessionCacheData<{
                     tiposEspacioDisponibles: TipoEspacio[];
                     tipoEspacioPorId: Record<number, string>;
+                    estaAbiertoPorEspacioId: Record<number, boolean>;
                 }>(APERTURA_CIERRE_CATALOGOS_CACHE_KEY, activeToken);
 
             if (cachedData) {
                 setTiposEspacioDisponibles(cachedData.tiposEspacioDisponibles);
                 setTipoEspacioPorId(cachedData.tipoEspacioPorId);
+                setEstaAbiertoPorEspacioId(cachedData.estaAbiertoPorEspacioId || {});
                 return;
             }
 
@@ -152,16 +155,20 @@ export function useAperturaCierre() {
             });
 
             const tipoPorEspacioId: Record<number, string> = {};
+            const aperturaPorEspacioId: Record<number, boolean> = {};
             (espaciosResponse.espacios || []).forEach((espacio) => {
                 if (!espacio.id) return;
                 tipoPorEspacioId[espacio.id] = espacio.tipo_espacio?.nombre || tipoNombrePorTipoId[espacio.tipo_id] || 'Sin tipo';
+                aperturaPorEspacioId[espacio.id] = espacio.esta_abierto !== false;
             });
 
             setTiposEspacioDisponibles(tipos);
             setTipoEspacioPorId(tipoPorEspacioId);
+            setEstaAbiertoPorEspacioId(aperturaPorEspacioId);
             setSessionCacheData(APERTURA_CIERRE_CATALOGOS_CACHE_KEY, activeToken, {
                 tiposEspacioDisponibles: tipos,
-                tipoEspacioPorId: tipoPorEspacioId
+                tipoEspacioPorId: tipoPorEspacioId,
+                estaAbiertoPorEspacioId: aperturaPorEspacioId
             });
         } catch (error) {
             console.error('Error cargando catalogos de espacios:', error);
@@ -277,8 +284,9 @@ export function useAperturaCierre() {
                 || espacio.sede.toLowerCase().includes(q)
                 || (espacio.piso || '').toLowerCase().includes(q);
 
+            const estadoApertura = estaAbiertoPorEspacioId[espacio.idEspacio] === false ? 'cerrado' : 'abierto';
             const matchesEstado = filterEstado === 'todos'
-                || espacio.estadoActual.toLowerCase() === filterEstado.toLowerCase();
+                || estadoApertura === filterEstado.toLowerCase();
 
             const matchesSede = filterSede === 'todas' || espacio.sede === filterSede;
 
@@ -287,7 +295,7 @@ export function useAperturaCierre() {
 
             return matchesSearch && matchesEstado && matchesSede && matchesTipo;
         });
-    }, [espacios, searchTerm, filterEstado, filterSede, filterTipo, tipoEspacioPorId]);
+    }, [espacios, searchTerm, filterEstado, filterSede, filterTipo, tipoEspacioPorId, estaAbiertoPorEspacioId]);
 
     // Aplanar espacios/horarios para paginar una tarjeta por horario
     const horariosPendientes = useMemo<HorarioPendientePaginado[]>(() => {
@@ -411,7 +419,7 @@ export function useAperturaCierre() {
 
     const abrirSalon = async (espacioId: number): Promise<ResultadoAccion> => {
         try {
-            await espacioService.cambiarEstado(espacioId, 'No Disponible');
+            await espacioService.cambiarApertura(espacioId, true);
             await refrescar();
             return { ok: true as const };
         } catch (err: any) {
@@ -423,7 +431,7 @@ export function useAperturaCierre() {
 
     const cerrarSalon = async (espacioId: number): Promise<ResultadoAccion> => {
         try {
-            await espacioService.cambiarEstado(espacioId, 'Disponible');
+            await espacioService.cambiarApertura(espacioId, false);
             await abrirPopupRevisionRecursos(espacioId);
             return { ok: true as const };
         } catch (err: any) {
@@ -443,6 +451,7 @@ export function useAperturaCierre() {
         espaciosFiltrados,
         sedes,
         tiposUso,
+        estaAbiertoPorEspacioId,
         searchTerm,
         setSearchTerm,
         filterTipo,

@@ -19,6 +19,7 @@ export default function SupervisorSalonHome() {
     espaciosFiltrados,
     sedes,
     tiposUso,
+    estaAbiertoPorEspacioId,
     searchTerm,
     setSearchTerm,
     filterTipo,
@@ -228,9 +229,8 @@ export default function SupervisorSalonHome() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los estados</SelectItem>
-            <SelectItem value="disponible">Disponible</SelectItem>
-            <SelectItem value="no disponible">No Disponible</SelectItem>
-            <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+            <SelectItem value="abierto">Abierto</SelectItem>
+            <SelectItem value="cerrado">Cerrado</SelectItem>
           </SelectContent>
         </Select>
 
@@ -280,6 +280,7 @@ export default function SupervisorSalonHome() {
                 {horariosPaginados.map(({ key, espacio, horario }, horarioIndex) => {
                     const isLoading = loadingAcciones[espacio.idEspacio] || false;
                     const isApertura = horario.proximaAccion === 'apertura';
+                  const estaAbierto = estaAbiertoPorEspacioId[espacio.idEspacio] !== false;
                     
                     return (
                       <motion.div
@@ -316,11 +317,11 @@ export default function SupervisorSalonHome() {
                                 </div>
                                 <Badge 
                                   variant="outline"
-                                  className={espacio.estadoActual === 'Disponible' 
+                                  className={estaAbierto
                                     ? 'bg-green-50 text-green-700 border-green-200'
                                     : 'bg-red-50 text-red-700 border-red-200'}
                                 >
-                                  {espacio.estadoActual}
+                                  {estaAbierto ? 'Abierto' : 'Cerrado'}
                                 </Badge>
                               </div>
                             </div>

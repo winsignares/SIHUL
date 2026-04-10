@@ -23,39 +23,31 @@ class PeriodoAcademicoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         from grupos.models import Grupo
+        from horario.models import Horario
 
         periodo = self.get_object()
 
-        periodo_anterior = (
-            PeriodoAcademico.objects
-            .filter(fecha_fin__lt=periodo.fecha_inicio)
-            .order_by('-fecha_fin', '-id')
-            .first()
-        )
+        grupos_asociados = Grupo.objects.filter(periodo=periodo)
+        horarios_asociados = Horario.objects.filter(grupo__periodo=periodo)
 
-        if not periodo_anterior:
+        if grupos_asociados.exists() or horarios_asociados.exists():
             return Response(
                 {
-                    'error': 'No existe un período anterior para trasladar los datos asociados. '
-                             'No se puede eliminar este período.'
+                    'error': (
+                        'No se puede eliminar el período porque tiene datos asociados. '
+                        'Primero debes dejarlo sin grupos ni horarios.'
+                    ),
+                    'grupos_asociados': grupos_asociados.count(),
+                    'horarios_asociados': horarios_asociados.count(),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        grupos_trasladados = Grupo.objects.filter(periodo=periodo).update(periodo=periodo_anterior)
-
-        # Si el período eliminado estaba marcado como activo, mantener estado coherente.
-        if periodo.activo and not periodo_anterior.activo:
-            periodo_anterior.activo = True
-            periodo_anterior.save(update_fields=['activo'])
 
         self.perform_destroy(periodo)
 
         return Response(
             {
-                'message': 'Período eliminado y datos asociados trasladados al período anterior.',
-                'periodo_anterior_id': periodo_anterior.id,
-                'grupos_trasladados': grupos_trasladados,
+                'message': 'Período eliminado correctamente.',
             },
             status=status.HTTP_200_OK,
         )

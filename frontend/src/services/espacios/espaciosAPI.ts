@@ -17,6 +17,7 @@ export interface EspacioFisico {
     descripcion?: string;
     recursos?: { id: number; nombre: string; estado: string }[];
     ubicacion?: string | null;
+    esta_abierto?: boolean;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -31,6 +32,7 @@ export interface CreateEspacioPayload {
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
     ubicacion?: string | null;
+    esta_abierto?: boolean;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -46,6 +48,7 @@ export interface UpdateEspacioPayload {
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
     ubicacion?: string | null;
+    esta_abierto?: boolean;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -136,6 +139,7 @@ export const espacioService = {
             capacidad: payload.capacidad,
             descripcion: payload.descripcion,
             ubicacion: payload.ubicacion,
+            esta_abierto: payload.esta_abierto,
             estado: payload.estado,
             recursos: payload.recursos,
         });
@@ -152,6 +156,7 @@ export const espacioService = {
             ...(payload.capacidad !== undefined ? { capacidad: payload.capacidad } : {}),
             ...(payload.descripcion !== undefined ? { descripcion: payload.descripcion } : {}),
             ...(payload.ubicacion !== undefined ? { ubicacion: payload.ubicacion } : {}),
+            ...(payload.esta_abierto !== undefined ? { esta_abierto: payload.esta_abierto } : {}),
             ...(payload.estado !== undefined ? { estado: payload.estado } : {}),
             ...(payload.recursos !== undefined ? { recursos: payload.recursos } : {}),
         });
@@ -229,6 +234,22 @@ export const espacioService = {
      */
     cambiarEstado: async (espacioId: number, nuevoEstado: 'Disponible' | 'No Disponible' | 'Mantenimiento'): Promise<{ message: string }> => {
         return apiClient.put<{ message: string }>(`/espacios/${espacioId}/estado/`, { estado: nuevoEstado });
+    },
+
+    /**
+     * Cambia el estado de apertura/cierre fisico del espacio.
+     * true = abierto, false = cerrado.
+     * 
+     * NOTA: Para cerrar (false), valida que no haya clase en curso.
+     */
+    cambiarApertura: async (espacioId: number, estaAbierto: boolean): Promise<EspacioFisico> => {
+        if (estaAbierto === false) {
+            // Usar endpoint específico de cierre que valida clase en curso
+            return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/cerrar/`, {});
+        } else {
+            // Usar PATCH genérico para abrir
+            return apiClient.patch<EspacioFisico>(`/espacios/${espacioId}/`, { esta_abierto: estaAbierto });
+        }
     }
 };
 

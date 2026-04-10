@@ -285,8 +285,8 @@ export function useSupervisorSalonHome() {
     // Abrir salón
     const abrirSalon = async (espacioId: number) => {
         try {
-            // Regla solicitada: al abrir, pasar de Disponible a No Disponible.
-            await espacioService.cambiarEstado(espacioId, 'No Disponible');
+            // Cambiar apertura a true (abierto)
+            await espacioService.cambiarApertura(espacioId, true);
 
             const nuevoEstado = new Map(estadosSalones);
             nuevoEstado.set(espacioId, {
@@ -376,6 +376,13 @@ export function useSupervisorSalonHome() {
     const cerrarSalon = async () => {
         if (!salonParaCerrar) return;
 
+        // Validar que no haya clase en curso
+        const estadoActualSalon = obtenerEstadoSalon(salonParaCerrar.id);
+        if (estadoActualSalon === 'en-clase') {
+            toast.error('No se puede cerrar el salón mientras hay una clase en curso');
+            return;
+        }
+
         const todoCompleto =
             checklist.lucesApagadas &&
             checklist.aireApagado &&
@@ -391,8 +398,8 @@ export function useSupervisorSalonHome() {
         }
 
         try {
-            // Regla solicitada: al cerrar, pasar de No Disponible a Disponible.
-            await espacioService.cambiarEstado(salonParaCerrar.id, 'Disponible');
+            // Cambiar apertura a false (cerrado)
+            await espacioService.cambiarApertura(salonParaCerrar.id, false);
 
             const estadoActual = estadosSalones.get(salonParaCerrar.id);
             const nuevoEstado = new Map(estadosSalones);

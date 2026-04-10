@@ -136,9 +136,14 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def apertura_cierre_proximos(self, request):
         return espacios_api.proximos_apertura_cierre(request._request)
 
-    @action(detail=True, methods=['get'], url_path='estado')
+    @action(detail=True, methods=['get', 'put'], url_path='estado')
     def estado(self, request, pk=None):
         return espacios_api.get_estado_espacio(request._request, espacio_id=pk)
+
+    @action(detail=True, methods=['post'], url_path='cerrar')
+    def cerrar_espacio(self, request, pk=None):
+        """Cierra un espacio validando que no haya clase en curso."""
+        return espacios_api.cerrar_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['get'], url_path='horario')
     def horario(self, request, pk=None):
@@ -321,7 +326,13 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             for ep in espacios_permisos
         ]
 
-    @action(detail=False, methods=['post'], url_path='login')
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='login',
+        authentication_classes=[],
+        permission_classes=[permissions.AllowAny],
+    )
     def login(self, request):
         correo = request.data.get('correo')
         contrasena = request.data.get('contrasena')

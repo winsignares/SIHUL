@@ -968,6 +968,58 @@ def get_estado_espacio(request, espacio_id=None):
 
 
 @csrf_exempt
+def cerrar_espacio(request, espacio_id=None):
+    """
+    Cierra un espacio (pone esta_abierto en False).
+    Valida que no haya una clase EN CURSO.
+    
+    POST: Cierra el espacio si es seguro
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Solo se permite POST"}, status=405)
+    
+    if espacio_id is None:
+        return JsonResponse({"error": "El espacio_id es requerido"}, status=400)
+    
+    try:
+        # Obtener espacio
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+        
+        # Validar que no haya clase EN CURSO
+        ahora = datetime.now()
+        hora_actual = ahora.time()
+        dia_actual = get_dia_semana_actual()
+        
+        clase_en_curso = Horario.objects.filter(
+            espacio_id=espacio_id,
+            dia_semana=dia_actual,
+            estado='aprobado',
+            hora_inicio__lte=hora_actual,  # Clase que ya comenzó
+            hora_fin__gt=hora_actual       # Clase que aún no ha terminado
+        ).exists()
+        
+        if clase_en_curso:
+            return JsonResponse({
+                "error": "No se puede cerrar el espacio mientras hay una clase en curso"
+            }, status=400)
+        
+        # Cerrar el espacio
+        espacio.esta_abierto = False
+        espacio.save()
+        
+        return JsonResponse({
+            "message": f"Espacio '{espacio.nombre}' cerrado correctamente",
+            "espacio_id": espacio.id,
+            "esta_abierto": espacio.esta_abierto
+        }, status=200)
+        
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({"error": "Espacio no encontrado"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
 def get_horario_espacio(request, espacio_id=None):
     """
     Obtiene el horario semanal completo de un espacio.

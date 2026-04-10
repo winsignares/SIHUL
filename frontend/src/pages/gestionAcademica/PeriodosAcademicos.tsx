@@ -26,7 +26,6 @@ export default function PeriodosAcademicos() {
     periodoForm, setPeriodoForm,
     periodoACopiar,
     periodoAEliminar,
-    periodoAnteriorAEliminar,
     canDeletePeriodo,
     handleOpenCreateDialog,
     handleCreatePeriodo,
@@ -512,13 +511,8 @@ export default function PeriodosAcademicos() {
                 ¿Está seguro de eliminar el periodo "{periodoAEliminar?.nombre}"?
               </p>
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                Los datos asociados se trasladarán al período anterior y luego se eliminará este período.
+                Solo se puede eliminar si no tiene programas ni horarios asociados.
               </p>
-              {periodoAnteriorAEliminar && (
-                <p className="text-slate-700 dark:text-slate-300 text-sm mt-2">
-                  Período de destino: <strong>{periodoAnteriorAEliminar.nombre}</strong>
-                </p>
-              )}
             </div>
             {periodoAEliminar?.programasActivos && periodoAEliminar.programasActivos > 0 && (
               <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
