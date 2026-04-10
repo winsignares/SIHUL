@@ -24,6 +24,11 @@ export interface HorarioPendientePaginado {
     horario: HorarioEspacio;
 }
 
+interface HorarioNormalizado extends HorarioEspacio {
+    inicioMin: number;
+    finMin: number;
+}
+
 export interface RecursoCierrePendiente extends EstadoRecurso {
     estadoOriginal: EspacioRecurso['estado'];
 }
@@ -65,6 +70,21 @@ export function useAperturaCierre() {
     const [recursosPendientes, setRecursosPendientes] = useState<RecursoCierrePendiente[]>([]);
     const [cargandoRecursos, setCargandoRecursos] = useState<boolean>(false);
     const [guardandoRecursos, setGuardandoRecursos] = useState<boolean>(false);
+
+    const horaAMinutos = useCallback((hora: string): number => {
+        const [h, m] = hora.split(':').map((part) => parseInt(part, 10));
+        if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+        return (h * 60) + m;
+    }, []);
+
+    const minutosASegundosRestantes = useCallback((deltaMinutos: number) => {
+        const totalSegundos = Math.max(0, Math.floor(deltaMinutos * 60));
+        return {
+            minutos: Math.floor(totalSegundos / 60),
+            segundos: totalSegundos % 60,
+            totalSegundos,
+        };
+    }, []);
 
     // Ref para controlar qué notificaciones ya se mostraron
     const notificacionesMostradas = useRef<Set<string>>(new Set());
@@ -297,16 +317,113 @@ export function useAperturaCierre() {
         });
     }, [espacios, searchTerm, filterEstado, filterSede, filterTipo, tipoEspacioPorId, estaAbiertoPorEspacioId]);
 
-    // Aplanar espacios/horarios para paginar una tarjeta por horario
-    const horariosPendientes = useMemo<HorarioPendientePaginado[]>(() => {
-        return espaciosFiltrados.flatMap((espacio) => {
-            return (espacio.horarios || []).map((horario, index) => ({
-                key: `${espacio.idEspacio}-${horario.horaInicio}-${horario.horaFin}-${index}`,
+    // Reglas de negocio UI: una sola tarjeta por espacio.
+    // - Abrir: solo si esta cerrado y faltan <= 15 min para una clase proxima.
+    // - Cerrar: solo si esta abierto, no hay clase en curso y pasaron >= 10 min desde la clase anterior.
+    //           Si existe una clase siguiente, desaparece al llegar a (inicio siguiente - 15 min).
+    const obtenerPendientePorEspacio = useCallback((espacio: EspacioConHorarios): HorarioPendientePaginado | null => {
+        const estaAbierto = estaAbiertoPorEspacioId[espacio.idEspacio] !== false;
+        const ahoraMin = horaAMinutos(horaActual);
+
+        const horariosNormalizados: HorarioNormalizado[] = (espacio.horarios || [])
+            .map((horario) => ({
+                ...horario,
+                inicioMin: horaAMinutos(horario.horaInicio),
+                finMin: horaAMinutos(horario.horaFin),
+            }))
+            .filter((horario) => horario.finMin > horario.inicioMin)
+            .sort((a, b) => a.inicioMin - b.inicioMin);
+
+        if (horariosNormalizados.length === 0) return null;
+
+        const claseEnCurso = horariosNormalizados.find((horario) => horario.inicioMin <= ahoraMin && ahoraMin < horario.finMin);
+        const proximaClase = horariosNormalizados.find((horario) => horario.inicioMin > ahoraMin);
+
+        let claseAnterior: HorarioNormalizado | null = null;
+        for (const horario of horariosNormalizados) {
+            if (horario.finMin <= ahoraMin) {
+                claseAnterior = horario;
+            }
+        }
+
+        if (!estaAbierto) {
+            if (!proximaClase) return null;
+
+            const inicioVentanaApertura = proximaClase.inicioMin - 15;
+            const dentroVentanaApertura = ahoraMin >= inicioVentanaApertura && ahoraMin < proximaClase.inicioMin;
+            if (!dentroVentanaApertura) return null;
+
+            const deltaApertura = proximaClase.inicioMin - ahoraMin;
+            const t = minutosASegundosRestantes(deltaApertura);
+
+            return {
+                key: `${espacio.idEspacio}-apertura-${proximaClase.horaInicio}-${proximaClase.horaFin}`,
                 espacio,
-                horario
-            }));
-        });
-    }, [espaciosFiltrados]);
+                horario: {
+                    ...proximaClase,
+                    proximaAccion: 'apertura',
+                    minutosRestantes: t.minutos,
+                    segundosRestantes: t.segundos,
+                    tiempoRestanteTotal: t.totalSegundos,
+                },
+            };
+        }
+
+        if (claseEnCurso) return null;
+        if (!claseAnterior) return null;
+
+        const inicioVentanaCierre = claseAnterior.finMin + 10;
+        const finVentanaCierre = proximaClase ? (proximaClase.inicioMin - 15) : Number.POSITIVE_INFINITY;
+        const dentroVentanaCierre = ahoraMin >= inicioVentanaCierre && ahoraMin < finVentanaCierre;
+        if (!dentroVentanaCierre) return null;
+
+        return {
+            key: `${espacio.idEspacio}-cierre-${claseAnterior.horaInicio}-${claseAnterior.horaFin}`,
+            espacio,
+            horario: {
+                ...claseAnterior,
+                proximaAccion: 'cierre',
+                minutosRestantes: 0,
+                segundosRestantes: 0,
+                tiempoRestanteTotal: 0,
+            },
+        };
+    }, [estaAbiertoPorEspacioId, horaAMinutos, horaActual, minutosASegundosRestantes]);
+
+    // Construir la lista final: una tarjeta por espacio como maximo.
+    const horariosPendientes = useMemo<HorarioPendientePaginado[]>(() => {
+        return espaciosFiltrados
+            .map((espacio) => obtenerPendientePorEspacio(espacio))
+            .filter((item): item is HorarioPendientePaginado => item !== null)
+            .sort((a, b) => a.horario.tiempoRestanteTotal - b.horario.tiempoRestanteTotal);
+    }, [espaciosFiltrados, obtenerPendientePorEspacio]);
+
+    const salonesPorAbrir = useMemo(
+        () => horariosPendientes.filter((item) => item.horario.proximaAccion === 'apertura').length,
+        [horariosPendientes]
+    );
+
+    const salonesPorCerrar = useMemo(
+        () => horariosPendientes.filter((item) => item.horario.proximaAccion === 'cierre').length,
+        [horariosPendientes]
+    );
+
+    const totalAccionesBackend = useMemo(
+        () => espaciosFiltrados.reduce((acc, espacio) => acc + (espacio.horarios?.length || 0), 0),
+        [espaciosFiltrados]
+    );
+
+    const diagnosticoPendientes = useMemo(() => {
+        if (horariosPendientes.length > 0) {
+            return null;
+        }
+
+        if (totalAccionesBackend === 0) {
+            return 'No hay acciones pendientes reportadas por el backend para hoy.';
+        }
+
+        return `El backend reporta ${totalAccionesBackend} accion(es), pero ninguna cae en la ventana operativa actual (abrir: 15 min antes si esta cerrado; cerrar: desde +10 min despues del fin y hasta 15 min antes de la siguiente clase).`;
+    }, [horariosPendientes.length, totalAccionesBackend]);
 
     const totalHorariosPendientes = horariosPendientes.length;
     const totalPages = getTotalPages(totalHorariosPendientes, PAGE_SIZE);
@@ -462,6 +579,10 @@ export function useAperturaCierre() {
         setFilterSede,
         horariosPaginados,
         totalHorariosPendientes,
+        salonesPorAbrir,
+        salonesPorCerrar,
+        totalAccionesBackend,
+        diagnosticoPendientes,
         horaActual,
         diaActual,
         fechaActual,

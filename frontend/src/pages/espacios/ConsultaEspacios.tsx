@@ -1583,6 +1583,8 @@ export default function ConsultaEspacios() {
                                       targetHoraInicio: nuevaHoraInicio
                                     });
                                     setConfirmMoveDialogOpen(true);
+                                  } else {
+                                    toast.error('No se puede mover el horario: las clases solo se permiten hasta las 22:00');
                                   }
                                 }
                               }}

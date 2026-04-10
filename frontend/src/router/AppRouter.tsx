@@ -122,8 +122,8 @@ export default function AppRouter() {
           <Route path="/public" element={<PublicLayout />}>
             <Route index element={<Navigate to="/public/dashboard" replace />} />
             <Route path="dashboard" element={<PublicDashboard />} />
-            <Route path="consulta-horario" element={<PublicConsultaHorario />} />
-            <Route path="disponibilidad-espacios" element={<ConsultaEspacios />} />
+            <Route path="consulta-horario" element={<EnConstruccion />} />
+            <Route path="disponibilidad-espacios" element={<PublicPrestamo />} />
             <Route path="prestamo" element={<PublicPrestamo />} />
             <Route path="asistente-virtual" element={<AsistentesVirtuales />} />
             <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />

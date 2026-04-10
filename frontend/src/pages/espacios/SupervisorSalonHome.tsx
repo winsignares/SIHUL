@@ -30,6 +30,10 @@ export default function SupervisorSalonHome() {
     setFilterSede,
     horariosPaginados,
     totalHorariosPendientes,
+    salonesPorAbrir,
+    salonesPorCerrar,
+    totalAccionesBackend,
+    diagnosticoPendientes,
     horaActual,
     diaActual,
     fechaActual,
@@ -91,13 +95,8 @@ export default function SupervisorSalonHome() {
     }
   };
 
-  // Calcular estadísticas (contar horarios totales, no espacios)
-  const totalSalones = espaciosFiltrados?.reduce((count, esp) => 
-    count + (esp.horarios?.length || 0), 0) || 0;
-  const salonesPorAbrir = espaciosFiltrados?.reduce((count, esp) => 
-    count + (esp.horarios?.filter(h => h.proximaAccion === 'apertura').length || 0), 0) || 0;
-  const salonesPorCerrar = espaciosFiltrados?.reduce((count, esp) => 
-    count + (esp.horarios?.filter(h => h.proximaAccion === 'cierre').length || 0), 0) || 0;
+  // Estadisticas derivadas de la lista final de tarjetas (maximo una por espacio)
+  const totalSalones = totalHorariosPendientes;
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full`}>
@@ -510,6 +509,12 @@ export default function SupervisorSalonHome() {
                 <br />
                 El sistema se actualiza automáticamente cada 30 segundos.
               </p>
+              {diagnosticoPendientes && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                  {diagnosticoPendientes}
+                  {totalAccionesBackend > 0 ? ` (acciones backend: ${totalAccionesBackend})` : ''}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
