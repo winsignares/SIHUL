@@ -296,6 +296,18 @@ export function useAperturaCierre() {
         return Array.from(sedesUnicas);
     }, [espacios]);
 
+    const estaAbiertoEspacio = useCallback((espacio: EspacioConHorarios): boolean => {
+        if (typeof estaAbiertoPorEspacioId[espacio.idEspacio] === 'boolean') {
+            return estaAbiertoPorEspacioId[espacio.idEspacio];
+        }
+
+        if (typeof espacio.esta_abierto === 'boolean') {
+            return espacio.esta_abierto;
+        }
+
+        return true;
+    }, [estaAbiertoPorEspacioId]);
+
     const espaciosFiltrados = useMemo(() => {
         return espacios.filter((espacio) => {
             const q = searchTerm.trim().toLowerCase();
@@ -304,8 +316,9 @@ export function useAperturaCierre() {
                 || espacio.sede.toLowerCase().includes(q)
                 || (espacio.piso || '').toLowerCase().includes(q);
 
-            const estadoApertura = estaAbiertoPorEspacioId[espacio.idEspacio] === false ? 'cerrado' : 'abierto';
-            const matchesEstado = filterEstado === 'todos'
+            const estadoApertura = estaAbiertoEspacio(espacio) ? 'abierto' : 'cerrado';
+            const esFiltroEstadoFisico = filterEstado === 'abierto' || filterEstado === 'cerrado';
+            const matchesEstado = !esFiltroEstadoFisico
                 || estadoApertura === filterEstado.toLowerCase();
 
             const matchesSede = filterSede === 'todas' || espacio.sede === filterSede;
@@ -315,14 +328,15 @@ export function useAperturaCierre() {
 
             return matchesSearch && matchesEstado && matchesSede && matchesTipo;
         });
-    }, [espacios, searchTerm, filterEstado, filterSede, filterTipo, tipoEspacioPorId, estaAbiertoPorEspacioId]);
+    }, [espacios, searchTerm, filterEstado, filterSede, filterTipo, tipoEspacioPorId, estaAbiertoEspacio]);
 
     // Reglas de negocio UI: una sola tarjeta por espacio.
-    // - Abrir: solo si esta cerrado y faltan <= 15 min para una clase proxima.
+    // - Abrir: solo si esta cerrado y estamos desde 15 min antes del inicio
+    //          de la clase relevante en adelante (incluye clase en curso).
     // - Cerrar: solo si esta abierto, no hay clase en curso y pasaron >= 10 min desde la clase anterior.
     //           Si existe una clase siguiente, desaparece al llegar a (inicio siguiente - 15 min).
     const obtenerPendientePorEspacio = useCallback((espacio: EspacioConHorarios): HorarioPendientePaginado | null => {
-        const estaAbierto = estaAbiertoPorEspacioId[espacio.idEspacio] !== false;
+        const estaAbierto = estaAbiertoEspacio(espacio);
         const ahoraMin = horaAMinutos(horaActual);
 
         const horariosNormalizados: HorarioNormalizado[] = (espacio.horarios || [])
@@ -347,20 +361,24 @@ export function useAperturaCierre() {
         }
 
         if (!estaAbierto) {
-            if (!proximaClase) return null;
+            // Clase relevante para apertura: la primera que aun no termina.
+            // Esto mantiene visible el aviso aunque ya sea hora de clase o este en curso,
+            // siempre que el espacio siga cerrado.
+            const claseRelevante = horariosNormalizados.find((horario) => horario.finMin > ahoraMin);
+            if (!claseRelevante) return null;
 
-            const inicioVentanaApertura = proximaClase.inicioMin - 15;
-            const dentroVentanaApertura = ahoraMin >= inicioVentanaApertura && ahoraMin < proximaClase.inicioMin;
+            const inicioVentanaApertura = claseRelevante.inicioMin - 15;
+            const dentroVentanaApertura = ahoraMin >= inicioVentanaApertura;
             if (!dentroVentanaApertura) return null;
 
-            const deltaApertura = proximaClase.inicioMin - ahoraMin;
+            const deltaApertura = claseRelevante.inicioMin - ahoraMin;
             const t = minutosASegundosRestantes(deltaApertura);
 
             return {
-                key: `${espacio.idEspacio}-apertura-${proximaClase.horaInicio}-${proximaClase.horaFin}`,
+                key: `${espacio.idEspacio}-apertura-${claseRelevante.horaInicio}-${claseRelevante.horaFin}`,
                 espacio,
                 horario: {
-                    ...proximaClase,
+                    ...claseRelevante,
                     proximaAccion: 'apertura',
                     minutosRestantes: t.minutos,
                     segundosRestantes: t.segundos,
@@ -388,15 +406,27 @@ export function useAperturaCierre() {
                 tiempoRestanteTotal: 0,
             },
         };
-    }, [estaAbiertoPorEspacioId, horaAMinutos, horaActual, minutosASegundosRestantes]);
+    }, [estaAbiertoEspacio, horaAMinutos, horaActual, minutosASegundosRestantes]);
 
     // Construir la lista final: una tarjeta por espacio como maximo.
-    const horariosPendientes = useMemo<HorarioPendientePaginado[]>(() => {
+    const horariosPendientesBase = useMemo<HorarioPendientePaginado[]>(() => {
         return espaciosFiltrados
             .map((espacio) => obtenerPendientePorEspacio(espacio))
             .filter((item): item is HorarioPendientePaginado => item !== null)
             .sort((a, b) => a.horario.tiempoRestanteTotal - b.horario.tiempoRestanteTotal);
     }, [espaciosFiltrados, obtenerPendientePorEspacio]);
+
+    const horariosPendientes = useMemo<HorarioPendientePaginado[]>(() => {
+        if (filterEstado === 'por-abrir') {
+            return horariosPendientesBase.filter((item) => item.horario.proximaAccion === 'apertura');
+        }
+
+        if (filterEstado === 'por-cerrar') {
+            return horariosPendientesBase.filter((item) => item.horario.proximaAccion === 'cierre');
+        }
+
+        return horariosPendientesBase;
+    }, [filterEstado, horariosPendientesBase]);
 
     const salonesPorAbrir = useMemo(
         () => horariosPendientes.filter((item) => item.horario.proximaAccion === 'apertura').length,
@@ -422,7 +452,7 @@ export function useAperturaCierre() {
             return 'No hay acciones pendientes reportadas por el backend para hoy.';
         }
 
-        return `El backend reporta ${totalAccionesBackend} accion(es), pero ninguna cae en la ventana operativa actual (abrir: 15 min antes si esta cerrado; cerrar: desde +10 min despues del fin y hasta 15 min antes de la siguiente clase).`;
+        return `El backend reporta ${totalAccionesBackend} accion(es), pero ninguna cae en la ventana operativa actual (abrir: desde 15 min antes del inicio y durante clase en curso si sigue cerrado; cerrar: desde +10 min despues del fin y hasta 15 min antes de la siguiente clase).`;
     }, [horariosPendientes.length, totalAccionesBackend]);
 
     const totalHorariosPendientes = horariosPendientes.length;

@@ -172,6 +172,7 @@ class TipoEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
 
 class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
+    queryset = EspacioFisico.objects.select_related('sede', 'tipo').prefetch_related('espacio_recursos__recurso')
     serializer_class = EspacioFisicoSerializer
     seccional_lookup = 'sede__seccional'
     permission_classes = [permissions.IsAuthenticated]
@@ -183,9 +184,8 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.get_current_user()
-        queryset = EspacioFisico.objects.select_related('sede', 'tipo').prefetch_related('espacio_recursos__recurso')
         if not user:
-            return queryset
+            return self.queryset
         return super().get_queryset()
 
     @action(detail=False, methods=['get'], url_path='horarios/all')

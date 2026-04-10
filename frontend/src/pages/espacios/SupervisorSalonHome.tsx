@@ -14,6 +14,13 @@ import CountdownTimer from '../../components/espacios/CountdownTimer';
 
 export default function SupervisorSalonHome() {
   const isMobile = useIsMobile();
+
+  const horaAMinutos = (hora: string): number => {
+    const [h, m] = hora.split(':').map((part) => parseInt(part, 10));
+    if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+    return (h * 60) + m;
+  };
+
   const {
     espacios,
     espaciosFiltrados,
@@ -228,6 +235,8 @@ export default function SupervisorSalonHome() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los estados</SelectItem>
+            <SelectItem value="por-abrir">Por Abrir</SelectItem>
+            <SelectItem value="por-cerrar">Por Cerrar</SelectItem>
             <SelectItem value="abierto">Abierto</SelectItem>
             <SelectItem value="cerrado">Cerrado</SelectItem>
           </SelectContent>
@@ -279,7 +288,16 @@ export default function SupervisorSalonHome() {
                 {horariosPaginados.map(({ key, espacio, horario }, horarioIndex) => {
                     const isLoading = loadingAcciones[espacio.idEspacio] || false;
                     const isApertura = horario.proximaAccion === 'apertura';
-                  const estaAbierto = estaAbiertoPorEspacioId[espacio.idEspacio] !== false;
+                  const estaAbierto = typeof estaAbiertoPorEspacioId[espacio.idEspacio] === 'boolean'
+                    ? estaAbiertoPorEspacioId[espacio.idEspacio]
+                    : espacio.esta_abierto !== false;
+                  const ahoraMin = horaAMinutos(horaActual);
+                  const inicioMin = horaAMinutos(horario.horaInicio);
+                  const finMin = horaAMinutos(horario.horaFin);
+                  const claseEnCursoYSalonCerrado = isApertura
+                    && !estaAbierto
+                    && ahoraMin >= inicioMin
+                    && ahoraMin < finMin;
                     
                     return (
                       <motion.div
@@ -327,11 +345,23 @@ export default function SupervisorSalonHome() {
 
                             {/* Temporizador */}
                             <div className="mb-4">
-                              <CountdownTimer
-                                minutosRestantes={horario.minutosRestantes}
-                                segundosRestantes={horario.segundosRestantes}
-                                tipo={horario.proximaAccion}
-                              />
+                              {claseEnCursoYSalonCerrado ? (
+                                <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-red-300 bg-red-100 dark:bg-red-950">
+                                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                                    <AlertCircle className="w-6 h-6 text-white" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-red-700 dark:text-red-300 mb-1">Estado de apertura</p>
+                                    <p className="text-base font-bold text-red-700 dark:text-red-300">Clase en curso y salon cerrado</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <CountdownTimer
+                                  minutosRestantes={horario.minutosRestantes}
+                                  segundosRestantes={horario.segundosRestantes}
+                                  tipo={horario.proximaAccion}
+                                />
+                              )}
                             </div>
 
                             {/* Información */}

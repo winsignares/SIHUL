@@ -366,6 +366,7 @@ export interface EspacioConHorarios {
     nombreEspacio: string;
     sede: string;
     piso: string;
+    esta_abierto?: boolean;
     estadoActual: string;
     horarios: HorarioEspacio[];
 }

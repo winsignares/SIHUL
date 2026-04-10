@@ -715,6 +715,7 @@ def proximos_apertura_cierre(request):
                         "nombreEspacio": espacio.nombre,
                         "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
                         "piso": espacio.ubicacion or "No especificado",
+                        "esta_abierto": espacio.esta_abierto,
                         "estadoActual": espacio.estado,
                         "horarios": []
                     }
@@ -779,6 +780,7 @@ def proximos_apertura_cierre(request):
                         "nombreEspacio": espacio.nombre,
                         "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
                         "piso": espacio.ubicacion or "No especificado",
+                        "esta_abierto": espacio.esta_abierto,
                         "estadoActual": espacio.estado,
                         "horarios": []
                     }
