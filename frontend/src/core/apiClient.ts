@@ -70,6 +70,37 @@ class ApiClient {
     }
   }
 
+  private async requestBlob(
+    endpoint: string,
+    config: RequestConfig = {}
+  ): Promise<Blob> {
+    const { requiresAuth = true, ...fetchConfig } = config;
+
+    const url = `${this.baseURL}${endpoint}`;
+
+    try {
+      const response = await fetch(url, {
+        ...fetchConfig,
+        credentials: 'include',
+        headers: {
+          ...this.getHeaders(fetchConfig.body instanceof FormData),
+          ...(fetchConfig.headers as Record<string, string>),
+        },
+      });
+
+      if (!response.ok) {
+        await handleApiError(response);
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      if (error.status !== 409) {
+        console.error('API Request Error:', error);
+      }
+      throw error;
+    }
+  }
+
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(endpoint, {
       ...config,
@@ -84,6 +115,18 @@ class ApiClient {
     config?: RequestConfig
   ): Promise<T> {
     return this.request<T>(endpoint, {
+      ...config,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async postBlob(
+    endpoint: string,
+    data?: unknown,
+    config?: RequestConfig
+  ): Promise<Blob> {
+    return this.requestBlob(endpoint, {
       ...config,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,

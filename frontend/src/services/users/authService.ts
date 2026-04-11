@@ -277,6 +277,18 @@ export const userService = {
   },
 
   /**
+   * Obtiene la lista de docentes activos
+   */
+  listarDocentes: async (): Promise<{ usuarios: Usuario[] }> => {
+    const response = await apiClient.get<{ usuarios?: UsuarioApi[] } | UsuarioApi[]>('/usuarios/docentes/');
+    const usuariosRaw = Array.isArray(response)
+      ? response
+      : (response.usuarios ?? []);
+    const usuarios = usuariosRaw.map(toFrontendUsuario);
+    return { usuarios };
+  },
+
+  /**
    * Obtiene un usuario por su ID
    */
   obtenerUsuario: async (id: number): Promise<Usuario> => {

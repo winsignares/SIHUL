@@ -263,6 +263,18 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     seccional_lookup = 'espacio__sede__seccional'
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        public_actions = {
+            'list_extendidos',
+            'exportar_pdf',
+            'exportar_excel',
+            'exportar_pdf_docente',
+            'exportar_excel_docente',
+        }
+        if self.action in public_actions:
+            return [permissions.AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
     @action(detail=False, methods=['get'], url_path='list/extendidos')
     def list_extendidos(self, request):
         return horario_api.list_horarios_extendidos(request._request)
@@ -352,9 +364,17 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_permissions(self):
-        if self.action == 'login':
+        if self.action in ('login', 'list_docentes'):
             return [permissions.AllowAny()]
         return super().get_permissions()
+
+    def get_queryset(self):
+        queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
+        if self.action == 'list_docentes':
+            return queryset.filter(activo=True, rol__nombre__iexact='docente')
+        if self.action == 'list':
+            return queryset
+        return super().get_queryset()
 
     def _build_componentes(self, usuario):
         if not usuario.rol:
@@ -515,6 +535,22 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         usuario.password = usuario.contrasena_hash
         usuario.save()
         return Response({'message': 'Contraseña cambiada exitosamente'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='docentes', permission_classes=[permissions.AllowAny])
+    def list_docentes(self, request):
+        docentes = self.get_queryset()
+        data = [
+            {
+                'id': docente.id,
+                'nombre': docente.nombre,
+                'correo': docente.correo,
+                'rol_id': docente.rol.id if docente.rol else None,
+                'facultad_id': docente.facultad.id if docente.facultad else None,
+                'activo': docente.activo,
+            }
+            for docente in docentes.filter(activo=True, rol__nombre__iexact='docente')
+        ]
+        return Response({'usuarios': data}, status=status.HTTP_200_OK)
 
 
 class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):

@@ -108,6 +108,10 @@ export interface ListHorariosExtendidosResponse {
     horarios: HorarioExtendido[];
 }
 
+const downloadHorariosBlob = async (endpoint: string, horarios: HorarioExtendido[]): Promise<Blob> => {
+    return apiClient.postBlob(endpoint, { horarios });
+};
+
 /**
  * Interfaz para el modelo de HorarioFusionado
  */
@@ -288,6 +292,34 @@ export const horarioService = {
     listExtendidos: async (options: ListHorariosExtendidosOptions = {}): Promise<ListHorariosExtendidosResponse> => {
         const query = options.includePending ? '?include_pending=1' : '';
         return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`);
+    },
+
+    /**
+     * Exporta horarios de programa a PDF.
+     */
+    exportarPdfPrograma: async (horarios: HorarioExtendido[]): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-pdf/', horarios);
+    },
+
+    /**
+     * Exporta horarios de docente a PDF.
+     */
+    exportarPdfDocente: async (horarios: HorarioExtendido[]): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-pdf-docente/', horarios);
+    },
+
+    /**
+     * Exporta horarios de programa a Excel.
+     */
+    exportarExcelPrograma: async (horarios: HorarioExtendido[]): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-excel/', horarios);
+    },
+
+    /**
+     * Exporta horarios de docente a Excel.
+     */
+    exportarExcelDocente: async (horarios: HorarioExtendido[]): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-excel-docente/', horarios);
     }
 };
 

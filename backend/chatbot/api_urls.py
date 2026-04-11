@@ -8,12 +8,18 @@ from .api_views import (
     PreguntaSugeridaDetailAPIView,
     PreguntaSugeridaListCreateAPIView,
 )
+from .views import enviar_pregunta_publico, list_agentes_publico
 
 urlpatterns = [
+    # Endpoints privados (requieren autenticacion)
     path('agentes/', AgenteListCreateAPIView.as_view(), name='api-agente-list-create'),
     path('agentes/<int:pk>/', AgenteDetailAPIView.as_view(), name='api-agente-detail'),
     path('preguntas/', PreguntaSugeridaListCreateAPIView.as_view(), name='api-pregunta-list-create'),
     path('preguntas/<int:pk>/', PreguntaSugeridaDetailAPIView.as_view(), name='api-pregunta-detail'),
     path('conversaciones/', ConversacionListCreateAPIView.as_view(), name='api-conversacion-list-create'),
     path('conversaciones/<int:pk>/', ConversacionDetailAPIView.as_view(), name='api-conversacion-detail'),
+
+    # Endpoints publicos (sin autenticacion)
+    path('public/agentes/', list_agentes_publico, name='api-public-agentes'),
+    path('public/pregunta/', enviar_pregunta_publico, name='api-public-pregunta'),
 ]
