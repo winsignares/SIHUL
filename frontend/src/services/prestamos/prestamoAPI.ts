@@ -47,9 +47,15 @@ export interface PrestamoEspacio {
 interface PrestamoEspacioApi {
   id?: number;
   espacio: number;
+  espacio_nombre?: string;
+  espacio_tipo?: string;
   usuario: number | null;
+  usuario_nombre?: string;
+  usuario_correo?: string;
   administrador: number | null;
+  administrador_nombre?: string;
   tipo_actividad: number;
+  tipo_actividad_nombre?: string;
   prestamo_padre?: number | null;
   fecha: string;
   hora_inicio: string;
@@ -72,9 +78,15 @@ interface PrestamoEspacioApi {
 const toFrontendPrestamo = (prestamo: PrestamoEspacioApi): PrestamoEspacio => ({
   id: prestamo.id,
   espacio_id: prestamo.espacio,
+  espacio_nombre: prestamo.espacio_nombre,
+  espacio_tipo: prestamo.espacio_tipo,
   usuario_id: prestamo.usuario,
+  usuario_nombre: prestamo.usuario_nombre,
+  usuario_correo: prestamo.usuario_correo,
   administrador_id: prestamo.administrador,
+  administrador_nombre: prestamo.administrador_nombre,
   tipo_actividad_id: prestamo.tipo_actividad,
+  tipo_actividad_nombre: prestamo.tipo_actividad_nombre,
   prestamo_padre_id: prestamo.prestamo_padre ?? null,
   fecha: prestamo.fecha,
   hora_inicio: prestamo.hora_inicio,

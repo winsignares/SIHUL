@@ -36,7 +36,14 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 // Helper para extraer el ID numérico y el tipo de préstamo del ID único
 const parseUniqueId = (uniqueId: string): { tipo: 'autenticado' | 'publico', id: number } | null => {
     const match = uniqueId.match(/^(auth|public)-(\d+)$/);
-    if (!match) return null;
+    if (!match) {
+        // Compatibilidad con IDs legados sin prefijo.
+        const numericId = Number.parseInt(uniqueId, 10);
+        if (Number.isInteger(numericId) && numericId > 0) {
+            return { tipo: 'autenticado', id: numericId };
+        }
+        return null;
+    }
     
     return {
         tipo: match[1] === 'auth' ? 'autenticado' : 'publico',
@@ -87,11 +94,19 @@ export function usePrestamosEspacios() {
 
             // Transformar datos del backend al formato UI
             const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
+                const esPublico = Boolean(
+                    p.usuario_id == null && (
+                        p.solicitante_publico_identificacion ||
+                        p.solicitante_publico_correo ||
+                        p.solicitante_publico_nombre
+                    )
+                );
+
                 return {
-                    id: p.id?.toString() || '',
-                    solicitante: p.usuario_nombre || 'Usuario No Disponible',
-                    email: p.usuario_correo || '',
-                    telefono: p.telefono || '',
+                    id: p.id ? `${esPublico ? 'public' : 'auth'}-${p.id}` : '',
+                    solicitante: p.usuario_nombre || p.solicitante_publico_nombre || 'Usuario No Disponible',
+                    email: p.usuario_correo || p.solicitante_publico_correo || '',
+                    telefono: p.telefono || p.solicitante_publico_telefono || '',
                     espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
                     espacio_id: p.espacio_id,
                     fecha: p.fecha,
