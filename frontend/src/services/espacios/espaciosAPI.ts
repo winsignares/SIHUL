@@ -324,6 +324,25 @@ export const espacioHorariosService = {
     },
 
     /**
+     * Obtiene todos los espacios DISPONIBLES con sus horarios aprobados.
+     */
+    getAllDisponiblesWithHorarios: async (): Promise<{
+        espacios: (EspacioFisico & {
+            horarios: {
+                id: number;
+                dia: string;
+                hora_inicio: number;
+                hora_fin: number;
+                materia: string;
+                docente: string;
+                grupo: string;
+            }[];
+        })[];
+    }> => {
+        return apiClient.get('/espacios/horarios/disponibles/all/');
+    },
+
+    /**
      * Obtiene espacios permitidos con horarios aprobados (para supervisor)
      */
     getSupervisorHorarios: async (usuarioId: number): Promise<{
@@ -340,6 +359,25 @@ export const espacioHorariosService = {
         })[];
     }> => {
         return apiClient.get(`/espacios/horarios/supervisor/${usuarioId}/`);
+    },
+
+    /**
+     * Obtiene espacios DISPONIBLES permitidos para supervisor con horarios aprobados.
+     */
+    getSupervisorDisponiblesHorarios: async (usuarioId: number): Promise<{
+        espacios: (EspacioFisico & {
+            horarios: {
+                id: number;
+                dia: string;
+                hora_inicio: number;
+                hora_fin: number;
+                materia: string;
+                docente: string;
+                grupo: string;
+            }[];
+        })[];
+    }> => {
+        return apiClient.get(`/espacios/horarios/disponibles/supervisor/${usuarioId}/`);
     }
 };
 export interface HorarioEspacio {

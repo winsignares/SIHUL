@@ -75,6 +75,7 @@ def list_all_espacios_with_horarios(request):
                     'edificio': espacio.ubicacion or 'Sin ubicación',
                     'estado': espacio.estado,
                     'ubicacion': espacio.ubicacion or 'Sin ubicación',
+                    'esta_abierto': espacio.esta_abierto,
                     'horarios': horarios,
                 }
             )
@@ -140,6 +141,128 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
                     'edificio': espacio.ubicacion or 'Sin ubicación',
                     'estado': espacio.estado,
                     'ubicacion': espacio.ubicacion or 'Sin ubicación',
+                    'esta_abierto': espacio.esta_abierto,
+                    'horarios': horarios,
+                }
+            )
+
+        return JsonResponse({'espacios': lista}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def list_all_espacios_disponibles_with_horarios(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Solo se permite GET'}, status=405)
+
+    try:
+        from django.db.models import Prefetch
+
+        user_sede = getattr(request, 'sede', None)
+        base = EspacioFisico.objects.all()
+        if user_sede and user_sede.seccional_id:
+            base = base.filter(sede__seccional_id=user_sede.seccional_id)
+
+        espacios = base.filter(estado='Disponible').select_related('sede', 'tipo').prefetch_related(
+            Prefetch(
+                'horarios',
+                queryset=Horario.objects.filter(estado='aprobado').select_related('asignatura', 'docente', 'grupo'),
+            )
+        )
+
+        lista = []
+        for espacio in espacios:
+            horarios = []
+            for h in espacio.horarios.all():
+                horarios.append(
+                    {
+                        'dia': h.dia_semana,
+                        'hora_inicio': h.hora_inicio.hour,
+                        'hora_fin': h.hora_fin.hour,
+                        'materia': h.asignatura.nombre if h.asignatura else 'Sin asignatura',
+                        'docente': h.docente.nombre if h.docente else 'Sin docente',
+                        'grupo': h.grupo.nombre if h.grupo else 'Sin grupo',
+                    }
+                )
+
+            lista.append(
+                {
+                    'id': espacio.id,
+                    'nombre': espacio.nombre,
+                    'tipo': espacio.tipo.nombre if espacio.tipo else 'Sin tipo',
+                    'capacidad': espacio.capacidad,
+                    'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
+                    'edificio': espacio.ubicacion or 'Sin ubicación',
+                    'estado': espacio.estado,
+                    'ubicacion': espacio.ubicacion or 'Sin ubicación',
+                    'esta_abierto': espacio.esta_abierto,
+                    'horarios': horarios,
+                }
+            )
+
+        return JsonResponse({'espacios': lista}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=None):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Solo se permite GET'}, status=405)
+
+    if not usuario_id:
+        return JsonResponse({'error': 'usuario_id es requerido'}, status=400)
+
+    try:
+        from django.db.models import Prefetch
+
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+        espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related(
+            'espacio', 'espacio__sede', 'espacio__tipo'
+        )
+
+        if not espacios_permitidos.exists():
+            return JsonResponse({'espacios': []}, status=200)
+
+        espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+        espacios = EspacioFisico.objects.filter(id__in=espacios_ids, estado='Disponible').select_related('sede', 'tipo').prefetch_related(
+            Prefetch(
+                'horarios',
+                queryset=Horario.objects.filter(estado='aprobado').select_related('asignatura', 'docente', 'grupo'),
+            )
+        )
+
+        lista = []
+        for espacio in espacios:
+            horarios = []
+            for h in espacio.horarios.all():
+                horarios.append(
+                    {
+                        'dia': h.dia_semana,
+                        'hora_inicio': h.hora_inicio.hour,
+                        'hora_fin': h.hora_fin.hour,
+                        'materia': h.asignatura.nombre if h.asignatura else 'Sin asignatura',
+                        'docente': h.docente.nombre if h.docente else 'Sin docente',
+                        'grupo': h.grupo.nombre if h.grupo else 'Sin grupo',
+                    }
+                )
+
+            lista.append(
+                {
+                    'id': espacio.id,
+                    'nombre': espacio.nombre,
+                    'tipo': espacio.tipo.nombre if espacio.tipo else 'Sin tipo',
+                    'capacidad': espacio.capacidad,
+                    'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
+                    'edificio': espacio.ubicacion or 'Sin ubicación',
+                    'estado': espacio.estado,
+                    'ubicacion': espacio.ubicacion or 'Sin ubicación',
+                    'esta_abierto': espacio.esta_abierto,
                     'horarios': horarios,
                 }
             )

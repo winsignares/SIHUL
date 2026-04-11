@@ -78,8 +78,8 @@ export default function ConsultaEspacios() {
     setSearchTerm,
     filterTipo,
     setFilterTipo,
-    filterEstado,
-    setFilterEstado,
+    filterApertura,
+    setFilterApertura,
     filterSede,
     setFilterSede,
     filterFechaInicio,
@@ -113,11 +113,9 @@ export default function ConsultaEspacios() {
     estadisticas,
     horarios,
     prestamos,
-    calcularProximaClaseYEstado,
     exportarCronogramaPDF,
     exportarCronogramaExcel,
     getOcupacionPorHora,
-    getColorEstado,
     // Drag-to-select
     isDragging,
     seleccionRango,
@@ -600,17 +598,12 @@ export default function ConsultaEspacios() {
     ? filteredEspacios.filter(e => e.id === espacioSeleccionado.id)
     : filteredEspacios;
 
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case 'disponible':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Disponible</Badge>;
-      case 'ocupado':
-        return <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">Ocupado</Badge>;
-      case 'mantenimiento':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">Mantenimiento</Badge>;
-      default:
-        return null;
-    }
+  const getAperturaBadge = (estaAbierto: boolean) => {
+    return estaAbierto ? (
+      <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Abierto</Badge>
+    ) : (
+      <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">Cerrado</Badge>
+    );
   };
 
   const getDayColumnIndex = (dia: string) => {
@@ -1016,7 +1009,7 @@ export default function ConsultaEspacios() {
       </div>
 
       {/* Estadísticas */}
-      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between gap-2">
@@ -1032,8 +1025,8 @@ export default function ConsultaEspacios() {
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Disponibles</p>
-                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.disponibles}</p>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Abiertos</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.abiertos}</p>
               </div>
               <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center flex-shrink-0`}>
                 <MapPin className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-green-600`} />
@@ -1045,24 +1038,11 @@ export default function ConsultaEspacios() {
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Ocupados</p>
-                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.ocupados}</p>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Cerrados</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.cerrados}</p>
               </div>
               <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-red-100 dark:bg-red-950 rounded-lg flex items-center justify-center flex-shrink-0`}>
                 <MapPin className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-red-600`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Mantenimiento</p>
-                <p className="text-slate-900 dark:text-slate-100">{estadisticas.mantenimiento}</p>
-              </div>
-              <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-950 rounded-lg flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-yellow-600" />
               </div>
             </div>
           </CardContent>
@@ -1165,15 +1145,15 @@ export default function ConsultaEspacios() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterEstado} onValueChange={setFilterEstado}>
+      {/* Filtro de Apertura */}
+            <Select value={filterApertura} onValueChange={setFilterApertura}>
               <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
-                <SelectValue placeholder="Estado" />
+                <SelectValue placeholder="Apertura" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="disponible">Disponible</SelectItem>
-                <SelectItem value="ocupado">Ocupado</SelectItem>
-                <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                <SelectItem value="todas">Todos</SelectItem>
+                <SelectItem value="abierto">Abierto</SelectItem>
+                <SelectItem value="cerrado">Cerrado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterSede} onValueChange={setFilterSede}>
@@ -1243,7 +1223,6 @@ export default function ConsultaEspacios() {
       {vistaActual === 'tarjetas' && !espacioSeleccionado && (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
           {paginatedEspacios.map(espacio => {
-            const { proximaClase, estado } = calcularProximaClaseYEstado(espacio.id);
             return (
               <motion.div
                 key={espacio.id}
@@ -1263,7 +1242,9 @@ export default function ConsultaEspacios() {
                           {espacio.tipo}
                         </Badge>
                       </div>
-                      {getEstadoBadge(estado)}
+                      <div className="flex items-center gap-2">
+                        {getAperturaBadge(espacio.estaAbierto)}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -1275,10 +1256,10 @@ export default function ConsultaEspacios() {
                       <MapPin className="w-4 h-4" />
                       <span>{espacio.sede} - Edificio {espacio.edificio}</span>
                     </div>
-                    {proximaClase && (
+                    {espacio.proximaClase && (
                       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
                         <p className="text-slate-600 dark:text-slate-400">Próxima clase:</p>
-                        <p className="text-blue-700 dark:text-blue-300">{proximaClase}</p>
+                        <p className="text-blue-700 dark:text-blue-300">{espacio.proximaClase}</p>
                       </div>
                     )}
                     <div className="pt-2">

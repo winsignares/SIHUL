@@ -192,9 +192,17 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def horarios_all(self, request):
         return espacios_api.list_all_espacios_with_horarios(request._request)
 
+    @action(detail=False, methods=['get'], url_path='horarios/disponibles/all')
+    def horarios_disponibles_all(self, request):
+        return espacios_api.list_all_espacios_disponibles_with_horarios(request._request)
+
     @action(detail=False, methods=['get'], url_path=r'horarios/supervisor/(?P<usuario_id>\d+)')
     def horarios_supervisor(self, request, usuario_id=None):
         return espacios_api.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
+
+    @action(detail=False, methods=['get'], url_path=r'horarios/disponibles/supervisor/(?P<usuario_id>\d+)')
+    def horarios_disponibles_supervisor(self, request, usuario_id=None):
+        return espacios_api.list_supervisor_espacios_disponibles_with_horarios(request._request, usuario_id=usuario_id)
 
     @action(detail=False, methods=['get'], url_path='apertura-cierre/proximos')
     def apertura_cierre_proximos(self, request):

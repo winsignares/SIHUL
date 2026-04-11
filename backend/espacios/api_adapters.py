@@ -16,6 +16,14 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
     return api_views.list_supervisor_espacios_with_horarios(request, usuario_id=usuario_id)
 
 
+def list_all_espacios_disponibles_with_horarios(request):
+    return api_views.list_all_espacios_disponibles_with_horarios(request)
+
+
+def list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=None):
+    return api_views.list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=usuario_id)
+
+
 def proximos_apertura_cierre(request):
     return api_views.proximos_apertura_cierre(request)
 
