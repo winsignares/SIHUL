@@ -190,7 +190,7 @@ export const componenteRolService = {
      * Actualiza un ComponenteRol existente
      */
     update: async (payload: UpdateComponenteRolPayload): Promise<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }> => {
-        const updated = await apiClient.put<ComponenteRolApi>(`/componentes/roles/${payload.id}/`, {
+        const updated = await apiClient.patch<ComponenteRolApi>(`/componentes/roles/${payload.id}/`, {
             permiso: payload.permiso,
         });
         const normalized = toFrontendComponenteRol(updated);
