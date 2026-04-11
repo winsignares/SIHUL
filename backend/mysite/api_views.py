@@ -34,7 +34,7 @@ from usuarios.serializers import RolSerializer, UsuarioSerializer
 
 from .auth_helpers import is_admin_global
 from .seccional_auth import SeccionalMixin
-from .permissions import IsAdminGlobal
+from .permissions import IsAuthenticatedReadOnlyOrAdminWrite, IsAdminGlobal, IsAdminSistema
 
 from espacios import api_adapters as espacios_api
 from horario import api_adapters as horario_api
@@ -58,9 +58,12 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Seccional.objects.all()
     serializer_class = SeccionalSerializer
     seccional_lookup = None
-    permission_classes = [permissions.IsAuthenticated, IsAdminGlobal]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_queryset(self):
+        if self.request.method == 'GET':
+            return Seccional.objects.all()
+
         user = self.get_current_user()
         if user and is_admin_global(user):
             return super().get_queryset()
@@ -357,7 +360,7 @@ class RolViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Rol.objects.all()
     serializer_class = RolSerializer
     seccional_lookup = None
-    permission_classes = [permissions.IsAuthenticated, IsAdminGlobal]
+    permission_classes = [permissions.IsAuthenticated, IsAdminSistema]
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
@@ -377,11 +380,14 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
-        queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
         if self.action == 'list_docentes':
-            return queryset.filter(activo=True, rol__nombre__iexact='docente')
-        if self.action == 'list':
-            return queryset
+            user = self.get_current_user()
+            if not user:
+                return Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional').filter(
+                    activo=True,
+                    rol__nombre__iexact='docente'
+                )
+            return super().get_queryset().filter(activo=True, rol__nombre__iexact='docente')
         return super().get_queryset()
 
     def _build_componentes(self, usuario):
@@ -556,7 +562,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 'facultad_id': docente.facultad.id if docente.facultad else None,
                 'activo': docente.activo,
             }
-            for docente in docentes.filter(activo=True, rol__nombre__iexact='docente')
+            for docente in docentes
         ]
         return Response({'usuarios': data}, status=status.HTTP_200_OK)
 

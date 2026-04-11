@@ -149,20 +149,18 @@ export interface SessionAuthStateResponse {
   }>;
 }
 
-const resolveSedeValue = async (usuario: CreateUsuarioPayload): Promise<string | undefined> => {
-  if (typeof usuario.sede === 'string' && usuario.sede.trim()) {
-    return usuario.sede.trim();
+const resolveSedeId = (usuario: CreateUsuarioPayload): number | undefined => {
+  if (usuario.sede_id !== null && usuario.sede_id !== undefined) {
+    return usuario.sede_id;
   }
 
-  // Compatibilidad: algunos formularios envian solo sede_id.
-  // El backend de usuarios espera el nombre en el campo "sede".
-  if (usuario.sede_id !== null && usuario.sede_id !== undefined) {
-    try {
-      const sede = await apiClient.get<{ id: number; nombre: string }>(`/sedes/${usuario.sede_id}/`);
-      return sede.nombre;
-    } catch {
-      return undefined;
-    }
+  if (typeof usuario.sede === 'string') {
+    const parsed = Number(usuario.sede);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  if (typeof usuario.sede === 'object' && usuario.sede !== null) {
+    return (usuario.sede as { id?: number }).id;
   }
 
   return undefined;
@@ -300,7 +298,7 @@ export const userService = {
    * Crea un nuevo usuario
    */
   crearUsuario: async (usuario: CreateUsuarioPayload): Promise<{ message: string; id: number }> => {
-    const sede = await resolveSedeValue(usuario);
+    const sede = resolveSedeId(usuario);
 
     return apiClient.post('/usuarios/', {
       nombre: usuario.nombre,

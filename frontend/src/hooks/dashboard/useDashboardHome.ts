@@ -9,7 +9,7 @@ import {
 } from '../../services/dashboard.data';
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import { programaService } from '../../services/programas/programaAPI';
-import { espacioService } from '../../services/espacios/espaciosAPI';
+import { espacioHorariosService } from '../../services/espacios/espaciosAPI';
 import { asignaturaService } from '../../services/asignaturas/asignaturaAPI';
 import { obtenerEstadisticasDashboard } from '../../services/dashboard/dashboardAPI';
 import { ocupacionSemanalService } from '../../services/reporte/ocupacionSemanalAPI';
@@ -97,7 +97,7 @@ export function useDashboardHome() {
             ] = await Promise.all([
                 facultadService.list(),
                 programaService.listarProgramas(),
-                espacioService.list(),
+                espacioHorariosService.getAllDisponiblesWithHorarios(),
                 asignaturaService.list(),
                 obtenerEstadisticasDashboard(),
                 ocupacionSemanalService.getOcupacionSemanal(undefined, 0),

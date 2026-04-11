@@ -328,6 +328,8 @@ export function useEspaciosFisicos() {
         }
 
         try {
+            const estadoAnterior = selectedEspacio.estado;
+
             // Preparar recursos para el payload
             const recursosPayload = recursosAgregados.map(r => ({
                 id: r.id!,
@@ -344,9 +346,12 @@ export function useEspaciosFisicos() {
                 sede_id: Number(espacioForm.sede_id),
                 ubicacion: ubicacionTrim.length > 0 ? ubicacionTrim : null,
                 descripcion: espacioForm.descripcion.trim(),
-                estado: espacioForm.estado,
                 recursos: recursosPayload
             });
+
+            if (estadoAnterior !== espacioForm.estado) {
+                await espacioService.cambiarEstado(selectedEspacio.id!, espacioForm.estado);
+            }
 
             await syncRecursosEspacio(selectedEspacio.id!, recursosAgregados);
 
