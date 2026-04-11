@@ -6,4 +6,5 @@ def is_admin_global(user):
         return True
 
     rol = getattr(user, 'rol', None)
-    return getattr(rol, 'nombre', None) == 'ADMIN_GLOBAL'
+    rol_nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
+    return rol_nombre in {'admin_global', 'admin'}

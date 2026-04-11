@@ -84,6 +84,20 @@ export interface ListComponenteRolesResponse {
     componente_roles: ComponenteRol[];
 }
 
+interface ComponenteRolApi {
+    id?: number;
+    componente: number;
+    rol: number;
+    permiso: 'VER' | 'EDITAR';
+}
+
+const toFrontendComponenteRol = (item: ComponenteRolApi): ComponenteRol => ({
+    id: item.id,
+    componente_id: item.componente,
+    rol_id: item.rol,
+    permiso: item.permiso,
+});
+
 /**
  * Servicio de componentes para comunicación con el backend
  */
@@ -140,13 +154,18 @@ export const componenteRolService = {
      * Crea un nuevo ComponenteRol
      */
     create: async (payload: CreateComponenteRolPayload): Promise<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }> => {
-        const created = await apiClient.post<ComponenteRol>('/componentes/roles/', payload);
+        const created = await apiClient.post<ComponenteRolApi>('/componentes/roles/', {
+            componente: payload.componente_id,
+            rol: payload.rol_id,
+            permiso: payload.permiso,
+        });
+        const normalized = toFrontendComponenteRol(created);
         return {
             message: 'ComponenteRol creado',
-            id: created.id ?? 0,
-            componente_id: created.componente_id,
-            rol_id: created.rol_id,
-            permiso: created.permiso,
+            id: normalized.id ?? 0,
+            componente_id: normalized.componente_id,
+            rol_id: normalized.rol_id,
+            permiso: normalized.permiso,
         };
     },
 
@@ -154,7 +173,8 @@ export const componenteRolService = {
      * Lista todos los ComponenteRoles
      */
     list: async (): Promise<ListComponenteRolesResponse> => {
-        const componente_roles = await apiClient.get<ComponenteRol[]>('/componentes/roles/');
+        const componenteRolesApi = await apiClient.get<ComponenteRolApi[]>('/componentes/roles/');
+        const componente_roles = componenteRolesApi.map(toFrontendComponenteRol);
         return { componente_roles };
     },
 
@@ -162,20 +182,24 @@ export const componenteRolService = {
      * Obtiene un ComponenteRol por ID
      */
     get: async (id: number): Promise<ComponenteRol> => {
-        return apiClient.get<ComponenteRol>(`/componentes/roles/${id}/`);
+        const item = await apiClient.get<ComponenteRolApi>(`/componentes/roles/${id}/`);
+        return toFrontendComponenteRol(item);
     },
 
     /**
      * Actualiza un ComponenteRol existente
      */
     update: async (payload: UpdateComponenteRolPayload): Promise<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }> => {
-        const updated = await apiClient.put<ComponenteRol>(`/componentes/roles/${payload.id}/`, payload);
+        const updated = await apiClient.put<ComponenteRolApi>(`/componentes/roles/${payload.id}/`, {
+            permiso: payload.permiso,
+        });
+        const normalized = toFrontendComponenteRol(updated);
         return {
             message: 'ComponenteRol actualizado',
-            id: updated.id ?? payload.id,
-            componente_id: updated.componente_id,
-            rol_id: updated.rol_id,
-            permiso: updated.permiso,
+            id: normalized.id ?? payload.id,
+            componente_id: normalized.componente_id,
+            rol_id: normalized.rol_id,
+            permiso: normalized.permiso,
         };
     },
 
