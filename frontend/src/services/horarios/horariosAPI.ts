@@ -28,12 +28,14 @@ export interface CreateHorarioPayload {
     docente_id?: number | null;
     cantidad_estudiantes?: number | null;
     usuario_id?: number | null;
-    estado?: 'pendiente' | 'aprobado' | 'rechazado';
+    estado?: HorarioEstado;
 }
 
 interface ListHorariosExtendidosOptions {
     includePending?: boolean;
 }
+
+type HorarioEstado = 'pendiente' | 'aprobado' | 'rechazado';
 
 /**
  * Payload para actualizar un horario
@@ -84,7 +86,7 @@ export interface HorarioExtendido {
     hora_inicio: string;
     hora_fin: string;
     cantidad_estudiantes: number | null;
-    estado?: 'pendiente' | 'aprobado' | 'rechazado';
+    estado?: HorarioEstado;
     es_solicitud?: boolean; // Para diferenciar solicitudes de horarios aprobados
 }
 
@@ -98,7 +100,7 @@ interface HorarioApi {
     hora_inicio: string;
     hora_fin: string;
     cantidad_estudiantes?: number | null;
-    estado?: 'pendiente' | 'aprobado' | 'rechazado';
+    estado?: HorarioEstado;
 }
 
 /**
@@ -258,6 +260,13 @@ export const horarioService = {
     },
 
     /**
+     * Crea usando el flujo de APIView (admin crea horario directo, planeacion crea solicitud pendiente).
+     */
+    createConFlujoSolicitud: async (payload: CreateHorarioPayload): Promise<{ message: string; id: number }> => {
+        return horarioService.create(payload);
+    },
+
+    /**
      * Actualiza un horario existente
      */
     update: async (payload: UpdateHorarioPayload): Promise<{ message: string; id: number }> => {
@@ -338,14 +347,25 @@ export const horarioService = {
     /**
      * Obtiene todos los horarios asociados a un período académico específico
      * @param periodoId ID del período académico
-     * @param estado Filtro opcional de estado ('aprobado', 'pendiente', etc.)
+     * @param estado Filtro opcional de estado (uno o varios)
      * @returns Horarios del período con información extendida
      */
     horariosPorPeriodo: async (
         periodoId: number,
-        estado?: 'pendiente' | 'aprobado' | 'rechazado'
+        estado?: HorarioEstado | HorarioEstado[]
     ): Promise<HorariosPorPeriodoResponse> => {
-        const query = estado ? `?periodo_id=${periodoId}&estado=${estado}` : `?periodo_id=${periodoId}`;
+        const params = new URLSearchParams();
+        params.set('periodo_id', String(periodoId));
+
+        if (estado) {
+            if (Array.isArray(estado)) {
+                estado.forEach((item) => params.append('estados[]', item));
+            } else {
+                params.set('estado', estado);
+            }
+        }
+
+        const query = `?${params.toString()}`;
         return apiClient.get<HorariosPorPeriodoResponse>(`/horarios/por-periodo/${query}`, {
             suppressErrorLog: true,
         });

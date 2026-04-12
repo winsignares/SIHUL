@@ -1,7 +1,9 @@
+import datetime
 import hashlib
 import secrets
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.exceptions import ValidationError
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -30,6 +32,7 @@ from recursos.serializers import EspacioRecursoSerializer, RecursoSerializer
 from sedes.models import Seccional, Sede
 from sedes.serializers import SeccionalSerializer, SedeSerializer
 from usuarios.models import Rol, Usuario
+from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioSerializer
 
 from .auth_helpers import is_admin_global
@@ -286,6 +289,99 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if self.action in public_actions:
             return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
+
+    def create(self, request, *args, **kwargs):
+        grupo_id = request.data.get('grupo') or request.data.get('grupo_id')
+        asignatura_id = request.data.get('asignatura') or request.data.get('asignatura_id')
+        espacio_id = request.data.get('espacio') or request.data.get('espacio_id')
+        dia_semana = request.data.get('dia_semana')
+        hora_inicio = request.data.get('hora_inicio')
+        hora_fin = request.data.get('hora_fin')
+        docente_id = request.data.get('docente') or request.data.get('docente_id')
+        cantidad = request.data.get('cantidad_estudiantes')
+        usuario_id = request.data.get('usuario_id')
+        estado_payload = request.data.get('estado')
+
+        if not grupo_id or not asignatura_id or not espacio_id or not dia_semana or not hora_inicio or not hora_fin:
+            return Response({'error': 'Faltan campos requeridos'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            grupo = Grupo.objects.get(id=grupo_id)
+            asignatura = Asignatura.objects.get(id=asignatura_id)
+            espacio = EspacioFisico.objects.get(id=espacio_id)
+            docente = Usuario.objects.get(id=docente_id) if docente_id else None
+            usuario = Usuario.objects.get(id=usuario_id) if usuario_id else None
+
+            hi = datetime.time.fromisoformat(str(hora_inicio))
+            hf = datetime.time.fromisoformat(str(hora_fin))
+
+            es_planificador = bool(usuario and usuario.rol and usuario.rol.nombre == 'planeacion_facultad')
+
+            if es_planificador:
+                solicitud = SolicitudEspacio(
+                    grupo=grupo,
+                    asignatura=asignatura,
+                    docente=docente,
+                    espacio_solicitado=espacio,
+                    planificador=usuario,
+                    dia_semana=dia_semana,
+                    hora_inicio=hi,
+                    hora_fin=hf,
+                    cantidad_estudiantes=int(cantidad) if cantidad is not None else None,
+                    estado='pendiente'
+                )
+                solicitud.save()
+
+                administradores = Usuario.objects.filter(rol__nombre__in=['admin', 'admin_planeacion']).distinct()
+                for admin in administradores:
+                    crear_notificacion(
+                        id_usuario=admin.id,
+                        tipo='solicitud_espacio',
+                        mensaje=(
+                            f'Nueva solicitud de espacio (ID: {solicitud.id}): '
+                            f'{asignatura.nombre} - Grupo {grupo.nombre} - Aula: {espacio.nombre} - '
+                            f'{dia_semana} {hi}-{hf}'
+                        ),
+                        prioridad='alta'
+                    )
+
+                return Response(
+                    {
+                        'message': 'Solicitud de espacio creada exitosamente',
+                        'id': solicitud.id,
+                        'tipo': 'solicitud',
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+            estado_horario = estado_payload if estado_payload in ['aprobado', 'pendiente', 'rechazado'] else 'aprobado'
+            horario = Horario(
+                grupo=grupo,
+                asignatura=asignatura,
+                docente=docente,
+                espacio=espacio,
+                dia_semana=dia_semana,
+                hora_inicio=hi,
+                hora_fin=hf,
+                cantidad_estudiantes=int(cantidad) if cantidad is not None else None,
+                estado=estado_horario,
+            )
+            horario.save()
+
+            return Response(
+                {
+                    'message': 'Horario creado',
+                    'id': horario.id,
+                    'tipo': 'horario',
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except ValidationError as e:
+            return Response({'error': str(e.message)}, status=status.HTTP_400_BAD_REQUEST)
+        except (Grupo.DoesNotExist, Asignatura.DoesNotExist, EspacioFisico.DoesNotExist, Usuario.DoesNotExist):
+            return Response({'error': 'Relacionada no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError:
+            return Response({'error': 'Formato de hora inválido o valor numérico incorrecto.'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'], url_path='list/extendidos')
     def list_extendidos(self, request):

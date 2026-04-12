@@ -302,14 +302,16 @@ def horarios_por_periodo(request):
     
     Query params:
     - periodo_id: int (requerido) - ID del período académico
-    - estado: str (opcional) - Filtro de estado ('aprobado', 'pendiente', etc.)
+    - estado: str (opcional) - Estado único o lista CSV (ej: 'aprobado,pendiente')
+    - estados[]: str[] (opcional) - Estados múltiples repetidos en query
     """
     if request.method != 'GET':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     try:
         periodo_id = request.GET.get('periodo_id')
-        estado = request.GET.get('estado')
+        estado_raw = request.GET.get('estado')
+        estados_array = request.GET.getlist('estados[]') or request.GET.getlist('estados')
 
         if not periodo_id:
             return JsonResponse({'error': 'periodo_id es requerido'}, status=400)
@@ -330,8 +332,26 @@ def horarios_por_periodo(request):
             'grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa'
         )
 
-        if estado:
-            horarios_qs = horarios_qs.filter(estado=estado)
+        estados = []
+
+        if estado_raw:
+            estados.extend([s.strip().lower() for s in estado_raw.split(',') if s.strip()])
+
+        if estados_array:
+            for estado_item in estados_array:
+                estados.extend([s.strip().lower() for s in estado_item.split(',') if s.strip()])
+
+        if estados:
+            estados_validos = {'aprobado', 'pendiente', 'rechazado'}
+            estados_filtrados = [e for e in dict.fromkeys(estados) if e in estados_validos]
+
+            if not estados_filtrados:
+                return JsonResponse(
+                    {'error': 'estado inválido. Valores permitidos: aprobado, pendiente, rechazado'},
+                    status=400
+                )
+
+            horarios_qs = horarios_qs.filter(estado__in=estados_filtrados)
 
         lst = []
         for h in horarios_qs:

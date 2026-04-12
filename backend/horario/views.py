@@ -202,9 +202,9 @@ def create_horario(request):
             )
             solicitud.save()
             
-            # Crear notificación para administradores
-            admins = Usuario.objects.filter(rol__nombre='admin')
-            for admin in admins:
+            # Crear notificación para administradores de facultad y planeación
+            administradores = Usuario.objects.filter(rol__nombre__in=['admin', 'admin_planeacion']).distinct()
+            for admin in administradores:
                 crear_notificacion(
                     id_usuario=admin.id,
                     tipo='solicitud_espacio',

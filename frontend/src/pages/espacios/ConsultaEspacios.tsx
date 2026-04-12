@@ -1540,6 +1540,10 @@ export default function ConsultaEspacios() {
                   <div className="w-6 h-6 bg-yellow-600 rounded"></div>
                   <span className="text-sm text-slate-700 dark:text-slate-300">Mantenimiento</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-[#f97316] rounded"></div>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Horario Pendiente</span>
+                </div>
                 {puedeCrearSolicitudes && (
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-purple-500 rounded border-2 border-purple-700"></div>
@@ -1770,6 +1774,7 @@ export default function ConsultaEspacios() {
                           const isPrestamo = ocupacion.tipo === 'prestamo';
                           const isPrestamoPendiente = isPrestamo && ocupacion.prestamo?.estado === 'Pendiente';
                           const isPrestamoAprobado = isPrestamo && ocupacion.prestamo?.estado === 'Aprobado';
+                          const isHorarioPendiente = !isPrestamo && ocupacion.estado === 'pendiente';
                           
                           let colorClass = '';
                           let labelText = '';
@@ -1780,6 +1785,9 @@ export default function ConsultaEspacios() {
                           } else if (isPrestamoAprobado) {
                             colorClass = 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white';
                             labelText = 'APROBADO';
+                          } else if (isHorarioPendiente) {
+                            colorClass = 'bg-[#f97316] hover:bg-[#ea580c] text-white';
+                            labelText = 'PENDIENTE';
                           } else if (ocupacion.estado === 'ocupado') {
                             colorClass = 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white';
                             labelText = '';

@@ -155,10 +155,11 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
           asignatura_nombre: string;
           docente_nombre: string;
           grupo_nombre: string;
+          estado?: 'aprobado' | 'pendiente' | 'rechazado';
         }[] = [];
 
         try {
-          const horariosResponse = await horarioService.listExtendidos();
+          const horariosResponse = await horarioService.listExtendidos({ includePending: true });
           horariosExtendidos = horariosResponse.horarios.map((h) => ({
             id: h.id,
             espacio_id: h.espacio_id,
@@ -167,19 +168,20 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
             hora_fin: h.hora_fin,
             asignatura_nombre: h.asignatura_nombre,
             docente_nombre: h.docente_nombre,
-            grupo_nombre: h.grupo_nombre
+            grupo_nombre: h.grupo_nombre,
+            estado: h.estado
           }));
         } catch (error) {
           console.warn('No se pudieron cargar los horarios extendidos con IDs:', error);
         }
 
-        const findHorarioId = (
+        const findHorarioMeta = (
           espacioId: string,
           dia: string,
           horaInicio: number,
           horaFin: number,
           materia: string
-        ): number | undefined => {
+        ): { id: number; estado?: 'aprobado' | 'pendiente' | 'rechazado' } | undefined => {
           const diaNormalizado = normalizarDia(dia);
           const match = horariosExtendidos.find((h) => {
             const hDiaNormalizado = normalizarDia(h.dia_semana);
@@ -193,7 +195,8 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
               h.asignatura_nombre === materia
             );
           });
-          return match?.id;
+          if (!match) return undefined;
+          return { id: match.id, estado: match.estado };
         };
 
         const allHorarios: OcupacionView[] = [];
@@ -201,7 +204,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
 
         espaciosConHorarios.forEach((espacio: any) => {
           espacio.horarios.forEach((h: any) => {
-            const horarioId = findHorarioId(
+            const horarioMeta = findHorarioMeta(
               espacio.id!.toString(),
               h.dia,
               h.hora_inicio,
@@ -210,7 +213,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
             );
 
             allHorarios.push({
-              id: horarioId,
+              id: horarioMeta?.id,
               espacioId: espacio.id!.toString(),
               dia: normalizarDia(h.dia),
               horaInicio: h.hora_inicio,
@@ -218,7 +221,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
               materia: h.materia,
               docente: h.docente,
               grupo: h.grupo,
-              estado: 'ocupado',
+              estado: horarioMeta?.estado === 'pendiente' ? 'pendiente' : 'ocupado',
               tipo: 'horario'
             });
           });

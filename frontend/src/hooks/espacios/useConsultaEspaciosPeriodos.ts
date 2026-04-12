@@ -5,6 +5,8 @@ import type { PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { HorarioExtendido } from '../../services/horarios/horariosAPI';
 import type { OcupacionView } from './types';
 
+type HorarioEstado = 'aprobado' | 'pendiente' | 'rechazado';
+
 function normalizarDia(dia: string): string {
   const diaLower = dia.toLowerCase().trim();
   const mapeo: Record<string, string> = {
@@ -36,7 +38,7 @@ function mapearHorariosAOcupacion(horarios: HorarioExtendido[]): OcupacionView[]
     materia: h.asignatura_nombre,
     docente: h.docente_nombre,
     grupo: h.grupo_nombre,
-    estado: 'ocupado',
+    estado: h.estado === 'pendiente' ? 'pendiente' : 'ocupado',
     tipo: 'horario'
   }));
 }
@@ -60,11 +62,11 @@ export function useConsultaEspaciosPeriodos() {
     }
   }, []);
 
-  const cargarHorariosPorPeriodo = useCallback(async (periodoId: number, estado?: string) => {
+  const cargarHorariosPorPeriodo = useCallback(async (periodoId: number, estado?: HorarioEstado | HorarioEstado[]) => {
     setHorariosLoading(true);
     setErrorBusquedaPeriodo(null);
     try {
-      const result = await horarioService.horariosPorPeriodo(periodoId, estado as any);
+      const result = await horarioService.horariosPorPeriodo(periodoId, estado);
       const ocupacion = mapearHorariosAOcupacion(result.horarios);
       setHorariosPeriodo(ocupacion);
     } catch (error: any) {
@@ -95,7 +97,7 @@ export function useConsultaEspaciosPeriodos() {
 
         const periodo = result.periodos[0];
 
-        await cargarHorariosPorPeriodo(periodo.id || 0, 'aprobado');
+        await cargarHorariosPorPeriodo(periodo.id || 0, ['aprobado', 'pendiente']);
 
         return periodo;
       } catch (error: any) {
