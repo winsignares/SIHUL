@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import SearchableSelect from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Switch } from '../../share/switch';
-import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight, User, Lock, Shield } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -182,9 +182,9 @@ export default function GestionUsuarios() {
                   <div className="space-y-2">
                     <Label>Nombre Completo *</Label>
                     <div className="relative group">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                       <Input
-                        placeholder="Juan Pérez García"
+                        placeholder="Ej: Juan Pérez García"
                         value={nuevoUsuario.nombre}
                         onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })}
                         className="pl-10"
@@ -237,7 +237,7 @@ export default function GestionUsuarios() {
                   <div className="space-y-2">
                     <Label>Contraseña *</Label>
                     <div className="relative group">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                       <Input
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
@@ -257,7 +257,7 @@ export default function GestionUsuarios() {
                   <div className="space-y-2">
                     <Label>Confirmar Contraseña *</Label>
                     <div className="relative group">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
@@ -276,16 +276,20 @@ export default function GestionUsuarios() {
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Rol *</Label>
-                    <SearchableSelect
-                      items={rolesDisponibles}
-                      value={nuevoUsuario.rol_id?.toString() || ''}
-                      onSelect={(rol) => setNuevoUsuario({ ...nuevoUsuario, rol_id: rol.id })}
-                      getItemId={(rol) => rol.id.toString()}
-                      getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-                      placeholder="Seleccione un rol"
-                      searchPlaceholder="Buscar rol..."
-                      emptyMessage="No se encontraron roles."
-                    />
+                    <div className="relative group">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={rolesDisponibles}
+                        value={nuevoUsuario.rol_id?.toString() || ''}
+                        onSelect={(rol) => setNuevoUsuario({ ...nuevoUsuario, rol_id: rol.id })}
+                        getItemId={(rol) => rol.id.toString()}
+                        getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                        placeholder="Seleccione un rol"
+                        searchPlaceholder="Buscar rol..."
+                        emptyMessage="No se encontraron roles."
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

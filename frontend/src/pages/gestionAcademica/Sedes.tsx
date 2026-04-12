@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { useSedes } from '../../hooks/gestionAcademica/useSedes';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -256,21 +257,16 @@ export default function Sedes() {
               <Label htmlFor="seccional-sede">
                 Seccional <span className="text-red-600">*</span>
               </Label>
-              <Select
+              <SearchableSelect
+                items={seccionales}
                 value={sedeForm.seccionalId}
-                onValueChange={(value) => setSedeForm({ ...sedeForm, seccionalId: value })}
-              >
-                <SelectTrigger id="seccional-sede">
-                  <SelectValue placeholder="Seleccionar seccional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {seccionales.map((seccional) => (
-                    <SelectItem key={seccional.id} value={seccional.id.toString()}>
-                      {seccional.ciudad}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSelect={(seccional) => setSedeForm({ ...sedeForm, seccionalId: seccional.id.toString() })}
+                getItemId={(seccional) => seccional.id.toString()}
+                getItemLabel={(seccional) => seccional.ciudad}
+                placeholder="Seleccionar seccional..."
+                searchPlaceholder="Buscar seccional..."
+                emptyMessage="No se encontró ninguna seccional"
+              />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -324,21 +320,16 @@ export default function Sedes() {
               <Label htmlFor="edit-seccional-sede">
                 Seccional <span className="text-red-600">*</span>
               </Label>
-              <Select
+              <SearchableSelect
+                items={seccionales}
                 value={sedeForm.seccionalId}
-                onValueChange={(value) => setSedeForm({ ...sedeForm, seccionalId: value })}
-              >
-                <SelectTrigger id="edit-seccional-sede">
-                  <SelectValue placeholder="Seleccionar seccional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {seccionales.map((seccional) => (
-                    <SelectItem key={seccional.id} value={seccional.id.toString()}>
-                      {seccional.ciudad}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSelect={(seccional) => setSedeForm({ ...sedeForm, seccionalId: seccional.id.toString() })}
+                getItemId={(seccional) => seccional.id.toString()}
+                getItemLabel={(seccional) => seccional.ciudad}
+                placeholder="Seleccionar seccional..."
+                searchPlaceholder="Buscar seccional..."
+                emptyMessage="No se encontró ninguna seccional"
+              />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">

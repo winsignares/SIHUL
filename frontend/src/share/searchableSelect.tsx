@@ -152,13 +152,13 @@ export function SearchableSelect<T>({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className={`w-full justify-between ${className}`}
+              className={`w-full h-9 px-0 justify-between items-center relative ${className}`}
               disabled={disabled}
             >
-            <span className="truncate">
+            <span className={`truncate block w-full pl-6 pr-8 text-left ${selectedItem ? '' : 'text-slate-400'}`}>
               {selectedItem ? getItemLabel(selectedItem) : placeholder}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="absolute right-2 h-4 w-4 shrink-0 opacity-50 pointer-events-none" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0" align="start">
