@@ -678,43 +678,59 @@ export default function GestionUsuarios() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre Completo *</Label>
-                    <Input
-                      placeholder="Ej: Juan Pérez"
-                      value={editingUser.nombre}
-                      onChange={(e) => setEditingUser({ ...editingUser, nombre: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        placeholder="Ej: Juan Pérez"
+                        value={editingUser.nombre}
+                        onChange={(e) => setEditingUser({ ...editingUser, nombre: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Correo Institucional *</Label>
-                    <Input
-                      type="email"
-                      placeholder="usuario@unilibre.edu.co"
-                      value={editingUser.correo}
-                      onChange={(e) => setEditingUser({ ...editingUser, correo: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type="email"
+                        placeholder="usuario@unilibre.edu.co"
+                        value={editingUser.correo}
+                        onChange={(e) => setEditingUser({ ...editingUser, correo: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Nueva Contraseña (opcional)</Label>
-                    <Input
-                      type="password"
-                      placeholder="Dejar vacío para no cambiar"
-                      value={editingUser.contrasena || ''}
-                      onChange={(e) => setEditingUser({ ...editingUser, contrasena: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type="password"
+                        placeholder="Dejar vacío para no cambiar"
+                        value={editingUser.contrasena || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, contrasena: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
                     <p className="text-xs text-slate-500">Solo ingrese una contraseña si desea cambiarla</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Rol *</Label>
-                    <SearchableSelect
-                      items={rolesDisponibles}
-                      value={editingUser.rol_id?.toString() || ''}
-                      onSelect={(rol) => setEditingUser({ ...editingUser, rol_id: rol.id })}
-                      getItemId={(rol) => rol.id.toString()}
-                      getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-                      placeholder="Seleccione un rol"
-                      searchPlaceholder="Buscar rol..."
-                      emptyMessage="No se encontraron roles."
-                    />
+                    <div className="relative group">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={rolesDisponibles}
+                        value={editingUser.rol_id?.toString() || ''}
+                        onSelect={(rol) => setEditingUser({ ...editingUser, rol_id: rol.id })}
+                        getItemId={(rol) => rol.id.toString()}
+                        getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                        placeholder="Seleccione un rol"
+                        searchPlaceholder="Buscar rol..."
+                        emptyMessage="No se encontraron roles."
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
