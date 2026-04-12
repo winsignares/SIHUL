@@ -7,6 +7,7 @@ const API_BASE_URL = rawApiUrl
 
 interface RequestConfig extends RequestInit {
   requiresAuth?: boolean;
+  suppressErrorLog?: boolean;
 }
 
 class ApiClient {
@@ -36,7 +37,7 @@ class ApiClient {
     endpoint: string,
     config: RequestConfig = {}
   ): Promise<T> {
-    const { requiresAuth = true, ...fetchConfig } = config;
+    const { requiresAuth = true, suppressErrorLog = false, ...fetchConfig } = config;
 
     const url = `${this.baseURL}${endpoint}`;
 
@@ -63,7 +64,7 @@ class ApiClient {
       return data as T;
     } catch (error: any) {
       // Don't log 409 Conflict errors as they are expected validation errors
-      if (error.status !== 409) {
+      if (!suppressErrorLog && error.status !== 409) {
         console.error('API Request Error:', error);
       }
       throw error;
@@ -74,7 +75,7 @@ class ApiClient {
     endpoint: string,
     config: RequestConfig = {}
   ): Promise<Blob> {
-    const { requiresAuth = true, ...fetchConfig } = config;
+    const { requiresAuth = true, suppressErrorLog = false, ...fetchConfig } = config;
 
     const url = `${this.baseURL}${endpoint}`;
 
@@ -94,7 +95,7 @@ class ApiClient {
 
       return await response.blob();
     } catch (error: any) {
-      if (error.status !== 409) {
+      if (!suppressErrorLog && error.status !== 409) {
         console.error('API Request Error:', error);
       }
       throw error;

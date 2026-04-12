@@ -37,6 +37,7 @@ export function useConsultaEspaciosFiltros() {
   const [filterTipo, setFilterTipo] = useState('todos');
   const [filterApertura, setFilterApertura] = useState('todas');
   const [filterSede, setFilterSede] = useState('todas');
+  const [filterPeriodo, setFilterPeriodo] = useState<number | null>(null);
   const [filterFechaInicio, setFilterFechaInicio] = useState<string>('');
   const [filterFechaFin, setFilterFechaFin] = useState<string>('');
   const [mensajeFiltroFecha, setMensajeFiltroFecha] = useState<MensajeFiltroFecha | null>(null);
@@ -259,6 +260,7 @@ export function useConsultaEspaciosFiltros() {
     setFilterTipo('todos');
     setFilterApertura('todas');
     setFilterSede('todas');
+    setFilterPeriodo(null);
 
     const hoy = getFechaColombia();
     hoy.setHours(0, 0, 0, 0);
@@ -279,6 +281,8 @@ export function useConsultaEspaciosFiltros() {
     setFilterApertura,
     filterSede,
     setFilterSede,
+    filterPeriodo,
+    setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
     mensajeFiltroFecha,

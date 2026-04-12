@@ -24,6 +24,10 @@ def inscribir_estudiante(request):
     return api_views.inscribir_estudiante(request)
 
 
+def horarios_por_periodo(request):
+    return api_views.horarios_por_periodo(request)
+
+
 def exportar_horarios_pdf_post(request):
     return legacy_views.exportar_horarios_pdf_post(request)
 

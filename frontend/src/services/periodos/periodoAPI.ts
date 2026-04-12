@@ -81,5 +81,21 @@ export const periodoService = {
       fecha_fin: nuevoPeriodo.fecha_fin,
       activo: nuevoPeriodo.activo
     });
+  },
+
+  /**
+   * Busca un período académico que se encuentre dentro de un rango de fechas específico
+   * @param fechaInicio Fecha inicio del rango a buscar (YYYY-MM-DD)
+   * @param fechaFin Fecha fin del rango a buscar (YYYY-MM-DD)
+   * @returns Período(s) que intersecten con el rango especificado
+   */
+  periodoPorRangoFechas: async (
+    fechaInicio: string,
+    fechaFin: string
+  ): Promise<{ mensaje: string; fecha_inicio_busqueda: string; fecha_fin_busqueda: string; periodos: PeriodoAcademico[] }> => {
+    return apiClient.get(
+      `/periodos/rango-fechas/?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`,
+      { suppressErrorLog: true }
+    );
   }
 };

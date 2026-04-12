@@ -5,6 +5,7 @@ import { useConsultaEspaciosDatos } from './useConsultaEspaciosDatos';
 import { useConsultaEspaciosPaginacion } from './useConsultaEspaciosPaginacion';
 import { useConsultaEspaciosSeleccion } from './useConsultaEspaciosSeleccion';
 import { useConsultaEspaciosExport } from './useConsultaEspaciosExport';
+import { useConsultaEspaciosPeriodos } from './useConsultaEspaciosPeriodos';
 import type { EspacioView } from './types';
 
 export type {
@@ -24,6 +25,7 @@ export function useConsultaEspacios() {
   const puedeCrearSolicitudes = !!user;
 
   const filtros = useConsultaEspaciosFiltros();
+  const periodos = useConsultaEspaciosPeriodos();
 
   const datos = useConsultaEspaciosDatos({
     user: user
@@ -35,6 +37,29 @@ export function useConsultaEspacios() {
       : undefined,
     filterFechaInicio: filtros.filterFechaInicio
   });
+
+  const horariosMostrados = useMemo(() => {
+    const rangoCompletoSeleccionado = Boolean(filtros.filterFechaInicio && filtros.filterFechaFin);
+    const baseHorarios = rangoCompletoSeleccionado ? periodos.horariosPeriodo : datos.horarios;
+    const prestamosComoOcupacion = datos.horariosConPrestamos.filter((h) => h.tipo === 'prestamo');
+    return [...baseHorarios, ...prestamosComoOcupacion];
+  }, [
+    datos.horarios,
+    datos.horariosConPrestamos,
+    filtros.filterFechaFin,
+    filtros.filterFechaInicio,
+    periodos.horariosPeriodo
+  ]);
+
+  const getOcupacionPorHora = useCallback(
+    (espacioId: string, dia: string, hora: number) => {
+      const matches = horariosMostrados.filter(
+        (h) => h.espacioId === espacioId && h.dia === dia && hora >= h.horaInicio && hora < h.horaFin
+      );
+      return matches.find((h) => h.tipo === 'prestamo') ?? matches[0];
+    },
+    [horariosMostrados]
+  );
 
   const filteredEspacios = useMemo(() => {
     return datos.espacios.filter((e) => {
@@ -63,12 +88,12 @@ export function useConsultaEspacios() {
     puedeCrearSolicitudes,
     espacios: datos.espacios,
     filterFechaInicio: filtros.filterFechaInicio,
-    getOcupacionPorHora: datos.getOcupacionPorHora
+    getOcupacionPorHora
   });
 
   const exportacion = useConsultaEspaciosExport({
     filteredEspacios,
-    getOcupacionPorHora: datos.getOcupacionPorHora
+    getOcupacionPorHora
   });
 
   const verCronogramaIndividual = useCallback((espacio: EspacioView) => {
@@ -90,6 +115,8 @@ export function useConsultaEspacios() {
     setFilterApertura: filtros.setFilterApertura,
     filterSede: filtros.filterSede,
     setFilterSede: filtros.setFilterSede,
+    filterPeriodo: filtros.filterPeriodo,
+    setFilterPeriodo: filtros.setFilterPeriodo,
     filterFechaInicio: filtros.filterFechaInicio,
     filterFechaFin: filtros.filterFechaFin,
     mensajeFiltroFecha: filtros.mensajeFiltroFecha,
@@ -119,9 +146,9 @@ export function useConsultaEspacios() {
     goToPrevPageWindow: paginacion.goToPrevPageWindow,
     goToNextPageWindow: paginacion.goToNextPageWindow,
     estadisticas: datos.estadisticas,
-    getOcupacionPorHora: datos.getOcupacionPorHora,
+    getOcupacionPorHora,
     loading: datos.loading,
-    horarios: datos.horariosConPrestamos,
+    horarios: horariosMostrados,
     prestamos: datos.prestamos,
     exportarCronogramaPDF: exportacion.exportarCronogramaPDF,
     exportarCronogramaExcel: exportacion.exportarCronogramaExcel,
@@ -140,6 +167,12 @@ export function useConsultaEspacios() {
     verCronogramaIndividual,
     volverALista,
     limpiarFiltros: filtros.limpiarFiltros,
-    recargarDatos: datos.recargarDatos
+    recargarDatos: datos.recargarDatos,
+    // Período académico
+    periodos: periodos.periodos,
+    periodosLoading: periodos.periodosLoading,
+    horariosLoading: periodos.horariosLoading,
+    errorBusquedaPeriodo: periodos.errorBusquedaPeriodo,
+    buscarPeriodoPorRangoFechas: periodos.buscarPeriodoPorRangoFechas
   };
 }

@@ -277,6 +277,7 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         public_actions = {
             'list_extendidos',
+            'por_periodo',
             'exportar_pdf',
             'exportar_excel',
             'exportar_pdf_docente',
@@ -297,6 +298,10 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='mi-horario-estudiante')
     def mi_horario_estudiante(self, request):
         return horario_api.mi_horario_estudiante(request._request)
+
+    @action(detail=False, methods=['get'], url_path='por-periodo')
+    def por_periodo(self, request):
+        return horario_api.horarios_por_periodo(request._request)
 
     @action(detail=False, methods=['post'], url_path='inscribir-estudiante')
     def inscribir_estudiante(self, request):

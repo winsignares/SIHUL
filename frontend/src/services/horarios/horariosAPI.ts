@@ -108,6 +108,19 @@ export interface ListHorariosExtendidosResponse {
     horarios: HorarioExtendido[];
 }
 
+/**
+ * Interfaz para horarios por período con información agregada
+ */
+export interface HorariosPorPeriodoResponse {
+    periodo_id: number;
+    periodo_nombre: string;
+    fecha_inicio: string;
+    fecha_fin: string;
+    activo: boolean;
+    total_horarios: number;
+    horarios: HorarioExtendido[];
+}
+
 const downloadHorariosBlob = async (endpoint: string, horarios: HorarioExtendido[]): Promise<Blob> => {
     return apiClient.postBlob(endpoint, { horarios });
 };
@@ -320,6 +333,22 @@ export const horarioService = {
      */
     exportarExcelDocente: async (horarios: HorarioExtendido[]): Promise<Blob> => {
         return downloadHorariosBlob('/horarios/exportar-excel-docente/', horarios);
+    },
+
+    /**
+     * Obtiene todos los horarios asociados a un período académico específico
+     * @param periodoId ID del período académico
+     * @param estado Filtro opcional de estado ('aprobado', 'pendiente', etc.)
+     * @returns Horarios del período con información extendida
+     */
+    horariosPorPeriodo: async (
+        periodoId: number,
+        estado?: 'pendiente' | 'aprobado' | 'rechazado'
+    ): Promise<HorariosPorPeriodoResponse> => {
+        const query = estado ? `?periodo_id=${periodoId}&estado=${estado}` : `?periodo_id=${periodoId}`;
+        return apiClient.get<HorariosPorPeriodoResponse>(`/horarios/por-periodo/${query}`, {
+            suppressErrorLog: true,
+        });
     }
 };
 

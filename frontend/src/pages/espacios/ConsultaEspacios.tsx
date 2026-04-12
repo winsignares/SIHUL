@@ -69,6 +69,21 @@ const GRID_DIA_A_JS_WEEKDAY: Record<string, number> = {
   Sábado: 6
 };
 
+function formatFechaLocalYYYYMMDD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getHoyColombia(): Date {
+  const ahora = new Date();
+  const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
+  const colombia = new Date(utc + 3600000 * -5);
+  colombia.setHours(0, 0, 0, 0);
+  return colombia;
+}
+
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
@@ -82,6 +97,8 @@ export default function ConsultaEspacios() {
     setFilterApertura,
     filterSede,
     setFilterSede,
+    filterPeriodo,
+    setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
     mensajeFiltroFecha,
@@ -128,6 +145,12 @@ export default function ConsultaEspacios() {
     setDialogSolicitudOpen,
     nuevaSolicitudData,
     setNuevaSolicitudData,
+    // Período académico
+    periodos,
+    periodosLoading,
+    horariosLoading,
+    errorBusquedaPeriodo,
+    buscarPeriodoPorRangoFechas,
     // Vista individual
     espacioSeleccionado,
     verCronogramaIndividual,
@@ -142,6 +165,94 @@ export default function ConsultaEspacios() {
   // Calcular índices de paginación
   const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredEspacios);
+
+  // Estado para el período seleccionado
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState<typeof periodos[0] | null>(null);
+  const [mensajeAutoPeriodo, setMensajeAutoPeriodo] = useState<string | null>(null);
+  const [inicializacionAplicada, setInicializacionAplicada] = useState(false);
+
+  const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
+    const hoy = getHoyColombia();
+    const inicioPeriodo = new Date(`${periodo.fecha_inicio}T00:00:00`);
+    const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
+
+    inicioPeriodo.setHours(0, 0, 0, 0);
+    finPeriodo.setHours(0, 0, 0, 0);
+
+    const inicioBase = new Date(Math.max(hoy.getTime(), inicioPeriodo.getTime()));
+    const inicioLunes = new Date(inicioBase);
+    const diaSemana = inicioLunes.getDay();
+
+    // Siempre calcular inicio automático en lunes:
+    // si hoy ya es lunes, se usa ese día; en otro caso, se toma el próximo lunes.
+    if (diaSemana !== 1) {
+      const diasHastaLunes = diaSemana === 0 ? 1 : 8 - diaSemana;
+      inicioLunes.setDate(inicioLunes.getDate() + diasHastaLunes);
+    }
+
+    if (inicioLunes <= finPeriodo) {
+      return {
+        inicio: formatFechaLocalYYYYMMDD(inicioLunes),
+        ajustadoPorDomingo: inicioBase.getDay() === 0 && inicioLunes.getDay() === 1
+      };
+    }
+
+    return null;
+  };
+
+  const aplicarPeriodoConIntervaloValido = (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
+    const intervalo = encontrarInicioValidoPeriodo(periodo);
+    if (!intervalo) {
+      setMensajeAutoPeriodo('No se encontró una fecha de inicio válida dentro del período seleccionado.');
+      return;
+    }
+
+    setPeriodoSeleccionado(periodo);
+    setFilterPeriodo(periodo.id ?? null);
+    handleFechaInicioChange(intervalo.inicio);
+
+    if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
+      setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
+    } else {
+      setMensajeAutoPeriodo(null);
+    }
+  };
+
+  const resolverPeriodoVigente = () => {
+    const hoy = getHoyColombia();
+    const hoyISO = formatFechaLocalYYYYMMDD(hoy);
+
+    const activo = periodos.find((p) => p.activo);
+    if (activo) return activo;
+
+    const contieneHoy = periodos.find((p) => p.fecha_inicio <= hoyISO && p.fecha_fin >= hoyISO);
+    if (contieneHoy) return contieneHoy;
+
+    const futuros = [...periodos].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+    return futuros[0] ?? null;
+  };
+
+  useEffect(() => {
+    if (inicializacionAplicada || periodosLoading || periodos.length === 0) return;
+
+    const vigente = resolverPeriodoVigente();
+    if (!vigente) return;
+
+    aplicarPeriodoConIntervaloValido(vigente, true);
+    setInicializacionAplicada(true);
+  }, [inicializacionAplicada, periodosLoading, periodos]);
+
+  // Integrar búsqueda de período cuando se cambian las fechas
+  useEffect(() => {
+    if (filterFechaInicio && filterFechaFin) {
+      buscarPeriodoPorRangoFechas(filterFechaInicio, filterFechaFin).then((periodo) => {
+        if (periodo) {
+          setPeriodoSeleccionado(periodo);
+          setFilterPeriodo(periodo.id ?? null);
+        }
+      });
+    }
+  }, [buscarPeriodoPorRangoFechas, filterFechaInicio, filterFechaFin, setFilterPeriodo]);
 
   // Estados para el formulario de solicitud
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
@@ -1208,6 +1319,57 @@ export default function ConsultaEspacios() {
             </Alert>
           )}
 
+          {mensajeAutoPeriodo && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{mensajeAutoPeriodo}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Mensaje de error de búsqueda de período */}
+          {errorBusquedaPeriodo && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{errorBusquedaPeriodo}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Información del período seleccionado */}
+          {periodoSeleccionado && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg p-3">
+              <p className="text-green-700 dark:text-green-300 text-sm">
+                <strong>Período académico encontrado:</strong> {periodoSeleccionado.nombre || 'Período'} ({new Date(periodoSeleccionado.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })} - {new Date(periodoSeleccionado.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })})
+              </p>
+            </div>
+          )}
+
+          {/* Selector de períodos disponibles */}
+          {periodos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-slate-600">Seleccionar período académico</Label>
+              <Select
+                value={filterPeriodo?.toString() || periodoSeleccionado?.id?.toString() || ''}
+                onValueChange={(value) => {
+                  const periodo = periodos.find(p => p.id?.toString() === value);
+                  if (periodo) {
+                    aplicarPeriodoConIntervaloValido(periodo);
+                  }
+                }}
+              >
+                <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[250px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
+                  <SelectValue placeholder="Seleccionar período..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodos.map(periodo => (
+                    <SelectItem key={periodo.id} value={periodo.id?.toString() || ''}>
+                      {periodo.nombre || 'Período'} - {new Date(periodo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {filterFechaInicio && (
             <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3">
               <p className="text-blue-700 dark:text-blue-300 text-sm">
@@ -1222,7 +1384,16 @@ export default function ConsultaEspacios() {
       {/* Vista Tarjetas */}
       {vistaActual === 'tarjetas' && !espacioSeleccionado && (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
-          {paginatedEspacios.map(espacio => {
+          {loading && (
+            <div className="col-span-full flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 py-10">
+              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-medium">Cargando espacios...</span>
+              </div>
+            </div>
+          )}
+
+          {!loading && paginatedEspacios.map(espacio => {
             return (
               <motion.div
                 key={espacio.id}
@@ -1428,11 +1599,19 @@ export default function ConsultaEspacios() {
                 </CardHeader>
                 <CardContent>
                   <div 
-                    className="overflow-x-auto"
+                    className="overflow-x-auto relative"
                     onMouseLeave={() => {
                       if (isDragging) finalizarSeleccion();
                     }}
                   >
+                    {(horariosLoading || loading) && (
+                      <div className="absolute inset-0 z-30 bg-white/70 dark:bg-slate-900/70 backdrop-blur-[1px] flex items-center justify-center rounded-md">
+                        <div className="flex flex-col items-center gap-2 text-slate-700 dark:text-slate-200">
+                          <RefreshCw className="w-6 h-6 animate-spin" />
+                          <span className="text-xs font-medium">Cargando horarios...</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
