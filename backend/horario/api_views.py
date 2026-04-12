@@ -295,3 +295,78 @@ def rechazar_solicitud_espacio(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@csrf_exempt
+def horarios_por_periodo(request):
+    """Lista todos los horarios asociados a un período académico específico.
+    
+    Query params:
+    - periodo_id: int (requerido) - ID del período académico
+    - estado: str (opcional) - Filtro de estado ('aprobado', 'pendiente', etc.)
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        periodo_id = request.GET.get('periodo_id')
+        estado = request.GET.get('estado')
+
+        if not periodo_id:
+            return JsonResponse({'error': 'periodo_id es requerido'}, status=400)
+
+        from periodos.models import PeriodoAcademico
+        from grupos.models import Grupo
+
+        try:
+            periodo = PeriodoAcademico.objects.get(id=periodo_id)
+        except PeriodoAcademico.DoesNotExist:
+            return JsonResponse({'error': 'Período no encontrado'}, status=404)
+
+        grupos_del_periodo = Grupo.objects.filter(periodo=periodo).values_list('id', flat=True)
+
+        horarios_qs = Horario.objects.filter(
+            grupo_id__in=grupos_del_periodo
+        ).select_related(
+            'grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa'
+        )
+
+        if estado:
+            horarios_qs = horarios_qs.filter(estado=estado)
+
+        lst = []
+        for h in horarios_qs:
+            lst.append({
+                'id': h.id,
+                'grupo_id': h.grupo.id,
+                'grupo_nombre': h.grupo.nombre,
+                'periodo_id': h.grupo.periodo.id,
+                'periodo_nombre': h.grupo.periodo.nombre,
+                'programa_id': h.grupo.programa.id,
+                'programa_nombre': h.grupo.programa.nombre,
+                'semestre': h.grupo.semestre,
+                'asignatura_id': h.asignatura.id,
+                'asignatura_nombre': h.asignatura.nombre,
+                'docente_id': h.docente.id if h.docente else None,
+                'docente_nombre': h.docente.nombre if h.docente else 'Sin asignar',
+                'espacio_id': h.espacio.id,
+                'espacio_nombre': h.espacio.nombre,
+                'dia_semana': h.dia_semana,
+                'hora_inicio': str(h.hora_inicio),
+                'hora_fin': str(h.hora_fin),
+                'cantidad_estudiantes': h.cantidad_estudiantes,
+                'estado': h.estado,
+            })
+
+        return JsonResponse({
+            'periodo_id': periodo.id,
+            'periodo_nombre': periodo.nombre,
+            'fecha_inicio': str(periodo.fecha_inicio),
+            'fecha_fin': str(periodo.fecha_fin),
+            'activo': periodo.activo,
+            'total_horarios': len(lst),
+            'horarios': lst
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+

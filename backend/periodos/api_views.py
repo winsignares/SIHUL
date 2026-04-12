@@ -129,3 +129,67 @@ class PeriodoAcademicoActivoAPIView(APIView):
         if not periodo:
             return Response({'error': 'No hay período activo'}, status=status.HTTP_404_NOT_FOUND)
         return Response(PeriodoAcademicoSerializer(periodo).data, status=status.HTTP_200_OK)
+
+
+class PeriodoPorRangoFechasAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """
+        Busca un período académico que se encuentre dentro de un rango de fechas específico.
+        
+        Query params:
+        - fecha_inicio: str (requerido) - Fecha inicio del rango a buscar (YYYY-MM-DD)
+        - fecha_fin: str (requerido) - Fecha fin del rango a buscar (YYYY-MM-DD)
+        
+        Retorna:
+        - El período encontrado que intersecta con el rango especificado
+        - Error 404 si no hay período en ese rango
+        """
+        fecha_inicio_str = request.query_params.get('fecha_inicio')
+        fecha_fin_str = request.query_params.get('fecha_fin')
+
+        if not fecha_inicio_str or not fecha_fin_str:
+            return Response(
+                {'error': 'fecha_inicio y fecha_fin son requeridos (formato YYYY-MM-DD)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            fecha_inicio = datetime.date.fromisoformat(fecha_inicio_str)
+            fecha_fin = datetime.date.fromisoformat(fecha_fin_str)
+        except ValueError:
+            return Response(
+                {'error': 'Formato de fecha inválido. Use YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if fecha_fin < fecha_inicio:
+            return Response(
+                {'error': 'fecha_fin debe ser posterior o igual a fecha_inicio'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from django.db.models import Q
+
+        periodos = PeriodoAcademico.objects.filter(
+            Q(fecha_inicio__lte=fecha_fin) & Q(fecha_fin__gte=fecha_inicio)
+        ).order_by('fecha_inicio')
+
+        if not periodos.exists():
+            return Response(
+                {
+                    'error': f'No hay período académico en el rango {fecha_inicio_str} a {fecha_fin_str}',
+                    'fecha_inicio': fecha_inicio_str,
+                    'fecha_fin': fecha_fin_str,
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = PeriodoAcademicoSerializer(periodos, many=True)
+        return Response({
+            'mensaje': f'Se encontraron {periodos.count()} período(s) en el rango especificado',
+            'fecha_inicio_busqueda': fecha_inicio_str,
+            'fecha_fin_busqueda': fecha_fin_str,
+            'periodos': serializer.data
+        }, status=status.HTTP_200_OK)
