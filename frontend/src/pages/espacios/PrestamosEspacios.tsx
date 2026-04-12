@@ -15,7 +15,8 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function PrestamosEspacios() {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, hasEditPermission } = useAuth();
+  const puedeGestionarPrestamos = hasEditPermission('Préstamos de Espacios');
   const {
     searchTerm,
     setSearchTerm,
@@ -223,9 +224,11 @@ export default function PrestamosEspacios() {
                       prestamo.email.toLowerCase() === user.correo.toLowerCase()
                     );
                     const puedeEditarEliminar =
-                      prestamo.estado === 'pendiente' ||
-                      prestamo.estado === 'rechazado' ||
-                      solicitanteEsAdmin;
+                      puedeGestionarPrestamos && (
+                        prestamo.estado === 'pendiente' ||
+                        prestamo.estado === 'rechazado' ||
+                        solicitanteEsAdmin
+                      );
 
                     return (
                   <div className="flex items-start justify-between gap-6">
@@ -390,7 +393,7 @@ export default function PrestamosEspacios() {
 
                           <div className="space-y-6 py-4">
                             {(() => {
-                              const prestamoActual = modoEdicion && prestamoEditando && prestamoEditando.id === prestamo.id
+                              const prestamoActual = puedeGestionarPrestamos && modoEdicion && prestamoEditando && prestamoEditando.id === prestamo.id
                                 ? prestamoEditando
                                 : prestamo;
 
@@ -445,7 +448,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha</Label>
-                                  {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <Input
                                       type="date"
                                       value={prestamoEditando.fecha}
@@ -458,7 +461,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Horario</Label>
-                                  {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <div className="flex gap-2 items-center mt-1">
                                       <Input
                                         type="time"
@@ -478,7 +481,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Número de Asistentes</Label>
-                                  {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <Input
                                       type="number"
                                       min="1"
@@ -500,7 +503,7 @@ export default function PrestamosEspacios() {
                                 Repetición
                               </h3>
                               <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700 space-y-4">
-                                {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                   <>
                                     <div className="flex items-center gap-3">
                                       <Checkbox
@@ -657,7 +660,7 @@ export default function PrestamosEspacios() {
                                 Motivo de la Solicitud
                               </h3>
                               <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                {modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                   <Textarea
                                     value={prestamoEditando.motivo}
                                     onChange={(e) => setPrestamoEditando({ ...prestamoEditando, motivo: e.target.value })}
@@ -717,7 +720,7 @@ export default function PrestamosEspacios() {
                             )}
 
                             {/* Acciones (solo para pendientes) */}
-                            {prestamoActual.estado === 'pendiente' && !modoEdicion && (
+                            {puedeGestionarPrestamos && prestamoActual.estado === 'pendiente' && !modoEdicion && (
                               <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                                 <Label htmlFor="comentarios">Comentarios (opcional para aprobar, obligatorio para rechazar)</Label>
                                 <Textarea
@@ -746,7 +749,7 @@ export default function PrestamosEspacios() {
                                 </div>
                               </div>
                             )}
-                            {modoEdicion && prestamoEditando?.id === prestamo.id && (
+                            {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id && (
                               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                                 <Button onClick={cancelarEdicion} variant="outline">
                                   <XIcon className="w-4 h-4 mr-2" />
