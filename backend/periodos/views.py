@@ -97,6 +97,8 @@ def list_periodos(request):
     if request.method == 'GET':
         try:
             from horario.models import Horario
+
+            PeriodoAcademico.sincronizar_activos_por_fecha()
             
             items = PeriodoAcademico.objects.all()
             lst = []
@@ -134,6 +136,7 @@ def get_periodo_activo(request):
     """Obtiene el período académico activo actual"""
     if request.method == 'GET':
         try:
+            PeriodoAcademico.sincronizar_activos_por_fecha()
             periodo = PeriodoAcademico.objects.filter(activo=True).first()
             if not periodo:
                 return JsonResponse({"error": "No hay período académico activo"}, status=404)

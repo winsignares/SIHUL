@@ -14,6 +14,10 @@ class PeriodoAcademicoListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = PeriodoAcademicoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        PeriodoAcademico.sincronizar_activos_por_fecha()
+        return super().get_queryset()
+
 
 class PeriodoAcademicoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = PeriodoAcademico.objects.all()
@@ -120,6 +124,7 @@ class PeriodoAcademicoActivoAPIView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        PeriodoAcademico.sincronizar_activos_por_fecha()
         periodo = PeriodoAcademico.objects.filter(activo=True).order_by('-id').first()
         if not periodo:
             return Response({'error': 'No hay período activo'}, status=status.HTTP_404_NOT_FOUND)
