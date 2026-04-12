@@ -252,13 +252,20 @@ export default function Login() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.58, duration: 0.5 }}
                 >
-                  <Button
+                  <button
                     type="button"
                     onClick={handleMicrosoftLogin}
-                    className="w-full h-11 bg-white text-slate-800 border-2 border-slate-200 hover:border-blue-500 hover:text-blue-700 rounded-lg transition-all duration-300 font-semibold"
+                    className="w-full h-12 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-slate-400 rounded-lg transition-all duration-300 font-semibold text-base flex items-center justify-center gap-3 shadow-sm hover:shadow-md"
                   >
-                    Iniciar sesion con Microsoft
-                  </Button>
+                    {/* Microsoft Logo */}
+                    <div className="w-5 h-5 grid grid-cols-2 grid-rows-2 gap-0.5">
+                      <div className="bg-[#F25022]"></div>
+                      <div className="bg-[#7FBA00]"></div>
+                      <div className="bg-[#00A4EF]"></div>
+                      <div className="bg-[#FFB900]"></div>
+                    </div>
+                    Iniciar sesión con Microsoft
+                  </button>
                 </motion.div>
 
                 {/* Acceso Público centrado */}
