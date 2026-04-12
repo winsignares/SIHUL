@@ -98,7 +98,7 @@ export function useConsultaEspaciosFiltros() {
     setFilterFechaFin(formatFechaLocalYYYYMMDD(getSabadoSemanaActual(fechaInicio)));
     setMensajeFiltroFecha({
       tipo: 'info',
-      texto: 'Rango actualizado. Puedes ajustar la fecha fin si necesitas un día posterior dentro del rango permitido.'
+      texto: 'Rango actualizado. Puedes ajustar la fecha manualmente si necesitas consultar un intervalo específico.'
     });
   }, []);
 

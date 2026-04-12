@@ -170,6 +170,7 @@ export default function ConsultaEspacios() {
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState<typeof periodos[0] | null>(null);
   const [mensajeAutoPeriodo, setMensajeAutoPeriodo] = useState<string | null>(null);
   const [inicializacionAplicada, setInicializacionAplicada] = useState(false);
+  const puedeEditarDisponibilidad = hasEditPermission('Disponibilidad de Espacios');
 
   const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
     const hoy = getHoyColombia();
@@ -796,7 +797,7 @@ export default function ConsultaEspacios() {
 
     try {
       // Verificar si el usuario tiene permiso de EDITAR para auto-aprobar
-      const puedeAutoAprobar = hasEditPermission('Disponibilidad de Espacios');
+      const puedeAutoAprobar = puedeEditarDisponibilidad;
       const estadoInicial: 'Aprobado' | 'Pendiente' = puedeAutoAprobar ? 'Aprobado' : 'Pendiente';
 
       const payloadBase = {
@@ -1582,19 +1583,21 @@ export default function ConsultaEspacios() {
                         </Badge>
                       </div>
                     </div>
-                    <Button
-                      variant={editModeEnabled ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setEditModeEnabled(!editModeEnabled)}
-                      className={`${editModeEnabled
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white'
-                        : 'border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950'
-                      }`}
-                      title={editModeEnabled ? 'Deshabilitar edición de horarios' : 'Habilitar edición de horarios'}
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      {editModeEnabled ? 'Edición ON' : 'Editar'}
-                    </Button>
+                    {puedeEditarDisponibilidad && (
+                      <Button
+                        variant={editModeEnabled ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditModeEnabled(!editModeEnabled)}
+                        className={`${editModeEnabled
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white'
+                          : 'border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950'
+                        }`}
+                        title={editModeEnabled ? 'Deshabilitar edición de horarios' : 'Habilitar edición de horarios'}
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        {editModeEnabled ? 'Edición ON' : 'Editar'}
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
