@@ -107,8 +107,9 @@ const toFrontendPrestamo = (prestamo: PrestamoEspacioApi): PrestamoEspacio => ({
 });
 
 const buildRecurrencePayload = (prestamo: Partial<PrestamoEspacio>) => {
+  // Si no es recurrente, retornar explícitamente con es_recurrente: false
   if (!prestamo.es_recurrente) {
-    return {};
+    return { es_recurrente: false };
   }
 
   const payload: Record<string, unknown> = {

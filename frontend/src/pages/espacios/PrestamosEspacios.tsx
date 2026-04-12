@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../../share/checkbox';
 import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Toaster } from '../../share/sonner';
 import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
@@ -855,8 +854,6 @@ export default function PrestamosEspacios() {
           </CardContent>
         </Card>
       )}
-
-      <Toaster />
     </div>
   );
 }

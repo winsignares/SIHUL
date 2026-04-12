@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 
 type Theme = 'light' | 'dark';
 
@@ -28,8 +29,25 @@ const notifications: Array<Notification & NotificationOptions> = [];
 export function showNotification(notification: Notification, options?: NotificationOptions) {
   const payload = { ...notification, ...(options || {}) } as Notification & NotificationOptions;
   notifications.push(payload);
-  // Aquí puedes agregar lógica para mostrar la notificación en pantalla
-  console.log(`Notification: ${payload.type} - ${payload.message}` + (payload.description ? ` (${payload.description})` : ''));
+  
+  // Mostrar notificación usando sonner toast
+  const message = payload.description ? `${payload.message}: ${payload.description}` : payload.message;
+  
+  switch (payload.type) {
+    case 'success':
+      toast.success(message, { duration: payload.duration || 3000 });
+      break;
+    case 'error':
+      toast.error(message, { duration: payload.duration || 4000 });
+      break;
+    case 'warning':
+      toast.warning(message, { duration: payload.duration || 3500 });
+      break;
+    case 'info':
+    default:
+      toast.info(message, { duration: payload.duration || 3000 });
+      break;
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

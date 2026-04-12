@@ -235,8 +235,6 @@ export function usePrestamosEspacios() {
             }
 
             // Recargar datos para obtener el estado actualizado
-            await loadData({ force: true });
-
             setVerSolicitudDialog(null);
             setComentariosAccion('');
 
@@ -244,6 +242,8 @@ export function usePrestamosEspacios() {
                 message: '✅ Solicitud aprobada correctamente',
                 type: 'success'
             });
+
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al aprobar solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -338,8 +338,6 @@ export function usePrestamosEspacios() {
             }
 
             // Recargar datos para obtener el estado actualizado
-            await loadData({ force: true });
-
             setVerSolicitudDialog(null);
             setComentariosAccion('');
 
@@ -347,6 +345,8 @@ export function usePrestamosEspacios() {
                 message: '✅ Solicitud rechazada correctamente',
                 type: 'success'
             });
+
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al rechazar solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -475,12 +475,14 @@ export function usePrestamosEspacios() {
                 });
             }
 
-            await loadData({ force: true });
-            cancelarEdicion();
             showNotification({
                 message: '✅ Solicitud actualizada correctamente',
                 type: 'success'
             });
+
+            setVerSolicitudDialog(null);
+            cancelarEdicion();
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al actualizar solicitud: ${getErrorMessage(error, 'Error desconocido')}`,
@@ -508,8 +510,6 @@ export function usePrestamosEspacios() {
                 await prestamoService.eliminarPrestamo(numericId);
             }
 
-            await loadData({ force: true });
-
             if (verSolicitudDialog === id) {
                 setVerSolicitudDialog(null);
             }
@@ -519,6 +519,8 @@ export function usePrestamosEspacios() {
                 message: '✅ Solicitud eliminada correctamente',
                 type: 'success'
             });
+
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al eliminar solicitud: ${getErrorMessage(error, 'Error desconocido')}`,
