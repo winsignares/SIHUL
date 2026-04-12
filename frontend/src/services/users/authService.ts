@@ -1,5 +1,10 @@
 import { apiClient } from '../../core/apiClient';
 
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+const BACKEND_BASE_URL = rawApiUrl
+  ? rawApiUrl.replace(/\/api$/, '')
+  : 'http://localhost:8000';
+
 // Interfaces
 export interface Rol {
   id: number;
@@ -149,6 +154,46 @@ export interface SessionAuthStateResponse {
   }>;
 }
 
+export interface SessionUserResponse {
+  id: number;
+  nombre: string;
+  correo: string;
+  rol: {
+    id: number;
+    nombre: string;
+    descripcion: string;
+  } | null;
+  facultad: {
+    id: number;
+    nombre: string;
+  } | null;
+  sede: {
+    id: number;
+    nombre: string;
+    seccional_id?: number | null;
+    seccional_ciudad?: string | null;
+    direccion?: string;
+    ciudad?: string;
+  } | null;
+  componentes: Array<{
+    id: number;
+    nombre: string;
+    descripcion: string;
+    permiso: string;
+  }>;
+  espacios_permitidos: Array<{
+    id: number;
+    tipo: string;
+    capacidad: number;
+    ubicacion: string;
+    disponible: boolean;
+    sede_id: number;
+    sede_nombre: string;
+  }>;
+  token: string;
+  signature?: string;
+}
+
 const resolveSedeId = (usuario: CreateUsuarioPayload): number | undefined => {
   if (usuario.sede_id !== null && usuario.sede_id !== undefined) {
     return usuario.sede_id;
@@ -203,6 +248,10 @@ const toFrontendUsuario = (usuario: UsuarioApi): Usuario => {
  * Servicio de autenticación y gestión de usuarios
  */
 export const authService = {
+  getMicrosoftLoginUrl: (): string => {
+    return `${BACKEND_BASE_URL}/accounts/microsoft/login/`;
+  },
+
   /**
    * Inicia sesión con el backend
    */
@@ -223,7 +272,22 @@ export const authService = {
    * Cierra la sesión del usuario
    */
   logout: async (): Promise<{ message: string }> => {
-    return apiClient.get('/usuarios/logout/');
+    return apiClient.get('/auth/logout/');
+  },
+
+  /**
+   * Obtiene el usuario autenticado desde la sesión backend (OAuth o login clásico).
+   */
+  getAuthenticatedUser: async (): Promise<SessionUserResponse> => {
+    const response = await apiClient.get<SessionUserResponse>('/auth/user/', {
+      requiresAuth: false,
+    });
+
+    if (response?.sede && !response.sede.ciudad && response.sede.seccional_ciudad) {
+      response.sede.ciudad = response.sede.seccional_ciudad;
+    }
+
+    return response;
   },
 
   /**

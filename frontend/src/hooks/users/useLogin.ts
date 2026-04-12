@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/users/authService';
 
 export function useLogin() {
     const [email, setEmail] = useState('');
@@ -46,6 +47,10 @@ export function useLogin() {
         navigate('/public/dashboard', { replace: true });
     };
 
+    const handleMicrosoftLogin = () => {
+        window.location.href = authService.getMicrosoftLoginUrl();
+    };
+
     useEffect(() => {
         if (isAuthenticated && role && components.length > 0 && !hasNavigated) {
             console.log('[useLogin] Usuario autenticado, redirigiendo...', { role, components });
@@ -72,6 +77,7 @@ export function useLogin() {
         setIsHovered,
         isLoading,
         handleSubmit,
-        handlePublicAccess
+        handlePublicAccess,
+        handleMicrosoftLogin
     };
 }

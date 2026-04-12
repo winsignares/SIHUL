@@ -22,7 +22,8 @@ export default function Login() {
     setIsHovered,
     isLoading,
     handleSubmit,
-    handlePublicAccess
+    handlePublicAccess,
+    handleMicrosoftLogin
   } = useLogin();
 
   return (
@@ -243,6 +244,20 @@ export default function Login() {
                       {isLoading ? 'INICIANDO...' : 'INICIAR SESIÓN'}
                       {!isLoading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                     </span>
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.58, duration: 0.5 }}
+                >
+                  <Button
+                    type="button"
+                    onClick={handleMicrosoftLogin}
+                    className="w-full h-11 bg-white text-slate-800 border-2 border-slate-200 hover:border-blue-500 hover:text-blue-700 rounded-lg transition-all duration-300 font-semibold"
+                  >
+                    Iniciar sesion con Microsoft
                   </Button>
                 </motion.div>
 
