@@ -58,7 +58,7 @@ export function useEspaciosFisicos() {
     });
 
     // Estado para recursos
-    const [recursoSeleccionado, setRecursoSeleccionado] = useState('');
+    const [recursoSeleccionado, setRecursoSeleccionado] = useState<number | null>(null);
     const [recursosAgregados, setRecursosAgregados] = useState<Recurso[]>([]);
     const [mostrandoRecursos, setMostrandoRecursos] = useState(true);
 
@@ -413,7 +413,7 @@ export function useEspaciosFisicos() {
             estado: 'Disponible'
         });
         setRecursosAgregados([]);
-        setRecursoSeleccionado('');
+        setRecursoSeleccionado(null);
         setMostrandoRecursos(true);
     };
 
