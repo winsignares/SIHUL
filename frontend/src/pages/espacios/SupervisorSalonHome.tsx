@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { useAperturaCierre } from '../../hooks/espacios/useAperturaCierre';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import CountdownTimer from '../../components/espacios/CountdownTimer';
@@ -92,9 +92,7 @@ export default function SupervisorSalonHome() {
 
     try {
       const result = await cerrarSalon(espacioId);
-      if (result.ok) {
-        toast.success(`✅ ${nombreEspacio} cambio de estado aplicado`);
-      } else if (result.message && result.status !== 400) {
+      if (!result.ok && result.message && result.status !== 400) {
         toast.error(`❌ Error al cerrar ${nombreEspacio}: ${result.message}`);
       }
     } finally {
@@ -616,7 +614,6 @@ export default function SupervisorSalonHome() {
         </DialogContent>
       </Dialog>
 
-      <Toaster />
     </div>
   );
 }

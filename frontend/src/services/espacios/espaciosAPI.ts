@@ -244,12 +244,18 @@ export const espacioService = {
      */
     cambiarApertura: async (espacioId: number, estaAbierto: boolean): Promise<EspacioFisico> => {
         if (estaAbierto === false) {
-            // Usar endpoint específico de cierre que valida clase en curso
             return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/cerrar/`, {});
         } else {
-            // Usar PATCH genérico para abrir
-            return apiClient.patch<EspacioFisico>(`/espacios/${espacioId}/`, { esta_abierto: estaAbierto });
+            return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/abrir/`, {});
         }
+    },
+
+    abrirSalon: async (espacioId: number): Promise<EspacioFisico> => {
+        return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/abrir/`, {});
+    },
+
+    cerrarSalon: async (espacioId: number): Promise<EspacioFisico> => {
+        return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/cerrar/`, {});
     }
 };
 

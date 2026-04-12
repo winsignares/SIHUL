@@ -32,6 +32,10 @@ def get_estado_espacio(request, espacio_id=None):
     return api_views.get_estado_espacio(request, espacio_id=espacio_id)
 
 
+def abrir_espacio(request, espacio_id=None):
+    return api_views.abrir_espacio(request, espacio_id=espacio_id)
+
+
 def cerrar_espacio(request, espacio_id=None):
     return api_views.cerrar_espacio(request, espacio_id=espacio_id)
 

@@ -231,6 +231,11 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
         """Cierra un espacio validando que no haya clase en curso."""
         return espacios_api.cerrar_espacio(request._request, espacio_id=pk)
 
+    @action(detail=True, methods=['post'], url_path='abrir')
+    def abrir_espacio(self, request, pk=None):
+        """Abre un espacio marcando su estado fisico como abierto."""
+        return espacios_api.abrir_espacio(request._request, espacio_id=pk)
+
     @action(detail=True, methods=['get'], url_path='horario')
     def horario(self, request, pk=None):
         return espacios_api.get_horario_espacio(request._request, espacio_id=pk)

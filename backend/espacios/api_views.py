@@ -337,24 +337,64 @@ def proximos_apertura_cierre(request):
         fecha_actual = ahora.date()
         dia_actual = get_dia_semana_actual()
 
-        espacios_permitidos = EspacioPermitido.objects.filter(usuario_id=usuario_id).select_related(
-            'espacio', 'espacio__sede', 'espacio__tipo'
-        )
+        try:
+            usuario = Usuario.objects.select_related('rol').get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
-        if not espacios_permitidos.exists():
-            return JsonResponse(
-                {
-                    'espacios': [],
-                    'horaActual': hora_actual.strftime('%H:%M'),
-                    'diaActual': dia_actual,
-                    'fechaActual': fecha_actual.strftime('%Y-%m-%d'),
-                },
-                status=200,
+        role_name = (usuario.rol.nombre if usuario.rol else '').lower()
+        if role_name.startswith('supervisor'):
+            espacios_permitidos = EspacioPermitido.objects.filter(usuario_id=usuario_id).select_related(
+                'espacio', 'espacio__sede', 'espacio__tipo'
             )
 
-        espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
-        espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
-        espacios_data = {}
+            espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
+
+            if not espacios_permitidos.exists():
+                return JsonResponse(
+                    {
+                        'espacios': [],
+                        'horaActual': hora_actual.strftime('%H:%M'),
+                        'diaActual': dia_actual,
+                        'fechaActual': fecha_actual.strftime('%Y-%m-%d'),
+                    },
+                    status=200,
+                )
+
+            espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+            espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
+        else:
+            espacios_qs = _filtrar_espacios_por_sede_usuario(
+                request,
+                EspacioFisico.objects.select_related('sede', 'tipo')
+            )
+            espacios_qs = espacios_qs.filter(estado='Disponible')
+            espacios = list(espacios_qs)
+            if not espacios:
+                return JsonResponse(
+                    {
+                        'espacios': [],
+                        'horaActual': hora_actual.strftime('%H:%M'),
+                        'diaActual': dia_actual,
+                        'fechaActual': fecha_actual.strftime('%Y-%m-%d'),
+                    },
+                    status=200,
+                )
+
+            espacios_ids = [espacio.id for espacio in espacios]
+            espacios_map = {espacio.id: espacio for espacio in espacios}
+        espacios_data = {
+            espacio.id: {
+                'idEspacio': espacio.id,
+                'nombreEspacio': espacio.nombre,
+                'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
+                'piso': espacio.ubicacion or 'No especificado',
+                'esta_abierto': espacio.esta_abierto,
+                'estadoActual': espacio.estado,
+                'horarios': [],
+            }
+            for espacio in espacios_map.values()
+        }
 
         horarios = Horario.objects.filter(
             espacio_id__in=espacios_ids,
@@ -387,19 +427,15 @@ def proximos_apertura_cierre(request):
                 tiempo_restante_segundos = segundos_hasta_fin
                 minutos_restantes = segundos_hasta_fin // 60
                 segundos_restantes = segundos_hasta_fin % 60
+            else:
+                # Mantener bloques ya terminados para que frontend calcule
+                # ventana de cierre (+10 min desde la clase/prestamo anterior).
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = 0
+                minutos_restantes = 0
+                segundos_restantes = 0
 
-            if proxima_accion and tiempo_restante_segundos:
-                if espacio.id not in espacios_data:
-                    espacios_data[espacio.id] = {
-                        'idEspacio': espacio.id,
-                        'nombreEspacio': espacio.nombre,
-                        'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
-                        'piso': espacio.ubicacion or 'No especificado',
-                        'esta_abierto': espacio.esta_abierto,
-                        'estadoActual': espacio.estado,
-                        'horarios': [],
-                    }
-
+            if proxima_accion is not None:
                 espacios_data[espacio.id]['horarios'].append(
                     {
                         'tipoUso': 'Clase',
@@ -446,19 +482,15 @@ def proximos_apertura_cierre(request):
                 tiempo_restante_segundos = segundos_hasta_fin
                 minutos_restantes = segundos_hasta_fin // 60
                 segundos_restantes = segundos_hasta_fin % 60
+            else:
+                # Mantener bloques ya terminados para que frontend calcule
+                # ventana de cierre (+10 min desde la clase/prestamo anterior).
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = 0
+                minutos_restantes = 0
+                segundos_restantes = 0
 
-            if proxima_accion and tiempo_restante_segundos:
-                if espacio.id not in espacios_data:
-                    espacios_data[espacio.id] = {
-                        'idEspacio': espacio.id,
-                        'nombreEspacio': espacio.nombre,
-                        'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
-                        'piso': espacio.ubicacion or 'No especificado',
-                        'esta_abierto': espacio.esta_abierto,
-                        'estadoActual': espacio.estado,
-                        'horarios': [],
-                    }
-
+            if proxima_accion is not None:
                 espacios_data[espacio.id]['horarios'].append(
                     {
                         'tipoUso': 'Préstamo',
@@ -636,6 +668,78 @@ def get_horario_espacio(request, espacio_id=None):
             )
 
         return JsonResponse({'horario': lista_horarios}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def abrir_espacio(request, espacio_id=None):
+    """Abre un espacio marcando esta_abierto en True."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Solo se permite POST'}, status=405)
+
+    if espacio_id is None:
+        return JsonResponse({'error': 'El espacio_id es requerido'}, status=400)
+
+    try:
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+        espacio.esta_abierto = True
+        espacio.save(update_fields=['esta_abierto'])
+
+        return JsonResponse(
+            {
+                'message': f"Espacio '{espacio.nombre}' abierto correctamente",
+                'espacio_id': espacio.id,
+                'esta_abierto': espacio.esta_abierto,
+            },
+            status=200,
+        )
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({'error': 'Espacio no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def cerrar_espacio(request, espacio_id=None):
+    """Cierra un espacio validando que no haya clase en curso."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Solo se permite POST'}, status=405)
+
+    if espacio_id is None:
+        return JsonResponse({'error': 'El espacio_id es requerido'}, status=400)
+
+    try:
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+
+        ahora = datetime.now()
+        hora_actual = ahora.time()
+        dia_actual = get_dia_semana_actual()
+
+        clase_en_curso = Horario.objects.filter(
+            espacio_id=espacio_id,
+            dia_semana=dia_actual,
+            estado='aprobado',
+            hora_inicio__lte=hora_actual,
+            hora_fin__gt=hora_actual,
+        ).exists()
+
+        if clase_en_curso:
+            return JsonResponse({'error': 'No se puede cerrar el espacio mientras hay una clase en curso'}, status=400)
+
+        espacio.esta_abierto = False
+        espacio.save(update_fields=['esta_abierto'])
+
+        return JsonResponse(
+            {
+                'message': f"Espacio '{espacio.nombre}' cerrado correctamente",
+                'espacio_id': espacio.id,
+                'esta_abierto': espacio.esta_abierto,
+            },
+            status=200,
+        )
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({'error': 'Espacio no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
