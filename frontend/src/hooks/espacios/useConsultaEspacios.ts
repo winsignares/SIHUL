@@ -29,7 +29,7 @@ export function useConsultaEspacios() {
     user: user
       ? {
           id: user.id,
-          rol: String(user.rol),
+          rol: typeof user.rol === 'string' ? user.rol : String(user.rol?.nombre ?? ''),
           facultad: user.facultad ? { id: user.facultad.id ?? null } : null
         }
       : undefined,

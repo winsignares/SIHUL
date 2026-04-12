@@ -169,6 +169,15 @@ export const prestamoService = {
   },
 
   /**
+   * Obtiene la lista de préstamos de los espacios permitidos para un supervisor
+   */
+  listarPrestamosSupervisor: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
+    const prestamosApi = await apiClient.get<PrestamoEspacioApi[]>('/prestamos/supervisor/espacios-prestamos/');
+    const prestamos = prestamosApi.map(toFrontendPrestamo);
+    return { prestamos };
+  },
+
+  /**
    * Obtiene la lista de préstamos de un usuario específico
    * @param usuarioId ID del usuario
    */

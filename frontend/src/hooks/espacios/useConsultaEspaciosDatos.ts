@@ -136,7 +136,9 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
 
         let espaciosConHorarios;
 
-        if (user?.id && String(user.rol) === 'supervisor_general') {
+        const esSupervisor = String(user?.rol ?? '').toLowerCase().startsWith('supervisor');
+
+        if (user?.id && esSupervisor) {
           const response = await espacioHorariosService.getSupervisorDisponiblesHorarios(user.id);
           espaciosConHorarios = response.espacios;
         } else {

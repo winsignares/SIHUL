@@ -89,8 +89,19 @@ export function usePrestamosEspacios() {
 
             setLoading(true);
 
+            // Detectar si es supervisor para usar el endpoint específico
+            const rol = user?.rol
+                ? typeof user.rol === 'string'
+                    ? user.rol
+                    : String(user.rol?.nombre ?? '')
+                : '';
+            const esSupervisor = rol.toLowerCase().startsWith('supervisor');
+
             // Cargar TODOS los préstamos (autenticados + públicos) desde la API combinada
-            const prestamosResponse = await prestamoService.listarTodosPrestamosAdmin();
+            // Si es supervisor, usar endpoint específico de prestamos de espacios permitidos
+            const prestamosResponse = esSupervisor
+                ? await prestamoService.listarPrestamosSupervisor()
+                : await prestamoService.listarTodosPrestamosAdmin();
 
             // Transformar datos del backend al formato UI
             const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
