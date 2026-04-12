@@ -2,6 +2,7 @@ import { Input } from '../../share/input';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/dialog';
 import { Label } from '../../share/label';
@@ -2258,20 +2259,20 @@ export default function ConsultaEspacios() {
                 Recursos Adicionales (Opcional)
               </h3>
               <div className="space-y-4 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50">
-                <div className="flex items-center justify-between">
+                <div>
                   <Label className="text-sm font-medium">Agregar recursos necesarios</Label>
-                  <Select onValueChange={(v) => agregarRecurso(parseInt(v))}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Agregar recurso..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {recursosDisponibles.map((recurso) => (
-                        <SelectItem key={recurso.id} value={recurso.id!.toString()}>
-                          {recurso.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-2">
+                    <SearchableSelect
+                      items={recursosDisponibles.filter(r => !recursosSeleccionados.some(s => s.recurso_id === r.id))}
+                      value={null}
+                      onSelect={(recurso) => agregarRecurso(recurso.id!)}
+                      getItemId={(recurso) => recurso.id!}
+                      getItemLabel={(recurso) => recurso.nombre}
+                      placeholder="Seleccionar recurso..."
+                      searchPlaceholder="Buscar recurso..."
+                      emptyMessage="No se encontró ningún recurso."
+                    />
+                  </div>
                 </div>
 
                 {recursosSeleccionados.length > 0 ? (
