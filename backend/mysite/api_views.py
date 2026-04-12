@@ -60,14 +60,22 @@ def _password_valida(usuario, password_plano):
 class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Seccional.objects.all()
     serializer_class = SeccionalSerializer
-    seccional_lookup = None
+    seccional_lookup = 'id'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_queryset(self):
-        if self.request.method == 'GET':
-            return Seccional.objects.all()
-
         user = self.get_current_user()
+
+        if self.request.method == 'GET':
+            if user and is_admin_global(user):
+                return Seccional.objects.all()
+
+            seccional = self.get_user_seccional()
+            if seccional is None:
+                return Seccional.objects.none()
+
+            return Seccional.objects.filter(id=seccional.id)
+
         if user and is_admin_global(user):
             return super().get_queryset()
         return Seccional.objects.none()

@@ -4,6 +4,7 @@ import { Label } from '../../share/label';
 import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, Check, Package, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
@@ -55,6 +56,19 @@ export default function EspaciosFisicos() {
 
   const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredEspacios);
+  const recursosDisponiblesParaAgregar = recursosDisponibles.filter(
+    (recurso) => recurso.id != null && !recursosAgregados.some((agregado) => agregado.id === recurso.id)
+  );
+
+  const agregarRecursoSeleccionado = () => {
+    if (recursoSeleccionado == null) return;
+
+    const recurso = recursosDisponibles.find((item) => item.id === recursoSeleccionado);
+    if (!recurso || recursosAgregados.some((item) => item.id === recurso.id)) return;
+
+    setRecursosAgregados([...recursosAgregados, recurso]);
+    setRecursoSeleccionado(null);
+  };
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -416,29 +430,26 @@ export default function EspaciosFisicos() {
               {mostrandoRecursos && (
                 <div className="space-y-3">
                   <div className="flex gap-2">
-                    <Select value={recursoSeleccionado} onValueChange={setRecursoSeleccionado}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Seleccione un recurso..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {recursosDisponibles.filter(r => !recursosAgregados.some(ra => ra.id === r.id)).map(recurso => (
-                          <SelectItem key={recurso.id} value={recurso.id?.toString() || ''}>
-                            {recurso.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <SearchableSelect
+                        items={recursosDisponiblesParaAgregar}
+                        value={recursoSeleccionado}
+                        onSelect={(recurso) => setRecursoSeleccionado(recurso.id ?? null)}
+                        getItemId={(recurso) => recurso.id ?? recurso.nombre}
+                        getItemLabel={(recurso) => recurso.nombre}
+                        getItemSecondary={(recurso) => recurso.descripcion || undefined}
+                        placeholder="Seleccione un recurso..."
+                        searchPlaceholder="Buscar recurso..."
+                        emptyMessage="No hay recursos disponibles para agregar."
+                        clearable
+                        onClear={() => setRecursoSeleccionado(null)}
+                      />
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        const recurso = recursosDisponibles.find(r => r.id?.toString() === recursoSeleccionado);
-                        if (recurso && !recursosAgregados.some(ra => ra.id === recurso.id)) {
-                          setRecursosAgregados([...recursosAgregados, recurso]);
-                          setRecursoSeleccionado('');
-                        }
-                      }}
-                      disabled={!recursoSeleccionado}
+                      onClick={agregarRecursoSeleccionado}
+                      disabled={recursoSeleccionado == null}
                       className="whitespace-nowrap"
                     >
                       <Package className="w-4 h-4 mr-2" />
@@ -634,29 +645,26 @@ export default function EspaciosFisicos() {
               {mostrandoRecursos && (
                 <div className="space-y-3">
                   <div className="flex gap-2">
-                    <Select value={recursoSeleccionado} onValueChange={setRecursoSeleccionado}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Seleccione un recurso..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {recursosDisponibles.filter(r => !recursosAgregados.some(ra => ra.id === r.id)).map(recurso => (
-                          <SelectItem key={recurso.id} value={recurso.id?.toString() || ''}>
-                            {recurso.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <SearchableSelect
+                        items={recursosDisponiblesParaAgregar}
+                        value={recursoSeleccionado}
+                        onSelect={(recurso) => setRecursoSeleccionado(recurso.id ?? null)}
+                        getItemId={(recurso) => recurso.id ?? recurso.nombre}
+                        getItemLabel={(recurso) => recurso.nombre}
+                        getItemSecondary={(recurso) => recurso.descripcion || undefined}
+                        placeholder="Seleccione un recurso..."
+                        searchPlaceholder="Buscar recurso..."
+                        emptyMessage="No hay recursos disponibles para agregar."
+                        clearable
+                        onClear={() => setRecursoSeleccionado(null)}
+                      />
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        const recurso = recursosDisponibles.find(r => r.id?.toString() === recursoSeleccionado);
-                        if (recurso && !recursosAgregados.some(ra => ra.id === recurso.id)) {
-                          setRecursosAgregados([...recursosAgregados, recurso]);
-                          setRecursoSeleccionado('');
-                        }
-                      }}
-                      disabled={!recursoSeleccionado}
+                      onClick={agregarRecursoSeleccionado}
+                      disabled={recursoSeleccionado == null}
                       className="whitespace-nowrap"
                     >
                       <Package className="w-4 h-4 mr-2" />
