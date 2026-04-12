@@ -145,15 +145,16 @@ export function SearchableSelect<T>({
 
   return (
     <div className="flex gap-2 w-full">
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={`w-full justify-between ${className}`}
-            disabled={disabled}
-          >
+      <div className="flex-1 min-w-0">
+        <Popover open={open} onOpenChange={handleOpenChange}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className={`w-full justify-between ${className}`}
+              disabled={disabled}
+            >
             <span className="truncate">
               {selectedItem ? getItemLabel(selectedItem) : placeholder}
             </span>
@@ -212,7 +213,8 @@ export function SearchableSelect<T>({
             </CommandList>
           </Command>
         </PopoverContent>
-      </Popover>
+        </Popover>
+      </div>
       
       {clearable && value && (
         <Button
