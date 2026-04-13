@@ -313,7 +313,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
       materia: p.tipo_actividad_nombre || 'Préstamo',
       docente: p.usuario_nombre || p.solicitante_publico_nombre,
       grupo: p.motivo,
-      estado: 'prestamo',
+      estado: p.estado || 'Pendiente',
       tipo: 'prestamo',
       prestamo: p
     }));

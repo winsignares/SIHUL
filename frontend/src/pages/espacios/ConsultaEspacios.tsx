@@ -1020,13 +1020,30 @@ export default function ConsultaEspacios() {
         hora_fin: formatHora(targetHoraFin)
       });
 
-      // Llamar al servicio para actualizar el horario
-      await horarioService.update({
-        id: horario.id,
-        dia_semana: targetDia,
-        hora_inicio: formatHora(targetHoraInicio),
-        hora_fin: formatHora(targetHoraFin)
-      });
+      // Validar que haya un ID válido
+      if (!horario.id) {
+        throw new Error('No se puede mover este elemento - ID no válido');
+      }
+
+      // Usar el servicio correcto según el tipo
+      if (horario.tipo === 'prestamo') {
+        // Para préstamos, usar prestamoService
+        await prestamoService.actualizarPrestamo({
+          id: horario.id,
+          estado: horario.estado || 'Pendiente',
+          fecha: (horario as any).fecha || (horario.prestamo?.fecha),
+          hora_inicio: horario.horaInicio ? `${String(horario.horaInicio).padStart(2, '0')}:00:00` : undefined,
+          hora_fin: horario.horaFin ? `${String(horario.horaFin).padStart(2, '0')}:00:00` : undefined
+        } as any);
+      } else {
+        // Para horarios académicos, usar horarioService
+        await horarioService.update({
+          id: horario.id,
+          dia_semana: targetDia,
+          hora_inicio: formatHora(targetHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        });
+      }
 
       toast.success(`Horario movido exitosamente a ${targetDia} ${targetHoraInicio}:00-${targetHoraFin}:00`);
 
@@ -1080,14 +1097,33 @@ export default function ConsultaEspacios() {
       // Convertir horas a formato string (HH:00:00)
       const formatHora = (h: number) => `${String(h).padStart(2, '0')}:00:00`;
 
-      // Llamar al servicio para actualizar el horario con el nuevo espacio, día y hora
-      await horarioService.update({
-        id: selectedClassToMove.id as number,
-        espacio_id: parseInt(targetEspacioId),
-        dia_semana: targetMoveDia,
-        hora_inicio: formatHora(targetMoveHoraInicio),
-        hora_fin: formatHora(targetHoraFin)
-      });
+      // Validar que haya un ID válido
+      if (!selectedClassToMove.id) {
+        setMoveClassError('Error: No se puede mover este elemento - ID no válido');
+        return;
+      }
+
+      // Usar el servicio correcto según el tipo
+      if (selectedClassToMove.tipo === 'prestamo') {
+        // Para préstamos, usar prestamoService
+        await prestamoService.actualizarPrestamo({
+          id: selectedClassToMove.id,
+          espacio_id: parseInt(targetEspacioId),
+          estado: selectedClassToMove.estado || 'Pendiente',
+          fecha: (selectedClassToMove as any).fecha || (selectedClassToMove.prestamo?.fecha),
+          hora_inicio: formatHora(targetMoveHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        } as any);
+      } else {
+        // Para horarios académicos, usar horarioService
+        await horarioService.update({
+          id: selectedClassToMove.id,
+          espacio_id: parseInt(targetEspacioId),
+          dia_semana: targetMoveDia,
+          hora_inicio: formatHora(targetMoveHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        });
+      }
 
       toast.success(`Clase movida exitosamente a ${targetEspacio.nombre} - ${targetMoveDia} ${targetMoveHoraInicio}:00-${targetHoraFin}:00`);
 
@@ -1791,7 +1827,7 @@ export default function ConsultaEspacios() {
                             labelText = 'PENDIENTE';
                           } else if (ocupacion.estado === 'ocupado') {
                             colorClass = 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white';
-                            labelText = '';
+                            labelText = ocupacion.materia || 'Ocupado';
                           } else {
                             colorClass = 'bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white';
                             labelText = '';
@@ -1802,9 +1838,9 @@ export default function ConsultaEspacios() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                    draggable={editModeEnabled && ocupacion.tipo !== 'prestamo'}
+                                    draggable={editModeEnabled && (!isPrestamo || isPrestamoPendiente)}
                                     onDragStart={() => {
-                                      if (editModeEnabled && ocupacion.tipo !== 'prestamo') {
+                                      if (editModeEnabled && (!isPrestamo || isPrestamoPendiente)) {
                                         setDraggedHorario(ocupacion);
                                       }
                                     }}
@@ -1820,7 +1856,7 @@ export default function ConsultaEspacios() {
                                       setMoveClassError(null);
                                     }}
                                     className={`${colorClass} text-white rounded p-1 sm:p-1.5 md:p-2 text-[10px] sm:text-[11px] md:text-xs ${
-                                      editModeEnabled && ocupacion.tipo !== 'prestamo' 
+                                      editModeEnabled && (!isPrestamo || isPrestamoPendiente)
                                         ? 'cursor-move hover:ring-2 hover:ring-purple-400 group' 
                                         : 'cursor-pointer'
                                     } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative`}
@@ -1831,7 +1867,7 @@ export default function ConsultaEspacios() {
                                       minHeight: `${rowSpan * 60}px`
                                     }}
                                   >
-                                    {editModeEnabled && ocupacion.tipo !== 'prestamo' && (
+                                    {editModeEnabled && (!isPrestamo || isPrestamoPendiente) && (
                                       <>
                                         <div className="absolute top-0.5 left-0.5 opacity-60">
                                           <GripVertical className="w-3 h-3" />
@@ -2483,24 +2519,17 @@ export default function ConsultaEspacios() {
                         {/* Grid cells */}
                         {horas.flatMap((hora, horaIdx) =>
                           diasSemana.map((dia, diaIdx) => {
-                            // Verificar si hay un horario en esta celda
-                            const horarioEnCelda = horarios.find(h =>
-                              h.espacioId === targetEspacioId &&
-                              h.dia === dia &&
-                              hora >= h.horaInicio &&
-                              hora < h.horaFin
+                            // Buscar en horarios (ya incluye horarios y prestamos fusionados)
+                            const ocupacionEnCelda = horarios.find(o =>
+                              o.espacioId === targetEspacioId &&
+                              o.dia === dia &&
+                              hora >= o.horaInicio &&
+                              hora < o.horaFin
                             );
 
-                            // Verificar si hay un préstamo en esta celda
-                            const prestamoEnCelda = prestamos.find(p => {
-                              if (String(p.espacio_id) !== targetEspacioId) return false;
-                              const prestamoDate = new Date(p.fecha);
-                              const diasSemanaFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                              const prestamoDia = diasSemanaFull[prestamoDate.getDay()];
-                              const pHoraInicio = parseInt(p.hora_inicio.split(':')[0]);
-                              const pHoraFin = parseInt(p.hora_fin.split(':')[0]);
-                              return prestamoDia === dia && hora >= pHoraInicio && hora < pHoraFin && p.estado === 'Aprobado';
-                            });
+                            // Separar en horario vs prestamo
+                            const horarioEnCelda = ocupacionEnCelda && ocupacionEnCelda.tipo !== 'prestamo' ? ocupacionEnCelda : null;
+                            const prestamoEnCelda = ocupacionEnCelda && ocupacionEnCelda.tipo === 'prestamo' ? ocupacionEnCelda : null;
 
                             // Verificar si es el horario propuesto seleccionado
                             const isProposedSlot = selectedClassToMove &&
@@ -2515,13 +2544,23 @@ export default function ConsultaEspacios() {
 
                             let bgClass = 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700';
                             let hoverClass = canSelect ? 'hover:bg-blue-50 hover:border-blue-300 cursor-pointer' : '';
-                            if (horarioEnCelda) {
+                            let labelText = '';
+                            let textClass = '';
+
+                            if (prestamoEnCelda) {
+                              // Los préstamos tienen prioridad sobre los horarios
+                              const isPrestamoPendiente = prestamoEnCelda.estado === 'Pendiente';
+                              bgClass = isPrestamoPendiente
+                                ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700'
+                                : 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
+                              hoverClass = '';
+                              labelText = isPrestamoPendiente ? 'Préstamo (Pendiente)' : 'Préstamo (Aprobado)';
+                              textClass = isPrestamoPendiente ? 'text-yellow-600' : 'text-green-600';
+                            } else if (horarioEnCelda) {
                               bgClass = 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
                               hoverClass = '';
-                            }
-                            if (prestamoEnCelda) {
-                              bgClass = 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
-                              hoverClass = '';
+                              labelText = horarioEnCelda.materia || 'Ocupado';
+                              textClass = 'text-red-600';
                             }
                             if (isProposedSlot) {
                               bgClass = 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 ring-2 ring-purple-500';
@@ -2543,8 +2582,8 @@ export default function ConsultaEspacios() {
                                 }}
                                 title={canSelect ? `Seleccionar ${dia} ${hora}:00` : ''}
                               >
-                                {horarioEnCelda && !prestamoEnCelda && <span className="text-red-600 font-medium">Ocupado</span>}
-                                {!horarioEnCelda && prestamoEnCelda && <span className="text-green-600 font-medium">Préstamo</span>}
+                                {prestamoEnCelda && <span className={`${textClass} font-medium truncate px-1`}>{labelText}</span>}
+                                {!prestamoEnCelda && horarioEnCelda && <span className={`${textClass} font-medium truncate px-1`}>{labelText}</span>}
                                 {isProposedSlot && !horarioEnCelda && !prestamoEnCelda && <span className="text-purple-600 font-medium">Nuevo</span>}
                               </div>
                             );
@@ -2556,6 +2595,10 @@ export default function ConsultaEspacios() {
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
                         <span>Horario ocupado</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded"></div>
+                        <span>Préstamo pendiente</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
