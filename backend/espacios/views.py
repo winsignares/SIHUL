@@ -648,25 +648,63 @@ def proximos_apertura_cierre(request):
         fecha_actual = ahora.date()
         dia_actual = get_dia_semana_actual()
         
-        # Obtener espacios permitidos para este usuario
-        espacios_permitidos = EspacioPermitido.objects.filter(
-            usuario_id=usuario_id
-        ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
-        
-        if not espacios_permitidos.exists():
-            return JsonResponse({
-                "espacios": [],
-                "horaActual": hora_actual.strftime('%H:%M'),
-                "diaActual": dia_actual,
-                "fechaActual": fecha_actual.strftime('%Y-%m-%d')
-            }, status=200)
-        
-        # Extraer IDs de espacios
-        espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
-        espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
-        
-        # Diccionario para agrupar por espacio
-        espacios_data = {}
+        try:
+            usuario = Usuario.objects.select_related('rol').get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({"error": "Usuario no encontrado"}, status=404)
+
+        role_name = (usuario.rol.nombre if usuario.rol else '').lower()
+        if role_name.startswith('supervisor'):
+            # Para supervisor: solo espacios permitidos explicitos.
+            espacios_permitidos = EspacioPermitido.objects.filter(
+                usuario_id=usuario_id
+            ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+
+            espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
+
+            if not espacios_permitidos.exists():
+                return JsonResponse({
+                    "espacios": [],
+                    "horaActual": hora_actual.strftime('%H:%M'),
+                    "diaActual": dia_actual,
+                    "fechaActual": fecha_actual.strftime('%Y-%m-%d')
+                }, status=200)
+
+            espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+            espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
+        else:
+            espacios_qs = EspacioFisico.objects.select_related('sede', 'tipo').all()
+            user_sede = getattr(request, 'sede', None)
+            if user_sede and getattr(user_sede, 'seccional_id', None):
+                espacios_qs = espacios_qs.filter(sede__seccional_id=user_sede.seccional_id)
+            espacios_qs = espacios_qs.filter(estado='Disponible')
+
+            espacios = list(espacios_qs)
+            if not espacios:
+                return JsonResponse({
+                    "espacios": [],
+                    "horaActual": hora_actual.strftime('%H:%M'),
+                    "diaActual": dia_actual,
+                    "fechaActual": fecha_actual.strftime('%Y-%m-%d')
+                }, status=200)
+
+            espacios_ids = [espacio.id for espacio in espacios]
+            espacios_map = {espacio.id: espacio for espacio in espacios}
+
+        # Diccionario para agrupar por espacio. Incluye todos los espacios
+        # permitidos aunque no tengan horarios/prestamos hoy.
+        espacios_data = {
+            espacio.id: {
+                "idEspacio": espacio.id,
+                "nombreEspacio": espacio.nombre,
+                "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                "piso": espacio.ubicacion or "No especificado",
+                "esta_abierto": espacio.esta_abierto,
+                "estadoActual": espacio.estado,
+                "horarios": []
+            }
+            for espacio in espacios_map.values()
+        }
         
         # ========== CONSULTAR HORARIOS ==========
         horarios = Horario.objects.filter(
@@ -706,20 +744,17 @@ def proximos_apertura_cierre(request):
                 tiempo_restante_segundos = segundos_hasta_fin
                 minutos_restantes = segundos_hasta_fin // 60
                 segundos_restantes = segundos_hasta_fin % 60
+            else:
+                # Mantener bloques ya terminados para que frontend calcule
+                # ventana de cierre (+10 min desde la clase/prestamo anterior).
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = 0
+                minutos_restantes = 0
+                segundos_restantes = 0
             
-            # Solo agregar si hay una acción pendiente
-            if proxima_accion and tiempo_restante_segundos:
-                if espacio.id not in espacios_data:
-                    espacios_data[espacio.id] = {
-                        "idEspacio": espacio.id,
-                        "nombreEspacio": espacio.nombre,
-                        "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                        "piso": espacio.ubicacion or "No especificado",
-                        "esta_abierto": espacio.esta_abierto,
-                        "estadoActual": espacio.estado,
-                        "horarios": []
-                    }
-                
+            # Mantener todos los bloques del dia (incluidos los finalizados)
+            # para que frontend aplique reglas operativas de +10 y -15 min.
+            if proxima_accion is not None:
                 espacios_data[espacio.id]["horarios"].append({
                     "tipoUso": "Clase",
                     "asignatura": horario.asignatura.nombre if horario.asignatura else "Sin asignatura",
@@ -771,20 +806,17 @@ def proximos_apertura_cierre(request):
                 tiempo_restante_segundos = segundos_hasta_fin
                 minutos_restantes = segundos_hasta_fin // 60
                 segundos_restantes = segundos_hasta_fin % 60
+            else:
+                # Mantener bloques ya terminados para que frontend calcule
+                # ventana de cierre (+10 min desde la clase/prestamo anterior).
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = 0
+                minutos_restantes = 0
+                segundos_restantes = 0
             
-            # Solo agregar si hay una acción pendiente
-            if proxima_accion and tiempo_restante_segundos:
-                if espacio.id not in espacios_data:
-                    espacios_data[espacio.id] = {
-                        "idEspacio": espacio.id,
-                        "nombreEspacio": espacio.nombre,
-                        "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                        "piso": espacio.ubicacion or "No especificado",
-                        "esta_abierto": espacio.esta_abierto,
-                        "estadoActual": espacio.estado,
-                        "horarios": []
-                    }
-                
+            # Mantener todos los bloques del dia (incluidos los finalizados)
+            # para que frontend aplique reglas operativas de +10 y -15 min.
+            if proxima_accion is not None:
                 espacios_data[espacio.id]["horarios"].append({
                     "tipoUso": "Préstamo",
                     "tipoActividad": prestamo.tipo_actividad.nombre if prestamo.tipo_actividad else "Sin especificar",

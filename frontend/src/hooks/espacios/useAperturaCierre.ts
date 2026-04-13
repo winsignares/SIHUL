@@ -24,6 +24,18 @@ export interface HorarioPendientePaginado {
     horario: HorarioEspacio;
 }
 
+const HORARIO_CIERRE_SIN_USO: HorarioEspacio = {
+    tipoUso: 'Clase',
+    asignatura: 'Sin clase en curso',
+    docente: 'No aplica',
+    horaInicio: '00:00',
+    horaFin: '00:00',
+    proximaAccion: 'cierre',
+    minutosRestantes: 0,
+    segundosRestantes: 0,
+    tiempoRestanteTotal: 0,
+};
+
 interface HorarioNormalizado extends HorarioEspacio {
     inicioMin: number;
     finMin: number;
@@ -310,6 +322,10 @@ export function useAperturaCierre() {
 
     const espaciosFiltrados = useMemo(() => {
         return espacios.filter((espacio) => {
+            if ((espacio.estadoActual || '').toLowerCase() !== 'disponible') {
+                return false;
+            }
+
             const q = searchTerm.trim().toLowerCase();
             const matchesSearch = q === ''
                 || espacio.nombreEspacio.toLowerCase().includes(q)
@@ -348,7 +364,15 @@ export function useAperturaCierre() {
             .filter((horario) => horario.finMin > horario.inicioMin)
             .sort((a, b) => a.inicioMin - b.inicioMin);
 
-        if (horariosNormalizados.length === 0) return null;
+        if (horariosNormalizados.length === 0) {
+            if (!estaAbierto) return null;
+
+            return {
+                key: `${espacio.idEspacio}-cierre-sin-horario`,
+                espacio,
+                horario: HORARIO_CIERRE_SIN_USO,
+            };
+        }
 
         const claseEnCurso = horariosNormalizados.find((horario) => horario.inicioMin <= ahoraMin && ahoraMin < horario.finMin);
         const proximaClase = horariosNormalizados.find((horario) => horario.inicioMin > ahoraMin);
@@ -388,18 +412,28 @@ export function useAperturaCierre() {
         }
 
         if (claseEnCurso) return null;
-        if (!claseAnterior) return null;
 
-        const inicioVentanaCierre = claseAnterior.finMin + 10;
-        const finVentanaCierre = proximaClase ? (proximaClase.inicioMin - 15) : Number.POSITIVE_INFINITY;
-        const dentroVentanaCierre = ahoraMin >= inicioVentanaCierre && ahoraMin < finVentanaCierre;
-        if (!dentroVentanaCierre) return null;
+        // Si hay una clase proxima y estamos dentro de la ventana de preparacion
+        // (15 min antes), no se debe pedir cierre.
+        if (proximaClase && ahoraMin >= (proximaClase.inicioMin - 15)) {
+            return null;
+        }
+
+        // Regla principal de cierre: +10 min tras finalizar la clase anterior.
+        // Si no hay clase anterior hoy, igualmente pedir cierre cuando el salon
+        // este abierto y no haya clase en curso.
+        if (claseAnterior) {
+            const inicioVentanaCierre = claseAnterior.finMin + 10;
+            if (ahoraMin < inicioVentanaCierre) return null;
+        }
 
         return {
-            key: `${espacio.idEspacio}-cierre-${claseAnterior.horaInicio}-${claseAnterior.horaFin}`,
+            key: claseAnterior
+                ? `${espacio.idEspacio}-cierre-${claseAnterior.horaInicio}-${claseAnterior.horaFin}`
+                : `${espacio.idEspacio}-cierre-sin-anterior`,
             espacio,
             horario: {
-                ...claseAnterior,
+                ...(claseAnterior || HORARIO_CIERRE_SIN_USO),
                 proximaAccion: 'cierre',
                 minutosRestantes: 0,
                 segundosRestantes: 0,
@@ -551,7 +585,6 @@ export function useAperturaCierre() {
                 })));
             }
 
-            toast.success('Revision de recursos registrada');
             cerrarPopupRecursos();
             await refrescar();
             return { ok: true as const };
@@ -566,7 +599,7 @@ export function useAperturaCierre() {
 
     const abrirSalon = async (espacioId: number): Promise<ResultadoAccion> => {
         try {
-            await espacioService.cambiarApertura(espacioId, true);
+            await espacioService.abrirSalon(espacioId);
             await refrescar();
             return { ok: true as const };
         } catch (err: any) {
@@ -578,7 +611,7 @@ export function useAperturaCierre() {
 
     const cerrarSalon = async (espacioId: number): Promise<ResultadoAccion> => {
         try {
-            await espacioService.cambiarApertura(espacioId, false);
+            await espacioService.cerrarSalon(espacioId);
             await abrirPopupRevisionRecursos(espacioId);
             return { ok: true as const };
         } catch (err: any) {

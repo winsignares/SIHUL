@@ -109,10 +109,9 @@ def user_view(request):
 
 @require_http_methods(['GET', 'POST'])
 def logout_view(request):
-    if not _get_authenticated_user(request):
-        return JsonResponse({'error': 'No autenticado'}, status=401)
-
-    request.session.flush()
+    # Logout idempotente: si no hay sesion activa, responder OK igual.
+    if request.session.session_key:
+        request.session.flush()
     return JsonResponse({'message': 'Logout exitoso'}, status=200)
 
 
