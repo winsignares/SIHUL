@@ -23,55 +23,62 @@ def create_usuarios_sistema(stdout, style):
         stdout.write(style.ERROR(f'    ✗ Error: Rol no encontrado - {str(e)}'))
         return
     
+    sede_centro = Sede.objects.get(nombre='Sede Centro')
+    hash_admin = make_password('admin123')
+    hash_plan = make_password('plan123')
+    hash_supervisor = make_password('sup123')
+    hash_docente = make_password('doc123')
+    hash_estudiante = make_password('est123')
+
     # Usuarios del sistema
     usuarios_data = [
         {
             'nombre': 'Administrador de Planeación',
             'correo': 'admin_planeacion@unilibre.edu.co',
             'rol': rol_admin_planeacion,
-            'contrasena_hash': make_password('admin123'),
+            'contrasena_hash': hash_admin,
             'activo': True,
-            'sede': Sede.objects.get(nombre='Sede Centro')
+            'sede': sede_centro
         },
         {
             'nombre': 'Administrador del Sistema',
             'correo': 'admin@unilibre.edu.co',
             'rol': rol_admin,
-            'contrasena_hash': make_password('admin123'),
+            'contrasena_hash': hash_admin,
             'activo': True,
-            'sede': Sede.objects.get(nombre='Sede Centro')
+            'sede': sede_centro
         },
         {
             'nombre': 'Coordinador de Planeación',
             'correo': 'planeacion@unilibre.edu.co',
             'rol': rol_planeacion,
-            'contrasena_hash': make_password('plan123'),
+            'contrasena_hash': hash_plan,
             'activo': True,
-            'sede': Sede.objects.get(nombre='Sede Centro')
+            'sede': sede_centro
         },
         {
             'nombre': 'Supervisor General',
             'correo': 'supervisor@unilibre.edu.co',
             'rol': rol_supervisor,
-            'contrasena_hash': make_password('sup123'),
+            'contrasena_hash': hash_supervisor,
             'activo': True,
-            'sede': Sede.objects.get(nombre='Sede Centro')
+            'sede': sede_centro
         },
         {
             'nombre': 'Docente de Prueba',
             'correo': 'docente@unilibre.edu.co',
             'rol': rol_docente,
-            'contrasena_hash': make_password('doc123'),
+            'contrasena_hash': hash_docente,
             'activo': True,
-            'sede': Sede.objects.get(nombre='Sede Centro')
+            'sede': sede_centro
         },
         {
             'nombre': 'Estudiante de Prueba',
             'correo': 'estudiante@unilibre.edu.co',
             'rol': rol_estudiante,
-            'contrasena_hash': make_password('est123'),
+            'contrasena_hash': hash_estudiante,
             'activo': True,
-            'sede': Sede.objects.get(nombre='Sede Centro')
+            'sede': sede_centro
         },
     ]
     
@@ -140,6 +147,9 @@ def create_usuarios_docentes(stdout, style):
         'Profesor 1', 'Profesor 2', 'Profesor 3', 'Profesor 4', 'Profesor 5', 'Profesor 6',
     ]
     
+    sede_centro = Sede.objects.get(nombre='Sede Centro')
+    hash_docente = make_password('doc123')
+
     created_count = 0
     for nombre_docente in docentes:
         # Generar correo a partir del nombre (normalizar caracteres)
@@ -153,10 +163,10 @@ def create_usuarios_docentes(stdout, style):
             correo=correo,
             defaults={
                 'nombre': nombre_docente,
-                'contrasena_hash': make_password('doc123'),
+                'contrasena_hash': hash_docente,
                 'rol': rol_docente,
                 'activo': True,
-                'sede': Sede.objects.get(nombre='Sede Centro')
+                'sede': sede_centro
             }
         )
         if created:

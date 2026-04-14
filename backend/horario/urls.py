@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, api_views
 
 urlpatterns = [
     # SolicitudEspacio endpoints (DEBEN IR PRIMERO - rutas más específicas)
@@ -8,6 +8,7 @@ urlpatterns = [
     path('solicitudes/', views.list_solicitudes_espacio, name='list_solicitudes_espacio'),
     
     # Horario endpoints
+    path('por-periodo/', api_views.horarios_por_periodo, name='horarios_por_periodo'),
     path('list/extendidos/', views.list_horarios_extendidos, name='list_horarios_extendidos'),
     path('mi-horario/', views.mi_horario_docente, name='mi_horario_docente'),
     path('mi-horario-estudiante/', views.mi_horario_estudiante, name='mi_horario_estudiante'),

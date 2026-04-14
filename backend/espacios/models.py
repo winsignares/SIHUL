@@ -1,7 +1,6 @@
 from django.db import models
 from sedes.models import Sede
 from usuarios.models import Usuario
-from .managers import EspacioFisicoManager
 
 
 class TipoEspacio(models.Model):
@@ -19,6 +18,11 @@ class EspacioFisico(models.Model):
     tipo = models.ForeignKey(TipoEspacio, on_delete=models.PROTECT, related_name='espacios')
     capacidad = models.PositiveIntegerField()
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
+    # Indica si el espacio esta abierto (True) o cerrado (False) para acceso fisico.
+    esta_abierto = models.BooleanField(default=True)
+    # Disponible: apto para uso.
+    # Mantenimiento: no apto por condicion fisica/tecnica del espacio.
+    # No Disponible: no apto por razones administrativas u otras ajenas al mantenimiento.
     estado = models.CharField(
         max_length=20, 
         choices=[
@@ -29,8 +33,17 @@ class EspacioFisico(models.Model):
         default='Disponible'
     )
 
-    # Manager con sincronización automática de estado al consultar
-    objects = EspacioFisicoManager()
+    @property
+    def recursos_con_estado(self):
+        """Lista de recursos asociados con su estado actual."""
+        return [
+            {
+                'id': relacion.recurso_id,
+                'nombre': relacion.recurso.nombre,
+                'estado': relacion.estado,
+            }
+            for relacion in self.espacio_recursos.select_related('recurso').all()
+        ]
 
     def __str__(self):
         return f"{self.nombre} - {self.tipo.nombre} ({self.ubicacion or 'sin ubicación'})"

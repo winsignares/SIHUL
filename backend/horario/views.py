@@ -202,9 +202,9 @@ def create_horario(request):
             )
             solicitud.save()
             
-            # Crear notificación para administradores
-            admins = Usuario.objects.filter(rol__nombre='admin')
-            for admin in admins:
+            # Crear notificación para administradores de facultad y planeación
+            administradores = Usuario.objects.filter(rol__nombre__in=['admin', 'admin_planeacion']).distinct()
+            for admin in administradores:
                 crear_notificacion(
                     id_usuario=admin.id,
                     tipo='solicitud_espacio',
@@ -317,7 +317,7 @@ def get_horario(request, id=None):
         #obtenemos la sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         if user_sede:
-            h = Horario.objects.filter(id=id, espacio__sede__ciudad=user_sede.ciudad).first()
+            h = Horario.objects.filter(id=id, espacio__sede__seccional_id=user_sede.seccional_id).first()
         else: 
             h = Horario.objects.get(id=id)
         return JsonResponse({
@@ -342,7 +342,7 @@ def list_horarios(request):
         #obtenemos sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         if user_sede:
-            items = Horario.objects.filter(estado='aprobado', espacio__sede__ciudad=user_sede.ciudad)
+            items = Horario.objects.filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
         else:
             items = Horario.objects.filter(estado='aprobado')
         lst = [{
@@ -364,9 +364,9 @@ def list_horarios_extendidos(request):
     if request.method == 'GET':
         #obtener sede de usuario autenticado
         user_sede = getattr(request, 'sede', None)
-        #validar que la sede tenga ciudad para filtrar por ciudad, si no tiene ciudad, no se filtra por ciudad
-        if user_sede and user_sede.ciudad:
-            items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__ciudad=user_sede.ciudad)
+        #validar que la sede tenga seccional para filtrar por seccional; si no tiene seccional, no se filtra
+        if user_sede and user_sede.seccional_id:
+            items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
         else:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
         # Traer solo horarios aprobados
@@ -506,7 +506,7 @@ def get_horario_fusionado(request, id=None):
         #obtener sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         if user_sede:
-            h = HorarioFusionado.objects.filter(id=id, espacio__sede__ciudad=user_sede.ciudad).first()
+            h = HorarioFusionado.objects.filter(id=id, espacio__sede__seccional_id=user_sede.seccional_id).first()
         else:
              h = HorarioFusionado.objects.get(id=id)
         return JsonResponse({
@@ -533,7 +533,7 @@ def list_horarios_fusionados(request):
         #obtener sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         if user_sede:
-            items = HorarioFusionado.objects.filter(espacio__sede__ciudad=user_sede.ciudad)
+            items = HorarioFusionado.objects.filter(espacio__sede__seccional_id=user_sede.seccional_id)
         else:
             items = HorarioFusionado.objects.all()
         lst = [{
@@ -2761,3 +2761,4 @@ def list_horarios_extendidos_usuario(usuario_id):
         print(f"ERROR en list_horarios_extendidos_usuario: {str(e)}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         return []
+

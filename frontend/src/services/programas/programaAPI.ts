@@ -8,6 +8,22 @@ export interface Programa {
   activo: boolean;
 }
 
+interface ProgramaApi {
+  id?: number;
+  nombre: string;
+  facultad: number;
+  semestres: number;
+  activo: boolean;
+}
+
+const toFrontendPrograma = (programa: ProgramaApi): Programa => ({
+  id: programa.id,
+  nombre: programa.nombre,
+  facultad_id: programa.facultad,
+  semestres: programa.semestres,
+  activo: programa.activo,
+});
+
 /**
  * Servicio para la gestión de programas académicos
  */
@@ -16,7 +32,9 @@ export const programaService = {
    * Obtiene la lista de todos los programas académicos
    */
   listarProgramas: async (): Promise<{ programas: Programa[] }> => {
-    return apiClient.get('/programas/');
+    const programasApi = await apiClient.get<ProgramaApi[]>('/programas/');
+    const programas = programasApi.map(toFrontendPrograma);
+    return { programas };
   },
 
   /**
@@ -24,7 +42,8 @@ export const programaService = {
    * @param id ID del programa académico
    */
   obtenerPrograma: async (id: number): Promise<Programa> => {
-    return apiClient.get(`/programas/${id}/`);
+    const programaApi = await apiClient.get<ProgramaApi>(`/programas/${id}/`);
+    return toFrontendPrograma(programaApi);
   },
 
   /**
@@ -32,12 +51,13 @@ export const programaService = {
    * @param programa Datos del programa a crear
    */
   crearPrograma: async (programa: Omit<Programa, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/programas/create/', {
+    const creado = await apiClient.post<ProgramaApi>('/programas/', {
       nombre: programa.nombre,
-      facultad_id: programa.facultad_id,
+      facultad: programa.facultad_id,
       semestres: programa.semestres,
       activo: programa.activo ?? true
     });
+    return { message: 'Programa creado', id: creado.id ?? 0 };
   },
 
   /**
@@ -49,13 +69,13 @@ export const programaService = {
       throw new Error('Se requiere el ID del programa para actualizar');
     }
 
-    return apiClient.put('/programas/update/', {
-      id: programa.id,
+    const actualizado = await apiClient.put<ProgramaApi>(`/programas/${programa.id}/`, {
       nombre: programa.nombre,
-      facultad_id: programa.facultad_id,
+      facultad: programa.facultad_id,
       semestres: programa.semestres,
       activo: programa.activo
     });
+    return { message: 'Programa actualizado', id: actualizado.id ?? programa.id };
   },
 
   /**
@@ -63,6 +83,7 @@ export const programaService = {
    * @param id ID del programa a eliminar
    */
   eliminarPrograma: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/programas/delete/', { id });
+    await apiClient.delete(`/programas/${id}/`);
+    return { message: 'Programa eliminado' };
   }
 };

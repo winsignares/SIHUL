@@ -1,16 +1,41 @@
 import { apiClient } from '../../core/apiClient';
 
+const DEFAULT_BG_GRADIENT = 'from-blue-500 via-blue-600 to-indigo-600';
+
+const iconAliasMap: Record<string, string> = {
+    bookopen: 'BookOpen',
+    book_open: 'BookOpen',
+    dooropen: 'DoorOpen',
+    door_open: 'DoorOpen',
+    trophy: 'Trophy',
+    headphoness: 'Headphones',
+    headphones: 'Headphones',
+    bot: 'Bot'
+};
+
 export interface AgenteAPI {
     id: number;
     nombre: string;
-    subtitulo: string;
+    subtitulo?: string | null;
     descripcion: string;
-    icono: string;
-    color: string;
-    bgGradient: string;
-    activo: boolean;
-    mensajeBienvenida: string;
-    preguntasRapidas: string[];
+    icono?: string;
+    color?: string;
+    bgGradient?: string;
+    bg_gradient?: string;
+    activo?: boolean;
+    mensajeBienvenida?: string;
+    mensaje_bienvenida?: string;
+    preguntasRapidas?: string[];
+    preguntas?: unknown;
+}
+
+export interface PreguntaSugeridaAPI {
+    id: number;
+    agente: number | { id: number };
+    pregunta: string;
+    activo?: boolean;
+    orden?: number;
+    contador_uso?: number;
 }
 
 export interface EnviarPreguntaRequest {
@@ -71,12 +96,107 @@ export interface ListarConversacionesResponse {
     total: number;
 }
 
+function extraerListaResponse<T>(response: unknown, keys: string[]): T[] {
+    if (Array.isArray(response)) {
+        return response as T[];
+    }
+
+    if (!response || typeof response !== 'object') {
+        return [];
+    }
+
+    const data = response as Record<string, unknown>;
+    for (const key of keys) {
+        const value = data[key];
+        if (Array.isArray(value)) {
+            return value as T[];
+        }
+    }
+
+    return [];
+}
+
+function normalizarIcono(rawIcono?: string): string {
+    if (!rawIcono) return 'Bot';
+
+    const key = rawIcono.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    return iconAliasMap[key] || rawIcono;
+}
+
+function convertirAPreguntasRapidas(rawPreguntas: unknown): string[] {
+    if (!rawPreguntas) return [];
+
+    if (Array.isArray(rawPreguntas)) {
+        return rawPreguntas
+            .map((item) => {
+                if (typeof item === 'string') {
+                    return item;
+                }
+                if (item && typeof item === 'object') {
+                    const pregunta = (item as { pregunta?: unknown }).pregunta;
+                    return typeof pregunta === 'string' ? pregunta : '';
+                }
+                return '';
+            })
+            .filter((pregunta): pregunta is string => Boolean(pregunta));
+    }
+
+    return [];
+}
+
+function normalizarAgenteAPI(
+    agente: AgenteAPI,
+    preguntasPorAgente?: Map<number, string[]>
+): AgenteAPI {
+    const preguntasDelBackend = preguntasPorAgente?.get(agente.id) || [];
+    const preguntasDirectas = convertirAPreguntasRapidas(agente.preguntasRapidas ?? agente.preguntas);
+
+    return {
+        ...agente,
+        subtitulo: agente.subtitulo ?? '',
+        icono: normalizarIcono(agente.icono),
+        color: agente.color ?? 'blue',
+        bgGradient: agente.bgGradient ?? agente.bg_gradient ?? DEFAULT_BG_GRADIENT,
+        activo: agente.activo ?? true,
+        mensajeBienvenida: agente.mensajeBienvenida ?? agente.mensaje_bienvenida ?? '',
+        preguntasRapidas: preguntasDirectas.length > 0 ? preguntasDirectas : preguntasDelBackend
+    };
+}
+
+function agruparPreguntasSugeridas(preguntas: PreguntaSugeridaAPI[]): Map<number, string[]> {
+    const agrupadas = new Map<number, string[]>();
+
+    for (const pregunta of preguntas) {
+        const agenteId = typeof pregunta.agente === 'number' ? pregunta.agente : pregunta.agente?.id;
+        if (!agenteId || !pregunta.pregunta) {
+            continue;
+        }
+
+        const existentes = agrupadas.get(agenteId) || [];
+        existentes.push(pregunta.pregunta);
+        agrupadas.set(agenteId, existentes);
+    }
+
+    return agrupadas;
+}
+
 export const chatbotAPI = {
     /**
      * Obtiene la lista de agentes activos
      */
     listarAgentes: async (): Promise<{ agentes: AgenteAPI[] }> => {
-        return apiClient.get('/chatbot/agentes/');
+        const [agentesResponse, preguntasResponse] = await Promise.all([
+            apiClient.get('/chatbot/agentes/'),
+            apiClient.get('/chatbot/preguntas/')
+        ]);
+
+        const agentes = extraerListaResponse<AgenteAPI>(agentesResponse, ['agentes', 'results', 'data']);
+        const preguntas = extraerListaResponse<PreguntaSugeridaAPI>(preguntasResponse, ['preguntas', 'results', 'data']);
+        const preguntasPorAgente = agruparPreguntasSugeridas(preguntas);
+
+        return {
+            agentes: agentes.map((agente) => normalizarAgenteAPI(agente, preguntasPorAgente))
+        };
     },
 
     /**
@@ -123,7 +243,12 @@ export const chatbotAPI = {
      * Lista agentes para usuarios públicos
      */
     listarAgentesPublico: async (): Promise<{ agentes: AgenteAPI[] }> => {
-        return apiClient.get('/chatbot/public/agentes/');
+        const response = await apiClient.get('/chatbot/public/agentes/');
+        const agentes = extraerListaResponse<AgenteAPI>(response, ['agentes', 'results', 'data']);
+
+        return {
+            agentes: agentes.map((agente) => normalizarAgenteAPI(agente))
+        };
     },
 
     /**

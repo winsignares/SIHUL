@@ -14,10 +14,10 @@ from django.db.models import Count
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
-    """Filtra espacios por la ciudad de la sede del usuario logueado."""
+    """Filtra espacios por la seccional de la sede del usuario logueado."""
     user_sede = getattr(request, 'sede', None)
-    if user_sede and user_sede.ciudad:
-        return queryset.filter(sede__ciudad=user_sede.ciudad)
+    if user_sede and user_sede.seccional_id:
+        return queryset.filter(sede__seccional_id=user_sede.seccional_id)
     return queryset
 
 # ---------- TipoEspacio CRUD ----------
@@ -212,8 +212,8 @@ def get_espacio(request, id=None):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
-            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id, sede__ciudad=sede_actual.ciudad)
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id, sede__seccional_id=sede_actual.seccional_id)
         else:
             e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id)
 
@@ -252,9 +252,9 @@ def list_espacios(request):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
             items = EspacioFisico.objects.select_related('sede', 'tipo').filter(
-                sede__ciudad=sede_actual.ciudad
+                sede__seccional_id=sede_actual.seccional_id
             )
         else:
             items = EspacioFisico.objects.select_related('sede', 'tipo').all()
@@ -306,9 +306,9 @@ def list_all_espacios_with_horarios(request):
         # Solo mostrar horarios aprobados
         #obtener sede del usuario autenticado en la request del middleware
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             espacios = EspacioFisico.objects.filter(
-                sede__ciudad=user_sede.ciudad
+                sede__seccional_id=user_sede.seccional_id
             ).select_related(
                 'sede', 'tipo'
             ).prefetch_related(
@@ -648,25 +648,63 @@ def proximos_apertura_cierre(request):
         fecha_actual = ahora.date()
         dia_actual = get_dia_semana_actual()
         
-        # Obtener espacios permitidos para este usuario
-        espacios_permitidos = EspacioPermitido.objects.filter(
-            usuario_id=usuario_id
-        ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
-        
-        if not espacios_permitidos.exists():
-            return JsonResponse({
-                "espacios": [],
-                "horaActual": hora_actual.strftime('%H:%M'),
-                "diaActual": dia_actual,
-                "fechaActual": fecha_actual.strftime('%Y-%m-%d')
-            }, status=200)
-        
-        # Extraer IDs de espacios
-        espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
-        espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
-        
-        # Diccionario para agrupar por espacio
-        espacios_data = {}
+        try:
+            usuario = Usuario.objects.select_related('rol').get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return JsonResponse({"error": "Usuario no encontrado"}, status=404)
+
+        role_name = (usuario.rol.nombre if usuario.rol else '').lower()
+        if role_name.startswith('supervisor'):
+            # Para supervisor: solo espacios permitidos explicitos.
+            espacios_permitidos = EspacioPermitido.objects.filter(
+                usuario_id=usuario_id
+            ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+
+            espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
+
+            if not espacios_permitidos.exists():
+                return JsonResponse({
+                    "espacios": [],
+                    "horaActual": hora_actual.strftime('%H:%M'),
+                    "diaActual": dia_actual,
+                    "fechaActual": fecha_actual.strftime('%Y-%m-%d')
+                }, status=200)
+
+            espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+            espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
+        else:
+            espacios_qs = EspacioFisico.objects.select_related('sede', 'tipo').all()
+            user_sede = getattr(request, 'sede', None)
+            if user_sede and getattr(user_sede, 'seccional_id', None):
+                espacios_qs = espacios_qs.filter(sede__seccional_id=user_sede.seccional_id)
+            espacios_qs = espacios_qs.filter(estado='Disponible')
+
+            espacios = list(espacios_qs)
+            if not espacios:
+                return JsonResponse({
+                    "espacios": [],
+                    "horaActual": hora_actual.strftime('%H:%M'),
+                    "diaActual": dia_actual,
+                    "fechaActual": fecha_actual.strftime('%Y-%m-%d')
+                }, status=200)
+
+            espacios_ids = [espacio.id for espacio in espacios]
+            espacios_map = {espacio.id: espacio for espacio in espacios}
+
+        # Diccionario para agrupar por espacio. Incluye todos los espacios
+        # permitidos aunque no tengan horarios/prestamos hoy.
+        espacios_data = {
+            espacio.id: {
+                "idEspacio": espacio.id,
+                "nombreEspacio": espacio.nombre,
+                "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
+                "piso": espacio.ubicacion or "No especificado",
+                "esta_abierto": espacio.esta_abierto,
+                "estadoActual": espacio.estado,
+                "horarios": []
+            }
+            for espacio in espacios_map.values()
+        }
         
         # ========== CONSULTAR HORARIOS ==========
         horarios = Horario.objects.filter(
@@ -706,19 +744,17 @@ def proximos_apertura_cierre(request):
                 tiempo_restante_segundos = segundos_hasta_fin
                 minutos_restantes = segundos_hasta_fin // 60
                 segundos_restantes = segundos_hasta_fin % 60
+            else:
+                # Mantener bloques ya terminados para que frontend calcule
+                # ventana de cierre (+10 min desde la clase/prestamo anterior).
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = 0
+                minutos_restantes = 0
+                segundos_restantes = 0
             
-            # Solo agregar si hay una acción pendiente
-            if proxima_accion and tiempo_restante_segundos:
-                if espacio.id not in espacios_data:
-                    espacios_data[espacio.id] = {
-                        "idEspacio": espacio.id,
-                        "nombreEspacio": espacio.nombre,
-                        "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                        "piso": espacio.ubicacion or "No especificado",
-                        "estadoActual": espacio.estado,
-                        "horarios": []
-                    }
-                
+            # Mantener todos los bloques del dia (incluidos los finalizados)
+            # para que frontend aplique reglas operativas de +10 y -15 min.
+            if proxima_accion is not None:
                 espacios_data[espacio.id]["horarios"].append({
                     "tipoUso": "Clase",
                     "asignatura": horario.asignatura.nombre if horario.asignatura else "Sin asignatura",
@@ -770,19 +806,17 @@ def proximos_apertura_cierre(request):
                 tiempo_restante_segundos = segundos_hasta_fin
                 minutos_restantes = segundos_hasta_fin // 60
                 segundos_restantes = segundos_hasta_fin % 60
+            else:
+                # Mantener bloques ya terminados para que frontend calcule
+                # ventana de cierre (+10 min desde la clase/prestamo anterior).
+                proxima_accion = 'cierre'
+                tiempo_restante_segundos = 0
+                minutos_restantes = 0
+                segundos_restantes = 0
             
-            # Solo agregar si hay una acción pendiente
-            if proxima_accion and tiempo_restante_segundos:
-                if espacio.id not in espacios_data:
-                    espacios_data[espacio.id] = {
-                        "idEspacio": espacio.id,
-                        "nombreEspacio": espacio.nombre,
-                        "sede": espacio.sede.nombre if espacio.sede else "Sin sede",
-                        "piso": espacio.ubicacion or "No especificado",
-                        "estadoActual": espacio.estado,
-                        "horarios": []
-                    }
-                
+            # Mantener todos los bloques del dia (incluidos los finalizados)
+            # para que frontend aplique reglas operativas de +10 y -15 min.
+            if proxima_accion is not None:
                 espacios_data[espacio.id]["horarios"].append({
                     "tipoUso": "Préstamo",
                     "tipoActividad": prestamo.tipo_actividad.nombre if prestamo.tipo_actividad else "Sin especificar",
@@ -968,6 +1002,58 @@ def get_estado_espacio(request, espacio_id=None):
 
 
 @csrf_exempt
+def cerrar_espacio(request, espacio_id=None):
+    """
+    Cierra un espacio (pone esta_abierto en False).
+    Valida que no haya una clase EN CURSO.
+    
+    POST: Cierra el espacio si es seguro
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Solo se permite POST"}, status=405)
+    
+    if espacio_id is None:
+        return JsonResponse({"error": "El espacio_id es requerido"}, status=400)
+    
+    try:
+        # Obtener espacio
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+        
+        # Validar que no haya clase EN CURSO
+        ahora = datetime.now()
+        hora_actual = ahora.time()
+        dia_actual = get_dia_semana_actual()
+        
+        clase_en_curso = Horario.objects.filter(
+            espacio_id=espacio_id,
+            dia_semana=dia_actual,
+            estado='aprobado',
+            hora_inicio__lte=hora_actual,  # Clase que ya comenzó
+            hora_fin__gt=hora_actual       # Clase que aún no ha terminado
+        ).exists()
+        
+        if clase_en_curso:
+            return JsonResponse({
+                "error": "No se puede cerrar el espacio mientras hay una clase en curso"
+            }, status=400)
+        
+        # Cerrar el espacio
+        espacio.esta_abierto = False
+        espacio.save()
+        
+        return JsonResponse({
+            "message": f"Espacio '{espacio.nombre}' cerrado correctamente",
+            "espacio_id": espacio.id,
+            "esta_abierto": espacio.esta_abierto
+        }, status=200)
+        
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({"error": "Espacio no encontrado"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
 def get_horario_espacio(request, espacio_id=None):
     """
     Obtiene el horario semanal completo de un espacio.
@@ -984,9 +1070,9 @@ def get_horario_espacio(request, espacio_id=None):
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
         #Obtener sede del usuario logueado
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             # Verificar que el espacio pertenece a la misma sede
-            if not EspacioFisico.objects.filter(id=espacio_id, sede__ciudad=user_sede.ciudad).exists():
+            if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
                 return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403) 
             
         # Obtener todos los horarios del espacio
@@ -3043,4 +3129,5 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
     except Exception as e:
         print(f"Error en _calcular_capacidad_reporte: {str(e)}")
         return []
+
 

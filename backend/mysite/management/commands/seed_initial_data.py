@@ -1,4 +1,4 @@
-﻿"""
+"""
 Comando de Django para cargar datos iniciales completos en la base de datos SIHUL.
 
 Cada responsabilidad de seed está delegada a su propio módulo en seeders/:

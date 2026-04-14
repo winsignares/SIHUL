@@ -3,15 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { SearchableSelect } from '../../share/searchableSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
-import { Download, Calendar, FileSpreadsheet, Eye, Clock, MapPin, Search } from 'lucide-react';
+import { Download, Calendar, FileSpreadsheet, Eye, Clock, MapPin, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { Toaster } from '../../share/sonner';
 import { motion } from 'motion/react';
 import { useConsultaHorario } from '../../hooks/horarios/useConsultaHorario';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useState, useEffect } from 'react';
+import { PAGE_SIZE_DEFAULT, getPageNumbers, getTotalPages, getPageSlice, hasPrevPageWindow, hasNextPageWindow, getTargetPageForPrevWindow, getTargetPageForNextWindow } from '../../hooks/gestionAcademica/paginacion';
 
 export default function PublicConsultaHorario() {
   const isMobile = useIsMobile();
+  const [currentPageDocente, setCurrentPageDocente] = useState(1);
+  const [currentPagePrograma, setCurrentPagePrograma] = useState(1);
+  const pageSize = PAGE_SIZE_DEFAULT;
+
   const {
     periodoActual,
     tipoConsulta,
@@ -38,6 +44,20 @@ export default function PublicConsultaHorario() {
     obtenerHorariosDocente
   } = useConsultaHorario();
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPageDocente(1);
+  }, [filtroDocente]);
+
+  useEffect(() => {
+    setCurrentPagePrograma(1);
+  }, [filtroPrograma]);
+
+  useEffect(() => {
+    setCurrentPageDocente(1);
+    setCurrentPagePrograma(1);
+  }, [tipoConsulta]);
+
   const renderContent = () => {
     if (tipoConsulta === 'horarios-docente') {
       // Agrupar horarios por docente y filtrar
@@ -60,13 +80,29 @@ export default function PublicConsultaHorario() {
         }, {} as Record<string, { docente: string; facultad?: string; horarios: any[] }>);
 
       const docentesListaAgrupada = Object.values(docentesAgrupados);
+      const totalDocentes = docentesListaAgrupada.length;
+      const totalPagesDocente = getTotalPages(totalDocentes, pageSize);
+      const paginatedDocentes = getPageSlice(docentesListaAgrupada, currentPageDocente, pageSize);
+      const pageNumbersDocente = getPageNumbers(totalPagesDocente, currentPageDocente);
+
+      const goToPageDocente = (page: number) => setCurrentPageDocente(page);
+      const goToPrevPageDocente = () => setCurrentPageDocente(p => Math.max(1, p - 1));
+      const goToNextPageDocente = () => setCurrentPageDocente(p => Math.min(totalPagesDocente, p + 1));
+      const goToPrevPageWindowDocente = () => {
+        const target = getTargetPageForPrevWindow(currentPageDocente, totalPagesDocente);
+        if (target) setCurrentPageDocente(target);
+      };
+      const goToNextPageWindowDocente = () => {
+        const target = getTargetPageForNextWindow(currentPageDocente, totalPagesDocente);
+        if (target) setCurrentPageDocente(target);
+      };
 
       return (
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Docente</CardTitle>
-              <div className="w-[300px]">
+              <div className="w-[340px]">
                 <SearchableSelect
                   items={docentes}
                   value={filtroDocente}
@@ -101,7 +137,7 @@ export default function PublicConsultaHorario() {
                     </tr>
                   </thead>
                   <tbody>
-                    {docentesListaAgrupada.map((item) => (
+                    {paginatedDocentes.map((item) => (
                       <tr key={item.docente} className="border-t border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
                         <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{item.facultad || 'N/A'}</td>
                         <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{item.docente}</td>
@@ -122,6 +158,63 @@ export default function PublicConsultaHorario() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {/* Pagination Docentes */}
+            {totalDocentes > pageSize && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  Mostrando {Math.min((currentPageDocente - 1) * pageSize + 1, totalDocentes)} - {Math.min(currentPageDocente * pageSize, totalDocentes)} de {totalDocentes} docentes
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPrevPageDocente}
+                    disabled={currentPageDocente <= 1}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Anterior
+                  </Button>
+                  {hasPrevPageWindow(currentPageDocente, totalPagesDocente) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevPageWindowDocente}
+                    >
+                      <ChevronsLeft className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {pageNumbersDocente.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      variant={pageNumber === currentPageDocente ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPageDocente(pageNumber)}
+                      className={pageNumber === currentPageDocente ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+                  {hasNextPageWindow(currentPageDocente, totalPagesDocente) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextPageWindowDocente}
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPageDocente}
+                    disabled={currentPageDocente >= totalPagesDocente}
+                  >
+                    Siguiente
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -149,22 +242,42 @@ export default function PublicConsultaHorario() {
       }, {} as Record<string, { programa?: string; grupo: string; horarios: any[] }>);
 
     const gruposAgrupados = Object.values(horariosAgrupados);
+    const totalGrupos = gruposAgrupados.length;
+    const totalPagesPrograma = getTotalPages(totalGrupos, pageSize);
+    const paginatedGrupos = getPageSlice(gruposAgrupados, currentPagePrograma, pageSize);
+    const pageNumbersPrograma = getPageNumbers(totalPagesPrograma, currentPagePrograma);
+
+    const goToPagePrograma = (page: number) => setCurrentPagePrograma(page);
+    const goToPrevPagePrograma = () => setCurrentPagePrograma(p => Math.max(1, p - 1));
+    const goToNextPagePrograma = () => setCurrentPagePrograma(p => Math.min(totalPagesPrograma, p + 1));
+    const goToPrevPageWindowPrograma = () => {
+      const target = getTargetPageForPrevWindow(currentPagePrograma, totalPagesPrograma);
+      if (target) setCurrentPagePrograma(target);
+    };
+    const goToNextPageWindowPrograma = () => {
+      const target = getTargetPageForNextWindow(currentPagePrograma, totalPagesPrograma);
+      if (target) setCurrentPagePrograma(target);
+    };
 
     return (
       <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-slate-900 dark:text-slate-100">Horarios por Programa</CardTitle>
-            <Select value={filtroPrograma} onValueChange={setFiltroPrograma}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Seleccionar programa" />
-              </SelectTrigger>
-              <SelectContent>
-                {programas.map(prog => (
-                  <SelectItem key={prog} value={prog}>{prog}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="w-[340px]">
+              <SearchableSelect
+                items={programas.map((prog, index) => ({ id: index, nombre: prog }))}
+                value={filtroPrograma === 'Todos' ? null : filtroPrograma}
+                onSelect={(item) => setFiltroPrograma(item.nombre)}
+                getItemId={(item) => item.nombre}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar programa..."
+                searchPlaceholder="Buscar programa..."
+                emptyMessage="No se encontró ningún programa"
+                clearable
+                onClear={() => setFiltroPrograma('Todos')}
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -186,7 +299,7 @@ export default function PublicConsultaHorario() {
                   </tr>
                 </thead>
                 <tbody>
-                  {gruposAgrupados.map((grupo) => (
+                  {paginatedGrupos.map((grupo) => (
                     <tr key={`${grupo.programa}-${grupo.grupo}`} className="border-t border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
                       <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{grupo.programa || 'N/A'}</td>
                       <td className="px-4 py-3">
@@ -216,13 +329,70 @@ export default function PublicConsultaHorario() {
               </table>
             </div>
           )}
+          {/* Pagination Programas */}
+          {totalGrupos > pageSize && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {Math.min((currentPagePrograma - 1) * pageSize + 1, totalGrupos)} - {Math.min(currentPagePrograma * pageSize, totalGrupos)} de {totalGrupos} grupos
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPagePrograma}
+                  disabled={currentPagePrograma <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+                {hasPrevPageWindow(currentPagePrograma, totalPagesPrograma) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPrevPageWindowPrograma}
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                {pageNumbersPrograma.map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    variant={pageNumber === currentPagePrograma ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => goToPagePrograma(pageNumber)}
+                    className={pageNumber === currentPagePrograma ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+                  >
+                    {pageNumber}
+                  </Button>
+                ))}
+                {hasNextPageWindow(currentPagePrograma, totalPagesPrograma) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPageWindowPrograma}
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPagePrograma}
+                  disabled={currentPagePrograma >= totalPagesPrograma}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
   };
 
   return (
-    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
+    <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6 overflow-y-auto max-h-screen`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

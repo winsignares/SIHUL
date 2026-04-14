@@ -75,6 +75,12 @@ class Usuario(AbstractUser):
     def save(self, *args, **kwargs):
         self.is_active = self.activo
 
+        # Mantiene consistencia: la seccional del usuario siempre se deriva de su sede.
+        if self.sede_id:
+            sede_seccional_id = self.sede.seccional_id if self.sede else None
+            if self.seccional_id != sede_seccional_id:
+                self.seccional_id = sede_seccional_id
+
         if self.is_superuser or self.es_superusuario:
             self.is_superuser = True
             self.es_superusuario = True

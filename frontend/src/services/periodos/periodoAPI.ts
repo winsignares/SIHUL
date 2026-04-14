@@ -18,7 +18,8 @@ export const periodoService = {
    * Obtiene la lista de todos los períodos académicos
    */
   listarPeriodos: async (): Promise<{ periodos: PeriodoAcademico[] }> => {
-    return apiClient.get('/periodos/list/');
+    const periodos = await apiClient.get<PeriodoAcademico[]>('/periodos/');
+    return { periodos };
   },
 
   /**
@@ -42,13 +43,17 @@ export const periodoService = {
    * @param periodo Datos del período académico a actualizar
    */
   actualizarPeriodo: async (periodo: PeriodoAcademico): Promise<{ message: string; id: number }> => {
-    return apiClient.put('/periodos/update/', {
-      id: periodo.id,
+    if (!periodo.id) {
+      throw new Error('Se requiere el ID del período para actualizar');
+    }
+
+    const actualizado = await apiClient.put<PeriodoAcademico>(`/periodos/${periodo.id}/`, {
       nombre: periodo.nombre,
       fecha_inicio: periodo.fecha_inicio,
       fecha_fin: periodo.fecha_fin,
       activo: periodo.activo
     });
+    return { message: 'Período actualizado', id: actualizado.id ?? periodo.id };
   },
 
   /**
@@ -56,7 +61,8 @@ export const periodoService = {
    * @param id ID del período académico a eliminar
    */
   eliminarPeriodo: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/periodos/delete/', { id });
+    await apiClient.delete(`/periodos/${id}/`);
+    return { message: 'Período eliminado' };
   },
 
   /**
@@ -75,5 +81,21 @@ export const periodoService = {
       fecha_fin: nuevoPeriodo.fecha_fin,
       activo: nuevoPeriodo.activo
     });
+  },
+
+  /**
+   * Busca un período académico que se encuentre dentro de un rango de fechas específico
+   * @param fechaInicio Fecha inicio del rango a buscar (YYYY-MM-DD)
+   * @param fechaFin Fecha fin del rango a buscar (YYYY-MM-DD)
+   * @returns Período(s) que intersecten con el rango especificado
+   */
+  periodoPorRangoFechas: async (
+    fechaInicio: string,
+    fechaFin: string
+  ): Promise<{ mensaje: string; fecha_inicio_busqueda: string; fecha_fin_busqueda: string; periodos: PeriodoAcademico[] }> => {
+    return apiClient.get(
+      `/periodos/rango-fechas/?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`,
+      { suppressErrorLog: true }
+    );
   }
 };

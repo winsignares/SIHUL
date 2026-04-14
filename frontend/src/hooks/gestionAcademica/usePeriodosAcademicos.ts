@@ -117,6 +117,11 @@ export function usePeriodosAcademicos() {
 
     const periodoActivo = periodos.find(p => p.estado === 'Activo');
 
+    const canDeletePeriodo = (periodo: PeriodoUI): boolean => {
+        if (periodo.estado === 'Activo') return false;
+        return periodo.programasActivos === 0 && periodo.horariosRegistrados === 0;
+    };
+
     const calcularSiguientePeriodo = (nombreActual: string): string => {
         const match = nombreActual.match(/(\d{4})-(\d+)/);
         if (match) {
@@ -404,6 +409,12 @@ export function usePeriodosAcademicos() {
             showNotification('No se puede eliminar el periodo activo', 'error');
             return;
         }
+
+        if (!canDeletePeriodo(periodo)) {
+            showNotification('No se puede eliminar: el período tiene programas o horarios asociados.', 'error');
+            return;
+        }
+
         setPeriodoAEliminar(periodo);
         setShowDeleteDialog(true);
     };
@@ -446,6 +457,7 @@ export function usePeriodosAcademicos() {
         periodoACopiar,
         periodoAEditar,
         periodoAEliminar,
+        canDeletePeriodo,
         handleOpenCreateDialog,
         handleCreatePeriodo,
         handleOpenEditDialog,

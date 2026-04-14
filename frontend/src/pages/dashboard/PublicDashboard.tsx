@@ -9,13 +9,11 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Badge } from '../../share/badge';
-import { useDashboardHome } from '../../hooks/dashboard/useDashboardHome';
 import { usePublicDashboard } from '../../hooks/dashboard/usePublicDashboard';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function PublicDashboard() {
   const isMobile = useIsMobile();
-  const { periodoActivo } = useDashboardHome();
   const { quickAccessItems, handleNavigateToService } = usePublicDashboard();
 
   return (

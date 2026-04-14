@@ -58,10 +58,13 @@ def validar_horario(sender, instance, **kwargs):
         except Horario.DoesNotExist:
             pass
     
-    # Buscar horarios que usan el mismo espacio en el mismo día
+    periodo_id = instance.grupo.periodo_id
+
+    # Buscar horarios que usan el mismo espacio en el mismo día y periodo
     horarios_mismo_espacio = Horario.objects.filter(
         espacio_id=instance.espacio_id,
-        dia_semana=instance.dia_semana
+        dia_semana=instance.dia_semana,
+        grupo__periodo_id=periodo_id,
     ).exclude(pk=instance.pk if instance.pk else None)
     
     # Verificar solapamientos
@@ -90,6 +93,7 @@ def validar_horario(sender, instance, **kwargs):
                 horarios_misma_clase = Horario.objects.filter(
                     espacio_id=instance.espacio_id,
                     dia_semana=instance.dia_semana,
+                    grupo__periodo_id=periodo_id,
                     asignatura_id=instance.asignatura_id,
                     docente_id=instance.docente_id,
                     hora_inicio=instance.hora_inicio,
@@ -141,7 +145,8 @@ def crear_horario_fusionado(sender, instance, created, **kwargs):
         dia_semana=instance.dia_semana,
         hora_inicio=instance.hora_inicio,
         hora_fin=instance.hora_fin,
-        espacio_id=instance.espacio_id
+        espacio_id=instance.espacio_id,
+        grupo__periodo_id=instance.grupo.periodo_id,
     ).exclude(
         id=instance.id  # Excluir el horario recién creado
     ).order_by('id')
@@ -169,7 +174,8 @@ def crear_horario_fusionado(sender, instance, created, **kwargs):
         docente_id=instance.docente_id,
         dia_semana=instance.dia_semana,
         hora_inicio=instance.hora_inicio,
-        hora_fin=instance.hora_fin
+        hora_fin=instance.hora_fin,
+        grupo__periodo_id=instance.grupo.periodo_id,
     )
     
     cantidad_total = sum(h.cantidad_estudiantes or 0 for h in horarios_para_sumar)

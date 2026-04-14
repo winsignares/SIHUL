@@ -91,16 +91,16 @@ def get_grupo(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        #buscamos el grupo solo si su programa está en la misma ciudad de la sede del usuario (a través de programa -> facultad -> sede)
+        #buscamos el grupo solo si su programa está en la misma seccional de la sede del usuario (a través de programa -> facultad -> sede)
         #obtenemos la sede del usuario desde el middleware
         user_sede = getattr(request, 'sede', None)
-        #si el usuario tiene una sede con ciudad, filtramos el grupo por esa ciudad
-        if user_sede and user_sede.ciudad:
-            g = Grupo.objects.filter(id=id, programa__facultad__sede__ciudad=user_sede.ciudad).first()
+        #si el usuario tiene una sede con seccional, filtramos el grupo por esa seccional
+        if user_sede and user_sede.seccional_id:
+            g = Grupo.objects.filter(id=id, programa__facultad__sede__seccional_id=user_sede.seccional_id).first()
             if not g:
                 return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
         else:
-            #si no tiene sede o ciudad, buscamos el grupo sin filtro de ciudad
+            #si no tiene sede o seccional, buscamos el grupo sin filtro de seccional
             g = Grupo.objects.get(id=id)
         return JsonResponse({"id": g.id, "nombre": g.nombre, "programa_id": g.programa.id, "periodo_id": g.periodo.id, "semestre": g.semestre, "activo": g.activo}, status=200)
     except Grupo.DoesNotExist:
@@ -114,13 +114,14 @@ def list_grupos(request):
         # Obtener sede del usuario desde middleware
         user_sede = getattr(request, 'sede', None)
         
-        # Filtrar grupos por la misma ciudad de la sede del usuario (a través de programa -> facultad -> sede)
-        if user_sede and user_sede.ciudad:
+        # Filtrar grupos por la misma seccional de la sede del usuario (a través de programa -> facultad -> sede)
+        if user_sede and user_sede.seccional_id:
             items = Grupo.objects.select_related('programa__facultad__sede').filter(
-                programa__facultad__sede__ciudad=user_sede.ciudad
+                programa__facultad__sede__seccional_id=user_sede.seccional_id
             )
         else:
             items = Grupo.objects.all()
         
         lst = [{"id": i.id, "nombre": i.nombre, "programa_id": i.programa.id, "periodo_id": i.periodo.id, "semestre": i.semestre, "activo": i.activo} for i in items]
         return JsonResponse({"grupos": lst}, status=200)
+

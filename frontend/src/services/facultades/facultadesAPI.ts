@@ -9,8 +9,30 @@ export interface Facultad {
     activa?: boolean;
     sede_id?: number;
     sede_nombre?: string;
-    sede_ciudad?: string;
+    sede_seccional_id?: number;
+    sede_seccional_ciudad?: string;
 }
+
+interface FacultadApi {
+    id?: number;
+    nombre: string;
+    activa?: boolean;
+    sede?: number | null;
+    sede_id?: number;
+    sede_nombre?: string;
+    sede_seccional_id?: number;
+    sede_seccional_ciudad?: string;
+}
+
+const toFrontendFacultad = (facultad: FacultadApi): Facultad => ({
+    id: facultad.id,
+    nombre: facultad.nombre,
+    activa: facultad.activa,
+    sede_id: facultad.sede_id ?? facultad.sede ?? undefined,
+    sede_nombre: facultad.sede_nombre,
+    sede_seccional_id: facultad.sede_seccional_id,
+    sede_seccional_ciudad: facultad.sede_seccional_ciudad,
+});
 
 /**
  * Payload para crear una facultad
@@ -58,27 +80,32 @@ export const facultadService = {
      * Actualiza una facultad existente
      */
     update: async (payload: UpdateFacultadPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/facultades/update/', payload);
+        const updated = await apiClient.put<FacultadApi>(`/facultades/${payload.id}/`, payload);
+        return { message: 'Facultad actualizada', id: updated.id ?? payload.id };
     },
 
     /**
      * Elimina una facultad
      */
     delete: async (payload: DeleteFacultadPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/facultades/delete/', payload);
+        await apiClient.delete(`/facultades/${payload.id}/`);
+        return { message: 'Facultad eliminada' };
     },
 
     /**
      * Obtiene una facultad por ID
      */
     get: async (id: number): Promise<Facultad> => {
-        return apiClient.get<Facultad>(`/facultades/${id}/`);
+        const facultad = await apiClient.get<FacultadApi>(`/facultades/${id}/`);
+        return toFrontendFacultad(facultad);
     },
 
     /**
      * Lista todas las facultades
      */
     list: async (): Promise<ListFacultadesResponse> => {
-        return apiClient.get<ListFacultadesResponse>('/facultades/list/');
+        const facultadesApi = await apiClient.get<FacultadApi[]>('/facultades/');
+        const facultades = facultadesApi.map(toFrontendFacultad);
+        return { facultades };
     }
 };

@@ -84,6 +84,20 @@ export interface ListComponenteRolesResponse {
     componente_roles: ComponenteRol[];
 }
 
+interface ComponenteRolApi {
+    id?: number;
+    componente: number;
+    rol: number;
+    permiso: 'VER' | 'EDITAR';
+}
+
+const toFrontendComponenteRol = (item: ComponenteRolApi): ComponenteRol => ({
+    id: item.id,
+    componente_id: item.componente,
+    rol_id: item.rol,
+    permiso: item.permiso,
+});
+
 /**
  * Servicio de componentes para comunicación con el backend
  */
@@ -99,7 +113,8 @@ export const componenteService = {
      * Lista todos los componentes
      */
     list: async (): Promise<ListComponentesResponse> => {
-        return apiClient.get<ListComponentesResponse>('/componentes/list/');
+        const componentes = await apiClient.get<Componente[]>('/componentes/');
+        return { componentes };
     },
 
     /**
@@ -113,14 +128,21 @@ export const componenteService = {
      * Actualiza un componente existente
      */
     update: async (payload: UpdateComponentePayload): Promise<{ message: string; id: number; nombre: string; descripcion?: string }> => {
-        return apiClient.put<{ message: string; id: number; nombre: string; descripcion?: string }>('/componentes/update/', payload);
+        const updated = await apiClient.put<Componente>(`/componentes/${payload.id}/`, payload);
+        return {
+            message: 'Componente actualizado',
+            id: updated.id ?? payload.id,
+            nombre: updated.nombre,
+            descripcion: updated.descripcion,
+        };
     },
 
     /**
      * Elimina un componente
      */
     delete: async (payload: DeleteComponentePayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/componentes/delete/', payload);
+        await apiClient.delete(`/componentes/${payload.id}/`);
+        return { message: 'Componente eliminado' };
     }
 };
 
@@ -132,34 +154,60 @@ export const componenteRolService = {
      * Crea un nuevo ComponenteRol
      */
     create: async (payload: CreateComponenteRolPayload): Promise<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }> => {
-        return apiClient.post<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }>('/componentes/rol/', payload);
+        const created = await apiClient.post<ComponenteRolApi>('/componentes/roles/', {
+            componente: payload.componente_id,
+            rol: payload.rol_id,
+            permiso: payload.permiso,
+        });
+        const normalized = toFrontendComponenteRol(created);
+        return {
+            message: 'ComponenteRol creado',
+            id: normalized.id ?? 0,
+            componente_id: normalized.componente_id,
+            rol_id: normalized.rol_id,
+            permiso: normalized.permiso,
+        };
     },
 
     /**
      * Lista todos los ComponenteRoles
      */
     list: async (): Promise<ListComponenteRolesResponse> => {
-        return apiClient.get<ListComponenteRolesResponse>('/componentes/rol/list/');
+        const componenteRolesApi = await apiClient.get<ComponenteRolApi[]>('/componentes/roles/');
+        const componente_roles = componenteRolesApi.map(toFrontendComponenteRol);
+        return { componente_roles };
     },
 
     /**
      * Obtiene un ComponenteRol por ID
      */
     get: async (id: number): Promise<ComponenteRol> => {
-        return apiClient.get<ComponenteRol>(`/componentes/rol/${id}/`);
+        const item = await apiClient.get<ComponenteRolApi>(`/componentes/roles/${id}/`);
+        return toFrontendComponenteRol(item);
     },
 
     /**
      * Actualiza un ComponenteRol existente
      */
     update: async (payload: UpdateComponenteRolPayload): Promise<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }> => {
-        return apiClient.put<{ message: string; id: number; componente_id: number; rol_id: number; permiso: string }>('/componentes/rol/update/', payload);
+        const updated = await apiClient.patch<ComponenteRolApi>(`/componentes/roles/${payload.id}/`, {
+            permiso: payload.permiso,
+        });
+        const normalized = toFrontendComponenteRol(updated);
+        return {
+            message: 'ComponenteRol actualizado',
+            id: normalized.id ?? payload.id,
+            componente_id: normalized.componente_id,
+            rol_id: normalized.rol_id,
+            permiso: normalized.permiso,
+        };
     },
 
     /**
      * Elimina un ComponenteRol
      */
     delete: async (payload: DeleteComponenteRolPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/componentes/rol/delete/', payload);
+        await apiClient.delete(`/componentes/roles/${payload.id}/`);
+        return { message: 'ComponenteRol eliminado' };
     }
 };

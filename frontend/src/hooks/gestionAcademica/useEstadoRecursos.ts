@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
 
 export function useEstadoRecursos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -42,6 +43,17 @@ export function useEstadoRecursos() {
 
     useEffect(() => {
         loadData();
+    }, []);
+
+    useEffect(() => {
+        const handleEspaciosUpdated = () => {
+            void loadData({ force: true });
+        };
+
+        window.addEventListener(ESPACIOS_UPDATED_EVENT, handleEspaciosUpdated);
+        return () => {
+            window.removeEventListener(ESPACIOS_UPDATED_EVENT, handleEspaciosUpdated);
+        };
     }, []);
 
     const loadData = async ({ force = false }: { force?: boolean } = {}) => {

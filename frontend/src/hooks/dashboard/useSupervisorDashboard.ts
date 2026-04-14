@@ -47,10 +47,10 @@ export function useSupervisorDashboard() {
                     color: 'from-blue-500 to-blue-600',
                     bgColor: 'bg-blue-100',
                     textColor: 'text-blue-600',
-                    trend: `+${calculateTrend(
+                    trend: `+${Math.abs(calculateTrend(
                         metrics.espaciosTotales,
                         parseInt(supervisorMetrics[0].value as string) || 0
-                    )}%`,
+                    ))}%`,
                     trendUp: true
                 },
                 {

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import SearchableSelect from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Switch } from '../../share/switch';
-import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight, User, Lock, Shield } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -33,6 +33,19 @@ export default function GestionUsuarios() {
     abrirEdicion,
     cambiarEstadoUsuario,
     confirmarEliminarUsuario,
+    paginatedUsuarios,
+    totalFilteredUsuarios,
+    currentUsuarioPage,
+    totalUsuarioPages,
+    usuarioPageNumbers,
+    goToUsuarioPage,
+    goToNextUsuarioPage,
+    goToPrevUsuarioPage,
+    hasPrevUsuarioPageWindow,
+    hasNextUsuarioPageWindow,
+    goToPrevUsuarioPageWindow,
+    goToNextUsuarioPageWindow,
+    pageSize,
     filteredUsuarios,
     notification,
     rolesDisponibles,
@@ -66,6 +79,9 @@ export default function GestionUsuarios() {
     confirmarPassword, setConfirmarPassword,
     sedeSeleccionada, setSedeSeleccionada
   } = useGestionUsuarios();
+
+  const firstUsuarioItemIndex = totalFilteredUsuarios === 0 ? 0 : (currentUsuarioPage - 1) * pageSize + 1;
+  const lastUsuarioItemIndex = Math.min(currentUsuarioPage * pageSize, totalFilteredUsuarios);
 
   const getRolBadge = (usuario: any) => {
     // Intentar obtener el nombre del rol del objeto anidado o buscarlo por ID
@@ -166,9 +182,9 @@ export default function GestionUsuarios() {
                   <div className="space-y-2">
                     <Label>Nombre Completo *</Label>
                     <div className="relative group">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                       <Input
-                        placeholder="Juan Pérez García"
+                        placeholder="Ej: Juan Pérez García"
                         value={nuevoUsuario.nombre}
                         onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })}
                         className="pl-10"
@@ -221,7 +237,7 @@ export default function GestionUsuarios() {
                   <div className="space-y-2">
                     <Label>Contraseña *</Label>
                     <div className="relative group">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                       <Input
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
@@ -241,7 +257,7 @@ export default function GestionUsuarios() {
                   <div className="space-y-2">
                     <Label>Confirmar Contraseña *</Label>
                     <div className="relative group">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
@@ -260,16 +276,20 @@ export default function GestionUsuarios() {
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Rol *</Label>
-                    <SearchableSelect
-                      items={rolesDisponibles}
-                      value={nuevoUsuario.rol_id?.toString() || ''}
-                      onSelect={(rol) => setNuevoUsuario({ ...nuevoUsuario, rol_id: rol.id })}
-                      getItemId={(rol) => rol.id.toString()}
-                      getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-                      placeholder="Seleccione un rol"
-                      searchPlaceholder="Buscar rol..."
-                      emptyMessage="No se encontraron roles."
-                    />
+                    <div className="relative group">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={rolesDisponibles}
+                        value={nuevoUsuario.rol_id?.toString() || ''}
+                        onSelect={(rol) => setNuevoUsuario({ ...nuevoUsuario, rol_id: rol.id })}
+                        getItemId={(rol) => rol.id.toString()}
+                        getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                        placeholder="Seleccione un rol"
+                        searchPlaceholder="Buscar rol..."
+                        emptyMessage="No se encontraron roles."
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -505,14 +525,14 @@ export default function GestionUsuarios() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsuarios.length === 0 ? (
+              {totalFilteredUsuarios === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                     No se encontraron usuarios
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsuarios.map((usuario) => (
+                paginatedUsuarios.map((usuario) => (
                   <TableRow key={usuario.id}>
                     <TableCell>
                       <div>
@@ -564,6 +584,79 @@ export default function GestionUsuarios() {
         </CardContent>
       </Card>
 
+      {totalFilteredUsuarios > 0 && (
+        <Card className="border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Mostrando {firstUsuarioItemIndex}-{lastUsuarioItemIndex} de {totalFilteredUsuarios} usuarios
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevUsuarioPage}
+                  disabled={currentUsuarioPage <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 flex-wrap">
+                  {hasPrevUsuarioPageWindow && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToPrevUsuarioPageWindow}
+                    >
+                      ...
+                    </Button>
+                  )}
+
+                  {usuarioPageNumbers.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      type="button"
+                      size="sm"
+                      variant={pageNumber === currentUsuarioPage ? 'default' : 'outline'}
+                      className={pageNumber === currentUsuarioPage ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                      onClick={() => goToUsuarioPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+
+                  {hasNextUsuarioPageWindow && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={goToNextUsuarioPageWindow}
+                    >
+                      ...
+                    </Button>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextUsuarioPage}
+                  disabled={currentUsuarioPage >= totalUsuarioPages}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dialog: Editar Usuario */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
         setEditDialogOpen(open);
@@ -585,43 +678,59 @@ export default function GestionUsuarios() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre Completo *</Label>
-                    <Input
-                      placeholder="Ej: Juan Pérez"
-                      value={editingUser.nombre}
-                      onChange={(e) => setEditingUser({ ...editingUser, nombre: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        placeholder="Ej: Juan Pérez"
+                        value={editingUser.nombre}
+                        onChange={(e) => setEditingUser({ ...editingUser, nombre: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Correo Institucional *</Label>
-                    <Input
-                      type="email"
-                      placeholder="usuario@unilibre.edu.co"
-                      value={editingUser.correo}
-                      onChange={(e) => setEditingUser({ ...editingUser, correo: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type="email"
+                        placeholder="usuario@unilibre.edu.co"
+                        value={editingUser.correo}
+                        onChange={(e) => setEditingUser({ ...editingUser, correo: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Nueva Contraseña (opcional)</Label>
-                    <Input
-                      type="password"
-                      placeholder="Dejar vacío para no cambiar"
-                      value={editingUser.contrasena || ''}
-                      onChange={(e) => setEditingUser({ ...editingUser, contrasena: e.target.value })}
-                    />
+                    <div className="relative group">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                      <Input
+                        type="password"
+                        placeholder="Dejar vacío para no cambiar"
+                        value={editingUser.contrasena || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, contrasena: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
                     <p className="text-xs text-slate-500">Solo ingrese una contraseña si desea cambiarla</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Rol *</Label>
-                    <SearchableSelect
-                      items={rolesDisponibles}
-                      value={editingUser.rol_id?.toString() || ''}
-                      onSelect={(rol) => setEditingUser({ ...editingUser, rol_id: rol.id })}
-                      getItemId={(rol) => rol.id.toString()}
-                      getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
-                      placeholder="Seleccione un rol"
-                      searchPlaceholder="Buscar rol..."
-                      emptyMessage="No se encontraron roles."
-                    />
+                    <div className="relative group">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={rolesDisponibles}
+                        value={editingUser.rol_id?.toString() || ''}
+                        onSelect={(rol) => setEditingUser({ ...editingUser, rol_id: rol.id })}
+                        getItemId={(rol) => rol.id.toString()}
+                        getItemLabel={(rol) => rol.nombre.charAt(0).toUpperCase() + rol.nombre.slice(1).replace('_', ' ')}
+                        placeholder="Seleccione un rol"
+                        searchPlaceholder="Buscar rol..."
+                        emptyMessage="No se encontraron roles."
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

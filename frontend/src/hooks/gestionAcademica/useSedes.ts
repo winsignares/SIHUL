@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import type { Sede } from '../../services/sedes/sedeAPI';
+import type { Seccional } from '../../services/sedes/sedeAPI';
 import {
   getPageNumbers,
   getPageSlice,
@@ -21,6 +22,7 @@ export function useSedes() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [sedes, setSedes] = useState<Sede[]>([]);
+    const [seccionales, setSeccionales] = useState<Seccional[]>([]);
     const [loading, setLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -30,13 +32,23 @@ export function useSedes() {
     const [showDelete, setShowDelete] = useState(false);
 
     // Estados de formulario
-    const [sedeForm, setSedeForm] = useState({ nombre: '', direccion: '', ciudad: '' });
+    const [sedeForm, setSedeForm] = useState({ nombre: '', direccion: '', seccionalId: '' });
     const [selectedSede, setSelectedSede] = useState<Sede | null>(null);
 
     // Cargar datos
     useEffect(() => {
         loadSedes();
+        loadSeccionales();
     }, []);
+
+    const loadSeccionales = async () => {
+        try {
+            const response = await sedeService.listarSeccionales();
+            setSeccionales(response.seccionales.filter((seccional) => seccional.activa));
+        } catch (error) {
+            toast.error(`Error al cargar seccionales: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+    };
 
     const loadSedes = async ({ force = false }: { force?: boolean } = {}) => {
         try {
@@ -66,17 +78,22 @@ export function useSedes() {
             return;
         }
 
+        if (!sedeForm.seccionalId) {
+            toast.error('Debe seleccionar una seccional');
+            return;
+        }
+
         try {
             setLoading(true);
             await sedeService.crearSede({
                 nombre: sedeForm.nombre.trim(),
                 direccion: sedeForm.direccion.trim() || undefined,
-                ciudad: sedeForm.ciudad.trim() || undefined,
+                seccional_id: Number(sedeForm.seccionalId),
                 activa: true
             });
 
             await loadSedes({ force: true });
-            setSedeForm({ nombre: '', direccion: '', ciudad: '' });
+            setSedeForm({ nombre: '', direccion: '', seccionalId: '' });
             setShowCreate(false);
 
             toast.success('Sede registrada exitosamente');
@@ -96,20 +113,25 @@ export function useSedes() {
             return;
         }
 
+        if (!sedeForm.seccionalId) {
+            toast.error('Debe seleccionar una seccional');
+            return;
+        }
+
         try {
             setLoading(true);
             await sedeService.actualizarSede({
                 id: selectedSede.id,
                 nombre: sedeForm.nombre.trim(),
                 direccion: sedeForm.direccion.trim() || undefined,
-                ciudad: sedeForm.ciudad.trim() || undefined,
+                seccional_id: Number(sedeForm.seccionalId),
                 activa: selectedSede.activa
             });
 
             await loadSedes({ force: true });
             setShowEdit(false);
             setSelectedSede(null);
-            setSedeForm({ nombre: '', direccion: '', ciudad: '' });
+            setSedeForm({ nombre: '', direccion: '', seccionalId: '' });
 
             toast.info('Sede actualizada correctamente');
         } catch (error) {
@@ -165,7 +187,7 @@ export function useSedes() {
         setSedeForm({ 
             nombre: sede.nombre,
             direccion: sede.direccion || '',
-            ciudad: sede.ciudad || ''
+            seccionalId: sede.seccional_id?.toString() || ''
         });
         setShowEdit(true);
     };
@@ -224,6 +246,7 @@ export function useSedes() {
     return {
         searchTerm, setSearchTerm,
         sedes,
+        seccionales,
         loading,
         showCreate, setShowCreate,
         showEdit, setShowEdit,

@@ -42,11 +42,8 @@ class OcupacionSemanalService {
    */
   async getTiposEspacio(): Promise<Array<{ id: number; nombre: string; descripcion?: string }>> {
     try {
-      const response = await apiClient.get('/espacios/tipos/list/');
-      if (response && typeof response === 'object' && 'tipos_espacio' in response) {
-        return (response as TipoEspacioResponse).tipos_espacio;
-      }
-      return [];
+      const tipos_espacio = await apiClient.get<Array<{ id: number; nombre: string; descripcion?: string }>>('/tipos-espacio/');
+      return tipos_espacio;
     } catch (error) {
       console.error('Error fetching tipos de espacio:', error);
       return [];

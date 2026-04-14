@@ -662,7 +662,7 @@ def get_prestamo(request, id=None):
                 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).prefetch_related('prestamo_recursos__recurso', 'ocurrencias_generadas').get(
                 id=id,
-                espacio__sede__ciudad=user_sede.ciudad
+                espacio__sede__seccional_id=user_sede.seccional_id
             )
         else:
             p = PrestamoEspacio.objects.select_related(
@@ -726,12 +726,12 @@ def list_prestamos(request):
         
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        # Filtrar prestamos por la misma ciudad de la sede del usuario (a través de espacio -> sede)
-        if user_sede and user_sede.ciudad:
+        # Filtrar prestamos por la misma seccional de la sede del usuario (a través de espacio -> sede)
+        if user_sede and user_sede.seccional_id:
             items = PrestamoEspacio.objects.select_related(
                 'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).prefetch_related('prestamo_recursos__recurso').filter(
-                espacio__sede__ciudad=user_sede.ciudad
+                espacio__sede__seccional_id=user_sede.seccional_id
             )
         else:
             items = PrestamoEspacio.objects.select_related(
@@ -787,11 +787,11 @@ def list_prestamos_todos_admin(request):
         # 1. Obtener préstamos de usuarios autenticados
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             items_auth = PrestamoEspacio.objects.select_related(
                 'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).prefetch_related('prestamo_recursos__recurso').filter(
-                espacio__sede__ciudad=user_sede.ciudad
+                espacio__sede__seccional_id=user_sede.seccional_id
             )
         else:
             items_auth = PrestamoEspacio.objects.select_related(
@@ -836,11 +836,11 @@ def list_prestamos_todos_admin(request):
             lst.append(item)
         
         # 2. Obtener préstamos públicos
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             items_public = PrestamoEspacioPublico.objects.select_related(
                 'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).filter(
-                espacio__sede__ciudad=user_sede.ciudad
+                espacio__sede__seccional_id=user_sede.seccional_id
             )
         else:
             items_public = PrestamoEspacioPublico.objects.select_related(
@@ -1178,7 +1178,7 @@ def list_espacios_disponibles_publico(request):
 def list_prestamos_publicos(request):
     """
     Lista todos los préstamos públicos.
-    Respeta el alcance de sede/ciudad del usuario cuando aplica middleware de sede.
+    Respeta el alcance de sede/seccional del usuario cuando aplica middleware de sede.
     """
     if request.method != 'GET':
         return JsonResponse({"error": "Método no permitido"}, status=405)
@@ -1187,11 +1187,11 @@ def list_prestamos_publicos(request):
         user_sede = getattr(request, 'sede', None)
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             items = PrestamoEspacioPublico.objects.select_related(
                 'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).filter(
-                espacio__sede__ciudad=user_sede.ciudad
+                espacio__sede__seccional_id=user_sede.seccional_id
             )
         else:
             items = PrestamoEspacioPublico.objects.select_related(
@@ -1594,3 +1594,4 @@ def delete_prestamo_publico(request):
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+

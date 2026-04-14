@@ -36,7 +36,14 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 // Helper para extraer el ID numérico y el tipo de préstamo del ID único
 const parseUniqueId = (uniqueId: string): { tipo: 'autenticado' | 'publico', id: number } | null => {
     const match = uniqueId.match(/^(auth|public)-(\d+)$/);
-    if (!match) return null;
+    if (!match) {
+        // Compatibilidad con IDs legados sin prefijo.
+        const numericId = Number.parseInt(uniqueId, 10);
+        if (Number.isInteger(numericId) && numericId > 0) {
+            return { tipo: 'autenticado', id: numericId };
+        }
+        return null;
+    }
     
     return {
         tipo: match[1] === 'auth' ? 'autenticado' : 'publico',
@@ -82,16 +89,35 @@ export function usePrestamosEspacios() {
 
             setLoading(true);
 
+            // Detectar si es supervisor para usar el endpoint específico
+            const rol = user?.rol
+                ? typeof user.rol === 'string'
+                    ? user.rol
+                    : String(user.rol?.nombre ?? '')
+                : '';
+            const esSupervisor = rol.toLowerCase().startsWith('supervisor');
+
             // Cargar TODOS los préstamos (autenticados + públicos) desde la API combinada
-            const prestamosResponse = await prestamoService.listarTodosPrestamosAdmin();
+            // Si es supervisor, usar endpoint específico de prestamos de espacios permitidos
+            const prestamosResponse = esSupervisor
+                ? await prestamoService.listarPrestamosSupervisor()
+                : await prestamoService.listarTodosPrestamosAdmin();
 
             // Transformar datos del backend al formato UI
             const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
+                const esPublico = Boolean(
+                    p.usuario_id == null && (
+                        p.solicitante_publico_identificacion ||
+                        p.solicitante_publico_correo ||
+                        p.solicitante_publico_nombre
+                    )
+                );
+
                 return {
-                    id: p.id?.toString() || '',
-                    solicitante: p.usuario_nombre || 'Usuario No Disponible',
-                    email: p.usuario_correo || '',
-                    telefono: p.telefono || '',
+                    id: p.id ? `${esPublico ? 'public' : 'auth'}-${p.id}` : '',
+                    solicitante: p.usuario_nombre || p.solicitante_publico_nombre || 'Usuario No Disponible',
+                    email: p.usuario_correo || p.solicitante_publico_correo || '',
+                    telefono: p.telefono || p.solicitante_publico_telefono || '',
                     espacio: p.espacio_nombre || `Espacio ${p.espacio_id}`,
                     espacio_id: p.espacio_id,
                     fecha: p.fecha,
@@ -209,8 +235,6 @@ export function usePrestamosEspacios() {
             }
 
             // Recargar datos para obtener el estado actualizado
-            await loadData({ force: true });
-
             setVerSolicitudDialog(null);
             setComentariosAccion('');
 
@@ -218,6 +242,8 @@ export function usePrestamosEspacios() {
                 message: '✅ Solicitud aprobada correctamente',
                 type: 'success'
             });
+
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al aprobar solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -312,8 +338,6 @@ export function usePrestamosEspacios() {
             }
 
             // Recargar datos para obtener el estado actualizado
-            await loadData({ force: true });
-
             setVerSolicitudDialog(null);
             setComentariosAccion('');
 
@@ -321,6 +345,8 @@ export function usePrestamosEspacios() {
                 message: '✅ Solicitud rechazada correctamente',
                 type: 'success'
             });
+
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al rechazar solicitud: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -449,12 +475,14 @@ export function usePrestamosEspacios() {
                 });
             }
 
-            await loadData({ force: true });
-            cancelarEdicion();
             showNotification({
                 message: '✅ Solicitud actualizada correctamente',
                 type: 'success'
             });
+
+            setVerSolicitudDialog(null);
+            cancelarEdicion();
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al actualizar solicitud: ${getErrorMessage(error, 'Error desconocido')}`,
@@ -482,8 +510,6 @@ export function usePrestamosEspacios() {
                 await prestamoService.eliminarPrestamo(numericId);
             }
 
-            await loadData({ force: true });
-
             if (verSolicitudDialog === id) {
                 setVerSolicitudDialog(null);
             }
@@ -493,6 +519,8 @@ export function usePrestamosEspacios() {
                 message: '✅ Solicitud eliminada correctamente',
                 type: 'success'
             });
+
+            await loadData({ force: true });
         } catch (error) {
             showNotification({
                 message: `Error al eliminar solicitud: ${getErrorMessage(error, 'Error desconocido')}`,

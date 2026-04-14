@@ -7,18 +7,26 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { DoorOpen, DoorClosed, Building2, Clock, MapPin, AlertCircle, Calendar, RefreshCw, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { useAperturaCierre } from '../../hooks/espacios/useAperturaCierre';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import CountdownTimer from '../../components/espacios/CountdownTimer';
 
 export default function SupervisorSalonHome() {
   const isMobile = useIsMobile();
+
+  const horaAMinutos = (hora: string): number => {
+    const [h, m] = hora.split(':').map((part) => parseInt(part, 10));
+    if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+    return (h * 60) + m;
+  };
+
   const {
     espacios,
     espaciosFiltrados,
     sedes,
     tiposUso,
+    estaAbiertoPorEspacioId,
     searchTerm,
     setSearchTerm,
     filterTipo,
@@ -29,6 +37,10 @@ export default function SupervisorSalonHome() {
     setFilterSede,
     horariosPaginados,
     totalHorariosPendientes,
+    salonesPorAbrir,
+    salonesPorCerrar,
+    totalAccionesBackend,
+    diagnosticoPendientes,
     horaActual,
     diaActual,
     fechaActual,
@@ -80,9 +92,7 @@ export default function SupervisorSalonHome() {
 
     try {
       const result = await cerrarSalon(espacioId);
-      if (result.ok) {
-        toast.success(`✅ ${nombreEspacio} cambio de estado aplicado`);
-      } else if (result.message && result.status !== 400) {
+      if (!result.ok && result.message && result.status !== 400) {
         toast.error(`❌ Error al cerrar ${nombreEspacio}: ${result.message}`);
       }
     } finally {
@@ -90,13 +100,8 @@ export default function SupervisorSalonHome() {
     }
   };
 
-  // Calcular estadísticas (contar horarios totales, no espacios)
-  const totalSalones = espaciosFiltrados?.reduce((count, esp) => 
-    count + (esp.horarios?.length || 0), 0) || 0;
-  const salonesPorAbrir = espaciosFiltrados?.reduce((count, esp) => 
-    count + (esp.horarios?.filter(h => h.proximaAccion === 'apertura').length || 0), 0) || 0;
-  const salonesPorCerrar = espaciosFiltrados?.reduce((count, esp) => 
-    count + (esp.horarios?.filter(h => h.proximaAccion === 'cierre').length || 0), 0) || 0;
+  // Estadisticas derivadas de la lista final de tarjetas (maximo una por espacio)
+  const totalSalones = totalHorariosPendientes;
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 dark:from-slate-900 dark:via-blue-950/10 dark:to-slate-800 min-h-full`}>
@@ -228,9 +233,10 @@ export default function SupervisorSalonHome() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los estados</SelectItem>
-            <SelectItem value="disponible">Disponible</SelectItem>
-            <SelectItem value="no disponible">No Disponible</SelectItem>
-            <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+            <SelectItem value="por-abrir">Por Abrir</SelectItem>
+            <SelectItem value="por-cerrar">Por Cerrar</SelectItem>
+            <SelectItem value="abierto">Abierto</SelectItem>
+            <SelectItem value="cerrado">Cerrado</SelectItem>
           </SelectContent>
         </Select>
 
@@ -280,6 +286,16 @@ export default function SupervisorSalonHome() {
                 {horariosPaginados.map(({ key, espacio, horario }, horarioIndex) => {
                     const isLoading = loadingAcciones[espacio.idEspacio] || false;
                     const isApertura = horario.proximaAccion === 'apertura';
+                  const estaAbierto = typeof estaAbiertoPorEspacioId[espacio.idEspacio] === 'boolean'
+                    ? estaAbiertoPorEspacioId[espacio.idEspacio]
+                    : espacio.esta_abierto !== false;
+                  const ahoraMin = horaAMinutos(horaActual);
+                  const inicioMin = horaAMinutos(horario.horaInicio);
+                  const finMin = horaAMinutos(horario.horaFin);
+                  const claseEnCursoYSalonCerrado = isApertura
+                    && !estaAbierto
+                    && ahoraMin >= inicioMin
+                    && ahoraMin < finMin;
                     
                     return (
                       <motion.div
@@ -316,22 +332,34 @@ export default function SupervisorSalonHome() {
                                 </div>
                                 <Badge 
                                   variant="outline"
-                                  className={espacio.estadoActual === 'Disponible' 
+                                  className={estaAbierto
                                     ? 'bg-green-50 text-green-700 border-green-200'
                                     : 'bg-red-50 text-red-700 border-red-200'}
                                 >
-                                  {espacio.estadoActual}
+                                  {estaAbierto ? 'Abierto' : 'Cerrado'}
                                 </Badge>
                               </div>
                             </div>
 
                             {/* Temporizador */}
                             <div className="mb-4">
-                              <CountdownTimer
-                                minutosRestantes={horario.minutosRestantes}
-                                segundosRestantes={horario.segundosRestantes}
-                                tipo={horario.proximaAccion}
-                              />
+                              {claseEnCursoYSalonCerrado ? (
+                                <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-red-300 bg-red-100 dark:bg-red-950">
+                                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                                    <AlertCircle className="w-6 h-6 text-white" />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-red-700 dark:text-red-300 mb-1">Estado de apertura</p>
+                                    <p className="text-base font-bold text-red-700 dark:text-red-300">Clase en curso y salon cerrado</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <CountdownTimer
+                                  minutosRestantes={horario.minutosRestantes}
+                                  segundosRestantes={horario.segundosRestantes}
+                                  tipo={horario.proximaAccion}
+                                />
+                              )}
                             </div>
 
                             {/* Información */}
@@ -509,6 +537,12 @@ export default function SupervisorSalonHome() {
                 <br />
                 El sistema se actualiza automáticamente cada 30 segundos.
               </p>
+              {diagnosticoPendientes && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                  {diagnosticoPendientes}
+                  {totalAccionesBackend > 0 ? ` (acciones backend: ${totalAccionesBackend})` : ''}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -580,7 +614,6 @@ export default function SupervisorSalonHome() {
         </DialogContent>
       </Dialog>
 
-      <Toaster />
     </div>
   );
 }

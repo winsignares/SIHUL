@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../share/notificationBanner';
 import { horarioService, horarioFusionadoService } from '../../services/horarios/horariosAPI';
@@ -8,6 +8,7 @@ import { espacioService, type EspacioFisico } from '../../services/espacios/espa
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { useValidacionHorarios } from './useValidacionHorarios';
 
 const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios';
 
@@ -113,6 +114,12 @@ export function useCentroHorarios() {
     const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
     const [progresoEliminacion, setProgresoEliminacion] = useState(0);
 
+    const { validarConflictosHorario } = useValidacionHorarios({
+        horarios,
+        grupos,
+        espacios,
+    });
+
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
     useEffect(() => {
@@ -171,6 +178,10 @@ export function useCentroHorarios() {
             const fusionadosResponse = await horarioFusionadoService.list();
             const fusionadosConInfo: HorarioFusionadoExtendido[] = await Promise.all(
                 fusionadosResponse.horarios_fusionados.map(async (hf): Promise<HorarioFusionadoExtendido> => {
+                    if (!hf.grupo1_id || !hf.grupo2_id) {
+                        throw new Error(`Horario fusionado inválido (id=${hf.id ?? 'sin-id'}): grupo1_id/grupo2_id requeridos`);
+                    }
+
                     // Obtener información de los grupos
                     const [grupo1, grupo2, grupo3] = await Promise.all([
                         grupoService.get(hf.grupo1_id),
@@ -362,153 +373,19 @@ export function useCentroHorarios() {
 
     // Validar conflictos de horario al editar
     const validarConflictosEdicion = (horarioEditado: HorarioExtendido): { valido: boolean; mensaje: string } => {
-        console.log('🔍 Validando conflictos para:', {
-            id: horarioEditado.id,
-            docente: horarioEditado.docente_nombre,
-            docente_id: horarioEditado.docente_id,
-            dia: horarioEditado.dia_semana,
-            horario: `${horarioEditado.hora_inicio} - ${horarioEditado.hora_fin}`,
-            espacio: horarioEditado.espacio_nombre
+        return validarConflictosHorario({
+            horarioId: horarioEditado.id,
+            grupoId: horarioEditado.grupo_id,
+            asignaturaId: horarioEditado.asignatura_id,
+            docenteId: horarioEditado.docente_id,
+            espacioId: horarioEditado.espacio_id,
+            diaSemana: horarioEditado.dia_semana,
+            horaInicio: horarioEditado.hora_inicio,
+            horaFin: horarioEditado.hora_fin,
+            cantidadEstudiantes: horarioEditado.cantidad_estudiantes,
+            docenteNombre: horarioEditado.docente_nombre,
+            espacioNombre: horarioEditado.espacio_nombre,
         });
-
-        // Validar que las horas sean válidas
-        if (horarioEditado.hora_inicio >= horarioEditado.hora_fin) {
-            return { valido: false, mensaje: 'La hora de fin debe ser mayor que la hora de inicio' };
-        }
-
-        // Validar conflictos de docente (si hay docente asignado)
-        if (horarioEditado.docente_id) {
-            // Normalizar día de la semana a minúsculas para comparación
-            const diaEditado = horarioEditado.dia_semana.toLowerCase();
-            
-            const horariosDocenteSuperpuestos = horarios.filter(h => {
-                if (h.id === horarioEditado.id) return false; // Excluir el horario que se está editando
-                if (h.docente_id !== horarioEditado.docente_id) return false;
-                if (h.dia_semana.toLowerCase() !== diaEditado) return false;
-                
-                // Verificar solapamiento de horarios
-                // Dos horarios se solapan si:
-                // - El inicio del editado está antes del fin del existente Y
-                // - El fin del editado está después del inicio del existente
-                const inicioEditado = horarioEditado.hora_inicio;
-                const finEditado = horarioEditado.hora_fin;
-                const inicioExistente = h.hora_inicio;
-                const finExistente = h.hora_fin;
-                
-                return inicioEditado < finExistente && finEditado > inicioExistente;
-            });
-
-            console.log(`📋 Horarios superpuestos del docente (${horarioEditado.docente_nombre}):`, horariosDocenteSuperpuestos.length);
-            if (horariosDocenteSuperpuestos.length > 0) {
-                console.log('Conflictos encontrados:', horariosDocenteSuperpuestos.map(h => ({
-                    asignatura: h.asignatura_nombre,
-                    grupo: h.grupo_nombre,
-                    dia: h.dia_semana,
-                    horario: `${h.hora_inicio} - ${h.hora_fin}`
-                })));
-            }
-
-            if (horariosDocenteSuperpuestos.length > 0) {
-                // Verificar si hay algún horario que NO sea exactamente la misma clase
-                const conflictoReal = horariosDocenteSuperpuestos.find(h =>
-                    // Es un conflicto si NO coinciden asignatura, hora inicio o hora fin
-                    h.asignatura_id !== horarioEditado.asignatura_id ||
-                    h.hora_inicio !== horarioEditado.hora_inicio ||
-                    h.hora_fin !== horarioEditado.hora_fin
-                );
-
-                if (conflictoReal) {
-                    // No es la misma clase, hay un conflicto real de docente
-                    const diaNombre = dias.find(d => d.toLowerCase() === diaEditado) || horarioEditado.dia_semana;
-                    const docenteNombre = horarioEditado.docente_nombre || docentes.find(d => d.id === horarioEditado.docente_id)?.nombre || 'el docente';
-                    const mensaje = `${docenteNombre} ya tiene una clase el ${diaNombre} de ${conflictoReal.hora_inicio} a ${conflictoReal.hora_fin} (${conflictoReal.asignatura_nombre})`;
-                    console.log('❌ CONFLICTO DE DOCENTE:', mensaje);
-                    return {
-                        valido: false,
-                        mensaje
-                    };
-                }
-                // Si todos los horarios son la misma clase, permitir (el docente puede dar la misma clase a múltiples grupos)
-                console.log('✅ Es la misma clase en múltiples grupos, permitido');
-            }
-        }
-
-        // Validar conflictos de espacio y capacidad compartida
-        const diaEditado = horarioEditado.dia_semana.toLowerCase();
-        const horariosSuperpuestos = horarios.filter(h => {
-            if (h.id === horarioEditado.id) return false; // Excluir el horario que se está editando
-            if (h.espacio_id !== horarioEditado.espacio_id) return false;
-            if (h.dia_semana.toLowerCase() !== diaEditado) return false;
-            
-            // Verificar solapamiento de horarios
-            const inicioEditado = horarioEditado.hora_inicio;
-            const finEditado = horarioEditado.hora_fin;
-            const inicioExistente = h.hora_inicio;
-            const finExistente = h.hora_fin;
-            
-            return inicioEditado < finExistente && finEditado > inicioExistente;
-        });
-
-        if (horariosSuperpuestos.length > 0) {
-            // Verificar si comparten EXACTAMENTE la misma asignatura, docente, hora_inicio y hora_fin
-            const horarioCompartible = horariosSuperpuestos.find(h =>
-                h.asignatura_id === horarioEditado.asignatura_id &&
-                h.docente_id === horarioEditado.docente_id &&
-                h.hora_inicio === horarioEditado.hora_inicio &&
-                h.hora_fin === horarioEditado.hora_fin
-            );
-
-            if (horarioCompartible) {
-                // Es la misma clase, verificar capacidad total del espacio
-                const espacioActual = espacios.find(e => e.id === horarioEditado.espacio_id);
-                if (espacioActual) {
-                    // Sumar todos los estudiantes de horarios que comparten exactamente el mismo horario
-                    const totalEstudiantesExistentes = horariosSuperpuestos
-                        .filter(h =>
-                            h.asignatura_id === horarioEditado.asignatura_id &&
-                            h.docente_id === horarioEditado.docente_id &&
-                            h.hora_inicio === horarioEditado.hora_inicio &&
-                            h.hora_fin === horarioEditado.hora_fin
-                        )
-                        .reduce((sum, h) => sum + (h.cantidad_estudiantes || 0), 0);
-
-                    const totalEstudiantes = totalEstudiantesExistentes + (horarioEditado.cantidad_estudiantes || 0);
-
-                    if (totalEstudiantes > espacioActual.capacidad) {
-                        const gruposCompartiendo = horariosSuperpuestos
-                            .filter(h =>
-                                h.asignatura_id === horarioEditado.asignatura_id &&
-                                h.docente_id === horarioEditado.docente_id &&
-                                h.hora_inicio === horarioEditado.hora_inicio &&
-                                h.hora_fin === horarioEditado.hora_fin
-                            )
-                            .map(h => h.grupo_nombre)
-                            .join(', ');
-
-                        const diaNombre = dias.find(d => d.toLowerCase() === diaEditado) || horarioEditado.dia_semana;
-                        return {
-                            valido: false,
-                            mensaje: `El espacio ${espacioActual.nombre} no tiene capacidad suficiente. Ya hay ${totalEstudiantesExistentes} estudiantes del grupo(s) ${gruposCompartiendo} en esta clase. Total: ${totalEstudiantes}/${espacioActual.capacidad}`
-                        };
-                    }
-                    // Si la capacidad es suficiente, permitir compartir el espacio
-                }
-            } else {
-                // No es la misma clase (diferente asignatura, docente u horario), hay conflicto
-                const conflicto = horariosSuperpuestos[0];
-                const diaNombre = dias.find(d => d.toLowerCase() === diaEditado) || horarioEditado.dia_semana;
-                const espacioNombre = horarioEditado.espacio_nombre || espacios.find(e => e.id === horarioEditado.espacio_id)?.nombre || 'el espacio';
-                const mensaje = `${espacioNombre} ya está ocupado el ${diaNombre} de ${conflicto.hora_inicio} a ${conflicto.hora_fin} por ${conflicto.grupo_nombre} (${conflicto.asignatura_nombre})`;
-                console.log('❌ CONFLICTO DE ESPACIO:', mensaje);
-                return {
-                    valido: false,
-                    mensaje
-                };
-            }
-        }
-
-        console.log('✅ Validación exitosa, sin conflictos');
-        return { valido: true, mensaje: '' };
     };
 
     const handleGuardarEdicion = async () => {

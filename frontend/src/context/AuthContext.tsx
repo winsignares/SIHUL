@@ -25,6 +25,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
     });
 
+    const persistAuthState = (response: {
+        id: number;
+        nombre: string;
+        correo: string;
+        rol: AuthState['role'];
+        facultad: AuthState['user'] extends { facultad: infer T } ? T : null;
+        sede: AuthState['user'] extends { sede: infer T } ? T : null;
+        componentes: AuthState['components'];
+        espacios_permitidos: AuthState['areas'];
+        token: string;
+        signature?: string;
+    }) => {
+        const user = {
+            id: response.id,
+            nombre: response.nombre,
+            correo: response.correo,
+            rol: response.rol,
+            facultad: response.facultad,
+            sede: response.sede
+        };
+
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('auth_user', JSON.stringify(user));
+        localStorage.setItem('auth_role', JSON.stringify(response.rol));
+        localStorage.setItem('auth_components', JSON.stringify(response.componentes || []));
+
+        if (response.facultad) {
+            localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
+        } else {
+            localStorage.removeItem('auth_faculties');
+        }
+
+        if (response.sede) {
+            localStorage.setItem('auth_sede', JSON.stringify(response.sede));
+        } else {
+            localStorage.removeItem('auth_sede');
+        }
+
+        if (response.espacios_permitidos) {
+            localStorage.setItem('auth_areas', JSON.stringify(response.espacios_permitidos));
+        } else {
+            localStorage.removeItem('auth_areas');
+        }
+
+        if (response.signature) {
+            localStorage.setItem('auth_signature', response.signature);
+            authSignatureRef.current = response.signature;
+        }
+
+        setState({
+            token: response.token,
+            user,
+            role: response.rol,
+            components: response.componentes || [],
+            faculties: response.facultad ? [response.facultad] : undefined,
+            areas: response.espacios_permitidos,
+            isAuthenticated: true,
+            isLoading: false,
+        });
+    };
+
     const login = async (payload: LoginPayload): Promise<LoginResponse> => {
         setState(prev => ({ ...prev, isLoading: true }));
 
@@ -35,47 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const response: LoginResponse = await authService.login(payload);
 
-            // Construir objeto usuario
-            const user = {
-                id: response.id,
-                nombre: response.nombre,
-                correo: response.correo,
-                rol: response.rol,
-                facultad: response.facultad,
-                sede: response.sede
-            };
-
-            // Guardar en localStorage
-            localStorage.setItem('auth_token', response.token);
-            localStorage.setItem('auth_user', JSON.stringify(user));
-            localStorage.setItem('auth_role', JSON.stringify(response.rol));
-            localStorage.setItem('auth_components', JSON.stringify(response.componentes));
             localStorage.removeItem('auth_signature');
             authSignatureRef.current = '';
-
-            if (response.facultad) {
-                localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
-            }
-
-            if (response.sede) {
-                localStorage.setItem('auth_sede', JSON.stringify(response.sede));
-            }
-
-            if (response.espacios_permitidos) {
-                localStorage.setItem('auth_areas', JSON.stringify(response.espacios_permitidos));
-            }
-
-            // Actualizar estado
-            setState({
-                token: response.token,
-                user: user,
-                role: response.rol,
-                components: response.componentes,
-                faculties: response.facultad ? [response.facultad] : undefined,
-                areas: response.espacios_permitidos,
-                isAuthenticated: true,
-                isLoading: false,
-            });
+            persistAuthState(response);
 
             return response;
         } catch (error: any) {
@@ -104,6 +127,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isLoading: false,
         });
     };
+
+    useEffect(() => {
+        const tryHydrateFromSession = async () => {
+            if (state.isAuthenticated || state.isLoading) {
+                return;
+            }
+
+            setState(prev => ({ ...prev, isLoading: true }));
+            try {
+                const response = await authService.getAuthenticatedUser();
+                persistAuthState(response);
+            } catch {
+                setState(prev => ({ ...prev, isLoading: false }));
+            }
+        };
+
+        void tryHydrateFromSession();
+        // Ejecutar una sola vez al montar para recuperar sesión OAuth.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Uso de useMemo para evitar recalcular permisos en cada render y disminuir complejidad de hasPermission y hasEditPermission
     // Mapa de componentes por nombre para acceso rápido

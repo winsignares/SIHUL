@@ -12,6 +12,22 @@ export interface Asignatura {
     horas?: number;
 }
 
+interface AsignaturaProgramaApi {
+    id?: number;
+    programa: number;
+    asignatura: number;
+    semestre: number;
+    componente_formativo: 'electiva' | 'optativa' | 'profesional' | 'humanística' | 'básica';
+}
+
+const toFrontendAsignaturaPrograma = (item: AsignaturaProgramaApi): AsignaturaPrograma => ({
+    id: item.id,
+    programa_id: item.programa,
+    asignatura_id: item.asignatura,
+    semestre: item.semestre,
+    componente_formativo: item.componente_formativo,
+});
+
 /**
  * Payload para crear una asignatura
  */
@@ -113,14 +129,16 @@ export const asignaturaService = {
      * Actualiza una asignatura existente
      */
     update: async (payload: UpdateAsignaturaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/asignaturas/update/', payload);
+        const updated = await apiClient.put<Asignatura>(`/asignaturas/${payload.id}/`, payload);
+        return { message: 'Asignatura actualizada', id: updated.id ?? payload.id };
     },
 
     /**
      * Elimina una asignatura
      */
     delete: async (payload: DeleteAsignaturaPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/asignaturas/delete/', payload);
+        await apiClient.delete(`/asignaturas/${payload.id}/`);
+        return { message: 'Asignatura eliminada' };
     },
 
     /**
@@ -134,7 +152,8 @@ export const asignaturaService = {
      * Lista todas las asignaturas
      */
     list: async (): Promise<ListAsignaturasResponse> => {
-        return apiClient.get<ListAsignaturasResponse>('/asignaturas/list/');
+        const asignaturas = await apiClient.get<Asignatura[]>('/asignaturas/');
+        return { asignaturas };
     }
 };
 
@@ -146,28 +165,37 @@ export const asignaturaProgramaService = {
      * Crea una nueva relación asignatura-programa
      */
     create: async (payload: CreateAsignaturaProgramaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post<{ message: string; id: number }>('/asignaturas/programa/', payload);
+        const created = await apiClient.post<AsignaturaProgramaApi>('/asignaturas-programa/', {
+            programa: payload.programa_id,
+            asignatura: payload.asignatura_id,
+            semestre: payload.semestre,
+            componente_formativo: payload.componente_formativo,
+        });
+        return { message: 'Asignatura-programa creada', id: created.id ?? 0 };
     },
 
     /**
      * Actualiza una relación asignatura-programa existente
      */
     update: async (payload: UpdateAsignaturaProgramaPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/asignaturas/programa/update/', payload);
+        const updated = await apiClient.put<AsignaturaProgramaApi>(`/asignaturas-programa/${payload.id}/`, payload);
+        return { message: 'Asignatura-programa actualizada', id: updated.id ?? payload.id };
     },
 
     /**
      * Elimina una relación asignatura-programa
      */
     delete: async (payload: DeleteAsignaturaProgramaPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/asignaturas/programa/delete/', payload);
+        await apiClient.delete(`/asignaturas-programa/${payload.id}/`);
+        return { message: 'Asignatura-programa eliminada' };
     },
 
     /**
      * Obtiene una relación asignatura-programa por ID
      */
     get: async (id: number): Promise<AsignaturaPrograma> => {
-        return apiClient.get<AsignaturaPrograma>(`/asignaturas/programa/${id}/`);
+        const item = await apiClient.get<AsignaturaProgramaApi>(`/asignaturas-programa/${id}/`);
+        return toFrontendAsignaturaPrograma(item);
     },
 
     /**
@@ -175,9 +203,11 @@ export const asignaturaProgramaService = {
      * @param programa_id - Opcional: Filtra por programa específico
      */
     list: async (programa_id?: number): Promise<ListAsignaturasProgramaResponse> => {
-        const url = programa_id 
-            ? `/asignaturas/programa/list/?programa_id=${programa_id}`
-            : '/asignaturas/programa/list/';
-        return apiClient.get<ListAsignaturasProgramaResponse>(url);
+        const allApi = await apiClient.get<AsignaturaProgramaApi[]>('/asignaturas-programa/');
+        const all = allApi.map(toFrontendAsignaturaPrograma);
+        const asignaturas_programa = programa_id
+            ? all.filter((item) => item.programa_id === programa_id)
+            : all;
+        return { asignaturas_programa };
     }
 };

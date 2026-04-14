@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Badge } from '../../share/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { useSedes } from '../../hooks/gestionAcademica/useSedes';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -37,7 +39,8 @@ export default function Sedes() {
     hasPrevPageWindow,
     hasNextPageWindow,
     goToPrevPageWindow,
-    goToNextPageWindow
+    goToNextPageWindow,
+    seccionales,
   } = useSedes();
 
   const firstItemIndex = totalFilteredSedes === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -86,7 +89,7 @@ export default function Sedes() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Dirección</TableHead>
-                <TableHead>Ciudad</TableHead>
+                <TableHead>Seccional</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -103,7 +106,7 @@ export default function Sedes() {
                   <TableRow key={sede.id}>
                     <TableCell className="text-slate-900">{sede.nombre}</TableCell>
                     <TableCell className="text-slate-600">{sede.direccion || 'Sin dirección'}</TableCell>
-                    <TableCell className="text-slate-600">{sede.ciudad || 'Sin ciudad'}</TableCell>
+                    <TableCell className="text-slate-600">{sede.seccional_ciudad || 'Sin seccional'}</TableCell>
                     <TableCell>
                       <Badge
                         variant={sede.activa ? 'default' : 'secondary'}
@@ -251,12 +254,18 @@ export default function Sedes() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ciudad-sede">Ciudad</Label>
-              <Input
-                id="ciudad-sede"
-                placeholder="Ej: Barranquilla"
-                value={sedeForm.ciudad}
-                onChange={(e) => setSedeForm({ ...sedeForm, ciudad: e.target.value })}
+              <Label htmlFor="seccional-sede">
+                Seccional <span className="text-red-600">*</span>
+              </Label>
+              <SearchableSelect
+                items={seccionales}
+                value={sedeForm.seccionalId}
+                onSelect={(seccional) => setSedeForm({ ...sedeForm, seccionalId: seccional.id.toString() })}
+                getItemId={(seccional) => seccional.id.toString()}
+                getItemLabel={(seccional) => seccional.ciudad}
+                placeholder="Seleccionar seccional..."
+                searchPlaceholder="Buscar seccional..."
+                emptyMessage="No se encontró ninguna seccional"
               />
             </div>
           </div>
@@ -265,7 +274,7 @@ export default function Sedes() {
               variant="outline"
               onClick={() => {
                 setShowCreate(false);
-                setSedeForm({ nombre: '', direccion: '', ciudad: '' });
+                setSedeForm({ nombre: '', direccion: '', seccionalId: '' });
               }}
             >
               Cancelar
@@ -308,12 +317,18 @@ export default function Sedes() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-ciudad-sede">Ciudad</Label>
-              <Input
-                id="edit-ciudad-sede"
-                placeholder="Ej: Barranquilla"
-                value={sedeForm.ciudad}
-                onChange={(e) => setSedeForm({ ...sedeForm, ciudad: e.target.value })}
+              <Label htmlFor="edit-seccional-sede">
+                Seccional <span className="text-red-600">*</span>
+              </Label>
+              <SearchableSelect
+                items={seccionales}
+                value={sedeForm.seccionalId}
+                onSelect={(seccional) => setSedeForm({ ...sedeForm, seccionalId: seccional.id.toString() })}
+                getItemId={(seccional) => seccional.id.toString()}
+                getItemLabel={(seccional) => seccional.ciudad}
+                placeholder="Seleccionar seccional..."
+                searchPlaceholder="Buscar seccional..."
+                emptyMessage="No se encontró ninguna seccional"
               />
             </div>
           </div>
@@ -323,7 +338,7 @@ export default function Sedes() {
               onClick={() => {
                 setShowEdit(false);
                 setSelectedSede(null);
-                setSedeForm({ nombre: '', direccion: '', ciudad: '' });
+                setSedeForm({ nombre: '', direccion: '', seccionalId: '' });
               }}
             >
               Cancelar

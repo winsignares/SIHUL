@@ -17,6 +17,7 @@ export interface EspacioFisico {
     descripcion?: string;
     recursos?: { id: number; nombre: string; estado: string }[];
     ubicacion?: string | null;
+    esta_abierto?: boolean;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -31,6 +32,7 @@ export interface CreateEspacioPayload {
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
     ubicacion?: string | null;
+    esta_abierto?: boolean;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -46,6 +48,7 @@ export interface UpdateEspacioPayload {
     descripcion?: string;
     recursos?: { id: number; estado: string }[];
     ubicacion?: string | null;
+    esta_abierto?: boolean;
     estado?: 'Disponible' | 'Mantenimiento' | 'No Disponible';
 }
 
@@ -129,21 +132,43 @@ export const espacioService = {
      * Crea un nuevo espacio físico
      */
     create: async (payload: CreateEspacioPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.post<{ message: string; id: number }>('/espacios/', payload);
+        return apiClient.post<{ message: string; id: number }>('/espacios/', {
+            nombre: payload.nombre,
+            sede: payload.sede_id,
+            tipo: payload.tipo_id,
+            capacidad: payload.capacidad,
+            descripcion: payload.descripcion,
+            ubicacion: payload.ubicacion,
+            esta_abierto: payload.esta_abierto,
+            estado: payload.estado,
+            recursos: payload.recursos,
+        });
     },
 
     /**
      * Actualiza un espacio físico existente
      */
     update: async (payload: UpdateEspacioPayload): Promise<{ message: string; id: number }> => {
-        return apiClient.put<{ message: string; id: number }>('/espacios/update/', payload);
+        const updated = await apiClient.put<EspacioFisico>(`/espacios/${payload.id}/`, {
+            ...(payload.nombre !== undefined ? { nombre: payload.nombre } : {}),
+            ...(payload.sede_id !== undefined ? { sede: payload.sede_id } : {}),
+            ...(payload.tipo_id !== undefined ? { tipo: payload.tipo_id } : {}),
+            ...(payload.capacidad !== undefined ? { capacidad: payload.capacidad } : {}),
+            ...(payload.descripcion !== undefined ? { descripcion: payload.descripcion } : {}),
+            ...(payload.ubicacion !== undefined ? { ubicacion: payload.ubicacion } : {}),
+            ...(payload.esta_abierto !== undefined ? { esta_abierto: payload.esta_abierto } : {}),
+            ...(payload.estado !== undefined ? { estado: payload.estado } : {}),
+            ...(payload.recursos !== undefined ? { recursos: payload.recursos } : {}),
+        });
+        return { message: 'Espacio actualizado', id: updated.id ?? payload.id };
     },
 
     /**
      * Elimina un espacio físico
      */
     delete: async (payload: DeleteEspacioPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/espacios/delete/', payload);
+        await apiClient.delete(`/espacios/${payload.id}/`);
+        return { message: 'Espacio eliminado' };
     },
 
     /**
@@ -157,14 +182,16 @@ export const espacioService = {
      * Lista todos los espacios físicos
      */
     list: async (): Promise<ListEspaciosResponse> => {
-        return apiClient.get<ListEspaciosResponse>('/espacios/list/');
+        const espacios = await apiClient.get<EspacioFisico[]>('/espacios/');
+        return { espacios };
     },
 
     /**
      * Lista todos los tipos de espacios
      */
     listTipos: async (): Promise<ListTiposEspacioResponse> => {
-        return apiClient.get<ListTiposEspacioResponse>('/espacios/tipos/list/');
+        const tipos_espacio = await apiClient.get<TipoEspacio[]>('/tipos-espacio/');
+        return { tipos_espacio };
     },
 
     /**
@@ -207,6 +234,28 @@ export const espacioService = {
      */
     cambiarEstado: async (espacioId: number, nuevoEstado: 'Disponible' | 'No Disponible' | 'Mantenimiento'): Promise<{ message: string }> => {
         return apiClient.put<{ message: string }>(`/espacios/${espacioId}/estado/`, { estado: nuevoEstado });
+    },
+
+    /**
+     * Cambia el estado de apertura/cierre fisico del espacio.
+     * true = abierto, false = cerrado.
+     * 
+     * NOTA: Para cerrar (false), valida que no haya clase en curso.
+     */
+    cambiarApertura: async (espacioId: number, estaAbierto: boolean): Promise<EspacioFisico> => {
+        if (estaAbierto === false) {
+            return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/cerrar/`, {});
+        } else {
+            return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/abrir/`, {});
+        }
+    },
+
+    abrirSalon: async (espacioId: number): Promise<EspacioFisico> => {
+        return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/abrir/`, {});
+    },
+
+    cerrarSalon: async (espacioId: number): Promise<EspacioFisico> => {
+        return apiClient.post<EspacioFisico>(`/espacios/${espacioId}/cerrar/`, {});
     }
 };
 
@@ -218,35 +267,43 @@ export const espacioPermitidoService = {
      * Crea un nuevo EspacioPermitido
      */
     create: async (payload: CreateEspacioPermitidoPayload): Promise<{ message: string; id: number; espacio_id: number; usuario_id: number }> => {
-        return apiClient.post<{ message: string; id: number; espacio_id: number; usuario_id: number }>('/espacios/permitido/', payload);
+        const created = await apiClient.post<EspacioPermitido>('/espacios-permitidos/', payload);
+        return {
+            message: 'Espacio permitido creado',
+            id: created.id ?? 0,
+            espacio_id: created.espacio_id,
+            usuario_id: created.usuario_id,
+        };
     },
 
     /**
      * Lista todos los EspaciosPermitidos
      */
     list: async (): Promise<ListEspaciosPermitidosResponse> => {
-        return apiClient.get<ListEspaciosPermitidosResponse>('/espacios/permitido/list/');
+        const espacios_permitidos = await apiClient.get<EspacioPermitido[]>('/espacios-permitidos/');
+        return { espacios_permitidos };
     },
 
     /**
      * Obtiene un EspacioPermitido por ID
      */
     get: async (id: number): Promise<EspacioPermitido> => {
-        return apiClient.get<EspacioPermitido>(`/espacios/permitido/${id}/`);
+        return apiClient.get<EspacioPermitido>(`/espacios-permitidos/${id}/`);
     },
 
     /**
      * Elimina un EspacioPermitido
      */
     delete: async (payload: DeleteEspacioPermitidoPayload): Promise<{ message: string }> => {
-        return apiClient.delete<{ message: string }>('/espacios/permitido/delete/', payload);
+        await apiClient.delete(`/espacios-permitidos/${payload.id}/`);
+        return { message: 'Espacio permitido eliminado' };
     },
 
     /**
      * Lista todos los espacios permitidos para un usuario específico
      */
     listByUsuario: async (usuario_id: number): Promise<ListEspaciosByUsuarioResponse> => {
-        return apiClient.get<ListEspaciosByUsuarioResponse>(`/espacios/permitido/usuario/${usuario_id}/`);
+        return apiClient.get<ListEspaciosByUsuarioResponse>(`/espacios-permitidos/usuario/${usuario_id}/`);
     }
 };
 /**
@@ -273,6 +330,25 @@ export const espacioHorariosService = {
     },
 
     /**
+     * Obtiene todos los espacios DISPONIBLES con sus horarios aprobados.
+     */
+    getAllDisponiblesWithHorarios: async (): Promise<{
+        espacios: (EspacioFisico & {
+            horarios: {
+                id: number;
+                dia: string;
+                hora_inicio: number;
+                hora_fin: number;
+                materia: string;
+                docente: string;
+                grupo: string;
+            }[];
+        })[];
+    }> => {
+        return apiClient.get('/espacios/horarios/disponibles/all/');
+    },
+
+    /**
      * Obtiene espacios permitidos con horarios aprobados (para supervisor)
      */
     getSupervisorHorarios: async (usuarioId: number): Promise<{
@@ -289,6 +365,25 @@ export const espacioHorariosService = {
         })[];
     }> => {
         return apiClient.get(`/espacios/horarios/supervisor/${usuarioId}/`);
+    },
+
+    /**
+     * Obtiene espacios DISPONIBLES permitidos para supervisor con horarios aprobados.
+     */
+    getSupervisorDisponiblesHorarios: async (usuarioId: number): Promise<{
+        espacios: (EspacioFisico & {
+            horarios: {
+                id: number;
+                dia: string;
+                hora_inicio: number;
+                hora_fin: number;
+                materia: string;
+                docente: string;
+                grupo: string;
+            }[];
+        })[];
+    }> => {
+        return apiClient.get(`/espacios/horarios/disponibles/supervisor/${usuarioId}/`);
     }
 };
 export interface HorarioEspacio {
@@ -315,6 +410,7 @@ export interface EspacioConHorarios {
     nombreEspacio: string;
     sede: string;
     piso: string;
+    esta_abierto?: boolean;
     estadoActual: string;
     horarios: HorarioEspacio[];
 }

@@ -2,6 +2,7 @@ import { Input } from '../../share/input';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/dialog';
 import { Label } from '../../share/label';
@@ -69,6 +70,21 @@ const GRID_DIA_A_JS_WEEKDAY: Record<string, number> = {
   Sábado: 6
 };
 
+function formatFechaLocalYYYYMMDD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getHoyColombia(): Date {
+  const ahora = new Date();
+  const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
+  const colombia = new Date(utc + 3600000 * -5);
+  colombia.setHours(0, 0, 0, 0);
+  return colombia;
+}
+
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
@@ -78,10 +94,12 @@ export default function ConsultaEspacios() {
     setSearchTerm,
     filterTipo,
     setFilterTipo,
-    filterEstado,
-    setFilterEstado,
+    filterApertura,
+    setFilterApertura,
     filterSede,
     setFilterSede,
+    filterPeriodo,
+    setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
     mensajeFiltroFecha,
@@ -113,11 +131,9 @@ export default function ConsultaEspacios() {
     estadisticas,
     horarios,
     prestamos,
-    calcularProximaClaseYEstado,
     exportarCronogramaPDF,
     exportarCronogramaExcel,
     getOcupacionPorHora,
-    getColorEstado,
     // Drag-to-select
     isDragging,
     seleccionRango,
@@ -130,6 +146,12 @@ export default function ConsultaEspacios() {
     setDialogSolicitudOpen,
     nuevaSolicitudData,
     setNuevaSolicitudData,
+    // Período académico
+    periodos,
+    periodosLoading,
+    horariosLoading,
+    errorBusquedaPeriodo,
+    buscarPeriodoPorRangoFechas,
     // Vista individual
     espacioSeleccionado,
     verCronogramaIndividual,
@@ -137,12 +159,102 @@ export default function ConsultaEspacios() {
     // Filtros
     limpiarFiltros,
     // Recarga
-    recargarDatos
+    recargarDatos,
+    loading
   } = useConsultaEspacios();
 
   // Calcular índices de paginación
   const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredEspacios);
+
+  // Estado para el período seleccionado
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState<typeof periodos[0] | null>(null);
+  const [mensajeAutoPeriodo, setMensajeAutoPeriodo] = useState<string | null>(null);
+  const [inicializacionAplicada, setInicializacionAplicada] = useState(false);
+  const puedeEditarDisponibilidad = hasEditPermission('Disponibilidad de Espacios');
+
+  const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
+    const hoy = getHoyColombia();
+    const inicioPeriodo = new Date(`${periodo.fecha_inicio}T00:00:00`);
+    const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
+
+    inicioPeriodo.setHours(0, 0, 0, 0);
+    finPeriodo.setHours(0, 0, 0, 0);
+
+    const inicioBase = new Date(Math.max(hoy.getTime(), inicioPeriodo.getTime()));
+    const inicioLunes = new Date(inicioBase);
+    const diaSemana = inicioLunes.getDay();
+
+    // Siempre calcular inicio automático en lunes:
+    // si hoy ya es lunes, se usa ese día; en otro caso, se toma el próximo lunes.
+    if (diaSemana !== 1) {
+      const diasHastaLunes = diaSemana === 0 ? 1 : 8 - diaSemana;
+      inicioLunes.setDate(inicioLunes.getDate() + diasHastaLunes);
+    }
+
+    if (inicioLunes <= finPeriodo) {
+      return {
+        inicio: formatFechaLocalYYYYMMDD(inicioLunes),
+        ajustadoPorDomingo: inicioBase.getDay() === 0 && inicioLunes.getDay() === 1
+      };
+    }
+
+    return null;
+  };
+
+  const aplicarPeriodoConIntervaloValido = (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
+    const intervalo = encontrarInicioValidoPeriodo(periodo);
+    if (!intervalo) {
+      setMensajeAutoPeriodo('No se encontró una fecha de inicio válida dentro del período seleccionado.');
+      return;
+    }
+
+    setPeriodoSeleccionado(periodo);
+    setFilterPeriodo(periodo.id ?? null);
+    handleFechaInicioChange(intervalo.inicio);
+
+    if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
+      setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
+    } else {
+      setMensajeAutoPeriodo(null);
+    }
+  };
+
+  const resolverPeriodoVigente = () => {
+    const hoy = getHoyColombia();
+    const hoyISO = formatFechaLocalYYYYMMDD(hoy);
+
+    const activo = periodos.find((p) => p.activo);
+    if (activo) return activo;
+
+    const contieneHoy = periodos.find((p) => p.fecha_inicio <= hoyISO && p.fecha_fin >= hoyISO);
+    if (contieneHoy) return contieneHoy;
+
+    const futuros = [...periodos].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+    return futuros[0] ?? null;
+  };
+
+  useEffect(() => {
+    if (inicializacionAplicada || periodosLoading || periodos.length === 0) return;
+
+    const vigente = resolverPeriodoVigente();
+    if (!vigente) return;
+
+    aplicarPeriodoConIntervaloValido(vigente, true);
+    setInicializacionAplicada(true);
+  }, [inicializacionAplicada, periodosLoading, periodos]);
+
+  // Integrar búsqueda de período cuando se cambian las fechas
+  useEffect(() => {
+    if (filterFechaInicio && filterFechaFin) {
+      buscarPeriodoPorRangoFechas(filterFechaInicio, filterFechaFin).then((periodo) => {
+        if (periodo) {
+          setPeriodoSeleccionado(periodo);
+          setFilterPeriodo(periodo.id ?? null);
+        }
+      });
+    }
+  }, [buscarPeriodoPorRangoFechas, filterFechaInicio, filterFechaFin, setFilterPeriodo]);
 
   // Estados para el formulario de solicitud
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
@@ -599,17 +711,12 @@ export default function ConsultaEspacios() {
     ? filteredEspacios.filter(e => e.id === espacioSeleccionado.id)
     : filteredEspacios;
 
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case 'disponible':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Disponible</Badge>;
-      case 'ocupado':
-        return <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">Ocupado</Badge>;
-      case 'mantenimiento':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">Mantenimiento</Badge>;
-      default:
-        return null;
-    }
+  const getAperturaBadge = (estaAbierto: boolean) => {
+    return estaAbierto ? (
+      <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Abierto</Badge>
+    ) : (
+      <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">Cerrado</Badge>
+    );
   };
 
   const getDayColumnIndex = (dia: string) => {
@@ -691,7 +798,7 @@ export default function ConsultaEspacios() {
 
     try {
       // Verificar si el usuario tiene permiso de EDITAR para auto-aprobar
-      const puedeAutoAprobar = hasEditPermission('Disponibilidad de Espacios');
+      const puedeAutoAprobar = puedeEditarDisponibilidad;
       const estadoInicial: 'Aprobado' | 'Pendiente' = puedeAutoAprobar ? 'Aprobado' : 'Pendiente';
 
       const payloadBase = {
@@ -913,13 +1020,30 @@ export default function ConsultaEspacios() {
         hora_fin: formatHora(targetHoraFin)
       });
 
-      // Llamar al servicio para actualizar el horario
-      await horarioService.update({
-        id: horario.id,
-        dia_semana: targetDia,
-        hora_inicio: formatHora(targetHoraInicio),
-        hora_fin: formatHora(targetHoraFin)
-      });
+      // Validar que haya un ID válido
+      if (!horario.id) {
+        throw new Error('No se puede mover este elemento - ID no válido');
+      }
+
+      // Usar el servicio correcto según el tipo
+      if (horario.tipo === 'prestamo') {
+        // Para préstamos, usar prestamoService
+        await prestamoService.actualizarPrestamo({
+          id: horario.id,
+          estado: horario.estado || 'Pendiente',
+          fecha: (horario as any).fecha || (horario.prestamo?.fecha),
+          hora_inicio: horario.horaInicio ? `${String(horario.horaInicio).padStart(2, '0')}:00:00` : undefined,
+          hora_fin: horario.horaFin ? `${String(horario.horaFin).padStart(2, '0')}:00:00` : undefined
+        } as any);
+      } else {
+        // Para horarios académicos, usar horarioService
+        await horarioService.update({
+          id: horario.id,
+          dia_semana: targetDia,
+          hora_inicio: formatHora(targetHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        });
+      }
 
       toast.success(`Horario movido exitosamente a ${targetDia} ${targetHoraInicio}:00-${targetHoraFin}:00`);
 
@@ -973,14 +1097,33 @@ export default function ConsultaEspacios() {
       // Convertir horas a formato string (HH:00:00)
       const formatHora = (h: number) => `${String(h).padStart(2, '0')}:00:00`;
 
-      // Llamar al servicio para actualizar el horario con el nuevo espacio, día y hora
-      await horarioService.update({
-        id: selectedClassToMove.id as number,
-        espacio_id: parseInt(targetEspacioId),
-        dia_semana: targetMoveDia,
-        hora_inicio: formatHora(targetMoveHoraInicio),
-        hora_fin: formatHora(targetHoraFin)
-      });
+      // Validar que haya un ID válido
+      if (!selectedClassToMove.id) {
+        setMoveClassError('Error: No se puede mover este elemento - ID no válido');
+        return;
+      }
+
+      // Usar el servicio correcto según el tipo
+      if (selectedClassToMove.tipo === 'prestamo') {
+        // Para préstamos, usar prestamoService
+        await prestamoService.actualizarPrestamo({
+          id: selectedClassToMove.id,
+          espacio_id: parseInt(targetEspacioId),
+          estado: selectedClassToMove.estado || 'Pendiente',
+          fecha: (selectedClassToMove as any).fecha || (selectedClassToMove.prestamo?.fecha),
+          hora_inicio: formatHora(targetMoveHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        } as any);
+      } else {
+        // Para horarios académicos, usar horarioService
+        await horarioService.update({
+          id: selectedClassToMove.id,
+          espacio_id: parseInt(targetEspacioId),
+          dia_semana: targetMoveDia,
+          hora_inicio: formatHora(targetMoveHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        });
+      }
 
       toast.success(`Clase movida exitosamente a ${targetEspacio.nombre} - ${targetMoveDia} ${targetMoveHoraInicio}:00-${targetHoraFin}:00`);
 
@@ -1015,7 +1158,7 @@ export default function ConsultaEspacios() {
       </div>
 
       {/* Estadísticas */}
-      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between gap-2">
@@ -1031,8 +1174,8 @@ export default function ConsultaEspacios() {
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Disponibles</p>
-                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.disponibles}</p>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Abiertos</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.abiertos}</p>
               </div>
               <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center flex-shrink-0`}>
                 <MapPin className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-green-600`} />
@@ -1044,24 +1187,11 @@ export default function ConsultaEspacios() {
           <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Ocupados</p>
-                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.ocupados}</p>
+                <p className={`text-slate-600 dark:text-slate-400 mb-1 ${isMobile ? 'text-xs' : ''}`}>Cerrados</p>
+                <p className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{estadisticas.cerrados}</p>
               </div>
               <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-red-100 dark:bg-red-950 rounded-lg flex items-center justify-center flex-shrink-0`}>
                 <MapPin className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-red-600`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-slate-600 dark:text-slate-400 mb-1">Mantenimiento</p>
-                <p className="text-slate-900 dark:text-slate-100">{estadisticas.mantenimiento}</p>
-              </div>
-              <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-950 rounded-lg flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-yellow-600" />
               </div>
             </div>
           </CardContent>
@@ -1122,9 +1252,10 @@ export default function ConsultaEspacios() {
             variant="outline"
             className="flex-1 sm:flex-none border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
             title="Limpiar caché y recargar datos"
+            disabled={loading}
           >
-            <RefreshCw className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-            {isMobile ? 'Recargar' : 'Recargar Datos'}
+            <RefreshCw className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Recargando...' : isMobile ? 'Recargar' : 'Recargar Datos'}
           </Button>
           {espacioSeleccionado && (
             <Button
@@ -1163,15 +1294,15 @@ export default function ConsultaEspacios() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterEstado} onValueChange={setFilterEstado}>
+      {/* Filtro de Apertura */}
+            <Select value={filterApertura} onValueChange={setFilterApertura}>
               <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
-                <SelectValue placeholder="Estado" />
+                <SelectValue placeholder="Apertura" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="disponible">Disponible</SelectItem>
-                <SelectItem value="ocupado">Ocupado</SelectItem>
-                <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                <SelectItem value="todas">Todos</SelectItem>
+                <SelectItem value="abierto">Abierto</SelectItem>
+                <SelectItem value="cerrado">Cerrado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterSede} onValueChange={setFilterSede}>
@@ -1226,6 +1357,57 @@ export default function ConsultaEspacios() {
             </Alert>
           )}
 
+          {mensajeAutoPeriodo && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{mensajeAutoPeriodo}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Mensaje de error de búsqueda de período */}
+          {errorBusquedaPeriodo && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{errorBusquedaPeriodo}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Información del período seleccionado */}
+          {periodoSeleccionado && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg p-3">
+              <p className="text-green-700 dark:text-green-300 text-sm">
+                <strong>Período académico encontrado:</strong> {periodoSeleccionado.nombre || 'Período'} ({new Date(periodoSeleccionado.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })} - {new Date(periodoSeleccionado.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })})
+              </p>
+            </div>
+          )}
+
+          {/* Selector de períodos disponibles */}
+          {periodos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-slate-600">Seleccionar período académico</Label>
+              <Select
+                value={filterPeriodo?.toString() || periodoSeleccionado?.id?.toString() || ''}
+                onValueChange={(value) => {
+                  const periodo = periodos.find(p => p.id?.toString() === value);
+                  if (periodo) {
+                    aplicarPeriodoConIntervaloValido(periodo);
+                  }
+                }}
+              >
+                <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[250px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
+                  <SelectValue placeholder="Seleccionar período..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodos.map(periodo => (
+                    <SelectItem key={periodo.id} value={periodo.id?.toString() || ''}>
+                      {periodo.nombre || 'Período'} - {new Date(periodo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {filterFechaInicio && (
             <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3">
               <p className="text-blue-700 dark:text-blue-300 text-sm">
@@ -1240,8 +1422,16 @@ export default function ConsultaEspacios() {
       {/* Vista Tarjetas */}
       {vistaActual === 'tarjetas' && !espacioSeleccionado && (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
-          {paginatedEspacios.map(espacio => {
-            const { proximaClase, estado } = calcularProximaClaseYEstado(espacio.id);
+          {loading && (
+            <div className="col-span-full flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 py-10">
+              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-medium">Cargando espacios...</span>
+              </div>
+            </div>
+          )}
+
+          {!loading && paginatedEspacios.map(espacio => {
             return (
               <motion.div
                 key={espacio.id}
@@ -1261,7 +1451,9 @@ export default function ConsultaEspacios() {
                           {espacio.tipo}
                         </Badge>
                       </div>
-                      {getEstadoBadge(estado)}
+                      <div className="flex items-center gap-2">
+                        {getAperturaBadge(espacio.estaAbierto)}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -1273,10 +1465,10 @@ export default function ConsultaEspacios() {
                       <MapPin className="w-4 h-4" />
                       <span>{espacio.sede} - Edificio {espacio.edificio}</span>
                     </div>
-                    {proximaClase && (
+                    {espacio.proximaClase && (
                       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
                         <p className="text-slate-600 dark:text-slate-400">Próxima clase:</p>
-                        <p className="text-blue-700 dark:text-blue-300">{proximaClase}</p>
+                        <p className="text-blue-700 dark:text-blue-300">{espacio.proximaClase}</p>
                       </div>
                     )}
                     <div className="pt-2">
@@ -1385,6 +1577,10 @@ export default function ConsultaEspacios() {
                   <div className="w-6 h-6 bg-yellow-600 rounded"></div>
                   <span className="text-sm text-slate-700 dark:text-slate-300">Mantenimiento</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-[#f97316] rounded"></div>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Horario Pendiente</span>
+                </div>
                 {puedeCrearSolicitudes && (
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-purple-500 rounded border-2 border-purple-700"></div>
@@ -1428,28 +1624,38 @@ export default function ConsultaEspacios() {
                         </Badge>
                       </div>
                     </div>
-                    <Button
-                      variant={editModeEnabled ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setEditModeEnabled(!editModeEnabled)}
-                      className={`${editModeEnabled
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white'
-                        : 'border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950'
-                      }`}
-                      title={editModeEnabled ? 'Deshabilitar edición de horarios' : 'Habilitar edición de horarios'}
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      {editModeEnabled ? 'Edición ON' : 'Editar'}
-                    </Button>
+                    {puedeEditarDisponibilidad && (
+                      <Button
+                        variant={editModeEnabled ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditModeEnabled(!editModeEnabled)}
+                        className={`${editModeEnabled
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white'
+                          : 'border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950'
+                        }`}
+                        title={editModeEnabled ? 'Deshabilitar edición de horarios' : 'Habilitar edición de horarios'}
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        {editModeEnabled ? 'Edición ON' : 'Editar'}
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div 
-                    className="overflow-x-auto"
+                    className="overflow-x-auto relative"
                     onMouseLeave={() => {
                       if (isDragging) finalizarSeleccion();
                     }}
                   >
+                    {(horariosLoading || loading) && (
+                      <div className="absolute inset-0 z-30 bg-white/70 dark:bg-slate-900/70 backdrop-blur-[1px] flex items-center justify-center rounded-md">
+                        <div className="flex flex-col items-center gap-2 text-slate-700 dark:text-slate-200">
+                          <RefreshCw className="w-6 h-6 animate-spin" />
+                          <span className="text-xs font-medium">Cargando horarios...</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
@@ -1581,6 +1787,8 @@ export default function ConsultaEspacios() {
                                       targetHoraInicio: nuevaHoraInicio
                                     });
                                     setConfirmMoveDialogOpen(true);
+                                  } else {
+                                    toast.error('No se puede mover el horario: las clases solo se permiten hasta las 22:00');
                                   }
                                 }
                               }}
@@ -1603,6 +1811,7 @@ export default function ConsultaEspacios() {
                           const isPrestamo = ocupacion.tipo === 'prestamo';
                           const isPrestamoPendiente = isPrestamo && ocupacion.prestamo?.estado === 'Pendiente';
                           const isPrestamoAprobado = isPrestamo && ocupacion.prestamo?.estado === 'Aprobado';
+                          const isHorarioPendiente = !isPrestamo && ocupacion.estado === 'pendiente';
                           
                           let colorClass = '';
                           let labelText = '';
@@ -1613,9 +1822,12 @@ export default function ConsultaEspacios() {
                           } else if (isPrestamoAprobado) {
                             colorClass = 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white';
                             labelText = 'APROBADO';
+                          } else if (isHorarioPendiente) {
+                            colorClass = 'bg-[#f97316] hover:bg-[#ea580c] text-white';
+                            labelText = 'PENDIENTE';
                           } else if (ocupacion.estado === 'ocupado') {
                             colorClass = 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white';
-                            labelText = '';
+                            labelText = ocupacion.materia || 'Ocupado';
                           } else {
                             colorClass = 'bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white';
                             labelText = '';
@@ -1626,9 +1838,9 @@ export default function ConsultaEspacios() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                    draggable={editModeEnabled && ocupacion.tipo !== 'prestamo'}
+                                    draggable={editModeEnabled && (!isPrestamo || isPrestamoPendiente)}
                                     onDragStart={() => {
-                                      if (editModeEnabled && ocupacion.tipo !== 'prestamo') {
+                                      if (editModeEnabled && (!isPrestamo || isPrestamoPendiente)) {
                                         setDraggedHorario(ocupacion);
                                       }
                                     }}
@@ -1644,7 +1856,7 @@ export default function ConsultaEspacios() {
                                       setMoveClassError(null);
                                     }}
                                     className={`${colorClass} text-white rounded p-1 sm:p-1.5 md:p-2 text-[10px] sm:text-[11px] md:text-xs ${
-                                      editModeEnabled && ocupacion.tipo !== 'prestamo' 
+                                      editModeEnabled && (!isPrestamo || isPrestamoPendiente)
                                         ? 'cursor-move hover:ring-2 hover:ring-purple-400 group' 
                                         : 'cursor-pointer'
                                     } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative`}
@@ -1655,7 +1867,7 @@ export default function ConsultaEspacios() {
                                       minHeight: `${rowSpan * 60}px`
                                     }}
                                   >
-                                    {editModeEnabled && ocupacion.tipo !== 'prestamo' && (
+                                    {editModeEnabled && (!isPrestamo || isPrestamoPendiente) && (
                                       <>
                                         <div className="absolute top-0.5 left-0.5 opacity-60">
                                           <GripVertical className="w-3 h-3" />
@@ -2083,20 +2295,20 @@ export default function ConsultaEspacios() {
                 Recursos Adicionales (Opcional)
               </h3>
               <div className="space-y-4 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50">
-                <div className="flex items-center justify-between">
+                <div>
                   <Label className="text-sm font-medium">Agregar recursos necesarios</Label>
-                  <Select onValueChange={(v) => agregarRecurso(parseInt(v))}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Agregar recurso..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {recursosDisponibles.map((recurso) => (
-                        <SelectItem key={recurso.id} value={recurso.id!.toString()}>
-                          {recurso.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-2">
+                    <SearchableSelect
+                      items={recursosDisponibles.filter(r => !recursosSeleccionados.some(s => s.recurso_id === r.id))}
+                      value={null}
+                      onSelect={(recurso) => agregarRecurso(recurso.id!)}
+                      getItemId={(recurso) => recurso.id!}
+                      getItemLabel={(recurso) => recurso.nombre}
+                      placeholder="Seleccionar recurso..."
+                      searchPlaceholder="Buscar recurso..."
+                      emptyMessage="No se encontró ningún recurso."
+                    />
+                  </div>
                 </div>
 
                 {recursosSeleccionados.length > 0 ? (
@@ -2307,24 +2519,17 @@ export default function ConsultaEspacios() {
                         {/* Grid cells */}
                         {horas.flatMap((hora, horaIdx) =>
                           diasSemana.map((dia, diaIdx) => {
-                            // Verificar si hay un horario en esta celda
-                            const horarioEnCelda = horarios.find(h =>
-                              h.espacioId === targetEspacioId &&
-                              h.dia === dia &&
-                              hora >= h.horaInicio &&
-                              hora < h.horaFin
+                            // Buscar en horarios (ya incluye horarios y prestamos fusionados)
+                            const ocupacionEnCelda = horarios.find(o =>
+                              o.espacioId === targetEspacioId &&
+                              o.dia === dia &&
+                              hora >= o.horaInicio &&
+                              hora < o.horaFin
                             );
 
-                            // Verificar si hay un préstamo en esta celda
-                            const prestamoEnCelda = prestamos.find(p => {
-                              if (String(p.espacio_id) !== targetEspacioId) return false;
-                              const prestamoDate = new Date(p.fecha);
-                              const diasSemanaFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                              const prestamoDia = diasSemanaFull[prestamoDate.getDay()];
-                              const pHoraInicio = parseInt(p.hora_inicio.split(':')[0]);
-                              const pHoraFin = parseInt(p.hora_fin.split(':')[0]);
-                              return prestamoDia === dia && hora >= pHoraInicio && hora < pHoraFin && p.estado === 'Aprobado';
-                            });
+                            // Separar en horario vs prestamo
+                            const horarioEnCelda = ocupacionEnCelda && ocupacionEnCelda.tipo !== 'prestamo' ? ocupacionEnCelda : null;
+                            const prestamoEnCelda = ocupacionEnCelda && ocupacionEnCelda.tipo === 'prestamo' ? ocupacionEnCelda : null;
 
                             // Verificar si es el horario propuesto seleccionado
                             const isProposedSlot = selectedClassToMove &&
@@ -2339,13 +2544,23 @@ export default function ConsultaEspacios() {
 
                             let bgClass = 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700';
                             let hoverClass = canSelect ? 'hover:bg-blue-50 hover:border-blue-300 cursor-pointer' : '';
-                            if (horarioEnCelda) {
+                            let labelText = '';
+                            let textClass = '';
+
+                            if (prestamoEnCelda) {
+                              // Los préstamos tienen prioridad sobre los horarios
+                              const isPrestamoPendiente = prestamoEnCelda.estado === 'Pendiente';
+                              bgClass = isPrestamoPendiente
+                                ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700'
+                                : 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
+                              hoverClass = '';
+                              labelText = isPrestamoPendiente ? 'Préstamo (Pendiente)' : 'Préstamo (Aprobado)';
+                              textClass = isPrestamoPendiente ? 'text-yellow-600' : 'text-green-600';
+                            } else if (horarioEnCelda) {
                               bgClass = 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
                               hoverClass = '';
-                            }
-                            if (prestamoEnCelda) {
-                              bgClass = 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
-                              hoverClass = '';
+                              labelText = horarioEnCelda.materia || 'Ocupado';
+                              textClass = 'text-red-600';
                             }
                             if (isProposedSlot) {
                               bgClass = 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 ring-2 ring-purple-500';
@@ -2367,8 +2582,8 @@ export default function ConsultaEspacios() {
                                 }}
                                 title={canSelect ? `Seleccionar ${dia} ${hora}:00` : ''}
                               >
-                                {horarioEnCelda && !prestamoEnCelda && <span className="text-red-600 font-medium">Ocupado</span>}
-                                {!horarioEnCelda && prestamoEnCelda && <span className="text-green-600 font-medium">Préstamo</span>}
+                                {prestamoEnCelda && <span className={`${textClass} font-medium truncate px-1`}>{labelText}</span>}
+                                {!prestamoEnCelda && horarioEnCelda && <span className={`${textClass} font-medium truncate px-1`}>{labelText}</span>}
                                 {isProposedSlot && !horarioEnCelda && !prestamoEnCelda && <span className="text-purple-600 font-medium">Nuevo</span>}
                               </div>
                             );
@@ -2380,6 +2595,10 @@ export default function ConsultaEspacios() {
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
                         <span>Horario ocupado</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded"></div>
+                        <span>Préstamo pendiente</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>

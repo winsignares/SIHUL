@@ -9,12 +9,49 @@ export interface Recurso {
   descripcion?: string;
 }
 
+type RecursoListResponse = Recurso[] | { recursos?: Recurso[]; results?: Recurso[] };
+type RecursoCreateResponse = Recurso | { message?: string; id?: number };
+
+const normalizeRecurso = (item: Recurso): Recurso => ({
+  id: item.id,
+  nombre: item.nombre,
+  descripcion: item.descripcion ?? ''
+});
+
+const normalizeRecursoList = (payload: RecursoListResponse): Recurso[] => {
+  if (Array.isArray(payload)) {
+    return payload.map(normalizeRecurso);
+  }
+
+  if (Array.isArray(payload.recursos)) {
+    return payload.recursos.map(normalizeRecurso);
+  }
+
+  if (Array.isArray(payload.results)) {
+    return payload.results.map(normalizeRecurso);
+  }
+
+  return [];
+};
+
+const normalizeCreateRecursoResponse = (payload: RecursoCreateResponse): { message: string; id: number } => {
+  if ('nombre' in payload) {
+    return { message: 'Recurso creado', id: payload.id ?? 0 };
+  }
+
+  return {
+    message: payload.message || 'Recurso creado',
+    id: payload.id ?? 0
+  };
+};
+
 export const recursoService = {
   /**
    * Obtiene la lista de todos los recursos
    */
   listarRecursos: async (): Promise<{ recursos: Recurso[] }> => {
-    return apiClient.get('/recursos/list/');
+    const payload = await apiClient.get<RecursoListResponse>('/recursos/');
+    return { recursos: normalizeRecursoList(payload) };
   },
 
   /**
@@ -30,7 +67,8 @@ export const recursoService = {
    * @param recurso Datos del recurso a crear
    */
   crearRecurso: async (recurso: Omit<Recurso, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/recursos/', recurso);
+    const creado = await apiClient.post<RecursoCreateResponse>('/recursos/', recurso);
+    return normalizeCreateRecursoResponse(creado);
   },
 
   /**
@@ -41,7 +79,8 @@ export const recursoService = {
     if (!recurso.id) {
       throw new Error('Se requiere el ID del recurso para actualizar');
     }
-    return apiClient.put('/recursos/update/', recurso);
+    const actualizado = await apiClient.patch<Recurso>(`/recursos/${recurso.id}/`, recurso);
+    return { message: 'Recurso actualizado', id: actualizado.id ?? recurso.id };
   },
 
   /**
@@ -49,7 +88,8 @@ export const recursoService = {
    * @param id ID del recurso a eliminar
    */
   eliminarRecurso: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/recursos/delete/', { id });
+    await apiClient.delete(`/recursos/${id}/`);
+    return { message: 'Recurso eliminado' };
   }
 };
 
@@ -57,21 +97,42 @@ export const recursoService = {
  * EspacioRecurso (Space-Resource relationship) related interfaces and services
  */
 export interface EspacioRecurso {
+  id?: number;
   espacio_id: number;
   recurso_id: number;
   estado: 'disponible' | 'no_disponible' | 'en_mantenimiento';
 }
 
+interface EspacioRecursoApi {
+  id?: number;
+  espacio: number;
+  recurso: number;
+  estado: 'disponible' | 'no_disponible' | 'en_mantenimiento';
+}
+
+const toFrontendEspacioRecurso = (item: EspacioRecursoApi): EspacioRecurso => ({
+  id: item.id,
+  espacio_id: item.espacio,
+  recurso_id: item.recurso,
+  estado: item.estado,
+});
+
 export interface EstadoRecurso extends EspacioRecurso {
   nombre: string;
 }
+
+const getEspacioRecursoByIds = async (espacio_id: number, recurso_id: number): Promise<EspacioRecurso> => {
+  const item = await apiClient.get<EspacioRecursoApi>(`/espacios-recursos/por-ids/${espacio_id}/${recurso_id}/`);
+  return toFrontendEspacioRecurso(item);
+};
 
 export const espacioRecursoService = {
   /**
    * Obtiene la lista de todas las relaciones espacio-recurso
    */
   listarEspacioRecursos: async (): Promise<{ espacio_recursos: EspacioRecurso[] }> => {
-    return apiClient.get('/recursos/espacio-recurso/list/');
+    const espacioRecursosApi = await apiClient.get<EspacioRecursoApi[]>('/espacios-recursos/');
+    return { espacio_recursos: espacioRecursosApi.map(toFrontendEspacioRecurso) };
   },
 
   /**
@@ -80,7 +141,7 @@ export const espacioRecursoService = {
    * @param recurso_id ID del recurso
    */
   obtenerEspacioRecurso: async (espacio_id: number, recurso_id: number): Promise<EspacioRecurso> => {
-    return apiClient.get(`/recursos/espacio-recurso/${espacio_id}/${recurso_id}/`);
+    return getEspacioRecursoByIds(espacio_id, recurso_id);
   },
 
   /**
@@ -88,11 +149,12 @@ export const espacioRecursoService = {
    * @param espacioRecurso Datos de la relación a crear
    */
   crearEspacioRecurso: async (espacioRecurso: EspacioRecurso): Promise<{ message: string }> => {
-    return apiClient.post('/recursos/espacio-recurso/', {
-      espacio_id: espacioRecurso.espacio_id,
-      recurso_id: espacioRecurso.recurso_id,
+    await apiClient.post('/espacios-recursos/', {
+      espacio: espacioRecurso.espacio_id,
+      recurso: espacioRecurso.recurso_id,
       estado: espacioRecurso.estado ?? 'disponible'
     });
+    return { message: 'EspacioRecurso creado' };
   },
 
   /**
@@ -100,11 +162,17 @@ export const espacioRecursoService = {
    * @param espacioRecurso Datos actualizados de la relación
    */
   actualizarEspacioRecurso: async (espacioRecurso: EspacioRecurso): Promise<{ message: string }> => {
-    return apiClient.put('/recursos/espacio-recurso/update/', {
-      espacio_id: espacioRecurso.espacio_id,
-      recurso_id: espacioRecurso.recurso_id,
+    const actual = await getEspacioRecursoByIds(espacioRecurso.espacio_id, espacioRecurso.recurso_id);
+    if (!actual.id) {
+      throw new Error('No se pudo resolver el ID de EspacioRecurso para actualizar');
+    }
+
+    await apiClient.put(`/espacios-recursos/${actual.id}/`, {
+      espacio: espacioRecurso.espacio_id,
+      recurso: espacioRecurso.recurso_id,
       estado: espacioRecurso.estado
     });
+    return { message: 'EspacioRecurso actualizado' };
   },
 
   /**
@@ -113,10 +181,13 @@ export const espacioRecursoService = {
    * @param recurso_id ID del recurso
    */
   eliminarEspacioRecurso: async (espacio_id: number, recurso_id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/recursos/espacio-recurso/delete/', {
-      espacio_id,
-      recurso_id
-    });
+    const actual = await getEspacioRecursoByIds(espacio_id, recurso_id);
+    if (!actual.id) {
+      throw new Error('No se pudo resolver el ID de EspacioRecurso para eliminar');
+    }
+
+    await apiClient.delete(`/espacios-recursos/${actual.id}/`);
+    return { message: 'EspacioRecurso eliminado' };
   },
 
   /**

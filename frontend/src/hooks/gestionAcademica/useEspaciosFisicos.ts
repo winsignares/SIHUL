@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
-import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
+import { recursoService, espacioRecursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { tipoEspacioService, type TipoEspacio } from '../../services/espacios/tipoEspacioAPI';
 import {
   getPageNumbers,
@@ -15,9 +15,11 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
+const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
 
 export function useEspaciosFisicos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -56,11 +58,43 @@ export function useEspaciosFisicos() {
     });
 
     // Estado para recursos
-    const [recursoSeleccionado, setRecursoSeleccionado] = useState('');
+    const [recursoSeleccionado, setRecursoSeleccionado] = useState<number | null>(null);
     const [recursosAgregados, setRecursosAgregados] = useState<Recurso[]>([]);
     const [mostrandoRecursos, setMostrandoRecursos] = useState(true);
 
     const [selectedEspacio, setSelectedEspacio] = useState<EspacioFisico | null>(null);
+
+    const notifyEspaciosUpdated = () => {
+        clearSessionCache(ESTADO_RECURSOS_CACHE_KEY);
+        clearSessionCache(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`);
+        window.dispatchEvent(new Event(ESPACIOS_UPDATED_EVENT));
+    };
+
+    const syncRecursosEspacio = async (espacioId: number, recursosDeseados: Recurso[]) => {
+        const { recursos: recursosActuales } = await espacioRecursoService.listarPorEspacio(espacioId);
+        const idsDeseados = new Set(
+            recursosDeseados
+                .map((recurso) => recurso.id)
+                .filter((id): id is number => id != null)
+        );
+        const idsActuales = new Set(recursosActuales.map((recurso) => recurso.recurso_id));
+
+        const recursosNuevos = [...idsDeseados].filter((id) => !idsActuales.has(id));
+        const recursosEliminar = [...idsActuales].filter((id) => !idsDeseados.has(id));
+
+        await Promise.all([
+            ...recursosNuevos.map((recursoId) =>
+                espacioRecursoService.crearEspacioRecurso({
+                    espacio_id: espacioId,
+                    recurso_id: recursoId,
+                    estado: 'disponible'
+                })
+            ),
+            ...recursosEliminar.map((recursoId) =>
+                espacioRecursoService.eliminarEspacioRecurso(espacioId, recursoId)
+            )
+        ]);
+    };
 
     // Cargar datos
     useEffect(() => {
@@ -130,8 +164,9 @@ export function useEspaciosFisicos() {
                 return;
             }
 
-            const response = await espacioService.list();
-            const data = (response as any).espacios || (Array.isArray(response) ? response : []);
+            const espaciosRes = await espacioService.list();
+            const data = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
+
             setEspacios(data);
             setSessionCacheData(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`, activeToken, data);
         } catch (error) {
@@ -169,7 +204,7 @@ export function useEspaciosFisicos() {
 
             const ubicacionTrim = espacioForm.ubicacion.trim();
             // 1. Crear el espacio con recursos
-            await espacioService.create({
+            const created = await espacioService.create({
                 nombre: espacioForm.nombre.trim(),
                 tipo_id: Number(espacioForm.tipo_id),
                 capacidad: Number(espacioForm.capacidad),
@@ -180,8 +215,13 @@ export function useEspaciosFisicos() {
                 recursos: recursosPayload
             });
 
+            if (created.id && recursosAgregados.length > 0) {
+                await syncRecursosEspacio(created.id, recursosAgregados);
+            }
+
             // Actualizar lista
             await loadData({ force: true });
+            notifyEspaciosUpdated();
 
             // Limpiar y cerrar
             resetForm();
@@ -248,16 +288,18 @@ export function useEspaciosFisicos() {
             estado: espacio.estado || 'Disponible'
         });
 
-        // Cargar recursos del espacio (ya vienen en el objeto espacio desde el listado)
-        if (espacio.recursos) {
-            const mappedRecursos = espacio.recursos.map(r => ({
-                id: r.id,
+        // Cargar recursos reales desde la relación EspacioRecurso
+        try {
+            const { recursos } = await espacioRecursoService.listarPorEspacio(espacio.id!);
+            const mappedRecursos = recursos.map(r => ({
+                id: r.recurso_id,
                 nombre: r.nombre,
                 descripcion: ''
             }));
             setRecursosAgregados(mappedRecursos);
             setMostrandoRecursos(mappedRecursos.length === 0);
-        } else {
+        } catch (error) {
+            console.error('Error cargando recursos del espacio:', error);
             setRecursosAgregados([]);
             setMostrandoRecursos(true);
         }
@@ -286,6 +328,8 @@ export function useEspaciosFisicos() {
         }
 
         try {
+            const estadoAnterior = selectedEspacio.estado;
+
             // Preparar recursos para el payload
             const recursosPayload = recursosAgregados.map(r => ({
                 id: r.id!,
@@ -302,12 +346,18 @@ export function useEspaciosFisicos() {
                 sede_id: Number(espacioForm.sede_id),
                 ubicacion: ubicacionTrim.length > 0 ? ubicacionTrim : null,
                 descripcion: espacioForm.descripcion.trim(),
-                estado: espacioForm.estado,
                 recursos: recursosPayload
             });
 
+            if (estadoAnterior !== espacioForm.estado) {
+                await espacioService.cambiarEstado(selectedEspacio.id!, espacioForm.estado);
+            }
+
+            await syncRecursosEspacio(selectedEspacio.id!, recursosAgregados);
+
             // Actualizar lista
             await loadData({ force: true });
+            notifyEspaciosUpdated();
 
             // Cerrar y limpiar
             setShowEditDialog(false);
@@ -337,6 +387,7 @@ export function useEspaciosFisicos() {
 
             // Actualizar lista
             await loadData({ force: true });
+            notifyEspaciosUpdated();
 
             // Cerrar
             setShowDeleteDialog(false);
@@ -362,7 +413,7 @@ export function useEspaciosFisicos() {
             estado: 'Disponible'
         });
         setRecursosAgregados([]);
-        setRecursoSeleccionado('');
+        setRecursoSeleccionado(null);
         setMostrandoRecursos(true);
     };
 

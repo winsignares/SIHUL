@@ -1,9 +1,13 @@
 import { handleApiError } from './errorHandler.ts';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+const API_BASE_URL = rawApiUrl
+  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`)
+  : '/api';
 
 interface RequestConfig extends RequestInit {
   requiresAuth?: boolean;
+  suppressErrorLog?: boolean;
 }
 
 class ApiClient {
@@ -33,7 +37,7 @@ class ApiClient {
     endpoint: string,
     config: RequestConfig = {}
   ): Promise<T> {
-    const { requiresAuth = true, ...fetchConfig } = config;
+    const { requiresAuth = true, suppressErrorLog = false, ...fetchConfig } = config;
 
     const url = `${this.baseURL}${endpoint}`;
 
@@ -60,7 +64,38 @@ class ApiClient {
       return data as T;
     } catch (error: any) {
       // Don't log 409 Conflict errors as they are expected validation errors
-      if (error.status !== 409) {
+      if (!suppressErrorLog && error.status !== 409) {
+        console.error('API Request Error:', error);
+      }
+      throw error;
+    }
+  }
+
+  private async requestBlob(
+    endpoint: string,
+    config: RequestConfig = {}
+  ): Promise<Blob> {
+    const { requiresAuth = true, suppressErrorLog = false, ...fetchConfig } = config;
+
+    const url = `${this.baseURL}${endpoint}`;
+
+    try {
+      const response = await fetch(url, {
+        ...fetchConfig,
+        credentials: 'include',
+        headers: {
+          ...this.getHeaders(fetchConfig.body instanceof FormData),
+          ...(fetchConfig.headers as Record<string, string>),
+        },
+      });
+
+      if (!response.ok) {
+        await handleApiError(response);
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      if (!suppressErrorLog && error.status !== 409) {
         console.error('API Request Error:', error);
       }
       throw error;
@@ -70,6 +105,7 @@ class ApiClient {
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(endpoint, {
       ...config,
+      cache: config?.cache ?? 'no-store',
       method: 'GET',
     });
   }
@@ -80,6 +116,18 @@ class ApiClient {
     config?: RequestConfig
   ): Promise<T> {
     return this.request<T>(endpoint, {
+      ...config,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async postBlob(
+    endpoint: string,
+    data?: unknown,
+    config?: RequestConfig
+  ): Promise<Blob> {
+    return this.requestBlob(endpoint, {
       ...config,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,

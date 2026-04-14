@@ -10,7 +10,6 @@ class SeccionalSerializer(serializers.ModelSerializer):
 
 
 class SedeSerializer(serializers.ModelSerializer):
-    seccional_nombre = serializers.CharField(source='seccional.nombre', read_only=True)
     seccional_ciudad = serializers.CharField(source='seccional.ciudad', read_only=True)
 
     class Meta:

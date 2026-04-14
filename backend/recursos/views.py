@@ -70,10 +70,10 @@ def get_recurso(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.ciudad:
+        if user_sede and user_sede.seccional_id:
             r = Recurso.objects.filter(
                 id=id,
-                recurso_espacios__espacio__sede__ciudad=user_sede.ciudad
+                recurso_espacios__espacio__sede__seccional_id=user_sede.seccional_id
             ).first()
         else:
             r = Recurso.objects.filter(id=id).first()
@@ -171,11 +171,11 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
             er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
                 espacio_id=espacio_id,
                 recurso_id=recurso_id,
-                espacio__sede__ciudad=sede_actual.ciudad
+                espacio__sede__seccional_id=sede_actual.seccional_id
             )
         else:
             er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
@@ -195,12 +195,13 @@ def list_espacio_recursos(request):
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.ciudad:
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
             items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').filter(
-                espacio__sede__ciudad=sede_actual.ciudad
+                espacio__sede__seccional_id=sede_actual.seccional_id
             )
         else:
             items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').all()
 
         lst = [{"espacio_id": i.espacio.id, "recurso_id": i.recurso.id, "estado": i.estado} for i in items]
         return JsonResponse({"espacio_recursos": lst}, status=200)
+

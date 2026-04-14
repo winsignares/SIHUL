@@ -4,14 +4,84 @@ export interface ApiError {
   errors?: Record<string, string[]>;
 }
 
+function normalizeMessages(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item : String(item ?? '')))
+      .filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value ? [value] : [];
+  }
+  if (value == null) {
+    return [];
+  }
+  return [String(value)];
+}
+
+function extractApiErrorInfo(errorData: unknown): {
+  message?: string;
+  errors?: Record<string, string[]>;
+} {
+  if (typeof errorData === 'string') {
+    return { message: errorData };
+  }
+
+  if (Array.isArray(errorData)) {
+    const messages = normalizeMessages(errorData);
+    return { message: messages.join(' ') };
+  }
+
+  if (!errorData || typeof errorData !== 'object') {
+    return {};
+  }
+
+  const data = errorData as Record<string, unknown>;
+  const directMessage =
+    (typeof data.message === 'string' && data.message) ||
+    (typeof data.detail === 'string' && data.detail) ||
+    (typeof data.error === 'string' && data.error);
+  if (directMessage) {
+    return { message: directMessage };
+  }
+
+  const normalizedErrors: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const messages = normalizeMessages(value);
+    if (messages.length > 0) {
+      normalizedErrors[key] = messages;
+    }
+  }
+
+  if (normalizedErrors.non_field_errors?.length) {
+    return {
+      message: normalizedErrors.non_field_errors.join(' '),
+      errors: normalizedErrors,
+    };
+  }
+
+  const firstField = Object.keys(normalizedErrors)[0];
+  if (firstField && normalizedErrors[firstField]?.length) {
+    return {
+      message: `${firstField}: ${normalizedErrors[firstField].join(' ')}`,
+      errors: normalizedErrors,
+    };
+  }
+
+  return {};
+}
+
 export async function handleApiError(response: Response): Promise<never> {
   let errorMessage = 'Error en la solicitud';
   let errors: Record<string, string[]> | undefined;
 
   try {
     const errorData = await response.json();
-    errorMessage = errorData.message || errorData.detail || errorData.error || errorMessage;
-    errors = errorData.errors;
+    const extracted = extractApiErrorInfo(errorData);
+    if (extracted.message) {
+      errorMessage = extracted.message;
+    }
+    errors = extracted.errors;
   } catch {
     // Si no hay JSON, usar mensaje por defecto
   }

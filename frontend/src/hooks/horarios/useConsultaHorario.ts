@@ -3,6 +3,7 @@ import type { HorarioDocente, HorarioPrograma } from '../../models';
 import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
+import { userService } from '../../services/users/authService';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 export interface Docente {
@@ -113,20 +114,16 @@ export function useConsultaHorario() {
             let docentesFinales: Docente[] = [];
             // Cargar docentes completos desde el endpoint
             try {
-                const apiUrl = import.meta.env.VITE_API_URL;
-                const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
-                if (docentesResponse.ok) {
-                    const docentesData = await docentesResponse.json();
-                    docentesFinales = [
-                        { id: 'todos', nombre: 'Todos', correo: '' },
-                        ...docentesData.usuarios.map((u: any) => ({
-                            id: u.id,
-                            nombre: u.nombre,
-                            correo: u.correo
-                        }))
-                    ];
-                    setDocentes(docentesFinales);
-                }
+                const docentesResponse = await userService.listarDocentes();
+                docentesFinales = [
+                    { id: 'todos', nombre: 'Todos', correo: '' },
+                    ...docentesResponse.usuarios.map((u) => ({
+                        id: u.id ?? 0,
+                        nombre: u.nombre,
+                        correo: u.correo,
+                    }))
+                ];
+                setDocentes(docentesFinales);
             } catch (error) {
                 console.error('Error al cargar docentes:', error);
                 // Fallback: usar nombres únicos de horarios
@@ -170,8 +167,6 @@ export function useConsultaHorario() {
     const exportarPDF = async () => {
         try {
             if (tipoConsulta === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL;
-                
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
@@ -179,21 +174,7 @@ export function useConsultaHorario() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
-
-                const blob = await response.blob();
+                const blob = await horarioService.exportarPdfPrograma(horariosAExportar);
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -207,8 +188,6 @@ export function useConsultaHorario() {
             }
 
             if (tipoConsulta === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL;
-                
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
@@ -216,21 +195,7 @@ export function useConsultaHorario() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
-
-                const blob = await response.blob();
+                const blob = await horarioService.exportarPdfDocente(horariosAExportar);
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -248,8 +213,6 @@ export function useConsultaHorario() {
     const exportarExcel = async () => {
         try {
             if (tipoConsulta === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL;
-                
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
@@ -257,21 +220,7 @@ export function useConsultaHorario() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Error al generar Excel');
-                }
-
-                const blob = await response.blob();
+                const blob = await horarioService.exportarExcelPrograma(horariosAExportar);
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -285,8 +234,6 @@ export function useConsultaHorario() {
             }
 
             if (tipoConsulta === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL;
-                
                 const horariosResponse = await horarioService.listExtendidos();
                 const todosLosHorarios = horariosResponse.horarios;
                 
@@ -294,21 +241,7 @@ export function useConsultaHorario() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-excel-docente/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Error al generar Excel');
-                }
-
-                const blob = await response.blob();
+                const blob = await horarioService.exportarExcelDocente(horariosAExportar);
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;

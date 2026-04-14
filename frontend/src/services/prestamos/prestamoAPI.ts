@@ -44,9 +44,72 @@ export interface PrestamoEspacio {
   prestamo_padre_id?: number | null;
 }
 
+interface PrestamoEspacioApi {
+  id?: number;
+  espacio: number;
+  espacio_nombre?: string;
+  espacio_tipo?: string;
+  usuario: number | null;
+  usuario_nombre?: string;
+  usuario_correo?: string;
+  administrador: number | null;
+  administrador_nombre?: string;
+  tipo_actividad: number;
+  tipo_actividad_nombre?: string;
+  prestamo_padre?: number | null;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  motivo?: string | null;
+  asistentes?: number;
+  telefono?: string | null;
+  estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+  es_recurrente?: boolean;
+  frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+  intervalo?: number;
+  dias_semana?: number[];
+  fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
+  fin_repeticion_fecha?: string | null;
+  fin_repeticion_ocurrencias?: number | null;
+  serie_id?: string | null;
+  es_ocurrencia_generada?: boolean;
+}
+
+const toFrontendPrestamo = (prestamo: PrestamoEspacioApi): PrestamoEspacio => ({
+  id: prestamo.id,
+  espacio_id: prestamo.espacio,
+  espacio_nombre: prestamo.espacio_nombre,
+  espacio_tipo: prestamo.espacio_tipo,
+  usuario_id: prestamo.usuario,
+  usuario_nombre: prestamo.usuario_nombre,
+  usuario_correo: prestamo.usuario_correo,
+  administrador_id: prestamo.administrador,
+  administrador_nombre: prestamo.administrador_nombre,
+  tipo_actividad_id: prestamo.tipo_actividad,
+  tipo_actividad_nombre: prestamo.tipo_actividad_nombre,
+  prestamo_padre_id: prestamo.prestamo_padre ?? null,
+  fecha: prestamo.fecha,
+  hora_inicio: prestamo.hora_inicio,
+  hora_fin: prestamo.hora_fin,
+  motivo: prestamo.motivo ?? undefined,
+  asistentes: prestamo.asistentes,
+  telefono: prestamo.telefono ?? undefined,
+  estado: prestamo.estado,
+  es_recurrente: prestamo.es_recurrente,
+  frecuencia: prestamo.frecuencia,
+  intervalo: prestamo.intervalo,
+  dias_semana: prestamo.dias_semana,
+  fin_repeticion_tipo: prestamo.fin_repeticion_tipo,
+  fin_repeticion_fecha: prestamo.fin_repeticion_fecha,
+  fin_repeticion_ocurrencias: prestamo.fin_repeticion_ocurrencias,
+  serie_id: prestamo.serie_id,
+  es_ocurrencia_generada: prestamo.es_ocurrencia_generada,
+});
+
 const buildRecurrencePayload = (prestamo: Partial<PrestamoEspacio>) => {
+  // Si no es recurrente, retornar explícitamente con es_recurrente: false
   if (!prestamo.es_recurrente) {
-    return {};
+    return { es_recurrente: false };
   }
 
   const payload: Record<string, unknown> = {
@@ -91,15 +154,28 @@ export const prestamoService = {
    * @param includeOcurrencias Si es true, incluye cada ocurrencia de series recurrentes (filas hijas en BD).
    */
   listarPrestamos: async (options?: { includeOcurrencias?: boolean }): Promise<{ prestamos: PrestamoEspacio[] }> => {
-    const q = options?.includeOcurrencias ? '?include_ocurrencias=true' : '';
-    return apiClient.get(`/prestamos/list/${q}`);
+    const query = options?.includeOcurrencias ? '?include_ocurrencias=true' : '';
+    const prestamosApi = await apiClient.get<PrestamoEspacioApi[]>(`/prestamos/espacios/${query}`);
+    const prestamos = prestamosApi.map(toFrontendPrestamo);
+    return { prestamos };
   },
 
   /**
    * Obtiene la lista de TODOS los préstamos (autenticados + públicos) para admin
    */
   listarTodosPrestamosAdmin: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
-    return apiClient.get('/prestamos/list/todos/');
+    const prestamosApi = await apiClient.get<PrestamoEspacioApi[]>('/prestamos/espacios/');
+    const prestamos = prestamosApi.map(toFrontendPrestamo);
+    return { prestamos };
+  },
+
+  /**
+   * Obtiene la lista de préstamos de los espacios permitidos para un supervisor
+   */
+  listarPrestamosSupervisor: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
+    const prestamosApi = await apiClient.get<PrestamoEspacioApi[]>('/prestamos/supervisor/espacios-prestamos/');
+    const prestamos = prestamosApi.map(toFrontendPrestamo);
+    return { prestamos };
   },
 
   /**
@@ -107,7 +183,9 @@ export const prestamoService = {
    * @param usuarioId ID del usuario
    */
   listarPrestamosPorUsuario: async (usuarioId: number): Promise<{ prestamos: PrestamoEspacio[] }> => {
-    return apiClient.get(`/prestamos/usuario/${usuarioId}/`);
+    const prestamosApi = await apiClient.get<PrestamoEspacioApi[]>('/prestamos/espacios/');
+    const prestamos = prestamosApi.map(toFrontendPrestamo);
+    return { prestamos: prestamos.filter((item) => item.usuario_id === usuarioId) };
   },
 
   /**
@@ -115,7 +193,8 @@ export const prestamoService = {
    * @param id ID del préstamo
    */
   obtenerPrestamo: async (id: number): Promise<PrestamoEspacio> => {
-    return apiClient.get(`/prestamos/${id}/`);
+    const prestamoApi = await apiClient.get<PrestamoEspacioApi>(`/prestamos/espacios/${id}/`);
+    return toFrontendPrestamo(prestamoApi);
   },
 
   /**
@@ -123,11 +202,12 @@ export const prestamoService = {
    * @param prestamo Datos del préstamo a crear
    */
   crearPrestamo: async (prestamo: Omit<PrestamoEspacio, 'id'>): Promise<{ message: string; id: number }> => {
-    return apiClient.post('/prestamos/', {
-      espacio_id: prestamo.espacio_id,
-      usuario_id: prestamo.usuario_id,
-      administrador_id: prestamo.administrador_id,
-      tipo_actividad_id: prestamo.tipo_actividad_id,
+    const created = await apiClient.post<PrestamoEspacioApi>('/prestamos/espacios/', {
+      espacio: prestamo.espacio_id,
+      usuario: prestamo.usuario_id,
+      administrador: prestamo.administrador_id,
+      tipo_actividad: prestamo.tipo_actividad_id,
+      prestamo_padre: prestamo.prestamo_padre_id,
       fecha: prestamo.fecha,
       hora_inicio: prestamo.hora_inicio,
       hora_fin: prestamo.hora_fin,
@@ -138,6 +218,7 @@ export const prestamoService = {
       recursos: prestamo.recursos || [],
       ...buildRecurrencePayload(prestamo)
     });
+    return { message: 'Préstamo creado', id: created.id ?? 0 };
   },
 
   /**
@@ -149,12 +230,12 @@ export const prestamoService = {
       throw new Error('Se requiere el ID del préstamo para actualizar');
     }
 
-    return apiClient.put('/prestamos/update/', {
-      id: prestamo.id,
-      espacio_id: prestamo.espacio_id,
-      usuario_id: prestamo.usuario_id,
-      administrador_id: prestamo.administrador_id,
-      tipo_actividad_id: prestamo.tipo_actividad_id,
+    const updated = await apiClient.put<PrestamoEspacioApi>(`/prestamos/espacios/${prestamo.id}/`, {
+      espacio: prestamo.espacio_id,
+      usuario: prestamo.usuario_id,
+      administrador: prestamo.administrador_id,
+      tipo_actividad: prestamo.tipo_actividad_id,
+      prestamo_padre: prestamo.prestamo_padre_id,
       fecha: prestamo.fecha,
       hora_inicio: prestamo.hora_inicio,
       hora_fin: prestamo.hora_fin,
@@ -164,6 +245,7 @@ export const prestamoService = {
       estado: prestamo.estado,
       ...buildRecurrencePayload(prestamo)
     });
+    return { message: 'Préstamo actualizado', id: updated.id ?? prestamo.id };
   },
 
   /**
@@ -171,6 +253,7 @@ export const prestamoService = {
    * @param id ID del préstamo a eliminar
    */
   eliminarPrestamo: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete('/prestamos/delete/', { id });
+    await apiClient.delete(`/prestamos/espacios/${id}/`);
+    return { message: 'Préstamo eliminado' };
   }
 };

@@ -52,7 +52,9 @@ export const crearNotificacion = async (data: NotificacionCreate): Promise<Notif
  * PUT /notificaciones/update/
  */
 export const actualizarNotificacion = async (data: NotificacionUpdate): Promise<{ message: string; id: number }> => {
-  return await apiClient.put<{ message: string; id: number }>(`${API_URL}/update/`, data);
+  const { id, ...payload } = data;
+  const updated = await apiClient.put<Notificacion>(`${API_URL}/${id}/`, payload);
+  return { message: 'Notificación actualizada', id: updated.id };
 };
 
 /**
@@ -60,7 +62,8 @@ export const actualizarNotificacion = async (data: NotificacionUpdate): Promise<
  * DELETE /notificaciones/delete/
  */
 export const eliminarNotificacion = async (id: number): Promise<{ message: string }> => {
-  return await apiClient.delete<{ message: string }>(`${API_URL}/delete/`, { id });
+  await apiClient.delete(`${API_URL}/${id}/`);
+  return { message: 'Notificación eliminada' };
 };
 
 /**
@@ -84,9 +87,9 @@ export const listarNotificaciones = async (params?: {
   if (params?.no_leidas !== undefined) queryParams.append('no_leidas', params.no_leidas.toString());
   
   const queryString = queryParams.toString();
-  const endpoint = queryString ? `${API_URL}/list/?${queryString}` : `${API_URL}/list/`;
-  
-  return await apiClient.get<NotificacionesResponse>(endpoint);
+  const endpoint = queryString ? `${API_URL}/?${queryString}` : `${API_URL}/`;
+  const notificaciones = await apiClient.get<Notificacion[]>(endpoint);
+  return { notificaciones, total: notificaciones.length };
 };
 
 // ==================== ACCIONES PERSONALIZADAS ====================

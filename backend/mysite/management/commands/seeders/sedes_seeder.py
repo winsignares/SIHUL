@@ -3,6 +3,7 @@ Seeder de sedes de la universidad.
 """
 
 from sedes.models import Sede
+from sedes.models import Seccional
 
 
 def create_sedes(stdout, style):
@@ -92,6 +93,9 @@ def create_sedes(stdout, style):
     
     created_count = 0
     for sede_data in sedes_data:
+        ciudad = sede_data.pop('ciudad')
+        seccional, _ = Seccional.objects.get_or_create(ciudad=ciudad, defaults={'activa': True})
+        sede_data['seccional'] = seccional
         _, created = Sede.objects.get_or_create(nombre=sede_data['nombre'], defaults=sede_data)
         if created:
             created_count += 1

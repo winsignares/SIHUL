@@ -84,7 +84,7 @@ def get_programa(request, id=None):
     try:
         user_sede = getattr(request, 'sede', None)
         if user_sede:
-            p = Programa.objects.filter(id=id, facultad__sede__ciudad=user_sede.ciudad).first()
+            p = Programa.objects.filter(id=id, facultad__sede__seccional_id=user_sede.seccional_id).first()
             if not p:
                 return JsonResponse({"error": "Programa no encontrado o no accesible."}, status=404)
         return JsonResponse({
@@ -105,7 +105,7 @@ def list_programas(request):
         user_sede = getattr(request, 'sede', None)
         
         if user_sede:
-            items = Programa.objects.filter(facultad__sede__ciudad=user_sede.ciudad)
+            items = Programa.objects.filter(facultad__sede__seccional_id=user_sede.seccional_id)
         else:
             items = Programa.objects.all()
             
@@ -117,3 +117,4 @@ def list_programas(request):
             "activo": i.activo
         } for i in items]
         return JsonResponse({"programas": lst}, status=200)
+

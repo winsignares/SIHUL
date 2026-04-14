@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.conf import settings
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
@@ -46,8 +47,8 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/auth/', include('mysite.auth_urls')),
     path('api/periodos/', include('periodos.api_urls')),
-    path('api/recursos/', include('recursos.api_urls')),
     path('api/componentes/', include('componentes.api_urls')),
     path('api/prestamos/', include('prestamos.api_urls')),
     path('api/chatbot/', include('chatbot.api_urls')),
@@ -69,3 +70,6 @@ urlpatterns = [
     path('notificaciones/', include('notificaciones.urls')),
     path('financiero/', include('financiero.urls')),  # Rutas páginas Financiero
 ]
+
+if settings.MICROSOFT_OAUTH_ENABLED:
+    urlpatterns.insert(1, path('accounts/', include('allauth.urls')))

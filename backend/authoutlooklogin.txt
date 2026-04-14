@@ -1,0 +1,51 @@
+Tareas:
+
+Backend (Django):
+Configurar django-allauth con provider Microsoft
+Configurar settings.py correctamente:
+INSTALLED_APPS (allauth y microsoft)
+SITE_ID
+AUTHENTICATION_BACKENDS
+SOCIALACCOUNT_PROVIDERS
+Configurar CORS (django-cors-headers) para permitir requests desde React
+Configurar URLs:
+/accounts/microsoft/login/
+/accounts/microsoft/login/callback/
+Crear endpoint adicional:
+/api/auth/user/ → retorna usuario autenticado en JSON
+/api/auth/logout/
+Configurar autenticación basada en sesión o JWT (preferiblemente JWT usando dj-rest-auth o simplejwt)
+Flujo de autenticación:
+Desde React, redirigir al usuario a:
+http://localhost:8000/accounts/microsoft/login/
+Django maneja OAuth con Microsoft
+Microsoft redirige a:
+/accounts/microsoft/login/callback/
+Django autentica usuario y crea sesión/token
+Frontend (React + TypeScript):
+Crear botón:
+"Iniciar sesión con Microsoft"
+Al hacer click:
+window.location.href = "http://localhost:8000/accounts/microsoft/login/"
+Después del login:
+Redirigir al frontend (ej: http://localhost:3000/dashboard)
+Crear función para obtener usuario autenticado:
+fetch("http://localhost:8000/api/auth/user/", {
+credentials: "include"
+})
+Manejar estado global de autenticación (Context API o Zustand)
+Seguridad:
+Usar cookies seguras (httpOnly)
+CSRF protegido
+HTTPS en producción
+Azure:
+Registrar app en Microsoft
+Redirect URI:
+http://localhost:8000/accounts/microsoft/login/callback/
+Entrega:
+Código completo backend (Django)
+Código frontend (React TS)
+Ejemplo funcional de login
+Explicaciones cortas, enfocadas en implementación
+
+Evitar usar templates de Django. Todo debe funcionar con React como cliente principal.
