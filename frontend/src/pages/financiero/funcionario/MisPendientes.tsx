@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle, Clock, Eye, FileText, TrendingUp } from 'lucide-react';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero';
-import FacturaDetailModal from './FacturaDetailModal.tsx';
+import FacturaDetailModal from '../../../share/factura-detail-modal';
 
 type PendingRow = {
   id: string;
@@ -229,17 +229,25 @@ export default function MisPendientes() {
       </div>
 
       <FacturaDetailModal
-        open={openDetail}
+        isOpen={openDetail}
         onClose={() => setOpenDetail(false)}
         factura={
           selectedRow
             ? {
-                idTramite: selectedRow.numeroFactura,
+                numeroFactura: selectedRow.numeroFactura,
                 proveedor: selectedRow.proveedor,
                 valorTotal: selectedRow.valorTotal,
-                fechaInicio: selectedRow.fechaRecepcion,
-                progreso: Math.max(5, Math.min(95, Math.round((selectedRow.dias / selectedRow.slaMax) * 35))),
-                etapaActual: 'Registro y Recepcion',
+                fechaRecepcion: selectedRow.fechaRecepcion,
+                areaSolicitante: selectedRow.area,
+                estado: 'Recibida',
+                diasTranscurridos: selectedRow.dias,
+                descripcion: selectedRow.accion,
+                nivelRiesgo:
+                  selectedRow.nivelRiesgo === 'vencido'
+                    ? 'vencido'
+                    : selectedRow.nivelRiesgo === 'amarillo'
+                      ? 'amarillo'
+                      : 'verde',
               }
             : null
         }

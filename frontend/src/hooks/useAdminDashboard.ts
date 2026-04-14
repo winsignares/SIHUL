@@ -35,6 +35,12 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
     const userName = user?.nombre || propsUserName || (isPublicAccess ? 'Usuario Público' : 'Usuario');
     const userRole = role?.nombre || propsUserRole || (isPublicAccess ? 'Público' : 'Usuario');
     const userFacultyName = user?.facultad?.nombre || '';
+    const normalizedRole = userRole
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ')
+        .trim();
 
     const handleLogout = propsOnLogout || (() => {
         logout();
@@ -135,7 +141,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         }
 
         // Menú específico para Funcionario Financiero (siempre consistente)
-        if (userRole.toLowerCase().includes('funcionario')) {
+        if (normalizedRole.includes('funcionario')) {
             sections.push({
                 id: 'principal',
                 label: 'Principal',
@@ -181,6 +187,57 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             return sections;
         }
 
+        // Menú específico para Contabilidad Financiera (siempre consistente)
+        if (
+            normalizedRole.includes('contabilidad') ||
+            normalizedRole.includes('admin financiero') ||
+            normalizedRole.includes('direccion financiera')
+        ) {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Contabilidad',
+                        icon: getIconForComponent('Contabilidad'),
+                        label: 'Dashboard',
+                        route: '/financiero/contabilidad/dashboard',
+                        code: 'Dashboard Contabilidad'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-contable',
+                label: 'Gestión Contable',
+                items: [
+                    {
+                        id: 'Mis Pendientes Contabilidad',
+                        icon: getIconForComponent('Mis Pendientes'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/contabilidad/pendientes',
+                        code: 'Mis Pendientes Contabilidad'
+                    },
+                    {
+                        id: 'Radicar Facturas',
+                        icon: getIconForComponent('Radicar Facturas'),
+                        label: 'Radicar Facturas',
+                        route: '/financiero/contabilidad/radicar',
+                        code: 'Radicar Facturas'
+                    },
+                    {
+                        id: 'Causar Facturas',
+                        icon: getIconForComponent('Causar Facturas'),
+                        label: 'Causar Facturas',
+                        route: '/financiero/contabilidad/causar',
+                        code: 'Causar Facturas'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
         // Sección Principal (Dashboards)
         const dashboardComponents = components.filter(c => c.nombre.toLowerCase().includes('dashboard'));
         if (dashboardComponents.length > 0) {
@@ -205,7 +262,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         ];
 
         // Si es admin, quitamos Estado de Recursos del sidebar porque ya está en Centro Institucional
-        if (userRole.toLowerCase().includes('admin')) {
+        if (normalizedRole.includes('admin')) {
             espaciosNames = espaciosNames.filter(n => n !== 'Estado de Recursos');
         }
 
@@ -221,7 +278,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 items: espaciosComponents.map(c => {
                     let route = getRouteForComponent(c.nombre);
                     // Fix para Supervisor General y Estado de Recursos
-                    if (userRole.toLowerCase().includes('supervisor') && c.nombre === 'Estado de Recursos') {
+                    if (normalizedRole.includes('supervisor') && c.nombre === 'Estado de Recursos') {
                         route = '/supervisor/recursos';
                     }
                     return {

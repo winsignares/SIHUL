@@ -3,6 +3,8 @@ import {
     Building2,
     Clock,
     Clock3,
+    Calculator,
+    FileCheck,
     HandCoins,
     Calendar,
     Bot,
@@ -11,6 +13,10 @@ import {
     FilePlus2,
     Receipt,
     Search,
+    Send,
+    CircleCheckBig,
+    ListChecks,
+    FileSearch,
     Shield,
     Zap,
     MapPin,
@@ -82,6 +88,10 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Registrar Factura': '/financiero/funcionario/registrar',
     'Consultar Facturas': '/financiero/funcionario/consultar',
     'Mis Pendientes': '/financiero/funcionario/pendientes',
+    'Dashboard Contabilidad': '/financiero/contabilidad/dashboard',
+    'Mis Pendientes Contabilidad': '/financiero/contabilidad/pendientes',
+    'Radicar Facturas': '/financiero/contabilidad/radicar',
+    'Causar Facturas': '/financiero/contabilidad/causar',
 };
 
 /**
@@ -144,6 +154,10 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Registrar Factura': FilePlus2,
     'Consultar Facturas': Search,
     'Mis Pendientes': Clock3,
+    'Dashboard Contabilidad': LayoutDashboard,
+    'Mis Pendientes Contabilidad': Clock3,
+    'Radicar Facturas': FileCheck,
+    'Causar Facturas': Calculator,
 };
 
 function normalizeComponentName(name: string): string {
@@ -169,6 +183,20 @@ function isFinancialComponentName(name: string): boolean {
     return (
         normalized === 'mis pendientes' ||
         normalized.includes('pendientes')
+    );
+}
+
+function isContabilidadLikeComponent(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+    return (
+        normalized.includes('contabilidad') ||
+        normalized.includes('causar') ||
+        normalized.includes('radicar') ||
+        normalized.includes('cuentas por pagar') ||
+        normalized.includes('alistar pago') ||
+        normalized.includes('revision pago') ||
+        normalized.includes('confirmacion pago') ||
+        normalized.includes('enviar a rectoria')
     );
 }
 
@@ -205,6 +233,10 @@ export function getDynamicRouteForComponent(name: string): string {
 export function getRouteForComponent(name: string): string {
     const route = COMPONENT_ROUTES[name] || NORMALIZED_COMPONENT_ROUTES[normalizeComponentName(name)];
 
+    if (!route && isContabilidadLikeComponent(name)) {
+        return '/financiero/contabilidad/dashboard';
+    }
+
     if (!route && isFinancialComponentName(name)) {
         return '/financiero/funcionario/dashboard';
     }
@@ -223,6 +255,18 @@ export function getRouteForComponent(name: string): string {
  */
 export function getIconForComponent(name: string): LucideIcon {
     const icon = COMPONENT_ICONS[name] || NORMALIZED_COMPONENT_ICONS[normalizeComponentName(name)];
+    const normalized = normalizeComponentName(name);
+
+    if (!icon) {
+        if (normalized.includes('dashboard')) return LayoutDashboard;
+        if (normalized.includes('mis pendientes')) return Clock3;
+        if (normalized.includes('consultar')) return FileSearch;
+        if (normalized.includes('radicar')) return FileCheck;
+        if (normalized.includes('causar')) return Calculator;
+        if (normalized.includes('enviar a rectoria')) return Send;
+        if (normalized.includes('confirmacion') || normalized.includes('confirmar')) return CircleCheckBig;
+        if (normalized.includes('revision') || normalized.includes('revisar')) return ListChecks;
+    }
 
     if (!icon && isFinancialComponentName(name)) {
         return HandCoins;

@@ -36,6 +36,7 @@ const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
 
 // Lazy load de componentes Financiero
 const FuncionarioDashboard = lazy(() => import('../pages/financiero/funcionario'));
+const ContabilidadDashboard = lazy(() => import('../pages/financiero/contabilidad'));
 
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
@@ -148,6 +149,12 @@ export default function AppRouter() {
   // Definir redirección inicial según rol y componentes exactos del backend
   const homeRoute = (() => {
     const roleName = role?.nombre;
+    const normalizedRoleName = (roleName || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
 
     if (roleName === 'admin') {
       if (hasComponentByName('Dashboard')) return '/admin/dashboard';
@@ -175,6 +182,13 @@ export default function AppRouter() {
     // Redirección para roles del módulo Financiero
     if (roleName === 'Funcionario' && (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)) {
       return '/financiero/funcionario/dashboard';
+    }
+
+    if (
+      (normalizedRoleName.includes('contabilidad') || normalizedRoleName.includes('admin financiero')) &&
+      (hasComponentByName('Causar Factura') || hasComponentByName('Causar Facturas') || hasFinancialComponent)
+    ) {
+      return '/financiero/contabilidad/dashboard';
     }
 
     for (const component of components) {
@@ -380,6 +394,33 @@ export default function AppRouter() {
         <Route path="financiero/funcionario/pendientes" element={
           <ProtectedRoute>
             <FuncionarioDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Contabilidad */}
+        <Route path="financiero/contabilidad" element={
+          <ProtectedRoute>
+            <ContabilidadDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/contabilidad/dashboard" element={
+          <ProtectedRoute>
+            <ContabilidadDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/contabilidad/pendientes" element={
+          <ProtectedRoute>
+            <ContabilidadDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/contabilidad/radicar" element={
+          <ProtectedRoute>
+            <ContabilidadDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/contabilidad/causar" element={
+          <ProtectedRoute>
+            <ContabilidadDashboard />
           </ProtectedRoute>
         } />
 
