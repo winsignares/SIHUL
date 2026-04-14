@@ -52,6 +52,7 @@ urlpatterns = [
     path('api/prestamos/', include('prestamos.api_urls')),
     path('api/chatbot/', include('chatbot.api_urls')),
     path('api/notificaciones/', include('notificaciones.api_urls')),
+    path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
     path('usuarios/', include('usuarios.urls')),
     path('sedes/', include('sedes.urls')),
     path('facultades/', include('facultades.urls')),
@@ -66,4 +67,5 @@ urlpatterns = [
     path('prestamos/', include('prestamos.urls')),
     path('chatbot/', include('chatbot.urls')),
     path('notificaciones/', include('notificaciones.urls')),
+    path('financiero/', include('financiero.urls')),  # Rutas páginas Financiero
 ]

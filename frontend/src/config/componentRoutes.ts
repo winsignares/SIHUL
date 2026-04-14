@@ -2,11 +2,15 @@ import {
     LayoutDashboard,
     Building2,
     Clock,
+    Clock3,
     HandCoins,
     Calendar,
     Bot,
     BarChart3,
     FileText,
+    FilePlus2,
+    Receipt,
+    Search,
     Shield,
     Zap,
     MapPin,
@@ -71,6 +75,13 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Dashboard Estudiante': '/estudiante/dashboard',
     'Mi Horario Estudiante': '/estudiante/mi-horario',
     'Asistentes Virtuales Estudiante': '/estudiante/asistente-virtual',
+
+    // Módulo Financiero
+    'Dashboard Financiero': '/financiero/funcionario/dashboard',
+    'Gestión de Facturas': '/financiero/funcionario/dashboard',
+    'Registrar Factura': '/financiero/funcionario/registrar',
+    'Consultar Facturas': '/financiero/funcionario/consultar',
+    'Mis Pendientes': '/financiero/funcionario/pendientes',
 };
 
 /**
@@ -126,7 +137,48 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Apertura y Cierre de Salones': DoorOpen,
     'Mi Horario': Clock,
     'Mi Horario Estudiante': Clock,
+
+    // Módulo Financiero
+    'Dashboard Financiero': LayoutDashboard,
+    'Gestión de Facturas': Receipt,
+    'Registrar Factura': FilePlus2,
+    'Consultar Facturas': Search,
+    'Mis Pendientes': Clock3,
 };
+
+function normalizeComponentName(name: string): string {
+    return name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+}
+
+function isFinancialComponentName(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+
+    if (
+        normalized.includes('factur') ||
+        normalized.includes('financier')
+    ) {
+        return true;
+    }
+
+    return (
+        normalized === 'mis pendientes' ||
+        normalized.includes('pendientes')
+    );
+}
+
+const NORMALIZED_COMPONENT_ROUTES: Record<string, string> = Object.fromEntries(
+    Object.entries(COMPONENT_ROUTES).map(([key, route]) => [normalizeComponentName(key), route])
+);
+
+const NORMALIZED_COMPONENT_ICONS: Record<string, LucideIcon> = Object.fromEntries(
+    Object.entries(COMPONENT_ICONS).map(([key, icon]) => [normalizeComponentName(key), icon])
+);
 
 /**
  * Convierte nombre de componente en slug de URL estable.
@@ -151,7 +203,11 @@ export function getDynamicRouteForComponent(name: string): string {
  * Obtiene la ruta del frontend para un nombre de componente
  */
 export function getRouteForComponent(name: string): string {
-    const route = COMPONENT_ROUTES[name];
+    const route = COMPONENT_ROUTES[name] || NORMALIZED_COMPONENT_ROUTES[normalizeComponentName(name)];
+
+    if (!route && isFinancialComponentName(name)) {
+        return '/financiero/funcionario/dashboard';
+    }
 
     if (!route) {
         const dynamicRoute = getDynamicRouteForComponent(name);
@@ -166,7 +222,11 @@ export function getRouteForComponent(name: string): string {
  * Obtiene el ícono para un nombre de componente
  */
 export function getIconForComponent(name: string): LucideIcon {
-    const icon = COMPONENT_ICONS[name];
+    const icon = COMPONENT_ICONS[name] || NORMALIZED_COMPONENT_ICONS[normalizeComponentName(name)];
+
+    if (!icon && isFinancialComponentName(name)) {
+        return HandCoins;
+    }
 
     if (!icon) {
         console.warn(`[componentRoutes] No icon found for component: ${name}, using default`);

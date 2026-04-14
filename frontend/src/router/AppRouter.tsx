@@ -34,6 +34,9 @@ const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/Solicitu
 const ComponentesRoles = lazy(() => import('../pages/permisos/ComponentesRoles'));
 const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
 
+// Lazy load de componentes Financiero
+const FuncionarioDashboard = lazy(() => import('../pages/financiero/funcionario'));
+
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
 
@@ -111,6 +114,13 @@ export default function AppRouter() {
   const { isAuthenticated, components, role } = useAuth();
 
   const hasComponentByName = (name: string) => components.some(c => c.nombre === name);
+  const hasFinancialComponent = components.some(c => {
+    const normalized = c.nombre
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    return normalized.includes('factur') || normalized.includes('financier') || normalized.includes('pendient');
+  });
 
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
@@ -160,6 +170,11 @@ export default function AppRouter() {
 
     if (roleName === 'estudiante') {
       if (hasComponentByName('Dashboard Estudiante')) return '/estudiante/dashboard';
+    }
+
+    // Redirección para roles del módulo Financiero
+    if (roleName === 'Funcionario' && (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)) {
+      return '/financiero/funcionario/dashboard';
     }
 
     for (const component of components) {
@@ -338,6 +353,33 @@ export default function AppRouter() {
         <Route path="estudiante/asistente-virtual" element={
           <ProtectedRoute requiredComponent="Asistentes Virtuales Estudiante">
             <AsistentesVirtuales />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Módulo Financiero */}
+        <Route path="financiero/funcionario" element={
+          <ProtectedRoute>
+            <FuncionarioDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/funcionario/dashboard" element={
+          <ProtectedRoute>
+            <FuncionarioDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/funcionario/registrar" element={
+          <ProtectedRoute>
+            <FuncionarioDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/funcionario/consultar" element={
+          <ProtectedRoute>
+            <FuncionarioDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/funcionario/pendientes" element={
+          <ProtectedRoute>
+            <FuncionarioDashboard />
           </ProtectedRoute>
         } />
 

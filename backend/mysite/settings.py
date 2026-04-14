@@ -48,8 +48,10 @@ INSTALLED_APPS = [
     'prestamos',
     'chatbot',
     'notificaciones',
+    'financiero',  # App nueva para gestión financiera
     'rest_framework',
     'corsheaders',
+    'django_filters',  # Para filtrados en API
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -55,6 +55,13 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             .trim();
     };
 
+    const normalizeComponentName = (name: string) => {
+        return name
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+    };
+
     /**
      * Agrupa los componentes en secciones para el menú
      */
@@ -125,6 +132,53 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 }
             ];
             return publicMenu;
+        }
+
+        // Menú específico para Funcionario Financiero (siempre consistente)
+        if (userRole.toLowerCase().includes('funcionario')) {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Financiero',
+                        icon: getIconForComponent('Dashboard Financiero'),
+                        label: 'Dashboard',
+                        route: '/financiero/funcionario/dashboard',
+                        code: 'Dashboard Financiero'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-financiera',
+                label: 'Gestión Financiera',
+                items: [
+                    {
+                        id: 'Mis Pendientes',
+                        icon: getIconForComponent('Mis Pendientes'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/funcionario/pendientes',
+                        code: 'Mis Pendientes'
+                    },
+                    {
+                        id: 'Registrar Factura',
+                        icon: getIconForComponent('Registrar Factura'),
+                        label: 'Registrar Factura',
+                        route: '/financiero/funcionario/registrar',
+                        code: 'Registrar Factura'
+                    },
+                    {
+                        id: 'Consultar Facturas',
+                        icon: getIconForComponent('Consultar Facturas'),
+                        label: 'Consultar Facturas',
+                        route: '/financiero/funcionario/consultar',
+                        code: 'Consultar Facturas'
+                    }
+                ]
+            });
+
+            return sections;
         }
 
         // Sección Principal (Dashboards)

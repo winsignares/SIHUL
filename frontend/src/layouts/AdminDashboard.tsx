@@ -49,6 +49,16 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     }
   }, [location.pathname, isMobile]);
 
+  const getRoleLabel = () => {
+    if (isPublicAccess) return 'Acceso Público';
+    if (userRole === 'supervisor_general') return 'Supervisor General';
+    if (userRole === 'planeacion_facultad') return `Planeación (${userFacultyName})`;
+    if (userRole === 'docente') return 'Docente';
+    if (userRole === 'estudiante') return 'Estudiante';
+    if (userRole?.toLowerCase()?.includes('funcionario')) return 'Funcionario';
+    return 'Administrador';
+  };
+
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900 overflow-hidden">
       {/* Sidebar Desktop */}
@@ -80,7 +90,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                       transition={{ duration: 0.3 }}
                     >
                       <h1 className="text-white whitespace-nowrap">SIHUL</h1>
-                      <p className="text-red-300 whitespace-nowrap text-xs">{isPublicAccess ? 'Acceso Público' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
+                      <p className="text-red-300 whitespace-nowrap text-xs">{getRoleLabel()}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -250,7 +260,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                                   className="flex-1 min-w-0"
                                 >
                                   <p className={`text-sm truncate ${isActive ? 'text-red-900 font-semibold' : 'text-white'}`}>{userName}</p>
-                                  <p className={`text-xs truncate font-medium ${isActive ? 'text-red-900' : 'text-yellow-300'}`}>{userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
+                                  <p className={`text-xs truncate font-medium ${isActive ? 'text-red-900' : 'text-yellow-300'}`}>{getRoleLabel()}</p>
                                 </motion.div>
                               )}
                             </AnimatePresence>
