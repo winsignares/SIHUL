@@ -14,6 +14,11 @@ class PeriodoAcademicoListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = PeriodoAcademicoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
     def get_queryset(self):
         PeriodoAcademico.sincronizar_activos_por_fecha()
         return super().get_queryset()

@@ -40,6 +40,17 @@ class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
 
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        user = self.get_current_user()
+        if not user:
+            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+        return super().get_queryset()
+
 
 class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
