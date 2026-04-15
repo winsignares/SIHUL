@@ -26,9 +26,14 @@ class Command(BaseCommand):
         parser.add_argument('--no-input', action='store_true', help='No pedir confirmacion en modo real')
         parser.add_argument('--limit', type=int, default=None)
         parser.add_argument(
+            '--only-active',
+            action='store_true',
+            help='Importar solo materias activas (por defecto se importan activas e inactivas)',
+        )
+        parser.add_argument(
             '--import-inactive',
             action='store_true',
-            help='Importar tambien materias inactivas (por defecto se omiten)',
+            help='Compatibilidad retro: no es necesario, por defecto ya se importan inactivas',
         )
 
     @staticmethod
@@ -95,7 +100,9 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         no_input = options['no_input']
         limit = options['limit']
-        import_inactive = options['import_inactive']
+        # Comportamiento por defecto: importar todo (activas e inactivas).
+        only_active = options['only_active']
+        import_inactive = options['import_inactive'] or not only_active
 
         if not all([host, user, password, service]):
             self.stdout.write(self.style.ERROR('Faltan credenciales Oracle (host/user/password/service)'))
