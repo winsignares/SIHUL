@@ -37,6 +37,11 @@ const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
 // Lazy load de componentes Financiero
 const FuncionarioDashboard = lazy(() => import('../pages/financiero/funcionario'));
 const ContabilidadDashboard = lazy(() => import('../pages/financiero/contabilidad'));
+const TesoreriaDashboard = lazy(() => import('../pages/financiero/tesoreria'));
+const AuditoriaDashboard = lazy(() => import('../pages/financiero/auditoria'));
+const DireccionFinancieraDashboard = lazy(() => import('../pages/financiero/direccion_financiera'));
+const RectoriaDashboard = lazy(() => import('../pages/financiero/rectoria'));
+const AdminFinancieroDashboard = lazy(() => import('../pages/financiero/admin_financiero'));
 
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
@@ -112,16 +117,91 @@ function ProtectedRoute({
 }
 
 export default function AppRouter() {
-  const { isAuthenticated, components, role } = useAuth();
+  const { isAuthenticated, components, role, user } = useAuth();
+
+  const normalizeText = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+
+  const normalizedUserName = normalizeText(user?.nombre || '');
 
   const hasComponentByName = (name: string) => components.some(c => c.nombre === name);
   const hasFinancialComponent = components.some(c => {
-    const normalized = c.nombre
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
+    const normalized = normalizeText(c.nombre);
     return normalized.includes('factur') || normalized.includes('financier') || normalized.includes('pendient');
   });
+  const hasTesoreriaComponent = components.some(c => {
+    const normalized = normalizeText(c.nombre);
+    return (
+      normalized.includes('tesorer') ||
+      normalized.includes('alistar pago') ||
+      normalized.includes('registrar pago') ||
+      normalized.includes('pago aplicado') ||
+      normalized.includes('comprobante egreso')
+    );
+  });
+  const hasDireccionFinancieraComponent = components.some(c => {
+    const normalized = normalizeText(c.nombre);
+    return (
+      normalized.includes('direccion financiera') ||
+      normalized.includes('sindicatura') ||
+      normalized.includes('revisar pagos') ||
+      normalized.includes('confirmacion pagos') ||
+      normalized.includes('enviar rectoria') ||
+      normalized.includes('enviar a rectoria')
+    );
+  });
+  const hasAuditoriaComponent = components.some(c => {
+    const normalized = normalizeText(c.nombre);
+    return (
+      normalized.includes('auditor') ||
+      normalized.includes('control previo') ||
+      normalized.includes('revision') ||
+      normalized.includes('revisar pagos') ||
+      normalized.includes('revisar pago')
+    );
+  });
+  const hasRectoriaComponent = components.some(c => {
+    const normalized = normalizeText(c.nombre);
+    return (
+      normalized.includes('rector') ||
+      normalized.includes('rectoria') ||
+      normalized.includes('autorizar pago') ||
+      normalized.includes('aprobacion rectoria')
+    );
+  });
+  const hasAdminFinancieroComponent = components.some(c => {
+    const normalized = normalizeText(c.nombre);
+    return (
+      normalized.includes('admin financiero') ||
+      normalized.includes('gestion proveedores') ||
+      normalized.includes('parametrizacion sla') ||
+      normalized.includes('reportes consolidados') ||
+      normalized.includes('configuracion sistema financiero')
+    );
+  });
+
+  const isRectoriaProfile =
+    normalizeText(role?.nombre || '').includes('rector') ||
+    normalizedUserName.includes('rector') ||
+    normalizedUserName.includes('rectoria') ||
+    hasRectoriaComponent;
+
+  const isDireccionFinancieraProfile =
+    normalizeText(role?.nombre || '').includes('direccion financiera') ||
+    normalizeText(role?.nombre || '').includes('sindicatura') ||
+    normalizedUserName.includes('direccion financiera') ||
+    normalizedUserName.includes('sindicatura') ||
+    hasDireccionFinancieraComponent;
+
+  const isAdminFinancieroProfile =
+    normalizeText(role?.nombre || '').includes('admin financiero') ||
+    normalizedUserName.includes('admin financiero') ||
+    hasAdminFinancieroComponent;
 
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
@@ -149,12 +229,7 @@ export default function AppRouter() {
   // Definir redirección inicial según rol y componentes exactos del backend
   const homeRoute = (() => {
     const roleName = role?.nombre;
-    const normalizedRoleName = (roleName || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[_-]+/g, ' ')
-      .trim();
+    const normalizedRoleName = normalizeText(roleName || '');
 
     if (roleName === 'admin') {
       if (hasComponentByName('Dashboard')) return '/admin/dashboard';
@@ -180,15 +255,41 @@ export default function AppRouter() {
     }
 
     // Redirección para roles del módulo Financiero
-    if (roleName === 'Funcionario' && (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)) {
-      return '/financiero/funcionario/dashboard';
+    if (isRectoriaProfile && (hasComponentByName('Dashboard Rectoria') || hasComponentByName('Autorizar Pagos') || hasRectoriaComponent)) {
+      return '/financiero/rectoria/dashboard';
+    }
+
+    if (isAdminFinancieroProfile && (hasComponentByName('Dashboard Admin Financiero') || hasAdminFinancieroComponent)) {
+      return '/financiero/admin-financiero/dashboard';
+    }
+
+    if (isDireccionFinancieraProfile && (hasComponentByName('Dashboard Direccion Financiera') || hasFinancialComponent)) {
+      return '/financiero/direccion-financiera/dashboard';
     }
 
     if (
-      (normalizedRoleName.includes('contabilidad') || normalizedRoleName.includes('admin financiero')) &&
+      (normalizedRoleName.includes('tesoreria') || normalizedRoleName.includes('tesorer')) &&
+      (hasComponentByName('Alistar Pagos') || hasComponentByName('Registrar Pago Aplicado') || hasTesoreriaComponent || hasFinancialComponent)
+    ) {
+      return '/financiero/tesoreria/dashboard';
+    }
+
+    if (
+      normalizedRoleName.includes('auditor') &&
+      (hasComponentByName('Control Previo') || hasAuditoriaComponent || hasFinancialComponent)
+    ) {
+      return '/financiero/auditoria/dashboard';
+    }
+
+    if (
+      normalizedRoleName.includes('contabilidad') &&
       (hasComponentByName('Causar Factura') || hasComponentByName('Causar Facturas') || hasFinancialComponent)
     ) {
       return '/financiero/contabilidad/dashboard';
+    }
+
+    if (normalizedRoleName.includes('funcionario') && (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)) {
+      return '/financiero/funcionario/dashboard';
     }
 
     for (const component of components) {
@@ -421,6 +522,156 @@ export default function AppRouter() {
         <Route path="financiero/contabilidad/causar" element={
           <ProtectedRoute>
             <ContabilidadDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Tesoreria */}
+        <Route path="financiero/tesoreria" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/tesoreria/dashboard" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/tesoreria/pendientes" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/tesoreria/alistar" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/tesoreria/enviar" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/tesoreria/registrar-pago" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/tesoreria/comprobante" element={
+          <ProtectedRoute>
+            <TesoreriaDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Auditoria */}
+        <Route path="financiero/auditoria" element={
+          <ProtectedRoute>
+            <AuditoriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/auditoria/dashboard" element={
+          <ProtectedRoute>
+            <AuditoriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/auditoria/pendientes" element={
+          <ProtectedRoute>
+            <AuditoriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/auditoria/control" element={
+          <ProtectedRoute>
+            <AuditoriaDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Direccion Financiera */}
+        <Route path="financiero/direccion-financiera" element={
+          <ProtectedRoute>
+            <DireccionFinancieraDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/direccion-financiera/dashboard" element={
+          <ProtectedRoute>
+            <DireccionFinancieraDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/direccion-financiera/pendientes" element={
+          <ProtectedRoute>
+            <DireccionFinancieraDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/direccion-financiera/revisar" element={
+          <ProtectedRoute>
+            <DireccionFinancieraDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/direccion-financiera/enviar" element={
+          <ProtectedRoute>
+            <DireccionFinancieraDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/direccion-financiera/confirmar" element={
+          <ProtectedRoute>
+            <DireccionFinancieraDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Rectoria */}
+        <Route path="financiero/rectoria" element={
+          <ProtectedRoute>
+            <RectoriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/rectoria/dashboard" element={
+          <ProtectedRoute>
+            <RectoriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/rectoria/pendientes" element={
+          <ProtectedRoute>
+            <RectoriaDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/rectoria/autorizar" element={
+          <ProtectedRoute>
+            <RectoriaDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Admin Financiero */}
+        <Route path="financiero/admin-financiero" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/admin-financiero/dashboard" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/admin-financiero/usuarios" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/admin-financiero/proveedores" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/admin-financiero/sla" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/admin-financiero/reportes" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/admin-financiero/configuracion" element={
+          <ProtectedRoute>
+            <AdminFinancieroDashboard />
           </ProtectedRoute>
         } />
 

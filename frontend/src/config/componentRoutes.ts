@@ -16,7 +16,9 @@ import {
     Send,
     CircleCheckBig,
     ListChecks,
+    Crown,
     FileSearch,
+    Wallet,
     Shield,
     Zap,
     MapPin,
@@ -92,6 +94,34 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Mis Pendientes Contabilidad': '/financiero/contabilidad/pendientes',
     'Radicar Facturas': '/financiero/contabilidad/radicar',
     'Causar Facturas': '/financiero/contabilidad/causar',
+    'Dashboard Tesoreria': '/financiero/tesoreria/dashboard',
+    'Mis Pendientes Tesoreria': '/financiero/tesoreria/pendientes',
+    'Alistar Pagos': '/financiero/tesoreria/alistar',
+    'Enviar Direccion Financiera': '/financiero/tesoreria/enviar',
+    'Registrar Pago Aplicado': '/financiero/tesoreria/registrar-pago',
+    'Generar Comprobante Egreso': '/financiero/tesoreria/comprobante',
+    'Dashboard Auditoria': '/financiero/auditoria/dashboard',
+    'Mis Pendientes Auditoria': '/financiero/auditoria/pendientes',
+    'Control Previo': '/financiero/auditoria/control',
+    'Dashboard Direccion Financiera': '/financiero/direccion-financiera/dashboard',
+    'Mis Pendientes Direccion Financiera': '/financiero/direccion-financiera/pendientes',
+    'Revisar Pagos Direccion Financiera': '/financiero/direccion-financiera/revisar',
+    'Enviar a Rectoria': '/financiero/direccion-financiera/enviar',
+    'Confirmacion Pagos Direccion Financiera': '/financiero/direccion-financiera/confirmar',
+    'Dashboard Rectoria': '/financiero/rectoria/dashboard',
+    'Mis Pendientes Rectoria': '/financiero/rectoria/pendientes',
+    'Autorizar Pagos': '/financiero/rectoria/autorizar',
+    'Autorizar Pago': '/financiero/rectoria/autorizar',
+    'Dashboard Admin Financiero': '/financiero/admin-financiero/dashboard',
+    'Gestion Usuarios Financiero': '/financiero/admin-financiero/usuarios',
+    'Gestion de Usuarios Financiero': '/financiero/admin-financiero/usuarios',
+    'Gestion Proveedores': '/financiero/admin-financiero/proveedores',
+    'Gestion de Proveedores': '/financiero/admin-financiero/proveedores',
+    'Parametrizacion SLA': '/financiero/admin-financiero/sla',
+    'Reportes Consolidados Financiero': '/financiero/admin-financiero/reportes',
+    'Reportes Consolidados': '/financiero/admin-financiero/reportes',
+    'Configuracion Sistema Financiero': '/financiero/admin-financiero/configuracion',
+    'Configuracion del Sistema Financiero': '/financiero/admin-financiero/configuracion',
 };
 
 /**
@@ -158,6 +188,34 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Mis Pendientes Contabilidad': Clock3,
     'Radicar Facturas': FileCheck,
     'Causar Facturas': Calculator,
+    'Dashboard Tesoreria': LayoutDashboard,
+    'Mis Pendientes Tesoreria': Clock3,
+    'Alistar Pagos': ListChecks,
+    'Enviar Direccion Financiera': Send,
+    'Registrar Pago Aplicado': CircleCheckBig,
+    'Generar Comprobante Egreso': FileText,
+    'Dashboard Auditoria': LayoutDashboard,
+    'Mis Pendientes Auditoria': Clock3,
+    'Control Previo': ShieldCheck,
+    'Dashboard Direccion Financiera': LayoutDashboard,
+    'Mis Pendientes Direccion Financiera': Clock3,
+    'Revisar Pagos Direccion Financiera': ListChecks,
+    'Enviar a Rectoria': Send,
+    'Confirmacion Pagos Direccion Financiera': CircleCheckBig,
+    'Dashboard Rectoria': Crown,
+    'Mis Pendientes Rectoria': Clock3,
+    'Autorizar Pagos': CircleCheckBig,
+    'Autorizar Pago': CircleCheckBig,
+    'Dashboard Admin Financiero': LayoutDashboard,
+    'Gestion Usuarios Financiero': Shield,
+    'Gestion de Usuarios Financiero': Shield,
+    'Gestion Proveedores': Building2,
+    'Gestion de Proveedores': Building2,
+    'Parametrizacion SLA': Clock,
+    'Reportes Consolidados Financiero': BarChart3,
+    'Reportes Consolidados': BarChart3,
+    'Configuracion Sistema Financiero': Wrench,
+    'Configuracion del Sistema Financiero': Wrench,
 };
 
 function normalizeComponentName(name: string): string {
@@ -193,10 +251,62 @@ function isContabilidadLikeComponent(name: string): boolean {
         normalized.includes('causar') ||
         normalized.includes('radicar') ||
         normalized.includes('cuentas por pagar') ||
-        normalized.includes('alistar pago') ||
         normalized.includes('revision pago') ||
         normalized.includes('confirmacion pago') ||
         normalized.includes('enviar a rectoria')
+    );
+}
+
+function isTesoreriaLikeComponent(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+    return (
+        normalized.includes('tesoreria') ||
+        normalized.includes('alistar pago') ||
+        normalized.includes('proceso pago') ||
+        normalized.includes('registrar pago') ||
+        normalized.includes('pago aplicado') ||
+        normalized.includes('comprobante egreso')
+    );
+}
+
+function isDireccionFinancieraLikeComponent(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+    return (
+        normalized.includes('direccion financiera') ||
+        normalized.includes('sindicatura') ||
+        normalized.includes('revisar pago') ||
+        normalized.includes('enviar a rectoria') ||
+        normalized.includes('confirmacion pago')
+    );
+}
+
+function isAuditoriaLikeComponent(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+    return (
+        normalized.includes('auditor') ||
+        normalized.includes('control previo') ||
+        normalized.includes('revisar pago') ||
+        normalized.includes('revision de pago')
+    );
+}
+
+function isRectoriaLikeComponent(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+    return (
+        normalized.includes('rectoria') ||
+        normalized.includes('rector') ||
+        normalized.includes('autorizar pago')
+    );
+}
+
+function isAdminFinancieroLikeComponent(name: string): boolean {
+    const normalized = normalizeComponentName(name);
+    return (
+        normalized.includes('admin financiero') ||
+        normalized.includes('gestion proveedores') ||
+        normalized.includes('parametrizacion sla') ||
+        normalized.includes('reportes consolidados') ||
+        normalized.includes('configuracion sistema financiero')
     );
 }
 
@@ -233,6 +343,26 @@ export function getDynamicRouteForComponent(name: string): string {
 export function getRouteForComponent(name: string): string {
     const route = COMPONENT_ROUTES[name] || NORMALIZED_COMPONENT_ROUTES[normalizeComponentName(name)];
 
+    if (!route && isAdminFinancieroLikeComponent(name)) {
+        return '/financiero/admin-financiero/dashboard';
+    }
+
+    if (!route && isRectoriaLikeComponent(name)) {
+        return '/financiero/rectoria/dashboard';
+    }
+
+    if (!route && isDireccionFinancieraLikeComponent(name)) {
+        return '/financiero/direccion-financiera/dashboard';
+    }
+
+    if (!route && isAuditoriaLikeComponent(name)) {
+        return '/financiero/auditoria/dashboard';
+    }
+
+    if (!route && isTesoreriaLikeComponent(name)) {
+        return '/financiero/tesoreria/dashboard';
+    }
+
     if (!route && isContabilidadLikeComponent(name)) {
         return '/financiero/contabilidad/dashboard';
     }
@@ -263,7 +393,20 @@ export function getIconForComponent(name: string): LucideIcon {
         if (normalized.includes('consultar')) return FileSearch;
         if (normalized.includes('radicar')) return FileCheck;
         if (normalized.includes('causar')) return Calculator;
+        if (normalized.includes('tesoreria')) return Wallet;
+        if (normalized.includes('alistar pago')) return ListChecks;
+        if (normalized.includes('registrar pago')) return CircleCheckBig;
+        if (normalized.includes('comprobante')) return FileText;
+        if (normalized.includes('auditor')) return ShieldCheck;
+        if (normalized.includes('control previo')) return ShieldCheck;
         if (normalized.includes('enviar a rectoria')) return Send;
+        if (normalized.includes('rectoria') || normalized.includes('rector')) return Crown;
+        if (normalized.includes('autorizar pago')) return CircleCheckBig;
+        if (normalized.includes('admin financiero')) return LayoutDashboard;
+        if (normalized.includes('proveedores')) return Building2;
+        if (normalized.includes('parametrizacion sla')) return Clock;
+        if (normalized.includes('reportes consolidados')) return BarChart3;
+        if (normalized.includes('configuracion sistema financiero')) return Wrench;
         if (normalized.includes('confirmacion') || normalized.includes('confirmar')) return CircleCheckBig;
         if (normalized.includes('revision') || normalized.includes('revisar')) return ListChecks;
     }

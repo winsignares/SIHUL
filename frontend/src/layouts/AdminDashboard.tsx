@@ -57,6 +57,12 @@ export default function AdminDashboard(props: AdminDashboardProps) {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[_-]+/g, ' ')
       .trim();
+    const normalizedUserName = (userName || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
 
     if (userRole === 'supervisor_general') return 'Supervisor General';
     if (userRole === 'planeacion_facultad') return `Planeación (${userFacultyName})`;
@@ -66,6 +72,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     if (normalizedRole.includes('contabilidad')) return 'Contabilidad';
     if (normalizedRole.includes('tesorer')) return 'Tesorería';
     if (normalizedRole.includes('auditor')) return 'Auditoría';
+    if (normalizedUserName.includes('direccion financiera') || normalizedUserName.includes('sindicatura')) return 'Dirección Financiera';
     if (normalizedRole.includes('direccion financiera') || normalizedRole.includes('dir financiera')) return 'Dirección Financiera';
     if (normalizedRole.includes('rector')) return 'Rectoría';
     if (normalizedRole.includes('admin financiero')) return 'Admin Financiero';

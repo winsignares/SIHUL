@@ -831,139 +831,185 @@ export default function RadicarFacturas() {
           if (!open) setFacturaDetalle(null);
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-slate-800 text-3xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-              Detalle de Factura - {facturaDetalle?.numeroFactura}
-            </DialogTitle>
-            <DialogDescription>Información completa y documentos adjuntos</DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 border-0 shadow-2xl">
           {facturaDetalle && (
-            <div className="space-y-6 py-2">
-              <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase font-semibold">Proveedor</Label>
-                  <p className="font-semibold text-slate-800 mt-1 text-3xl">{facturaDetalle.proveedor}</p>
-                </div>
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase font-semibold">NIT</Label>
-                  <p className="font-semibold text-slate-800 mt-1 font-mono text-2xl">{facturaDetalle.nit}</p>
-                </div>
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase font-semibold">Valor Total</Label>
-                  <p className="font-semibold text-slate-800 mt-1 text-3xl">
-                    ${facturaDetalle.valorTotal.toLocaleString('es-CO')}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase font-semibold">Área Solicitante</Label>
-                  <p className="font-semibold text-slate-800 mt-1 text-3xl">{facturaDetalle.areaSolicitante}</p>
-                </div>
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase font-semibold">Fecha Factura</Label>
-                  <p className="font-semibold text-slate-800 mt-1 text-3xl">{facturaDetalle.fechaFactura}</p>
-                </div>
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase font-semibold">Fecha Recepción</Label>
-                  <p className="font-semibold text-slate-800 mt-1 text-3xl">{facturaDetalle.fechaRecepcion}</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-b from-slate-50 to-white">
+              <DialogHeader className="px-8 py-6 border-b border-slate-200 bg-white sticky top-0 z-10">
+                <DialogTitle className="flex items-center gap-3 text-slate-800 text-2xl">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <span>Detalle de Factura - {facturaDetalle.numeroFactura}</span>
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Información completa y checklist documental para radicación
+                </DialogDescription>
+              </DialogHeader>
 
-              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                <Label className="text-blue-900 text-xs uppercase font-semibold">Descripción</Label>
-                <p className="text-blue-800 mt-2 text-xl">{facturaDetalle.descripcion}</p>
-              </div>
+              <div className="p-8 space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1">Proveedor</p>
+                      <h3 className="text-3xl font-bold text-slate-900 leading-tight">{facturaDetalle.proveedor}</h3>
+                      <p className="text-sm text-slate-500 mt-1">NIT: <span className="font-mono font-semibold text-slate-700">{facturaDetalle.nit}</span></p>
+                    </div>
+                    <div className="text-left lg:text-right">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Valor Total</p>
+                      <p className="text-4xl font-extrabold text-slate-900">${facturaDetalle.valorTotal.toLocaleString('es-CO')}</p>
+                    </div>
+                  </div>
 
-              <div className="border border-slate-200 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-2xl">
-                    <Upload className="w-5 h-5 text-blue-600" />
-                    Checklist de Documentos Requeridos
-                  </h3>
-                  <Badge
-                    className={
-                      validarDocumentosCompletos(facturaDetalle)
-                        ? 'bg-green-100 text-green-700 border-green-200 border'
-                        : 'bg-red-100 text-red-700 border-red-200 border'
-                    }
-                  >
-                    {validarDocumentosCompletos(facturaDetalle)
-                      ? '✓ Documentos Completos'
-                      : '✗ Documentos Incompletos'}
-                  </Badge>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
+                      <p className="text-xs uppercase text-slate-500 font-semibold mb-1">Área Solicitante</p>
+                      <p className="text-2xl font-bold text-slate-800">{facturaDetalle.areaSolicitante}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
+                      <p className="text-xs uppercase text-slate-500 font-semibold mb-1">Fecha Factura</p>
+                      <p className="text-2xl font-bold text-slate-800">{facturaDetalle.fechaFactura}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
+                      <p className="text-xs uppercase text-slate-500 font-semibold mb-1">Fecha Recepción</p>
+                      <p className="text-2xl font-bold text-slate-800">{facturaDetalle.fechaRecepcion}</p>
+                    </div>
+                  </div>
+                </motion.div>
 
-                <div className="space-y-3">
-                  {DOCUMENTOS_REQUERIDOS.map((docReq) => {
-                    const documento = facturaDetalle.documentosAdjuntos.find((doc) =>
-                      esDocumentoTipo(doc, docReq.tipo)
-                    );
-                    const existe = !!documento;
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className="p-5 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50"
+                >
+                  <Label className="text-blue-900 text-xs uppercase font-semibold tracking-wide">Descripción</Label>
+                  <p className="text-blue-900 mt-2 text-2xl leading-snug">{facturaDetalle.descripcion}</p>
+                </motion.div>
 
-                    return (
-                      <div
-                        key={docReq.tipo}
-                        className={`p-4 rounded-xl border-2 ${
-                          existe
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-red-50 border-red-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">{docReq.icono}</span>
-                            <div>
-                              <p className={`font-semibold ${existe ? 'text-green-800' : 'text-red-800'}`}>
-                                {docReq.label}
-                              </p>
-                              <p className={`text-sm ${existe ? 'text-green-600' : 'text-red-600'}`}>
-                                {existe ? `Documento adjunto ✓` : 'Documento faltante'}
-                              </p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2 text-3xl">
+                      <Upload className="w-5 h-5 text-blue-600" />
+                      Checklist de Documentos Requeridos
+                    </h3>
+                    <Badge
+                      className={
+                        validarDocumentosCompletos(facturaDetalle)
+                          ? 'bg-green-100 text-green-700 border-green-200 border'
+                          : 'bg-red-100 text-red-700 border-red-200 border'
+                      }
+                    >
+                      {validarDocumentosCompletos(facturaDetalle)
+                        ? 'Documentos Completos'
+                        : 'Documentos Incompletos'}
+                    </Badge>
+                  </div>
+
+                  <div className="w-full bg-slate-100 rounded-full h-2 mb-5 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${
+                          (DOCUMENTOS_REQUERIDOS.filter((d) =>
+                            facturaDetalle.documentosAdjuntos.some((doc) => esDocumentoTipo(doc, d.tipo))
+                          ).length /
+                            DOCUMENTOS_REQUERIDOS.length) *
+                          100
+                        }%`,
+                      }}
+                      transition={{ duration: 0.45 }}
+                      className={`h-2 rounded-full ${
+                        validarDocumentosCompletos(facturaDetalle) ? 'bg-green-500' : 'bg-amber-500'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    {DOCUMENTOS_REQUERIDOS.map((docReq, index) => {
+                      const documento = facturaDetalle.documentosAdjuntos.find((doc) =>
+                        esDocumentoTipo(doc, docReq.tipo)
+                      );
+                      const existe = !!documento;
+
+                      return (
+                        <motion.div
+                          key={docReq.tipo}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.14 + index * 0.06 }}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            existe
+                              ? 'bg-green-50 border-green-200 hover:border-green-300'
+                              : 'bg-red-50 border-red-200 hover:border-red-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{docReq.icono}</span>
+                              <div>
+                                <p className={`font-semibold text-lg ${existe ? 'text-green-900' : 'text-red-900'}`}>
+                                  {docReq.label}
+                                </p>
+                                <p className={`text-sm ${existe ? 'text-green-700' : 'text-red-700'}`}>
+                                  {existe ? 'Documento adjunto' : 'Documento faltante'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {existe && documento && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <ExternalLink className="w-4 h-4 mr-1" />
+                                    Ver
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Descargar
+                                  </Button>
+                                </>
+                              )}
+                              {existe ? (
+                                <CheckCircle2 className="w-6 h-6 text-green-600" />
+                              ) : (
+                                <AlertTriangle className="w-6 h-6 text-red-600" />
+                              )}
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2">
-                            {existe && documento && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                                >
-                                  <ExternalLink className="w-4 h-4 mr-1" />
-                                  Ver
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-slate-300 text-slate-700 hover:bg-slate-50"
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  Descargar
-                                </Button>
-                              </>
-                            )}
-                            {existe ? (
-                              <CheckCircle2 className="w-6 h-6 text-green-600" />
-                            ) : (
-                              <AlertTriangle className="w-6 h-6 text-red-600" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {!validarDocumentosCompletos(facturaDetalle) && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-amber-800 text-sm font-semibold">
-                      ⚠️ No se puede radicar esta factura hasta completar todos los documentos requeridos.
-                    </p>
+                        </motion.div>
+                      );
+                    })}
                   </div>
-                )}
+
+                  {!validarDocumentosCompletos(facturaDetalle) && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+                    >
+                      <p className="text-amber-800 text-sm font-semibold">
+                        No se puede radicar esta factura hasta completar todos los documentos requeridos.
+                      </p>
+                    </motion.div>
+                  )}
+                </motion.div>
               </div>
             </div>
           )}
