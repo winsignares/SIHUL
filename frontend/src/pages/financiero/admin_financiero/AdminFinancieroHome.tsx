@@ -110,7 +110,6 @@ export default function AdminFinancieroHome({ onNavigate }: AdminFinancieroHomeP
     { rol: 'Tesoreria', tareasPendientes: 15, tareasCompletadas: 42, eficiencia: 74 },
     { rol: 'Auditoria', tareasPendientes: 10, tareasCompletadas: 35, eficiencia: 78 },
     { rol: 'Dir. Financiera', tareasPendientes: 5, tareasCompletadas: 28, eficiencia: 85 },
-    { rol: 'Rectoria', tareasPendientes: 3, tareasCompletadas: 25, eficiencia: 89 },
   ];
 
   const handleClickActividad = (actividad: ActividadFactura) => {

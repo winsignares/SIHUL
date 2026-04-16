@@ -118,6 +118,7 @@ function ProtectedRoute({
 
 export default function AppRouter() {
   const { isAuthenticated, components, role, user } = useAuth();
+  const effectiveRole = role ?? user?.rol ?? null;
 
   const normalizeText = (value: string) =>
     value
@@ -178,30 +179,57 @@ export default function AppRouter() {
     const normalized = normalizeText(c.nombre);
     return (
       normalized.includes('admin financiero') ||
+      normalized.includes('administrador financiero') ||
+      normalized.includes('dashboard admin') ||
+      normalized.includes('gestion usuarios financiero') ||
+      normalized.includes('gestion de usuarios financiero') ||
+      normalized.includes('gestion proveedores') ||
       normalized.includes('gestion proveedores') ||
       normalized.includes('parametrizacion sla') ||
       normalized.includes('reportes consolidados') ||
+      normalized.includes('reportes consolidados financiero') ||
+      normalized.includes('configuracion sistema') ||
       normalized.includes('configuracion sistema financiero')
     );
   });
 
   const isRectoriaProfile =
-    normalizeText(role?.nombre || '').includes('rector') ||
+    normalizeText(effectiveRole?.nombre || '').includes('rector') ||
     normalizedUserName.includes('rector') ||
     normalizedUserName.includes('rectoria') ||
     hasRectoriaComponent;
 
   const isDireccionFinancieraProfile =
-    normalizeText(role?.nombre || '').includes('direccion financiera') ||
-    normalizeText(role?.nombre || '').includes('sindicatura') ||
+    normalizeText(effectiveRole?.nombre || '').includes('direccion financiera') ||
+    normalizeText(effectiveRole?.nombre || '').includes('sindicatura') ||
     normalizedUserName.includes('direccion financiera') ||
     normalizedUserName.includes('sindicatura') ||
     hasDireccionFinancieraComponent;
 
   const isAdminFinancieroProfile =
-    normalizeText(role?.nombre || '').includes('admin financiero') ||
+    normalizeText(effectiveRole?.nombre || '').includes('admin financiero') ||
+    normalizeText(effectiveRole?.nombre || '').includes('administrador financiero') ||
     normalizedUserName.includes('admin financiero') ||
     hasAdminFinancieroComponent;
+
+  const isAdminFinancieroByRole =
+    normalizeText(effectiveRole?.nombre || '').includes('admin financiero') ||
+    normalizeText(effectiveRole?.nombre || '').includes('administrador financiero');
+
+  const canAccessAdminFinanciero =
+    isAdminFinancieroByRole ||
+    (isAdminFinancieroProfile &&
+      (hasComponentByName('Dashboard Admin Financiero') || hasAdminFinancieroComponent));
+
+  const canAccessRectoria =
+    !isAdminFinancieroByRole &&
+    !canAccessAdminFinanciero &&
+    isRectoriaProfile &&
+    (hasComponentByName('Dashboard Rectoria') || hasComponentByName('Autorizar Pagos') || hasRectoriaComponent);
+
+  const canAccessDireccionFinanciera =
+    isDireccionFinancieraProfile &&
+    (hasComponentByName('Dashboard Direccion Financiera') || hasFinancialComponent);
 
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
@@ -228,7 +256,7 @@ export default function AppRouter() {
 
   // Definir redirección inicial según rol y componentes exactos del backend
   const homeRoute = (() => {
-    const roleName = role?.nombre;
+    const roleName = effectiveRole?.nombre;
     const normalizedRoleName = normalizeText(roleName || '');
 
     if (roleName === 'admin') {
@@ -255,15 +283,16 @@ export default function AppRouter() {
     }
 
     // Redirección para roles del módulo Financiero
-    if (isRectoriaProfile && (hasComponentByName('Dashboard Rectoria') || hasComponentByName('Autorizar Pagos') || hasRectoriaComponent)) {
-      return '/financiero/rectoria/dashboard';
-    }
-
-    if (isAdminFinancieroProfile && (hasComponentByName('Dashboard Admin Financiero') || hasAdminFinancieroComponent)) {
+    // AdminFinanciero tiene prioridad sobre Rectoria
+    if (canAccessAdminFinanciero) {
       return '/financiero/admin-financiero/dashboard';
     }
 
-    if (isDireccionFinancieraProfile && (hasComponentByName('Dashboard Direccion Financiera') || hasFinancialComponent)) {
+    if (canAccessRectoria) {
+      return '/financiero/rectoria/dashboard';
+    }
+
+    if (canAccessDireccionFinanciera) {
       return '/financiero/direccion-financiera/dashboard';
     }
 
@@ -586,93 +615,161 @@ export default function AppRouter() {
 
         {/* Rutas de Direccion Financiera */}
         <Route path="financiero/direccion-financiera" element={
-          <ProtectedRoute>
-            <DireccionFinancieraDashboard />
-          </ProtectedRoute>
+          canAccessDireccionFinanciera ? (
+            <ProtectedRoute>
+              <DireccionFinancieraDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/direccion-financiera/dashboard" element={
-          <ProtectedRoute>
-            <DireccionFinancieraDashboard />
-          </ProtectedRoute>
+          canAccessDireccionFinanciera ? (
+            <ProtectedRoute>
+              <DireccionFinancieraDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/direccion-financiera/pendientes" element={
-          <ProtectedRoute>
-            <DireccionFinancieraDashboard />
-          </ProtectedRoute>
+          canAccessDireccionFinanciera ? (
+            <ProtectedRoute>
+              <DireccionFinancieraDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/direccion-financiera/revisar" element={
-          <ProtectedRoute>
-            <DireccionFinancieraDashboard />
-          </ProtectedRoute>
+          canAccessDireccionFinanciera ? (
+            <ProtectedRoute>
+              <DireccionFinancieraDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/direccion-financiera/enviar" element={
-          <ProtectedRoute>
-            <DireccionFinancieraDashboard />
-          </ProtectedRoute>
+          canAccessDireccionFinanciera ? (
+            <ProtectedRoute>
+              <DireccionFinancieraDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/direccion-financiera/confirmar" element={
-          <ProtectedRoute>
-            <DireccionFinancieraDashboard />
-          </ProtectedRoute>
+          canAccessDireccionFinanciera ? (
+            <ProtectedRoute>
+              <DireccionFinancieraDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
 
         {/* Rutas de Rectoria */}
         <Route path="financiero/rectoria" element={
-          <ProtectedRoute>
-            <RectoriaDashboard />
-          </ProtectedRoute>
+          canAccessRectoria ? (
+            <ProtectedRoute>
+              <RectoriaDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/rectoria/dashboard" element={
-          <ProtectedRoute>
-            <RectoriaDashboard />
-          </ProtectedRoute>
+          canAccessRectoria ? (
+            <ProtectedRoute>
+              <RectoriaDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/rectoria/pendientes" element={
-          <ProtectedRoute>
-            <RectoriaDashboard />
-          </ProtectedRoute>
+          canAccessRectoria ? (
+            <ProtectedRoute>
+              <RectoriaDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/rectoria/autorizar" element={
-          <ProtectedRoute>
-            <RectoriaDashboard />
-          </ProtectedRoute>
+          canAccessRectoria ? (
+            <ProtectedRoute>
+              <RectoriaDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
 
         {/* Rutas de Admin Financiero */}
         <Route path="financiero/admin-financiero" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/admin-financiero/dashboard" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/admin-financiero/usuarios" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/admin-financiero/proveedores" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/admin-financiero/sla" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/admin-financiero/reportes" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
         <Route path="financiero/admin-financiero/configuracion" element={
-          <ProtectedRoute>
-            <AdminFinancieroDashboard />
-          </ProtectedRoute>
+          canAccessAdminFinanciero ? (
+            <ProtectedRoute>
+              <AdminFinancieroDashboard />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to={homeRoute} replace />
+          )
         } />
 
         {/* Rutas compartidas - no requieren componente específico */}
