@@ -59,7 +59,7 @@ class Usuario(AbstractUser):
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'correo'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['nombre']
     
     class Meta:
         indexes = [
@@ -70,7 +70,7 @@ class Usuario(AbstractUser):
         ]
 
     def __str__(self):
-        return self.nombre
+        return self.nombre or self.correo
 
     def save(self, *args, **kwargs):
         self.is_active = self.activo
@@ -96,3 +96,70 @@ class Usuario(AbstractUser):
             self.password = self.contrasena_hash
 
         super().save(*args, **kwargs)
+
+
+class StgOracleDocente(models.Model):
+    source_system = models.CharField(max_length=50, default='ORACLE_SIU', db_index=True)
+    external_id = models.CharField(max_length=100, db_index=True)
+    id_docente_oracle = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    tipo_documento = models.CharField(max_length=30, null=True, blank=True)
+    numero_documento = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    nombres = models.CharField(max_length=501, null=True, blank=True)
+    apellidos = models.CharField(max_length=501, null=True, blank=True)
+    nombre_completo = models.CharField(max_length=501, null=True, blank=True)
+    correo_institucional = models.CharField(max_length=150, null=True, blank=True, db_index=True)
+    correo_personal = models.CharField(max_length=150, null=True, blank=True)
+    id_sede_oracle = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    nombre_sede_oracle = models.CharField(max_length=255, null=True, blank=True)
+    id_facultad_oracle = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    nombre_facultad_oracle = models.CharField(max_length=255, null=True, blank=True)
+    periodo_academico = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    estado_docente = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    raw_data = models.JSONField(default=dict, blank=True)
+    row_hash = models.CharField(max_length=64, db_index=True)
+    estado_registro = models.CharField(max_length=30, default='valido', db_index=True)
+    fecha_carga = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_system', 'external_id'],
+                name='uq_stg_oracle_doc_source_external',
+            )
+        ]
+        ordering = ['external_id']
+
+    def __str__(self):
+        display_name = self.nombre_completo or self.correo_institucional or self.numero_documento or ''
+        return f'{self.source_system}:{self.external_id} {display_name}'.strip()
+
+
+class StgOracleEstudiante(models.Model):
+    source_system = models.CharField(max_length=50, default='ORACLE_SIU', db_index=True)
+    external_id = models.CharField(max_length=100, db_index=True)
+    tipo_identificacion = models.CharField(max_length=6, null=True, blank=True)
+    id_estudiante_oracle = models.CharField(max_length=30, null=True, blank=True, db_index=True)
+    codigo_estudiante_oracle = models.CharField(max_length=12, null=True, blank=True, db_index=True)
+    nombres = models.CharField(max_length=501, null=True, blank=True)
+    apellidos = models.CharField(max_length=501, null=True, blank=True)
+    nombre_completo = models.CharField(max_length=501, null=True, blank=True)
+    semestre_oracle = models.IntegerField(null=True, blank=True)
+    periodo_academico = models.CharField(max_length=5, null=True, blank=True, db_index=True)
+    programa_oracle = models.CharField(max_length=250, null=True, blank=True)
+    raw_data = models.JSONField(default=dict, blank=True)
+    row_hash = models.CharField(max_length=64, db_index=True)
+    estado_registro = models.CharField(max_length=30, default='valido', db_index=True)
+    fecha_carga = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_system', 'external_id'],
+                name='uq_stg_oracle_est_source_external',
+            )
+        ]
+        ordering = ['external_id']
+
+    def __str__(self):
+        display_name = self.nombre_completo or self.id_estudiante_oracle or self.codigo_estudiante_oracle or ''
+        return f'{self.source_system}:{self.external_id} {display_name}'.strip()

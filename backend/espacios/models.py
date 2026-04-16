@@ -54,3 +54,32 @@ class EspacioPermitido(models.Model):
 
     def __str__(self):
         return f"{self.usuario} para {self.espacio}"
+
+
+class StgOracleEspacioFisico(models.Model):
+    source_system = models.CharField(max_length=50, default='ORACLE_SIU', db_index=True)
+    external_id = models.CharField(max_length=100, db_index=True)
+    ident_aula_oracle = models.CharField(max_length=10, null=True, blank=True, db_index=True)
+    bloque_oracle = models.CharField(max_length=22, null=True, blank=True)
+    nombre_espacio_oracle = models.CharField(max_length=60, null=True, blank=True)
+    tipo_espacio_oracle = models.CharField(max_length=6, null=True, blank=True, db_index=True)
+    id_sede_oracle = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    nombre_sede_oracle = models.CharField(max_length=50, null=True, blank=True)
+    nombre_facultad_oracle = models.CharField(max_length=250, null=True, blank=True)
+    raw_data = models.JSONField(default=dict, blank=True)
+    row_hash = models.CharField(max_length=64, db_index=True)
+    estado_registro = models.CharField(max_length=30, default='valido', db_index=True)
+    fecha_carga = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_system', 'external_id'],
+                name='uq_stg_oracle_espacio_source_external',
+            )
+        ]
+        ordering = ['external_id']
+
+    def __str__(self):
+        display_name = self.nombre_espacio_oracle or self.ident_aula_oracle or ''
+        return f'{self.source_system}:{self.external_id} {display_name}'.strip()

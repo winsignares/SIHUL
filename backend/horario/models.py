@@ -110,3 +110,41 @@ class SolicitudEspacio(models.Model):
     
     def __str__(self):
         return f"Solicitud {self.asignatura.nombre} - {self.estado}"
+
+
+class StgOracleHorario(models.Model):
+    source_system = models.CharField(max_length=50, default='ORACLE_SIU', db_index=True)
+    external_id = models.CharField(max_length=120, db_index=True)
+    id_grupo_oracle = models.CharField(max_length=22, null=True, blank=True, db_index=True)
+    programa_oracle = models.CharField(max_length=5, null=True, blank=True, db_index=True)
+    id_asignatura_oracle = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    nombre_grupo_oracle = models.CharField(max_length=20, null=True, blank=True)
+    periodo_oracle = models.CharField(max_length=5, null=True, blank=True, db_index=True)
+    cantidad_estudiantes_oracle = models.IntegerField(null=True, blank=True)
+    asignatura_oracle = models.CharField(max_length=255, null=True, blank=True)
+    nombre_programa_oracle = models.CharField(max_length=273, null=True, blank=True)
+    id_sede_oracle = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    nombre_sede_oracle = models.CharField(max_length=50, null=True, blank=True)
+    num_identificacion_docente = models.CharField(max_length=30, null=True, blank=True, db_index=True)
+    nombre_docente_oracle = models.CharField(max_length=501, null=True, blank=True)
+    apellidos_docente_oracle = models.CharField(max_length=501, null=True, blank=True)
+    nom_aula_oracle = models.CharField(max_length=60, null=True, blank=True)
+    hor_inicio_raw = models.TextField(null=True, blank=True)
+    hor_fin_raw = models.TextField(null=True, blank=True)
+    raw_data = models.JSONField(default=dict, blank=True)
+    row_hash = models.CharField(max_length=64, db_index=True)
+    estado_registro = models.CharField(max_length=30, default='valido', db_index=True)
+    fecha_carga = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_system', 'external_id'],
+                name='uq_stg_oracle_horario_source_external',
+            )
+        ]
+        ordering = ['external_id']
+
+    def __str__(self):
+        display_name = self.nombre_grupo_oracle or self.id_grupo_oracle or self.id_asignatura_oracle or ''
+        return f'{self.source_system}:{self.external_id} {display_name}'.strip()

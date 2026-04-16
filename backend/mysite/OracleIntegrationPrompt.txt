@@ -1,0 +1,25 @@
+me compartieron vistas de una base de datos externa de oracle, el problema es que en sus tablas hay columnas que no tengo en mis modelos, columnas faltantes, o datos en diferente tipo, por ejemplo, muchas de sus tablas usan ID's alfanuméricos.
+pregunté con un experto en desarrollo, y me dijo que lo mejor es pasar los datos crudos a tablas stg (staging) iguales a las tablas de oracle, con el fin de que me sea más fácil hacer la transición a mis tablas reales del proyecto.
+actualmente ya realicé los scripts de extracción y cargue de datos a las tablas staging de sede, facultad, programa, asignatura y asignatura_programa(no se creó una tabla staging), verifica que lo actual esté bien, y a continuación intentaremos crear el comando para extraer datos de la vista de VW_DOCENTES, crear un modelo staging para docentes y cargar los datos allí mientras se hace la transición.
+
+Las vistas que me fueron compartidas fueron:
+
+·         VW_SEDES
+
+·         VW_FACULTAD
+
+·         VW_PROGRAMAS_ACADEMICOS
+
+·         VW_GRUPOS_ACADEMICOS
+
+·         VW_ASIGNATURA
+
+·         VW_ASIGNATURA_PROGRAMA
+
+·         VW_DOCENTES
+
+·         VW_ESTUDIANTES
+.         VW_HORARIO
+.         VW_ESPACIOS_FISICOS
+
+Este es mi host, user, password y servicion: 10.4.100.215, UHORARIOS, Temporal2026U, SIULEDU .
