@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent, getIconForComponent } from '../config/componentRoutes';
@@ -52,11 +52,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         logout();
         navigate('/login');
     });
-
-    // Cuando la ruta cambia, colapsar la sidebar
-    useEffect(() => {
-        setIsSidebarCollapsed(true);
-    }, [location.pathname]);
 
     const cleanLabel = (name: string) => {
         return name

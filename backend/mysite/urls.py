@@ -68,7 +68,6 @@ urlpatterns = [
     path('prestamos/', include('prestamos.urls')),
     path('chatbot/', include('chatbot.urls')),
     path('notificaciones/', include('notificaciones.urls')),
-    path('financiero/', include('financiero.urls')),  # Rutas páginas Financiero
 ]
 
 if settings.MICROSOFT_OAUTH_ENABLED:

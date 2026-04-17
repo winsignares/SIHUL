@@ -160,7 +160,7 @@ export interface RechazoDevolucion {
 
 // DTOs para crear/actualizar
 export interface CreateFacturaDTO {
-  numero_factura: string;
+  numero_factura?: string;
   proveedor_id: number;
   departamento_id: number;
   cuenta_contable_id?: number;
@@ -182,6 +182,18 @@ export interface CreateFacturaDTO {
   
   urgente?: boolean;
   usuario_responsable_id?: number;
+}
+
+export interface ParametroSLA {
+  id: number;
+  etapa: string;
+  rol_responsable: string;
+  dias_maximos: number;
+  alerta_amarillo_porcentaje: number;
+  alerta_roja_porcentaje: number;
+  descripcion?: string;
+  activo: boolean;
+  aplica_dias_habiles: boolean;
 }
 
 export interface UpdateFacturaEstadoDTO {

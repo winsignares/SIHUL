@@ -3,6 +3,7 @@ import type {
   Factura,
   Proveedor,
   Departamento,
+  ParametroSLA,
   CuentaContable,
   CentroCosto,
   DocumentoAdjunto,
@@ -12,7 +13,8 @@ import type {
   PaginatedResponse,
 } from '../../models/financiero';
 
-const API_BASE = '/api/financiero';
+// apiClient ya incluye el prefijo /api en su base URL
+const API_BASE = '/financiero';
 
 // Helper para construir query strings
 const buildQueryString = (params?: Record<string, any>): string => {
@@ -99,6 +101,12 @@ export const facturasService = {
     const response = await apiClient.get<any>(`${API_BASE}/facturas/${id}/seguimiento/`);
     return response;
   },
+
+  // Obtener próximo número sugerido
+  getNumeroSugerido: async (): Promise<string> => {
+    const response = await apiClient.get<{ numero_factura?: string }>(`${API_BASE}/facturas/numero_sugerido/`);
+    return response?.numero_factura || '';
+  },
 };
 
 // ============================================================
@@ -149,6 +157,12 @@ export const departamentosService = {
     const response = await apiClient.get<Departamento>(`${API_BASE}/departamentos/${id}/`);
     return response;
   },
+
+  getAreasSolicitantes: async (): Promise<Departamento[]> => {
+    const response = await apiClient.get<any>(`${API_BASE}/departamentos/areas_solicitantes/`);
+    if (Array.isArray(response)) return response;
+    return response?.results || [];
+  },
 };
 
 // ============================================================
@@ -187,6 +201,22 @@ export const centrosCostoService = {
   },
 };
 
+export const parametrosSlaService = {
+  getResumenProceso: async (): Promise<{ totalDias: number; todosHabiles: boolean; etapas: number }> => {
+    const response = await apiClient.get<any>(`${API_BASE}/parametros-sla/`);
+    const list: ParametroSLA[] = Array.isArray(response) ? response : response?.results || [];
+
+    const totalDias = list.reduce((acc, item) => acc + (Number(item.dias_maximos) || 0), 0);
+    const todosHabiles = list.length > 0 ? list.every((item) => Boolean(item.aplica_dias_habiles)) : true;
+
+    return {
+      totalDias,
+      todosHabiles,
+      etapas: list.length,
+    };
+  },
+};
+
 // ============================================================
 // DOCUMENTOS ADJUNTOS
 // ============================================================
@@ -206,7 +236,7 @@ export const documentosService = {
     formData.append('tipo_documento', tipoDocumento);
     formData.append('url_storage', file.name);
 
-    const response = await apiClient.post<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
+    const response = await apiClient.postFormData<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
     return response;
   },
 
@@ -243,7 +273,6 @@ export const comentariosService = {
   create: async (facturaId: number, comentario: string, tipo: string): Promise<ComentarioFactura> => {
     const response = await apiClient.post<ComentarioFactura>(`${API_BASE}/comentarios/`, {
       factura: facturaId,
-      usuario_id: 1,
       comentario,
       tipo,
     });

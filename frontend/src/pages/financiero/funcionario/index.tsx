@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FileText,
   Search,
@@ -13,6 +14,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import RegistrarFactura from './RegistrarFactura.tsx';
 import ConsultarFacturas from './ConsultarFacturas.tsx';
 import MisPendientes from './MisPendientes.tsx';
+import { facturasService } from '../../../services/financiero';
+import type { Factura } from '../../../models/financiero';
+
+const toList = <T,>(data: any): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray(data?.results)) return data.results as T[];
+  return [];
+};
 
 export default function FuncionarioDashboard() {
   const location = useLocation();
@@ -54,75 +63,93 @@ function DashboardHome({
   onGoToRegistrar: () => void;
   onGoToConsultar: () => void;
 }) {
-  const stats = [
-    {
-      title: 'Facturas Recibidas Hoy',
-      value: '8',
-      icon: Receipt,
-      color: 'from-blue-600 to-blue-700',
-      iconColor: 'text-blue-100',
-      trend: '+2 desde ayer',
-    },
-    {
-      title: 'Facturas Pendientes',
-      value: '15',
-      icon: Clock,
-      color: 'from-yellow-600 to-yellow-700',
-      iconColor: 'text-yellow-100',
-      trend: 'Requieren atención',
-    },
-    {
-      title: 'Procesadas Este Mes',
-      value: '124',
-      icon: CheckCircle2,
-      color: 'from-green-600 to-green-700',
-      iconColor: 'text-green-100',
-      trend: '+12% vs mes anterior',
-    },
-    {
-      title: 'En Radicación',
-      value: '23',
-      icon: TrendingUp,
-      color: 'from-red-600 to-red-700',
-      iconColor: 'text-red-100',
-      trend: 'Promedio: 2.3 días',
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [statsApi, setStatsApi] = useState<{ total_facturas: number; vencidas: number; atrasadas: number; por_estado: Record<string, number> } | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const recentActivity = [
-    {
-      id: 1,
-      factura: 'FAC-2026-001',
-      proveedor: 'Papelería Central Ltda.',
-      monto: 2450000,
-      estado: 'Recibida',
-      fecha: '2026-03-23 09:15',
-    },
-    {
-      id: 2,
-      factura: 'FAC-2026-002',
-      proveedor: 'Servicios TI Colombia SAS',
-      monto: 8950000,
-      estado: 'Radicada',
-      fecha: '2026-03-23 08:30',
-    },
-    {
-      id: 3,
-      factura: 'FAC-2026-003',
-      proveedor: 'Suministros Industriales SA',
-      monto: 3200000,
-      estado: 'Recibida',
-      fecha: '2026-03-22 16:45',
-    },
-    {
-      id: 4,
-      factura: 'FAC-2026-004',
-      proveedor: 'Mantenimiento y Obras EU',
-      monto: 12500000,
-      estado: 'Radicada',
-      fecha: '2026-03-22 14:20',
-    },
-  ];
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [listResp, statsResp, pendingResp] = await Promise.all([
+          facturasService.getAll({ limit: 20 }),
+          facturasService.getEstadisticas(),
+          facturasService.getPendientes(),
+        ]);
+
+        setFacturas(toList<Factura>(listResp));
+        setStatsApi(statsResp ?? null);
+        setPendingCount(Array.isArray(pendingResp) ? pendingResp.length : 0);
+      } catch {
+        setFacturas([]);
+        setStatsApi(null);
+        setPendingCount(0);
+        setLoadError('No fue posible cargar el dashboard desde el backend.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const stats = useMemo(() => {
+    const total = statsApi?.total_facturas ?? 0;
+    const porEstado = statsApi?.por_estado ?? {};
+    const recibidas = porEstado['Recibida'] ?? 0;
+    const pendientes = pendingCount;
+    const procesadas = (porEstado['Pagada'] ?? 0) + (porEstado['Pago Aplicado'] ?? 0) + (porEstado['Autorizada'] ?? 0);
+    const enRadicacion = porEstado['Radicada'] ?? 0;
+
+    return [
+      {
+        title: 'Facturas Recibidas',
+        value: String(recibidas),
+        icon: Receipt,
+        color: 'from-blue-600 to-blue-700',
+        iconColor: 'text-blue-100',
+        trend: `Total sistema: ${total}`,
+      },
+      {
+        title: 'Facturas Pendientes',
+        value: String(pendientes),
+        icon: Clock,
+        color: 'from-yellow-600 to-yellow-700',
+        iconColor: 'text-yellow-100',
+        trend: 'Requieren atención',
+      },
+      {
+        title: 'Procesadas',
+        value: String(procesadas),
+        icon: CheckCircle2,
+        color: 'from-green-600 to-green-700',
+        iconColor: 'text-green-100',
+        trend: `Vencidas: ${statsApi?.vencidas ?? 0}`,
+      },
+      {
+        title: 'En Radicación',
+        value: String(enRadicacion),
+        icon: TrendingUp,
+        color: 'from-red-600 to-red-700',
+        iconColor: 'text-red-100',
+        trend: `Atrasadas: ${statsApi?.atrasadas ?? 0}`,
+      },
+    ];
+  }, [pendingCount, statsApi]);
+
+  const recentActivity = useMemo(() => {
+    return facturas.slice(0, 8).map((f) => ({
+      id: f.id,
+      factura: f.numero_factura,
+      proveedor: f.proveedor?.razon_social || 'Proveedor sin nombre',
+      monto: Number(f.valor_total || 0),
+      estado: f.estado,
+      fecha: f.fecha_recepcion || '',
+    }));
+  }, [facturas]);
 
   return (
     <div className="space-y-6">
@@ -140,6 +167,12 @@ function DashboardHome({
           </div>
         </div>
       </motion.div>
+
+      {loadError && (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => {
@@ -222,7 +255,11 @@ function DashboardHome({
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Ultimas facturas registradas en el sistema</p>
 
         <div className="space-y-3">
-          {recentActivity.map((activity) => (
+          {loading ? (
+            <div className="text-sm text-slate-500">Cargando actividad...</div>
+          ) : recentActivity.length === 0 ? (
+            <div className="text-sm text-slate-500">No hay facturas registradas todavía.</div>
+          ) : recentActivity.map((activity) => (
             <div
               key={activity.id}
               className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"

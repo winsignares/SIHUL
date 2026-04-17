@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const tryHydrateFromSession = async () => {
-            if (state.isAuthenticated || state.isLoading) {
+            if (state.isLoading) {
                 return;
             }
 
@@ -139,7 +139,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const response = await authService.getAuthenticatedUser();
                 persistAuthState(response);
             } catch {
-                setState(prev => ({ ...prev, isLoading: false }));
+                const storedToken = localStorage.getItem('auth_token');
+                const storedUser = localStorage.getItem('auth_user');
+
+                // En recargas o errores transitorios de red/backend, conservar sesión local
+                // para no expulsar al usuario al login inesperadamente.
+                if (storedToken && storedUser) {
+                    setState(prev => ({
+                        ...prev,
+                        isAuthenticated: true,
+                        isLoading: false,
+                    }));
+                    return;
+                }
+
+                // Si no existe estado local utilizable, limpiar autenticación.
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                localStorage.removeItem('auth_role');
+                localStorage.removeItem('auth_components');
+                localStorage.removeItem('auth_faculties');
+                localStorage.removeItem('auth_areas');
+                localStorage.removeItem('auth_signature');
+
+                authSignatureRef.current = '';
+                setState({
+                    token: null,
+                    user: null,
+                    role: null,
+                    components: [],
+                    faculties: undefined,
+                    areas: undefined,
+                    isAuthenticated: false,
+                    isLoading: false,
+                });
             }
         };
 

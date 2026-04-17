@@ -19,47 +19,11 @@ type Row = {
   dias: number;
 };
 
-const mockRows: Row[] = [
-  {
-    id: '1',
-    riesgo: 'verde',
-    idTramite: 'FAC-2026-150',
-    proveedor: 'Editorial Academica Colombia',
-    area: 'Biblioteca',
-    monto: 3200000,
-    estado: 'Recibida',
-    etapa: 'Radicacion Contable',
-    numeroRadicado: '-',
-    fecha: '2026-04-01',
-    dias: 1,
-  },
-  {
-    id: '2',
-    riesgo: 'verde',
-    idTramite: 'FAC-2026-145',
-    proveedor: 'Tecnologia Global SAS',
-    area: 'Sistemas',
-    monto: 8900000,
-    estado: 'Radicada',
-    etapa: 'Causacion Contable',
-    numeroRadicado: 'RAD-2026-00145',
-    fecha: '2026-03-25',
-    dias: 4,
-  },
-  {
-    id: '3',
-    riesgo: 'verde',
-    idTramite: 'FAC-2026-142',
-    proveedor: 'Mantenimiento y Obras SAS',
-    area: 'Mantenimiento',
-    monto: 5600000,
-    estado: 'Causada',
-    etapa: 'Alistamiento de Pago',
-    numeroRadicado: 'RAD-2026-00142',
-    fecha: '2026-03-20',
-    dias: 11,
-  },
-];
+const toList = <T,>(data: any): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray(data?.results)) return data.results as T[];
+  return [];
+};
 
 function mapFactura(f: Factura): Row {
   const dias = Number(f.dias_transcurridos || 0);
@@ -86,6 +50,7 @@ function mapFactura(f: Factura): Row {
 export default function ConsultarFacturas() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -101,12 +66,14 @@ export default function ConsultarFacturas() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const response = await facturasService.getAll({ limit: 100 });
-        const apiRows = Array.isArray(response?.results) ? response.results.map(mapFactura) : [];
-        setRows(apiRows.length ? apiRows : mockRows);
+        const apiRows = toList<Factura>(response).map(mapFactura);
+        setRows(apiRows);
       } catch {
-        setRows(mockRows);
+        setRows([]);
+        setLoadError('No fue posible consultar facturas. Intente nuevamente.');
       } finally {
         setLoading(false);
       }
@@ -179,6 +146,11 @@ export default function ConsultarFacturas() {
       </motion.div>
 
       <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6">
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {loadError}
+          </div>
+        )}
         <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-lg">

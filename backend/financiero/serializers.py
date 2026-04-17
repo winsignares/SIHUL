@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from . import models
 from usuarios.serializers import UsuarioSerializer
+from decimal import Decimal
+from django.db import IntegrityError
+from django.utils import timezone
 
 
 # ============================================================
@@ -87,7 +90,7 @@ class HistorialFacturaSerializer(serializers.ModelSerializer):
 
 class ComentarioFacturaSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
-    usuario_id = serializers.IntegerField(write_only=True)
+    usuario_id = serializers.IntegerField(write_only=True, required=False)
     respuestas = serializers.SerializerMethodField()
 
     class Meta:
@@ -160,6 +163,7 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
 
 
 class FacturaCreateSerializer(serializers.ModelSerializer):
+    numero_factura = serializers.CharField(required=False, allow_blank=True)
     proveedor_id = serializers.IntegerField()
     departamento_id = serializers.IntegerField()
     cuenta_contable_id = serializers.IntegerField(required=False, allow_null=True)
@@ -177,10 +181,49 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        if data['valor_subtotal'] != (data['valor_total'] - data['valor_iva']):
+        subtotal = Decimal(str(data.get('valor_subtotal', 0)))
+        total = Decimal(str(data.get('valor_total', 0)))
+        iva = Decimal(str(data.get('valor_iva', 0)))
+        expected_subtotal = total - iva
+
+        # Tolerancia de 2 centavos para evitar falsos negativos por redondeo de frontend.
+        if abs(subtotal - expected_subtotal) > Decimal('0.02'):
             raise serializers.ValidationError("El subtotal no coincide con la suma de valor total y IVA")
         return data
 
+    def _generate_numero_factura(self):
+        year = timezone.now().year
+        prefix = f"FAC-{year}-"
+        last_number = (
+            models.Factura.objects
+            .filter(numero_factura__startswith=prefix)
+            .order_by('-numero_factura')
+            .values_list('numero_factura', flat=True)
+            .first()
+        )
+
+        next_seq = 1
+        if last_number:
+            try:
+                next_seq = int(str(last_number).split('-')[-1]) + 1
+            except (TypeError, ValueError):
+                next_seq = 1
+
+        return f"{prefix}{next_seq:04d}"
+
     def create(self, validated_data):
         validated_data['creado_por_id'] = self.context['request'].user.id
-        return super().create(validated_data)
+        provided_number = str(validated_data.get('numero_factura') or '').strip()
+
+        for _ in range(5):
+            if not provided_number:
+                validated_data['numero_factura'] = self._generate_numero_factura()
+
+            try:
+                return super().create(validated_data)
+            except IntegrityError:
+                if provided_number:
+                    raise serializers.ValidationError("El numero de factura ya existe")
+                validated_data['numero_factura'] = ''
+
+        raise serializers.ValidationError("No fue posible generar un numero de factura unico")

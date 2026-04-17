@@ -2,6 +2,8 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
+import json
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from . import models, serializers
@@ -29,6 +31,35 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo', 'estado']
     search_fields = ['codigo', 'nombre']
+
+    @action(detail=False, methods=['get'])
+    def areas_solicitantes(self, request):
+        """Lista de áreas solicitantes para registro inicial (excluye áreas del flujo financiero)."""
+        excluded_default = [
+            'Financiero',
+            'Contabilidad',
+            'Tesorería',
+            'Auditoría',
+            'Dirección Financiera',
+            'Rectoría',
+        ]
+
+        excluded = excluded_default
+        config = models.ParametrosFinanciero.objects.filter(
+            clave='areas_solicitantes_excluidas'
+        ).first()
+
+        if config and config.valor:
+            try:
+                parsed = json.loads(config.valor)
+                if isinstance(parsed, list):
+                    excluded = [str(item).strip() for item in parsed if str(item).strip()]
+            except (TypeError, ValueError, json.JSONDecodeError):
+                excluded = excluded_default
+
+        queryset = models.Departamento.objects.filter(estado='Activo').exclude(nombre__in=excluded).order_by('nombre')
+        serializer = serializers.DepartamentoSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class CuentaContableViewSet(viewsets.ModelViewSet):
@@ -202,6 +233,28 @@ class FacturaViewSet(viewsets.ModelViewSet):
             usuario_rol=self.request.user.rol.nombre if self.request.user.rol else 'Sin rol'
         )
 
+    @action(detail=False, methods=['get'])
+    def numero_sugerido(self, request):
+        """Retorna el próximo número sugerido de factura con formato FAC-YYYY-####."""
+        year = timezone.now().year
+        prefix = f"FAC-{year}-"
+        last_number = (
+            models.Factura.objects
+            .filter(numero_factura__startswith=prefix)
+            .order_by('-numero_factura')
+            .values_list('numero_factura', flat=True)
+            .first()
+        )
+
+        next_seq = 1
+        if last_number:
+            try:
+                next_seq = int(str(last_number).split('-')[-1]) + 1
+            except (TypeError, ValueError):
+                next_seq = 1
+
+        return Response({'numero_factura': f"{prefix}{next_seq:04d}"})
+
     @action(detail=True, methods=['post'])
     def radicar(self, request, pk=None):
         """Radicar una factura"""
@@ -304,6 +357,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Rechazar una factura con motivo"""
         factura = self.get_object()
         motivo = request.data.get('motivo', 'Sin especificar')
+        estado_anterior = factura.estado
         
         models.RechazoDevolucion.objects.create(
             factura=factura,
@@ -322,7 +376,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         models.HistorialFactura.objects.create(
             factura=factura,
             accion='Factura devuelta',
-            estado_anterior=factura.estado,
+            estado_anterior=estado_anterior,
             estado_nuevo='Devuelta',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
@@ -339,10 +393,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def pendientes(self, request):
         """Obtener facturas pendientes del usuario"""
         user = request.user
+        estados_flujo = ['Recibida', 'Radicada', 'Causada', 'Alistada']
         pendientes = models.Factura.objects.filter(
-            usuario_responsable=user,
-            estado__in=['Recibida', 'Radicada', 'Causada', 'Alistada']
-        )
+            Q(usuario_responsable=user, estado__in=estados_flujo) |
+            Q(usuario_responsable__isnull=True, estado='Recibida')
+        ).order_by('-fecha_recepcion', '-id').distinct()
         serializer = serializers.FacturaListSerializer(pendientes, many=True)
         return Response(serializer.data)
 

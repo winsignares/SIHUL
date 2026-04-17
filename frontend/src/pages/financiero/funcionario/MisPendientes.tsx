@@ -18,45 +18,6 @@ type PendingRow = {
   accion: string;
 };
 
-const mockPendientes: PendingRow[] = [
-  {
-    id: '1',
-    numeroFactura: 'FAC-2026-145',
-    proveedor: 'Tecnologia Global SAS',
-    area: 'Sistemas',
-    valorTotal: 8900000,
-    fechaRecepcion: '2026-03-30',
-    dias: 1,
-    slaMax: 2,
-    nivelRiesgo: 'amarillo',
-    accion: 'Registrar factura y subir documentos',
-  },
-  {
-    id: '2',
-    numeroFactura: 'FAC-2026-138',
-    proveedor: 'Editorial Academica Colombia',
-    area: 'Biblioteca',
-    valorTotal: 6750000,
-    fechaRecepcion: '2026-03-26',
-    dias: 4,
-    slaMax: 2,
-    nivelRiesgo: 'vencido',
-    accion: 'URGENTE: Registrar factura VENCIDA',
-  },
-  {
-    id: '3',
-    numeroFactura: 'FAC-2026-152',
-    proveedor: 'Servicios Medicos Especializados',
-    area: 'Enfermeria',
-    valorTotal: 12500000,
-    fechaRecepcion: '2026-03-31',
-    dias: 0,
-    slaMax: 2,
-    nivelRiesgo: 'verde',
-    accion: 'Registrar factura y subir documentos',
-  },
-];
-
 function mapFacturaToPendingRow(f: Factura): PendingRow {
   const dias = Number(f.dias_transcurridos || 0);
   const riesgo: PendingRow['nivelRiesgo'] = dias > 2 ? 'vencido' : dias > 0 ? 'amarillo' : 'verde';
@@ -78,18 +39,21 @@ function mapFacturaToPendingRow(f: Factura): PendingRow {
 export default function MisPendientes() {
   const [rows, setRows] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const response = await facturasService.getPendientes();
         const apiRows = Array.isArray(response) ? response.map(mapFacturaToPendingRow) : [];
-        setRows(apiRows.length > 0 ? apiRows : mockPendientes);
+        setRows(apiRows);
       } catch {
-        setRows(mockPendientes);
+        setRows([]);
+        setLoadError('No fue posible consultar pendientes del usuario.');
       } finally {
         setLoading(false);
       }
@@ -166,6 +130,11 @@ export default function MisPendientes() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 overflow-x-auto">
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {loadError}
+          </div>
+        )}
         <h3 className="text-xl font-semibold text-slate-800 mb-1">Facturas Pendientes de Registro</h3>
         <p className="text-slate-500 mb-5">Facturas fisicas recibidas que debo registrar en el sistema antes de 2 dias</p>
 
@@ -187,6 +156,10 @@ export default function MisPendientes() {
             {loading ? (
               <tr>
                 <td className="p-4 text-slate-500" colSpan={9}>Cargando pendientes...</td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td className="p-4 text-slate-500" colSpan={9}>No hay pendientes para mostrar.</td>
               </tr>
             ) : rows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">

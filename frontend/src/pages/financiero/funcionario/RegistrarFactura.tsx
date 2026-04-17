@@ -1,33 +1,46 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Calendar, CheckCircle2, FileText, Upload, X } from 'lucide-react';
-import { departamentosService, documentosService, facturasService, proveedoresService } from '../../../services/financiero';
+import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
+import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
 import type { CreateFacturaDTO, Departamento, Proveedor } from '../../../models/financiero';
 
 type UploadedDoc = {
   id: string;
-  type: string;
+  type: 'Factura' | 'Orden de Compra' | 'Certificación Bancaria';
   file: File;
 };
 
-const mockProveedores: Proveedor[] = [
-  { id: 1001, nit: '900123456-7', razon_social: 'Tecnologia Global SAS', tipo_proveedor: 'Servicios', estado: 'Activo' },
-  { id: 1002, nit: '900234567-8', razon_social: 'Editorial Academica Colombia', tipo_proveedor: 'Bienes', estado: 'Activo' },
-  { id: 1003, nit: '900345678-9', razon_social: 'Servicios Medicos Especializados', tipo_proveedor: 'Servicios', estado: 'Activo' },
-];
+const DOCUMENT_TYPES: Array<UploadedDoc['type']> = ['Factura', 'Orden de Compra', 'Certificación Bancaria'];
 
-const mockDepartamentos: Departamento[] = [
-  { id: 1, codigo: 'SIS', nombre: 'Sistemas', tipo: 'Administrativo', estado: 'Activo' },
-  { id: 2, codigo: 'BIB', nombre: 'Biblioteca', tipo: 'Académico', estado: 'Activo' },
-  { id: 3, codigo: 'ENF', nombre: 'Enfermeria', tipo: 'Administrativo', estado: 'Activo' },
-  { id: 4, codigo: 'MNT', nombre: 'Mantenimiento', tipo: 'Administrativo', estado: 'Activo' },
-];
+const toList = <T,>(data: any): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray(data?.results)) return data.results as T[];
+  return [];
+};
+
+const buildApiErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as ApiError | undefined;
+  const detailed = formatValidationErrors(apiError?.errors);
+  if (apiError?.message && detailed) {
+    return `${apiError.message}. ${detailed}`;
+  }
+  if (apiError?.message) {
+    return apiError.message;
+  }
+  return fallback;
+};
 
 export default function RegistrarFactura() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
+  const [slaTotalDias, setSlaTotalDias] = useState(0);
+  const [slaTodosHabiles, setSlaTodosHabiles] = useState(true);
+  const [slaEtapas, setSlaEtapas] = useState(0);
 
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
@@ -38,7 +51,6 @@ export default function RegistrarFactura() {
     proveedorId: 0,
     proveedorNombre: '',
     nit: '',
-    numeroFactura: '',
     tipoDocumento: 'Factura',
     valorTotal: 0,
     fechaFactura: '',
@@ -50,20 +62,32 @@ export default function RegistrarFactura() {
 
   useEffect(() => {
     const load = async () => {
+      setCatalogLoading(true);
+      setError(null);
       try {
-        const [prov, dept] = await Promise.all([
+        const [prov, dept, resumenSla, numeroSugerido] = await Promise.all([
           proveedoresService.getAll({ limit: 100 }),
-          departamentosService.getAll({ limit: 100 }),
+          departamentosService.getAreasSolicitantes(),
+          parametrosSlaService.getResumenProceso(),
+          facturasService.getNumeroSugerido(),
         ]);
 
-        const provList = Array.isArray(prov?.results) && prov.results.length > 0 ? prov.results : mockProveedores;
-        const depList = Array.isArray(dept?.results) && dept.results.length > 0 ? dept.results : mockDepartamentos;
+        const provList = toList<Proveedor>(prov);
+        const depList = toList<Departamento>(dept);
 
         setProveedores(provList);
         setDepartamentos(depList);
+        setSlaTotalDias(Number(resumenSla.totalDias) || 0);
+        setSlaTodosHabiles(Boolean(resumenSla.todosHabiles));
+        setSlaEtapas(Number(resumenSla.etapas) || 0);
+        setNumeroFacturaSugerido(numeroSugerido || '');
       } catch {
-        setProveedores(mockProveedores);
-        setDepartamentos(mockDepartamentos);
+        setProveedores([]);
+        setDepartamentos([]);
+        setNumeroFacturaSugerido('');
+        setError('No fue posible cargar proveedores y departamentos. Verifique la conexion con el backend.');
+      } finally {
+        setCatalogLoading(false);
       }
     };
 
@@ -89,7 +113,7 @@ export default function RegistrarFactura() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const addDoc = (type: string, file?: File) => {
+  const addDoc = (type: UploadedDoc['type'], file?: File) => {
     if (!file) return;
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setDocs((prev) => [
@@ -123,14 +147,13 @@ export default function RegistrarFactura() {
     });
   };
 
-  const requiredDocTypes = ['Factura', 'Orden', 'Certificacion'];
+  const requiredDocTypes = DOCUMENT_TYPES;
   const requiredUploaded = new Set(docs.map((d) => d.type)).size;
   const uploadCompletion = Math.round((Math.min(requiredUploaded, requiredDocTypes.length) / requiredDocTypes.length) * 100);
   const flowCompletion = Math.round(((step - 1) / 2) * 100);
 
   const validateStep1 = () => {
     if (!form.proveedorId) return 'Debe seleccionar un proveedor';
-    if (!form.numeroFactura.trim()) return 'Numero de factura es obligatorio';
     if (!form.tipoDocumento.trim()) return 'Tipo de documento es obligatorio';
     if (!form.valorTotal || Number(form.valorTotal) <= 0) return 'Valor total debe ser mayor a 0';
     if (!form.fechaFactura) return 'Fecha de emision es obligatoria';
@@ -141,7 +164,7 @@ export default function RegistrarFactura() {
   };
 
   const validateStep2 = () => {
-    const required = ['Factura', 'Orden', 'Certificacion'];
+    const required = DOCUMENT_TYPES;
     const docTypes = new Set(docs.map((d) => d.type));
     const missing = required.filter((t) => !docTypes.has(t));
     return missing.length ? `Faltan documentos obligatorios: ${missing.join(', ')}` : null;
@@ -182,7 +205,7 @@ export default function RegistrarFactura() {
     setLoading(true);
 
     const payload: CreateFacturaDTO = {
-      numero_factura: form.numeroFactura,
+      numero_factura: numeroFacturaSugerido || undefined,
       proveedor_id: Number(form.proveedorId),
       departamento_id: Number(form.departamentoId),
       valor_subtotal: Math.round((Number(form.valorTotal) / 1.19) * 100) / 100,
@@ -197,13 +220,10 @@ export default function RegistrarFactura() {
 
     try {
       const factura = await facturasService.create(payload);
-      for (const doc of docs) {
-        await documentosService.upload(factura.id, doc.file, doc.type).catch(() => null);
-      }
+      await Promise.all(docs.map((doc) => documentosService.upload(factura.id, doc.file, doc.type)));
       setSuccess(true);
-    } catch {
-      // Permite validar flujo visual aun si backend no responde en ambiente de pruebas
-      setSuccess(true);
+    } catch (err) {
+      setError(buildApiErrorMessage(err, 'No fue posible registrar la factura. Revise los datos e intente nuevamente.'));
     } finally {
       setLoading(false);
     }
@@ -222,7 +242,6 @@ export default function RegistrarFactura() {
         proveedorId: 0,
         proveedorNombre: '',
         nit: '',
-        numeroFactura: '',
         tipoDocumento: 'Factura',
         valorTotal: 0,
         fechaFactura: '',
@@ -231,6 +250,7 @@ export default function RegistrarFactura() {
         descripcion: '',
         observaciones: '',
       });
+      void facturasService.getNumeroSugerido().then((numero) => setNumeroFacturaSugerido(numero || '')).catch(() => setNumeroFacturaSugerido(''));
     }, 4000);
 
     return () => clearTimeout(timer);
@@ -481,13 +501,20 @@ export default function RegistrarFactura() {
               className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-slate-900 font-medium"
               value={form.proveedorId}
               onChange={(e) => setField('proveedorId', Number(e.target.value))}
+              disabled={catalogLoading || proveedores.length === 0}
             >
               <option value={0}>-- Seleccione un proveedor --</option>
               {proveedores.map((p) => (
                 <option key={p.id} value={p.id}>{p.razon_social}</option>
               ))}
             </select>
-            <p className="text-xs text-blue-700 mt-2">Si el proveedor no existe, contacte al Administrador Financiero</p>
+            <p className="text-xs text-blue-700 mt-2">
+              {catalogLoading
+                ? 'Cargando proveedores...'
+                : proveedores.length === 0
+                  ? 'No hay proveedores disponibles. Cree proveedores en el modulo Admin Financiero.'
+                  : 'Si el proveedor no existe, contacte al Administrador Financiero'}
+            </p>
           </motion.div>
 
           {/* Datos del Proveedor */}
@@ -529,10 +556,9 @@ export default function RegistrarFactura() {
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Número de Factura</label>
                 <input 
-                  className="w-full border-2 border-amber-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                  value={form.numeroFactura} 
-                  onChange={(e) => setField('numeroFactura', e.target.value)} 
-                  placeholder="Ej: FAC-2026-001"
+                  className="w-full border-2 border-amber-200 rounded-lg px-4 py-2.5 bg-amber-50 text-slate-700"
+                  value={numeroFacturaSugerido || 'Cargando consecutivo...'}
+                  readOnly
                 />
               </div>
               <div>
@@ -597,7 +623,9 @@ export default function RegistrarFactura() {
                     onChange={(e) => setField('fechaRecepcion', e.target.value)}
                   />
                 </div>
-                <p className="text-xs text-red-600 font-semibold mt-1">⚠ Desde esta fecha inician los 17 días hábiles del SLA</p>
+                <p className="text-xs text-red-600 font-semibold mt-1">
+                  ⚠ Desde esta fecha inician los {slaTotalDias} días {slaTodosHabiles ? 'hábiles' : 'totales'} del SLA del proceso completo ({slaEtapas} etapas activas)
+                </p>
               </div>
             </div>
           </motion.div>
@@ -615,12 +643,16 @@ export default function RegistrarFactura() {
                 className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                 value={form.departamentoId} 
                 onChange={(e) => setField('departamentoId', Number(e.target.value))}
+                disabled={catalogLoading || departamentos.length === 0}
               >
                 <option value={0}>Seleccione un área</option>
                 {departamentos.map((d) => (
                   <option key={d.id} value={d.id}>{d.nombre}</option>
                 ))}
               </select>
+              {!catalogLoading && departamentos.length === 0 && (
+                <p className="text-xs text-red-600 mt-2">No hay areas/departamentos disponibles para asignar.</p>
+              )}
             </div>
 
             <div>
@@ -713,7 +745,7 @@ export default function RegistrarFactura() {
               transition={{ delay: 0.15 }}
               className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
             >
-              {['Factura', 'Orden', 'Certificacion'].map((type, idx) => {
+              {DOCUMENT_TYPES.map((type, idx) => {
                 const hasDoc = docs.some(d => d.type === type);
                 return (
                   <motion.div
@@ -886,7 +918,7 @@ export default function RegistrarFactura() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Número</p>
-                  <p className="text-lg font-bold text-slate-900">{form.numeroFactura}</p>
+                  <p className="text-lg font-bold text-slate-900">{numeroFacturaSugerido || 'Cargando consecutivo...'}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Tipo</p>
