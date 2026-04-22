@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Calendar, CheckCircle2, FileText, Upload, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
-import type { CreateFacturaDTO, Departamento, Proveedor } from '../../../models/financiero';
+import type { CreateFacturaDTO, Departamento, Factura, Proveedor } from '../../../models/financiero';
 
 type UploadedDoc = {
   id: string;
@@ -31,10 +32,42 @@ const buildApiErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+// Funciones de seguridad para valores potencialmente undefined
+const safeString = (val: any, fallback = 'Sin datos'): string => {
+  if (val === null || val === undefined) return fallback;
+  return String(val).trim() || fallback;
+};
+
+const safeNumber = (val: any, fallback = 0): number => {
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
+
+const formatMoney = (val: any): string => {
+  const num = safeNumber(val, 0);
+  return `$${num.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
+};
+
+type PrefillFromPendiente = {
+  facturaId: number;
+  proveedorId: number;
+  proveedorNombre?: string;
+  nit?: string;
+  tipoDocumento?: string;
+  valorTotal?: number;
+  fechaRecepcion?: string;
+  departamentoId?: number;
+  descripcion?: string;
+};
+
 export default function RegistrarFactura() {
+  const location = useLocation();
+  const prefillFromPendiente = (location.state as { prefillFromPendiente?: PrefillFromPendiente } | null)?.prefillFromPendiente;
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [prefillApplied, setPrefillApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
@@ -93,6 +126,39 @@ export default function RegistrarFactura() {
 
     void load();
   }, []);
+
+  useEffect(() => {
+    setPrefillApplied(false);
+  }, [prefillFromPendiente?.facturaId]);
+
+  useEffect(() => {
+    if (!prefillFromPendiente) return;
+
+    // Solo aplicar prefill cuando los catálogos estén cargados
+    if (!catalogLoading && proveedores.length > 0 && departamentos.length > 0 && !prefillApplied) {
+      const proveedorExiste = prefillFromPendiente.proveedorId
+        ? proveedores.some((p) => p.id === prefillFromPendiente.proveedorId)
+        : false;
+      
+      const departamentoExiste = prefillFromPendiente.departamentoId
+        ? departamentos.some((d) => d.id === prefillFromPendiente.departamentoId)
+        : false;
+
+      setForm((prev) => ({
+        ...prev,
+        proveedorId: proveedorExiste ? Number(prefillFromPendiente.proveedorId) : prev.proveedorId,
+        proveedorNombre: prefillFromPendiente.proveedorNombre || prev.proveedorNombre,
+        nit: prefillFromPendiente.nit || prev.nit,
+        tipoDocumento: prefillFromPendiente.tipoDocumento || prev.tipoDocumento,
+        valorTotal: Number(prefillFromPendiente.valorTotal || prev.valorTotal || 0),
+        fechaRecepcion: prefillFromPendiente.fechaRecepcion || prev.fechaRecepcion,
+        departamentoId: departamentoExiste ? Number(prefillFromPendiente.departamentoId) : prev.departamentoId,
+        descripcion: prefillFromPendiente.descripcion || prev.descripcion,
+      }));
+
+      setPrefillApplied(true);
+    }
+  }, [prefillFromPendiente, catalogLoading, proveedores, departamentos, prefillApplied]);
 
   const selectedProveedor = useMemo(
     () => proveedores.find((p) => p.id === Number(form.proveedorId)),
@@ -153,7 +219,10 @@ export default function RegistrarFactura() {
   const flowCompletion = Math.round(((step - 1) / 2) * 100);
 
   const validateStep1 = () => {
-    if (!form.proveedorId) return 'Debe seleccionar un proveedor';
+    // Si el nombre y NIT del proveedor ya están llenos, no requerir selección del dropdown
+    if (!form.proveedorId && (!form.proveedorNombre.trim() || !form.nit.trim())) {
+      return 'Debe seleccionar un proveedor';
+    }
     if (!form.tipoDocumento.trim()) return 'Tipo de documento es obligatorio';
     if (!form.valorTotal || Number(form.valorTotal) <= 0) return 'Valor total debe ser mayor a 0';
     if (!form.fechaFactura) return 'Fecha de emision es obligatoria';
@@ -204,9 +273,28 @@ export default function RegistrarFactura() {
 
     setLoading(true);
 
+    // Si no hay proveedorId pero hay nombre y NIT, buscar el proveedor en la lista
+    let proveedorIdFinal = Number(form.proveedorId);
+    if (!proveedorIdFinal && form.proveedorNombre.trim() && form.nit.trim()) {
+      const proveedorEncontrado = proveedores.find(p => 
+        p.razon_social === form.proveedorNombre.trim() && p.nit === form.nit.trim()
+      );
+      if (proveedorEncontrado) {
+        proveedorIdFinal = proveedorEncontrado.id;
+      } else {
+        // Intentar búsqueda parcial solo por nombre
+        const proveedorPorNombre = proveedores.find(p => 
+          p.razon_social === form.proveedorNombre.trim()
+        );
+        if (proveedorPorNombre) {
+          proveedorIdFinal = proveedorPorNombre.id;
+        }
+      }
+    }
+
     const payload: CreateFacturaDTO = {
       numero_factura: numeroFacturaSugerido || undefined,
-      proveedor_id: Number(form.proveedorId),
+      proveedor_id: proveedorIdFinal,
       departamento_id: Number(form.departamentoId),
       valor_subtotal: Math.round((Number(form.valorTotal) / 1.19) * 100) / 100,
       valor_iva: Math.round((Number(form.valorTotal) - Number(form.valorTotal) / 1.19) * 100) / 100,
@@ -219,8 +307,40 @@ export default function RegistrarFactura() {
     };
 
     try {
-      const factura = await facturasService.create(payload);
-      await Promise.all(docs.map((doc) => documentosService.upload(factura.id, doc.file, doc.type)));
+      let factura: any;
+
+      // Si viene de Mis Pendientes, actualizar la factura existente con el endpoint específico
+      if (prefillFromPendiente?.facturaId) {
+        const updatePayload: Partial<Factura> = {
+          proveedor_id: payload.proveedor_id,
+          departamento_id: payload.departamento_id,
+          valor_subtotal: payload.valor_subtotal,
+          valor_iva: payload.valor_iva,
+          valor_total: payload.valor_total,
+          tipo_documento: payload.tipo_documento as Factura['tipo_documento'],
+          descripcion: payload.descripcion,
+          observaciones: payload.observaciones,
+          fecha_factura: payload.fecha_factura,
+          fecha_recepcion: payload.fecha_recepcion,
+        };
+        factura = await facturasService.completarRegistro(prefillFromPendiente.facturaId, updatePayload);
+      } else {
+        // Si es una factura nueva, crearla
+        factura = await facturasService.create(payload);
+      }
+
+      // Validar que la factura fue creada correctamente
+      if (!factura || !factura.id) {
+        setError('Error: La factura no fue creada correctamente. Por favor intente nuevamente.');
+        setLoading(false);
+        return;
+      }
+
+      // Subir documentos si existen
+      if (docs && docs.length > 0) {
+        await Promise.all(docs.map((doc) => documentosService.upload(factura.id, doc.file, doc.type)));
+      }
+      
       setSuccess(true);
     } catch (err) {
       setError(buildApiErrorMessage(err, 'No fue posible registrar la factura. Revise los datos e intente nuevamente.'));
@@ -469,6 +589,12 @@ export default function RegistrarFactura() {
       {error && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-2 text-red-700">
           <AlertCircle size={18} /> {error}
+        </motion.div>
+      )}
+
+      {prefillFromPendiente && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+          Se cargaron automaticamente datos desde Pendientes (registro #{prefillFromPendiente.facturaId}). Verifique y complete los campos faltantes antes de registrar.
         </motion.div>
       )}
 
@@ -898,11 +1024,11 @@ export default function RegistrarFactura() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-amber-200">
                   <p className="text-xs text-amber-700 font-semibold mb-1">Proveedor</p>
-                  <p className="text-lg font-bold text-slate-900">{form.proveedorNombre}</p>
+                  <p className="text-lg font-bold text-slate-900">{safeString(form.proveedorNombre, 'No seleccionado')}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-amber-200">
                   <p className="text-xs text-amber-700 font-semibold mb-1">NIT</p>
-                  <p className="text-lg font-bold text-slate-900 font-mono">{form.nit}</p>
+                  <p className="text-lg font-bold text-slate-900 font-mono">{safeString(form.nit, 'No disponible')}</p>
                 </div>
               </div>
             </motion.div>
@@ -918,15 +1044,15 @@ export default function RegistrarFactura() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Número</p>
-                  <p className="text-lg font-bold text-slate-900">{numeroFacturaSugerido || 'Cargando consecutivo...'}</p>
+                  <p className="text-lg font-bold text-slate-900">{safeString(numeroFacturaSugerido, 'Cargando...')}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Tipo</p>
-                  <p className="text-lg font-bold text-slate-900">{form.tipoDocumento}</p>
+                  <p className="text-lg font-bold text-slate-900">{safeString(form.tipoDocumento, 'No especificado')}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Valor Total</p>
-                  <p className="text-2xl font-bold text-green-600">${Number(form.valorTotal || 0).toLocaleString('es-CO')}</p>
+                  <p className="text-2xl font-bold text-green-600">{formatMoney(form.valorTotal)}</p>
                 </div>
               </div>
             </motion.div>
@@ -942,11 +1068,11 @@ export default function RegistrarFactura() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-purple-200">
                   <p className="text-xs text-purple-700 font-semibold mb-1">Emisión de Factura</p>
-                  <p className="text-lg font-bold text-slate-900">{form.fechaFactura || 'Sin fecha'}</p>
+                  <p className="text-lg font-bold text-slate-900">{safeString(form.fechaFactura, 'Sin fecha')}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-red-400">
                   <p className="text-xs text-red-700 font-semibold mb-1">⚠ Recepción en Universidad (SLA)</p>
-                  <p className="text-lg font-bold text-red-600">{form.fechaRecepcion || 'Sin fecha'}</p>
+                  <p className="text-lg font-bold text-red-600">{safeString(form.fechaRecepcion, 'Sin fecha')}</p>
                 </div>
               </div>
             </motion.div>
@@ -962,16 +1088,20 @@ export default function RegistrarFactura() {
               <div className="space-y-3">
                 <div className="bg-white rounded-lg p-3 border border-slate-200">
                   <p className="text-xs text-slate-600 font-semibold mb-1">Área Solicitante</p>
-                  <p className="text-slate-900 font-semibold">{departamentos.find(d => d.id === form.departamentoId)?.nombre || 'No seleccionada'}</p>
+                  <p className="text-slate-900 font-semibold">
+                    {departamentos?.length > 0 
+                      ? safeString(departamentos.find(d => d?.id === form.departamentoId)?.nombre, 'No seleccionada')
+                      : 'No seleccionada'}
+                  </p>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-slate-200">
                   <p className="text-xs text-slate-600 font-semibold mb-1">Descripción</p>
-                  <p className="text-slate-800 text-sm">{form.descripcion || 'Sin descripción'}</p>
+                  <p className="text-slate-800 text-sm">{safeString(form.descripcion, 'Sin descripción')}</p>
                 </div>
-                {form.observaciones && (
+                {form.observaciones && safeString(form.observaciones) !== 'Sin observaciones' && (
                   <div className="bg-white rounded-lg p-3 border border-slate-200">
                     <p className="text-xs text-slate-600 font-semibold mb-1">Observaciones</p>
-                    <p className="text-slate-800 text-sm">{form.observaciones}</p>
+                    <p className="text-slate-800 text-sm">{safeString(form.observaciones, 'Sin observaciones')}</p>
                   </div>
                 )}
               </div>

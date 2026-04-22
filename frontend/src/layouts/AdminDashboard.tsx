@@ -69,6 +69,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     if (userRole === 'docente') return 'Docente';
     if (userRole === 'estudiante') return 'Estudiante';
     if (normalizedRole.includes('funcionario')) return 'Funcionario';
+    if (normalizedRole.includes('proveedor')) return 'Proveedor';
     if (normalizedRole.includes('contabilidad')) return 'Contabilidad';
     if (normalizedRole.includes('tesorer')) return 'Tesorería';
     if (normalizedRole.includes('auditor')) return 'Auditoría';

@@ -107,6 +107,12 @@ export const facturasService = {
     const response = await apiClient.get<{ numero_factura?: string }>(`${API_BASE}/facturas/numero_sugerido/`);
     return response?.numero_factura || '';
   },
+
+  // Completar registro de factura pendiente (desde Mis Pendientes)
+  completarRegistro: async (id: number, data: Partial<Factura>): Promise<Factura> => {
+    const response = await apiClient.patch<Factura>(`${API_BASE}/facturas/${id}/completar_registro/`, data);
+    return response;
+  },
 };
 
 // ============================================================
@@ -138,6 +144,19 @@ export const proveedoresService = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete<void>(`${API_BASE}/proveedores/${id}/`);
+  },
+
+  getMiPerfil: async (nit?: string): Promise<Proveedor> => {
+    const query = nit ? `?nit=${encodeURIComponent(nit)}` : '';
+    const response = await apiClient.get<Proveedor>(`${API_BASE}/proveedores/mi_perfil/${query}`);
+    return response;
+  },
+
+  getMisFacturas: async (proveedorId: number, params?: any): Promise<PaginatedResponse<Factura>> => {
+    const query = buildQueryString({ proveedor: proveedorId, ...params });
+    const endpoint = `${API_BASE}/facturas/${query ? '?' + query : ''}`;
+    const response = await apiClient.get<PaginatedResponse<Factura>>(endpoint);
+    return response;
   },
 };
 

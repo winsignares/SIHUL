@@ -1,23 +1,62 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Download, Eye, Search, Filter, DollarSign, FileSearch } from 'lucide-react';
+import { Calendar, Download, Eye, Search, Filter, DollarSign, FileSearch, Bell } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero';
-import FacturaDetailModal from './FacturaDetailModal.tsx';
+import FacturaDetailModal from '../../../share/factura-detail-modal';
+import type { TimelineEtapa } from '../../../share/factura-timeline';
 
 type Row = {
   id: string;
+  facturaId: number;
   riesgo: 'verde' | 'amarillo' | 'naranja' | 'vencido';
   idTramite: string;
   proveedor: string;
+  nit?: string;
   area: string;
   monto: number;
   estado: string;
   etapa: string;
   numeroRadicado: string;
-  fecha: string;
+  fechaFactura: string;
+  fechaRecepcion: string;
   dias: number;
 };
+
+type SeguimientoResponse = {
+  factura?: Factura;
+  historial?: Array<{
+    fecha_accion?: string;
+    accion?: string;
+    estado_anterior?: string;
+    estado_nuevo?: string;
+    usuario_nombre?: string;
+    observacion?: string;
+  }>;
+};
+
+type EstadoChange = {
+  id: number;
+  numeroFactura: string;
+  estadoAnterior: string;
+  estadoNuevo: string;
+};
+
+const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
+  { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
+  { id: '1.5', nombre: 'Registro Completo', estadoRef: 'Registrada', responsable: 'Funcionario', diasMaximos: 1 },
+  { id: '2', nombre: 'Radicación', estadoRef: 'Radicada', responsable: 'Contabilidad', diasMaximos: 3 },
+  { id: '3', nombre: 'Causación', estadoRef: 'Causada', responsable: 'Contabilidad', diasMaximos: 2 },
+  { id: '4', nombre: 'Alistamiento', estadoRef: 'Alistada', responsable: 'Tesorería', diasMaximos: 3 },
+  { id: '5', nombre: 'Control Previo', estadoRef: 'Aprobada Auditoría', responsable: 'Auditoría', diasMaximos: 4 },
+  { id: '6', nombre: 'Cargue', estadoRef: 'Cargada', responsable: 'Dirección Financiera', diasMaximos: 2 },
+  { id: '7', nombre: 'Revisión Dirección Financiera', estadoRef: 'Revisada Dir. Financiera', responsable: 'Dirección Financiera', diasMaximos: 2 },
+  { id: '8', nombre: 'Envío a Rectoría', estadoRef: 'Enviada Rectoría', responsable: 'Dirección Financiera', diasMaximos: 1 },
+  { id: '9', nombre: 'Autorización de Pago', estadoRef: 'Autorizada', responsable: 'Rectoría', diasMaximos: 3 },
+  { id: '10', nombre: 'Aplicación de Pago', estadoRef: 'Pago Aplicado', responsable: 'Tesorería', diasMaximos: 1 },
+  { id: '11', nombre: 'Pago Finalizado', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
+];
 
 const toList = <T,>(data: any): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -34,25 +73,92 @@ function mapFactura(f: Factura): Row {
 
   return {
     id: String(f.id),
+    facturaId: Number(f.id),
     riesgo,
     idTramite: f.numero_factura || `FAC-${f.id}`,
     proveedor: f.proveedor?.razon_social || 'Proveedor sin nombre',
+    nit: f.proveedor?.nit,
     area: f.departamento?.nombre || 'Sin area',
     monto: Number(f.valor_total || 0),
     estado: f.estado || 'Recibida',
-    etapa: f.etapa_actual || 'Radicacion Contable',
+    etapa: f.etapa_actual || 'Recepción y Registro',
     numeroRadicado: f.numero_radicado || '-',
-    fecha: f.fecha_factura || '',
+    fechaFactura: f.fecha_factura || '',
+    fechaRecepcion: f.fecha_recepcion || '',
     dias,
   };
 }
 
+function inferEtapaActual(estado: string): string {
+  const found = TIMELINE_BLUEPRINT.find((item) => item.estadoRef === estado);
+  return found?.nombre || estado;
+}
+
+function mapRiesgo(risk: Row['riesgo']): 'verde' | 'amarillo' | 'rojo' | 'vencido' {
+  if (risk === 'naranja') return 'rojo';
+  return risk;
+}
+
+function buildTimelineFromSeguimiento(seguimiento: SeguimientoResponse, fallbackEstado: string): TimelineEtapa[] {
+  const historial = Array.isArray(seguimiento?.historial) ? [...seguimiento.historial] : [];
+  historial.sort((a, b) => new Date(a.fecha_accion || 0).getTime() - new Date(b.fecha_accion || 0).getTime());
+
+  const estadoActual = seguimiento?.factura?.estado || fallbackEstado;
+  const estadoIndex = TIMELINE_BLUEPRINT.findIndex((step) => step.estadoRef === estadoActual);
+
+  const isRejectedFlow = ['Rechazada', 'Rechazada Auditoría', 'Devuelta', 'Detenida', 'Anulada'].includes(estadoActual);
+
+  return TIMELINE_BLUEPRINT.map((step, index) => {
+    const matchHistorial = historial.find((h) => h.estado_nuevo === step.estadoRef);
+    let estado: TimelineEtapa['estado'];
+    
+    if (isRejectedFlow && index === Math.max(estadoIndex, 0)) {
+      estado = 'rechazado';
+    } else if (estadoIndex >= 0 && index < estadoIndex) {
+      estado = 'completado';
+    } else if (estadoIndex >= 0 && index === estadoIndex) {
+      estado = 'en-proceso';
+    } else {
+      estado = 'pendiente';
+    }
+
+    return {
+      id: step.id,
+      nombre: step.nombre,
+      estado,
+      fechaInicio: matchHistorial?.fecha_accion,
+      fechaFin: matchHistorial?.fecha_accion,
+      usuarioResponsable: matchHistorial?.usuario_nombre || step.responsable,
+      observaciones: matchHistorial?.observacion || matchHistorial?.accion || undefined,
+      diasMaximos: step.diasMaximos,
+    };
+  });
+}
+
 export default function ConsultarFacturas() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<{
+    numeroFactura: string;
+    proveedor: string;
+    valorTotal: number;
+    fechaFactura?: string;
+    fechaRecepcion?: string;
+    areaSolicitante?: string;
+    estado: string;
+    diasTranscurridos?: number;
+    numeroRadicado?: string;
+    descripcion?: string;
+    nivelRiesgo?: 'verde' | 'amarillo' | 'rojo' | 'vencido';
+    nit?: string;
+    etapasTimeline?: TimelineEtapa[];
+  } | null>(null);
+  const [estadoChanges, setEstadoChanges] = useState<EstadoChange[]>([]);
 
   const [numeroFactura, setNumeroFactura] = useState('');
   const [proveedor, setProveedor] = useState('');
@@ -63,14 +169,17 @@ export default function ConsultarFacturas() {
   const [montoMin, setMontoMin] = useState('0');
   const [montoMax, setMontoMax] = useState('999999999');
 
+  const loadRows = async () => {
+    const response = await facturasService.getAll({ limit: 100 });
+    return toList<Factura>(response).map(mapFactura);
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setLoadError(null);
       try {
-        const response = await facturasService.getAll({ limit: 100 });
-        const apiRows = toList<Factura>(response).map(mapFactura);
-        setRows(apiRows);
+        setRows(await loadRows());
       } catch {
         setRows([]);
         setLoadError('No fue posible consultar facturas. Intente nuevamente.');
@@ -80,6 +189,42 @@ export default function ConsultarFacturas() {
     };
 
     void load();
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void (async () => {
+        try {
+          const latest = await loadRows();
+          setRows((prev) => {
+            const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
+            const changes: EstadoChange[] = [];
+
+            latest.forEach((next) => {
+              const old = previousMap.get(next.facturaId);
+              if (old && old.estado !== next.estado) {
+                changes.push({
+                  id: next.facturaId,
+                  numeroFactura: next.idTramite,
+                  estadoAnterior: old.estado,
+                  estadoNuevo: next.estado,
+                });
+              }
+            });
+
+            if (changes.length > 0) {
+              setEstadoChanges(changes);
+            }
+
+            return latest;
+          });
+        } catch {
+          // Polling silencioso para no interrumpir la experiencia si falla temporalmente.
+        }
+      })();
+    }, 25000);
+
+    return () => window.clearInterval(interval);
   }, []);
 
   const proveedores = useMemo(() => Array.from(new Set(rows.map(r => r.proveedor))), [rows]);
@@ -92,8 +237,8 @@ export default function ConsultarFacturas() {
       if (proveedor && r.proveedor !== proveedor) return false;
       if (estado && r.estado !== estado) return false;
       if (area && r.area !== area) return false;
-      if (fechaInicio && r.fecha && r.fecha < fechaInicio) return false;
-      if (fechaFin && r.fecha && r.fecha > fechaFin) return false;
+      if (fechaInicio && r.fechaRecepcion && r.fechaRecepcion < fechaInicio) return false;
+      if (fechaFin && r.fechaRecepcion && r.fechaRecepcion > fechaFin) return false;
       if (montoMin && r.monto < Number(montoMin)) return false;
       if (montoMax && r.monto > Number(montoMax)) return false;
       return true;
@@ -102,8 +247,72 @@ export default function ConsultarFacturas() {
 
   const selectedRow = filtered.find((r) => r.id === selectedId) || rows.find((r) => r.id === selectedId) || null;
 
+  useEffect(() => {
+    const facturaParam = searchParams.get('factura');
+    if (!facturaParam || rows.length === 0) return;
+
+    const facturaId = Number(facturaParam);
+    if (!Number.isFinite(facturaId)) return;
+
+    const row = rows.find((item) => item.facturaId === facturaId);
+    if (!row) return;
+
+    setSelectedId(row.id);
+    setOpenDetail(true);
+  }, [rows, searchParams]);
+
+  useEffect(() => {
+    if (!selectedRow || !openDetail) return;
+
+    const loadDetail = async () => {
+      setDetailLoading(true);
+      try {
+        const seguimiento = await facturasService.getSeguimiento(selectedRow.facturaId);
+        const factura = (seguimiento?.factura || null) as Factura | null;
+        const estadoActual = factura?.estado || selectedRow.estado;
+        const timeline = buildTimelineFromSeguimiento(seguimiento as SeguimientoResponse, estadoActual);
+
+        setSelectedDetail({
+          numeroFactura: factura?.numero_factura || selectedRow.idTramite,
+          proveedor: factura?.proveedor?.razon_social || selectedRow.proveedor,
+          valorTotal: Number(factura?.valor_total || selectedRow.monto),
+          fechaFactura: factura?.fecha_factura || selectedRow.fechaFactura,
+          fechaRecepcion: factura?.fecha_recepcion || selectedRow.fechaRecepcion,
+          areaSolicitante: factura?.departamento?.nombre || selectedRow.area,
+          estado: estadoActual,
+          diasTranscurridos: Number(factura?.dias_transcurridos ?? selectedRow.dias),
+          numeroRadicado: factura?.numero_radicado || selectedRow.numeroRadicado,
+          descripcion: factura?.descripcion,
+          nivelRiesgo: mapRiesgo(selectedRow.riesgo),
+          nit: factura?.proveedor?.nit || selectedRow.nit,
+          etapasTimeline: timeline,
+        });
+      } catch {
+        setSelectedDetail({
+          numeroFactura: selectedRow.idTramite,
+          proveedor: selectedRow.proveedor,
+          valorTotal: selectedRow.monto,
+          fechaFactura: selectedRow.fechaFactura,
+          fechaRecepcion: selectedRow.fechaRecepcion,
+          areaSolicitante: selectedRow.area,
+          estado: selectedRow.estado,
+          diasTranscurridos: selectedRow.dias,
+          numeroRadicado: selectedRow.numeroRadicado,
+          nivelRiesgo: mapRiesgo(selectedRow.riesgo),
+          nit: selectedRow.nit,
+          etapasTimeline: buildTimelineFromSeguimiento({}, selectedRow.estado),
+        });
+      } finally {
+        setDetailLoading(false);
+      }
+    };
+
+    void loadDetail();
+  }, [openDetail, selectedRow]);
+
   const estadoBadge = (value: string) => {
     if (value === 'Recibida') return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (value === 'Registrada') return 'bg-cyan-100 text-cyan-700 border-cyan-200';
     if (value === 'Radicada') return 'bg-green-100 text-green-700 border-green-200';
     if (value === 'Causada') return 'bg-purple-100 text-purple-700 border-purple-200';
     return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -145,53 +354,65 @@ export default function ConsultarFacturas() {
         </div>
       </motion.div>
 
-      <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6">
+      {estadoChanges.length > 0 && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-start gap-3">
+          <Bell className="w-4 h-4 mt-0.5" />
+          <div>
+            <p className="font-semibold">Actualización de etapas detectada</p>
+            <p>
+              {estadoChanges[0].numeroFactura} pasó de {estadoChanges[0].estadoAnterior} a {estadoChanges[0].estadoNuevo}
+              {estadoChanges.length > 1 ? ` y ${estadoChanges.length - 1} factura(s) más.` : '.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         {loadError && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {loadError}
           </div>
         )}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-slate-200">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-lg">
-              <Filter className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white">
+              <Filter className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-lg font-bold text-slate-900">Filtros de Búsqueda</p>
-              <p className="text-xs text-slate-500">Refine sus criterios para encontrar las facturas</p>
+              <p className="text-base font-semibold text-slate-900">Filtros de búsqueda</p>
+              <p className="text-xs text-slate-500">Consulta de facturas por criterios operativos</p>
             </div>
           </div>
           <motion.button 
             whileHover={{ scale: 1.05 }} 
             whileTap={{ scale: 0.95 }}
             onClick={clearFilters} 
-            className="px-4 py-2.5 rounded-lg border-2 border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition-all"
+            className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium transition-all"
           >
-            🔄 Limpiar Todo
+            Limpiar todo
           </motion.button>
         </div>
 
-        {/* Fila 1: Número, Proveedor, Estado, Área */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 pb-3 border-b border-slate-200">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-            <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">🔍 Número de Factura</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Número de factura</label>
             <div className="relative">
               <Search className="w-4 h-4 text-red-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 
                 value={numeroFactura} 
                 onChange={e => setNumeroFactura(e.target.value)} 
-                className="w-full border-2 border-slate-300 rounded-lg pl-9 pr-3 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                className="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
                 placeholder="FAC-2024-001" 
               />
             </div>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">🏢 Proveedor</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Proveedor</label>
             <select 
               value={proveedor} 
               onChange={e => setProveedor(e.target.value)} 
-              className="w-full border-2 border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
             >
               <option value="">Todos</option>
               {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
@@ -199,11 +420,11 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">📊 Estado</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Estado</label>
             <select 
               value={estado} 
               onChange={e => setEstado(e.target.value)} 
-              className="w-full border-2 border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
             >
               <option value="">Todos</option>
               {estados.map(s => <option key={s} value={s}>{s}</option>)}
@@ -211,11 +432,11 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">🏭 Área Solicitante</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Área solicitante</label>
             <select 
               value={area} 
               onChange={e => setArea(e.target.value)} 
-              className="w-full border-2 border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
             >
               <option value="">Todas</option>
               {areas.map(a => <option key={a} value={a}>{a}</option>)}
@@ -223,11 +444,10 @@ export default function ConsultarFacturas() {
           </motion.div>
         </div>
 
-        {/* Fila 2: Rango de Fechas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 border-b border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 pb-3 border-b border-slate-200">
           <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-slate-700 mb-3 uppercase tracking-wide flex items-center gap-1">
-              <Calendar className="w-4 h-4 text-blue-500" /> 📅 Rango de Fechas
+            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1">
+              <Calendar className="w-4 h-4 text-slate-500" /> Rango de fechas
             </label>
           </div>
           
@@ -238,9 +458,9 @@ export default function ConsultarFacturas() {
                 type="date" 
                 value={fechaInicio} 
                 onChange={e => setFechaInicio(e.target.value)} 
-                className="w-full border-2 border-blue-300 rounded-lg px-3 pr-10 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full border border-slate-300 rounded-lg px-3 pr-10 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
               />
-              <Calendar className="w-4 h-4 text-blue-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Calendar className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </motion.div>
 
@@ -251,9 +471,9 @@ export default function ConsultarFacturas() {
                 type="date" 
                 value={fechaFin} 
                 onChange={e => setFechaFin(e.target.value)} 
-                className="w-full border-2 border-blue-300 rounded-lg px-3 pr-10 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full border border-slate-300 rounded-lg px-3 pr-10 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
               />
-              <Calendar className="w-4 h-4 text-blue-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Calendar className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </motion.div>
 
@@ -265,11 +485,10 @@ export default function ConsultarFacturas() {
           </motion.div>
         </div>
 
-        {/* Fila 3: Rango de Montos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-slate-700 mb-3 uppercase tracking-wide flex items-center gap-1">
-              <DollarSign className="w-4 h-4 text-green-500" /> 💰 Rango de Montos
+            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1">
+              <DollarSign className="w-4 h-4 text-slate-500" /> Rango de montos
             </label>
           </div>
 
@@ -281,7 +500,7 @@ export default function ConsultarFacturas() {
                 type="number" 
                 value={montoMin} 
                 onChange={e => setMontoMin(e.target.value)} 
-                className="w-full border-2 border-green-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
               />
             </div>
           </motion.div>
@@ -294,7 +513,7 @@ export default function ConsultarFacturas() {
                 type="number" 
                 value={montoMax} 
                 onChange={e => setMontoMax(e.target.value)} 
-                className="w-full border-2 border-green-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
               />
             </div>
           </motion.div>
@@ -317,7 +536,7 @@ export default function ConsultarFacturas() {
       >
         <div className="flex items-center justify-between mb-5 pb-4 border-b-2 border-slate-200">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">📋 Resultados de la Búsqueda</h3>
+            <h3 className="text-xl font-bold text-slate-900">Resultados de la búsqueda</h3>
             <p className="text-sm text-slate-500 mt-1">{filtered.length} factura(s) encontrada(s)</p>
           </div>
           <motion.button 
@@ -348,9 +567,9 @@ export default function ConsultarFacturas() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>⏳ Cargando facturas...</td></tr>
+                <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>Cargando facturas...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>📭 No hay resultados con los filtros actuales</td></tr>
+                <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>No hay resultados con los filtros actuales.</td></tr>
               ) : filtered.map((row, idx) => (
                 <motion.tr 
                   key={row.id}
@@ -375,9 +594,9 @@ export default function ConsultarFacturas() {
                       {row.estado}
                     </span>
                   </td>
-                  <td className="p-4 text-slate-700 text-sm">{row.etapa}</td>
+                  <td className="p-4 text-slate-700 text-sm">{inferEtapaActual(row.estado) || row.etapa}</td>
                   <td className="p-4 text-slate-600 font-mono">{row.numeroRadicado}</td>
-                  <td className="p-4 text-slate-700">{row.fecha || '—'}</td>
+                  <td className="p-4 text-slate-700">{row.fechaRecepcion || '—'}</td>
                   <td className="p-4 font-semibold text-slate-900">{row.dias} días</td>
                   <td className="p-4 text-center">
                     <motion.button
@@ -400,21 +619,44 @@ export default function ConsultarFacturas() {
       </motion.div>
 
       <FacturaDetailModal
-        open={openDetail}
-        onClose={() => setOpenDetail(false)}
+        isOpen={openDetail}
+        onClose={() => {
+          setOpenDetail(false);
+          setSelectedDetail(null);
+          if (searchParams.get('factura')) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.delete('factura');
+            setSearchParams(nextParams, { replace: true });
+          }
+        }}
         factura={
-          selectedRow
+          selectedDetail
             ? {
-                idTramite: selectedRow.idTramite,
-                proveedor: selectedRow.proveedor,
-                valorTotal: selectedRow.monto,
-                fechaInicio: selectedRow.fecha,
-                progreso: Math.max(8, Math.min(92, Math.round((selectedRow.dias / 17) * 100))),
-                etapaActual: selectedRow.etapa,
+                numeroFactura: selectedDetail.numeroFactura,
+                proveedor: selectedDetail.proveedor,
+                valorTotal: selectedDetail.valorTotal,
+                fechaFactura: selectedDetail.fechaFactura,
+                fechaRecepcion: selectedDetail.fechaRecepcion,
+                areaSolicitante: selectedDetail.areaSolicitante,
+                estado: selectedDetail.estado,
+                diasTranscurridos: selectedDetail.diasTranscurridos,
+                numeroRadicado: selectedDetail.numeroRadicado,
+                descripcion: selectedDetail.descripcion,
+                nivelRiesgo: selectedDetail.nivelRiesgo,
+                nit: selectedDetail.nit,
+                etapasTimeline: selectedDetail.etapasTimeline,
               }
             : null
         }
       />
+
+      {detailLoading && (
+        <div className="fixed inset-0 z-[110] bg-black/20 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="bg-white border border-slate-200 rounded-xl px-5 py-3 text-slate-700 text-sm shadow-lg">
+            Cargando detalle y timeline de la factura...
+          </div>
+        </div>
+      )}
     </div>
   );
 }

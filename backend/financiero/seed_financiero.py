@@ -26,7 +26,8 @@ roles_financieros = {
     'Auditoría': 'Revisa documentación y causación',
     'Dirección Financiera': 'Cargue de pagos en portal bancario',
     'Rectoría': 'Autoriza pagos finales',
-    'Admin Financiero': 'Administrador del módulo financiero'
+    'Admin Financiero': 'Administrador del módulo financiero',
+    'Proveedor': 'Usuario externo que consulta estado de facturas'
 }
 
 roles_dict = {}
@@ -57,6 +58,8 @@ componentes_financieros = [
     ('Reportes Financiero', 'Acceso a reportes financieros'),
     ('Administración Financiera', 'Administración del módulo'),
     ('Dashboard Financiero', 'Ver dashboard de facturas'),
+    ('Dashboard Proveedor', 'Dashboard del rol Proveedor'),
+    ('Mis Facturas Proveedor', 'Consulta de facturas del proveedor'),
 ]
 
 componentes_dict = {}
@@ -132,6 +135,10 @@ permisos = {
         'Reportes Financiero',
         'Administración Financiera',
         'Dashboard Financiero',
+    ],
+    'Proveedor': [
+        'Dashboard Proveedor',
+        'Mis Facturas Proveedor',
     ],
 }
 

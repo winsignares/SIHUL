@@ -119,6 +119,8 @@ class RechazoDevolacionSerializer(serializers.ModelSerializer):
 
 class FacturaListSerializer(serializers.ModelSerializer):
     proveedor = ProveedorSerializer(read_only=True)
+    departamento = DepartamentoSerializer(read_only=True)
+    departamento_id = serializers.IntegerField(source='departamento.id', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
     indicador_riesgo_display = serializers.CharField(source='get_indicador_riesgo_display', read_only=True)
     valor_neto_pagar = serializers.ReadOnlyField()
@@ -128,9 +130,9 @@ class FacturaListSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Factura
         fields = [
-            'id', 'numero_factura', 'numero_radicado', 'proveedor', 'valor_total',
+            'id', 'numero_factura', 'numero_radicado', 'proveedor', 'departamento', 'departamento_id', 'valor_total',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual',
-            'fecha_recepcion', 'dias_transcurridos', 'indicador_riesgo',
+            'tipo_documento', 'descripcion', 'fecha_factura', 'fecha_recepcion', 'dias_transcurridos', 'indicador_riesgo',
             'indicador_riesgo_display', 'monto_alto', 'sla_cumplido'
         ]
 

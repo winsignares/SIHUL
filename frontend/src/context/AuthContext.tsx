@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
-import { authService } from '../services/users/authService';
-import type { LoginPayload, LoginResponse, AuthState } from '../models/auth/auth.model';
+import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../services/users/authService';
+import type { AuthState } from '../models/auth/auth.model';
 import { useMemo } from 'react';
 
 interface AuthContextType extends AuthState {
@@ -25,18 +25,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
     });
 
-    const persistAuthState = (response: {
-        id: number;
-        nombre: string;
-        correo: string;
-        rol: AuthState['role'];
-        facultad: AuthState['user'] extends { facultad: infer T } ? T : null;
-        sede: AuthState['user'] extends { sede: infer T } ? T : null;
-        componentes: AuthState['components'];
-        espacios_permitidos: AuthState['areas'];
-        token: string;
-        signature?: string;
-    }) => {
+    const persistAuthState = (response: LoginResponse) => {
+        const user = {
+            id: response.id,
+            nombre: response.nombre,
+            correo: response.correo,
+            rol: response.rol,
+            facultad: response.facultad,
+            sede: response.sede
+        };
+
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('auth_user', JSON.stringify(user));
+        localStorage.setItem('auth_role', JSON.stringify(response.rol));
+        localStorage.setItem('auth_components', JSON.stringify(response.componentes || []));
+
+        if (response.facultad) {
+            localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
+        } else {
+            localStorage.removeItem('auth_faculties');
+        }
+
+        if (response.sede) {
+            localStorage.setItem('auth_sede', JSON.stringify(response.sede));
+        } else {
+            localStorage.removeItem('auth_sede');
+        }
+
+        if (response.espacios_permitidos) {
+            localStorage.setItem('auth_areas', JSON.stringify(response.espacios_permitidos));
+        } else {
+            localStorage.removeItem('auth_areas');
+        }
+
+        if ('signature' in response && response.signature) {
+            const signature = String(response.signature);
+            localStorage.setItem('auth_signature', signature);
+            authSignatureRef.current = signature;
+        }
+
+        setState({
+            token: response.token,
+            user,
+            role: response.rol,
+            components: response.componentes || [],
+            faculties: response.facultad ? [response.facultad] : undefined,
+            areas: response.espacios_permitidos,
+            isAuthenticated: true,
+            isLoading: false,
+        });
+    };
+
+    const persistSessionUserState = (response: SessionUserResponse) => {
         const user = {
             id: response.id,
             nombre: response.nombre,
@@ -137,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setState(prev => ({ ...prev, isLoading: true }));
             try {
                 const response = await authService.getAuthenticatedUser();
-                persistAuthState(response);
+                persistSessionUserState(response);
             } catch {
                 const storedToken = localStorage.getItem('auth_token');
                 const storedUser = localStorage.getItem('auth_user');

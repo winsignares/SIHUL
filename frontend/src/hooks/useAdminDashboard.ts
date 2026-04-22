@@ -487,6 +487,46 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             return sections;
         }
 
+        // Menú específico para Proveedor
+        if (normalizedRole.includes('proveedor')) {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Proveedor',
+                        icon: getIconForComponent('Dashboard Proveedor'),
+                        label: 'Dashboard',
+                        route: '/financiero/proveedor/dashboard',
+                        code: 'Dashboard Proveedor'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-proveedor',
+                label: 'Mis Facturas',
+                items: [
+                    {
+                        id: 'Enviar Factura Proveedor',
+                        icon: getIconForComponent('Enviar Factura Proveedor'),
+                        label: 'Enviar Factura',
+                        route: '/financiero/proveedor/enviar',
+                        code: 'Enviar Factura Proveedor'
+                    },
+                    {
+                        id: 'Mis Facturas Proveedor',
+                        icon: getIconForComponent('Mis Facturas Proveedor'),
+                        label: 'Mis Facturas',
+                        route: '/financiero/proveedor/mis-facturas',
+                        code: 'Mis Facturas Proveedor'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
         // Menú específico para Contabilidad Financiera (siempre consistente)
         if (
             normalizedRole.includes('contabilidad')

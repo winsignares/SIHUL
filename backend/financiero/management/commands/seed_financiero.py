@@ -2,9 +2,10 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from usuarios.models import Rol
+import re
+from usuarios.models import Rol, Usuario
 from componentes.models import Componente, ComponenteRol
-from financiero.models import Departamento, ParametroSLA, ParametrosFinanciero, Proveedor, Factura
+from financiero.models import Departamento, ParametroSLA, ParametrosFinanciero, Proveedor, Factura, HistorialFactura
 
 
 class Command(BaseCommand):
@@ -33,6 +34,7 @@ class Command(BaseCommand):
             "Dirección Financiera": "Revisa y carga pagos para autorizacion.",
             "Rectoría": "Autoriza pagos finales.",
             "Admin Financiero": "Administra catalogos, usuarios financieros y configuracion.",
+            "Proveedor": "Usuario externo que consulta estado de facturas.",
         }
 
         result = {}
@@ -61,8 +63,9 @@ class Command(BaseCommand):
             ("Dashboard Contabilidad", "Dashboard del rol Contabilidad"),
             ("Mis Pendientes Contabilidad", "Pendientes de contabilidad"),
             ("Radicar Facturas", "Radicacion contable"),
-            ("Causar Factura", "Causacion contable individual"),
             ("Causar Facturas", "Causacion contable"),
+            ("Consultar Facturas", "Consulta y seguimiento de facturas"),
+            ("Gestión de Facturas", "Componente general del modulo de facturas"),
 
             # Tesoreria
             ("Dashboard Tesoreria", "Dashboard del rol Tesoreria"),
@@ -97,6 +100,11 @@ class Command(BaseCommand):
             ("Parametrizacion SLA", "Parametrizacion de SLA por etapa"),
             ("Reportes Consolidados Financiero", "Reportes financieros consolidados"),
             ("Configuracion Sistema Financiero", "Configuracion del sistema financiero"),
+
+            # Proveedor
+            ("Dashboard Proveedor", "Dashboard del rol Proveedor"),
+            ("Mis Facturas Proveedor", "Consulta de facturas del proveedor"),
+            ("Consultar Estado Facturas", "Consulta de estado de facturas"),
         ]
 
         result = {}
@@ -171,6 +179,11 @@ class Command(BaseCommand):
                 "Configuracion Sistema Financiero",
                 "Consultar Facturas",
                 "Gestión de Facturas",
+            ],
+            "Proveedor": [
+                "Dashboard Proveedor",
+                "Mis Facturas Proveedor",
+                "Consultar Estado Facturas",
             ],
         }
 
@@ -249,6 +262,8 @@ class Command(BaseCommand):
             ('900123456-7', 'Tecnologia Global SAS', 'Servicios'),
             ('900234567-8', 'Editorial Academica Colombia', 'Bienes'),
             ('900345678-9', 'Mantenimiento y Obras SAS', 'Servicios'),
+            ('900456789-0', 'Distribuidora de Recursos Educativos', 'Bienes'),
+            ('900567890-1', 'Soluciones de Infraestructura Digital', 'Servicios'),
         ]
 
         proveedores = {}
@@ -265,19 +280,42 @@ class Command(BaseCommand):
             msg = "Creado" if created else "Existente"
             self.stdout.write(f"  - {msg}: Proveedor {nit}")
 
-        departamento, _ = Departamento.objects.get_or_create(
-            codigo='ADM',
-            defaults={
-                'nombre': 'Administración',
-                'tipo': 'Administrativo',
-                'estado': 'Activo',
-            },
-        )
+        # Crear múltiples departamentos para una universidad
+        departamentos_default = {}
+        departamentos_data = [
+            ('ADM', 'Administración', 'Administrativo'),
+            ('ACAD', 'Académica', 'Académico'),
+            ('THHH', 'Talento Humano', 'Administrativo'),
+            ('INFRA', 'Infraestructura y Mantenimiento', 'Administrativo'),
+            ('TI', 'Tecnología (TI)', 'Tecnológico'),
+            ('CONT', 'Contabilidad', 'Financiero'),
+            ('TESO', 'Tesorería', 'Financiero'),
+            ('PRES', 'Presupuesto', 'Financiero'),
+            ('COMPRAS', 'Compras y Contratación', 'Administrativo'),
+            ('BIENESTAR', 'Bienestar Universitario', 'Administrativo'),
+            ('INVESTIG', 'Investigación', 'Académico'),
+            ('EXTENSION', 'Extensión y Proyección Social', 'Académico'),
+            ('JURIDICA', 'Área Jurídica', 'Administrativa'),
+        ]
+        
+        for codigo, nombre, tipo in departamentos_data:
+            dept, _ = Departamento.objects.get_or_create(
+                codigo=codigo,
+                defaults={
+                    'nombre': nombre,
+                    'tipo': tipo,
+                    'estado': 'Activo',
+                },
+            )
+            departamentos_default[codigo] = dept
+        
+        # Para facturas demo, usar Administración
+        departamento = departamentos_default['ADM']
 
         hoy = timezone.now().date()
         facturas_demo = [
             {
-                'numero_factura': 'FAC-2026-001',
+                'numero_factura': 'FAC-2026-0001',
                 'proveedor': proveedores['900123456-7'],
                 'departamento': departamento,
                 'valor_subtotal': 8000000,
@@ -291,7 +329,7 @@ class Command(BaseCommand):
                 'etapa_actual': 'Registro y Recepción',
             },
             {
-                'numero_factura': 'FAC-2026-002',
+                'numero_factura': 'FAC-2026-0002',
                 'proveedor': proveedores['900234567-8'],
                 'departamento': departamento,
                 'valor_subtotal': 3000000,
@@ -307,7 +345,7 @@ class Command(BaseCommand):
                 'fecha_radicacion': hoy,
             },
             {
-                'numero_factura': 'FAC-2026-003',
+                'numero_factura': 'FAC-2026-0003',
                 'proveedor': proveedores['900345678-9'],
                 'departamento': departamento,
                 'valor_subtotal': 4500000,
@@ -323,15 +361,176 @@ class Command(BaseCommand):
                 'fecha_radicacion': hoy,
                 'fecha_causacion': hoy,
             },
+            {
+                'numero_factura': 'FAC-2026-0004',
+                'proveedor': proveedores['900456789-0'],
+                'departamento': departamento,
+                'valor_subtotal': 2000000,
+                'valor_iva': 380000,
+                'valor_total': 2380000,
+                'tipo_documento': 'Factura Electrónica',
+                'descripcion': 'Materiales educativos digitales',
+                'fecha_factura': hoy,
+                'fecha_recepcion': hoy,
+                'estado': 'Recibida',
+                'etapa_actual': 'Registro y Recepción',
+            },
+            {
+                'numero_factura': 'FAC-2026-0005',
+                'proveedor': proveedores['900567890-1'],
+                'departamento': departamento,
+                'valor_subtotal': 15000000,
+                'valor_iva': 2850000,
+                'valor_total': 17850000,
+                'tipo_documento': 'Factura',
+                'descripcion': 'Implementación de plataforma de gestión académica',
+                'fecha_factura': hoy,
+                'fecha_recepcion': hoy,
+                'estado': 'Radicada',
+                'etapa_actual': 'Radicación',
+                'numero_radicado': 'RAD-2026-0005',
+                'fecha_radicacion': hoy,
+            },
+            {
+                'numero_factura': 'FAC-2026-0006',
+                'proveedor': proveedores['900234567-8'],
+                'departamento': departamento,
+                'valor_subtotal': 5000000,
+                'valor_iva': 950000,
+                'valor_total': 5950000,
+                'tipo_documento': 'Cuenta de Cobro',
+                'descripcion': 'Servicios de consultoría académica',
+                'fecha_factura': hoy,
+                'fecha_recepcion': hoy,
+                'estado': 'Causada',
+                'etapa_actual': 'Causación',
+                'numero_radicado': 'RAD-2026-0006',
+                'fecha_radicacion': hoy,
+                'fecha_causacion': hoy,
+            },
         ]
 
-        for data in facturas_demo:
-            factura, created = Factura.objects.get_or_create(
-                numero_factura=data['numero_factura'],
-                defaults=data,
+        # COMENTADO: Seed data de facturas elimado por conflictos
+        # Las facturas deben ser creadas manualmente a través del panel
+        # para evitar inconsistencias en la base de datos
+        if False:  # Deshabilitado intencionalmente
+            for data in facturas_demo:
+                factura, created = Factura.objects.get_or_create(
+                    numero_factura=data['numero_factura'],
+                    defaults=data,
+                )
+                msg = "Creada" if created else "Existente"
+                self.stdout.write(f"  - {msg}: Factura {factura.numero_factura}")
+
+            # Garantiza trazabilidad para timeline en datos de demo.
+            if factura.estado == 'Recibida':
+                HistorialFactura.objects.get_or_create(
+                    factura=factura,
+                    accion='Factura registrada',
+                    estado_nuevo='Recibida',
+                    defaults={
+                        'usuario_nombre': 'Sistema',
+                        'usuario_rol': 'Funcionario',
+                    },
+                )
+
+            if factura.estado in ['Radicada', 'Causada']:
+                HistorialFactura.objects.get_or_create(
+                    factura=factura,
+                    accion='Factura registrada',
+                    estado_nuevo='Recibida',
+                    defaults={
+                        'usuario_nombre': 'Sistema',
+                        'usuario_rol': 'Funcionario',
+                    },
+                )
+                HistorialFactura.objects.get_or_create(
+                    factura=factura,
+                    accion='Factura radicada',
+                    estado_anterior='Recibida',
+                    estado_nuevo='Radicada',
+                    defaults={
+                        'usuario_nombre': 'Sistema',
+                        'usuario_rol': 'Contabilidad',
+                    },
+                )
+
+            if factura.estado == 'Causada':
+                HistorialFactura.objects.get_or_create(
+                    factura=factura,
+                    accion='Factura causada',
+                    estado_anterior='Radicada',
+                    estado_nuevo='Causada',
+                    defaults={
+                        'usuario_nombre': 'Sistema',
+                        'usuario_rol': 'Contabilidad',
+                    },
+                )
+
+    def _seed_usuarios_proveedores(self, roles):
+        """
+        Crea un usuario de acceso por cada proveedor en la BD.
+        - Email:      generado desde la razón social si el proveedor no tiene email.
+        - Contraseña: Prov + NIT sin guion + *
+        - Rol:        Proveedor
+        El email del usuario = email del proveedor => vinculación automática al entrar.
+        Usa get_or_create en ambos modelos para ser idempotente (re-ejecutable).
+        """
+        self.stdout.write("\n[5b/6] Usuarios de proveedores (omitido por configuración actual)")
+        self.stdout.write("  - Info: la creación automática de usuarios proveedor está deshabilitada.")
+        self.stdout.write("  - Info: vincule usuarios proveedor manualmente al perfil correspondiente.")
+        return
+
+        def slugify_email(razon_social):
+            s = razon_social.lower()
+            s = re.sub(r'\b(sas|s\.a\.s|s\.a|ltda|e\.u|s\.a\.s\.)\b', '', s)
+            s = re.sub(r'[^a-z0-9]+', '.', s).strip('.')
+            return s
+
+        rol_proveedor = roles.get('Proveedor')
+        if not rol_proveedor:
+            rol_proveedor, _ = Rol.objects.get_or_create(
+                nombre='Proveedor',
+                defaults={'descripcion': 'Usuario externo que consulta estado de facturas.'}
             )
-            msg = "Creada" if created else "Existente"
-            self.stdout.write(f"  - {msg}: Factura {factura.numero_factura}")
+
+        self.stdout.write("\n[5b/6] Usuarios de proveedores")
+
+        for prov in Proveedor.objects.all():
+            # 1. Asignar email al proveedor si no tiene
+            if not prov.email:
+                slug = slugify_email(prov.razon_social)
+                prov.email = f'{slug}@proveedor.sihul.edu.co'
+                prov.save(update_fields=['email'])
+
+            correo = prov.email
+            nit_limpio = re.sub(r'[^0-9]', '', prov.nit)
+            contrasena = f'Prov{nit_limpio}*'
+
+            # 2. Crear o actualizar usuario
+            if Usuario.objects.filter(correo=correo).exists():
+                u = Usuario.objects.get(correo=correo)
+                u.rol = rol_proveedor
+                u.activo = True
+                u.set_password(contrasena)
+                u.contrasena_hash = u.password
+                u.save()
+                accion = 'Actualizado'
+            else:
+                u = Usuario(
+                    nombre=prov.razon_social,
+                    correo=correo,
+                    rol=rol_proveedor,
+                    activo=True,
+                )
+                u.set_password(contrasena)
+                u.contrasena_hash = u.password
+                u.save()
+                accion = 'Creado'
+
+            self.stdout.write(
+                f"  - {accion}: {prov.razon_social} | {correo} | Pass: {contrasena}"
+            )
 
     def _seed_parametros(self):
         parametros = [

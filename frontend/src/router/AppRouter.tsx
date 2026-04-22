@@ -36,6 +36,8 @@ const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
 
 // Lazy load de componentes Financiero
 const FuncionarioDashboard = lazy(() => import('../pages/financiero/funcionario'));
+const ProveedorDashboard = lazy(() => import('../pages/financiero/proveedor'));
+const ProveedorFacturaDetalle = lazy(() => import('../pages/financiero/proveedor/FacturaDetalle'));
 const ContabilidadDashboard = lazy(() => import('../pages/financiero/contabilidad'));
 const TesoreriaDashboard = lazy(() => import('../pages/financiero/tesoreria'));
 const AuditoriaDashboard = lazy(() => import('../pages/financiero/auditoria'));
@@ -317,7 +319,14 @@ export default function AppRouter() {
       return '/financiero/contabilidad/dashboard';
     }
 
-    if (normalizedRoleName.includes('funcionario') && (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)) {
+    if (normalizedRoleName.includes('proveedor')) {
+      return '/financiero/proveedor/dashboard';
+    }
+
+    if (
+      normalizedRoleName.includes('funcionario') &&
+      (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)
+    ) {
       return '/financiero/funcionario/dashboard';
     }
 
@@ -524,6 +533,35 @@ export default function AppRouter() {
         <Route path="financiero/funcionario/pendientes" element={
           <ProtectedRoute>
             <FuncionarioDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas de Proveedor */}
+        <Route path="financiero/proveedor" element={
+          <ProtectedRoute>
+            <ProveedorDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/proveedor/dashboard" element={
+          <ProtectedRoute>
+            <ProveedorDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/proveedor/enviar" element={
+          <ProtectedRoute>
+            <ProveedorDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/proveedor/mis-facturas" element={
+          <ProtectedRoute>
+            <ProveedorDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="financiero/proveedor/:id" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <ProveedorFacturaDetalle />
+            </Suspense>
           </ProtectedRoute>
         } />
 

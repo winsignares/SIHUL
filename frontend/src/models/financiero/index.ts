@@ -180,6 +180,7 @@ export interface CreateFacturaDTO {
   fecha_factura: string;
   fecha_recepcion: string;
   
+  cuenta_bancaria_proveedor?: string;
   urgente?: boolean;
   usuario_responsable_id?: number;
 }

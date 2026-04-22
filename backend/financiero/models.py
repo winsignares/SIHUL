@@ -40,6 +40,13 @@ class Proveedor(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
+    usuario = models.OneToOneField(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='perfil_proveedor'
+    )
     nit = models.CharField(max_length=50, unique=True)
     razon_social = models.CharField(max_length=255)
     nombre_comercial = models.CharField(max_length=255, blank=True, null=True)
@@ -246,6 +253,7 @@ class Factura(models.Model):
     ]
     ESTADO_CHOICES = [
         ('Recibida', 'Recibida'),
+        ('Registrada', 'Registrada'),
         ('Radicada', 'Radicada'),
         ('Causada', 'Causada'),
         ('Alistada', 'Alistada'),

@@ -34,6 +34,7 @@ interface FacturaDetailModalProps {
 function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   const estadosOrdenados = [
     'Recibida',
+    'Registrada',
     'Radicada',
     'Causada',
     'Alistada',
@@ -56,6 +57,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
 
   const mapEstado: Record<string, string> = {
     recibida: 'Recibida',
+    registrada: 'Registrada',
     radicada: 'Radicada',
     causada: 'Causada',
     alistada: 'Alistada',
@@ -76,7 +78,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   const idx = estadosOrdenados.indexOf(current);
 
   const blueprint = [
-    ['Recibida', 'Funcionario', 'Factura registrada en el sistema', 1],
+    ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1],
+    ['Registrada', 'Funcionario', 'Registro completo de la factura', 1],
     ['Radicada', 'Contabilidad', 'Radicacion contable', 3],
     ['Causada', 'Contabilidad', 'Causacion contable', 2],
     ['Alistada', 'Tesoreria', 'Alistamiento de pago', 3],
@@ -108,6 +111,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
 function getEstadoBadge(estado: string) {
   const map: Record<string, string> = {
     Recibida: 'bg-blue-100 text-blue-700 border-blue-200',
+    Registrada: 'bg-cyan-100 text-cyan-700 border-cyan-200',
     Radicada: 'bg-green-100 text-green-700 border-green-200',
     Causada: 'bg-purple-100 text-purple-700 border-purple-200',
     Alistada: 'bg-yellow-100 text-yellow-700 border-yellow-200',

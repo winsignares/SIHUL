@@ -14,12 +14,14 @@ import { toast } from 'sonner';
 import { useNotificaciones } from '../../hooks/users/useNotificaciones';
 import { useAuth } from '../../context/AuthContext';
 import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
+import { useNavigate } from 'react-router-dom';
 
 interface NotificacionesProps {
   onNotificacionesChange?: (count: number) => void;
 }
 
 export default function Notificaciones({ onNotificacionesChange }: NotificacionesProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [procesando, setProcesando] = React.useState(false);
   const [showModalRechazo, setShowModalRechazo] = React.useState(false);
@@ -225,6 +227,8 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
 
   const getIcono = (tipo: string) => {
     switch (tipo.toLowerCase()) {
+      case 'factura_etapa_actualizada':
+        return <Bell className="w-5 h-5 text-red-600 dark:text-red-400" />;
       case 'solicitud':
         return <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
       case 'mensaje':
@@ -274,6 +278,8 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
 
   const getTipoColor = (tipo: string) => {
     switch (tipo.toLowerCase()) {
+      case 'factura_etapa_actualizada':
+        return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
       case 'solicitud':
         return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
       case 'mensaje':
@@ -319,6 +325,13 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       default:
         return 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-700';
     }
+  };
+
+  const getFacturaRoute = (notif: { titulo?: string; descripcion?: string; tipo?: string }) => {
+    if ((notif.tipo || '').toLowerCase() !== 'factura_etapa_actualizada') return null;
+    const raw = `${notif.titulo || ''} ${notif.descripcion || ''}`;
+    const match = raw.match(/\/financiero\/funcionario\/consultar\?factura=\d+/i);
+    return match?.[0] || null;
   };
 
   const getPrioridadBadge = (prioridad: string) => {
@@ -574,6 +587,23 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
                               title="Marcar como leída"
                             >
                               <Check className="w-4 h-4" />
+                            </Button>
+                          )}
+
+                          {getFacturaRoute(notif) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const route = getFacturaRoute(notif);
+                                if (route) {
+                                  navigate(route);
+                                }
+                              }}
+                              className="border-red-300 text-red-700 hover:bg-red-50"
+                              title="Abrir factura relacionada"
+                            >
+                              Ver factura
                             </Button>
                           )}
                         </div>

@@ -1,42 +1,62 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, Clock, Eye, FileText, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 
 type PendingRow = {
   id: string;
-  numeroFactura: string;
+  numeroFactura?: string;
   proveedor: string;
-  area: string;
+  nit: string;
+  contacto: string;
+  tipoDocumento: string;
+  descripcion: string;
   valorTotal: number;
   fechaRecepcion: string;
   dias: number;
   slaMax: number;
   nivelRiesgo: 'verde' | 'amarillo' | 'vencido';
   accion: string;
+  proveedorId: number;
+  departamentoId?: number;
+  departamentoNombre?: string;
 };
 
 function mapFacturaToPendingRow(f: Factura): PendingRow {
   const dias = Number(f.dias_transcurridos || 0);
   const riesgo: PendingRow['nivelRiesgo'] = dias > 2 ? 'vencido' : dias > 0 ? 'amarillo' : 'verde';
+  const contacto = [f.proveedor?.email, f.proveedor?.telefono].filter(Boolean).join(' | ');
+  const area = f.departamento?.nombre?.trim() || '';
 
   return {
     id: String(f.id),
-    numeroFactura: f.numero_factura || `FAC-${f.id}`,
+    numeroFactura: f.numero_factura || undefined,
     proveedor: f.proveedor?.razon_social || 'Proveedor sin nombre',
-    area: f.departamento?.nombre || 'Sin area',
+    nit: f.proveedor?.nit || 'Sin NIT',
+    contacto: contacto || 'Sin datos de contacto',
+    tipoDocumento: f.tipo_documento || 'Factura',
+    descripcion: f.descripcion || 'Sin descripcion',
     valorTotal: Number(f.valor_total || 0),
     fechaRecepcion: f.fecha_recepcion || '',
     dias,
     slaMax: 2,
     nivelRiesgo: riesgo,
-    accion: riesgo === 'vencido' ? 'URGENTE: Registrar factura VENCIDA' : 'Registrar factura y subir documentos',
+    accion: area
+      ? riesgo === 'vencido'
+        ? 'URGENTE: completar registro y documentos'
+        : 'Completar registro y subir documentos'
+      : 'Asignar area y completar registro',
+    proveedorId: Number(f.proveedor_id),
+    departamentoId: f.departamento?.id,
+    departamentoNombre: area || undefined,
   };
 }
 
 export default function MisPendientes() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -138,13 +158,14 @@ export default function MisPendientes() {
         <h3 className="text-xl font-semibold text-slate-800 mb-1">Facturas Pendientes de Registro</h3>
         <p className="text-slate-500 mb-5">Facturas fisicas recibidas que debo registrar en el sistema antes de 2 dias</p>
 
-        <table className="w-full min-w-[1050px] text-sm">
+        <table className="w-full min-w-[1200px] text-sm">
           <thead>
             <tr className="bg-slate-50 border border-slate-200">
               <th className="py-3 px-3 text-left">SLA</th>
-              <th className="py-3 px-3 text-left">N° Factura</th>
               <th className="py-3 px-3 text-left">Proveedor</th>
-              <th className="py-3 px-3 text-left">Area</th>
+              <th className="py-3 px-3 text-left">NIT</th>
+              <th className="py-3 px-3 text-left">Contacto</th>
+              <th className="py-3 px-3 text-left">Tipo Documento</th>
               <th className="py-3 px-3 text-left">Monto</th>
               <th className="py-3 px-3 text-left">Fecha Recepcion</th>
               <th className="py-3 px-3 text-left">Dias</th>
@@ -155,11 +176,11 @@ export default function MisPendientes() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="p-4 text-slate-500" colSpan={9}>Cargando pendientes...</td>
+                <td className="p-4 text-slate-500" colSpan={10}>Cargando pendientes...</td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="p-4 text-slate-500" colSpan={9}>No hay pendientes para mostrar.</td>
+                <td className="p-4 text-slate-500" colSpan={10}>No hay pendientes para mostrar.</td>
               </tr>
             ) : rows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
@@ -169,9 +190,10 @@ export default function MisPendientes() {
                     {row.nivelRiesgo === 'vencido' && <AlertCircle className="w-4 h-4 text-purple-700" />}
                   </div>
                 </td>
-                <td className="p-3 font-medium text-slate-800">{row.numeroFactura}</td>
                 <td className="p-3 text-slate-700">{row.proveedor}</td>
-                <td className="p-3 text-slate-700">{row.area}</td>
+                <td className="p-3 text-slate-700 font-mono">{row.nit}</td>
+                <td className="p-3 text-slate-700">{row.contacto}</td>
+                <td className="p-3 text-slate-700">{row.tipoDocumento}</td>
                 <td className="p-3 font-semibold text-slate-800">${row.valorTotal.toLocaleString('es-CO')}</td>
                 <td className="p-3 text-slate-700">{row.fechaRecepcion || 'Sin fecha'}</td>
                 <td className="p-3 font-semibold">
@@ -185,15 +207,39 @@ export default function MisPendientes() {
                   </span>
                 </td>
                 <td className="p-3">
-                  <button
-                    onClick={() => {
-                      setSelectedId(row.id);
-                      setOpenDetail(true);
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700"
-                  >
-                    <Eye className="w-4 h-4" /> Ver
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        navigate('/financiero/funcionario/registrar', {
+                          state: {
+                            prefillFromPendiente: {
+                              facturaId: Number(row.id),
+                              proveedorId: row.proveedorId,
+                              proveedorNombre: row.proveedor,
+                              nit: row.nit,
+                              tipoDocumento: row.tipoDocumento,
+                              valorTotal: row.valorTotal,
+                              fechaRecepcion: row.fechaRecepcion,
+                              departamentoId: row.departamentoId,
+                              descripcion: row.descripcion,
+                            },
+                          },
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 text-red-700"
+                    >
+                      Registrar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedId(row.id);
+                        setOpenDetail(true);
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700"
+                    >
+                      <Eye className="w-4 h-4" /> Ver
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -207,14 +253,16 @@ export default function MisPendientes() {
         factura={
           selectedRow
             ? {
-                numeroFactura: selectedRow.numeroFactura,
+                id: selectedRow.id,
+                numeroFactura: selectedRow.numeroFactura || `PEND-${selectedRow.id}`,
                 proveedor: selectedRow.proveedor,
                 valorTotal: selectedRow.valorTotal,
                 fechaRecepcion: selectedRow.fechaRecepcion,
-                areaSolicitante: selectedRow.area,
+                areaSolicitante: selectedRow.departamentoNombre,
                 estado: 'Recibida',
                 diasTranscurridos: selectedRow.dias,
-                descripcion: selectedRow.accion,
+                descripcion: selectedRow.descripcion,
+                nit: selectedRow.nit,
                 nivelRiesgo:
                   selectedRow.nivelRiesgo === 'vencido'
                     ? 'vencido'

@@ -122,6 +122,9 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Reportes Consolidados': '/financiero/admin-financiero/reportes',
     'Configuracion Sistema Financiero': '/financiero/admin-financiero/configuracion',
     'Configuracion del Sistema Financiero': '/financiero/admin-financiero/configuracion',
+    'Dashboard Proveedor': '/financiero/proveedor/dashboard',
+    'Enviar Factura Proveedor': '/financiero/proveedor/enviar',
+    'Mis Facturas Proveedor': '/financiero/proveedor/mis-facturas',
 };
 
 /**
@@ -216,6 +219,9 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Reportes Consolidados': BarChart3,
     'Configuracion Sistema Financiero': Wrench,
     'Configuracion del Sistema Financiero': Wrench,
+    'Dashboard Proveedor': LayoutDashboard,
+    'Enviar Factura Proveedor': Send,
+    'Mis Facturas Proveedor': FileText,
 };
 
 function normalizeComponentName(name: string): string {
