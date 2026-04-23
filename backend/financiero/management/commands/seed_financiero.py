@@ -20,6 +20,7 @@ class Command(BaseCommand):
         self._seed_permisos(roles, componentes)
         self._seed_departamentos()
         self._seed_demo_data()
+        self._seed_usuarios_proveedores(roles)
         self._seed_sla()
         self._seed_parametros()
 
@@ -476,10 +477,7 @@ class Command(BaseCommand):
         El email del usuario = email del proveedor => vinculación automática al entrar.
         Usa get_or_create en ambos modelos para ser idempotente (re-ejecutable).
         """
-        self.stdout.write("\n[5b/6] Usuarios de proveedores (omitido por configuración actual)")
-        self.stdout.write("  - Info: la creación automática de usuarios proveedor está deshabilitada.")
-        self.stdout.write("  - Info: vincule usuarios proveedor manualmente al perfil correspondiente.")
-        return
+        self.stdout.write("\n[5b/6] Usuarios de proveedores")
 
         def slugify_email(razon_social):
             s = razon_social.lower()
@@ -493,8 +491,6 @@ class Command(BaseCommand):
                 nombre='Proveedor',
                 defaults={'descripcion': 'Usuario externo que consulta estado de facturas.'}
             )
-
-        self.stdout.write("\n[5b/6] Usuarios de proveedores")
 
         for prov in Proveedor.objects.all():
             # 1. Asignar email al proveedor si no tiene

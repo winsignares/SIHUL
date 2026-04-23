@@ -6,8 +6,16 @@ export interface Proveedor {
   razon_social: string;
   nombre_comercial?: string;
   tipo_proveedor: 'Bienes' | 'Servicios' | 'Construcción' | 'Mixto';
+  tipo_persona?: 'Natural' | 'Jurídica';
   email?: string;
   telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  departamento?: string;
+  pais?: string;
+  banco?: string;
+  tipo_cuenta?: 'Ahorros' | 'Corriente' | string;
+  numero_cuenta?: string;
   cuenta_bancaria_completa?: string;
   estado: 'Activo' | 'Inactivo' | 'Bloqueado' | 'Verificación';
 }

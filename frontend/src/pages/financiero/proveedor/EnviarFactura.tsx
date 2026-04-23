@@ -37,6 +37,22 @@ const TIPO_DOCUMENTO_OPTS = [
   'Otro',
 ];
 const DOC_TYPES = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const IVA_PERCENTAGES = [0, 5, 19];
+const BANCOS_COLOMBIA = [
+  'Bancolombia',
+  'Banco de Bogotá',
+  'Davivienda',
+  'BBVA',
+  'Banco Popular',
+  'Banco AV Villas',
+  'Banco Caja Social',
+  'Banco de Occidente',
+  'Scotiabank Colpatria',
+  'Otro',
+];
+const TIPO_CUENTA_OPTS = ['Ahorros', 'Corriente'];
+
+const getToday = () => new Date().toISOString().split('T')[0];
 
 interface Props {
   miProveedor: Proveedor | null;
@@ -56,18 +72,22 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
 
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
+  const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
 
   const [form, setForm] = useState({
     tipoDocumento: 'Factura' as string,
-    numeroFactura: '',
     descripcion: '',
     observaciones: '',
     departamentoId: 0,
     valorSubtotal: 0,
+    ivaPorcentaje: 19,
     valorIva: 0,
     valorTotal: 0,
-    fechaFactura: '',
-    fechaRecepcion: new Date().toISOString().split('T')[0],
+    fechaFactura: getToday(),
+    fechaRecepcion: getToday(),
+    banco: '',
+    tipoCuenta: '',
+    numeroCuenta: '',
     cuentaBancaria: '',
   });
 
@@ -90,6 +110,44 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
     void loadCatalogos();
   }, []);
 
+  useEffect(() => {
+    const loadNumeroSugerido = async () => {
+      try {
+        const numero = await facturasService.getNumeroSugerido();
+        setNumeroFacturaSugerido(numero || 'Se asignará al guardar');
+      } catch {
+        setNumeroFacturaSugerido('Se asignará al guardar');
+      }
+    };
+    void loadNumeroSugerido();
+  }, []);
+
+  useEffect(() => {
+    if (!departamentos.length || !proveedorSeleccionado || form.departamentoId > 0) return;
+    const deptoPreferido =
+      departamentos.find(d => d.codigo === 'ADM') ||
+      departamentos.find(d => d.nombre.toLowerCase().includes('administr')) ||
+      departamentos[0];
+
+    if (deptoPreferido) {
+      setForm(prev => ({ ...prev, departamentoId: deptoPreferido.id }));
+    }
+  }, [departamentos, proveedorSeleccionado, form.departamentoId]);
+
+  useEffect(() => {
+    if (!proveedorSeleccionado) return;
+    setForm(prev => ({
+      ...prev,
+      banco: prev.banco || proveedorSeleccionado.banco || '',
+      tipoCuenta: prev.tipoCuenta || proveedorSeleccionado.tipo_cuenta || '',
+      numeroCuenta: prev.numeroCuenta || proveedorSeleccionado.numero_cuenta || '',
+      cuentaBancaria:
+        prev.cuentaBancaria ||
+        proveedorSeleccionado.cuenta_bancaria_completa ||
+        [proveedorSeleccionado.banco, proveedorSeleccionado.tipo_cuenta, proveedorSeleccionado.numero_cuenta].filter(Boolean).join(' - '),
+    }));
+  }, [proveedorSeleccionado]);
+
   const handleBuscarProveedor = async () => {
     if (!nitBusqueda.trim()) return;
     setBuscandoProveedor(true);
@@ -108,12 +166,19 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
   const handleFieldChange = (field: string, value: any) => {
     setForm(prev => {
       const updated = { ...prev, [field]: value };
-      if (field === 'valorSubtotal' || field === 'valorIva') {
-        updated.valorTotal = Number(updated.valorSubtotal) + Number(updated.valorIva);
+      if (field === 'valorSubtotal' || field === 'ivaPorcentaje') {
+        const subtotal = Number(updated.valorSubtotal) || 0;
+        const porcentaje = Number(updated.ivaPorcentaje) || 0;
+        updated.valorIva = Number(((subtotal * porcentaje) / 100).toFixed(2));
+        updated.valorTotal = Number((subtotal + updated.valorIva).toFixed(2));
       }
-      if (field === 'valorTotal' && !Number(prev.valorIva)) {
-        updated.valorSubtotal = Number(value);
+
+      if (field === 'banco' || field === 'tipoCuenta' || field === 'numeroCuenta') {
+        updated.cuentaBancaria = [updated.banco, updated.tipoCuenta, updated.numeroCuenta]
+          .filter(Boolean)
+          .join(' - ');
       }
+
       return updated;
     });
   };
@@ -146,12 +211,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const subtotal = Number(form.valorSubtotal) || Number(form.valorTotal);
+      const subtotal = Number(form.valorSubtotal) || 0;
       const iva = Number(form.valorIva) || 0;
       const total = Number(form.valorTotal);
+      const cuentaBancariaCompleta = [form.banco, form.tipoCuenta, form.numeroCuenta].filter(Boolean).join(' - ') || form.cuentaBancaria;
 
       const factura = await facturasService.create({
-        numero_factura: form.numeroFactura.trim() || undefined,
         proveedor_id: proveedorSeleccionado.id,
         departamento_id: form.departamentoId,
         tipo_documento: form.tipoDocumento as any,
@@ -162,7 +227,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
         valor_total: total,
         fecha_factura: form.fechaFactura,
         fecha_recepcion: form.fechaRecepcion,
-        cuenta_bancaria_proveedor: form.cuentaBancaria || undefined,
+        cuenta_bancaria_proveedor: cuentaBancariaCompleta || undefined,
       });
 
       // Upload documents
@@ -180,15 +245,18 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
         setStep(1);
         setForm({
           tipoDocumento: 'Factura',
-          numeroFactura: '',
           descripcion: '',
           observaciones: '',
           departamentoId: 0,
           valorSubtotal: 0,
+          ivaPorcentaje: 19,
           valorIva: 0,
           valorTotal: 0,
-          fechaFactura: '',
-          fechaRecepcion: new Date().toISOString().split('T')[0],
+          fechaFactura: getToday(),
+          fechaRecepcion: getToday(),
+          banco: '',
+          tipoCuenta: '',
+          numeroCuenta: '',
           cuentaBancaria: '',
         });
         setDocs([]);
@@ -378,15 +446,15 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    N° Factura <span className="text-slate-400 text-xs">(opcional, se genera automático)</span>
+                    N° Factura <span className="text-slate-400 text-xs">(generado automáticamente por el sistema)</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej: FE-2024-001"
-                    value={form.numeroFactura}
-                    onChange={e => handleFieldChange('numeroFactura', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    value={numeroFacturaSugerido}
+                    disabled
+                    className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 outline-none"
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Evita errores de duplicidad: el consecutivo se asigna automáticamente.</p>
                 </div>
 
                 <div>
@@ -400,6 +468,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                     onChange={e => handleFieldChange('fechaFactura', e.target.value)}
                     className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Se autocompleta con hoy. Cámbiala solo si la factura física tiene otra fecha.</p>
                 </div>
 
                 <div>
@@ -410,9 +479,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                     type="date"
                     value={form.fechaRecepcion}
                     max={new Date().toISOString().split('T')[0]}
-                    onChange={e => handleFieldChange('fechaRecepcion', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    disabled
+                    className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 outline-none"
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Corresponde al día de envío en el portal.</p>
                 </div>
 
                 <div className="md:col-span-2">
@@ -422,14 +492,22 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                   <select
                     value={form.departamentoId}
                     onChange={e => handleFieldChange('departamentoId', Number(e.target.value))}
-                    disabled={catalogLoading}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    disabled={catalogLoading || !!proveedorSeleccionado}
+                    className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none ${proveedorSeleccionado
+                      ? 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'
+                      : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500'
+                      }`}
                   >
                     <option value={0}>-- Seleccionar área --</option>
                     {departamentos.map(d => (
                       <option key={d.id} value={d.id}>{d.nombre}</option>
                     ))}
                   </select>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {proveedorSeleccionado
+                      ? 'El área se asigna automáticamente para reducir errores de radicación.'
+                      : 'Selecciona el área interna a la que corresponde tu servicio o bien.'}
+                  </p>
                 </div>
 
                 <div className="md:col-span-2">
@@ -454,7 +532,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                 </h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subtotal</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subtotal <span className="text-red-500">*</span></label>
                     <input
                       type="number"
                       min={0}
@@ -463,19 +541,33 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                       placeholder="0"
                       className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Valor antes de impuestos.</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (%)</label>
+                    <select
+                      value={form.ivaPorcentaje}
+                      onChange={e => handleFieldChange('ivaPorcentaje', Number(e.target.value))}
+                      className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    >
+                      {IVA_PERCENTAGES.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">El valor de IVA se calcula automáticamente.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (valor)</label>
                     <input
                       type="number"
                       min={0}
                       value={form.valorIva || ''}
-                      onChange={e => handleFieldChange('valorIva', Number(e.target.value))}
+                      readOnly
                       placeholder="0"
-                      className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                      className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 outline-none"
                     />
                   </div>
-                  <div>
+                  <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Total <span className="text-red-500">*</span>
                     </label>
@@ -483,10 +575,11 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                       type="number"
                       min={0}
                       value={form.valorTotal || ''}
-                      onChange={e => handleFieldChange('valorTotal', Number(e.target.value))}
+                      readOnly
                       placeholder="0"
-                      className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none font-semibold"
+                      className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 outline-none font-semibold"
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total = Subtotal + IVA.</p>
                   </div>
                 </div>
               </div>
@@ -496,13 +589,39 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Cuenta Bancaria para Pago <span className="text-slate-400 text-xs">(opcional)</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Banco – Tipo – Número de cuenta"
-                  value={form.cuentaBancaria}
-                  onChange={e => handleFieldChange('cuentaBancaria', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <select
+                    value={form.banco}
+                    onChange={e => handleFieldChange('banco', e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                  >
+                    <option value="">Seleccionar banco</option>
+                    {BANCOS_COLOMBIA.map(banco => (
+                      <option key={banco} value={banco}>{banco}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={form.tipoCuenta}
+                    onChange={e => handleFieldChange('tipoCuenta', e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                  >
+                    <option value="">Tipo de cuenta</option>
+                    {TIPO_CUENTA_OPTS.map(tipo => (
+                      <option key={tipo} value={tipo}>{tipo}</option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Número de cuenta"
+                    value={form.numeroCuenta}
+                    onChange={e => handleFieldChange('numeroCuenta', e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Completa estos datos para agilizar validación y pago en tesorería.</p>
               </div>
 
               <div>
