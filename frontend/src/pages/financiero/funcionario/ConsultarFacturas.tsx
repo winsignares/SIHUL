@@ -4,7 +4,7 @@ import { Calendar, Download, Eye, Search, Filter, DollarSign, FileSearch, Bell }
 import { useSearchParams } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero';
-import FacturaDetailModal from '../../../share/factura-detail-modal';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import type { TimelineEtapa } from '../../../share/factura-timeline';
 
 type Row = {
@@ -19,6 +19,7 @@ type Row = {
   estado: string;
   etapa: string;
   numeroRadicado: string;
+  sinRadicado: boolean;
   fechaFactura: string;
   fechaRecepcion: string;
   dias: number;
@@ -58,14 +59,14 @@ const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string;
   { id: '11', nombre: 'Pago Finalizado', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
 ];
 
-const toList = <T,>(data: any): T[] => {
+const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
-  if (Array.isArray(data?.results)) return data.results as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
   return [];
 };
 
 function mapFactura(f: Factura): Row {
-  const dias = Number(f.dias_transcurridos || 0);
+  const dias = Math.max(0, Number(f.dias_transcurridos || 0));
   let riesgo: Row['riesgo'] = 'verde';
   if (dias > 15) riesgo = 'vencido';
   else if (dias > 10) riesgo = 'naranja';
@@ -82,7 +83,8 @@ function mapFactura(f: Factura): Row {
     monto: Number(f.valor_total || 0),
     estado: f.estado || 'Recibida',
     etapa: f.etapa_actual || 'Recepción y Registro',
-    numeroRadicado: f.numero_radicado || '-',
+    numeroRadicado: f.numero_radicado || '',
+    sinRadicado: !f.numero_radicado,
     fechaFactura: f.fecha_factura || '',
     fechaRecepcion: f.fecha_recepcion || '',
     dias,
@@ -114,9 +116,9 @@ function buildTimelineFromSeguimiento(seguimiento: SeguimientoResponse, fallback
     
     if (isRejectedFlow && index === Math.max(estadoIndex, 0)) {
       estado = 'rechazado';
-    } else if (estadoIndex >= 0 && index < estadoIndex) {
+    } else if (estadoIndex >= 0 && index <= estadoIndex) {
       estado = 'completado';
-    } else if (estadoIndex >= 0 && index === estadoIndex) {
+    } else if (estadoIndex >= 0 && index === estadoIndex + 1) {
       estado = 'en-proceso';
     } else {
       estado = 'pendiente';
@@ -143,21 +145,7 @@ export default function ConsultarFacturas() {
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [selectedDetail, setSelectedDetail] = useState<{
-    numeroFactura: string;
-    proveedor: string;
-    valorTotal: number;
-    fechaFactura?: string;
-    fechaRecepcion?: string;
-    areaSolicitante?: string;
-    estado: string;
-    diasTranscurridos?: number;
-    numeroRadicado?: string;
-    descripcion?: string;
-    nivelRiesgo?: 'verde' | 'amarillo' | 'rojo' | 'vencido';
-    nit?: string;
-    etapasTimeline?: TimelineEtapa[];
-  } | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<SharedFacturaDetail | null>(null);
   const [estadoChanges, setEstadoChanges] = useState<EstadoChange[]>([]);
 
   const [numeroFactura, setNumeroFactura] = useState('');
@@ -171,7 +159,9 @@ export default function ConsultarFacturas() {
 
   const loadRows = async () => {
     const response = await facturasService.getAll({ limit: 100 });
-    return toList<Factura>(response).map(mapFactura);
+    return toList<Factura>(response)
+      .filter(f => f.estado !== 'Recibida')
+      .map(mapFactura);
   };
 
   useEffect(() => {
@@ -275,17 +265,31 @@ export default function ConsultarFacturas() {
         setSelectedDetail({
           numeroFactura: factura?.numero_factura || selectedRow.idTramite,
           proveedor: factura?.proveedor?.razon_social || selectedRow.proveedor,
+          valorSubtotal: Number(factura?.valor_subtotal || 0) || undefined,
+          valorIva: Number(factura?.valor_iva || 0) || undefined,
           valorTotal: Number(factura?.valor_total || selectedRow.monto),
           fechaFactura: factura?.fecha_factura || selectedRow.fechaFactura,
           fechaRecepcion: factura?.fecha_recepcion || selectedRow.fechaRecepcion,
           areaSolicitante: factura?.departamento?.nombre || selectedRow.area,
           estado: estadoActual,
-          diasTranscurridos: Number(factura?.dias_transcurridos ?? selectedRow.dias),
-          numeroRadicado: factura?.numero_radicado || selectedRow.numeroRadicado,
+          diasTranscurridos: Math.max(0, Number(factura?.dias_transcurridos ?? selectedRow.dias)),
+          numeroRadicado: factura?.numero_radicado || undefined,
           descripcion: factura?.descripcion,
+          observaciones: factura?.observaciones || undefined,
+          tipoDocumento: factura?.tipo_documento || undefined,
+          cuentaBancariaProveedor: factura?.cuenta_bancaria_proveedor || undefined,
+          contactoProveedor: [factura?.proveedor?.email, factura?.proveedor?.telefono].filter(Boolean).join(' | ') || undefined,
           nivelRiesgo: mapRiesgo(selectedRow.riesgo),
           nit: factura?.proveedor?.nit || selectedRow.nit,
           etapasTimeline: timeline,
+          documentos: (factura?.documentos || []).map((doc) => ({
+            id: String(doc.id),
+            tipo: doc.tipo_documento,
+            nombre: doc.nombre_archivo,
+            fecha: doc.fecha_carga,
+            verificado: doc.verificado,
+            url: doc.archivo_url || doc.url_storage || undefined,
+          })),
         });
       } catch {
         setSelectedDetail({
@@ -296,8 +300,8 @@ export default function ConsultarFacturas() {
           fechaRecepcion: selectedRow.fechaRecepcion,
           areaSolicitante: selectedRow.area,
           estado: selectedRow.estado,
-          diasTranscurridos: selectedRow.dias,
-          numeroRadicado: selectedRow.numeroRadicado,
+          diasTranscurridos: Math.max(0, selectedRow.dias),
+          numeroRadicado: selectedRow.sinRadicado ? undefined : selectedRow.numeroRadicado,
           nivelRiesgo: mapRiesgo(selectedRow.riesgo),
           nit: selectedRow.nit,
           etapasTimeline: buildTimelineFromSeguimiento({}, selectedRow.estado),
@@ -595,9 +599,14 @@ export default function ConsultarFacturas() {
                     </span>
                   </td>
                   <td className="p-4 text-slate-700 text-sm">{inferEtapaActual(row.estado) || row.etapa}</td>
-                  <td className="p-4 text-slate-600 font-mono">{row.numeroRadicado}</td>
+                  <td className="p-4">
+                    {row.sinRadicado
+                      ? <span className="text-slate-400 italic text-xs">Sin Asignar</span>
+                      : <span className="text-slate-600 font-mono">{row.numeroRadicado}</span>
+                    }
+                  </td>
                   <td className="p-4 text-slate-700">{row.fechaRecepcion || '—'}</td>
-                  <td className="p-4 font-semibold text-slate-900">{row.dias} días</td>
+                  <td className="p-4 font-semibold text-slate-900">{row.dias === 0 ? '< 1 día' : `${row.dias} días`}</td>
                   <td className="p-4 text-center">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -629,25 +638,7 @@ export default function ConsultarFacturas() {
             setSearchParams(nextParams, { replace: true });
           }
         }}
-        factura={
-          selectedDetail
-            ? {
-                numeroFactura: selectedDetail.numeroFactura,
-                proveedor: selectedDetail.proveedor,
-                valorTotal: selectedDetail.valorTotal,
-                fechaFactura: selectedDetail.fechaFactura,
-                fechaRecepcion: selectedDetail.fechaRecepcion,
-                areaSolicitante: selectedDetail.areaSolicitante,
-                estado: selectedDetail.estado,
-                diasTranscurridos: selectedDetail.diasTranscurridos,
-                numeroRadicado: selectedDetail.numeroRadicado,
-                descripcion: selectedDetail.descripcion,
-                nivelRiesgo: selectedDetail.nivelRiesgo,
-                nit: selectedDetail.nit,
-                etapasTimeline: selectedDetail.etapasTimeline,
-              }
-            : null
-        }
+        factura={selectedDetail}
       />
 
       {detailLoading && (

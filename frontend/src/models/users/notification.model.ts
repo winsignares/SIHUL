@@ -21,6 +21,7 @@ export interface NotificacionUsuario {
     descripcion: string;
     fecha: string;
     leida: boolean;
+    eliminada?: boolean;
     prioridad: 'alta' | 'media' | 'baja';
 }
 

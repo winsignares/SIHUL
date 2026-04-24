@@ -17,7 +17,7 @@ interface FacturaPendiente {
   fechaAlistamiento: string;
   diasTranscurridos: number;
   diasMaximos: number;
-  nivelRiesgo: 'verde' | 'amarillo' | 'naranja' | 'vencido';
+  nivelRiesgo: 'verde' | 'amarillo' | 'rojo' | 'vencido';
   accionRequerida: string;
   areaSolicitante: string;
   cuentaContable: string;
@@ -109,7 +109,7 @@ export default function MisPendientes() {
 
   const totalPendientes = facturasPendientes.length;
   const enTiempoCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'verde').length;
-  const proximasVencerCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'amarillo' || f.nivelRiesgo === 'naranja').length;
+  const proximasVencerCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'amarillo' || f.nivelRiesgo === 'rojo').length;
 
   return (
     <>
@@ -225,7 +225,7 @@ export default function MisPendientes() {
                       const colorRiesgo =
                         factura.nivelRiesgo === 'vencido'
                           ? 'bg-purple-700'
-                          : factura.nivelRiesgo === 'naranja'
+                          : factura.nivelRiesgo === 'rojo'
                             ? 'bg-orange-500'
                             : factura.nivelRiesgo === 'amarillo'
                               ? 'bg-yellow-500'

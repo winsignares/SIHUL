@@ -1,22 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Calendar, CheckCircle2, FileText, Upload, X } from 'lucide-react';
+import { AlertCircle, Calendar, CheckCircle2, Download, ExternalLink, FileText, RefreshCw, Upload, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
-import type { CreateFacturaDTO, Departamento, Factura, Proveedor } from '../../../models/financiero';
+import type { CreateFacturaDTO, Departamento, DocumentoAdjunto, Factura, Proveedor } from '../../../models/financiero';
 
 type UploadedDoc = {
   id: string;
-  type: 'Factura' | 'Orden de Compra' | 'Certificación Bancaria';
+  type: 'Factura' | 'Orden de Compra' | 'Certificación Bancaria' | 'Acta de Entrega' | 'Soporte Adicional';
   file: File;
 };
 
-const DOCUMENT_TYPES: Array<UploadedDoc['type']> = ['Factura', 'Orden de Compra', 'Certificación Bancaria'];
+const DOCUMENT_TYPES: Array<UploadedDoc['type']> = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
+const BLOCKED_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'ps1', 'js', 'vbs', 'scr', 'msi', 'com', 'jar', 'sh']);
+const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'application/xml', 'text/xml', 'image/png', 'image/jpeg']);
 
-const toList = <T,>(data: any): T[] => {
+const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
-  if (Array.isArray(data?.results)) return data.results as T[];
+  if (typeof data === 'object' && data !== null && 'results' in data) {
+    const results = (data as { results?: unknown }).results;
+    if (Array.isArray(results)) return results as T[];
+  }
   return [];
 };
 
@@ -33,31 +40,80 @@ const buildApiErrorMessage = (error: unknown, fallback: string) => {
 };
 
 // Funciones de seguridad para valores potencialmente undefined
-const safeString = (val: any, fallback = 'Sin datos'): string => {
+const safeString = (val: unknown, fallback = 'Sin datos'): string => {
   if (val === null || val === undefined) return fallback;
   return String(val).trim() || fallback;
 };
 
-const safeNumber = (val: any, fallback = 0): number => {
+const safeNumber = (val: unknown, fallback = 0): number => {
   const num = Number(val);
   return isNaN(num) ? fallback : num;
 };
 
-const formatMoney = (val: any): string => {
+const formatMoney = (val: unknown): string => {
   const num = safeNumber(val, 0);
   return `$${num.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
 };
 
+const getFileExtension = (filename: string): string => {
+  const parts = filename.split('.');
+  if (parts.length < 2) return '';
+  return parts[parts.length - 1].toLowerCase();
+};
+
+const resolveDocumentUrl = (urlStorage?: string): string | null => {
+  if (!urlStorage) return null;
+  const cleaned = urlStorage.trim();
+  if (!cleaned) return null;
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  if (cleaned.startsWith('/')) return cleaned;
+  if (cleaned.startsWith('media/') || cleaned.startsWith('uploads/')) return `/${cleaned}`;
+  return null;
+};
+
+const validateUploadFile = (file: File): string | null => {
+  const extension = getFileExtension(file.name);
+
+  if (!extension) {
+    return 'El archivo debe tener extensión válida (PDF, XML, PNG o JPG).';
+  }
+
+  if (BLOCKED_EXTENSIONS.has(extension)) {
+    return `Tipo de archivo bloqueado por seguridad (.${extension}).`;
+  }
+
+  if (!ALLOWED_EXTENSIONS.has(extension)) {
+    return `Tipo de archivo no permitido (.${extension}). Use PDF, XML, PNG o JPG.`;
+  }
+
+  if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+    return 'El archivo supera el tamaño máximo permitido (10 MB).';
+  }
+
+  if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
+    return 'El tipo MIME del archivo no es válido para documentos financieros.';
+  }
+
+  return null;
+};
+
 type PrefillFromPendiente = {
   facturaId: number;
-  proveedorId: number;
-  proveedorNombre?: string;
-  nit?: string;
-  tipoDocumento?: string;
-  valorTotal?: number;
-  fechaRecepcion?: string;
-  departamentoId?: number;
-  descripcion?: string;
+  snapshot?: {
+    numeroFactura?: string;
+    proveedorId?: number;
+    proveedorNombre?: string;
+    nit?: string;
+    tipoDocumento?: string;
+    valorSubtotal?: number;
+    valorIva?: number;
+    valorTotal?: number;
+    fechaFactura?: string;
+    fechaRecepcion?: string;
+    departamentoId?: number;
+    descripcion?: string;
+    observaciones?: string;
+  };
 };
 
 export default function RegistrarFactura() {
@@ -67,7 +123,9 @@ export default function RegistrarFactura() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [prefillLoading, setPrefillLoading] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const [prefillWarning, setPrefillWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
@@ -78,13 +136,17 @@ export default function RegistrarFactura() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
+  const [existingDocs, setExistingDocs] = useState<DocumentoAdjunto[]>([]);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [diagInfo, setDiagInfo] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; count: number; source: string; rawError: string | null }>({ status: 'idle', count: 0, source: '', rawError: null });
 
   const [form, setForm] = useState({
     proveedorId: 0,
     proveedorNombre: '',
     nit: '',
     tipoDocumento: 'Factura',
+    valorSubtotal: 0,
+    valorIva: 0,
     valorTotal: 0,
     fechaFactura: '',
     fechaRecepcion: new Date().toISOString().split('T')[0],
@@ -129,35 +191,131 @@ export default function RegistrarFactura() {
 
   useEffect(() => {
     setPrefillApplied(false);
+    setPrefillWarning(null);
+    setExistingDocs([]);
+    setDiagInfo({ status: 'idle', count: 0, source: '', rawError: null });
   }, [prefillFromPendiente?.facturaId]);
+
+  useEffect(() => {
+    if (!prefillFromPendiente?.snapshot) return;
+
+    const snap = prefillFromPendiente.snapshot;
+    const snapTotal = Number(snap.valorTotal || 0);
+    const snapSubtotal = Number(snap.valorSubtotal ?? (snapTotal > 0 ? Number((snapTotal / 1.19).toFixed(2)) : 0));
+    const snapIva = Number(snap.valorIva ?? (snapTotal > 0 ? Number((snapTotal - snapSubtotal).toFixed(2)) : 0));
+
+    setForm((prev) => ({
+      ...prev,
+      proveedorId: Number(snap.proveedorId || prev.proveedorId || 0),
+      proveedorNombre: snap.proveedorNombre || prev.proveedorNombre,
+      nit: snap.nit || prev.nit,
+      tipoDocumento: snap.tipoDocumento || prev.tipoDocumento,
+      valorSubtotal: snapSubtotal || prev.valorSubtotal,
+      valorIva: snapIva || prev.valorIva,
+      valorTotal: snapTotal || prev.valorTotal,
+      fechaFactura: snap.fechaFactura || prev.fechaFactura,
+      fechaRecepcion: snap.fechaRecepcion || prev.fechaRecepcion,
+      departamentoId: Number(snap.departamentoId || prev.departamentoId || 0),
+      descripcion: snap.descripcion || prev.descripcion,
+      observaciones: snap.observaciones || prev.observaciones,
+    }));
+
+    if (snap.numeroFactura) {
+      setNumeroFacturaSugerido(snap.numeroFactura);
+    }
+  }, [prefillFromPendiente?.snapshot]);
 
   useEffect(() => {
     if (!prefillFromPendiente) return;
 
-    // Solo aplicar prefill cuando los catálogos estén cargados
-    if (!catalogLoading && proveedores.length > 0 && departamentos.length > 0 && !prefillApplied) {
-      const proveedorExiste = prefillFromPendiente.proveedorId
-        ? proveedores.some((p) => p.id === prefillFromPendiente.proveedorId)
-        : false;
-      
-      const departamentoExiste = prefillFromPendiente.departamentoId
-        ? departamentos.some((d) => d.id === prefillFromPendiente.departamentoId)
-        : false;
+    if (catalogLoading || prefillApplied) return;
 
-      setForm((prev) => ({
-        ...prev,
-        proveedorId: proveedorExiste ? Number(prefillFromPendiente.proveedorId) : prev.proveedorId,
-        proveedorNombre: prefillFromPendiente.proveedorNombre || prev.proveedorNombre,
-        nit: prefillFromPendiente.nit || prev.nit,
-        tipoDocumento: prefillFromPendiente.tipoDocumento || prev.tipoDocumento,
-        valorTotal: Number(prefillFromPendiente.valorTotal || prev.valorTotal || 0),
-        fechaRecepcion: prefillFromPendiente.fechaRecepcion || prev.fechaRecepcion,
-        departamentoId: departamentoExiste ? Number(prefillFromPendiente.departamentoId) : prev.departamentoId,
-        descripcion: prefillFromPendiente.descripcion || prev.descripcion,
-      }));
+    const loadPrefillDetalle = async () => {
+      setPrefillLoading(true);
+      setPrefillWarning(null);
+      try {
+        let factura: Factura | null = null;
 
-      setPrefillApplied(true);
-    }
+        try {
+          const seguimiento = await facturasService.getSeguimiento(prefillFromPendiente.facturaId);
+          factura = (seguimiento?.factura || null) as Factura | null;
+        } catch {
+          factura = null;
+        }
+
+        if (!factura) {
+          factura = await facturasService.getById(prefillFromPendiente.facturaId);
+        }
+
+        if (!factura) return;
+
+        const facturaProveedorId = Number(factura.proveedor_id || factura.proveedor?.id || 0);
+        const facturaDepartamentoId = Number(factura.departamento?.id || factura.departamento_id || 0);
+
+        const proveedorExiste = proveedores.some((p) => p.id === facturaProveedorId);
+        const departamentoExiste = departamentos.some((d) => d.id === facturaDepartamentoId);
+
+        setForm((prev) => ({
+          ...prev,
+          proveedorId: proveedorExiste ? facturaProveedorId : prev.proveedorId,
+          proveedorNombre: factura.proveedor?.razon_social || prev.proveedorNombre,
+          nit: factura.proveedor?.nit || prev.nit,
+          tipoDocumento: factura.tipo_documento || prev.tipoDocumento,
+          valorSubtotal: Number(factura.valor_subtotal || prev.valorSubtotal || 0),
+          valorIva: Number(factura.valor_iva || prev.valorIva || 0),
+          valorTotal: Number(factura.valor_total || prev.valorTotal || 0),
+          fechaFactura: factura.fecha_factura || prev.fechaFactura,
+          fechaRecepcion: factura.fecha_recepcion || prev.fechaRecepcion,
+          departamentoId: departamentoExiste ? facturaDepartamentoId : prev.departamentoId,
+          descripcion: factura.descripcion || prev.descripcion,
+          observaciones: factura.observaciones || prev.observaciones,
+        }));
+
+        if (factura.numero_factura) {
+          setNumeroFacturaSugerido(factura.numero_factura);
+        }
+
+        const docsFromFactura = Array.isArray(factura.documentos) ? factura.documentos : [];
+
+        if (docsFromFactura.length > 0) {
+          setExistingDocs(docsFromFactura);
+          setDiagInfo({ status: 'done', count: docsFromFactura.length, source: 'seguimiento/detail (nested)', rawError: null });
+        } else {
+          setDiagInfo((prev) => ({ ...prev, status: 'loading', source: 'documentos endpoint' }));
+          try {
+            const docsFromEndpoint = await documentosService.getByFactura(prefillFromPendiente.facturaId);
+            const list = Array.isArray(docsFromEndpoint) ? docsFromEndpoint : [];
+            setExistingDocs(list);
+            setDiagInfo({ status: 'done', count: list.length, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId}`, rawError: null });
+          } catch (e: unknown) {
+            const msg = (e as { message?: string })?.message || String(e);
+            setExistingDocs([]);
+            setDiagInfo({ status: 'error', count: 0, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId}`, rawError: msg });
+            setPrefillWarning('Se cargaron datos básicos, pero no fue posible consultar soportes adjuntos del proveedor.');
+          }
+        }
+      } catch (outerErr: unknown) {
+        const outerMsg = (outerErr as { message?: string })?.message || String(outerErr);
+        setDiagInfo((prev) => ({ ...prev, status: 'loading', source: 'documentos endpoint (fallback)', rawError: outerMsg }));
+        try {
+          const docsFromEndpoint = await documentosService.getByFactura(prefillFromPendiente.facturaId);
+          const list = Array.isArray(docsFromEndpoint) ? docsFromEndpoint : [];
+          setExistingDocs(list);
+          setDiagInfo({ status: 'done', count: list.length, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId} (fallback)`, rawError: outerMsg });
+          setPrefillWarning('No se pudo cargar el detalle completo de la factura, pero sí se recuperaron los soportes del proveedor.');
+        } catch (e2: unknown) {
+          const msg2 = (e2 as { message?: string })?.message || String(e2);
+          setExistingDocs([]);
+          setDiagInfo({ status: 'error', count: 0, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId} (fallback)`, rawError: `Detalle: ${outerMsg} | Docs: ${msg2}` });
+          setPrefillWarning('No se pudo cargar el detalle completo ni los soportes del proveedor para esta factura.');
+        }
+      } finally {
+        setPrefillApplied(true);
+        setPrefillLoading(false);
+      }
+    };
+
+    void loadPrefillDetalle();
   }, [prefillFromPendiente, catalogLoading, proveedores, departamentos, prefillApplied]);
 
   const selectedProveedor = useMemo(
@@ -176,14 +334,34 @@ export default function RegistrarFactura() {
   }, [selectedProveedor]);
 
   const setField = (key: keyof typeof form, value: string | number) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const updated = { ...prev, [key]: value };
+      if (key === 'valorSubtotal' || key === 'valorIva') {
+        updated.valorTotal = Number(updated.valorSubtotal || 0) + Number(updated.valorIva || 0);
+      }
+      if (key === 'valorTotal') {
+        const total = Number(updated.valorTotal || 0);
+        if (total >= 0) {
+          updated.valorSubtotal = Number((total / 1.19).toFixed(2));
+          updated.valorIva = Number((total - updated.valorSubtotal).toFixed(2));
+        }
+      }
+      return updated;
+    });
   };
 
   const addDoc = (type: UploadedDoc['type'], file?: File) => {
     if (!file) return;
+    const validationError = validateUploadFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError(null);
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setDocs((prev) => [
-      ...prev,
+      ...prev.filter((doc) => doc.type !== type),
       {
         id,
         type,
@@ -204,6 +382,63 @@ export default function RegistrarFactura() {
     }, 120);
   };
 
+  const reloadExistingDocs = async () => {
+    if (!prefillFromPendiente?.facturaId) return;
+    setDiagInfo({ status: 'loading', count: 0, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId}`, rawError: null });
+    try {
+      const list = await documentosService.getByFactura(prefillFromPendiente.facturaId);
+      const docs = Array.isArray(list) ? list : [];
+      setExistingDocs(docs);
+      setDiagInfo({ status: 'done', count: docs.length, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId} (manual reload)`, rawError: null });
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message || String(e);
+      setDiagInfo({ status: 'error', count: 0, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId}`, rawError: msg });
+    }
+  };
+
+  const openExistingDocument = (doc: DocumentoAdjunto) => {
+    const url = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+    if (!url) {
+      setError('Este documento no tiene una URL válida para vista previa en el navegador.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const downloadExistingDocument = (doc: DocumentoAdjunto) => {
+    const url = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+    if (!url) {
+      setError('Este documento no tiene una URL válida para descarga directa.');
+      return;
+    }
+
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.download = doc.nombre_archivo || 'documento';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  };
+
+  const openLocalDocument = (doc: UploadedDoc) => {
+    const objectUrl = URL.createObjectURL(doc.file);
+    window.open(objectUrl, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  };
+
+  const downloadLocalDocument = (doc: UploadedDoc) => {
+    const objectUrl = URL.createObjectURL(doc.file);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = doc.file.name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+  };
+
   const removeDoc = (id: string) => {
     setDocs((prev) => prev.filter((d) => d.id !== id));
     setUploadProgress((prev) => {
@@ -214,7 +449,12 @@ export default function RegistrarFactura() {
   };
 
   const requiredDocTypes = DOCUMENT_TYPES;
-  const requiredUploaded = new Set(docs.map((d) => d.type)).size;
+  const existingDocTypes = useMemo(
+    () => new Set(existingDocs.map((doc) => doc.tipo_documento).filter((tipo): tipo is UploadedDoc['type'] => DOCUMENT_TYPES.includes(tipo as UploadedDoc['type']))),
+    [existingDocs]
+  );
+  const uploadedDocTypes = useMemo(() => new Set(docs.map((d) => d.type)), [docs]);
+  const requiredUploaded = new Set([...existingDocTypes, ...uploadedDocTypes]).size;
   const uploadCompletion = Math.round((Math.min(requiredUploaded, requiredDocTypes.length) / requiredDocTypes.length) * 100);
   const flowCompletion = Math.round(((step - 1) / 2) * 100);
 
@@ -234,7 +474,7 @@ export default function RegistrarFactura() {
 
   const validateStep2 = () => {
     const required = DOCUMENT_TYPES;
-    const docTypes = new Set(docs.map((d) => d.type));
+    const docTypes = new Set<UploadedDoc['type']>([...existingDocTypes, ...uploadedDocTypes]);
     const missing = required.filter((t) => !docTypes.has(t));
     return missing.length ? `Faltan documentos obligatorios: ${missing.join(', ')}` : null;
   };
@@ -292,12 +532,18 @@ export default function RegistrarFactura() {
       }
     }
 
+    if (!proveedorIdFinal) {
+      setError('No se pudo resolver el proveedor de esta factura. Abra “Ver” en Mis Pendientes, valide el proveedor y vuelva a intentar.');
+      setLoading(false);
+      return;
+    }
+
     const payload: CreateFacturaDTO = {
       numero_factura: numeroFacturaSugerido || undefined,
       proveedor_id: proveedorIdFinal,
       departamento_id: Number(form.departamentoId),
-      valor_subtotal: Math.round((Number(form.valorTotal) / 1.19) * 100) / 100,
-      valor_iva: Math.round((Number(form.valorTotal) - Number(form.valorTotal) / 1.19) * 100) / 100,
+      valor_subtotal: Number(form.valorSubtotal || 0),
+      valor_iva: Number(form.valorIva || 0),
       valor_total: Number(form.valorTotal),
       tipo_documento: form.tipoDocumento,
       descripcion: form.descripcion,
@@ -307,7 +553,7 @@ export default function RegistrarFactura() {
     };
 
     try {
-      let factura: any;
+      let factura: Factura;
 
       // Si viene de Mis Pendientes, actualizar la factura existente con el endpoint específico
       if (prefillFromPendiente?.facturaId) {
@@ -357,12 +603,15 @@ export default function RegistrarFactura() {
       setStep(1);
       setError(null);
       setDocs([]);
+      setExistingDocs([]);
       setUploadProgress({});
       setForm({
         proveedorId: 0,
         proveedorNombre: '',
         nit: '',
         tipoDocumento: 'Factura',
+        valorSubtotal: 0,
+        valorIva: 0,
         valorTotal: 0,
         fechaFactura: '',
         fechaRecepcion: new Date().toISOString().split('T')[0],
@@ -509,8 +758,14 @@ export default function RegistrarFactura() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-4xl font-bold text-slate-900">Registrar Nueva Factura</h1>
-        <p className="text-slate-600 mt-1">Complete la informacion de la factura recibida del proveedor</p>
+        <h1 className="text-4xl font-bold text-slate-900">
+          {prefillFromPendiente ? 'Verificar y Registrar Factura' : 'Registrar Nueva Factura'}
+        </h1>
+        <p className="text-slate-600 mt-1">
+          {prefillFromPendiente
+            ? 'Revise datos y soportes enviados por el proveedor antes del registro oficial.'
+            : 'Complete la informacion de la factura recibida del proveedor'}
+        </p>
       </div>
 
       <div className="max-w-4xl mx-auto">
@@ -594,7 +849,20 @@ export default function RegistrarFactura() {
 
       {prefillFromPendiente && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-          Se cargaron automaticamente datos desde Pendientes (registro #{prefillFromPendiente.facturaId}). Verifique y complete los campos faltantes antes de registrar.
+          Se cargaron automáticamente datos desde Pendientes (registro #{prefillFromPendiente.facturaId}).
+          El flujo ahora es de verificación: valida información y soportes, y registra sin re-digitar.
+        </motion.div>
+      )}
+
+      {prefillWarning && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          {prefillWarning}
+        </motion.div>
+      )}
+
+      {prefillLoading && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          Cargando información completa de la solicitud del proveedor...
         </motion.div>
       )}
 
@@ -627,7 +895,7 @@ export default function RegistrarFactura() {
               className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-slate-900 font-medium"
               value={form.proveedorId}
               onChange={(e) => setField('proveedorId', Number(e.target.value))}
-              disabled={catalogLoading || proveedores.length === 0}
+              disabled={Boolean(prefillFromPendiente) || catalogLoading || proveedores.length === 0}
             >
               <option value={0}>-- Seleccione un proveedor --</option>
               {proveedores.map((p) => (
@@ -635,7 +903,9 @@ export default function RegistrarFactura() {
               ))}
             </select>
             <p className="text-xs text-blue-700 mt-2">
-              {catalogLoading
+              {prefillFromPendiente
+                ? 'Proveedor bloqueado: corresponde a la solicitud pendiente seleccionada.'
+                : catalogLoading
                 ? 'Cargando proveedores...'
                 : proveedores.length === 0
                   ? 'No hay proveedores disponibles. Cree proveedores en el modulo Admin Financiero.'
@@ -678,7 +948,7 @@ export default function RegistrarFactura() {
             className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-5 border-2 border-amber-300"
           >
             <p className="text-sm font-bold text-amber-900 mb-4">📄 Datos de la Factura *</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Número de Factura</label>
                 <input 
@@ -701,14 +971,40 @@ export default function RegistrarFactura() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Valor Total</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">Subtotal</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
                   <input 
                     type="number" 
                     className="w-full border-2 border-amber-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                    value={form.valorTotal || ''} 
-                    onChange={(e) => setField('valorTotal', Number(e.target.value || 0))} 
+                    value={form.valorSubtotal || ''} 
+                    onChange={(e) => setField('valorSubtotal', Number(e.target.value || 0))} 
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">IVA</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
+                  <input
+                    type="number"
+                    className="w-full border-2 border-amber-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    value={form.valorIva || ''}
+                    onChange={(e) => setField('valorIva', Number(e.target.value || 0))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">Valor Total</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
+                  <input
+                    type="number"
+                    className="w-full border-2 border-amber-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    value={form.valorTotal || ''}
+                    onChange={(e) => setField('valorTotal', Number(e.target.value || 0))}
                     placeholder="0"
                   />
                 </div>
@@ -747,6 +1043,7 @@ export default function RegistrarFactura() {
                     className="w-full border-2 border-red-400 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all font-semibold"
                     value={form.fechaRecepcion} 
                     onChange={(e) => setField('fechaRecepcion', e.target.value)}
+                    disabled={Boolean(prefillFromPendiente)}
                   />
                 </div>
                 <p className="text-xs text-red-600 font-semibold mt-1">
@@ -814,7 +1111,8 @@ export default function RegistrarFactura() {
               whileTap={{ scale: 0.98 }} 
               onClick={nextStep} 
               type="button" 
-              className="px-8 py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-300 hover:shadow-lg hover:shadow-red-400 transition-all"
+              disabled={prefillLoading}
+              className="px-8 py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-300 hover:shadow-lg hover:shadow-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Siguiente →
             </motion.button>
@@ -832,10 +1130,61 @@ export default function RegistrarFactura() {
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8"
           >
-            <div className="mb-8">
-              <h2 className="text-4xl font-bold text-slate-900">Carga de Documentos</h2>
-              <p className="text-slate-500 mt-2">Adjunte los documentos obligatorios para continuar el flujo</p>
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-4xl font-bold text-slate-900">Carga de Documentos</h2>
+                <p className="text-slate-500 mt-2">Verifique soportes del proveedor y cargue solo faltantes o correcciones.</p>
+              </div>
+              {prefillFromPendiente && (
+                <button
+                  type="button"
+                  onClick={() => { void reloadExistingDocs(); }}
+                  disabled={diagInfo.status === 'loading'}
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-300 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 disabled:opacity-50 transition-all mt-1"
+                >
+                  <RefreshCw className={`w-4 h-4 ${diagInfo.status === 'loading' ? 'animate-spin' : ''}`} />
+                  Recargar documentos
+                </button>
+              )}
             </div>
+
+            {prefillFromPendiente && prefillApplied && (
+              <div className={`mb-5 rounded-xl border p-4 text-sm font-mono ${
+                diagInfo.status === 'error' ? 'bg-red-50 border-red-300 text-red-800' :
+                diagInfo.status === 'loading' ? 'bg-slate-50 border-slate-300 text-slate-600' :
+                diagInfo.count === 0 ? 'bg-amber-50 border-amber-300 text-amber-800' :
+                'bg-green-50 border-green-300 text-green-800'
+              }`}>
+                <p className="font-bold text-xs mb-1">🔍 DIAGNÓSTICO DE DOCUMENTOS</p>
+                <p>Fuente: <span className="font-semibold">{diagInfo.source || '—'}</span></p>
+                <p>Resultado: <span className="font-bold">{diagInfo.status === 'loading' ? 'Consultando...' : `${diagInfo.count} documento(s) encontrado(s) en BD`}</span></p>
+                {diagInfo.rawError && <p className="mt-1 text-xs">Error: {diagInfo.rawError}</p>}
+                {diagInfo.status === 'done' && diagInfo.count === 0 && (
+                  <p className="mt-1 text-xs font-semibold">
+                    ⚠ La BD no tiene documentos para esta factura. El proveedor puede no haberlos subido correctamente, o fallaron al guardarse.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {existingDocs.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 }}
+                className="mb-6 rounded-2xl bg-blue-50 border-2 border-blue-200 p-5"
+              >
+                <p className="text-sm font-bold text-blue-900 mb-3">📎 Documentos ya enviados por proveedor ({existingDocs.length})</p>
+                <div className="space-y-2">
+                  {existingDocs.map((doc) => (
+                    <div key={`existing-${doc.id}`} className="bg-white rounded-lg p-3 border border-blue-200">
+                      <p className="text-sm font-semibold text-slate-900">{doc.tipo_documento}</p>
+                      <p className="text-xs text-slate-600">{doc.nombre_archivo}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
             {/* Barra de progreso de documentos */}
             <motion.div
@@ -872,7 +1221,9 @@ export default function RegistrarFactura() {
               className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
             >
               {DOCUMENT_TYPES.map((type, idx) => {
-                const hasDoc = docs.some(d => d.type === type);
+                const hasUpload = uploadedDocTypes.has(type);
+                const hasExisting = existingDocTypes.has(type);
+                const hasDoc = hasUpload || hasExisting;
                 return (
                   <motion.div
                     key={type}
@@ -889,7 +1240,8 @@ export default function RegistrarFactura() {
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <p className="font-bold text-slate-900 text-lg">{type}</p>
-                        {hasDoc && <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado</p>}
+                        {hasUpload && <p className="text-xs text-green-600 font-semibold mt-1">✓ Actualizado en esta revisión</p>}
+                        {!hasUpload && hasExisting && <p className="text-xs text-blue-600 font-semibold mt-1">✓ Ya enviado por proveedor</p>}
                       </div>
                       {hasDoc && <span className="text-2xl">✓</span>}
                     </div>
@@ -897,8 +1249,9 @@ export default function RegistrarFactura() {
                     <label className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold hover:shadow-lg hover:shadow-red-300 cursor-pointer transition-all hover:scale-105 active:scale-95">
                       <Upload className="w-4 h-4" /> 
                       {hasDoc ? 'Cambiar' : 'Subir'}
-                      <input type="file" className="hidden" onChange={(e) => addDoc(type, e.target.files?.[0])} />
+                      <input type="file" accept=".pdf,.xml,.png,.jpg,.jpeg,application/pdf,application/xml,text/xml,image/png,image/jpeg" className="hidden" onChange={(e) => addDoc(type, e.target.files?.[0])} />
                     </label>
+                    <p className="text-[11px] text-slate-500 mt-2">Permitidos: PDF, XML, PNG, JPG. Máximo 10 MB.</p>
                   </motion.div>
                 );
               })}
@@ -912,18 +1265,54 @@ export default function RegistrarFactura() {
               className="rounded-2xl border-2 border-slate-200 p-6 bg-slate-50"
             >
               <p className="font-bold text-slate-800 mb-4 text-lg">📁 Documentos Cargados</p>
-              
-              {docs.length === 0 ? (
+
+              {docs.length === 0 && existingDocs.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="py-8 text-center"
                 >
                   <p className="text-slate-500 text-sm">📪 Aún no has cargado documentos</p>
-                  <p className="text-slate-400 text-xs mt-1">Adjunta Factura, Orden y Certificación para continuar</p>
+                  <p className="text-slate-400 text-xs mt-1">Adjunta Factura, Orden de Compra, Certificación Bancaria, Acta de Entrega o Soporte Adicional</p>
                 </motion.div>
               ) : (
                 <div className="space-y-3">
+                  {existingDocs.map((d) => (
+                    <div
+                      key={`exist-list-${d.id}`}
+                      className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-900 text-sm">{d.tipo_documento}</p>
+                            <p className="text-xs text-slate-500 truncate">{d.nombre_archivo}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Proveedor</span>
+                          <button
+                            type="button"
+                            onClick={() => openExistingDocument(d)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Ver
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadExistingDocument(d)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Descargar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
                   {docs.map((d, idx) => (
                     <motion.div
                       key={d.id}
@@ -942,14 +1331,30 @@ export default function RegistrarFactura() {
                             <p className="text-xs text-slate-500 truncate">{d.file.name}</p>
                           </div>
                         </div>
-                        
-                        <button 
-                          type="button" 
-                          onClick={() => removeDoc(d.id)} 
-                          className="p-2 rounded-lg hover:bg-red-100 text-red-600 hover:text-red-700 transition-all hover:scale-110 active:scale-95"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openLocalDocument(d)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Ver
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadLocalDocument(d)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Descargar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeDoc(d.id)}
+                            className="p-2 rounded-lg hover:bg-red-100 text-red-600 hover:text-red-700 transition-all hover:scale-110 active:scale-95"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Barra de progreso por archivo */}
@@ -1041,7 +1446,7 @@ export default function RegistrarFactura() {
               className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 p-6 mb-6"
             >
               <p className="font-bold text-blue-900 mb-4 text-lg">📄 Datos de la Factura</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Número</p>
                   <p className="text-lg font-bold text-slate-900">{safeString(numeroFacturaSugerido, 'Cargando...')}</p>
@@ -1049,6 +1454,14 @@ export default function RegistrarFactura() {
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Tipo</p>
                   <p className="text-lg font-bold text-slate-900">{safeString(form.tipoDocumento, 'No especificado')}</p>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-blue-200">
+                  <p className="text-xs text-blue-700 font-semibold mb-1">Subtotal</p>
+                  <p className="text-xl font-bold text-slate-800">{formatMoney(form.valorSubtotal)}</p>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-blue-200">
+                  <p className="text-xs text-blue-700 font-semibold mb-1">IVA</p>
+                  <p className="text-xl font-bold text-slate-800">{formatMoney(form.valorIva)}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-blue-200">
                   <p className="text-xs text-blue-700 font-semibold mb-1">Valor Total</p>
@@ -1114,8 +1527,21 @@ export default function RegistrarFactura() {
               transition={{ delay: 0.3 }}
               className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 p-6 mb-6"
             >
-              <p className="font-bold text-green-900 mb-4 text-lg">✓ Documentos Cargados ({docs.length})</p>
+              <p className="font-bold text-green-900 mb-4 text-lg">✓ Documentos Verificados ({existingDocs.length + docs.length})</p>
               <div className="space-y-2">
+                {existingDocs.map((d) => (
+                  <div
+                    key={`confirm-existing-${d.id}`}
+                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-green-200"
+                  >
+                    <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">P</span>
+                    <div>
+                      <p className="font-semibold text-slate-900 text-sm">{d.tipo_documento}</p>
+                      <p className="text-xs text-slate-500 truncate">{d.nombre_archivo}</p>
+                    </div>
+                  </div>
+                ))}
+
                 {docs.map((d, idx) => (
                   <motion.div
                     key={d.id}

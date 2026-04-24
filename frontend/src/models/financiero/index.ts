@@ -94,6 +94,7 @@ export interface Factura {
   tipo_documento: 'Factura Electrónica' | 'Factura' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro';
   descripcion: string;
   observaciones?: string;
+  cuenta_bancaria_proveedor?: string;
   
   fecha_factura: string;
   fecha_recepcion: string;
@@ -120,6 +121,10 @@ export interface Factura {
   
   fecha_creacion: string;
   fecha_modificacion: string;
+
+  documentos?: DocumentoAdjunto[];
+  historial?: HistorialFactura[];
+  comentarios?: ComentarioFactura[];
 }
 
 export interface DocumentoAdjunto {
@@ -128,6 +133,9 @@ export interface DocumentoAdjunto {
   nombre_archivo: string;
   tipo_documento: string;
   url_storage: string;
+  archivo_url?: string | null;
+  tipo_mime?: string | null;
+  tamano_bytes?: number | null;
   obligatorio: boolean;
   verificado: boolean;
   fecha_carga: string;

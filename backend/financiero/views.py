@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, parsers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -170,6 +170,7 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['factura', 'tipo_documento']
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
         factura_id = self.request.query_params.get('factura_id')
@@ -178,7 +179,15 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
         return models.DocumentoAdjunto.objects.all()
 
     def perform_create(self, serializer):
-        serializer.save(cargado_por=self.request.user)
+        archivo = self.request.FILES.get('archivo')
+        url_storage = self.request.data.get('url_storage', '') or ''
+        instance = serializer.save(cargado_por=self.request.user, url_storage=url_storage)
+        if archivo and instance.archivo:
+            try:
+                instance.url_storage = instance.archivo.url
+                instance.save(update_fields=['url_storage'])
+            except Exception:
+                pass
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -245,7 +254,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
         if rol_nombre == 'Funcionario':
             queryset = queryset.filter(
                 Q(creado_por=user) |
-                Q(usuario_responsable=user)
+                Q(usuario_responsable=user) |
+                Q(usuario_responsable__isnull=True, estado='Recibida')
             ).distinct()
         elif rol_nombre == 'Proveedor':
             # Proveedor solo ve sus propias facturas (por vínculo directo o email)
@@ -562,15 +572,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def seguimiento(self, request, pk=None):
         """Obtener seguimiento completo de una factura"""
         factura = self.get_object()
+        ctx = {'request': request}
         return Response({
-            'factura': serializers.FacturaDetailSerializer(factura).data,
+            'factura': serializers.FacturaDetailSerializer(factura, context=ctx).data,
             'historial': serializers.HistorialFacturaSerializer(
-                factura.historial.all(), 
-                many=True
+                factura.historial.all(), many=True, context=ctx
             ).data,
             'comentarios': serializers.ComentarioFacturaSerializer(
-                factura.comentarios.all(),
-                many=True
+                factura.comentarios.all(), many=True, context=ctx
             ).data
         })
 

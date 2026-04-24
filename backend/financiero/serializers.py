@@ -6,6 +6,17 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 
+ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg'}
+ALLOWED_DOC_MIME_TYPES = {
+    'application/pdf',
+    'application/xml',
+    'text/xml',
+    'image/png',
+    'image/jpeg',
+}
+MAX_DOC_SIZE_BYTES = 10 * 1024 * 1024
+
+
 # ============================================================
 # SERIALIZERS SIMPLES
 # ============================================================
@@ -72,11 +83,55 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
     cargado_por = UsuarioSerializer(read_only=True)
     cargado_por_id = serializers.IntegerField(write_only=True, required=False)
     verificado_por = UsuarioSerializer(read_only=True)
+    archivo_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.DocumentoAdjunto
         fields = '__all__'
-        read_only_fields = ['fecha_carga']
+        read_only_fields = ['fecha_carga', 'archivo_url']
+
+    def get_archivo_url(self, obj):
+        request = self.context.get('request')
+        if obj.archivo and hasattr(obj.archivo, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.archivo.url)
+            return obj.archivo.url
+        return obj.url_storage or None
+
+    def validate_archivo(self, archivo):
+        filename = (getattr(archivo, 'name', '') or '').strip()
+        extension = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+
+        if extension not in ALLOWED_DOC_EXTENSIONS:
+            raise serializers.ValidationError('Tipo de archivo no permitido. Use PDF, XML, PNG o JPG.')
+
+        if getattr(archivo, 'size', 0) > MAX_DOC_SIZE_BYTES:
+            raise serializers.ValidationError('El archivo supera el tamaño máximo permitido (10 MB).')
+
+        content_type = (getattr(archivo, 'content_type', '') or '').split(';', 1)[0].strip().lower()
+        if content_type and content_type not in ALLOWED_DOC_MIME_TYPES:
+            raise serializers.ValidationError('El tipo MIME del archivo no es válido para documentos financieros.')
+
+        head = archivo.read(512)
+        archivo.seek(0)
+        stripped = head.lstrip()
+
+        if stripped.startswith(b'<!doctype html') or stripped.startswith(b'<html'):
+            raise serializers.ValidationError('El archivo no es un documento válido; se detectó contenido HTML.')
+
+        if extension == 'pdf' and not head.startswith(b'%PDF-'):
+            raise serializers.ValidationError('El contenido del archivo no corresponde a un PDF válido.')
+
+        if extension == 'png' and not head.startswith(b'\x89PNG\r\n\x1a\n'):
+            raise serializers.ValidationError('El contenido del archivo no corresponde a una imagen PNG válida.')
+
+        if extension in {'jpg', 'jpeg'} and not head.startswith(b'\xff\xd8\xff'):
+            raise serializers.ValidationError('El contenido del archivo no corresponde a una imagen JPG válida.')
+
+        if extension == 'xml' and not stripped.startswith((b'<?xml', b'<')):
+            raise serializers.ValidationError('El contenido del archivo no corresponde a un XML válido.')
+
+        return archivo
 
 
 class HistorialFacturaSerializer(serializers.ModelSerializer):
@@ -175,7 +230,7 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Factura
         fields = [
-            'numero_factura', 'tipo_documento', 'descripcion', 'observaciones',
+            'id', 'numero_factura', 'tipo_documento', 'descripcion', 'observaciones',
             'proveedor_id', 'departamento_id', 'cuenta_contable_id', 'centro_costo_id',
             'valor_subtotal', 'valor_iva', 'valor_retencion_renta', 'valor_retencion_iva',
             'valor_retencion_ica', 'valor_total', 'fecha_factura', 'fecha_recepcion',

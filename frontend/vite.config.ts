@@ -25,6 +25,11 @@ export default defineConfig(() => {
           changeOrigin: true,
           secure: false,
         },
+        '/media': {
+          target: apiUrlClean,
+          changeOrigin: true,
+          secure: false,
+        },
       },
       hmr: {
         // En Docker puede necesitar clientPort si se hace port-forward distinto

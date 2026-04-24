@@ -17,7 +17,7 @@ import type {
 const API_BASE = '/financiero';
 
 // Helper para construir query strings
-const buildQueryString = (params?: Record<string, any>): string => {
+const buildQueryString = (params?: Record<string, unknown>): string => {
   if (!params || Object.keys(params).length === 0) return '';
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -34,7 +34,7 @@ const buildQueryString = (params?: Record<string, any>): string => {
 
 export const facturasService = {
   // Obtener todas las facturas
-  getAll: async (params?: any): Promise<PaginatedResponse<Factura>> => {
+  getAll: async (params?: Record<string, unknown>): Promise<PaginatedResponse<Factura>> => {
     const query = buildQueryString(params);
     const endpoint = `${API_BASE}/facturas/${query ? '?' + query : ''}`;
     const response = await apiClient.get<PaginatedResponse<Factura>>(endpoint);
@@ -78,27 +78,27 @@ export const facturasService = {
   },
 
   // Rechazar factura
-  rechazar: async (id: number, motivo: string): Promise<any> => {
+  rechazar: async (id: number, motivo: string): Promise<Factura> => {
     const response = await apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar/`, { motivo });
     return response;
   },
 
   // Obtener facturas pendientes
   getPendientes: async (): Promise<Factura[]> => {
-    const response = await apiClient.get<any>(`${API_BASE}/facturas/pendientes/`);
+    const response = await apiClient.get<PaginatedResponse<Factura> | Factura[]>(`${API_BASE}/facturas/pendientes/`);
     if (Array.isArray(response)) return response;
-    return response?.results || [];
+    return (response as PaginatedResponse<Factura>)?.results || [];
   },
 
   // Obtener estadísticas
-  getEstadisticas: async (): Promise<any> => {
-    const response = await apiClient.get<any>(`${API_BASE}/facturas/estadisticas/`);
+  getEstadisticas: async (): Promise<Record<string, unknown>> => {
+    const response = await apiClient.get<Record<string, unknown>>(`${API_BASE}/facturas/estadisticas/`);
     return response;
   },
 
   // Obtener seguimiento de factura
-  getSeguimiento: async (id: number): Promise<any> => {
-    const response = await apiClient.get<any>(`${API_BASE}/facturas/${id}/seguimiento/`);
+  getSeguimiento: async (id: number): Promise<Record<string, unknown>> => {
+    const response = await apiClient.get<Record<string, unknown>>(`${API_BASE}/facturas/${id}/seguimiento/`);
     return response;
   },
 
@@ -120,7 +120,7 @@ export const facturasService = {
 // ============================================================
 
 export const proveedoresService = {
-  getAll: async (params?: any): Promise<PaginatedResponse<Proveedor>> => {
+  getAll: async (params?: Record<string, unknown>): Promise<PaginatedResponse<Proveedor>> => {
     const query = buildQueryString(params);
     const endpoint = `${API_BASE}/proveedores/${query ? '?' + query : ''}`;
     const response = await apiClient.get<PaginatedResponse<Proveedor>>(endpoint);
@@ -152,7 +152,7 @@ export const proveedoresService = {
     return response;
   },
 
-  getMisFacturas: async (proveedorId: number, params?: any): Promise<PaginatedResponse<Factura>> => {
+  getMisFacturas: async (proveedorId: number, params?: Record<string, unknown>): Promise<PaginatedResponse<Factura>> => {
     const query = buildQueryString({ proveedor: proveedorId, ...params });
     const endpoint = `${API_BASE}/facturas/${query ? '?' + query : ''}`;
     const response = await apiClient.get<PaginatedResponse<Factura>>(endpoint);
@@ -165,7 +165,7 @@ export const proveedoresService = {
 // ============================================================
 
 export const departamentosService = {
-  getAll: async (params?: any): Promise<PaginatedResponse<Departamento>> => {
+  getAll: async (params?: Record<string, unknown>): Promise<PaginatedResponse<Departamento>> => {
     const query = buildQueryString(params);
     const endpoint = `${API_BASE}/departamentos/${query ? '?' + query : ''}`;
     const response = await apiClient.get<PaginatedResponse<Departamento>>(endpoint);
@@ -178,9 +178,9 @@ export const departamentosService = {
   },
 
   getAreasSolicitantes: async (): Promise<Departamento[]> => {
-    const response = await apiClient.get<any>(`${API_BASE}/departamentos/areas_solicitantes/`);
+    const response = await apiClient.get<PaginatedResponse<Departamento> | Departamento[]>(`${API_BASE}/departamentos/areas_solicitantes/`);
     if (Array.isArray(response)) return response;
-    return response?.results || [];
+    return (response as PaginatedResponse<Departamento>)?.results || [];
   },
 };
 
@@ -189,7 +189,7 @@ export const departamentosService = {
 // ============================================================
 
 export const cuentasContablesService = {
-  getAll: async (params?: any): Promise<PaginatedResponse<CuentaContable>> => {
+  getAll: async (params?: Record<string, unknown>): Promise<PaginatedResponse<CuentaContable>> => {
     const query = buildQueryString(params);
     const endpoint = `${API_BASE}/cuentas-contables/${query ? '?' + query : ''}`;
     const response = await apiClient.get<PaginatedResponse<CuentaContable>>(endpoint);
@@ -207,7 +207,7 @@ export const cuentasContablesService = {
 // ============================================================
 
 export const centrosCostoService = {
-  getAll: async (params?: any): Promise<PaginatedResponse<CentroCosto>> => {
+  getAll: async (params?: Record<string, unknown>): Promise<PaginatedResponse<CentroCosto>> => {
     const query = buildQueryString(params);
     const endpoint = `${API_BASE}/centros-costo/${query ? '?' + query : ''}`;
     const response = await apiClient.get<PaginatedResponse<CentroCosto>>(endpoint);
@@ -222,8 +222,8 @@ export const centrosCostoService = {
 
 export const parametrosSlaService = {
   getResumenProceso: async (): Promise<{ totalDias: number; todosHabiles: boolean; etapas: number }> => {
-    const response = await apiClient.get<any>(`${API_BASE}/parametros-sla/`);
-    const list: ParametroSLA[] = Array.isArray(response) ? response : response?.results || [];
+    const response = await apiClient.get<PaginatedResponse<ParametroSLA> | ParametroSLA[]>(`${API_BASE}/parametros-sla/`);
+    const list: ParametroSLA[] = Array.isArray(response) ? response : (response as PaginatedResponse<ParametroSLA>)?.results || [];
 
     const totalDias = list.reduce((acc, item) => acc + (Number(item.dias_maximos) || 0), 0);
     const todosHabiles = list.length > 0 ? list.every((item) => Boolean(item.aplica_dias_habiles)) : true;
@@ -244,8 +244,9 @@ export const documentosService = {
   getByFactura: async (facturaId: number): Promise<DocumentoAdjunto[]> => {
     const query = buildQueryString({ factura_id: facturaId });
     const endpoint = `${API_BASE}/documentos/${query ? '?' + query : ''}`;
-    const response = await apiClient.get<any>(endpoint);
-    return response.results || response;
+    const response = await apiClient.get<PaginatedResponse<DocumentoAdjunto> | DocumentoAdjunto[]>(endpoint);
+    if (Array.isArray(response)) return response;
+    return (response as PaginatedResponse<DocumentoAdjunto>).results || [];
   },
 
   upload: async (facturaId: number, file: File, tipoDocumento: string): Promise<DocumentoAdjunto> => {
@@ -254,9 +255,19 @@ export const documentosService = {
     formData.append('nombre_archivo', file.name);
     formData.append('tipo_documento', tipoDocumento);
     formData.append('url_storage', file.name);
+    formData.append('tamano_bytes', file.size.toString());
+    if (file.type) formData.append('tipo_mime', file.type);
+    formData.append('archivo', file);
 
-    const response = await apiClient.postFormData<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
-    return response;
+    console.info(`[documentosService.upload] POST /financiero/documentos/ factura=${facturaId} tipo=${tipoDocumento} archivo=${file.name} (${file.size}B)`);
+    try {
+      const response = await apiClient.postFormData<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
+      console.info(`[documentosService.upload] ✅ Creado DocumentoAdjunto id=${response?.id} para factura ${facturaId}`);
+      return response;
+    } catch (err: unknown) {
+      console.error(`[documentosService.upload] ❌ Error al subir "${tipoDocumento}" para factura ${facturaId}:`, err);
+      throw err;
+    }
   },
 
   delete: async (id: number): Promise<void> => {
@@ -272,8 +283,9 @@ export const historialService = {
   getByFactura: async (facturaId: number): Promise<HistorialFactura[]> => {
     const query = buildQueryString({ factura_id: facturaId });
     const endpoint = `${API_BASE}/historial/${query ? '?' + query : ''}`;
-    const response = await apiClient.get<any>(endpoint);
-    return response.results || response;
+    const response = await apiClient.get<PaginatedResponse<HistorialFactura> | HistorialFactura[]>(endpoint);
+    if (Array.isArray(response)) return response;
+    return (response as PaginatedResponse<HistorialFactura>).results || [];
   },
 };
 
@@ -285,8 +297,9 @@ export const comentariosService = {
   getByFactura: async (facturaId: number): Promise<ComentarioFactura[]> => {
     const query = buildQueryString({ factura_id: facturaId });
     const endpoint = `${API_BASE}/comentarios/${query ? '?' + query : ''}`;
-    const response = await apiClient.get<any>(endpoint);
-    return response.results || response;
+    const response = await apiClient.get<PaginatedResponse<ComentarioFactura> | ComentarioFactura[]>(endpoint);
+    if (Array.isArray(response)) return response;
+    return (response as PaginatedResponse<ComentarioFactura>).results || [];
   },
 
   create: async (facturaId: number, comentario: string, tipo: string): Promise<ComentarioFactura> => {

@@ -14,6 +14,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const authSignatureRef = useRef<string>(localStorage.getItem('auth_signature') || '');
+    const [isSessionHydrated, setIsSessionHydrated] = useState(false);
     const [state, setState] = useState<AuthState>({
         token: localStorage.getItem('auth_token'),
         user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
@@ -24,6 +25,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!localStorage.getItem('auth_token'),
         isLoading: false,
     });
+
+    const clearAuthState = () => {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_role');
+        localStorage.removeItem('auth_components');
+        localStorage.removeItem('auth_faculties');
+        localStorage.removeItem('auth_areas');
+        localStorage.removeItem('auth_signature');
+
+        authSignatureRef.current = '';
+        setState({
+            token: null,
+            user: null,
+            role: null,
+            components: [],
+            faculties: undefined,
+            areas: undefined,
+            isAuthenticated: false,
+            isLoading: false,
+        });
+    };
+
+    const getErrorStatus = (error: unknown): number | undefined => {
+        if (typeof error !== 'object' || error === null || !('status' in error)) {
+            return undefined;
+        }
+
+        const status = (error as { status?: unknown }).status;
+        return typeof status === 'number' ? status : undefined;
+    };
 
     const persistAuthState = (response: LoginResponse) => {
         const user = {
@@ -141,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             persistAuthState(response);
 
             return response;
-        } catch (error: any) {
+        } catch (error: unknown) {
             setState(prev => ({ ...prev, isLoading: false }));
             throw error;
         }
@@ -155,17 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.clear();
 
         // Limpiar estado
-        authSignatureRef.current = '';
-        setState({
-            token: null,
-            user: null,
-            role: null,
-            components: [],
-            faculties: undefined,
-            areas: undefined,
-            isAuthenticated: false,
-            isLoading: false,
-        });
+        clearAuthState();
     };
 
     useEffect(() => {
@@ -176,9 +198,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setState(prev => ({ ...prev, isLoading: true }));
             try {
-                const response = await authService.getAuthenticatedUser();
+                const response = await authService.getAuthenticatedUser({ suppressErrorLog: true });
                 persistSessionUserState(response);
-            } catch {
+            } catch (error: unknown) {
+                const status = getErrorStatus(error);
+                if (status === 401 || status === 403) {
+                    clearAuthState();
+                    return;
+                }
+
                 const storedToken = localStorage.getItem('auth_token');
                 const storedUser = localStorage.getItem('auth_user');
 
@@ -194,25 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 // Si no existe estado local utilizable, limpiar autenticación.
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('auth_user');
-                localStorage.removeItem('auth_role');
-                localStorage.removeItem('auth_components');
-                localStorage.removeItem('auth_faculties');
-                localStorage.removeItem('auth_areas');
-                localStorage.removeItem('auth_signature');
-
-                authSignatureRef.current = '';
-                setState({
-                    token: null,
-                    user: null,
-                    role: null,
-                    components: [],
-                    faculties: undefined,
-                    areas: undefined,
-                    isAuthenticated: false,
-                    isLoading: false,
-                });
+                clearAuthState();
+            } finally {
+                setIsSessionHydrated(true);
             }
         };
 
@@ -251,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        if (!state.isAuthenticated) {
+        if (!isSessionHydrated || !state.isAuthenticated) {
             return;
         }
 
@@ -259,7 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const syncSessionAuthState = async () => {
             try {
-                const response = await authService.getSessionAuthState(authSignatureRef.current || undefined);
+                const response = await authService.getSessionAuthState(authSignatureRef.current || undefined, { suppressErrorLog: true });
                 if (isCancelled) {
                     return;
                 }
@@ -285,8 +297,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     components: nextComponents,
                     user: prev.user ? { ...prev.user, rol: nextRole } : prev.user,
                 }));
-            } catch (error) {
-                // Fallar en silencio para no interrumpir la sesión en errores transitorios.
+            } catch (error: unknown) {
+                const status = getErrorStatus(error);
+                if (status === 401 || status === 403) {
+                    if (!isCancelled) {
+                        clearAuthState();
+                    }
+                    return;
+                }
             }
         };
 
@@ -312,7 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.removeEventListener('focus', syncIfVisible);
             document.removeEventListener('visibilitychange', syncIfVisible);
         };
-    }, [state.isAuthenticated]);
+    }, [isSessionHydrated, state.isAuthenticated]);
 
     return (
         <AuthContext.Provider value={{ ...state, login, logout, hasPermission, hasEditPermission }}>

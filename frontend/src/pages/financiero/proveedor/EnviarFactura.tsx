@@ -16,13 +16,7 @@ import {
 import { departamentosService, documentosService, facturasService, proveedoresService } from '../../../services/financiero';
 import type { Departamento, Proveedor } from '../../../models/financiero';
 
-const toList = <T,>(data: any): T[] => {
-  if (Array.isArray(data)) return data as T[];
-  if (Array.isArray(data?.results)) return data.results as T[];
-  return [];
-};
-
-const formatMoney = (val: any) => {
+const formatMoney = (val: unknown) => {
   const num = Number(val) || 0;
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
@@ -37,6 +31,8 @@ const TIPO_DOCUMENTO_OPTS = [
   'Otro',
 ];
 const DOC_TYPES = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const ALLOWED_DOC_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
+const ALLOWED_DOC_MIME_TYPES = new Set(['application/pdf', 'application/xml', 'text/xml', 'image/png', 'image/jpeg']);
 const IVA_PERCENTAGES = [0, 5, 19];
 const BANCOS_COLOMBIA = [
   'Bancolombia',
@@ -53,6 +49,45 @@ const BANCOS_COLOMBIA = [
 const TIPO_CUENTA_OPTS = ['Ahorros', 'Corriente'];
 
 const getToday = () => new Date().toISOString().split('T')[0];
+
+const fileStartsWith = (bytes: Uint8Array, signature: number[]): boolean =>
+  signature.every((value, idx) => bytes[idx] === value);
+
+const validateDocFile = async (file: File): Promise<string | null> => {
+  const extension = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : '';
+  if (!ALLOWED_DOC_EXTENSIONS.has(extension)) {
+    return 'Tipo de archivo no permitido. Usa PDF, XML, PNG o JPG.';
+  }
+
+  if (file.type && !ALLOWED_DOC_MIME_TYPES.has(file.type)) {
+    return 'El tipo MIME del archivo no es válido para documentos financieros.';
+  }
+
+  const head = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  const decoded = new TextDecoder().decode(head).trimStart().toLowerCase();
+
+  if (decoded.startsWith('<!doctype html') || decoded.startsWith('<html')) {
+    return 'El archivo seleccionado contiene HTML y no un documento válido.';
+  }
+
+  if (extension === 'pdf' && !fileStartsWith(head, [0x25, 0x50, 0x44, 0x46, 0x2d])) {
+    return 'El contenido no corresponde a un PDF válido.';
+  }
+
+  if (extension === 'png' && !fileStartsWith(head, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    return 'El contenido no corresponde a una imagen PNG válida.';
+  }
+
+  if ((extension === 'jpg' || extension === 'jpeg') && !fileStartsWith(head, [0xff, 0xd8, 0xff])) {
+    return 'El contenido no corresponde a una imagen JPG válida.';
+  }
+
+  if (extension === 'xml' && !(decoded.startsWith('<?xml') || decoded.startsWith('<'))) {
+    return 'El contenido no corresponde a un XML válido.';
+  }
+
+  return null;
+};
 
 interface Props {
   miProveedor: Proveedor | null;
@@ -163,7 +198,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
     }
   };
 
-  const handleFieldChange = (field: string, value: any) => {
+  const handleFieldChange = (field: string, value: unknown) => {
     setForm(prev => {
       const updated = { ...prev, [field]: value };
       if (field === 'valorSubtotal' || field === 'ivaPorcentaje') {
@@ -183,9 +218,16 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
     });
   };
 
-  const handleAddDoc = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+  const handleAddDoc = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validationError = await validateDocFile(file);
+    if (validationError) {
+      setError(`${type}: ${validationError}`);
+      e.target.value = '';
+      return;
+    }
+    setError(null);
     setDocs(prev => [...prev.filter(d => d.type !== type), { id: Date.now().toString(), type, file }]);
     e.target.value = '';
   };
@@ -219,7 +261,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
       const factura = await facturasService.create({
         proveedor_id: proveedorSeleccionado.id,
         departamento_id: form.departamentoId,
-        tipo_documento: form.tipoDocumento as any,
+        tipo_documento: form.tipoDocumento as 'Factura' | 'Factura Electrónica' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro',
         descripcion: form.descripcion,
         observaciones: form.observaciones || undefined,
         valor_subtotal: subtotal,
@@ -231,12 +273,24 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
       });
 
       // Upload documents
+      const failedDocTypes: string[] = [];
       for (const doc of docs) {
         try {
           await documentosService.upload(factura.id, doc.file, doc.type);
-        } catch {
-          // Non-critical
+        } catch (uploadErr: unknown) {
+          const errMsg = (uploadErr as { message?: string })?.message || String(uploadErr);
+          console.error(`[EnviarFactura] Falló subida de documento "${doc.type}" para factura ${factura.id}:`, errMsg, uploadErr);
+          failedDocTypes.push(doc.type);
         }
+      }
+
+      if (failedDocTypes.length > 0) {
+        setError(
+          `La factura fue enviada (#${factura.id}), pero fallaron los soportes: ${failedDocTypes.join(', ')}. ` +
+          'Revisa la consola del navegador para ver el detalle del error y vuelve a intentarlo.'
+        );
+        // No mostrar pantalla de éxito: el usuario debe ver el error y reintentar
+        return;
       }
 
       setSuccess(true);
@@ -262,8 +316,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
         setDocs([]);
         onSuccess?.();
       }, 3000);
-    } catch (err: any) {
-      const msg = err?.message || err?.detail || 'Error al enviar la factura. Verifica los datos.';
+    } catch (err: unknown) {
+      const msg = (err as { message?: string; detail?: string })?.message
+        || (err as { message?: string; detail?: string })?.detail
+        || 'Error al enviar la factura. Verifica los datos.';
       setError(String(msg));
     } finally {
       setLoading(false);
@@ -672,7 +728,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
                         <label className="cursor-pointer px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors">
                           <Upload size={12} className="inline mr-1" />
                           Adjuntar
-                          <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onChange={e => handleAddDoc(e, type)} />
+                          <input type="file" className="hidden" accept=".pdf,.xml,.jpg,.jpeg,.png" onChange={e => { void handleAddDoc(e, type); }} />
                         </label>
                       )}
                     </div>

@@ -48,7 +48,7 @@ class Database {
   }
 
   // CREATE
-  create<T extends { id: string }>(tableName: string, item: Omit<T, 'id'>): T {
+  create<T extends { id: string | number }>(tableName: string, item: Omit<T, 'id'>): T {
     const table = this.getTable<T>(tableName);
     const newItem = { ...item, id: this.generateId() } as T;
     table.push(newItem);
@@ -62,7 +62,7 @@ class Database {
   }
 
   // READ ONE
-  getById<T extends { id: string }>(tableName: string, id: string): T | undefined {
+  getById<T extends { id: string | number }>(tableName: string, id: string | number): T | undefined {
     const table = this.getTable<T>(tableName);
     return table.find(item => item.id === id);
   }
@@ -80,7 +80,7 @@ class Database {
   }
 
   // UPDATE
-  update<T extends { id: string }>(tableName: string, id: string, updates: Partial<T>): T | null {
+  update<T extends { id: string | number }>(tableName: string, id: string | number, updates: Partial<T>): T | null {
     const table = this.getTable<T>(tableName);
     const index = table.findIndex(item => item.id === id);
 
@@ -93,8 +93,8 @@ class Database {
 
   // DELETE
   delete(tableName: string, id: string): boolean {
-    const table = this.getTable(tableName);
-    const filtered = table.filter((item: any) => item.id !== id);
+    const table = this.getTable<{ id: string }>(tableName);
+    const filtered = table.filter((item) => item.id !== id);
 
     if (filtered.length === table.length) return false;
 
@@ -103,9 +103,10 @@ class Database {
   }
 
   // DELETE MULTIPLE
-  deleteMany(tableName: string, predicate: (item: any) => boolean): number {
-    const table = this.getTable(tableName);
+  deleteMany<T>(tableName: string, predicate: (item: T) => boolean): number {
+    const table = this.getTable<T>(tableName);
     const filtered = table.filter(item => !predicate(item));
+
     const deletedCount = table.length - filtered.length;
 
     if (deletedCount > 0) {
@@ -275,20 +276,20 @@ class Database {
   }
 
   // DOCENTES
-  getDocentes(): any[] {
-    return this.getAll<any>(TABLES.docentes);
+  getDocentes(): Docente[] {
+    return this.getAll<Docente>(TABLES.docentes);
   }
 
-  getDocenteById(id: string): any | undefined {
-    return this.getById<any>(TABLES.docentes, id);
+  getDocenteById(id: string): Docente | undefined {
+    return this.getById<Docente>(TABLES.docentes, id);
   }
 
-  createDocente(docente: any): any {
-    return this.create<any>(TABLES.docentes, docente);
+  createDocente(docente: Omit<Docente, 'id'>): Docente {
+    return this.create<Docente>(TABLES.docentes, docente);
   }
 
-  updateDocente(id: string, updates: any): any | null {
-    return this.update<any>(TABLES.docentes, id, updates);
+  updateDocente(id: string, updates: Partial<Docente>): Docente | null {
+    return this.update<Docente>(TABLES.docentes, id, updates);
   }
 
   deleteDocente(id: string): boolean {
@@ -321,7 +322,15 @@ class Database {
     return this.getAll<HorarioAcademico>(TABLES.horarios);
   }
 
-  getHorariosExtendidos(): any[] {
+  getHorariosExtendidos(): Array<HorarioAcademico & {
+    asignatura: string;
+    docente: string;
+    grupo: string;
+    programaId: string;
+    semestre: number;
+    espacioCodigo: string;
+    espacioNombre: string;
+  }> {
     const horarios = this.getAll<HorarioAcademico>(TABLES.horarios);
     const grupos = this.getGrupos();
     const asignaturas = this.getAsignaturas();
@@ -359,7 +368,7 @@ class Database {
     return this.create<HorarioAcademico>(TABLES.horarios, horario);
   }
 
-  addHorario(horario: any): HorarioAcademico {
+  addHorario(horario: Omit<HorarioAcademico, 'id'>): HorarioAcademico {
     // Alias para createHorario para compatibilidad
     return this.create<HorarioAcademico>(TABLES.horarios, horario);
   }

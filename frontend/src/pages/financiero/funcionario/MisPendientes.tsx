@@ -4,7 +4,7 @@ import { AlertCircle, Clock, Eye, FileText, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero';
-import FacturaDetailModal from '../../../share/factura-detail-modal';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 
 type PendingRow = {
   id: string;
@@ -15,7 +15,9 @@ type PendingRow = {
   tipoDocumento: string;
   descripcion: string;
   valorTotal: number;
+  fechaFactura: string;
   fechaRecepcion: string;
+  areaSolicitante: string;
   dias: number;
   slaMax: number;
   nivelRiesgo: 'verde' | 'amarillo' | 'vencido';
@@ -26,7 +28,7 @@ type PendingRow = {
 };
 
 function mapFacturaToPendingRow(f: Factura): PendingRow {
-  const dias = Number(f.dias_transcurridos || 0);
+  const dias = Math.max(0, Number(f.dias_transcurridos || 0));
   const riesgo: PendingRow['nivelRiesgo'] = dias > 2 ? 'vencido' : dias > 0 ? 'amarillo' : 'verde';
   const contacto = [f.proveedor?.email, f.proveedor?.telefono].filter(Boolean).join(' | ');
   const area = f.departamento?.nombre?.trim() || '';
@@ -40,7 +42,9 @@ function mapFacturaToPendingRow(f: Factura): PendingRow {
     tipoDocumento: f.tipo_documento || 'Factura',
     descripcion: f.descripcion || 'Sin descripcion',
     valorTotal: Number(f.valor_total || 0),
+    fechaFactura: f.fecha_factura || '',
     fechaRecepcion: f.fecha_recepcion || '',
+    areaSolicitante: area || 'Sin area asignada',
     dias,
     slaMax: 2,
     nivelRiesgo: riesgo,
@@ -62,6 +66,8 @@ export default function MisPendientes() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<SharedFacturaDetail | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -86,12 +92,93 @@ export default function MisPendientes() {
   const proximas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'amarillo').length, [rows]);
 
   const riskDotClass = (risk: PendingRow['nivelRiesgo']) => {
-    if (risk === 'vencido') return 'bg-purple-700';
+    if (risk === 'vencido') return 'bg-red-600';
     if (risk === 'amarillo') return 'bg-yellow-500';
     return 'bg-green-500';
   };
 
   const selectedRow = rows.find((r) => r.id === selectedId) || null;
+
+  useEffect(() => {
+    if (!openDetail || !selectedId) return;
+
+    const loadDetalle = async () => {
+      setDetailLoading(true);
+      try {
+        const seguimiento = await facturasService.getSeguimiento(Number(selectedId));
+        const factura = seguimiento?.factura as Factura | null;
+
+        if (!factura) {
+          setSelectedDetail(null);
+          return;
+        }
+
+        const contactoProveedor = [factura.proveedor?.email, factura.proveedor?.telefono].filter(Boolean).join(' | ');
+
+        setSelectedDetail({
+          id: String(factura.id),
+          numeroFactura: factura.numero_factura || `PEND-${factura.id}`,
+          proveedor: factura.proveedor?.razon_social || 'Proveedor sin nombre',
+          nit: factura.proveedor?.nit || 'Sin NIT',
+          contactoProveedor,
+          tipoDocumento: factura.tipo_documento,
+          valorSubtotal: Number(factura.valor_subtotal || 0),
+          valorIva: Number(factura.valor_iva || 0),
+          valorTotal: Number(factura.valor_total || 0),
+          fechaFactura: factura.fecha_factura || '',
+          fechaRecepcion: factura.fecha_recepcion || '',
+          areaSolicitante: factura.departamento?.nombre || 'Sin area asignada',
+          estado: factura.estado || 'Recibida',
+          diasTranscurridos: Math.max(0, Number(factura.dias_transcurridos || 0)),
+          numeroRadicado: factura.numero_radicado || undefined,
+          numeroProcesoPago: factura.numero_proceso_pago || undefined,
+          descripcion: factura.descripcion || undefined,
+          observaciones: factura.observaciones || undefined,
+          cuentaBancariaProveedor: factura.cuenta_bancaria_proveedor || undefined,
+          nivelRiesgo:
+            Number(factura.dias_transcurridos || 0) > 2
+              ? 'vencido'
+              : Number(factura.dias_transcurridos || 0) > 0
+                ? 'amarillo'
+                : 'verde',
+          documentos: (factura.documentos || []).map((doc) => ({
+            id: String(doc.id),
+            tipo: doc.tipo_documento,
+            nombre: doc.nombre_archivo,
+            fecha: doc.fecha_carga,
+            verificado: doc.verificado,
+            url: doc.archivo_url || doc.url_storage || undefined,
+          })),
+        });
+      } catch {
+        if (selectedRow) {
+          setSelectedDetail({
+            id: selectedRow.id,
+            numeroFactura: selectedRow.numeroFactura || `PEND-${selectedRow.id}`,
+            proveedor: selectedRow.proveedor,
+            valorTotal: selectedRow.valorTotal,
+            fechaFactura: selectedRow.fechaFactura,
+            fechaRecepcion: selectedRow.fechaRecepcion,
+            areaSolicitante: selectedRow.areaSolicitante,
+            estado: 'Recibida',
+            diasTranscurridos: selectedRow.dias,
+            descripcion: selectedRow.descripcion,
+            nit: selectedRow.nit,
+            nivelRiesgo:
+              selectedRow.nivelRiesgo === 'vencido'
+                ? 'vencido'
+                : selectedRow.nivelRiesgo === 'amarillo'
+                  ? 'amarillo'
+                  : 'verde',
+          });
+        }
+      } finally {
+        setDetailLoading(false);
+      }
+    };
+
+    void loadDetalle();
+  }, [openDetail, selectedId, selectedRow]);
 
   return (
     <div className="space-y-6">
@@ -156,53 +243,54 @@ export default function MisPendientes() {
           </div>
         )}
         <h3 className="text-xl font-semibold text-slate-800 mb-1">Facturas Pendientes de Registro</h3>
-        <p className="text-slate-500 mb-5">Facturas fisicas recibidas que debo registrar en el sistema antes de 2 dias</p>
+        <p className="text-slate-500 mb-5">Vista resumida con campos esenciales. El detalle completo está en “Ver”.</p>
 
-        <table className="w-full min-w-[1200px] text-sm">
+        <table className="w-full min-w-[920px] text-sm">
           <thead>
             <tr className="bg-slate-50 border border-slate-200">
               <th className="py-3 px-3 text-left">SLA</th>
+              <th className="py-3 px-3 text-left">Factura</th>
               <th className="py-3 px-3 text-left">Proveedor</th>
-              <th className="py-3 px-3 text-left">NIT</th>
-              <th className="py-3 px-3 text-left">Contacto</th>
-              <th className="py-3 px-3 text-left">Tipo Documento</th>
+              <th className="py-3 px-3 text-left">Tipo</th>
               <th className="py-3 px-3 text-left">Monto</th>
-              <th className="py-3 px-3 text-left">Fecha Recepcion</th>
+              <th className="py-3 px-3 text-left">Recepción</th>
               <th className="py-3 px-3 text-left">Dias</th>
-              <th className="py-3 px-3 text-left">Accion Requerida</th>
+              <th className="py-3 px-3 text-left">Estado</th>
               <th className="py-3 px-3 text-left">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td className="p-4 text-slate-500" colSpan={10}>Cargando pendientes...</td>
+                <td className="p-4 text-slate-500" colSpan={8}>Cargando pendientes...</td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="p-4 text-slate-500" colSpan={10}>No hay pendientes para mostrar.</td>
+                <td className="p-4 text-slate-500" colSpan={8}>No hay pendientes para mostrar.</td>
               </tr>
             ) : rows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-3">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${riskDotClass(row.nivelRiesgo)}`} />
-                    {row.nivelRiesgo === 'vencido' && <AlertCircle className="w-4 h-4 text-purple-700" />}
+                    {row.nivelRiesgo === 'vencido' && <AlertCircle className="w-4 h-4 text-red-700" />}
                   </div>
                 </td>
-                <td className="p-3 text-slate-700">{row.proveedor}</td>
-                <td className="p-3 text-slate-700 font-mono">{row.nit}</td>
-                <td className="p-3 text-slate-700">{row.contacto}</td>
+                <td className="p-3 text-slate-700 font-mono">{row.numeroFactura || `PEND-${row.id}`}</td>
+                <td className="p-3 text-slate-700">
+                  <div className="font-medium text-slate-800">{row.proveedor}</div>
+                  <div className="text-xs text-slate-500 font-mono">NIT: {row.nit}</div>
+                </td>
                 <td className="p-3 text-slate-700">{row.tipoDocumento}</td>
                 <td className="p-3 font-semibold text-slate-800">${row.valorTotal.toLocaleString('es-CO')}</td>
                 <td className="p-3 text-slate-700">{row.fechaRecepcion || 'Sin fecha'}</td>
                 <td className="p-3 font-semibold">
-                  <span className={row.nivelRiesgo === 'vencido' ? 'text-purple-700' : row.nivelRiesgo === 'amarillo' ? 'text-yellow-700' : 'text-green-700'}>
+                  <span className={row.nivelRiesgo === 'vencido' ? 'text-red-700' : row.nivelRiesgo === 'amarillo' ? 'text-yellow-700' : 'text-green-700'}>
                     {row.dias}d / {row.slaMax}d
                   </span>
                 </td>
                 <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs border ${row.nivelRiesgo === 'vencido' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-blue-100 text-blue-800 border-blue-300'}`}>
+                  <span className={`px-2 py-1 rounded-full text-xs border ${row.nivelRiesgo === 'vencido' ? 'bg-red-100 text-red-800 border-red-300' : row.nivelRiesgo === 'amarillo' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-green-100 text-green-800 border-green-300'}`}>
                     {row.accion}
                   </span>
                 </td>
@@ -214,14 +302,20 @@ export default function MisPendientes() {
                           state: {
                             prefillFromPendiente: {
                               facturaId: Number(row.id),
-                              proveedorId: row.proveedorId,
-                              proveedorNombre: row.proveedor,
-                              nit: row.nit,
-                              tipoDocumento: row.tipoDocumento,
-                              valorTotal: row.valorTotal,
-                              fechaRecepcion: row.fechaRecepcion,
-                              departamentoId: row.departamentoId,
-                              descripcion: row.descripcion,
+                              snapshot: {
+                                numeroFactura: row.numeroFactura,
+                                proveedorId: row.proveedorId,
+                                proveedorNombre: row.proveedor,
+                                nit: row.nit,
+                                tipoDocumento: row.tipoDocumento,
+                                valorTotal: row.valorTotal,
+                                fechaFactura: row.fechaFactura,
+                                fechaRecepcion: row.fechaRecepcion,
+                                departamentoId: row.departamentoId,
+                                departamentoNombre: row.departamentoNombre,
+                                descripcion: row.descripcion,
+                                observaciones: '',
+                              },
                             },
                           },
                         });
@@ -249,30 +343,16 @@ export default function MisPendientes() {
 
       <FacturaDetailModal
         isOpen={openDetail}
-        onClose={() => setOpenDetail(false)}
-        factura={
-          selectedRow
-            ? {
-                id: selectedRow.id,
-                numeroFactura: selectedRow.numeroFactura || `PEND-${selectedRow.id}`,
-                proveedor: selectedRow.proveedor,
-                valorTotal: selectedRow.valorTotal,
-                fechaRecepcion: selectedRow.fechaRecepcion,
-                areaSolicitante: selectedRow.departamentoNombre,
-                estado: 'Recibida',
-                diasTranscurridos: selectedRow.dias,
-                descripcion: selectedRow.descripcion,
-                nit: selectedRow.nit,
-                nivelRiesgo:
-                  selectedRow.nivelRiesgo === 'vencido'
-                    ? 'vencido'
-                    : selectedRow.nivelRiesgo === 'amarillo'
-                      ? 'amarillo'
-                      : 'verde',
-              }
-            : null
-        }
+        onClose={() => {
+          setOpenDetail(false);
+          setSelectedDetail(null);
+        }}
+        factura={selectedDetail}
       />
+
+      {openDetail && detailLoading && (
+        <div className="text-sm text-slate-500">Cargando detalles completos de la factura...</div>
+      )}
     </div>
   );
 }
