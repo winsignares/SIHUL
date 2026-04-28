@@ -16,6 +16,7 @@ import { Button } from '../share/button';
 
 import { useAdminDashboard, type MenuOption } from '../hooks/useAdminDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
 interface AdminDashboardProps {
   userName?: string;
@@ -51,13 +52,11 @@ export default function AdminDashboard(props: AdminDashboardProps) {
 
   const getRoleLabel = () => {
     if (isPublicAccess) return 'Acceso Público';
+    const canonicalFinancialRole = resolveCanonicalFinancialRole({
+      roleName: userRole,
+      userName,
+    });
     const normalizedRole = (userRole || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[_-]+/g, ' ')
-      .trim();
-    const normalizedUserName = (userName || '')
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -68,15 +67,15 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     if (userRole === 'planeacion_facultad') return `Planeación (${userFacultyName})`;
     if (userRole === 'docente') return 'Docente';
     if (userRole === 'estudiante') return 'Estudiante';
-    if (normalizedRole.includes('funcionario')) return 'Funcionario';
-    if (normalizedRole.includes('proveedor')) return 'Proveedor';
-    if (normalizedRole.includes('contabilidad')) return 'Contabilidad';
-    if (normalizedRole.includes('tesorer')) return 'Tesorería';
-    if (normalizedRole.includes('auditor')) return 'Auditoría';
-    if (normalizedUserName.includes('direccion financiera') || normalizedUserName.includes('sindicatura')) return 'Dirección Financiera';
+    if (canonicalFinancialRole === 'funcionario') return 'Funcionario';
+    if (canonicalFinancialRole === 'proveedor') return 'Proveedor';
+    if (canonicalFinancialRole === 'contabilidad') return 'Contabilidad';
+    if (canonicalFinancialRole === 'tesoreria') return 'Tesorería';
+    if (canonicalFinancialRole === 'auditoria') return 'Auditoría';
+    if (canonicalFinancialRole === 'direccion_financiera') return 'Dirección Financiera';
+    if (canonicalFinancialRole === 'rectoria') return 'Rectoría';
+    if (canonicalFinancialRole === 'admin_financiero') return 'Admin Financiero';
     if (normalizedRole.includes('direccion financiera') || normalizedRole.includes('dir financiera')) return 'Dirección Financiera';
-    if (normalizedRole.includes('rector')) return 'Rectoría';
-    if (normalizedRole.includes('admin financiero')) return 'Admin Financiero';
     return 'Administrador';
   };
 

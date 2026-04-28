@@ -15,12 +15,25 @@ import RegistrarFactura from './RegistrarFactura.tsx';
 import ConsultarFacturas from './ConsultarFacturas.tsx';
 import MisPendientes from './MisPendientes.tsx';
 import { facturasService } from '../../../services/financiero';
-import type { Factura } from '../../../models/financiero';
+import type { Factura } from '../../../models/financiero/core.models';
+import type { FuncionarioDashboardHomeProps, FuncionarioStatsApi } from '../../../models/financiero/funcionario';
 
 const toList = <T,>(data: any): T[] => {
   if (Array.isArray(data)) return data as T[];
   if (Array.isArray(data?.results)) return data.results as T[];
   return [];
+};
+
+const isFuncionarioStatsApi = (value: unknown): value is FuncionarioStatsApi => {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<FuncionarioStatsApi>;
+  return (
+    typeof candidate.total_facturas === 'number' &&
+    typeof candidate.vencidas === 'number' &&
+    typeof candidate.atrasadas === 'number' &&
+    typeof candidate.por_estado === 'object' &&
+    candidate.por_estado !== null
+  );
 };
 
 export default function FuncionarioDashboard() {
@@ -56,17 +69,11 @@ export default function FuncionarioDashboard() {
   return <div className="p-6">{renderContent()}</div>;
 }
 
-function DashboardHome({
-  onGoToRegistrar,
-  onGoToConsultar,
-}: {
-  onGoToRegistrar: () => void;
-  onGoToConsultar: () => void;
-}) {
+function DashboardHome({ onGoToRegistrar, onGoToConsultar }: FuncionarioDashboardHomeProps) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [statsApi, setStatsApi] = useState<{ total_facturas: number; vencidas: number; atrasadas: number; por_estado: Record<string, number> } | null>(null);
+  const [statsApi, setStatsApi] = useState<FuncionarioStatsApi | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -81,7 +88,7 @@ function DashboardHome({
         ]);
 
         setFacturas(toList<Factura>(listResp));
-        setStatsApi(statsResp ?? null);
+        setStatsApi(isFuncionarioStatsApi(statsResp) ? statsResp : null);
         setPendingCount(Array.isArray(pendingResp) ? pendingResp.length : 0);
       } catch {
         setFacturas([]);

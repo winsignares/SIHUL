@@ -1,159 +1,133 @@
-import { useState } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Button } from '../../../share/button';
-import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { facturasService, documentosService } from '../../../services/financiero';
+import type { Factura, DocumentoAdjunto } from '../../../models/financiero/core.models';
 
-interface FacturaPendiente {
-  id: string;
-  numeroFactura: string;
-  numeroRadicado: string;
-  proveedor: string;
-  nit?: string;
-  valorTotal: number;
-  fechaRadicacion: string;
-  diasTranscurridos: number;
-  diasMaximos: number;
-  nivelRiesgo: 'verde' | 'amarillo' | 'naranja' | 'vencido';
-  accionRequerida: string;
-  areaSolicitante: string;
-  estado: string;
-  descripcion?: string;
+const SLA_DIAS = 12;
+
+function nivelRiesgo(dias: number): 'verde' | 'amarillo' | 'naranja' | 'vencido' {
+  if (dias > SLA_DIAS) return 'vencido';
+  if (dias >= SLA_DIAS - 2) return 'naranja';
+  if (dias >= SLA_DIAS - 5) return 'amarillo';
+  return 'verde';
+}
+
+function accionRequerida(factura: Factura): string {
+  if (factura.estado === 'Recibida') return 'Radicar factura y verificar documentos';
+  if (factura.estado === 'Radicada') {
+    if (factura.dias_transcurridos > SLA_DIAS) return 'URGENTE: Causar factura VENCIDA';
+    return 'Causar factura y asignar cuenta contable';
+  }
+  return 'Revisar factura';
+}
+
+function facturaToDetail(factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail {
+  return {
+    id: String(factura.id),
+    numeroFactura: factura.numero_factura,
+    numeroRadicado: factura.numero_radicado,
+    proveedor: factura.proveedor?.razon_social ?? '',
+    nit: factura.proveedor?.nit ?? '',
+    valorTotal: Number(factura.valor_total),
+    fechaFactura: factura.fecha_factura,
+    fechaRecepcion: factura.fecha_recepcion,
+    areaSolicitante: factura.departamento?.nombre ?? '',
+    estado: factura.estado,
+    diasTranscurridos: factura.dias_transcurridos,
+    descripcion: factura.descripcion,
+    observaciones: factura.observaciones,
+    nivelRiesgo: factura.indicador_riesgo === 'vencida' ? 'vencido' : factura.indicador_riesgo === 'atrasada' ? 'rojo' : factura.indicador_riesgo === 'atencion' ? 'amarillo' : 'verde',
+    documentos: docs.map((d) => ({
+      id: String(d.id),
+      nombre: d.nombre_archivo,
+      tipo: d.tipo_documento,
+      verificado: d.verificado,
+      url: d.archivo_url ?? d.url_storage ?? undefined,
+    })),
+  };
 }
 
 export default function MisPendientes() {
+  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<SharedFacturaDetail | null>(null);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
 
-  const facturasPendientes: FacturaPendiente[] = [
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-002',
-      numeroRadicado: 'RAD-2026-087',
-      proveedor: 'Servicios TI Colombia SAS',
-      nit: '900123456-7',
-      valorTotal: 8950000,
-      fechaRadicacion: '2026-03-23',
-      diasTranscurridos: 8,
-      diasMaximos: 12,
-      nivelRiesgo: 'amarillo',
-      accionRequerida: 'Causar factura y asignar cuenta contable',
-      areaSolicitante: 'Sistemas',
-      estado: 'Radicada - Pendiente causación',
-      descripcion: 'Servicios de mantenimiento de infraestructura tecnológica',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-006',
-      numeroRadicado: 'RAD-2026-089',
-      proveedor: 'Servicios de Aseo Total',
-      nit: '900234567-8',
-      valorTotal: 4200000,
-      fechaRadicacion: '2026-03-23',
-      diasTranscurridos: 13,
-      diasMaximos: 12,
-      nivelRiesgo: 'vencido',
-      accionRequerida: 'URGENTE: Causar factura VENCIDA',
-      areaSolicitante: 'Servicios Generales',
-      estado: 'VENCIDA - Sin causar',
-      descripcion: 'Servicios de aseo y mantenimiento general',
-    },
-    {
-      id: '3',
-      numeroFactura: 'FAC-2026-012',
-      numeroRadicado: 'RAD-2026-090',
-      proveedor: 'Mantenimiento Integral EU',
-      nit: '900345678-9',
-      valorTotal: 6750000,
-      fechaRadicacion: '2026-03-22',
-      diasTranscurridos: 7,
-      diasMaximos: 12,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Causar factura y asignar cuenta contable',
-      areaSolicitante: 'Mantenimiento',
-      estado: 'Radicada - Pendiente causación',
-      descripcion: 'Reparaciones de infraestructura física',
-    },
-    {
-      id: '4',
-      numeroFactura: 'FAC-2026-013',
-      numeroRadicado: 'RAD-2026-091',
-      proveedor: 'Editorial Académica',
-      nit: '900456789-0',
-      valorTotal: 3890000,
-      fechaRadicacion: '2026-03-22',
-      diasTranscurridos: 10,
-      diasMaximos: 12,
-      nivelRiesgo: 'naranja',
-      accionRequerida: 'Causar factura y asignar cuenta contable',
-      areaSolicitante: 'Biblioteca',
-      estado: 'Radicada - Pendiente causación',
-      descripcion: 'Adquisición de libros y material bibliográfico',
-    },
-  ];
+  const cargarDatos = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const [recibidas, radicadas] = await Promise.all([
+        facturasService.getByEstado('Recibida'),
+        facturasService.getByEstado('Radicada'),
+      ]);
+      const todas = [...recibidas, ...radicadas];
+      setFacturas(todas);
+      const docsResults = await Promise.all(
+        todas.map((f) => documentosService.getByFactura(f.id).then((d) => ({ id: f.id, docs: d })).catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] })))
+      );
+      const map: Record<number, DocumentoAdjunto[]> = {};
+      docsResults.forEach(({ id, docs }) => { map[id] = docs; });
+      setDocsMap(map);
+    } catch {
+      setError('No se pudo cargar los pendientes. Verifique la conexion.');
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
-  const handleVerDetalle = (factura: FacturaPendiente) => {
-    setFacturaSeleccionada({
-      id: factura.id,
-      numeroFactura: factura.numeroFactura,
-      numeroRadicado: factura.numeroRadicado,
-      proveedor: factura.proveedor,
-      nit: factura.nit,
-      valorTotal: factura.valorTotal,
-      areaSolicitante: factura.areaSolicitante,
-      estado: factura.estado,
-      diasTranscurridos: factura.diasTranscurridos,
-      fechaRecepcion: factura.fechaRadicacion,
-      descripcion: factura.descripcion,
-      observaciones: factura.accionRequerida,
-      nivelRiesgo:
-        factura.nivelRiesgo === 'vencido'
-          ? 'vencido'
-          : factura.nivelRiesgo === 'naranja'
-            ? 'rojo'
-            : factura.nivelRiesgo === 'amarillo'
-              ? 'amarillo'
-              : 'verde',
-    });
-    setMostrarDetalle(true);
-  };
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
-  const vencidasCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'vencido').length;
-  const proximasVencerCount = facturasPendientes.filter(
-    (f) => f.nivelRiesgo === 'amarillo' || f.nivelRiesgo === 'naranja'
-  ).length;
-  const enTiempoCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'verde').length;
+  const vencidasCount = facturas.filter((f) => f.dias_transcurridos > SLA_DIAS).length;
+  const proximasVencerCount = facturas.filter((f) => {
+    const nivel = nivelRiesgo(f.dias_transcurridos);
+    return nivel === 'amarillo' || nivel === 'naranja';
+  }).length;
+  const enTiempoCount = facturas.filter((f) => nivelRiesgo(f.dias_transcurridos) === 'verde').length;
 
   return (
     <>
       <div className="space-y-6">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-6 text-white shadow-xl"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Calculator className="w-7 h-7 text-yellow-400" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <Calculator className="w-7 h-7 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
+                <p className="text-red-100 text-sm">
+                  Facturas asignadas a contabilidad (Recibidas + Radicadas) — SLA: {SLA_DIAS} días
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
-              <p className="text-red-100 text-sm">
-                Facturas radicadas que debo causar contablemente (SLA: 12 días desde radicación)
-              </p>
-            </div>
+            <Button onClick={cargarDatos} variant="outline" className="border-white/30 text-white hover:bg-white/10" disabled={cargando}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
           </div>
         </motion.div>
 
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="border-0 shadow-lg">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-slate-500 text-sm">Total Por Causar</p>
-                <p className="text-4xl font-bold text-slate-800 mt-1">{facturasPendientes.length}</p>
+                <p className="text-slate-500 text-sm">Total Por Procesar</p>
+                <p className="text-4xl font-bold text-slate-800 mt-1">{facturas.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <FileText className="w-6 h-6 text-blue-600" />
@@ -198,111 +172,118 @@ export default function MisPendientes() {
           </Card>
         </div>
 
+        {/* Table */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-slate-800">Facturas Pendientes de Causación</CardTitle>
+              <CardTitle className="text-slate-800">Facturas Pendientes de Procesamiento</CardTitle>
               <CardDescription>
-                Facturas radicadas que debo causar y asignar cuenta contable antes de 12 días
+                Recibidas (pendientes de radicar) y Radicadas (pendientes de causar)
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Nº Factura</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Nº Radicado</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Proveedor</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Área</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Fecha Radicación</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Días</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Acción Requerida</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {facturasPendientes.map((factura, index) => {
-                      const colorRiesgo =
-                        factura.nivelRiesgo === 'vencido'
-                          ? 'bg-purple-700'
-                          : factura.nivelRiesgo === 'naranja'
-                            ? 'bg-orange-500'
-                            : factura.nivelRiesgo === 'amarillo'
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500';
-
-                      return (
-                        <motion.tr
-                          key={factura.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="hover:bg-slate-50 transition-colors"
-                        >
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${colorRiesgo}`} />
-                              {factura.nivelRiesgo === 'vencido' && <AlertCircle className="w-4 h-4 text-purple-700" />}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
-                          <TableCell>
-                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-mono text-xs">
-                              {factura.numeroRadicado}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600">{factura.proveedor}</TableCell>
-                          <TableCell className="text-slate-600">{factura.areaSolicitante}</TableCell>
-                          <TableCell className="font-semibold text-slate-800">
-                            ${factura.valorTotal.toLocaleString('es-CO')}
-                          </TableCell>
-                          <TableCell className="text-slate-600 text-sm">{factura.fechaRadicacion}</TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center gap-1 font-bold text-sm ${
-                                factura.nivelRiesgo === 'vencido'
-                                  ? 'text-purple-700'
-                                  : factura.nivelRiesgo === 'naranja'
-                                    ? 'text-orange-600'
-                                    : factura.nivelRiesgo === 'amarillo'
-                                      ? 'text-yellow-600'
-                                      : 'text-green-600'
-                              }`}
-                            >
-                              {factura.diasTranscurridos}d / {factura.diasMaximos}d
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={`${
-                                factura.nivelRiesgo === 'vencido'
-                                  ? 'bg-purple-100 text-purple-800 border-purple-300'
-                                  : 'bg-blue-100 text-blue-800 border-blue-300'
-                              } border text-xs`}
-                            >
-                              {factura.accionRequerida}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleVerDetalle(factura)}
-                              className="border-slate-300 text-slate-700 hover:bg-slate-100"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Ver
-                            </Button>
-                          </TableCell>
-                        </motion.tr>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              {cargando ? (
+                <div className="flex items-center justify-center py-16 text-slate-400">
+                  <Loader2 className="w-8 h-8 animate-spin mr-3" /> Cargando facturas...
+                </div>
+              ) : error ? (
+                <div className="flex items-center justify-center py-16 text-red-500 gap-2">
+                  <AlertCircle className="w-5 h-5" /> {error}
+                </div>
+              ) : facturas.length === 0 ? (
+                <div className="text-center py-16 text-slate-400">
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No hay facturas pendientes</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="font-semibold text-slate-700">SLA</TableHead>
+                        <TableHead className="font-semibold text-slate-700">N° Factura</TableHead>
+                        <TableHead className="font-semibold text-slate-700">N° Radicado</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Área</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Monto</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Estado</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Días</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Acción</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Ver</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {facturas.map((factura) => {
+                        const nivel = nivelRiesgo(factura.dias_transcurridos);
+                        const colorDot =
+                          nivel === 'vencido' ? 'bg-purple-700' :
+                          nivel === 'naranja' ? 'bg-orange-500' :
+                          nivel === 'amarillo' ? 'bg-yellow-500' : 'bg-green-500';
+                        const colorDias =
+                          nivel === 'vencido' ? 'text-purple-700 font-bold' :
+                          nivel === 'naranja' ? 'text-orange-600 font-semibold' :
+                          nivel === 'amarillo' ? 'text-yellow-600 font-semibold' : 'text-green-700';
+                        return (
+                          <TableRow key={factura.id} className="hover:bg-slate-50">
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${colorDot}`} />
+                                {nivel === 'vencido' && <AlertCircle className="w-4 h-4 text-purple-700" />}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium text-slate-800">{factura.numero_factura}</TableCell>
+                            <TableCell>
+                              {factura.numero_radicado ? (
+                                <Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-mono text-xs">
+                                  {factura.numero_radicado}
+                                </Badge>
+                              ) : <span className="text-slate-400 text-xs">—</span>}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium text-slate-800">{factura.proveedor?.razon_social}</p>
+                              <p className="text-xs text-slate-500 font-mono">{factura.proveedor?.nit}</p>
+                            </TableCell>
+                            <TableCell className="text-slate-600">{factura.departamento?.nombre}</TableCell>
+                            <TableCell className="font-semibold text-slate-800">
+                              ${Number(factura.valor_total).toLocaleString('es-CO')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={
+                                factura.estado === 'Recibida'
+                                  ? 'bg-blue-100 text-blue-700 border-blue-200 border'
+                                  : 'bg-purple-100 text-purple-700 border-purple-200 border'
+                              }>
+                                {factura.estado}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className={colorDias}>{factura.dias_transcurridos}d / {SLA_DIAS}d</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`text-xs ${nivel === 'vencido' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-100 text-slate-700 border-slate-300'} border`}>
+                                {accionRequerida(factura)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setFacturaSeleccionada(facturaToDetail(factura, docsMap[factura.id] ?? []));
+                                  setMostrarDetalle(true);
+                                }}
+                                className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                              >
+                                <Eye className="w-4 h-4 mr-1" /> Ver
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

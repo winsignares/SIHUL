@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent, getIconForComponent } from '../config/componentRoutes';
+import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
 export type MenuOption = 'home' | 'facultades' | 'espacios' | 'asignacion' | 'centrohorarios' | 'periodos' | 'reportes' | 'prestamos' | 'recursos' | 'ocupacion' | 'notificaciones' | 'ajustes' | 'chat' | 'usuarios' | 'asistentes' | 'mihorario';
 
@@ -41,12 +42,11 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         .toLowerCase()
         .replace(/[_-]+/g, ' ')
         .trim();
-    const normalizedUserName = userName
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[_-]+/g, ' ')
-        .trim();
+    const canonicalFinancialRole = resolveCanonicalFinancialRole({
+        roleName: userRole,
+        userName,
+        components,
+    });
 
     const handleLogout = propsOnLogout || (() => {
         logout();
@@ -62,55 +62,9 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             .trim();
     };
 
-    const normalizeComponentName = (name: string) => {
-        return name
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
-    };
-
-    const hasComponentLike = (terms: string[]) =>
-        components.some((c) => {
-            const normalized = normalizeComponentName(c.nombre);
-            return terms.some((term) => normalized.includes(term));
-        });
-
-    const isDireccionFinancieraProfile =
-        normalizedRole.includes('direccion financiera') ||
-        normalizedRole.includes('sindicatura') ||
-        normalizedUserName.includes('direccion financiera') ||
-        normalizedUserName.includes('sindicatura') ||
-        hasComponentLike([
-            'direccion financiera',
-            'sindicatura',
-            'revisar pago',
-            'confirmacion pago',
-            'enviar a rectoria'
-        ]);
-
-    const isRectoriaProfile =
-        normalizedRole.includes('rector') ||
-        normalizedUserName.includes('rector') ||
-        normalizedUserName.includes('rectoria') ||
-        hasComponentLike([
-            'rectoria',
-            'rector',
-            'autorizar pago',
-            'mis pendientes rectoria',
-            'dashboard rectoria'
-        ]);
-
-    const isAdminFinancieroProfile =
-        normalizedRole.includes('admin financiero') ||
-        normalizedUserName.includes('admin financiero') ||
-        hasComponentLike([
-            'admin financiero',
-            'dashboard admin financiero',
-            'gestion proveedores',
-            'parametrizacion sla',
-            'reportes consolidados financiero',
-            'configuracion sistema financiero'
-        ]);
+    const isDireccionFinancieraProfile = canonicalFinancialRole === 'direccion_financiera';
+    const isRectoriaProfile = canonicalFinancialRole === 'rectoria';
+    const isAdminFinancieroProfile = canonicalFinancialRole === 'admin_financiero';
 
     /**
      * Agrupa los componentes en secciones para el menú
@@ -340,7 +294,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         }
 
         // Menu especifico para Tesoreria Financiera
-        if (normalizedRole.includes('tesoreria') || normalizedRole.includes('tesorer')) {
+        if (canonicalFinancialRole === 'tesoreria') {
             sections.push({
                 id: 'principal',
                 label: 'Principal',
@@ -401,7 +355,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         }
 
         // Menu especifico para Auditoria Financiera
-        if (normalizedRole.includes('auditor')) {
+        if (canonicalFinancialRole === 'auditoria') {
             sections.push({
                 id: 'principal',
                 label: 'Principal',
@@ -441,7 +395,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         }
 
         // Menú específico para Funcionario Financiero (siempre consistente)
-        if (normalizedRole.includes('funcionario')) {
+        if (canonicalFinancialRole === 'funcionario') {
             sections.push({
                 id: 'principal',
                 label: 'Principal',
@@ -488,7 +442,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         }
 
         // Menú específico para Proveedor
-        if (normalizedRole.includes('proveedor')) {
+        if (canonicalFinancialRole === 'proveedor') {
             sections.push({
                 id: 'principal',
                 label: 'Principal',
@@ -528,9 +482,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         }
 
         // Menú específico para Contabilidad Financiera (siempre consistente)
-        if (
-            normalizedRole.includes('contabilidad')
-        ) {
+        if (canonicalFinancialRole === 'contabilidad') {
             sections.push({
                 id: 'principal',
                 label: 'Principal',

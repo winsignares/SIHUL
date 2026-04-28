@@ -15,7 +15,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { facturasService } from '../../../services/financiero';
-import type { Factura, HistorialFactura } from '../../../models/financiero';
+import type { Factura, HistorialFactura } from '../../../models/financiero/core.models';
 
 const formatMoney = (val: any) => {
   const num = Number(val) || 0;
@@ -82,7 +82,8 @@ export default function FacturaDetalle() {
       setError(null);
       try {
         const seg = await facturasService.getSeguimiento(Number(id));
-        setFactura(seg.factura || null);
+        const facturaSeguimiento = (seg?.factura || null) as Factura | null;
+        setFactura(facturaSeguimiento);
         setHistorial(Array.isArray(seg.historial) ? seg.historial : []);
       } catch {
         try {

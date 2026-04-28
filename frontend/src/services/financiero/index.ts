@@ -11,7 +11,7 @@ import type {
   ComentarioFactura,
   CreateFacturaDTO,
   PaginatedResponse,
-} from '../../models/financiero';
+} from '../../models/financiero/core.models';
 
 // apiClient ya incluye el prefijo /api en su base URL
 const API_BASE = '/financiero';
@@ -60,15 +60,28 @@ export const facturasService = {
   },
 
   // Radicar factura
-  radicar: async (id: number): Promise<Factura> => {
-    const response = await apiClient.post<Factura>(`${API_BASE}/facturas/${id}/radicar/`);
+  radicar: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    const response = await apiClient.post<Factura>(`${API_BASE}/facturas/${id}/radicar/`, body);
     return response;
   },
 
   // Causar factura
-  causar: async (id: number): Promise<Factura> => {
-    const response = await apiClient.post<Factura>(`${API_BASE}/facturas/${id}/causar/`);
+  causar: async (
+    id: number,
+    opts?: { cuenta_contable_id?: number; centro_costo_id?: number; observaciones?: string }
+  ): Promise<Factura> => {
+    const response = await apiClient.post<Factura>(`${API_BASE}/facturas/${id}/causar/`, opts || {});
     return response;
+  },
+
+  // Obtener facturas por estado (para contabilidad, tesorería, etc.)
+  getByEstado: async (estado: string): Promise<Factura[]> => {
+    const response = await apiClient.get<PaginatedResponse<Factura> | Factura[]>(
+      `${API_BASE}/facturas/?estado=${encodeURIComponent(estado)}`
+    );
+    if (Array.isArray(response)) return response;
+    return (response as PaginatedResponse<Factura>)?.results || [];
   },
 
   // Alistar factura

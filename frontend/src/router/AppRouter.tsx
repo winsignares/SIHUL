@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent } from '../config/componentRoutes';
+import { normalizeFinancialRole, normalizeFinancialText, resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
 // Lazy load de componentes para mejorar el rendimiento
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
@@ -122,23 +123,19 @@ export default function AppRouter() {
   const { isAuthenticated, components, role, user } = useAuth();
   const effectiveRole = role ?? user?.rol ?? null;
 
-  const normalizeText = (value: string) =>
-    value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[_-]+/g, ' ')
-      .trim();
-
-  const normalizedUserName = normalizeText(user?.nombre || '');
+  const canonicalFinancialRole = resolveCanonicalFinancialRole({
+    roleName: effectiveRole?.nombre,
+    userName: user?.nombre || '',
+    components,
+  });
 
   const hasComponentByName = (name: string) => components.some(c => c.nombre === name);
   const hasFinancialComponent = components.some(c => {
-    const normalized = normalizeText(c.nombre);
+    const normalized = normalizeFinancialText(c.nombre);
     return normalized.includes('factur') || normalized.includes('financier') || normalized.includes('pendient');
   });
   const hasTesoreriaComponent = components.some(c => {
-    const normalized = normalizeText(c.nombre);
+    const normalized = normalizeFinancialText(c.nombre);
     return (
       normalized.includes('tesorer') ||
       normalized.includes('alistar pago') ||
@@ -148,7 +145,7 @@ export default function AppRouter() {
     );
   });
   const hasDireccionFinancieraComponent = components.some(c => {
-    const normalized = normalizeText(c.nombre);
+    const normalized = normalizeFinancialText(c.nombre);
     return (
       normalized.includes('direccion financiera') ||
       normalized.includes('sindicatura') ||
@@ -159,7 +156,7 @@ export default function AppRouter() {
     );
   });
   const hasAuditoriaComponent = components.some(c => {
-    const normalized = normalizeText(c.nombre);
+    const normalized = normalizeFinancialText(c.nombre);
     return (
       normalized.includes('auditor') ||
       normalized.includes('control previo') ||
@@ -169,7 +166,7 @@ export default function AppRouter() {
     );
   });
   const hasRectoriaComponent = components.some(c => {
-    const normalized = normalizeText(c.nombre);
+    const normalized = normalizeFinancialText(c.nombre);
     return (
       normalized.includes('rector') ||
       normalized.includes('rectoria') ||
@@ -178,7 +175,7 @@ export default function AppRouter() {
     );
   });
   const hasAdminFinancieroComponent = components.some(c => {
-    const normalized = normalizeText(c.nombre);
+    const normalized = normalizeFinancialText(c.nombre);
     return (
       normalized.includes('admin financiero') ||
       normalized.includes('administrador financiero') ||
@@ -195,28 +192,13 @@ export default function AppRouter() {
     );
   });
 
-  const isRectoriaProfile =
-    normalizeText(effectiveRole?.nombre || '').includes('rector') ||
-    normalizedUserName.includes('rector') ||
-    normalizedUserName.includes('rectoria') ||
-    hasRectoriaComponent;
+  const isRectoriaProfile = canonicalFinancialRole === 'rectoria';
 
-  const isDireccionFinancieraProfile =
-    normalizeText(effectiveRole?.nombre || '').includes('direccion financiera') ||
-    normalizeText(effectiveRole?.nombre || '').includes('sindicatura') ||
-    normalizedUserName.includes('direccion financiera') ||
-    normalizedUserName.includes('sindicatura') ||
-    hasDireccionFinancieraComponent;
+  const isDireccionFinancieraProfile = canonicalFinancialRole === 'direccion_financiera';
 
-  const isAdminFinancieroProfile =
-    normalizeText(effectiveRole?.nombre || '').includes('admin financiero') ||
-    normalizeText(effectiveRole?.nombre || '').includes('administrador financiero') ||
-    normalizedUserName.includes('admin financiero') ||
-    hasAdminFinancieroComponent;
+  const isAdminFinancieroProfile = canonicalFinancialRole === 'admin_financiero';
 
-  const isAdminFinancieroByRole =
-    normalizeText(effectiveRole?.nombre || '').includes('admin financiero') ||
-    normalizeText(effectiveRole?.nombre || '').includes('administrador financiero');
+  const isAdminFinancieroByRole = normalizeFinancialRole(effectiveRole?.nombre) === 'admin_financiero';
 
   const canAccessAdminFinanciero =
     isAdminFinancieroByRole ||
@@ -231,7 +213,7 @@ export default function AppRouter() {
 
   const canAccessDireccionFinanciera =
     isDireccionFinancieraProfile &&
-    (hasComponentByName('Dashboard Direccion Financiera') || hasFinancialComponent);
+    (hasComponentByName('Dashboard Direccion Financiera') || hasDireccionFinancieraComponent || hasFinancialComponent);
 
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {
@@ -259,7 +241,6 @@ export default function AppRouter() {
   // Definir redirección inicial según rol y componentes exactos del backend
   const homeRoute = (() => {
     const roleName = effectiveRole?.nombre;
-    const normalizedRoleName = normalizeText(roleName || '');
 
     if (roleName === 'admin') {
       if (hasComponentByName('Dashboard')) return '/admin/dashboard';
@@ -298,35 +279,23 @@ export default function AppRouter() {
       return '/financiero/direccion-financiera/dashboard';
     }
 
-    if (
-      (normalizedRoleName.includes('tesoreria') || normalizedRoleName.includes('tesorer')) &&
-      (hasComponentByName('Alistar Pagos') || hasComponentByName('Registrar Pago Aplicado') || hasTesoreriaComponent || hasFinancialComponent)
-    ) {
+    if (canonicalFinancialRole === 'tesoreria' && (hasComponentByName('Alistar Pagos') || hasComponentByName('Registrar Pago Aplicado') || hasTesoreriaComponent || hasFinancialComponent)) {
       return '/financiero/tesoreria/dashboard';
     }
 
-    if (
-      normalizedRoleName.includes('auditor') &&
-      (hasComponentByName('Control Previo') || hasAuditoriaComponent || hasFinancialComponent)
-    ) {
+    if (canonicalFinancialRole === 'auditoria' && (hasComponentByName('Control Previo') || hasAuditoriaComponent || hasFinancialComponent)) {
       return '/financiero/auditoria/dashboard';
     }
 
-    if (
-      normalizedRoleName.includes('contabilidad') &&
-      (hasComponentByName('Causar Factura') || hasComponentByName('Causar Facturas') || hasFinancialComponent)
-    ) {
+    if (canonicalFinancialRole === 'contabilidad' && (hasComponentByName('Causar Factura') || hasComponentByName('Causar Facturas') || hasFinancialComponent)) {
       return '/financiero/contabilidad/dashboard';
     }
 
-    if (normalizedRoleName.includes('proveedor')) {
+    if (canonicalFinancialRole === 'proveedor') {
       return '/financiero/proveedor/dashboard';
     }
 
-    if (
-      normalizedRoleName.includes('funcionario') &&
-      (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)
-    ) {
+    if (canonicalFinancialRole === 'funcionario' && (hasComponentByName('Gestión de Facturas') || hasFinancialComponent)) {
       return '/financiero/funcionario/dashboard';
     }
 

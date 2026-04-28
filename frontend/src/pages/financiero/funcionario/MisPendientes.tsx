@@ -3,33 +3,13 @@ import { motion } from 'framer-motion';
 import { AlertCircle, Clock, Eye, FileText, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
-import type { Factura } from '../../../models/financiero';
+import type { Factura } from '../../../models/financiero/core.models';
+import type { FuncionarioPendingRow } from '../../../models/financiero/funcionario';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 
-type PendingRow = {
-  id: string;
-  numeroFactura?: string;
-  proveedor: string;
-  nit: string;
-  contacto: string;
-  tipoDocumento: string;
-  descripcion: string;
-  valorTotal: number;
-  fechaFactura: string;
-  fechaRecepcion: string;
-  areaSolicitante: string;
-  dias: number;
-  slaMax: number;
-  nivelRiesgo: 'verde' | 'amarillo' | 'vencido';
-  accion: string;
-  proveedorId: number;
-  departamentoId?: number;
-  departamentoNombre?: string;
-};
-
-function mapFacturaToPendingRow(f: Factura): PendingRow {
+function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
-  const riesgo: PendingRow['nivelRiesgo'] = dias > 2 ? 'vencido' : dias > 0 ? 'amarillo' : 'verde';
+  const riesgo: FuncionarioPendingRow['nivelRiesgo'] = dias > 2 ? 'vencido' : dias > 0 ? 'amarillo' : 'verde';
   const contacto = [f.proveedor?.email, f.proveedor?.telefono].filter(Boolean).join(' | ');
   const area = f.departamento?.nombre?.trim() || '';
 
@@ -61,7 +41,7 @@ function mapFacturaToPendingRow(f: Factura): PendingRow {
 
 export default function MisPendientes() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<PendingRow[]>([]);
+  const [rows, setRows] = useState<FuncionarioPendingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -91,7 +71,7 @@ export default function MisPendientes() {
   const vencidas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'vencido').length, [rows]);
   const proximas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'amarillo').length, [rows]);
 
-  const riskDotClass = (risk: PendingRow['nivelRiesgo']) => {
+  const riskDotClass = (risk: FuncionarioPendingRow['nivelRiesgo']) => {
     if (risk === 'vencido') return 'bg-red-600';
     if (risk === 'amarillo') return 'bg-yellow-500';
     return 'bg-green-500';

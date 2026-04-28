@@ -14,7 +14,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import EnviarFactura from './EnviarFactura';
 import MisFacturas from './MisFacturas';
 import { proveedoresService, facturasService } from '../../../services/financiero';
-import type { Proveedor, Factura } from '../../../models/financiero';
+import type { Proveedor, Factura } from '../../../models/financiero/core.models';
+import type { ProveedorDashboardHomeProps } from '../../../models/financiero/proveedor';
 
 const toList = <T,>(data: any): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -77,14 +78,7 @@ export default function ProveedorDashboard() {
   return <div className="p-6">{renderContent()}</div>;
 }
 
-interface DashboardHomeProps {
-  miProveedor: Proveedor | null;
-  proveedorLoading: boolean;
-  onGoToEnviar: () => void;
-  onGoToMisFacturas: () => void;
-}
-
-function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisFacturas }: DashboardHomeProps) {
+function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisFacturas }: ProveedorDashboardHomeProps) {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
 

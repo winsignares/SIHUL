@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { proveedoresService } from '../../../services/financiero';
-import type { Factura, Proveedor } from '../../../models/financiero';
+import type { Factura } from '../../../models/financiero/core.models';
+import type { MisFacturasProps } from '../../../models/financiero/proveedor';
 
 const toList = <T,>(data: any): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -44,11 +45,7 @@ const ESTADO_CONFIG: Record<string, { color: string; icon: React.ElementType; la
   'Anulada':               { color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',        icon: XCircle,        label: 'Anulada' },
 };
 
-interface Props {
-  miProveedor: Proveedor | null;
-}
-
-export default function MisFacturas({ miProveedor }: Props) {
+export default function MisFacturas({ miProveedor }: MisFacturasProps) {
   const navigate = useNavigate();
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);

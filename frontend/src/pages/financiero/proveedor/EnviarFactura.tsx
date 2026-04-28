@@ -14,14 +14,13 @@ import {
   Search,
 } from 'lucide-react';
 import { departamentosService, documentosService, facturasService, proveedoresService } from '../../../services/financiero';
-import type { Departamento, Proveedor } from '../../../models/financiero';
+import type { Departamento, Proveedor } from '../../../models/financiero/core.models';
+import type { EnviarFacturaProps, UploadedDoc } from '../../../models/financiero/proveedor';
 
 const formatMoney = (val: unknown) => {
   const num = Number(val) || 0;
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
-
-type UploadedDoc = { id: string; type: string; file: File };
 
 const TIPO_DOCUMENTO_OPTS = [
   'Factura Electrónica',
@@ -89,12 +88,7 @@ const validateDocFile = async (file: File): Promise<string | null> => {
   return null;
 };
 
-interface Props {
-  miProveedor: Proveedor | null;
-  onSuccess?: () => void;
-}
-
-export default function EnviarFactura({ miProveedor, onSuccess }: Props) {
+export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);

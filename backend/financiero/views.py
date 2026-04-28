@@ -426,6 +426,22 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        cuenta_contable_id = request.data.get('cuenta_contable_id')
+        centro_costo_id = request.data.get('centro_costo_id')
+        observaciones = request.data.get('observaciones', '')
+
+        if cuenta_contable_id:
+            try:
+                factura.cuenta_contable = models.CuentaContable.objects.get(pk=cuenta_contable_id)
+            except models.CuentaContable.DoesNotExist:
+                return Response({'error': 'Cuenta contable no encontrada'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if centro_costo_id:
+            try:
+                factura.centro_costo = models.CentroCosto.objects.get(pk=centro_costo_id)
+            except models.CentroCosto.DoesNotExist:
+                return Response({'error': 'Centro de costo no encontrado'}, status=status.HTTP_400_BAD_REQUEST)
+
         factura.estado = 'Causada'
         factura.fecha_causacion = timezone.now().date()
         factura.etapa_actual = 'Causación'
@@ -439,7 +455,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             estado_nuevo='Causada',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
-            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol'
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None
         )
 
         self._notificar_transicion(factura, 'Radicada', 'Causada')

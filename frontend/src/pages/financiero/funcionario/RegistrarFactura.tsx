@@ -4,15 +4,16 @@ import { AlertCircle, Calendar, CheckCircle2, Download, ExternalLink, FileText, 
 import { useLocation } from 'react-router-dom';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
-import type { CreateFacturaDTO, Departamento, DocumentoAdjunto, Factura, Proveedor } from '../../../models/financiero';
+import type {
+  CreateFacturaDTO,
+  Departamento,
+  DocumentoAdjunto,
+  Factura,
+  Proveedor,
+} from '../../../models/financiero/core.models';
+import type { FuncionarioDocumentType, FuncionarioUploadedDoc, PrefillFromPendiente } from '../../../models/financiero/funcionario';
 
-type UploadedDoc = {
-  id: string;
-  type: 'Factura' | 'Orden de Compra' | 'Certificación Bancaria' | 'Acta de Entrega' | 'Soporte Adicional';
-  file: File;
-};
-
-const DOCUMENT_TYPES: Array<UploadedDoc['type']> = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const DOCUMENT_TYPES: FuncionarioDocumentType[] = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
 const BLOCKED_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'ps1', 'js', 'vbs', 'scr', 'msi', 'com', 'jar', 'sh']);
@@ -97,25 +98,6 @@ const validateUploadFile = (file: File): string | null => {
   return null;
 };
 
-type PrefillFromPendiente = {
-  facturaId: number;
-  snapshot?: {
-    numeroFactura?: string;
-    proveedorId?: number;
-    proveedorNombre?: string;
-    nit?: string;
-    tipoDocumento?: string;
-    valorSubtotal?: number;
-    valorIva?: number;
-    valorTotal?: number;
-    fechaFactura?: string;
-    fechaRecepcion?: string;
-    departamentoId?: number;
-    descripcion?: string;
-    observaciones?: string;
-  };
-};
-
 export default function RegistrarFactura() {
   const location = useLocation();
   const prefillFromPendiente = (location.state as { prefillFromPendiente?: PrefillFromPendiente } | null)?.prefillFromPendiente;
@@ -135,7 +117,7 @@ export default function RegistrarFactura() {
 
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
-  const [docs, setDocs] = useState<UploadedDoc[]>([]);
+  const [docs, setDocs] = useState<FuncionarioUploadedDoc[]>([]);
   const [existingDocs, setExistingDocs] = useState<DocumentoAdjunto[]>([]);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [diagInfo, setDiagInfo] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; count: number; source: string; rawError: string | null }>({ status: 'idle', count: 0, source: '', rawError: null });
@@ -350,7 +332,7 @@ export default function RegistrarFactura() {
     });
   };
 
-  const addDoc = (type: UploadedDoc['type'], file?: File) => {
+  const addDoc = (type: FuncionarioDocumentType, file?: File) => {
     if (!file) return;
     const validationError = validateUploadFile(file);
     if (validationError) {
@@ -422,13 +404,13 @@ export default function RegistrarFactura() {
     document.body.removeChild(anchor);
   };
 
-  const openLocalDocument = (doc: UploadedDoc) => {
+  const openLocalDocument = (doc: FuncionarioUploadedDoc) => {
     const objectUrl = URL.createObjectURL(doc.file);
     window.open(objectUrl, '_blank', 'noopener,noreferrer');
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   };
 
-  const downloadLocalDocument = (doc: UploadedDoc) => {
+  const downloadLocalDocument = (doc: FuncionarioUploadedDoc) => {
     const objectUrl = URL.createObjectURL(doc.file);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
@@ -450,7 +432,7 @@ export default function RegistrarFactura() {
 
   const requiredDocTypes = DOCUMENT_TYPES;
   const existingDocTypes = useMemo(
-    () => new Set(existingDocs.map((doc) => doc.tipo_documento).filter((tipo): tipo is UploadedDoc['type'] => DOCUMENT_TYPES.includes(tipo as UploadedDoc['type']))),
+    () => new Set(existingDocs.map((doc) => doc.tipo_documento).filter((tipo): tipo is FuncionarioDocumentType => DOCUMENT_TYPES.includes(tipo as FuncionarioDocumentType))),
     [existingDocs]
   );
   const uploadedDocTypes = useMemo(() => new Set(docs.map((d) => d.type)), [docs]);
@@ -474,7 +456,7 @@ export default function RegistrarFactura() {
 
   const validateStep2 = () => {
     const required = DOCUMENT_TYPES;
-    const docTypes = new Set<UploadedDoc['type']>([...existingDocTypes, ...uploadedDocTypes]);
+    const docTypes = new Set<FuncionarioDocumentType>([...existingDocTypes, ...uploadedDocTypes]);
     const missing = required.filter((t) => !docTypes.has(t));
     return missing.length ? `Faltan documentos obligatorios: ${missing.join(', ')}` : null;
   };

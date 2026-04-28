@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -7,24 +8,42 @@ import {
   Clock,
   CheckCircle2,
   TrendingUp,
-  AlertCircle,
+  Loader2,
 } from 'lucide-react';
-
-interface ContabilidadHomeProps {
-  onGoToPendientes: () => void;
-  onGoToRadicar: () => void;
-  onGoToCausar: () => void;
-}
+import { facturasService, historialService } from '../../../services/financiero';
+import type { HistorialFactura } from '../../../models/financiero/core.models';
+import type { ContabilidadHomePropsModel } from '../../../models/financiero/contabilidad';
 
 export default function ContabilidadHome({
   onGoToPendientes,
   onGoToRadicar,
   onGoToCausar,
-}: ContabilidadHomeProps) {
+}: ContabilidadHomePropsModel) {
+  const [recibidas, setRecibidas] = useState<number | null>(null);
+  const [radicadas, setRadicadas] = useState<number | null>(null);
+  const [causadas, setCausadas] = useState<number | null>(null);
+  const [historial, setHistorial] = useState<HistorialFactura[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      facturasService.getByEstado('Recibida'),
+      facturasService.getByEstado('Radicada'),
+      facturasService.getByEstado('Causada'),
+    ]).then(([rec, rad, caus]) => {
+      setRecibidas(rec.length);
+      setRadicadas(rad.length);
+      setCausadas(caus.length);
+      if (rad.length > 0) {
+        historialService.getByFactura(rad[0].id).then(setHistorial).catch(() => {});
+      }
+    }).catch(() => {}).finally(() => setLoadingStats(false));
+  }, []);
+
   const stats = [
     {
       title: 'Facturas para Radicar',
-      value: '12',
+      value: loadingStats ? '...' : String(recibidas ?? 0),
       icon: FileCheck,
       color: 'from-blue-600 to-blue-700',
       iconColor: 'text-blue-100',
@@ -32,27 +51,27 @@ export default function ContabilidadHome({
     },
     {
       title: 'Pendientes de Causación',
-      value: '18',
+      value: loadingStats ? '...' : String(radicadas ?? 0),
       icon: Calculator,
       color: 'from-green-600 to-green-700',
       iconColor: 'text-green-100',
       trend: 'Estado: Radicadas',
     },
     {
-      title: 'Causadas Este Mes',
-      value: '156',
+      title: 'Causadas (en sistema)',
+      value: loadingStats ? '...' : String(causadas ?? 0),
       icon: CheckCircle2,
       color: 'from-purple-600 to-purple-700',
       iconColor: 'text-purple-100',
-      trend: '+15% vs mes anterior',
+      trend: 'Total acumulado',
     },
     {
-      title: 'Promedio de Procesamiento',
-      value: '2.1 días',
+      title: 'SLA Máximo',
+      value: '12 días',
       icon: TrendingUp,
       color: 'from-red-600 to-red-700',
       iconColor: 'text-red-100',
-      trend: 'Mejora del 10%',
+      trend: 'Desde radicación hasta causación',
     },
   ];
 
@@ -73,44 +92,7 @@ export default function ContabilidadHome({
     },
   ];
 
-  const recentActivity = [
-    {
-      id: 1,
-      factura: 'FAC-2026-005',
-      proveedor: 'Editorial Universitaria',
-      monto: 5670000,
-      estado: 'Causada',
-      fecha: '2026-03-23 10:45',
-      accion: 'Causación aprobada',
-    },
-    {
-      id: 2,
-      factura: 'FAC-2026-006',
-      proveedor: 'Servicios de Aseo Total',
-      monto: 4200000,
-      estado: 'Radicada',
-      fecha: '2026-03-23 09:30',
-      accion: 'Radicado: RAD-2026-089',
-    },
-    {
-      id: 3,
-      factura: 'FAC-2026-007',
-      proveedor: 'Suministros de Oficina',
-      monto: 1850000,
-      estado: 'Causada',
-      fecha: '2026-03-22 16:15',
-      accion: 'Causación completada',
-    },
-    {
-      id: 4,
-      factura: 'FAC-2026-008',
-      proveedor: 'Tecnología Educativa SAS',
-      monto: 9200000,
-      estado: 'Devuelta',
-      fecha: '2026-03-22 14:30',
-      accion: 'Devuelta por soportes incompletos',
-    },
-  ];
+  const recentActivity = historial.slice(0, 5);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -237,44 +219,44 @@ export default function ContabilidadHome({
                 Últimas acciones realizadas en el área de contabilidad
               </p>
             </div>
-            <div className="space-y-3">
-              {recentActivity.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 + index * 0.05 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
-                      <Calculator className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold text-slate-800">{item.factura}</p>
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full border ${getEstadoBadge(
-                            item.estado
-                          )}`}
-                        >
-                          {item.estado}
-                        </span>
+            {loadingStats ? (
+              <div className="flex items-center justify-center py-8 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando actividad...
+              </div>
+            ) : recentActivity.length === 0 ? (
+              <p className="text-center text-slate-400 py-8">No hay actividad reciente registrada.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 + index * 0.05 }}
+                    className="flex items-center justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                        <Calculator className="w-5 h-5 text-white" />
                       </div>
-                      <p className="text-sm text-slate-600">
-                        {item.proveedor} - {item.accion}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-slate-800">Factura #{item.factura_id}</p>
+                          <span className={`text-xs px-2 py-1 rounded-full border ${getEstadoBadge(item.estado_nuevo ?? '')} `}>
+                            {item.estado_nuevo ?? item.accion}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600">{item.accion}{item.observacion ? ` — ${item.observacion}` : ''}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-slate-800">
-                      ${item.monto.toLocaleString('es-CO')}
-                    </p>
-                    <p className="text-xs text-slate-500">{item.fecha}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">{item.fecha_accion?.slice(0, 16).replace('T', ' ')}</p>
+                      {item.usuario_nombre && <p className="text-xs text-slate-400">{item.usuario_nombre}</p>}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

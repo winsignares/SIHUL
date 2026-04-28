@@ -1,4 +1,4 @@
-// Modelos para el módulo Financiero
+// Modelos base compartidos para el módulo Financiero
 
 export interface Proveedor {
   id: number;
@@ -73,16 +73,16 @@ export interface Factura {
   numero_proceso_pago?: string;
   numero_transaccion?: string;
   numero_comprobante?: string;
-  
+
   proveedor_id: number;
   proveedor?: Proveedor;
-  
+
   departamento_id: number;
   departamento?: Departamento;
-  
+
   cuenta_contable_id?: number;
   centro_costo_id?: number;
-  
+
   valor_subtotal: number;
   valor_iva: number;
   valor_retencion_renta: number;
@@ -90,12 +90,12 @@ export interface Factura {
   valor_retencion_ica: number;
   valor_total: number;
   valor_neto_pagar: number;
-  
+
   tipo_documento: 'Factura Electrónica' | 'Factura' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro';
   descripcion: string;
   observaciones?: string;
   cuenta_bancaria_proveedor?: string;
-  
+
   fecha_factura: string;
   fecha_recepcion: string;
   fecha_radicacion?: string;
@@ -106,19 +106,19 @@ export interface Factura {
   fecha_autorizacion?: string;
   fecha_pago_aplicado?: string;
   fecha_comprobante?: string;
-  
+
   estado: EstadoFactura;
   etapa_actual?: string;
   indicador_riesgo: IndicadorRiesgo;
   sla_cumplido: boolean;
   dias_transcurridos: number;
-  
+
   usuario_responsable_id?: number;
   usuario_responsable?: { id: number; nombre: string };
-  
+
   urgente: boolean;
   requiere_autorizacion_especial: boolean;
-  
+
   fecha_creacion: string;
   fecha_modificacion: string;
 
@@ -174,28 +174,27 @@ export interface RechazoDevolucion {
   usuario_rechaza_id: number;
 }
 
-// DTOs para crear/actualizar
 export interface CreateFacturaDTO {
   numero_factura?: string;
   proveedor_id: number;
   departamento_id: number;
   cuenta_contable_id?: number;
   centro_costo_id?: number;
-  
+
   valor_subtotal: number;
   valor_iva: number;
   valor_retencion_renta?: number;
   valor_retencion_iva?: number;
   valor_retencion_ica?: number;
   valor_total: number;
-  
+
   tipo_documento: string;
   descripcion: string;
   observaciones?: string;
-  
+
   fecha_factura: string;
   fecha_recepcion: string;
-  
+
   cuenta_bancaria_proveedor?: string;
   urgente?: boolean;
   usuario_responsable_id?: number;
@@ -218,7 +217,6 @@ export interface UpdateFacturaEstadoDTO {
   observacion?: string;
 }
 
-// Respuesta de APIs
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

@@ -3,46 +3,10 @@ import { motion } from 'framer-motion';
 import { Calendar, Download, Eye, Search, Filter, DollarSign, FileSearch, Bell } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
-import type { Factura } from '../../../models/financiero';
+import type { Factura } from '../../../models/financiero/core.models';
+import type { FuncionarioConsultaRow, FuncionarioEstadoChange, FuncionarioSeguimientoResponse } from '../../../models/financiero/funcionario';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import type { TimelineEtapa } from '../../../share/factura-timeline';
-
-type Row = {
-  id: string;
-  facturaId: number;
-  riesgo: 'verde' | 'amarillo' | 'naranja' | 'vencido';
-  idTramite: string;
-  proveedor: string;
-  nit?: string;
-  area: string;
-  monto: number;
-  estado: string;
-  etapa: string;
-  numeroRadicado: string;
-  sinRadicado: boolean;
-  fechaFactura: string;
-  fechaRecepcion: string;
-  dias: number;
-};
-
-type SeguimientoResponse = {
-  factura?: Factura;
-  historial?: Array<{
-    fecha_accion?: string;
-    accion?: string;
-    estado_anterior?: string;
-    estado_nuevo?: string;
-    usuario_nombre?: string;
-    observacion?: string;
-  }>;
-};
-
-type EstadoChange = {
-  id: number;
-  numeroFactura: string;
-  estadoAnterior: string;
-  estadoNuevo: string;
-};
 
 const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
   { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
@@ -65,9 +29,9 @@ const toList = <T,>(data: unknown): T[] => {
   return [];
 };
 
-function mapFactura(f: Factura): Row {
+function mapFactura(f: Factura): FuncionarioConsultaRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
-  let riesgo: Row['riesgo'] = 'verde';
+  let riesgo: FuncionarioConsultaRow['riesgo'] = 'verde';
   if (dias > 15) riesgo = 'vencido';
   else if (dias > 10) riesgo = 'naranja';
   else if (dias > 5) riesgo = 'amarillo';
@@ -96,12 +60,12 @@ function inferEtapaActual(estado: string): string {
   return found?.nombre || estado;
 }
 
-function mapRiesgo(risk: Row['riesgo']): 'verde' | 'amarillo' | 'rojo' | 'vencido' {
+function mapRiesgo(risk: FuncionarioConsultaRow['riesgo']): 'verde' | 'amarillo' | 'rojo' | 'vencido' {
   if (risk === 'naranja') return 'rojo';
   return risk;
 }
 
-function buildTimelineFromSeguimiento(seguimiento: SeguimientoResponse, fallbackEstado: string): TimelineEtapa[] {
+function buildTimelineFromSeguimiento(seguimiento: FuncionarioSeguimientoResponse, fallbackEstado: string): TimelineEtapa[] {
   const historial = Array.isArray(seguimiento?.historial) ? [...seguimiento.historial] : [];
   historial.sort((a, b) => new Date(a.fecha_accion || 0).getTime() - new Date(b.fecha_accion || 0).getTime());
 
@@ -139,14 +103,14 @@ function buildTimelineFromSeguimiento(seguimiento: SeguimientoResponse, fallback
 
 export default function ConsultarFacturas() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<FuncionarioConsultaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<SharedFacturaDetail | null>(null);
-  const [estadoChanges, setEstadoChanges] = useState<EstadoChange[]>([]);
+  const [estadoChanges, setEstadoChanges] = useState<FuncionarioEstadoChange[]>([]);
 
   const [numeroFactura, setNumeroFactura] = useState('');
   const [proveedor, setProveedor] = useState('');
@@ -188,7 +152,7 @@ export default function ConsultarFacturas() {
           const latest = await loadRows();
           setRows((prev) => {
             const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
-            const changes: EstadoChange[] = [];
+            const changes: FuncionarioEstadoChange[] = [];
 
             latest.forEach((next) => {
               const old = previousMap.get(next.facturaId);
@@ -260,7 +224,7 @@ export default function ConsultarFacturas() {
         const seguimiento = await facturasService.getSeguimiento(selectedRow.facturaId);
         const factura = (seguimiento?.factura || null) as Factura | null;
         const estadoActual = factura?.estado || selectedRow.estado;
-        const timeline = buildTimelineFromSeguimiento(seguimiento as SeguimientoResponse, estadoActual);
+        const timeline = buildTimelineFromSeguimiento(seguimiento as FuncionarioSeguimientoResponse, estadoActual);
 
         setSelectedDetail({
           numeroFactura: factura?.numero_factura || selectedRow.idTramite,
@@ -322,7 +286,7 @@ export default function ConsultarFacturas() {
     return 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
-  const riskDot = (risk: Row['riesgo']) => {
+  const riskDot = (risk: FuncionarioConsultaRow['riesgo']) => {
     if (risk === 'vencido') return 'bg-purple-700';
     if (risk === 'naranja') return 'bg-orange-500';
     if (risk === 'amarillo') return 'bg-yellow-500';
