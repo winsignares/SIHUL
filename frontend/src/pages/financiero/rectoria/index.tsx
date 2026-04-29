@@ -1,18 +1,10 @@
-import { useLocation, useNavigate } from 'react-router-dom';
 import RectoriaHome from './RectoriaHome';
 import MisPendientes from './MisPendientes';
 import AutorizarPagos from './AutorizarPagos';
+import { useRectoriaDashboard } from '../../../hooks/financiero/rectoria';
 
 export default function RectoriaDashboard() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const activeView = (() => {
-    const path = location.pathname.toLowerCase();
-    if (path.includes('/pendientes')) return 'pendientes';
-    if (path.includes('/autorizar')) return 'autorizar';
-    return 'dashboard';
-  })();
+  const { activeView, goToPendientes, goToAutorizar } = useRectoriaDashboard();
 
   const renderContent = () => {
     switch (activeView) {
@@ -23,8 +15,8 @@ export default function RectoriaDashboard() {
       default:
         return (
           <RectoriaHome
-            onGoToPendientes={() => navigate('/financiero/rectoria/pendientes')}
-            onGoToAutorizar={() => navigate('/financiero/rectoria/autorizar')}
+            onGoToPendientes={goToPendientes}
+            onGoToAutorizar={goToAutorizar}
           />
         );
     }

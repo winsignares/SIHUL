@@ -1,20 +1,11 @@
-import { useLocation, useNavigate } from 'react-router-dom';
 import ContabilidadHome from './ContabilidadHome';
 import MisPendientes from './MisPendientes';
 import RadicarFacturas from './RadicarFacturas';
 import CausarFacturas from './CausarFacturas';
+import { useContabilidadDashboard } from '../../../hooks/financiero/contabilidad';
 
 export default function ContabilidadDashboard() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const activeView = (() => {
-    const path = location.pathname.toLowerCase();
-    if (path.includes('/pendientes')) return 'pendientes';
-    if (path.includes('/radicar')) return 'radicar';
-    if (path.includes('/causar')) return 'causar';
-    return 'dashboard';
-  })();
+  const { activeView, goToPendientes, goToRadicar, goToCausar } = useContabilidadDashboard();
 
   const renderContent = () => {
     switch (activeView) {
@@ -27,9 +18,9 @@ export default function ContabilidadDashboard() {
       default:
         return (
           <ContabilidadHome
-            onGoToPendientes={() => navigate('/financiero/contabilidad/pendientes')}
-            onGoToRadicar={() => navigate('/financiero/contabilidad/radicar')}
-            onGoToCausar={() => navigate('/financiero/contabilidad/causar')}
+            onGoToPendientes={goToPendientes}
+            onGoToRadicar={goToRadicar}
+            onGoToCausar={goToCausar}
           />
         );
     }

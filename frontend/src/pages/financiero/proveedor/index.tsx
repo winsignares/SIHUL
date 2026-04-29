@@ -10,22 +10,15 @@ import {
   TrendingUp,
   Receipt,
 } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import EnviarFactura from './EnviarFactura';
 import MisFacturas from './MisFacturas';
-import { proveedoresService, facturasService } from '../../../services/financiero';
-import type { Proveedor, Factura } from '../../../models/financiero/core.models';
+import { proveedoresService } from '../../../services/financiero';
+import type { Proveedor } from '../../../models/financiero/core.models';
 import type { ProveedorDashboardHomeProps } from '../../../models/financiero/proveedor';
-
-const toList = <T,>(data: any): T[] => {
-  if (Array.isArray(data)) return data as T[];
-  if (Array.isArray(data?.results)) return data.results as T[];
-  return [];
-};
+import { useProveedorDashboard, useProveedorHome } from '../../../hooks/financiero/proveedor';
 
 export default function ProveedorDashboard() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { activeView, goToEnviar, goToMisFacturas } = useProveedorDashboard();
 
   const [miProveedor, setMiProveedor] = useState<Proveedor | null>(null);
   const [proveedorLoading, setProveedorLoading] = useState(true);
@@ -45,20 +38,13 @@ export default function ProveedorDashboard() {
     void load();
   }, []);
 
-  const activeView = (() => {
-    const path = location.pathname.toLowerCase();
-    if (path.includes('/enviar')) return 'enviar';
-    if (path.includes('/mis-facturas')) return 'mis-facturas';
-    return 'dashboard';
-  })();
-
   const renderContent = () => {
     switch (activeView) {
       case 'enviar':
         return (
           <EnviarFactura
             miProveedor={miProveedor}
-            onSuccess={() => navigate('/financiero/proveedor/mis-facturas')}
+            onSuccess={goToMisFacturas}
           />
         );
       case 'mis-facturas':
@@ -68,8 +54,8 @@ export default function ProveedorDashboard() {
           <DashboardHome
             miProveedor={miProveedor}
             proveedorLoading={proveedorLoading}
-            onGoToEnviar={() => navigate('/financiero/proveedor/enviar')}
-            onGoToMisFacturas={() => navigate('/financiero/proveedor/mis-facturas')}
+            onGoToEnviar={goToEnviar}
+            onGoToMisFacturas={goToMisFacturas}
           />
         );
     }
@@ -79,64 +65,7 @@ export default function ProveedorDashboard() {
 }
 
 function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisFacturas }: ProveedorDashboardHomeProps) {
-  const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!miProveedor) {
-      setLoading(false);
-      return;
-    }
-    const load = async () => {
-      setLoading(true);
-      try {
-        const resp = await proveedoresService.getMisFacturas(miProveedor.id, { limit: 20 });
-        setFacturas(toList<Factura>(resp));
-      } catch {
-        setFacturas([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
-  }, [miProveedor]);
-
-  const stats = [
-    {
-      title: 'Facturas Enviadas',
-      value: facturas.length,
-      icon: Receipt,
-      color: 'from-blue-600 to-blue-700',
-      iconColor: 'text-blue-100',
-      trend: 'Total histórico',
-    },
-    {
-      title: 'En Proceso',
-      value: facturas.filter(f => !['Pagada', 'Pago Aplicado', 'Rechazada', 'Anulada', 'Devuelta'].includes(f.estado)).length,
-      icon: Clock,
-      color: 'from-orange-600 to-orange-700',
-      iconColor: 'text-orange-100',
-      trend: 'Siendo procesadas',
-    },
-    {
-      title: 'Pagadas',
-      value: facturas.filter(f => f.estado === 'Pagada' || f.estado === 'Pago Aplicado').length,
-      icon: CheckCircle2,
-      color: 'from-green-600 to-green-700',
-      iconColor: 'text-green-100',
-      trend: 'Completadas',
-    },
-    {
-      title: 'Devueltas',
-      value: facturas.filter(f => f.estado === 'Devuelta' || f.estado === 'Rechazada').length,
-      icon: TrendingUp,
-      color: 'from-red-600 to-red-700',
-      iconColor: 'text-red-100',
-      trend: 'Requieren atención',
-    },
-  ];
-
-  const recentFacturas = facturas.slice(0, 6);
+  const { loading, stats, recentFacturas } = useProveedorHome(miProveedor?.id);
 
   return (
     <div className="space-y-6">

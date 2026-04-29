@@ -1,5 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+﻿import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Textarea } from '../../../share/textarea';
@@ -31,177 +30,40 @@ import {
 } from '../../../share/dialog';
 import { Badge } from '../../../share/badge';
 import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
-import {
-  facturasService,
-  cuentasContablesService,
-  centrosCostoService,
-  documentosService,
-} from '../../../services/financiero';
-import type { Factura, CuentaContable, CentroCosto, DocumentoAdjunto } from '../../../models/financiero/core.models';
-
-const facturaToDetail = (
-  factura: Factura,
-  docs: DocumentoAdjunto[],
-  cuentasContables: CuentaContable[] = [],
-  centrosCosto: CentroCosto[] = []
-): SharedFacturaDetail => {
-  const cuenta = cuentasContables.find((c) => c.id === factura.cuenta_contable_id);
-  const centro = centrosCosto.find((c) => c.id === factura.centro_costo_id);
-  return {
-    id: String(factura.id),
-    numeroFactura: factura.numero_factura,
-    numeroRadicado: factura.numero_radicado,
-    proveedor: factura.proveedor?.razon_social ?? '',
-    nit: factura.proveedor?.nit ?? '',
-    valorTotal: Number(factura.valor_total),
-    fechaFactura: factura.fecha_factura,
-    fechaRecepcion: factura.fecha_recepcion,
-    areaSolicitante: factura.departamento?.nombre ?? '',
-    estado: factura.estado,
-    diasTranscurridos: factura.dias_transcurridos,
-    descripcion: factura.descripcion,
-    observaciones: factura.observaciones,
-    cuentaContable: cuenta ? `${cuenta.codigo} — ${cuenta.nombre}` : undefined,
-    centroCosto: centro ? `${centro.codigo} — ${centro.nombre}` : undefined,
-    documentos: docs.map((d) => ({
-      id: String(d.id),
-      nombre: d.nombre_archivo,
-      tipo: d.tipo_documento,
-      verificado: d.verificado,
-      url: d.archivo_url ?? d.url_storage ?? undefined,
-    })),
-  };
-};
+import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { useContabilidadCausarFacturas } from '../../../hooks/financiero/contabilidad';
 
 export default function CausarFacturas() {
-  const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [cuentasContables, setCuentasContables] = useState<CuentaContable[]>([]);
-  const [centrosCosto, setCentrosCosto] = useState<CentroCosto[]>([]);
-  const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
-  const [accion, setAccion] = useState<'causar' | 'devolver' | null>(null);
-  const [cuentaId, setCuentaId] = useState<string>('');
-  const [centroId, setCentroId] = useState<string>('');
-  const [observaciones, setObservaciones] = useState('');
-  const [procesando, setProcesando] = useState(false);
-  const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
-
-  const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
-
-  const [filtros, setFiltros] = useState({
-    numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
-    fechaInicio: '',
-    fechaFin: '',
-    montoMin: '',
-    montoMax: '',
-  });
-
-  const cargarDatos = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      const [lista, cuentas, centros] = await Promise.all([
-        facturasService.getByEstado('Radicada'),
-        cuentasContablesService.getAll(),
-        centrosCostoService.getAll(),
-      ]);
-      setFacturas(lista);
-      setCuentasContables(Array.isArray(cuentas) ? cuentas : (cuentas as { results?: CuentaContable[] }).results ?? []);
-      setCentrosCosto(Array.isArray(centros) ? centros : (centros as { results?: CentroCosto[] }).results ?? []);
-      const docsResults = await Promise.all(
-        lista.map((f) => documentosService.getByFactura(f.id).then((d) => ({ id: f.id, docs: d })))
-      );
-      const map: Record<number, DocumentoAdjunto[]> = {};
-      docsResults.forEach(({ id, docs }) => { map[id] = docs; });
-      setDocsMap(map);
-    } catch {
-      setError('No se pudo cargar las facturas. Verifique la conexion.');
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  useEffect(() => { cargarDatos(); }, [cargarDatos]);
-
-  const showToast = (tipo: 'ok' | 'err', msg: string) => {
-    setToast({ tipo, msg });
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  const facturasFiltradas = facturas.filter((f) => {
-    const proveedor = f.proveedor?.razon_social ?? '';
-    const area = f.departamento?.nombre ?? '';
-    if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase()) && !(f.numero_radicado ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-    if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
-    if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
-    if (filtros.fechaInicio && f.fecha_radicacion && f.fecha_radicacion < filtros.fechaInicio) return false;
-    if (filtros.fechaFin && f.fecha_radicacion && f.fecha_radicacion > filtros.fechaFin) return false;
-    if (filtros.montoMin && Number(f.valor_total) < Number(filtros.montoMin)) return false;
-    if (filtros.montoMax && Number(f.valor_total) > Number(filtros.montoMax)) return false;
-    return true;
-  });
-
-  const iniciarAccion = (factura: Factura, acc: 'causar' | 'devolver') => {
-    setFacturaSeleccionada(factura);
-    setAccion(acc);
-    setCuentaId('');
-    setCentroId('');
-    setObservaciones('');
-  };
-
-  const cancelar = () => {
-    setFacturaSeleccionada(null);
-    setAccion(null);
-    setCuentaId('');
-    setCentroId('');
-    setObservaciones('');
-  };
-
-  const confirmarCausacion = async () => {
-    if (!facturaSeleccionada) return;
-    if (!cuentaId) { showToast('err', 'Debe seleccionar una cuenta contable.'); return; }
-    setProcesando(true);
-    try {
-      await facturasService.causar(facturaSeleccionada.id, {
-        cuenta_contable_id: Number(cuentaId),
-        centro_costo_id: centroId ? Number(centroId) : undefined,
-        observaciones: observaciones || undefined,
-      });
-      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} causada exitosamente.`);
-      cancelar();
-      cargarDatos();
-    } catch {
-      showToast('err', 'Error al causar la factura. Intente de nuevo.');
-    } finally {
-      setProcesando(false);
-    }
-  };
-
-  const confirmarDevolucion = async () => {
-    if (!facturaSeleccionada) return;
-    if (!observaciones.trim() || observaciones.trim().length < 10) {
-      showToast('err', 'El motivo de devolucion es requerido (minimo 10 caracteres).');
-      return;
-    }
-    setProcesando(true);
-    try {
-      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim());
-      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta al funcionario.`);
-      cancelar();
-      cargarDatos();
-    } catch {
-      showToast('err', 'Error al devolver la factura. Intente de nuevo.');
-    } finally {
-      setProcesando(false);
-    }
-  };
+  const {
+    facturas,
+    cuentasContables,
+    centrosCosto,
+    docsMap,
+    cargando,
+    error,
+    facturaSeleccionada,
+    accion,
+    cuentaId,
+    centroId,
+    observaciones,
+    procesando,
+    toast,
+    modalFactura,
+    filtros,
+    facturasFiltradas,
+    setCuentaId,
+    setCentroId,
+    setObservaciones,
+    setModalFactura,
+    setFiltros,
+    cargarDatos,
+    iniciarAccion,
+    cancelar,
+    confirmarCausacion,
+    confirmarDevolucion,
+    openDetalle,
+    getDiasColor,
+  } = useContabilidadCausarFacturas();
 
   return (
     <div className="space-y-6">
@@ -405,7 +267,7 @@ export default function CausarFacturas() {
                 <TableBody>
                   {facturasFiltradas.map((factura) => {
                     const dias = factura.dias_transcurridos ?? 0;
-                    const diasColor = dias >= 17 ? 'text-red-600 font-bold' : dias >= 10 ? 'text-orange-600 font-semibold' : 'text-green-700';
+                    const diasColor = getDiasColor(dias);
                     return (
                       <TableRow key={factura.id} className="hover:bg-slate-50">
                         <TableCell className="font-medium text-slate-800">{factura.numero_factura}</TableCell>
@@ -422,7 +284,7 @@ export default function CausarFacturas() {
                         <TableCell><span className={diasColor}>{dias}d</span></TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 flex-wrap">
-                            <Button size="sm" variant="outline" onClick={() => setModalFactura(facturaToDetail(factura, docsMap[factura.id] ?? [], cuentasContables, centrosCosto))} className="border-slate-300 text-slate-700">
+                            <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700">
                               <Eye className="w-3 h-3 mr-1" /> Detalle
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50">
