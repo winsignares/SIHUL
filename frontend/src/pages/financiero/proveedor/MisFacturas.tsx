@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { proveedoresService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero/core.models';
 import type { MisFacturasProps } from '../../../models/financiero/proveedor';
+import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 
 const toList = <T,>(data: any): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -208,14 +209,12 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-slate-900 dark:text-white text-sm">{factura.numero_factura}</p>
-                      {factura.numero_radicado && (
-                        <span className="text-xs text-slate-400 dark:text-slate-500">| {factura.numero_radicado}</span>
-                      )}
+                      <span className="text-xs text-slate-400 dark:text-slate-500">| {displayRadicado(factura.numero_radicado)}</span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{factura.descripcion}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{displayText(factura.descripcion)}</p>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                      Recibida: {factura.fecha_recepcion}
-                      {factura.fecha_factura && ` · Factura: ${factura.fecha_factura}`}
+                      Recibida: {displayDate(factura.fecha_recepcion)}
+                      {` · Factura: ${displayDate(factura.fecha_factura)}`}
                     </p>
                   </div>
 

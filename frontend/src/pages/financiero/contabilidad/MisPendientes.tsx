@@ -6,6 +6,7 @@ import { Button } from '../../../share/button';
 import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadMisPendientes } from '../../../hooks/financiero/contabilidad';
+import { displayRadicado, displayText } from '../../../share/field-placeholders';
 
 export default function MisPendientes() {
   const {
@@ -169,13 +170,13 @@ export default function MisPendientes() {
                                 <Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-mono text-xs">
                                   {factura.numero_radicado}
                                 </Badge>
-                              ) : <span className="text-slate-400 text-xs">—</span>}
+                              ) : <span className="text-slate-400 text-xs">{displayRadicado(factura.numero_radicado)}</span>}
                             </TableCell>
                             <TableCell>
-                              <p className="font-medium text-slate-800">{factura.proveedor?.razon_social}</p>
-                              <p className="text-xs text-slate-500 font-mono">{factura.proveedor?.nit}</p>
+                              <p className="font-medium text-slate-800">{displayText(factura.proveedor?.razon_social)}</p>
+                              <p className="text-xs text-slate-500 font-mono">{displayText(factura.proveedor?.nit)}</p>
                             </TableCell>
-                            <TableCell className="text-slate-600">{factura.departamento?.nombre}</TableCell>
+                            <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
                             <TableCell className="font-semibold text-slate-800">
                               ${Number(factura.valor_total).toLocaleString('es-CO')}
                             </TableCell>

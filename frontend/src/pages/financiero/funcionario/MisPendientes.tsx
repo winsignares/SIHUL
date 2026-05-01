@@ -6,6 +6,7 @@ import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero/core.models';
 import type { FuncionarioPendingRow } from '../../../models/financiero/funcionario';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { displayDate, displayText } from '../../../share/field-placeholders';
 
 function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -259,11 +260,11 @@ export default function MisPendientes() {
                 <td className="p-3 text-slate-700 font-mono">{row.numeroFactura || `PEND-${row.id}`}</td>
                 <td className="p-3 text-slate-700">
                   <div className="font-medium text-slate-800">{row.proveedor}</div>
-                  <div className="text-xs text-slate-500 font-mono">NIT: {row.nit}</div>
+                  <div className="text-xs text-slate-500 font-mono">NIT: {displayText(row.nit)}</div>
                 </td>
-                <td className="p-3 text-slate-700">{row.tipoDocumento}</td>
+                <td className="p-3 text-slate-700">{displayText(row.tipoDocumento)}</td>
                 <td className="p-3 font-semibold text-slate-800">${row.valorTotal.toLocaleString('es-CO')}</td>
-                <td className="p-3 text-slate-700">{row.fechaRecepcion || 'Sin fecha'}</td>
+                <td className="p-3 text-slate-700">{displayDate(row.fechaRecepcion)}</td>
                 <td className="p-3 font-semibold">
                   <span className={row.nivelRiesgo === 'vencido' ? 'text-red-700' : row.nivelRiesgo === 'amarillo' ? 'text-yellow-700' : 'text-green-700'}>
                     {row.dias}d / {row.slaMax}d

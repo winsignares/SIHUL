@@ -19,11 +19,12 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
   useEffect(() => {
     Promise.all([
       facturasService.getByEstado('Recibida'),
+      facturasService.getByEstado('Registrada'),
       facturasService.getByEstado('Radicada'),
       facturasService.getByEstado('Causada'),
     ])
-      .then(([rec, rad, caus]) => {
-        setRecibidas(rec.length);
+      .then(([rec, reg, rad, caus]) => {
+        setRecibidas(rec.length + reg.length);
         setRadicadas(rad.length);
         setCausadas(caus.length);
         if (rad.length > 0) {

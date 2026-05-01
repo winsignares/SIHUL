@@ -66,11 +66,18 @@ export function useContabilidadMisPendientes() {
     setCargando(true);
     setError(null);
     try {
-      const [recibidas, radicadas] = await Promise.all([
+      const [recibidas, registradas, radicadas] = await Promise.all([
         facturasService.getByEstado('Recibida'),
+        facturasService.getByEstado('Registrada'),
         facturasService.getByEstado('Radicada'),
       ]);
-      const todas = [...recibidas, ...radicadas];
+
+      const mergedMap = new Map<number, Factura>();
+      [...recibidas, ...registradas, ...radicadas].forEach((f) => {
+        mergedMap.set(f.id, f);
+      });
+      const todas = Array.from(mergedMap.values());
+
       setFacturas(todas);
       const docsResults = await Promise.all(
         todas.map((f) =>

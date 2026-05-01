@@ -11,6 +11,52 @@ from usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
 
 
+DEFAULT_CUENTAS_CONTABLES = [
+    {
+        'codigo': '513505',
+        'nombre': 'Servicios públicos',
+        'tipo_cuenta': 'Gasto',
+        'nivel': 4,
+        'cuenta_padre': '5135',
+        'naturaleza': 'Débito',
+        'acepta_movimiento': True,
+        'requiere_tercero': True,
+        'requiere_centro_costo': True,
+        'estado': 'Activo',
+    },
+    {
+        'codigo': '513595',
+        'nombre': 'Otros servicios administrativos',
+        'tipo_cuenta': 'Gasto',
+        'nivel': 4,
+        'cuenta_padre': '5135',
+        'naturaleza': 'Débito',
+        'acepta_movimiento': True,
+        'requiere_tercero': True,
+        'requiere_centro_costo': True,
+        'estado': 'Activo',
+    },
+    {
+        'codigo': '220505',
+        'nombre': 'Proveedores nacionales',
+        'tipo_cuenta': 'Pasivo',
+        'nivel': 4,
+        'cuenta_padre': '2205',
+        'naturaleza': 'Crédito',
+        'acepta_movimiento': True,
+        'requiere_tercero': True,
+        'requiere_centro_costo': False,
+        'estado': 'Activo',
+    },
+]
+
+DEFAULT_CENTROS_COSTO = [
+    {'codigo': 'CC-ADM-001', 'nombre': 'Administración General', 'tipo': 'Administrativo', 'estado': 'Activo'},
+    {'codigo': 'CC-ACA-001', 'nombre': 'Gestión Académica', 'tipo': 'Académico', 'estado': 'Activo'},
+    {'codigo': 'CC-OPE-001', 'nombre': 'Operación Institucional', 'tipo': 'Operativo', 'estado': 'Activo'},
+]
+
+
 # ============================================================
 # VIEWSETS SIMPLES
 # ============================================================
@@ -107,6 +153,12 @@ class CuentaContableViewSet(viewsets.ModelViewSet):
     filterset_fields = ['tipo_cuenta', 'nivel', 'estado']
     search_fields = ['codigo', 'nombre']
 
+    def list(self, request, *args, **kwargs):
+        if not models.CuentaContable.objects.exists():
+            for cuenta in DEFAULT_CUENTAS_CONTABLES:
+                models.CuentaContable.objects.get_or_create(codigo=cuenta['codigo'], defaults=cuenta)
+        return super().list(request, *args, **kwargs)
+
 
 class CentroCostoViewSet(viewsets.ModelViewSet):
     queryset = models.CentroCosto.objects.all()
@@ -115,6 +167,12 @@ class CentroCostoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo', 'estado']
     search_fields = ['codigo', 'nombre']
+
+    def list(self, request, *args, **kwargs):
+        if not models.CentroCosto.objects.exists():
+            for centro in DEFAULT_CENTROS_COSTO:
+                models.CentroCosto.objects.get_or_create(codigo=centro['codigo'], defaults=centro)
+        return super().list(request, *args, **kwargs)
 
 
 class ParametroSLAViewSet(viewsets.ReadOnlyModelViewSet):
@@ -255,6 +313,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(
                 Q(creado_por=user) |
                 Q(usuario_responsable=user) |
+                Q(historial__usuario=user) |
                 Q(usuario_responsable__isnull=True, estado='Recibida')
             ).distinct()
         elif rol_nombre == 'Proveedor':
@@ -287,6 +346,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         siguientes_roles = {
             'Recibida': ['Contabilidad'],
+            'Registrada': ['Contabilidad'],
             'Radicada': ['Contabilidad'],
             'Causada': ['Tesorería'],
             'Alistada': ['Auditoría'],
@@ -317,6 +377,39 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 mensaje=mensaje,
                 prioridad='alta' if estado_nuevo in ['Recibida', 'Devuelta', 'Rechazada'] else 'media',
             )
+
+    def _texto_normalizado(self, value):
+        return str(value or '').strip().lower()
+
+    def _doc_cumple_tipo(self, documento, tipo_requerido, keywords):
+        tipo_doc = self._texto_normalizado(getattr(documento, 'tipo_documento', ''))
+        nombre_doc = self._texto_normalizado(getattr(documento, 'nombre_archivo', ''))
+        tipo_ref = self._texto_normalizado(tipo_requerido)
+
+        if tipo_doc == tipo_ref:
+            return True
+
+        return any(keyword in nombre_doc for keyword in keywords)
+
+    def _obtener_faltantes_radicacion(self, factura):
+        requeridos = {
+            'Factura': ['factura'],
+            'Orden de Compra': ['orden', 'compra', 'contrato'],
+            'Certificación Bancaria': ['certif', 'bancari'],
+        }
+
+        documentos = list(models.DocumentoAdjunto.objects.filter(factura=factura))
+        faltantes = []
+
+        for tipo_requerido, keywords in requeridos.items():
+            existe = any(
+                self._doc_cumple_tipo(doc, tipo_requerido, keywords)
+                for doc in documentos
+            )
+            if not existe:
+                faltantes.append(tipo_requerido)
+
+        return faltantes
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -384,12 +477,25 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def radicar(self, request, pk=None):
         """Radicar una factura"""
         factura = self.get_object()
-        
-        if factura.estado != 'Recibida':
+
+        if factura.estado not in ['Recibida', 'Registrada']:
             return Response(
-                {'error': 'La factura debe estar en estado Recibida'},
+                {'error': 'La factura debe estar en estado Recibida o Registrada'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        faltantes = self._obtener_faltantes_radicacion(factura)
+        if faltantes:
+            return Response(
+                {
+                    'error': 'No se puede radicar: faltan soportes obligatorios.',
+                    'faltantes': faltantes,
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+        observaciones = (request.data.get('observaciones') or '').strip()
         
         factura.estado = 'Radicada'
         factura.fecha_radicacion = timezone.now().date()
@@ -401,14 +507,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
         models.HistorialFactura.objects.create(
             factura=factura,
             accion='Factura radicada',
-            estado_anterior='Recibida',
+            estado_anterior=estado_anterior,
             estado_nuevo='Radicada',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
-            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol'
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, 'Recibida', 'Radicada')
+        self._notificar_transicion(factura, estado_anterior, 'Radicada')
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -430,11 +537,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
         centro_costo_id = request.data.get('centro_costo_id')
         observaciones = request.data.get('observaciones', '')
 
-        if cuenta_contable_id:
-            try:
-                factura.cuenta_contable = models.CuentaContable.objects.get(pk=cuenta_contable_id)
-            except models.CuentaContable.DoesNotExist:
-                return Response({'error': 'Cuenta contable no encontrada'}, status=status.HTTP_400_BAD_REQUEST)
+        if not cuenta_contable_id:
+            return Response({'error': 'Debe seleccionar una cuenta contable'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            factura.cuenta_contable = models.CuentaContable.objects.get(pk=cuenta_contable_id)
+        except models.CuentaContable.DoesNotExist:
+            return Response({'error': 'Cuenta contable no encontrada'}, status=status.HTTP_400_BAD_REQUEST)
 
         if centro_costo_id:
             try:
@@ -504,8 +613,24 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def rechazar(self, request, pk=None):
         """Rechazar una factura con motivo"""
         factura = self.get_object()
-        motivo = request.data.get('motivo', 'Sin especificar')
+        motivo = (request.data.get('motivo') or '').strip()
+
+        if len(motivo) < 10:
+            return Response(
+                {'error': 'El motivo de rechazo/devolución es obligatorio (mínimo 10 caracteres).'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         estado_anterior = factura.estado
+
+        if estado_anterior in ['Recibida', 'Registrada', 'Radicada']:
+            estado_destino = 'Registrada'
+            etapa_destino = 'Corrección Funcionario'
+            responsable_destino = factura.creado_por
+        else:
+            estado_destino = 'Devuelta'
+            etapa_destino = 'Devolución'
+            responsable_destino = None
         
         models.RechazoDevolucion.objects.create(
             factura=factura,
@@ -516,26 +641,26 @@ class FacturaViewSet(viewsets.ModelViewSet):
             usuario_rechaza=request.user
         )
 
-        factura.estado = 'Devuelta'
-        factura.etapa_actual = 'Devolución'
-        factura.usuario_responsable = None
+        factura.estado = estado_destino
+        factura.etapa_actual = etapa_destino
+        factura.usuario_responsable = responsable_destino
         factura.save()
 
         models.HistorialFactura.objects.create(
             factura=factura,
             accion='Factura devuelta',
             estado_anterior=estado_anterior,
-            estado_nuevo='Devuelta',
+            estado_nuevo=estado_destino,
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=motivo
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Devuelta')
+        self._notificar_transicion(factura, estado_anterior, estado_destino)
 
         return Response(
-            {'mensaje': 'Factura rechazada y devuelta'},
+            {'mensaje': f'Factura rechazada y enviada a {estado_destino}'},
             status=status.HTTP_200_OK
         )
 
@@ -604,11 +729,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def completar_registro(self, request, pk=None):
         """Completar registro de una factura pendiente (desde Mis Pendientes)"""
         factura = self.get_object()
+        estado_anterior = factura.estado
         
-        # Permitir facturas en estado 'Recibida' o 'Registrada'
-        if factura.estado not in ['Recibida', 'Registrada']:
+        # Permitir facturas en estado 'Recibida', 'Registrada' o 'Devuelta' para reproceso.
+        if factura.estado not in ['Recibida', 'Registrada', 'Devuelta']:
             return Response(
-                {'error': f'Solo se pueden completar facturas en estado Recibida o Registrada. Estado actual: {factura.estado}'},
+                {'error': f'Solo se pueden completar facturas en estado Recibida, Registrada o Devuelta. Estado actual: {factura.estado}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -634,13 +760,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
             HistorialFactura.objects.create(
                 factura=factura,
                 accion='Completar Registro',
-                estado_anterior='Recibida',
+                estado_anterior=estado_anterior,
                 estado_nuevo='Registrada',
                 usuario=request.user,
                 usuario_nombre=request.user.get_full_name() or request.user.username,
                 usuario_rol='Funcionario',
                 observacion='Factura registrada correctamente por el funcionario'
             )
+
+            self._notificar_transicion(factura, estado_anterior, 'Registrada')
             
             return Response(serializer.data)
         

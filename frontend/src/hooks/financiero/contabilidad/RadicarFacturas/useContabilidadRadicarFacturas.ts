@@ -91,10 +91,25 @@ export function useContabilidadRadicarFacturas() {
     setCargando(true);
     setError(null);
     try {
-      const lista = await facturasService.getByEstado('Recibida');
+      const [recibidas, registradas] = await Promise.all([
+        facturasService.getByEstado('Recibida'),
+        facturasService.getByEstado('Registrada'),
+      ]);
+
+      const mergedMap = new Map<number, Factura>();
+      [...recibidas, ...registradas].forEach((f) => {
+        mergedMap.set(f.id, f);
+      });
+      const lista = Array.from(mergedMap.values());
+
       setFacturas(lista);
       const docsResults = await Promise.all(
-        lista.map((f) => documentosService.getByFactura(f.id).then((d) => ({ id: f.id, docs: d })))
+        lista.map((f) =>
+          documentosService
+            .getByFactura(f.id)
+            .then((d) => ({ id: f.id, docs: d }))
+            .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
+        )
       );
       const map: Record<number, DocumentoAdjunto[]> = {};
       docsResults.forEach(({ id, docs }) => {
@@ -153,6 +168,14 @@ export function useContabilidadRadicarFacturas() {
 
   const confirmarRadicacion = async () => {
     if (!facturaSeleccionada) return;
+
+    const docs = docsMap[facturaSeleccionada.id] ?? [];
+    if (!validarDocumentosCompletos(docs)) {
+      const faltantes = obtenerDocumentosFaltantes(docs);
+      showToast('err', `No se puede radicar. Faltan soportes: ${faltantes.join(', ')}.`);
+      return;
+    }
+
     setProcesando(true);
     try {
       await facturasService.radicar(facturaSeleccionada.id, observaciones || undefined);

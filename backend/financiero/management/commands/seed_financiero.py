@@ -5,7 +5,16 @@ from django.utils import timezone
 import re
 from usuarios.models import Rol, Usuario
 from componentes.models import Componente, ComponenteRol
-from financiero.models import Departamento, ParametroSLA, ParametrosFinanciero, Proveedor, Factura, HistorialFactura
+from financiero.models import (
+    Departamento,
+    ParametroSLA,
+    ParametrosFinanciero,
+    Proveedor,
+    Factura,
+    HistorialFactura,
+    CuentaContable,
+    CentroCosto,
+)
 
 
 class Command(BaseCommand):
@@ -19,6 +28,7 @@ class Command(BaseCommand):
         componentes = self._seed_componentes()
         self._seed_permisos(roles, componentes)
         self._seed_departamentos()
+        self._seed_catalogos_contables()
         self._seed_demo_data()
         self._seed_usuarios_proveedores(roles)
         self._seed_sla()
@@ -224,6 +234,171 @@ class Command(BaseCommand):
             )
             msg = "Creado" if created else "Existente"
             self.stdout.write(f"  - {msg}: {codigo} {nombre}")
+
+    def _seed_catalogos_contables(self):
+        self.stdout.write("\n[4b/6] Catálogos contables (cuentas y centros de costo)")
+
+        cuentas_contables = [
+            {
+                'codigo': '110505',
+                'nombre': 'Caja General',
+                'tipo_cuenta': 'Activo',
+                'nivel': 4,
+                'cuenta_padre': '1105',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': False,
+                'requiere_centro_costo': False,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '111005',
+                'nombre': 'Bancos Nacionales',
+                'tipo_cuenta': 'Activo',
+                'nivel': 4,
+                'cuenta_padre': '1110',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': False,
+                'requiere_centro_costo': False,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '130505',
+                'nombre': 'Clientes Nacionales',
+                'tipo_cuenta': 'Activo',
+                'nivel': 4,
+                'cuenta_padre': '1305',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': False,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '220505',
+                'nombre': 'Proveedores Nacionales',
+                'tipo_cuenta': 'Pasivo',
+                'nivel': 4,
+                'cuenta_padre': '2205',
+                'naturaleza': 'Crédito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': False,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '236540',
+                'nombre': 'Retención en la Fuente',
+                'tipo_cuenta': 'Pasivo',
+                'nivel': 4,
+                'cuenta_padre': '2365',
+                'naturaleza': 'Crédito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': False,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '413595',
+                'nombre': 'Ingresos por Servicios Académicos',
+                'tipo_cuenta': 'Ingreso',
+                'nivel': 4,
+                'cuenta_padre': '4135',
+                'naturaleza': 'Crédito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': True,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '513505',
+                'nombre': 'Servicios Públicos',
+                'tipo_cuenta': 'Gasto',
+                'nivel': 4,
+                'cuenta_padre': '5135',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': True,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '513595',
+                'nombre': 'Otros Servicios Administrativos',
+                'tipo_cuenta': 'Gasto',
+                'nivel': 4,
+                'cuenta_padre': '5135',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': True,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '519595',
+                'nombre': 'Gastos Diversos',
+                'tipo_cuenta': 'Gasto',
+                'nivel': 4,
+                'cuenta_padre': '5195',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': True,
+                'estado': 'Activo',
+            },
+            {
+                'codigo': '613505',
+                'nombre': 'Costos de Servicios Educativos',
+                'tipo_cuenta': 'Costo',
+                'nivel': 4,
+                'cuenta_padre': '6135',
+                'naturaleza': 'Débito',
+                'acepta_movimiento': True,
+                'requiere_tercero': True,
+                'requiere_centro_costo': True,
+                'estado': 'Activo',
+            },
+        ]
+
+        centros_costo = [
+            {'codigo': 'CC-ADM-001', 'nombre': 'Administración General', 'tipo': 'Administrativo', 'departamento_codigo': 'ADM'},
+            {'codigo': 'CC-CONT-001', 'nombre': 'Gestión Contable', 'tipo': 'Administrativo', 'departamento_codigo': 'CONT'},
+            {'codigo': 'CC-TESO-001', 'nombre': 'Tesorería Institucional', 'tipo': 'Administrativo', 'departamento_codigo': 'TESO'},
+            {'codigo': 'CC-ACAD-001', 'nombre': 'Operación Académica', 'tipo': 'Académico', 'departamento_codigo': 'ACAD'},
+            {'codigo': 'CC-BIEN-001', 'nombre': 'Bienestar Universitario', 'tipo': 'Operativo', 'departamento_codigo': 'BIENESTAR'},
+            {'codigo': 'CC-INFRA-001', 'nombre': 'Infraestructura y Mantenimiento', 'tipo': 'Operativo', 'departamento_codigo': 'INFRA'},
+            {'codigo': 'CC-TI-001', 'nombre': 'Tecnología y Sistemas', 'tipo': 'Operativo', 'departamento_codigo': 'TI'},
+            {'codigo': 'CC-INV-001', 'nombre': 'Proyectos de Investigación', 'tipo': 'Investigación', 'departamento_codigo': 'INVESTIG'},
+            {'codigo': 'CC-EXT-001', 'nombre': 'Extensión y Proyección Social', 'tipo': 'Extensión', 'departamento_codigo': 'EXTENSION'},
+            {'codigo': 'CC-COMP-001', 'nombre': 'Compras y Contratación', 'tipo': 'Administrativo', 'departamento_codigo': 'COMPRAS'},
+        ]
+
+        self.stdout.write("  - Cuentas contables:")
+        for cuenta in cuentas_contables:
+            _, created = CuentaContable.objects.get_or_create(
+                codigo=cuenta['codigo'],
+                defaults=cuenta,
+            )
+            msg = "Creada" if created else "Existente"
+            self.stdout.write(f"    · {msg}: {cuenta['codigo']} - {cuenta['nombre']}")
+
+        self.stdout.write("  - Centros de costo:")
+        for centro in centros_costo:
+            depto_codigo = centro.pop('departamento_codigo')
+            departamento = Departamento.objects.filter(codigo=depto_codigo).first()
+            defaults = {
+                'nombre': centro['nombre'],
+                'tipo': centro['tipo'],
+                'departamento': departamento,
+                'estado': 'Activo',
+            }
+            _, created = CentroCosto.objects.get_or_create(
+                codigo=centro['codigo'],
+                defaults=defaults,
+            )
+            msg = "Creado" if created else "Existente"
+            self.stdout.write(f"    · {msg}: {centro['codigo']} - {centro['nombre']}")
 
     def _seed_sla(self):
         etapas = [

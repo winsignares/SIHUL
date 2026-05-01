@@ -187,7 +187,8 @@ class FacturaListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'numero_factura', 'numero_radicado', 'proveedor', 'departamento', 'departamento_id', 'valor_total',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual',
-            'tipo_documento', 'descripcion', 'fecha_factura', 'fecha_recepcion', 'dias_transcurridos', 'indicador_riesgo',
+            'tipo_documento', 'descripcion', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
+            'dias_transcurridos', 'indicador_riesgo',
             'indicador_riesgo_display', 'monto_alto', 'sla_cumplido'
         ]
 

@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent } from '../config/componentRoutes';
 import { normalizeFinancialRole, normalizeFinancialText, resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
@@ -50,11 +51,11 @@ const AdminFinancieroDashboard = lazy(() => import('../pages/financiero/admin_fi
 import AdminDashboard from '../layouts/AdminDashboard';
 
 // Componente de Loading
-const PageLoader = () => (
+const PageLoader = ({ message = 'Cargando...' }: { message?: string }) => (
   <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
     <div className="text-center">
       <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-      <p className="mt-4 text-slate-600 font-medium">Cargando...</p>
+      <p className="mt-4 text-slate-600 font-medium">{message}</p>
     </div>
   </div>
 );
@@ -120,8 +121,42 @@ function ProtectedRoute({
 }
 
 export default function AppRouter() {
-  const { isAuthenticated, components, role, user } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, components, role, user, isLoading } = useAuth();
+  const [hasBootstrappedRoleView, setHasBootstrappedRoleView] = useState(false);
+  const [isRouteTransitionLoading, setIsRouteTransitionLoading] = useState(false);
   const effectiveRole = role ?? user?.rol ?? null;
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setHasBootstrappedRoleView(false);
+      return;
+    }
+
+    if (hasBootstrappedRoleView) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setHasBootstrappedRoleView(true);
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated, hasBootstrappedRoleView]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsRouteTransitionLoading(false);
+      return;
+    }
+
+    setIsRouteTransitionLoading(true);
+    const timer = window.setTimeout(() => {
+      setIsRouteTransitionLoading(false);
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated, location.pathname]);
 
   const canonicalFinancialRole = resolveCanonicalFinancialRole({
     roleName: effectiveRole?.nombre,
@@ -214,6 +249,11 @@ export default function AppRouter() {
   const canAccessDireccionFinanciera =
     isDireccionFinancieraProfile &&
     (hasComponentByName('Dashboard Direccion Financiera') || hasDireccionFinancieraComponent || hasFinancialComponent);
+
+  // Evita renderizar layouts vacíos mientras se hidrata sesión y componentes del rol.
+  if (isAuthenticated && (!hasBootstrappedRoleView || isLoading || isRouteTransitionLoading)) {
+    return <PageLoader message="Cargando componentes de tu rol..." />;
+  }
 
   // Si no está logueado, solo puede ver Login y rutas públicas
   if (!isAuthenticated) {

@@ -12,6 +12,7 @@ import { Calendar, FileCheck, Eye, AlertCircle, XCircle, Download, TrendingUp } 
 import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 
 interface Factura {
   id: string;
@@ -254,14 +255,14 @@ export default function AlistarPagos() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
-                        <TableCell><Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-mono text-xs">{factura.numeroRadicado}</Badge></TableCell>
-                        <TableCell className="text-slate-600 max-w-[180px] truncate" title={factura.proveedor}>{factura.proveedor}</TableCell>
-                        <TableCell className="font-mono text-xs text-slate-500">{factura.nit}</TableCell>
+                        <TableCell><Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-mono text-xs">{displayRadicado(factura.numeroRadicado)}</Badge></TableCell>
+                        <TableCell className="text-slate-600 max-w-[180px] truncate" title={displayText(factura.proveedor)}>{displayText(factura.proveedor)}</TableCell>
+                        <TableCell className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</TableCell>
                         <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
                         <TableCell><Badge className="bg-purple-100 text-purple-700 border-purple-200 border font-mono text-xs">{factura.cuentaContable}</Badge></TableCell>
-                        <TableCell>{factura.centroCosto ? <Badge className="bg-cyan-100 text-cyan-700 border-cyan-200 border font-mono text-xs">{factura.centroCosto}</Badge> : '-'}</TableCell>
+                        <TableCell>{factura.centroCosto ? <Badge className="bg-cyan-100 text-cyan-700 border-cyan-200 border font-mono text-xs">{factura.centroCosto}</Badge> : <span className="text-slate-400 text-xs">{displayText(factura.centroCosto)}</span>}</TableCell>
                         <TableCell className="text-slate-600 text-sm">
-                          <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-slate-400" />{factura.fechaCausacion}</div>
+                          <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-slate-400" />{displayDate(factura.fechaCausacion)}</div>
                         </TableCell>
                         <TableCell><span className="inline-flex items-center gap-1 font-bold text-sm text-slate-700">{factura.diasTranscurridos}d</span></TableCell>
                         <TableCell>

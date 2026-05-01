@@ -3,6 +3,7 @@ import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { FileText, Clock, DollarSign, Building, MapPin, Hash, CalendarDays, Paperclip, Eye, Download } from 'lucide-react';
 import FacturaTimeline, { type TimelineEtapa } from './factura-timeline';
+import { displayDate, displayRadicado, displayText } from './field-placeholders';
 
 type SharedFacturaDocumento = {
   id?: string;
@@ -196,7 +197,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div className="space-y-2">
                     <div>
                       <p className="text-xs text-slate-500">Razon Social</p>
-                      <p className="font-semibold text-slate-800">{factura.proveedor}</p>
+                      <p className="font-semibold text-slate-800">{displayText(factura.proveedor)}</p>
                     </div>
                     {factura.nit && (
                       <div>
@@ -219,7 +220,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                       <MapPin className="w-5 h-5 text-red-600" />
                       <h3 className="font-semibold text-slate-800">Area Solicitante</h3>
                     </div>
-                    <p className="text-slate-700">{factura.areaSolicitante}</p>
+                    <p className="text-slate-700">{displayText(factura.areaSolicitante)}</p>
                   </div>
                 )}
 
@@ -231,11 +232,11 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div className="space-y-2 text-sm">
                     <div>
                       <p className="text-xs text-slate-500">Fecha de Factura</p>
-                      <p className="text-slate-800">{factura.fechaFactura || 'Sin fecha registrada'}</p>
+                      <p className="text-slate-800">{displayDate(factura.fechaFactura)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Fecha de Recepcion</p>
-                      <p className="text-slate-800">{factura.fechaRecepcion || 'Sin fecha registrada'}</p>
+                      <p className="text-slate-800">{displayDate(factura.fechaRecepcion)}</p>
                     </div>
                     {factura.tipoDocumento && (
                       <div>
@@ -281,14 +282,16 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div className="space-y-2">
                     <div>
                       <p className="text-xs text-slate-500">Numero de Factura</p>
-                      <p className="font-mono text-slate-800">{factura.numeroFactura}</p>
+                      <p className="font-mono text-slate-800">{displayText(factura.numeroFactura)}</p>
                     </div>
-                    {factura.numeroRadicado && (
-                      <div>
-                        <p className="text-xs text-slate-500">Numero de Radicado</p>
-                        <p className="font-mono text-slate-800">{factura.numeroRadicado}</p>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-xs text-slate-500">Numero de Radicado</p>
+                      <p className="font-mono text-slate-800">{displayRadicado(factura.numeroRadicado)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Numero de Proceso</p>
+                      <p className="font-mono text-slate-800">{displayText(factura.numeroProcesoPago)}</p>
+                    </div>
                   </div>
                 </div>
 

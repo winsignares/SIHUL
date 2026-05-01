@@ -32,6 +32,7 @@ import {
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadRadicarFacturas } from '../../../hooks/financiero/contabilidad';
+import { displayDate, displayText } from '../../../share/field-placeholders';
 
 export default function RadicarFacturas() {
   const {
@@ -116,9 +117,9 @@ export default function RadicarFacturas() {
             <div className="space-y-4">
               <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-2 gap-3 text-sm">
                 <div><p className="text-slate-500">Factura</p><p className="font-bold">{facturaSeleccionada.numero_factura}</p></div>
-                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{facturaSeleccionada.proveedor?.razon_social}</p></div>
+                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{displayText(facturaSeleccionada.proveedor?.razon_social)}</p></div>
                 <div><p className="text-slate-500">Monto</p><p className="font-bold text-green-700">${Number(facturaSeleccionada.valor_total).toLocaleString('es-CO')}</p></div>
-                <div><p className="text-slate-500">Área</p><p className="font-bold">{facturaSeleccionada.departamento?.nombre}</p></div>
+                <div><p className="text-slate-500">Área</p><p className="font-bold">{displayText(facturaSeleccionada.departamento?.nombre)}</p></div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Observaciones (Opcional)</label>
@@ -154,7 +155,7 @@ export default function RadicarFacturas() {
             <div className="space-y-4">
               <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-2 gap-3 text-sm">
                 <div><p className="text-slate-500">Factura</p><p className="font-bold">{facturaSeleccionada.numero_factura}</p></div>
-                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{facturaSeleccionada.proveedor?.razon_social}</p></div>
+                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{displayText(facturaSeleccionada.proveedor?.razon_social)}</p></div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-red-700">* Motivo de Devolución (Requerido)</label>
@@ -202,7 +203,7 @@ export default function RadicarFacturas() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-800">Facturas Pendientes de Radicación</h2>
-              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Recibida</em></p>
+              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Recibida / Registrada</em></p>
             </div>
           </div>
 
@@ -253,14 +254,14 @@ export default function RadicarFacturas() {
                         </TableCell>
                         <TableCell className="font-medium text-slate-800">{factura.numero_factura}</TableCell>
                         <TableCell>
-                          <p className="font-medium text-slate-800">{factura.proveedor?.razon_social}</p>
-                          <p className="text-xs text-slate-500 font-mono">{factura.proveedor?.nit}</p>
+                          <p className="font-medium text-slate-800">{displayText(factura.proveedor?.razon_social)}</p>
+                          <p className="text-xs text-slate-500 font-mono">{displayText(factura.proveedor?.nit)}</p>
                         </TableCell>
                         <TableCell className="font-semibold text-slate-800">
                           ${Number(factura.valor_total).toLocaleString('es-CO')}
                         </TableCell>
-                        <TableCell className="text-slate-600">{factura.departamento?.nombre}</TableCell>
-                        <TableCell className="text-slate-600">{factura.fecha_recepcion}</TableCell>
+                        <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
+                        <TableCell className="text-slate-600">{displayDate(factura.fecha_recepcion)}</TableCell>
                         <TableCell>
                           <span className={`font-semibold ${diasColor(nivel)}`}>{dias}d</span>
                         </TableCell>
@@ -288,9 +289,15 @@ export default function RadicarFacturas() {
                             <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50">
                               <XCircle className="w-3 h-3 mr-1" /> Devolver
                             </Button>
-                            <Button size="sm" onClick={() => iniciarAccion(factura, 'radicar')} className="bg-blue-600 hover:bg-blue-700 text-white" title={!docsOk ? `Faltan: ${faltantes.join(', ')}` : ''}>
+                            <Button
+                              size="sm"
+                              onClick={() => iniciarAccion(factura, 'radicar')}
+                              className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:text-slate-500"
+                              title={!docsOk ? `Faltan: ${faltantes.join(', ')}` : ''}
+                              disabled={!docsOk}
+                            >
                               <FileCheck className="w-3 h-3 mr-1" />
-                              {docsOk ? 'Radicar' : 'Radicar*'}
+                              Radicar
                             </Button>
                           </div>
                         </TableCell>

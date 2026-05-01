@@ -7,6 +7,7 @@ import type { Factura } from '../../../models/financiero/core.models';
 import type { FuncionarioConsultaRow, FuncionarioEstadoChange, FuncionarioSeguimientoResponse } from '../../../models/financiero/funcionario';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import type { TimelineEtapa } from '../../../share/factura-timeline';
+import { displayDate, displayRadicado } from '../../../share/field-placeholders';
 
 const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
   { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
@@ -123,9 +124,7 @@ export default function ConsultarFacturas() {
 
   const loadRows = async () => {
     const response = await facturasService.getAll({ limit: 100 });
-    return toList<Factura>(response)
-      .filter(f => f.estado !== 'Recibida')
-      .map(mapFactura);
+    return toList<Factura>(response).map(mapFactura);
   };
 
   useEffect(() => {
@@ -565,11 +564,11 @@ export default function ConsultarFacturas() {
                   <td className="p-4 text-slate-700 text-sm">{inferEtapaActual(row.estado) || row.etapa}</td>
                   <td className="p-4">
                     {row.sinRadicado
-                      ? <span className="text-slate-400 italic text-xs">Sin Asignar</span>
-                      : <span className="text-slate-600 font-mono">{row.numeroRadicado}</span>
+                      ? <span className="text-slate-400 italic text-xs">{displayRadicado(row.numeroRadicado)}</span>
+                      : <span className="text-slate-600 font-mono">{displayRadicado(row.numeroRadicado)}</span>
                     }
                   </td>
-                  <td className="p-4 text-slate-700">{row.fechaRecepcion || '—'}</td>
+                  <td className="p-4 text-slate-700">{displayDate(row.fechaRecepcion)}</td>
                   <td className="p-4 font-semibold text-slate-900">{row.dias === 0 ? '< 1 día' : `${row.dias} días`}</td>
                   <td className="p-4 text-center">
                     <motion.button

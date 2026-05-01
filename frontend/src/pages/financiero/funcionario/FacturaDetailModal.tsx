@@ -127,7 +127,7 @@ export default function FacturaDetailModal({ open, onClose, factura }: Props) {
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-700 text-sm">
-                  <div className="flex items-center gap-2"><Calendar className="w-4 h-4" /> Inicio: {factura.fechaInicio || 'Sin fecha'}</div>
+                  <div className="flex items-center gap-2"><Calendar className="w-4 h-4" /> Inicio: {factura.fechaInicio || 'Sin fecha registrada'}</div>
                   <div className="flex items-center gap-2"><FileText className="w-4 h-4" /> Etapa actual: {factura.etapaActual}</div>
                 </div>
               </div>

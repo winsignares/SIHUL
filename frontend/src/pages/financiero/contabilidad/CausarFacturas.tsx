@@ -32,6 +32,7 @@ import { Badge } from '../../../share/badge';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadCausarFacturas } from '../../../hooks/financiero/contabilidad';
+import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 
 export default function CausarFacturas() {
   const {
@@ -117,8 +118,8 @@ export default function CausarFacturas() {
             <div className="space-y-4">
               <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-2 gap-3 text-sm">
                 <div><p className="text-slate-500">Factura</p><p className="font-bold">{facturaSeleccionada.numero_factura}</p></div>
-                <div><p className="text-slate-500">Radicado</p><p className="font-bold text-blue-600">{facturaSeleccionada.numero_radicado ?? '-'}</p></div>
-                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{facturaSeleccionada.proveedor?.razon_social}</p></div>
+                <div><p className="text-slate-500">Radicado</p><p className="font-bold text-blue-600">{displayRadicado(facturaSeleccionada.numero_radicado)}</p></div>
+                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{displayText(facturaSeleccionada.proveedor?.razon_social)}</p></div>
                 <div><p className="text-slate-500">Monto</p><p className="font-bold text-green-700">${Number(facturaSeleccionada.valor_total).toLocaleString('es-CO')}</p></div>
               </div>
 
@@ -130,6 +131,7 @@ export default function CausarFacturas() {
                   className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
                 >
                   <option value="">Seleccionar cuenta contable...</option>
+                  {cuentasContables.length === 0 && <option value="" disabled>Sin cuentas disponibles</option>}
                   {cuentasContables.map((c) => (
                     <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
                   ))}
@@ -144,6 +146,7 @@ export default function CausarFacturas() {
                   className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
                 >
                   <option value="">Seleccionar centro de costo...</option>
+                  {centrosCosto.length === 0 && <option value="" disabled>Sin centros disponibles</option>}
                   {centrosCosto.map((c) => (
                     <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
                   ))}
@@ -272,15 +275,15 @@ export default function CausarFacturas() {
                       <TableRow key={factura.id} className="hover:bg-slate-50">
                         <TableCell className="font-medium text-slate-800">{factura.numero_factura}</TableCell>
                         <TableCell>
-                          <Badge className="bg-blue-100 text-blue-700 border border-blue-200">{factura.numero_radicado ?? '-'}</Badge>
+                          <Badge className="bg-blue-100 text-blue-700 border border-blue-200">{displayRadicado(factura.numero_radicado)}</Badge>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium text-slate-800">{factura.proveedor?.razon_social}</p>
-                          <p className="text-xs text-slate-500 font-mono">{factura.proveedor?.nit}</p>
+                          <p className="font-medium text-slate-800">{displayText(factura.proveedor?.razon_social)}</p>
+                          <p className="text-xs text-slate-500 font-mono">{displayText(factura.proveedor?.nit)}</p>
                         </TableCell>
                         <TableCell className="font-semibold text-slate-800">${Number(factura.valor_total).toLocaleString('es-CO')}</TableCell>
-                        <TableCell className="text-slate-600">{factura.departamento?.nombre}</TableCell>
-                        <TableCell className="text-slate-600">{factura.fecha_radicacion ?? '-'}</TableCell>
+                        <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
+                        <TableCell className="text-slate-600">{displayDate(factura.fecha_radicacion)}</TableCell>
                         <TableCell><span className={diasColor}>{dias}d</span></TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 flex-wrap">
