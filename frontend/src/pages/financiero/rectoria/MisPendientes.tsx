@@ -1,92 +1,29 @@
-import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
-import { AlertCircle, Clock3, Eye, Search } from 'lucide-react';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { AlertCircle, Clock3, Eye, Search, Loader2, RefreshCw } from 'lucide-react';
+import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { Input } from '../../../share/input';
-
-const pendientesBase: SharedFacturaDetail[] = [
-  {
-    id: '1',
-    numeroFactura: 'FAC-2026-129',
-    numeroRadicado: 'RAD-2026-00129',
-    numeroProcesoPago: 'PP-2026-0092',
-    proveedor: 'Construcciones Universitarias SAS',
-    valorTotal: 450000000,
-    fechaFactura: '2026-03-15',
-    fechaRecepcion: '2026-03-26',
-    areaSolicitante: 'Infraestructura',
-    estado: 'Cargada para autorizacion',
-    diasTranscurridos: 3,
-    descripcion: 'Pago parcial construccion bloque D - avance del 80%',
-    observaciones: 'Requiere autorizacion prioritaria por cierre del contrato.',
-  },
-  {
-    id: '2',
-    numeroFactura: 'FAC-2026-139',
-    numeroRadicado: 'RAD-2026-00139',
-    numeroProcesoPago: 'PP-2026-0093',
-    proveedor: 'Nomina Planta Docente',
-    valorTotal: 825000000,
-    fechaFactura: '2026-03-25',
-    fechaRecepcion: '2026-03-28',
-    areaSolicitante: 'Talento Humano',
-    estado: 'Cargada para autorizacion',
-    diasTranscurridos: 2,
-    descripcion: 'Nomina planta docente mes de marzo 2026',
-  },
-  {
-    id: '3',
-    numeroFactura: 'FAC-2026-122',
-    numeroRadicado: 'RAD-2026-00122',
-    numeroProcesoPago: 'PP-2026-0089',
-    proveedor: 'Consultoria Internacional Acreditacion',
-    valorTotal: 185000000,
-    fechaFactura: '2026-03-10',
-    fechaRecepcion: '2026-03-24',
-    areaSolicitante: 'Vicerrectoria Academica',
-    estado: 'Cargada para autorizacion',
-    diasTranscurridos: 4,
-    descripcion: 'Consultoria proceso de acreditacion internacional',
-    observaciones: 'Vencida por SLA. Requiere respuesta inmediata.',
-    nivelRiesgo: 'vencido',
-  },
-  {
-    id: '4',
-    numeroFactura: 'FAC-2026-148',
-    numeroRadicado: 'RAD-2026-00148',
-    numeroProcesoPago: 'PP-2026-0094',
-    proveedor: 'Tecnologia Educativa Global',
-    valorTotal: 125000000,
-    fechaFactura: '2026-03-27',
-    fechaRecepcion: '2026-03-30',
-    areaSolicitante: 'Sistemas',
-    estado: 'Cargada para autorizacion',
-    diasTranscurridos: 1,
-    descripcion: 'Licencia anual plataforma de gestion academica',
-  },
-];
+import { useMisPendientesRectoria } from '../../../hooks/financiero/rectoria';
 
 export default function MisPendientes() {
-  const [search, setSearch] = useState('');
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selected, setSelected] = useState<SharedFacturaDetail | null>(null);
-
-  const pendientes = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return pendientesBase;
-    return pendientesBase.filter(
-      (f) =>
-        f.numeroFactura.toLowerCase().includes(q) ||
-        f.proveedor.toLowerCase().includes(q) ||
-        (f.numeroRadicado || '').toLowerCase().includes(q) ||
-        (f.numeroProcesoPago || '').toLowerCase().includes(q)
-    );
-  }, [search]);
-
-  const totalPendiente = pendientes.reduce((sum, item) => sum + item.valorTotal, 0);
+  const {
+    pendientes,
+    cargando,
+    error,
+    search,
+    detailOpen,
+    selected,
+    totalPendiente,
+    criticos,
+    promedioEspera,
+    setSearch,
+    setDetailOpen,
+    setSelected,
+    abrirDetalle,
+    recargar,
+  } = useMisPendientesRectoria();
 
   return (
     <div className="space-y-6">
@@ -111,29 +48,35 @@ export default function MisPendientes() {
         <Card className="border-0 shadow-lg">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Pendientes</p>
-            <p className="text-3xl font-bold text-slate-800">{pendientes.length}</p>
+            <p className="text-3xl font-bold text-slate-800">{cargando ? '-' : pendientes.length}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-lg">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Criticos (&gt; 3 dias)</p>
-            <p className="text-3xl font-bold text-red-700">{pendientes.filter((p) => (p.diasTranscurridos || 0) > 3).length}</p>
+            <p className="text-3xl font-bold text-red-700">{cargando ? '-' : criticos}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-lg">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Promedio de espera</p>
-            <p className="text-3xl font-bold text-amber-700">
-              {Math.round(pendientes.reduce((s, p) => s + (p.diasTranscurridos || 0), 0) / Math.max(1, pendientes.length))} dias
-            </p>
+            <p className="text-3xl font-bold text-amber-700">{cargando ? '-' : `${promedioEspera} dias`}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <CardTitle>Cola de Prioridades</CardTitle>
-          <CardDescription>Filtra y abre el detalle para gestionar trazabilidad completa</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Cola de Prioridades</CardTitle>
+              <CardDescription>Filtra y abre el detalle para gestionar trazabilidad completa</CardDescription>
+            </div>
+            <Button onClick={recargar} variant="outline" size="sm" disabled={cargando}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
@@ -141,8 +84,23 @@ export default function MisPendientes() {
             <Input className="pl-9" placeholder="Buscar por factura, proveedor, radicado o proceso" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
 
-          <div className="space-y-3">
-            {pendientes.map((item) => (
+          {cargando ? (
+            <div className="flex items-center justify-center py-12 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin mr-3" /> Cargando facturas...
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" /> {error}
+            </div>
+          ) : pendientes.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <Clock3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No hay pagos pendientes de autorizacion</p>
+              <p className="text-sm mt-1">Los pagos enviados por Direccion Financiera apareceran aqui</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendientes.map((item) => (
               <motion.div
                 key={item.numeroFactura}
                 initial={{ opacity: 0, y: 8 }}
@@ -168,10 +126,7 @@ export default function MisPendientes() {
                   </div>
                   <Button
                     className="bg-red-600 hover:bg-red-700"
-                    onClick={() => {
-                      setSelected(item);
-                      setDetailOpen(true);
-                    }}
+                    onClick={() => abrirDetalle(item)}
                   >
                     <Eye className="w-4 h-4 mr-2" /> Ver detalle
                   </Button>
@@ -183,8 +138,9 @@ export default function MisPendientes() {
                   </div>
                 )}
               </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

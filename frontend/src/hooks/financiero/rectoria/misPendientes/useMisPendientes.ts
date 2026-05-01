@@ -3,21 +3,21 @@ import { facturasService, documentosService } from '../../../../services/financi
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
 import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 
-export interface FacturaPendiente extends SharedFacturaDetail {
+export interface FacturaPendienteRectoria extends SharedFacturaDetail {
   id: string;
   nit: string;
 }
 
-export function useMisPendientes() {
+export function useMisPendientesRectoria() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [detailOpen, setDetailOpen] = useState(false);
-  const [selected, setSelected] = useState<FacturaPendiente | null>(null);
+  const [selected, setSelected] = useState<FacturaPendienteRectoria | null>(null);
 
-  const facturaToPendiente = (factura: Factura, docs: DocumentoAdjunto[]): FacturaPendiente => {
+  const mapFactura = (factura: Factura, docs: DocumentoAdjunto[]): FacturaPendienteRectoria => {
     const base = buildSharedFacturaDetail(factura);
     return {
       ...base,
@@ -37,17 +37,9 @@ export function useMisPendientes() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas remitidas por Tesoreria y facturas devueltas por Rectoria
-      const [recibidasDF, devueltas] = await Promise.all([
-        facturasService.getByEstado('Revisada Dir. Financiera'),
-        facturasService.getByEstado('Devuelta'),
-      ]);
-      const lista = [...recibidasDF, ...devueltas].filter(
-        (factura, index, arr) => arr.findIndex((f) => f.id === factura.id) === index
-      );
-      
+      const lista = await facturasService.getByEstado('Enviada Rectoría');
       setFacturas(lista);
-      
+
       const docsResults = await Promise.all(
         lista.map((f) =>
           documentosService
@@ -62,7 +54,7 @@ export function useMisPendientes() {
       });
       setDocsMap(map);
     } catch {
-      setError('No se pudo cargar las facturas. Verifique la conexión.');
+      setError('No se pudieron cargar las facturas pendientes de Rectoría.');
     } finally {
       setCargando(false);
     }
@@ -73,33 +65,28 @@ export function useMisPendientes() {
   }, [cargarFacturas]);
 
   const pendientes = useMemo(() => {
-    const mapped = facturas.map((f) => facturaToPendiente(f, docsMap[f.id] ?? []));
+    const mapped = facturas.map((f) => mapFactura(f, docsMap[f.id] ?? []));
     const q = search.trim().toLowerCase();
     if (!q) return mapped;
     return mapped.filter(
       (f) =>
         f.numeroFactura.toLowerCase().includes(q) ||
         f.proveedor.toLowerCase().includes(q) ||
-        (f.numeroRadicado || '').toLowerCase().includes(q)
+        (f.numeroRadicado || '').toLowerCase().includes(q) ||
+        (f.numeroProcesoPago || '').toLowerCase().includes(q)
     );
   }, [facturas, docsMap, search]);
 
-  const totalPendiente = useMemo(() => 
-    pendientes.reduce((sum, item) => sum + item.valorTotal, 0),
+  const totalPendiente = useMemo(() => pendientes.reduce((sum, item) => sum + item.valorTotal, 0), [pendientes]);
+
+  const criticos = useMemo(() => pendientes.filter((p) => (p.diasTranscurridos || 0) > 3).length, [pendientes]);
+
+  const promedioEspera = useMemo(
+    () => Math.round(pendientes.reduce((s, p) => s + (p.diasTranscurridos || 0), 0) / Math.max(1, pendientes.length)),
     [pendientes]
   );
 
-  const criticos = useMemo(() => 
-    pendientes.filter((p) => (p.diasTranscurridos || 0) > 3).length,
-    [pendientes]
-  );
-
-  const promedioEspera = useMemo(() => 
-    Math.round(pendientes.reduce((s, p) => s + (p.diasTranscurridos || 0), 0) / Math.max(1, pendientes.length)),
-    [pendientes]
-  );
-
-  const abrirDetalle = (item: FacturaPendiente) => {
+  const abrirDetalle = (item: FacturaPendienteRectoria) => {
     setSelected(item);
     setDetailOpen(true);
   };

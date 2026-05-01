@@ -269,7 +269,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                     {
                         id: 'Revisar Pagos Direccion Financiera',
                         icon: getIconForComponent('Revisar Pagos Direccion Financiera'),
-                        label: 'Revisar Pagos',
+                        label: 'Cargue y Revision',
                         route: '/financiero/direccion-financiera/revisar',
                         code: 'Revisar Pagos Direccion Financiera'
                     },

@@ -41,14 +41,14 @@ export default function DireccionFinancieraHome({
   const quickActions = [
     {
       title: 'Mis Pendientes',
-      description: 'Cola operativa de cargue con SLA de direccion financiera',
+      description: 'Facturas recibidas desde Tesoreria pendientes de gestion',
       icon: Clock,
       color: 'from-yellow-600 to-yellow-700',
       action: onGoToPendientes,
     },
     {
       title: 'Revisar Pagos',
-      description: 'Revision de pagos enviados por Tesoreria antes de remision',
+      description: 'Cargue formal en direccion financiera o devolucion a tesoreria',
       icon: FileText,
       color: 'from-blue-600 to-blue-700',
       action: onGoToRevisar,
@@ -70,8 +70,8 @@ export default function DireccionFinancieraHome({
   ];
 
   const statsData = [
-    { title: 'Facturas por Cargar', value: String(stats.facturasPorCargar), icon: Upload, color: 'from-purple-600 to-purple-700', iconColor: 'text-purple-100', trend: 'Aprobadas por auditoria' },
-    { title: 'Cargadas Este Mes', value: String(stats.cargadasEsteMes), icon: CheckCircle2, color: 'from-green-600 to-green-700', iconColor: 'text-green-100', trend: '+10% vs mes anterior' },
+    { title: 'Pendientes de Cargue', value: String(stats.facturasPorCargar), icon: Upload, color: 'from-purple-600 to-purple-700', iconColor: 'text-purple-100', trend: 'Recibidas de Tesoreria' },
+    { title: 'Listas para Enviar a Rectoria', value: String(stats.listasParaEnviar), icon: CheckCircle2, color: 'from-green-600 to-green-700', iconColor: 'text-green-100', trend: 'Cargadas para autorizacion' },
   ];
 
   return (
@@ -138,7 +138,7 @@ export default function DireccionFinancieraHome({
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-slate-800">Tablero Kanban Resumido</CardTitle>
-                  <CardDescription>Estados del flujo de cuentas por pagar</CardDescription>
+                  <CardDescription>Estados reales de todo el flujo: desde Funcionario, pasando por Tesoreria, Auditoria, Direccion Financiera y Rectoria, hasta Pago.</CardDescription>
                 </div>
                 <Button onClick={() => setShowKanbanCompleto(true)} className="bg-red-600 hover:bg-red-700">
                   Ver Kanban Completo
@@ -151,13 +151,15 @@ export default function DireccionFinancieraHome({
                   <Loader2 className="w-6 h-6 animate-spin mr-3" /> Cargando datos...
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-4">
-                  {kanbanEstados.map((item) => (
-                    <div key={item.estado} className="rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow">
-                      <p className="text-2xl font-bold text-slate-800 mb-1">{item.cantidad}</p>
-                      <Badge className={`${item.color} border`}>{item.estado}</Badge>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto [scrollbar-gutter:stable_both-edges] pb-2">
+                  <div className="flex w-max min-w-full gap-3">
+                    {kanbanEstados.map((item) => (
+                      <div key={item.estado} className="min-w-[210px] rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow">
+                        <p className="text-2xl font-bold text-slate-800 mb-1">{item.cantidad}</p>
+                        <Badge className={`${item.color} border`}>{item.estado}</Badge>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -252,6 +254,7 @@ export default function DireccionFinancieraHome({
       {/* Kanban Full View */}
       <KanbanVistaCompleta
         isOpen={showKanbanCompleto}
+        kanbanEstados={kanbanEstados}
         onClose={() => setShowKanbanCompleto(false)}
         onSelectFactura={(factura) => {
           setSelectedFactura(factura);

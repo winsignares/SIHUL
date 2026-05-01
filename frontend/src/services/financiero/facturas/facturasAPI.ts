@@ -53,6 +53,15 @@ export const facturasService = {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/enviar_direccion_financiera/`, body);
   },
 
+  autorizarRectoria: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/autorizar_rectoria/`, body);
+  },
+
+  rechazarRectoria: async (id: number, motivo: string): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar_rectoria/`, { motivo });
+  },
+
   registrarPagoAplicado: async (
     id: number,
     opts: { numero_transaccion: string; fecha_pago_aplicado?: string; observaciones?: string }

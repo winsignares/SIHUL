@@ -1,159 +1,54 @@
-import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
 import { Textarea } from '../../../share/textarea';
-import { Label } from '../../../share/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { CheckSquare, CheckCircle2, XCircle, Calendar, Eye, Building, AlertCircle } from 'lucide-react';
+import { CheckSquare, CheckCircle2, XCircle, Calendar, Eye, Building, AlertCircle, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
-
-interface Factura extends SharedFacturaDetail {
-  id: string;
-  numeroProcesoPago: string;
-  fechaCargue: string;
-  cuentaContable: string;
-  centroCosto: string;
-}
+import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { useAutorizarPagos } from '../../../hooks/financiero/rectoria';
 
 export default function AutorizarPagos() {
-  const [filtros, setFiltros] = useState({
-    numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
-    fechaInicio: '',
-    fechaFin: '',
-    montoMin: '',
-    montoMax: '',
-  });
-
-  const [facturasCargadas] = useState<Factura[]>([
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-018',
-      numeroRadicado: 'RAD-2026-00115',
-      numeroProcesoPago: 'PP-2026-0092',
-      proveedor: 'Construcciones Universitarias SAS',
-      nit: '900123456-7',
-      valorTotal: 45000000,
-      fechaCargue: '2026-04-01',
-      areaSolicitante: 'Infraestructura',
-      cuentaContable: '5180-001',
-      centroCosto: 'CC-010',
-      estado: 'Cargada para autorizacion',
-      diasTranscurridos: 1,
-      descripcion: 'Obra construccion bloque D - pago parcial',
-      observaciones: 'Cargue formal completado. Todo en orden.',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-020',
-      numeroRadicado: 'RAD-2026-00118',
-      numeroProcesoPago: 'PP-2026-0095',
-      proveedor: 'Equipos Medicos Especializados',
-      nit: '900234567-8',
-      valorTotal: 28500000,
-      fechaCargue: '2026-04-02',
-      areaSolicitante: 'Ciencias de la Salud',
-      cuentaContable: '5160-002',
-      centroCosto: 'CC-012',
-      estado: 'Cargada para autorizacion',
-      diasTranscurridos: 0,
-      descripcion: 'Equipamiento laboratorio de fisiologia',
-      observaciones: 'Cargado sin observaciones.',
-    },
-    {
-      id: '3',
-      numeroFactura: 'FAC-2026-022',
-      numeroRadicado: 'RAD-2026-00120',
-      numeroProcesoPago: 'PP-2026-0097',
-      proveedor: 'Tecnologia Educativa Global',
-      nit: '900345678-9',
-      valorTotal: 15200000,
-      fechaCargue: '2026-04-01',
-      areaSolicitante: 'Sistemas',
-      cuentaContable: '5165-001',
-      centroCosto: 'CC-007',
-      estado: 'Cargada para autorizacion',
-      diasTranscurridos: 1,
-      descripcion: 'Licencias software educativo anual',
-      observaciones: 'Proceso completado correctamente.',
-    },
-  ]);
-
-  const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
-  const [facturaDetalle, setFacturaDetalle] = useState<SharedFacturaDetail | null>(null);
-  const [mostrarDialogAccion, setMostrarDialogAccion] = useState(false);
-  const [mostrarDialogDetalle, setMostrarDialogDetalle] = useState(false);
-  const [accion, setAccion] = useState<'aprobar' | 'rechazar'>('aprobar');
-  const [motivo, setMotivo] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const facturasFiltradas = useMemo(
-    () =>
-      facturasCargadas.filter((factura) => {
-        if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-        if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-        if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-        if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-        if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
-        if (filtros.fechaInicio && factura.fechaCargue < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && factura.fechaCargue > filtros.fechaFin) return false;
-        return true;
-      }),
-    [facturasCargadas, filtros]
-  );
-
-  const abrirDialog = (factura: Factura, accionSeleccionada: 'aprobar' | 'rechazar') => {
-    setFacturaSeleccionada(factura);
-    setAccion(accionSeleccionada);
-    setMotivo('');
-    setMostrarDialogAccion(true);
-  };
-
-  const handleVerDetalle = (factura: Factura) => {
-    setFacturaDetalle(factura);
-    setMostrarDialogDetalle(true);
-  };
-
-  const procesarAutorizacion = () => {
-    if (!facturaSeleccionada) return;
-
-    if (accion === 'rechazar' && !motivo.trim()) {
-      toast.error('Motivo requerido', {
-        description: 'Debe registrar el motivo del rechazo para devolver a Direccion Financiera',
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-
-    setTimeout(() => {
-      if (accion === 'aprobar') {
-        toast.success('Pago autorizado por Rectoria', {
-          description: `${facturaSeleccionada.numeroFactura} enviado para aplicacion en portal bancario.`,
-        });
-      } else {
-        toast.warning('Pago rechazado por Rectoria', {
-          description: `${facturaSeleccionada.numeroFactura} devuelto a Direccion Financiera.`,
-        });
-      }
-
-      setIsProcessing(false);
-      setMostrarDialogAccion(false);
-      setFacturaSeleccionada(null);
-      setMotivo('');
-    }, 1200);
-  };
+  const {
+    filtros,
+    facturasFiltradas,
+    facturaSeleccionada,
+    facturaDetalle,
+    mostrarDialogAccion,
+    mostrarDialogDetalle,
+    accion,
+    motivo,
+    isProcessing,
+    cargando,
+    error,
+    toast,
+    setFiltros,
+    setMostrarDialogAccion,
+    setMostrarDialogDetalle,
+    setMotivo,
+    abrirDialog,
+    handleVerDetalle,
+    procesarAutorizacion,
+    cargarFacturas,
+  } = useAutorizarPagos();
 
   return (
     <>
       <div className="space-y-6">
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-xl text-white font-semibold ${toast.tipo === 'ok' ? 'bg-green-600' : 'bg-red-600'}`}
+          >
+            {toast.tipo === 'ok' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            {toast.msg}
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,9 +75,9 @@ export default function AutorizarPagos() {
               <TableFilters
                 filters={filtros}
                 onFilterChange={setFiltros}
-                estados={['Cargada para autorizacion']}
-                proveedores={Array.from(new Set(facturasCargadas.map((f) => f.proveedor)))}
-                areas={Array.from(new Set(facturasCargadas.map((f) => f.areaSolicitante || ''))).filter(Boolean)}
+                estados={['Enviada Rectoría']}
+                proveedores={Array.from(new Set(facturasFiltradas.map((f) => f.proveedor)))}
+                areas={Array.from(new Set(facturasFiltradas.map((f) => f.areaSolicitante || ''))).filter(Boolean)}
                 showMontoFilter
                 showFechaFilter
                 showAreaFilter
@@ -196,15 +91,19 @@ export default function AutorizarPagos() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-slate-800">Pagos Cargados para Autorizacion</CardTitle>
+                  <CardTitle className="text-slate-800">Pagos Enviados a Rectoría</CardTitle>
                   <CardDescription>{facturasFiltradas.length} pago(s) pendiente(s) de decision</CardDescription>
                 </div>
-                <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 border text-lg px-4 py-2">
-                  {facturasFiltradas.length} Por Autorizar
-                </Badge>
+                <Button onClick={cargarFacturas} variant="outline" disabled={cargando}>
+                  <Loader2 className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+              )}
               <div className="rounded-lg border border-slate-200 overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -220,7 +119,12 @@ export default function AutorizarPagos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {facturasFiltradas.map((factura, index) => (
+                    {cargando ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando pagos enviados a Rectoría...</TableCell>
+                      </TableRow>
+                    ) : (
+                      facturasFiltradas.map((factura, index) => (
                       <motion.tr
                         key={factura.id}
                         initial={{ opacity: 0, y: 10 }}
@@ -247,7 +151,7 @@ export default function AutorizarPagos() {
                         <TableCell className="text-slate-600 text-sm">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            {factura.fechaCargue}
+                            {factura.fechaEnvioRectoria}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -280,7 +184,8 @@ export default function AutorizarPagos() {
                           </div>
                         </TableCell>
                       </motion.tr>
-                    ))}
+                      ))
+                    )}
                   </TableBody>
                 </Table>
 
@@ -329,9 +234,7 @@ export default function AutorizarPagos() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700">
-                  {accion === 'aprobar' ? 'Observaciones de Rectoria (opcional)' : 'Motivo del rechazo *'}
-                </Label>
+                <p className="text-sm font-semibold text-slate-700">{accion === 'aprobar' ? 'Observaciones de Rectoria (opcional)' : 'Motivo del rechazo *'}</p>
                 <Textarea
                   placeholder={
                     accion === 'aprobar'
@@ -352,7 +255,6 @@ export default function AutorizarPagos() {
               variant="outline"
               onClick={() => {
                 setMostrarDialogAccion(false);
-                setFacturaSeleccionada(null);
                 setMotivo('');
               }}
               disabled={isProcessing}
@@ -375,7 +277,6 @@ export default function AutorizarPagos() {
         isOpen={mostrarDialogDetalle}
         onClose={() => {
           setMostrarDialogDetalle(false);
-          setFacturaDetalle(null);
         }}
       />
     </>

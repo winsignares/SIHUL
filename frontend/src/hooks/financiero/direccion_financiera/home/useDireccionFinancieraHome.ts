@@ -10,6 +10,14 @@ export interface StatsDireccionFinanciera {
   listasParaEnviar: number;
 }
 
+export interface KanbanEstadoDireccionFinanciera {
+  estado: string;
+  sourceEstado: string;
+  color: string;
+  cantidad: number;
+  facturas: SharedFacturaDetail[];
+}
+
 export function useDireccionFinancieraHome() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
@@ -25,22 +33,54 @@ export function useDireccionFinancieraHome() {
     setCargando(true);
     setError(null);
     try {
-      // Cargar facturas de diferentes estados relevantes para DF
-      // Nota: Usamos 'Aprobada Auditoría' como el estado de facturas enviadas por Tesorería a DF
       const [
+        recibidas,
+        registradas,
+        radicadas,
+        causadas,
+        alistadas,
         aprobadasAuditoria,
+        rechazadasAuditoria,
         revisadasDF,
+        devueltas,
+        cargadas,
         enviadasRectoria,
         autorizadas,
+        pagosAplicados,
+        pagadas,
       ] = await Promise.all([
+        facturasService.getByEstado('Recibida'),
+        facturasService.getByEstado('Registrada'),
+        facturasService.getByEstado('Radicada'),
+        facturasService.getByEstado('Causada'),
+        facturasService.getByEstado('Alistada'),
         facturasService.getByEstado('Aprobada Auditoría'),
+        facturasService.getByEstado('Rechazada Auditoría'),
         facturasService.getByEstado('Revisada Dir. Financiera'),
+        facturasService.getByEstado('Devuelta'),
+        facturasService.getByEstado('Cargada'),
         facturasService.getByEstado('Enviada Rectoría'),
         facturasService.getByEstado('Autorizada'),
+        facturasService.getByEstado('Pago Aplicado'),
+        facturasService.getByEstado('Pagada'),
       ]);
 
-      // Combinar todas las facturas
-      const todasLasFacturas = [...aprobadasAuditoria, ...revisadasDF, ...enviadasRectoria, ...autorizadas];
+      const todasLasFacturas = [
+        ...recibidas,
+        ...registradas,
+        ...radicadas,
+        ...causadas,
+        ...alistadas,
+        ...aprobadasAuditoria,
+        ...rechazadasAuditoria,
+        ...revisadasDF,
+        ...cargadas,
+        ...enviadasRectoria,
+        ...autorizadas,
+        ...devueltas,
+        ...pagosAplicados,
+        ...pagadas,
+      ];
       
       // Eliminar duplicados por ID
       const facturasUnicas = Array.from(new Map(todasLasFacturas.map(f => [f.id, f])).values());
@@ -74,12 +114,10 @@ export function useDireccionFinancieraHome() {
   }, [cargarDatos]);
 
   const stats = useMemo<StatsDireccionFinanciera>(() => {
-    const facturasPorCargar = facturas.filter(f => f.estado === 'Aprobada Auditoría').length;
-    const cargadasEsteMes = facturas.filter(f => 
-      f.estado === 'Cargada' || f.estado === 'Revisada Dir. Financiera'
-    ).length;
+    const facturasPorCargar = facturas.filter(f => f.estado === 'Revisada Dir. Financiera' || f.estado === 'Devuelta').length;
+    const cargadasEsteMes = facturas.filter(f => f.estado === 'Cargada').length;
     const pendientesRevision = facturasPorCargar;
-    const listasParaEnviar = facturas.filter(f => f.estado === 'Revisada Dir. Financiera').length;
+    const listasParaEnviar = facturas.filter(f => f.estado === 'Cargada').length;
 
     return {
       facturasPorCargar,
@@ -89,33 +127,56 @@ export function useDireccionFinancieraHome() {
     };
   }, [facturas]);
 
-  const kanbanEstados = useMemo(() => {
-    const estados = [
-      { estado: 'Recibida', cantidad: 0, color: 'bg-gray-100 text-gray-700' },
-      { estado: 'Radicada', cantidad: 0, color: 'bg-blue-100 text-blue-700' },
-      { estado: 'Causada', cantidad: 0, color: 'bg-indigo-100 text-indigo-700' },
-      { estado: 'Alistada', cantidad: 0, color: 'bg-yellow-100 text-yellow-700' },
-      { estado: 'Aprobada Auditoría', cantidad: 0, color: 'bg-orange-100 text-orange-700' },
-      { estado: 'Cargada', cantidad: 0, color: 'bg-purple-100 text-purple-700' },
-      { estado: 'Revisada Dir. Financiera', cantidad: 0, color: 'bg-pink-100 text-pink-700' },
-      { estado: 'Enviada Rectoría', cantidad: 0, color: 'bg-cyan-100 text-cyan-700' },
-      { estado: 'Autorizada', cantidad: 0, color: 'bg-green-100 text-green-700' },
-      { estado: 'Pago Aplicado', cantidad: 0, color: 'bg-emerald-100 text-emerald-700' },
-    ];
+  const kanbanEstados = useMemo<KanbanEstadoDireccionFinanciera[]>(() => {
+    const definiciones = [
+      { label: 'Recibida (Funcionario)', sourceEstado: 'Recibida', color: 'bg-slate-100 text-slate-700' },
+      { label: 'Registrada', sourceEstado: 'Registrada', color: 'bg-blue-100 text-blue-700' },
+      { label: 'Radicada', sourceEstado: 'Radicada', color: 'bg-cyan-100 text-cyan-700' },
+      { label: 'Causada', sourceEstado: 'Causada', color: 'bg-indigo-100 text-indigo-700' },
+      { label: 'Alistada', sourceEstado: 'Alistada', color: 'bg-amber-100 text-amber-700' },
+      { label: 'Aprobada Auditoría', sourceEstado: 'Aprobada Auditoría', color: 'bg-teal-100 text-teal-700' },
+      { label: 'Rechazada Auditoría', sourceEstado: 'Rechazada Auditoría', color: 'bg-rose-100 text-rose-700' },
+      { label: 'Revisada Dir. Financiera', sourceEstado: 'Revisada Dir. Financiera', color: 'bg-orange-100 text-orange-700' },
+      { label: 'Cargada para autorización', sourceEstado: 'Cargada', color: 'bg-purple-100 text-purple-700' },
+      { label: 'Enviada Rectoría', sourceEstado: 'Enviada Rectoría', color: 'bg-cyan-100 text-cyan-700' },
+      { label: 'Autorizada para pago', sourceEstado: 'Autorizada', color: 'bg-green-100 text-green-700' },
+      { label: 'Devuelta para ajustes', sourceEstado: 'Devuelta', color: 'bg-red-100 text-red-700' },
+      { label: 'Pago Aplicado', sourceEstado: 'Pago Aplicado', color: 'bg-emerald-100 text-emerald-700' },
+      { label: 'Pagada', sourceEstado: 'Pagada', color: 'bg-emerald-200 text-emerald-800' },
+    ] as const;
 
-    facturas.forEach(f => {
-      const estadoItem = estados.find(e => e.estado === f.estado);
-      if (estadoItem) {
-        estadoItem.cantidad++;
-      }
+    return definiciones.map(({ label, sourceEstado, color }) => {
+      const facturasEstado = facturas
+        .filter((f) => f.estado === sourceEstado)
+        .sort((a, b) => new Date(b.fecha_modificacion).getTime() - new Date(a.fecha_modificacion).getTime())
+        .map((f) => {
+          const docs = docsMap[f.id] ?? [];
+          return {
+            ...buildSharedFacturaDetail(f),
+            documentos: docs.map((d) => ({
+              id: String(d.id),
+              nombre: d.nombre_archivo,
+              tipo: d.tipo_documento,
+              verificado: d.verificado,
+              url: d.archivo_url ?? d.url_storage ?? undefined,
+            })),
+          };
+        });
+
+      return {
+        estado: label,
+        sourceEstado,
+        color,
+        cantidad: facturasEstado.length,
+        facturas: facturasEstado,
+      };
     });
-
-    return estados;
-  }, [facturas]);
+  }, [facturas, docsMap]);
 
   const actividadesRecientes = useMemo<SharedFacturaDetail[]>(() => {
-    // Tomar las últimas 5 facturas con más actividad (ordenadas por fecha de actualización)
     const recientes = facturas
+      .slice()
+      .sort((a, b) => new Date(b.fecha_modificacion).getTime() - new Date(a.fecha_modificacion).getTime())
       .slice(0, 5)
       .map(f => {
         const docs = docsMap[f.id] ?? [];
@@ -145,10 +206,11 @@ export function useDireccionFinancieraHome() {
       'Causada': 'bg-purple-100 text-purple-700 border-purple-200',
       'Alistada': 'bg-yellow-100 text-yellow-700 border-yellow-200',
       'Aprobada Auditoría': 'bg-teal-100 text-teal-700 border-teal-200',
+      'Revisada Dir. Financiera': 'bg-amber-100 text-amber-700 border-amber-200',
       'Cargada': 'bg-orange-100 text-orange-700 border-orange-200',
-      'Revisada Dir. Financiera': 'bg-pink-100 text-pink-700 border-pink-200',
       'Enviada Rectoría': 'bg-cyan-100 text-cyan-700 border-cyan-200',
       'Autorizada': 'bg-green-100 text-green-700 border-green-200',
+      'Devuelta': 'bg-red-100 text-red-700 border-red-200',
       'Pago Aplicado': 'bg-emerald-100 text-emerald-700 border-emerald-200',
       'Pagada': 'bg-emerald-100 text-emerald-700 border-emerald-200',
     };

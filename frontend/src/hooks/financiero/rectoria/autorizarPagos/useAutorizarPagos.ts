@@ -3,23 +3,20 @@ import { facturasService, documentosService } from '../../../../services/financi
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
 import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 
-export interface FacturaEnvio extends SharedFacturaDetail {
+export interface FacturaAutorizacion extends SharedFacturaDetail {
   id: string;
   nit: string;
-  fechaRevision: string;
+  fechaEnvioRectoria: string;
+  cuentaContable: string;
+  centroCosto: string;
 }
 
-export function useEnviarRectoria() {
+export function useAutorizarPagos() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [procesando, setProcesando] = useState(false);
-
-  const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaEnvio | null>(null);
-  const [detalleAbierto, setDetalleAbierto] = useState(false);
-  const [envioAbierto, setEnvioAbierto] = useState(false);
-  const [observaciones, setObservaciones] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
@@ -32,6 +29,13 @@ export function useEnviarRectoria() {
     montoMax: '',
   });
 
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaAutorizacion | null>(null);
+  const [facturaDetalle, setFacturaDetalle] = useState<SharedFacturaDetail | null>(null);
+  const [mostrarDialogAccion, setMostrarDialogAccion] = useState(false);
+  const [mostrarDialogDetalle, setMostrarDialogDetalle] = useState(false);
+  const [accion, setAccion] = useState<'aprobar' | 'rechazar'>('aprobar');
+  const [motivo, setMotivo] = useState('');
+
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
 
   const showToast = (tipo: 'ok' | 'err', msg: string) => {
@@ -39,13 +43,15 @@ export function useEnviarRectoria() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const facturaToEnvio = (factura: Factura, docs: DocumentoAdjunto[]): FacturaEnvio => {
+  const mapFactura = (factura: Factura, docs: DocumentoAdjunto[]): FacturaAutorizacion => {
     const base = buildSharedFacturaDetail(factura);
     return {
       ...base,
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
-      fechaRevision: factura.fecha_aprobacion_auditoria ?? factura.fecha_recepcion ?? '',
+      fechaEnvioRectoria: factura.fecha_recepcion ?? factura.fecha_creacion ?? '',
+      cuentaContable: factura.cuenta_contable ? `${factura.cuenta_contable.codigo} - ${factura.cuenta_contable.nombre}` : '',
+      centroCosto: factura.centro_costo ? `${factura.centro_costo.codigo} - ${factura.centro_costo.nombre}` : '',
       documentos: docs.map((d) => ({
         id: String(d.id),
         nombre: d.nombre_archivo,
@@ -60,11 +66,9 @@ export function useEnviarRectoria() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas cargadas por Direccion Financiera, listas para enviar a Rectoria
-      const lista = await facturasService.getByEstado('Cargada');
-      
+      const lista = await facturasService.getByEstado('Enviada Rectoría');
       setFacturas(lista);
-      
+
       const docsResults = await Promise.all(
         lista.map((f) =>
           documentosService
@@ -73,13 +77,14 @@ export function useEnviarRectoria() {
             .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
         )
       );
+
       const map: Record<number, DocumentoAdjunto[]> = {};
       docsResults.forEach(({ id, docs }) => {
         map[id] = docs;
       });
       setDocsMap(map);
     } catch {
-      setError('No se pudo cargar las facturas. Verifique la conexión.');
+      setError('No se pudieron cargar los pagos pendientes de autorización.');
     } finally {
       setCargando(false);
     }
@@ -91,76 +96,80 @@ export function useEnviarRectoria() {
 
   const facturasFiltradas = useMemo(() => {
     return facturas
-      .map((f) => facturaToEnvio(f, docsMap[f.id] ?? []))
+      .map((f) => mapFactura(f, docsMap[f.id] ?? []))
       .filter((factura) => {
         if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
         if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
         if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-        if (filtros.fechaInicio && factura.fechaRevision < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && factura.fechaRevision > filtros.fechaFin) return false;
+        if (filtros.fechaInicio && factura.fechaEnvioRectoria < filtros.fechaInicio) return false;
+        if (filtros.fechaFin && factura.fechaEnvioRectoria > filtros.fechaFin) return false;
         if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
         if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
         return true;
       });
   }, [facturas, docsMap, filtros]);
 
-  const abrirDetalle = (factura: FacturaEnvio) => {
+  const abrirDialog = (factura: FacturaAutorizacion, accionSeleccionada: 'aprobar' | 'rechazar') => {
     setFacturaSeleccionada(factura);
-    setDetalleAbierto(true);
+    setAccion(accionSeleccionada);
+    setMotivo('');
+    setMostrarDialogAccion(true);
   };
 
-  const abrirEnvio = (factura: FacturaEnvio) => {
-    setFacturaSeleccionada(factura);
-    setObservaciones('');
-    setEnvioAbierto(true);
+  const handleVerDetalle = (factura: FacturaAutorizacion) => {
+    setFacturaDetalle(factura);
+    setMostrarDialogDetalle(true);
   };
 
-  const cerrarEnvio = () => {
-    setEnvioAbierto(false);
-    setFacturaSeleccionada(null);
-    setObservaciones('');
-  };
-
-  const enviarARectoria = async () => {
+  const procesarAutorizacion = async () => {
     if (!facturaSeleccionada?.facturaId) return;
-    
-    setProcesando(true);
+
+    if (accion === 'rechazar' && (!motivo.trim() || motivo.trim().length < 10)) {
+      showToast('err', 'Debe registrar un motivo de rechazo (mínimo 10 caracteres).');
+      return;
+    }
+
+    setIsProcessing(true);
     try {
-      await facturasService.update(facturaSeleccionada.facturaId, {
-        estado: 'Enviada Rectoría',
-        observaciones: observaciones || undefined,
-      });
-      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} enviada a Rectoría exitosamente.`);
-      cerrarEnvio();
-      cargarFacturas();
+      if (accion === 'aprobar') {
+        await facturasService.autorizarRectoria(facturaSeleccionada.facturaId, motivo.trim() || undefined);
+        showToast('ok', `Pago autorizado por Rectoría: ${facturaSeleccionada.numeroFactura}.`);
+      } else {
+        await facturasService.rechazarRectoria(facturaSeleccionada.facturaId, motivo.trim());
+        showToast('ok', `Pago rechazado y devuelto a Dirección Financiera: ${facturaSeleccionada.numeroFactura}.`);
+      }
+
+      setMostrarDialogAccion(false);
+      setFacturaSeleccionada(null);
+      setMotivo('');
+      await cargarFacturas();
     } catch {
-      showToast('err', 'Error al enviar la factura. Intente de nuevo.');
+      showToast('err', 'No fue posible procesar la decisión en Rectoría.');
     } finally {
-      setProcesando(false);
+      setIsProcessing(false);
     }
   };
 
   return {
-    facturas,
+    filtros,
     facturasFiltradas,
-    docsMap,
+    facturaSeleccionada,
+    facturaDetalle,
+    mostrarDialogAccion,
+    mostrarDialogDetalle,
+    accion,
+    motivo,
+    isProcessing,
     cargando,
     error,
-    procesando,
-    facturaSeleccionada,
-    detalleAbierto,
-    envioAbierto,
-    observaciones,
-    filtros,
     toast,
     setFiltros,
-    setObservaciones,
-    setDetalleAbierto,
-    setEnvioAbierto,
-    abrirDetalle,
-    abrirEnvio,
-    cerrarEnvio,
-    enviarARectoria,
+    setMostrarDialogAccion,
+    setMostrarDialogDetalle,
+    setMotivo,
+    abrirDialog,
+    handleVerDetalle,
+    procesarAutorizacion,
     cargarFacturas,
   };
 }

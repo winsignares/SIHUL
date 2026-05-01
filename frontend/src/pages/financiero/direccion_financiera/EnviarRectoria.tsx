@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { Loader2, Send, Filter, Calendar, CheckCircle2, Eye, Building, AlertCircle } from 'lucide-react';
+import { Loader2, Send, Filter, Calendar, CheckCircle2, Eye, Building, AlertCircle, ClipboardCheck, Landmark } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Textarea } from '../../../share/textarea';
 import TableFilters from '../../../share/table-filters';
@@ -43,7 +43,7 @@ export default function EnviarRectoria() {
           </div>
           <div>
             <h1 className="text-white mb-1 text-2xl font-bold">Enviar a Rectoria</h1>
-            <p className="text-red-100 text-sm">Remitir pagos revisados para autorizacion final</p>
+            <p className="text-red-100 text-sm">Remitir pagos cargados para autorizacion final</p>
           </div>
         </div>
       </motion.div>
@@ -89,7 +89,7 @@ export default function EnviarRectoria() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Pagos Revisados - Listos para Enviar</CardTitle>
-              <CardDescription>{facturasFiltradas.length} pago(s) listo(s) para enviar a Rectoria</CardDescription>
+              <CardDescription>{facturasFiltradas.length} pago(s) cargado(s) listo(s) para enviar a Rectoria</CardDescription>
             </div>
             <Button onClick={cargarFacturas} variant="outline" disabled={cargando}>
               <Loader2 className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
@@ -168,21 +168,63 @@ export default function EnviarRectoria() {
 
       {/* Dialog Envio */}
       <Dialog open={envioAbierto} onOpenChange={setEnvioAbierto}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Enviar a Rectoria</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Send className="w-5 h-5 text-blue-600" />
+              Remision Formal a Rectoria
+            </DialogTitle>
             <DialogDescription>
-              {facturaSeleccionada ? `Confirmar envio de ${facturaSeleccionada.numeroFactura} para autorizacion final.` : 'Selecciona una factura.'}
+              {facturaSeleccionada ? `Confirme la remision de ${facturaSeleccionada.numeroFactura} para autorizacion final institucional.` : 'Seleccione una factura para remitir.'}
             </DialogDescription>
           </DialogHeader>
+
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Factura</p>
+                  <p className="font-semibold text-slate-800">{facturaSeleccionada.numeroFactura}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Proveedor</p>
+                  <p className="font-semibold text-slate-800 truncate">{facturaSeleccionada.proveedor}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Monto</p>
+                  <p className="font-semibold text-green-700">${facturaSeleccionada.valorTotal.toLocaleString('es-CO')}</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-start gap-3">
+                  <ClipboardCheck className="w-5 h-5 text-blue-700 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-blue-900">Control previo a la remision</p>
+                    <ul className="mt-2 text-sm text-blue-800 space-y-1">
+                      <li>- Cargue financiero y soportes completos verificados</li>
+                      <li>- Datos de proceso de pago y rubro confirmados</li>
+                      <li>- Factura lista para decision final de Rectoria</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Observaciones para Rectoria</label>
-            <Textarea rows={4} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Contexto de envio y prioridad" />
+            <label className="text-sm font-medium text-slate-700">Observaciones para Rectoria (opcional)</label>
+            <Textarea
+              rows={4}
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Contexto de envio, prioridad, riesgos o validaciones relevantes para la autorizacion..."
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={cerrarEnvio} disabled={procesando}>Cancelar</Button>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={enviarARectoria} disabled={procesando}>
-              {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : 'Confirmar envio'}
+              {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : <><Landmark className="w-4 h-4 mr-2" />Confirmar remision</>}
             </Button>
           </DialogFooter>
         </DialogContent>

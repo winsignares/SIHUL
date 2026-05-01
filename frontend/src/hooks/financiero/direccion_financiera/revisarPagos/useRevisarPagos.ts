@@ -63,8 +63,14 @@ export function useRevisarPagos() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas aprobadas por auditoria (enviadas por tesoreria a direccion financiera)
-      const lista = await facturasService.getByEstado('Aprobada Auditoría');
+      // Facturas recibidas en Direccion Financiera y facturas devueltas por Rectoria
+      const [recibidasDF, devueltas] = await Promise.all([
+        facturasService.getByEstado('Revisada Dir. Financiera'),
+        facturasService.getByEstado('Devuelta'),
+      ]);
+      const lista = [...recibidasDF, ...devueltas].filter(
+        (factura, index, arr) => arr.findIndex((f) => f.id === factura.id) === index
+      );
       
       setFacturas(lista);
       
@@ -130,12 +136,12 @@ export function useRevisarPagos() {
     
     setProcesando(true);
     try {
-      // Cambiar estado a "Revisada Dir. Financiera" (revisada y cargada)
+      // Cambiar estado a "Cargada" (lista para autorizacion en Rectoria)
       await facturasService.update(facturaSeleccionada.facturaId, {
-        estado: 'Revisada Dir. Financiera',
+        estado: 'Cargada',
         observaciones: observaciones || undefined,
       });
-      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} revisada y cargada exitosamente.`);
+      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} cargada para autorizacion en Rectoria.`);
       cerrarDecision();
       cargarFacturas();
     } catch {

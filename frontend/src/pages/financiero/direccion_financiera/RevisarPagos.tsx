@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { Loader2, FileCheck, Filter, Calendar, CheckCircle2, RotateCcw, Eye, Building, AlertCircle, Upload } from 'lucide-react';
+import { Loader2, FileCheck, Filter, Calendar, CheckCircle2, RotateCcw, Eye, Building, AlertCircle, Upload, ClipboardList, ShieldAlert, Landmark } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Textarea } from '../../../share/textarea';
 import TableFilters from '../../../share/table-filters';
@@ -90,7 +90,7 @@ export default function RevisarPagos() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-slate-800">Pagos Recibidos de Tesoreria - Pendientes de Cargue</CardTitle>
+              <CardTitle className="text-slate-800">Pagos Recibidos de Tesoreria - Pendientes de Cargue Formal</CardTitle>
               <CardDescription>{facturasFiltradas.length} pago(s) pendiente(s) de cargue</CardDescription>
             </div>
             <Button onClick={cargarFacturas} variant="outline" disabled={cargando}>
@@ -112,7 +112,7 @@ export default function RevisarPagos() {
             <div className="text-center py-16 text-slate-400">
               <FileCheck className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">No hay pagos pendientes de cargue</p>
-              <p className="text-sm mt-1">Los pagos enviados por tesoreria apareceran aqui</p>
+              <p className="text-sm mt-1">Los pagos remitidos por Tesoreria apareceran aqui</p>
             </div>
           ) : (
             <Table>
@@ -168,24 +168,85 @@ export default function RevisarPagos() {
 
       {/* Dialog Decision */}
       <Dialog open={decisionAbierta} onOpenChange={setDecisionAbierta}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{decisionTipo === 'aprobar' ? 'Cargar pago' : 'Devolver pago'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              {decisionTipo === 'aprobar' ? (
+                <>
+                  <Upload className="w-5 h-5 text-green-600" />
+                  Confirmacion de Cargue Financiero
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-5 h-5 text-red-600" />
+                  Devolucion para Ajustes
+                </>
+              )}
+            </DialogTitle>
             <DialogDescription>
               {decisionTipo === 'aprobar'
-                ? `La factura ${facturaSeleccionada?.numeroFactura} quedara cargada y lista para enviar a Rectoria.`
-                : `La factura ${facturaSeleccionada?.numeroFactura} se devolvera a Tesoreria para ajuste.`}
+                ? 'Valide la informacion operativa antes de dejar la factura en estado Cargada para autorizacion de Rectoria.'
+                : 'Registre una justificacion formal para retornar la factura al flujo de ajustes.'}
             </DialogDescription>
           </DialogHeader>
+
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Factura</p>
+                  <p className="font-semibold text-slate-800">{facturaSeleccionada.numeroFactura}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Proveedor</p>
+                  <p className="font-semibold text-slate-800 truncate">{facturaSeleccionada.proveedor}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Valor total</p>
+                  <p className="font-semibold text-green-700">${facturaSeleccionada.valorTotal.toLocaleString('es-CO')}</p>
+                </div>
+              </div>
+
+              {decisionTipo === 'aprobar' ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <ClipboardList className="w-5 h-5 text-emerald-700 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-emerald-900">Checklist de control previo al cargue</p>
+                      <ul className="mt-2 text-sm text-emerald-800 space-y-1">
+                        <li>- Soportes documentales validados y trazables</li>
+                        <li>- Proceso de pago y area solicitante confirmados</li>
+                        <li>- Lista para remision a Rectoria</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-red-700 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-red-900">Control de devolucion</p>
+                      <p className="mt-1 text-sm text-red-800">
+                        Esta accion retornara la factura al flujo de ajustes. El motivo quedara registrado en historial para trazabilidad.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">
-              {decisionTipo === 'devolver' ? '* Motivo de devolucion (Requerido)' : 'Observaciones'}
+              {decisionTipo === 'devolver' ? '* Motivo de devolucion (Requerido)' : 'Observaciones de cargue (opcional)'}
             </label>
             <Textarea
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              placeholder={decisionTipo === 'devolver' ? 'Especifique el motivo de la devolucion...' : 'Observaciones opcionales...'}
+              placeholder={decisionTipo === 'devolver' ? 'Especifique claramente el motivo de la devolucion y accion requerida...' : 'Registre contexto operativo, validaciones realizadas o notas para Rectoria...'}
               className={decisionTipo === 'devolver' ? 'border-red-300' : ''}
+              rows={4}
             />
             {decisionTipo === 'devolver' && (
               <p className="text-xs text-slate-500">Minimo 10 caracteres.</p>
@@ -199,7 +260,7 @@ export default function RevisarPagos() {
               onClick={decisionTipo === 'aprobar' ? aprobarFactura : devolverFactura}
               disabled={procesando}
             >
-              {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : (decisionTipo === 'aprobar' ? 'Confirmar cargue' : 'Confirmar devolucion')}
+              {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : (decisionTipo === 'aprobar' ? <><Landmark className="w-4 h-4 mr-2" />Confirmar cargue financiero</> : <><RotateCcw className="w-4 h-4 mr-2" />Confirmar devolucion</>)}
             </Button>
           </DialogFooter>
         </DialogContent>

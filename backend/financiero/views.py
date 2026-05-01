@@ -354,7 +354,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'Rechazada Auditoría': ['Tesorería'],
             'Revisada Dir. Financiera': ['Dirección Financiera'],
             'Cargada': ['Rectoría'],
+            'Enviada Rectoría': ['Rectoría'],
             'Autorizada': ['Tesorería'],
+            'Devuelta': ['Dirección Financiera'],
             'Pago Aplicado': ['Tesorería'],
         }
 
@@ -518,6 +520,91 @@ class FacturaViewSet(viewsets.ModelViewSet):
         )
 
         self._notificar_transicion(factura, estado_anterior, 'Radicada')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='autorizar_rectoria')
+    def autorizar_rectoria(self, request, pk=None):
+        """Autorizar una factura desde Rectoría para continuar con tesorería."""
+        factura = self.get_object()
+
+        if factura.estado != 'Enviada Rectoría':
+            return Response(
+                {'error': 'La factura debe estar enviada a Rectoría para autorizarla'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+        estado_anterior = factura.estado
+
+        factura.estado = 'Autorizada'
+        factura.fecha_autorizacion = timezone.now().date()
+        factura.etapa_actual = 'Autorización Rectoría'
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Rectoría] {observaciones}"]))
+
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura autorizada por rectoría',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Autorizada',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Autorizada')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='rechazar_rectoria')
+    def rechazar_rectoria(self, request, pk=None):
+        """Rechazar una factura desde Rectoría y devolverla a Dirección Financiera."""
+        factura = self.get_object()
+
+        if factura.estado != 'Enviada Rectoría':
+            return Response(
+                {'error': 'La factura debe estar enviada a Rectoría para rechazarla'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        motivo = (request.data.get('motivo') or '').strip()
+        if len(motivo) < 10:
+            return Response(
+                {'error': 'Debe registrar un motivo de rechazo (mínimo 10 caracteres)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+        factura.estado = 'Devuelta'
+        factura.etapa_actual = 'Devolución Dirección Financiera'
+        factura.usuario_responsable = None
+        factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Rectoría - Rechazo] {motivo}"]))
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura rechazada por rectoría',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Devuelta',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=motivo,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Devuelta')
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,

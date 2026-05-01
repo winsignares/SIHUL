@@ -35,6 +35,14 @@ export interface SharedFacturaDetail {
   tipoDocumento?: string;
   valorSubtotal?: number;
   valorIva?: number;
+  fechaRadicacion?: string;
+  fechaCausacion?: string;
+  fechaAlistamiento?: string;
+  fechaAprobacionAuditoria?: string;
+  fechaCargue?: string;
+  fechaAutorizacion?: string;
+  fechaPagoAplicado?: string;
+  fechaComprobante?: string;
   cuentaBancariaProveedor?: string;
   contactoProveedor?: string;
   nivelRiesgo?: 'verde' | 'amarillo' | 'rojo' | 'vencido';
@@ -60,13 +68,13 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'Radicada',
     'Causada',
     'Alistada',
-    'Aprobada auditoria',
-    'Enviado a direccion financiera',
-    'Revisado por direccion financiera',
-    'Enviado a Rectoria',
-    'Cargada para autorizacion',
-    'Autorizada para pago',
-    'Pago aplicado',
+    'Aprobada Auditoría',
+    'Revisada Dir. Financiera',
+    'Cargada',
+    'Enviada Rectoría',
+    'Devuelta',
+    'Autorizada',
+    'Pago Aplicado',
     'Pagada',
   ];
 
@@ -83,16 +91,23 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     radicada: 'Radicada',
     causada: 'Causada',
     alistada: 'Alistada',
-    'aprobada auditoria': 'Aprobada auditoria',
-    'enviado a direccion financiera': 'Enviado a direccion financiera',
-    'enviado a dir. financiera': 'Enviado a direccion financiera',
-    'revisado por direccion financiera': 'Revisado por direccion financiera',
-    'enviado a rectoria': 'Enviado a Rectoria',
-    'cargada para autorizacion': 'Cargada para autorizacion',
-    cargada: 'Cargada para autorizacion',
-    autorizada: 'Autorizada para pago',
-    'autorizada para pago': 'Autorizada para pago',
-    'pago aplicado': 'Pago aplicado',
+    'aprobada auditoria': 'Aprobada Auditoría',
+    'rechazada auditoria': 'Devuelta',
+    'enviado a direccion financiera': 'Revisada Dir. Financiera',
+    'enviado a dir. financiera': 'Revisada Dir. Financiera',
+    'revisado por direccion financiera': 'Revisada Dir. Financiera',
+    'revisada dir. financiera': 'Revisada Dir. Financiera',
+    'enviada rectoria': 'Enviada Rectoría',
+    'enviado a rectoria': 'Enviada Rectoría',
+    'cargada para autorizacion': 'Cargada',
+    cargada: 'Cargada',
+    autorizada: 'Autorizada',
+    'autorizada para pago': 'Autorizada',
+    devuelta: 'Devuelta',
+    rechazada: 'Devuelta',
+    detenida: 'Devuelta',
+    anulada: 'Devuelta',
+    'pago aplicado': 'Pago Aplicado',
     pagada: 'Pagada',
   };
 
@@ -100,32 +115,38 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   const idx = estadosOrdenados.indexOf(current);
 
   const blueprint = [
-    ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1],
-    ['Registrada', 'Funcionario', 'Registro completo de la factura', 1],
-    ['Radicada', 'Contabilidad', 'Radicacion contable', 3],
-    ['Causada', 'Contabilidad', 'Causacion contable', 2],
-    ['Alistada', 'Tesoreria', 'Alistamiento de pago', 3],
-    ['Aprobada auditoria', 'Auditoria', 'Control previo de auditoria', 4],
-    ['Enviado a direccion financiera', 'Tesoreria', 'Remitido a Direccion Financiera', 1],
-    ['Revisado por direccion financiera', 'Dir. Financiera', 'Revision financiera', 2],
-    ['Enviado a Rectoria', 'Dir. Financiera', 'Enviado a Rectoria', 1],
-    ['Cargada para autorizacion', 'Dir. Financiera / Rectoria', 'Cargue para autorizacion', 2],
-    ['Autorizada para pago', 'Rectoria', 'Autorizacion final', 3],
-    ['Pago aplicado', 'Portal bancario / Tesoreria', 'Aplicacion de pago', 1],
-    ['Pagada', 'Tesoreria', 'Comprobante de egreso generado', 1],
+    ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1, factura.fechaRecepcion || factura.fechaFactura],
+    ['Registrada', 'Funcionario', 'Registro y validacion inicial completada', 1, factura.fechaRecepcion],
+    ['Radicada', 'Contabilidad', 'Radicacion contable ejecutada', 3, factura.fechaRadicacion],
+    ['Causada', 'Contabilidad', 'Causacion contable ejecutada', 2, factura.fechaCausacion],
+    ['Alistada', 'Tesoreria', 'Alistamiento previo a auditoria', 3, factura.fechaAlistamiento],
+    ['Aprobada Auditoría', 'Auditoria', 'Control previo de auditoria aprobado', 4, factura.fechaAprobacionAuditoria],
+    ['Revisada Dir. Financiera', 'Direccion Financiera', 'Revision financiera y trazabilidad de soportes', 2, factura.fechaAprobacionAuditoria],
+    ['Cargada', 'Direccion Financiera', 'Cargue formal para autorizacion de Rectoría', 2, factura.fechaCargue],
+    ['Enviada Rectoría', 'Direccion Financiera', 'Remitida para decision final institucional', 1, factura.fechaCargue],
+    ['Devuelta', 'Rectoria / Tesoreria', 'Tramite devuelto para ajustes y correcciones', 2, undefined],
+    ['Autorizada', 'Rectoria', 'Autorizacion final de pago', 3, factura.fechaAutorizacion],
+    ['Pago Aplicado', 'Tesoreria', 'Aplicacion del pago en portal bancario', 1, factura.fechaPagoAplicado],
+    ['Pagada', 'Tesoreria', 'Comprobante emitido y tramite cerrado', 1, factura.fechaComprobante],
   ] as const;
 
-  return blueprint.map(([nombre, responsable, observaciones, sla], i) => {
-    const estado = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
+  return blueprint.map(([nombre, responsable, observaciones, sla, fecha], i) => {
+    let estado: TimelineEtapa['estado'] = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
+
+    if (nombre === 'Devuelta') {
+      estado = current === 'Devuelta' ? 'devuelto' : 'pendiente';
+    }
+
     return {
       id: String(i + 1),
       nombre,
       estado,
+      fechaFin: fecha,
       usuarioResponsable: responsable,
       observaciones,
       diasMaximos: sla,
-      diasTranscurridos: i === idx ? factura.diasTranscurridos : undefined,
-      nivelRiesgo: i === idx ? factura.nivelRiesgo : undefined,
+      diasTranscurridos: i === idx || (current === 'Devuelta' && nombre === 'Devuelta') ? factura.diasTranscurridos : undefined,
+      nivelRiesgo: i === idx || (current === 'Devuelta' && nombre === 'Devuelta') ? factura.nivelRiesgo : undefined,
     } as TimelineEtapa;
   });
 }
@@ -510,6 +531,14 @@ export function buildSharedFacturaDetail(f: APIFactura): SharedFacturaDetail {
     valorIva: f.valor_iva ?? undefined,
     fechaFactura: f.fecha_factura,
     fechaRecepcion: f.fecha_recepcion,
+    fechaRadicacion: f.fecha_radicacion,
+    fechaCausacion: f.fecha_causacion,
+    fechaAlistamiento: f.fecha_alistamiento,
+    fechaAprobacionAuditoria: f.fecha_aprobacion_auditoria,
+    fechaCargue: f.fecha_cargue,
+    fechaAutorizacion: f.fecha_autorizacion,
+    fechaPagoAplicado: f.fecha_pago_aplicado,
+    fechaComprobante: f.fecha_comprobante,
     areaSolicitante: f.departamento?.nombre,
     estado: f.estado,
     diasTranscurridos: Math.max(0, f.dias_transcurridos || 0),
@@ -533,6 +562,19 @@ export function buildSharedFacturaDetail(f: APIFactura): SharedFacturaDetail {
 }
 
 function mapFacturaDetail(detail: APIFactura, base: SharedFacturaDetail): SharedFacturaDetail {
+  const contactoProveedor = [detail.proveedor?.email, detail.proveedor?.telefono].filter(Boolean).join(' | ') || base.contactoProveedor;
+
+  const cuentaBancariaCompleta = detail.cuenta_bancaria_proveedor ||
+    (detail.proveedor?.banco && detail.proveedor?.tipo_cuenta && detail.proveedor?.numero_cuenta
+      ? `${detail.proveedor.banco} - ${detail.proveedor.tipo_cuenta} ${detail.proveedor.numero_cuenta}`
+      : detail.proveedor?.cuenta_bancaria_completa) ||
+    base.cuentaBancariaProveedor;
+
+  const nivelRiesgo: SharedFacturaDetail['nivelRiesgo'] =
+    detail.indicador_riesgo === 'vencida' ? 'vencido' :
+    detail.indicador_riesgo === 'atrasada' ? 'rojo' :
+    detail.indicador_riesgo === 'atencion' ? 'amarillo' : 'verde';
+
   const documentos = (detail.documentos || []).map((doc) => ({
     id: doc.id ? String(doc.id) : undefined,
     nombre: doc.nombre_archivo,
@@ -550,6 +592,14 @@ function mapFacturaDetail(detail: APIFactura, base: SharedFacturaDetail): Shared
     valorTotal: Number(detail.valor_total || base.valorTotal || 0),
     fechaFactura: detail.fecha_factura || base.fechaFactura,
     fechaRecepcion: detail.fecha_recepcion || base.fechaRecepcion,
+    fechaRadicacion: detail.fecha_radicacion || base.fechaRadicacion,
+    fechaCausacion: detail.fecha_causacion || base.fechaCausacion,
+    fechaAlistamiento: detail.fecha_alistamiento || base.fechaAlistamiento,
+    fechaAprobacionAuditoria: detail.fecha_aprobacion_auditoria || base.fechaAprobacionAuditoria,
+    fechaCargue: detail.fecha_cargue || base.fechaCargue,
+    fechaAutorizacion: detail.fecha_autorizacion || base.fechaAutorizacion,
+    fechaPagoAplicado: detail.fecha_pago_aplicado || base.fechaPagoAplicado,
+    fechaComprobante: detail.fecha_comprobante || base.fechaComprobante,
     areaSolicitante: detail.departamento?.nombre || base.areaSolicitante,
     estado: detail.estado || base.estado,
     diasTranscurridos: Number(detail.dias_transcurridos || base.diasTranscurridos || 0),
@@ -560,8 +610,9 @@ function mapFacturaDetail(detail: APIFactura, base: SharedFacturaDetail): Shared
     tipoDocumento: detail.tipo_documento || base.tipoDocumento,
     valorSubtotal: detail.valor_subtotal ?? base.valorSubtotal,
     valorIva: detail.valor_iva ?? base.valorIva,
-    cuentaBancariaProveedor: detail.cuenta_bancaria_proveedor || base.cuentaBancariaProveedor,
-    contactoProveedor: base.contactoProveedor,
+    cuentaBancariaProveedor: cuentaBancariaCompleta,
+    contactoProveedor,
+    nivelRiesgo,
     nit: detail.proveedor?.nit || base.nit,
     cuentaContable: detail.cuenta_contable
       ? `${detail.cuenta_contable.codigo} - ${detail.cuenta_contable.nombre}`

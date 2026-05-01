@@ -31,7 +31,7 @@ export default function MisPendientes() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-1">Mis Pendientes de Cargue</h1>
-            <p className="text-yellow-100">Facturas aprobadas por auditoria listas para cargue y consolidacion</p>
+            <p className="text-yellow-100">Facturas recibidas desde Tesoreria para cargue y validacion final</p>
           </div>
           <div className="text-right">
             <p className="text-sm text-yellow-100">Total en cola</p>
@@ -101,7 +101,7 @@ export default function MisPendientes() {
             <div className="text-center py-12 text-slate-400">
               <Clock3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">No hay facturas pendientes de cargue</p>
-              <p className="text-sm mt-1">Las facturas aprobadas por auditoria apareceran aqui</p>
+              <p className="text-sm mt-1">Las facturas remitidas por Tesoreria apareceran aqui</p>
             </div>
           ) : (
             /* Lista de pendientes */

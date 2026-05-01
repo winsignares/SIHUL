@@ -4,128 +4,33 @@ import { Button } from '../../../share/button';
 import { FileText, Eye, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import type { KanbanEstadoDireccionFinanciera } from '../../../hooks/financiero/direccion_financiera/home/useDireccionFinancieraHome';
 
 interface KanbanVistaCompletaProps {
   isOpen: boolean;
+  kanbanEstados: KanbanEstadoDireccionFinanciera[];
   onClose: () => void;
   onSelectFactura: (factura: SharedFacturaDetail) => void;
 }
 
-const facturasPorEstado: Record<string, SharedFacturaDetail[]> = {
-  Recibida: [
-    {
-      numeroFactura: 'FAC-2026-001',
-      proveedor: 'Papeleria Central Ltda.',
-      valorTotal: 2450000,
-      fechaFactura: '2026-03-20',
-      fechaRecepcion: '2026-03-23',
-      areaSolicitante: 'Administracion',
-      estado: 'Recibida',
-      diasTranscurridos: 0,
-      descripcion: 'Suministros administrativos',
-    },
-  ],
-  Radicada: [
-    {
-      numeroFactura: 'FAC-2026-002',
-      numeroRadicado: 'RAD-2026-00145',
-      proveedor: 'Servicios TI Colombia SAS',
-      valorTotal: 8950000,
-      fechaFactura: '2026-03-19',
-      fechaRecepcion: '2026-03-23',
-      areaSolicitante: 'Sistemas',
-      estado: 'Radicada',
-      diasTranscurridos: 1,
-      descripcion: 'Soporte de infraestructura',
-    },
-  ],
-  Causada: [
-    {
-      numeroFactura: 'FAC-2026-010',
-      numeroRadicado: 'RAD-2026-00140',
-      proveedor: 'Editorial Academica',
-      valorTotal: 4500000,
-      fechaFactura: '2026-03-17',
-      fechaRecepcion: '2026-03-21',
-      areaSolicitante: 'Publicaciones',
-      estado: 'Causada',
-      diasTranscurridos: 3,
-      descripcion: 'Impresion institucional',
-    },
-  ],
-  Alistada: [
-    {
-      numeroFactura: 'FAC-2026-004',
-      numeroRadicado: 'RAD-2026-00138',
-      numeroProcesoPago: 'PP-2026-0078',
-      proveedor: 'Mantenimiento y Obras EU',
-      valorTotal: 12500000,
-      fechaFactura: '2026-03-17',
-      fechaRecepcion: '2026-03-22',
-      areaSolicitante: 'Mantenimiento',
-      estado: 'Alistada',
-      diasTranscurridos: 3,
-      descripcion: 'Mantenimiento estructural',
-    },
-  ],
-  'Aprobada Auditoria': [
-    {
-      numeroFactura: 'FAC-2026-005',
-      numeroRadicado: 'RAD-2026-00132',
-      numeroProcesoPago: 'PP-2026-0076',
-      proveedor: 'Editorial Universitaria',
-      valorTotal: 5670000,
-      fechaFactura: '2026-03-15',
-      fechaRecepcion: '2026-03-21',
-      areaSolicitante: 'Biblioteca',
-      estado: 'Aprobada Auditoria',
-      diasTranscurridos: 5,
-      descripcion: 'Adquisicion de libros',
-    },
-  ],
-  Cargada: [
-    {
-      numeroFactura: 'FAC-2026-006',
-      numeroRadicado: 'RAD-2026-00128',
-      numeroProcesoPago: 'PP-2026-0074',
-      proveedor: 'Servicios de Aseo Total',
-      valorTotal: 4200000,
-      fechaFactura: '2026-03-14',
-      fechaRecepcion: '2026-03-20',
-      areaSolicitante: 'Servicios Generales',
-      estado: 'Cargada',
-      diasTranscurridos: 6,
-      descripcion: 'Servicios de aseo mensual',
-    },
-  ],
-  Autorizada: [
-    {
-      numeroFactura: 'FAC-2026-007',
-      numeroRadicado: 'RAD-2026-00124',
-      numeroProcesoPago: 'PP-2026-0072',
-      proveedor: 'Transporte Estudiantil SA',
-      valorTotal: 7200000,
-      fechaFactura: '2026-03-12',
-      fechaRecepcion: '2026-03-18',
-      areaSolicitante: 'Bienestar',
-      estado: 'Autorizada',
-      diasTranscurridos: 8,
-      descripcion: 'Transporte estudiantil mensual',
-    },
-  ],
-};
-
 const estadoColor: Record<string, string> = {
-  Recibida: 'from-slate-500 to-slate-600',
-  Radicada: 'from-blue-500 to-blue-600',
+  'Recibida (Funcionario)': 'from-slate-500 to-slate-600',
+  Registrada: 'from-blue-500 to-blue-600',
+  Radicada: 'from-cyan-500 to-cyan-600',
   Causada: 'from-indigo-500 to-indigo-600',
-  Alistada: 'from-yellow-500 to-yellow-600',
-  'Aprobada Auditoria': 'from-orange-500 to-orange-600',
-  Cargada: 'from-purple-500 to-purple-600',
-  Autorizada: 'from-green-500 to-green-600',
+  Alistada: 'from-amber-500 to-amber-600',
+  'Aprobada Auditoría': 'from-teal-500 to-teal-600',
+  'Rechazada Auditoría': 'from-rose-500 to-rose-600',
+  'Revisada Dir. Financiera': 'from-orange-500 to-orange-600',
+  'Cargada para autorización': 'from-purple-500 to-purple-600',
+  'Enviada Rectoría': 'from-cyan-500 to-cyan-600',
+  'Autorizada para pago': 'from-green-500 to-green-600',
+  'Devuelta para ajustes': 'from-red-500 to-red-600',
+  'Pago Aplicado': 'from-emerald-500 to-emerald-600',
+  Pagada: 'from-emerald-700 to-emerald-800',
 };
 
-export default function KanbanVistaCompleta({ isOpen, onClose, onSelectFactura }: KanbanVistaCompletaProps) {
+export default function KanbanVistaCompleta({ isOpen, kanbanEstados, onClose, onSelectFactura }: KanbanVistaCompletaProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[96vw] h-[90vh] max-w-[1700px] sm:max-w-[96vw] max-h-[90vh] rounded-2xl border p-0 overflow-hidden">
@@ -143,7 +48,7 @@ export default function KanbanVistaCompleta({ isOpen, onClose, onSelectFactura }
 
         <div className="h-[calc(90vh-86px)] overflow-scroll [scrollbar-gutter:stable_both-edges] p-4 bg-slate-50">
           <div className="flex w-max min-w-max min-h-full items-start gap-4 pb-8">
-            {Object.entries(facturasPorEstado).map(([estado, facturas], colIndex) => {
+            {kanbanEstados.map(({ estado, facturas }, colIndex) => {
               const totalMonto = facturas.reduce((sum, f) => sum + f.valorTotal, 0);
 
               return (
@@ -163,6 +68,11 @@ export default function KanbanVistaCompleta({ isOpen, onClose, onSelectFactura }
                   </div>
 
                   <div className="p-3 space-y-3">
+                    {facturas.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-slate-300 p-4 bg-slate-50 text-center text-sm text-slate-500">
+                        No hay facturas en esta etapa.
+                      </div>
+                    )}
                     {facturas.map((factura) => (
                       <div key={factura.numeroFactura} className="rounded-xl border border-slate-200 p-3 bg-slate-50">
                         <div className="flex items-center justify-between mb-2">

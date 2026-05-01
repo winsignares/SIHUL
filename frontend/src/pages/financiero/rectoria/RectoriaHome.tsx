@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../share/card';
-import { Crown, CheckSquare, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Button } from '../../../share/button';
+import { Crown, CheckSquare, Clock, CheckCircle2, AlertTriangle, RefreshCw, AlertCircle } from 'lucide-react';
+import { useRectoriaHome } from '../../../hooks/financiero/rectoria';
 
 interface RectoriaHomeProps {
   onGoToPendientes: () => void;
@@ -8,10 +10,12 @@ interface RectoriaHomeProps {
 }
 
 export default function RectoriaHome({ onGoToPendientes, onGoToAutorizar }: RectoriaHomeProps) {
+  const { stats: rectoriaStats, cargando, error, recargar, formatUltimaActualizacion } = useRectoriaHome();
+
   const stats = [
     {
       title: 'Pagos por Autorizar',
-      value: '5',
+      value: String(rectoriaStats.pagosPorAutorizar),
       icon: CheckSquare,
       color: 'from-indigo-600 to-indigo-700',
       iconColor: 'text-indigo-100',
@@ -19,15 +23,15 @@ export default function RectoriaHome({ onGoToPendientes, onGoToAutorizar }: Rect
     },
     {
       title: 'Autorizados Este Mes',
-      value: '87',
+      value: String(rectoriaStats.autorizadosEsteMes),
       icon: CheckCircle2,
       color: 'from-green-600 to-green-700',
       iconColor: 'text-green-100',
-      trend: '+8% vs mes anterior',
+      trend: 'Con decision final de Rectoria',
     },
     {
       title: 'Pendientes Criticos',
-      value: '1',
+      value: String(rectoriaStats.pendientesCriticos),
       icon: AlertTriangle,
       color: 'from-orange-600 to-orange-700',
       iconColor: 'text-orange-100',
@@ -53,9 +57,19 @@ export default function RectoriaHome({ onGoToPendientes, onGoToAutorizar }: Rect
         </div>
         <div className="flex items-center gap-2 text-sm text-red-100">
           <Clock className="w-4 h-4" />
-          <span>Ultima actualizacion: Hoy, 14 de Abril 2026 - 16:00 PM</span>
+          <span>Ultima actualizacion: {formatUltimaActualizacion()}</span>
+          <Button variant="ghost" size="sm" onClick={recargar} disabled={cargando} className="text-white hover:bg-white/20 ml-2">
+            <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </motion.div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700">
+          <AlertCircle className="w-5 h-5" />
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((stat, index) => {
