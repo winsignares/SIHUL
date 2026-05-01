@@ -37,8 +37,8 @@ export function useMisPendientes() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas enviadas por tesoreria a direccion financiera para cargue
-      const lista = await facturasService.getByEstado('Enviado a dirección financiera');
+      // Facturas aprobadas por auditoria (enviadas por tesoreria a direccion financiera)
+      const lista = await facturasService.getByEstado('Aprobada Auditoría');
       
       setFacturas(lista);
       

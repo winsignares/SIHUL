@@ -60,8 +60,8 @@ export function useEnviarRectoria() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas cargadas en DF, listas para enviar a rectoria
-      const lista = await facturasService.getByEstado('Cargada');
+      // Facturas revisadas y cargadas en DF, listas para enviar a rectoria
+      const lista = await facturasService.getByEstado('Revisada Dir. Financiera');
       
       setFacturas(lista);
       

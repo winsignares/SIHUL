@@ -26,22 +26,21 @@ export function useDireccionFinancieraHome() {
     setError(null);
     try {
       // Cargar facturas de diferentes estados relevantes para DF
+      // Nota: Usamos 'Aprobada Auditoría' como el estado de facturas enviadas por Tesorería a DF
       const [
-        enviadasDF,
-        cargadas,
+        aprobadasAuditoria,
+        revisadasDF,
         enviadasRectoria,
         autorizadas,
-        pagosAplicados,
       ] = await Promise.all([
-        facturasService.getByEstado('Enviado a dirección financiera'),
-        facturasService.getByEstado('Cargada'),
+        facturasService.getByEstado('Aprobada Auditoría'),
+        facturasService.getByEstado('Revisada Dir. Financiera'),
         facturasService.getByEstado('Enviada Rectoría'),
         facturasService.getByEstado('Autorizada'),
-        facturasService.getByEstado('Pago Aplicado'),
       ]);
 
       // Combinar todas las facturas
-      const todasLasFacturas = [...enviadasDF, ...cargadas, ...enviadasRectoria, ...autorizadas, ...pagosAplicados];
+      const todasLasFacturas = [...aprobadasAuditoria, ...revisadasDF, ...enviadasRectoria, ...autorizadas];
       
       // Eliminar duplicados por ID
       const facturasUnicas = Array.from(new Map(todasLasFacturas.map(f => [f.id, f])).values());
@@ -75,10 +74,12 @@ export function useDireccionFinancieraHome() {
   }, [cargarDatos]);
 
   const stats = useMemo<StatsDireccionFinanciera>(() => {
-    const facturasPorCargar = facturas.filter(f => f.estado === 'Enviado a dirección financiera').length;
-    const cargadasEsteMes = facturas.filter(f => f.estado === 'Cargada').length;
+    const facturasPorCargar = facturas.filter(f => f.estado === 'Aprobada Auditoría').length;
+    const cargadasEsteMes = facturas.filter(f => 
+      f.estado === 'Cargada' || f.estado === 'Revisada Dir. Financiera'
+    ).length;
     const pendientesRevision = facturasPorCargar;
-    const listasParaEnviar = facturas.filter(f => f.estado === 'Cargada').length;
+    const listasParaEnviar = facturas.filter(f => f.estado === 'Revisada Dir. Financiera').length;
 
     return {
       facturasPorCargar,
@@ -95,8 +96,8 @@ export function useDireccionFinancieraHome() {
       { estado: 'Causada', cantidad: 0, color: 'bg-indigo-100 text-indigo-700' },
       { estado: 'Alistada', cantidad: 0, color: 'bg-yellow-100 text-yellow-700' },
       { estado: 'Aprobada Auditoría', cantidad: 0, color: 'bg-orange-100 text-orange-700' },
-      { estado: 'Enviado a dirección financiera', cantidad: 0, color: 'bg-purple-100 text-purple-700' },
-      { estado: 'Cargada', cantidad: 0, color: 'bg-pink-100 text-pink-700' },
+      { estado: 'Cargada', cantidad: 0, color: 'bg-purple-100 text-purple-700' },
+      { estado: 'Revisada Dir. Financiera', cantidad: 0, color: 'bg-pink-100 text-pink-700' },
       { estado: 'Enviada Rectoría', cantidad: 0, color: 'bg-cyan-100 text-cyan-700' },
       { estado: 'Autorizada', cantidad: 0, color: 'bg-green-100 text-green-700' },
       { estado: 'Pago Aplicado', cantidad: 0, color: 'bg-emerald-100 text-emerald-700' },
@@ -144,7 +145,6 @@ export function useDireccionFinancieraHome() {
       'Causada': 'bg-purple-100 text-purple-700 border-purple-200',
       'Alistada': 'bg-yellow-100 text-yellow-700 border-yellow-200',
       'Aprobada Auditoría': 'bg-teal-100 text-teal-700 border-teal-200',
-      'Enviado a dirección financiera': 'bg-purple-100 text-purple-700 border-purple-200',
       'Cargada': 'bg-orange-100 text-orange-700 border-orange-200',
       'Revisada Dir. Financiera': 'bg-pink-100 text-pink-700 border-pink-200',
       'Enviada Rectoría': 'bg-cyan-100 text-cyan-700 border-cyan-200',

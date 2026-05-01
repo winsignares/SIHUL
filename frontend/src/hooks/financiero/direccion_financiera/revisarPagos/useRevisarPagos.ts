@@ -63,8 +63,8 @@ export function useRevisarPagos() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas enviadas por tesoreria a direccion financiera para cargue/revision
-      const lista = await facturasService.getByEstado('Enviado a dirección financiera');
+      // Facturas aprobadas por auditoria (enviadas por tesoreria a direccion financiera)
+      const lista = await facturasService.getByEstado('Aprobada Auditoría');
       
       setFacturas(lista);
       
@@ -130,12 +130,12 @@ export function useRevisarPagos() {
     
     setProcesando(true);
     try {
-      // Cambiar estado a "Cargada" (cargue formal previo a autorizacion)
+      // Cambiar estado a "Revisada Dir. Financiera" (revisada y cargada)
       await facturasService.update(facturaSeleccionada.facturaId, {
-        estado: 'Cargada',
+        estado: 'Revisada Dir. Financiera',
         observaciones: observaciones || undefined,
       });
-      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} cargada exitosamente.`);
+      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} revisada y cargada exitosamente.`);
       cerrarDecision();
       cargarFacturas();
     } catch {
