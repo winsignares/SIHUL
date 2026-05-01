@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
@@ -6,9 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from '../../../share/button';
 import { AlertCircle, Eye, ShieldCheck, FileSearch, CheckCircle2 } from 'lucide-react';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface FacturaPendiente {
   id: string;
+  facturaId: number;
   numeroFactura: string;
   numeroRadicado: string;
   numeroProcesoPago: string;
@@ -26,66 +29,68 @@ interface FacturaPendiente {
   descripcion?: string;
 }
 
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const getNivelRiesgo = (dias: number, max: number): FacturaPendiente['nivelRiesgo'] => {
+  if (dias >= max) return 'vencido';
+  if (dias >= Math.round(max * 0.8)) return 'rojo';
+  if (dias >= Math.round(max * 0.6)) return 'amarillo';
+  return 'verde';
+};
+
+const mapFactura = (f: APIFactura, diasMaximos: number): FacturaPendiente => {
+  const diasTranscurridos = Math.max(0, Number(f.dias_transcurridos || 0));
+  return {
+    id: String(f.id),
+    facturaId: Number(f.id),
+    numeroFactura: f.numero_factura || `FAC-${f.id}`,
+    numeroRadicado: f.numero_radicado || 'Sin radicado',
+    numeroProcesoPago: f.numero_proceso_pago || 'Sin proceso',
+    proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+    valorTotal: Number(f.valor_total || 0),
+    fechaAlistamiento: f.fecha_alistamiento || 'Sin fecha',
+    diasTranscurridos,
+    diasMaximos,
+    nivelRiesgo: getNivelRiesgo(diasTranscurridos, diasMaximos),
+    accionRequerida: 'Realizar control previo de auditoria',
+    areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
+    cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
+    centroCosto: f.centro_costo ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}` : 'Sin centro',
+    estado: f.estado,
+    descripcion: f.descripcion,
+  };
+};
+
 export default function MisPendientes() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<SharedFacturaDetail | null>(null);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [facturasPendientes, setFacturasPendientes] = useState<FacturaPendiente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const facturasPendientes: FacturaPendiente[] = [
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-145',
-      numeroRadicado: 'RAD-2026-00145',
-      numeroProcesoPago: 'PP-2026-00078',
-      proveedor: 'Tecnologia Global SAS',
-      valorTotal: 8900000,
-      fechaAlistamiento: '2026-03-31',
-      diasTranscurridos: 5,
-      diasMaximos: 24,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Realizar control previo de auditoria',
-      areaSolicitante: 'Sistemas',
-      cuentaContable: '5165-001',
-      centroCosto: 'CC-007',
-      estado: 'Alistada - Pendiente control previo',
-      descripcion: 'Equipos de computo para area administrativa',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-152',
-      numeroRadicado: 'RAD-2026-00152',
-      numeroProcesoPago: 'PP-2026-00079',
-      proveedor: 'Servicios Medicos Especializados',
-      valorTotal: 12500000,
-      fechaAlistamiento: '2026-04-01',
-      diasTranscurridos: 3,
-      diasMaximos: 24,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Realizar control previo de auditoria',
-      areaSolicitante: 'Enfermeria',
-      cuentaContable: '5170-001',
-      centroCosto: 'CC-010',
-      estado: 'Alistada - Pendiente control previo',
-      descripcion: 'Servicios medicos especializados mes de marzo',
-    },
-    {
-      id: '3',
-      numeroFactura: 'FAC-2026-158',
-      numeroRadicado: 'RAD-2026-00158',
-      numeroProcesoPago: 'PP-2026-00081',
-      proveedor: 'Mantenimiento Pro EU',
-      valorTotal: 6750000,
-      fechaAlistamiento: '2026-04-01',
-      diasTranscurridos: 4,
-      diasMaximos: 24,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Realizar control previo de auditoria',
-      areaSolicitante: 'Mantenimiento',
-      cuentaContable: '5125-001',
-      centroCosto: 'CC-008',
-      estado: 'Alistada - Pendiente control previo',
-      descripcion: 'Reparaciones de infraestructura fisica',
-    },
-  ];
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const response = await facturasService.getAll({ estado: 'Alistada', limit: 200 });
+        const rows = toList<APIFactura>(response).map((f) => mapFactura(f, 24));
+        setFacturasPendientes(rows);
+      } catch {
+        setFacturasPendientes([]);
+        setLoadError('No fue posible cargar las facturas alistadas.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   const handleVerDetalle = (factura: FacturaPendiente) => {
     setFacturaSeleccionada({
@@ -102,9 +107,34 @@ export default function MisPendientes() {
       observaciones: factura.accionRequerida,
       cuentaContable: factura.cuentaContable,
       centroCosto: factura.centroCosto,
+      auditoriaView: true,
+      auditoriaNotas: 'Revise causacion contable, soportes y distribucion correcta en el rubro antes de aprobar.',
       nivelRiesgo: factura.nivelRiesgo,
     });
     setMostrarDetalle(true);
+
+    setCargandoDetalle(true);
+    void (async () => {
+      try {
+        const detail = await facturasService.getById(factura.facturaId);
+        const documentos = (detail.documentos || []).map((doc) => ({
+          id: doc.id ? String(doc.id) : undefined,
+          nombre: doc.nombre_archivo,
+          tipo: doc.tipo_documento,
+          fecha: doc.fecha_carga,
+          verificado: doc.verificado,
+          url: doc.archivo_url || doc.url_storage || null,
+        }));
+
+        setFacturaSeleccionada((prev) => prev ? {
+          ...prev,
+          documentos,
+          observaciones: detail.observaciones || prev.observaciones,
+        } : prev);
+      } finally {
+        setCargandoDetalle(false);
+      }
+    })();
   };
 
   const totalPendientes = facturasPendientes.length;
@@ -203,6 +233,9 @@ export default function MisPendientes() {
               <CardDescription>Facturas alistadas para revisar antes del siguiente paso del flujo financiero</CardDescription>
             </CardHeader>
             <CardContent>
+              {loadError && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+              )}
               <div className="rounded-lg border border-slate-200 overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -221,7 +254,15 @@ export default function MisPendientes() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {facturasPendientes.map((factura, index) => {
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center text-slate-500 py-6">Cargando facturas alistadas...</TableCell>
+                      </TableRow>
+                    ) : facturasPendientes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoría.</TableCell>
+                      </TableRow>
+                    ) : facturasPendientes.map((factura, index) => {
                       const colorRiesgo =
                         factura.nivelRiesgo === 'vencido'
                           ? 'bg-purple-700'
@@ -251,7 +292,7 @@ export default function MisPendientes() {
                             </Button>
                           </TableCell>
                         </motion.tr>
-                      );
+                    );
                     })}
                   </TableBody>
                 </Table>
@@ -265,6 +306,7 @@ export default function MisPendientes() {
         factura={facturaSeleccionada}
         isOpen={mostrarDetalle}
         onClose={() => {
+          if (cargandoDetalle) return;
           setMostrarDetalle(false);
           setFacturaSeleccionada(null);
         }}

@@ -175,6 +175,8 @@ class RechazoDevolacionSerializer(serializers.ModelSerializer):
 class FacturaListSerializer(serializers.ModelSerializer):
     proveedor = ProveedorSerializer(read_only=True)
     departamento = DepartamentoSerializer(read_only=True)
+    cuenta_contable = CuentaContableSerializer(read_only=True)
+    centro_costo = CentroCostoSerializer(read_only=True)
     departamento_id = serializers.IntegerField(source='departamento.id', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
     indicador_riesgo_display = serializers.CharField(source='get_indicador_riesgo_display', read_only=True)
@@ -186,8 +188,12 @@ class FacturaListSerializer(serializers.ModelSerializer):
         model = models.Factura
         fields = [
             'id', 'numero_factura', 'numero_radicado', 'proveedor', 'departamento', 'departamento_id', 'valor_total',
+            'cuenta_contable', 'centro_costo', 'numero_proceso_pago', 'numero_transaccion', 'numero_comprobante',
+            'archivo_plano_generado',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual',
             'tipo_documento', 'descripcion', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
+            'fecha_alistamiento', 'fecha_aprobacion_auditoria', 'fecha_revision_direccion', 'fecha_autorizacion',
+            'fecha_pago_aplicado', 'fecha_comprobante',
             'dias_transcurridos', 'indicador_riesgo',
             'indicador_riesgo_display', 'monto_alto', 'sla_cumplido'
         ]

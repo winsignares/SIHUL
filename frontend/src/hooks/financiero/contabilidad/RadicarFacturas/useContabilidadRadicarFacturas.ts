@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { documentosService, facturasService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import type { SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 
 const DOCUMENTOS_REQUERIDOS = [
   { tipo: 'Factura', label: 'Factura Original' },
@@ -35,32 +35,19 @@ const getSlaLevel = (dias: number): 'verde' | 'amarillo' | 'naranja' | 'vencido'
   return 'verde';
 };
 
-const facturaToSharedDetail = (factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail => ({
-  id: String(factura.id),
-  numeroFactura: factura.numero_factura,
-  proveedor: factura.proveedor?.razon_social ?? '',
-  nit: factura.proveedor?.nit ?? '',
-  valorTotal: Number(factura.valor_total),
-  fechaFactura: factura.fecha_factura,
-  fechaRecepcion: factura.fecha_recepcion,
-  areaSolicitante: factura.departamento?.nombre ?? '',
-  estado: factura.estado,
-  diasTranscurridos: factura.dias_transcurridos,
-  numeroRadicado: factura.numero_radicado,
-  descripcion: factura.descripcion,
-  observaciones: factura.observaciones,
-  tipoDocumento: factura.tipo_documento,
-  valorSubtotal: Number(factura.valor_subtotal),
-  valorIva: Number(factura.valor_iva),
-  cuentaBancariaProveedor: factura.cuenta_bancaria_proveedor,
-  documentos: docs.map((d) => ({
-    id: String(d.id),
-    nombre: d.nombre_archivo,
-    tipo: d.tipo_documento,
-    verificado: d.verificado,
-    url: d.archivo_url ?? d.url_storage ?? undefined,
-  })),
-});
+const facturaToSharedDetail = (factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail => {
+  const base = buildSharedFacturaDetail(factura);
+  return {
+    ...base,
+    documentos: docs.map((d) => ({
+      id: String(d.id),
+      nombre: d.nombre_archivo,
+      tipo: d.tipo_documento,
+      verificado: d.verificado,
+      url: d.archivo_url ?? d.url_storage ?? undefined,
+    })),
+  };
+};
 
 export function useContabilidadRadicarFacturas() {
   const [facturas, setFacturas] = useState<Factura[]>([]);

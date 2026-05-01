@@ -351,6 +351,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'Causada': ['Tesorería'],
             'Alistada': ['Auditoría'],
             'Aprobada Auditoría': ['Dirección Financiera'],
+            'Rechazada Auditoría': ['Tesorería'],
+            'Revisada Dir. Financiera': ['Dirección Financiera'],
             'Cargada': ['Rectoría'],
             'Autorizada': ['Tesorería'],
             'Pago Aplicado': ['Tesorería'],
@@ -580,11 +582,30 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Alistar una factura"""
         factura = self.get_object()
         
-        if factura.estado != 'Causada':
+        if factura.estado not in ['Causada', 'Detenida']:
             return Response(
-                {'error': 'La factura debe estar causada'},
+                {'error': 'La factura debe estar causada o detenida en tesorería'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        numero_proceso_pago = (request.data.get('numero_proceso_pago') or '').strip()
+        archivo_plano_generado = (request.data.get('archivo_plano_generado') or '').strip()
+        observaciones = (request.data.get('observaciones') or '').strip()
+
+        if not numero_proceso_pago and not archivo_plano_generado:
+            return Response(
+                {'error': 'Debe registrar el número de proceso de pago o un archivo plano generado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+
+        if numero_proceso_pago:
+            factura.numero_proceso_pago = numero_proceso_pago
+        if archivo_plano_generado:
+            factura.archivo_plano_generado = archivo_plano_generado
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
 
         factura.estado = 'Alistada'
         factura.fecha_alistamiento = timezone.now().date()
@@ -595,14 +616,288 @@ class FacturaViewSet(viewsets.ModelViewSet):
         models.HistorialFactura.objects.create(
             factura=factura,
             accion='Factura alistada',
-            estado_anterior='Causada',
+            estado_anterior=estado_anterior,
             estado_nuevo='Alistada',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
-            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol'
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, 'Causada', 'Alistada')
+        self._notificar_transicion(factura, estado_anterior, 'Alistada')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='aprobar_auditoria')
+    def aprobar_auditoria(self, request, pk=None):
+        """Aprobar una factura en control previo de auditoría."""
+        factura = self.get_object()
+
+        if factura.estado != 'Alistada':
+            return Response(
+                {'error': 'La factura debe estar alistada para auditoría'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+        estado_anterior = factura.estado
+
+        factura.estado = 'Aprobada Auditoría'
+        factura.fecha_aprobacion_auditoria = timezone.now().date()
+        factura.etapa_actual = 'Control Previo'
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Auditoría] {observaciones}"]))
+
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura aprobada por auditoría',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Aprobada Auditoría',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Aprobada Auditoría')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='rechazar_auditoria')
+    def rechazar_auditoria(self, request, pk=None):
+        """Rechazar una factura en auditoría y devolverla a tesorería."""
+        factura = self.get_object()
+
+        if factura.estado != 'Alistada':
+            return Response(
+                {'error': 'La factura debe estar alistada para auditoría'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        motivo = (request.data.get('motivo') or '').strip()
+        if len(motivo) < 10:
+            return Response(
+                {'error': 'Debe registrar un motivo de rechazo (mínimo 10 caracteres)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+        factura.estado = 'Rechazada Auditoría'
+        factura.etapa_actual = 'Tesorería - Ajustes internos'
+        factura.usuario_responsable = None
+        factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Auditoría - Rechazo] {motivo}"]))
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura rechazada por auditoría',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Rechazada Auditoría',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=motivo,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Rechazada Auditoría')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='enviar_direccion_financiera')
+    def enviar_direccion_financiera(self, request, pk=None):
+        """Enviar una factura aprobada a Dirección Financiera."""
+        factura = self.get_object()
+
+        if factura.estado != 'Aprobada Auditoría':
+            return Response(
+                {'error': 'La factura debe estar aprobada por Auditoría'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+        estado_anterior = factura.estado
+
+        factura.estado = 'Revisada Dir. Financiera'
+        factura.fecha_revision_direccion = timezone.now().date()
+        factura.etapa_actual = 'Envío a Dirección Financiera'
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
+
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura enviada a Dirección Financiera',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Revisada Dir. Financiera',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Revisada Dir. Financiera')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='registrar_pago_aplicado')
+    def registrar_pago_aplicado(self, request, pk=None):
+        """Registrar pago aplicado en tesorería."""
+        factura = self.get_object()
+
+        if factura.estado != 'Autorizada':
+            return Response(
+                {'error': 'La factura debe estar autorizada para pago'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        numero_transaccion = (request.data.get('numero_transaccion') or '').strip()
+        observaciones = (request.data.get('observaciones') or '').strip()
+        fecha_pago = request.data.get('fecha_pago_aplicado')
+
+        if not numero_transaccion:
+            return Response(
+                {'error': 'Debe registrar el número de transacción bancaria'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+
+        factura.numero_transaccion = numero_transaccion
+        factura.fecha_pago_aplicado = fecha_pago or timezone.now().date()
+        factura.estado = 'Pago Aplicado'
+        factura.etapa_actual = 'Pago Aplicado'
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
+
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Pago aplicado registrado',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Pago Aplicado',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='generar_comprobante')
+    def generar_comprobante(self, request, pk=None):
+        """Generar comprobante de egreso y cerrar la factura."""
+        factura = self.get_object()
+
+        if factura.estado != 'Pago Aplicado':
+            return Response(
+                {'error': 'La factura debe estar con pago aplicado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        numero_comprobante = (request.data.get('numero_comprobante') or '').strip()
+        observaciones = (request.data.get('observaciones') or '').strip()
+
+        if not numero_comprobante:
+            return Response(
+                {'error': 'Debe registrar el número de comprobante de egreso'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+
+        factura.numero_comprobante = numero_comprobante
+        factura.fecha_comprobante = timezone.now().date()
+        factura.estado = 'Pagada'
+        factura.etapa_actual = 'Comprobante de Egreso'
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
+
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Comprobante de egreso generado',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Pagada',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Pagada')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='detener_en_tesoreria')
+    def detener_en_tesoreria(self, request, pk=None):
+        """Detener una factura en tesorería por inconsistencias sin enviarla a auditoría."""
+        factura = self.get_object()
+
+        if factura.estado not in ['Causada', 'Detenida']:
+            return Response(
+                {'error': 'Solo se pueden detener facturas en estado Causada o Detenida'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+        if len(observaciones) < 10:
+            return Response(
+                {'error': 'Debe registrar una observación de al menos 10 caracteres'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+        factura.estado = 'Detenida'
+        factura.etapa_actual = 'Tesorería - Ajustes internos'
+        factura.usuario_responsable = request.user
+        factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería - Detenida] {observaciones}"]))
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura detenida en tesorería',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Detenida',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Detenida')
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,

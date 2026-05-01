@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
-import { Briefcase, Clock, Upload, CheckCircle2, FileText, Eye } from 'lucide-react';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { Loader2, Briefcase, Clock, Upload, CheckCircle2, FileText, Eye, RefreshCw, AlertCircle } from 'lucide-react';
+import FacturaDetailModal from '../../../share/factura-detail-modal';
 import KanbanVistaCompleta from './KanbanVistaCompleta';
+import { useDireccionFinancieraHome } from '../../../hooks/financiero/direccion_financiera';
 
 interface DireccionFinancieraHomeProps {
   onGoToPendientes: () => void;
@@ -20,14 +20,23 @@ export default function DireccionFinancieraHome({
   onGoToEnviar,
   onGoToConfirmar,
 }: DireccionFinancieraHomeProps) {
-  const [showKanbanCompleto, setShowKanbanCompleto] = useState(false);
-  const [selectedFactura, setSelectedFactura] = useState<SharedFacturaDetail | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-
-  const stats = [
-    { title: 'Facturas por Cargar', value: '5', icon: Upload, color: 'from-purple-600 to-purple-700', iconColor: 'text-purple-100', trend: 'Aprobadas por auditoria' },
-    { title: 'Cargadas Este Mes', value: '87', icon: CheckCircle2, color: 'from-green-600 to-green-700', iconColor: 'text-green-100', trend: '+10% vs mes anterior' },
-  ];
+  const {
+    cargando,
+    error,
+    stats,
+    kanbanEstados,
+    actividadesRecientes,
+    selectedFactura,
+    showDetailModal,
+    showKanbanCompleto,
+    setShowDetailModal,
+    setShowKanbanCompleto,
+    setSelectedFactura,
+    handleClickActividad,
+    getEstadoBadge,
+    formatUltimaActualizacion,
+    recargarDatos,
+  } = useDireccionFinancieraHome();
 
   const quickActions = [
     {
@@ -60,80 +69,15 @@ export default function DireccionFinancieraHome({
     },
   ];
 
-  const kanbanEstados = [
-    { estado: 'Recibida', cantidad: 3, color: 'bg-gray-100 text-gray-700' },
-    { estado: 'Radicada', cantidad: 2, color: 'bg-blue-100 text-blue-700' },
-    { estado: 'Causada', cantidad: 2, color: 'bg-indigo-100 text-indigo-700' },
-    { estado: 'Alistada', cantidad: 2, color: 'bg-yellow-100 text-yellow-700' },
-    { estado: 'Aprobada Auditoria', cantidad: 2, color: 'bg-orange-100 text-orange-700' },
-    { estado: 'Cargada', cantidad: 2, color: 'bg-purple-100 text-purple-700' },
-    { estado: 'Autorizada', cantidad: 2, color: 'bg-green-100 text-green-700' },
+  const statsData = [
+    { title: 'Facturas por Cargar', value: String(stats.facturasPorCargar), icon: Upload, color: 'from-purple-600 to-purple-700', iconColor: 'text-purple-100', trend: 'Aprobadas por auditoria' },
+    { title: 'Cargadas Este Mes', value: String(stats.cargadasEsteMes), icon: CheckCircle2, color: 'from-green-600 to-green-700', iconColor: 'text-green-100', trend: '+10% vs mes anterior' },
   ];
-
-  const actividadesRecientes: SharedFacturaDetail[] = [
-    {
-      numeroFactura: 'FAC-2026-006',
-      proveedor: 'Servicios de Aseo Total',
-      valorTotal: 4200000,
-      estado: 'Cargada',
-      fechaFactura: '2026-03-14',
-      fechaRecepcion: '2026-03-20',
-      areaSolicitante: 'Servicios Generales',
-      diasTranscurridos: 6,
-      numeroRadicado: 'RAD-2026-00128',
-      numeroProcesoPago: 'PP-2026-0074',
-      descripcion: 'Servicio de aseo mensual',
-    },
-    {
-      numeroFactura: 'FAC-2026-005',
-      proveedor: 'Editorial Universitaria',
-      valorTotal: 5670000,
-      estado: 'Aprobada Auditoria',
-      fechaFactura: '2026-03-15',
-      fechaRecepcion: '2026-03-21',
-      areaSolicitante: 'Biblioteca',
-      diasTranscurridos: 5,
-      numeroRadicado: 'RAD-2026-00132',
-      numeroProcesoPago: 'PP-2026-0076',
-      descripcion: 'Adquisicion de libros academicos',
-    },
-    {
-      numeroFactura: 'FAC-2026-007',
-      proveedor: 'Transporte Estudiantil SA',
-      valorTotal: 7200000,
-      estado: 'Autorizada',
-      fechaFactura: '2026-03-12',
-      fechaRecepcion: '2026-03-18',
-      areaSolicitante: 'Bienestar',
-      diasTranscurridos: 8,
-      numeroRadicado: 'RAD-2026-00124',
-      numeroProcesoPago: 'PP-2026-0072',
-      descripcion: 'Servicio de transporte estudiantil',
-    },
-  ];
-
-  const handleClickActividad = (actividad: SharedFacturaDetail) => {
-    setSelectedFactura(actividad);
-    setShowDetailModal(true);
-  };
-
-  const getEstadoBadge = (estado: string) => {
-    const badges: Record<string, string> = {
-      Recibida: 'bg-blue-100 text-blue-700 border-blue-200',
-      Radicada: 'bg-green-100 text-green-700 border-green-200',
-      Causada: 'bg-purple-100 text-purple-700 border-purple-200',
-      Alistada: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      'Aprobada Auditoria': 'bg-teal-100 text-teal-700 border-teal-200',
-      Cargada: 'bg-orange-100 text-orange-700 border-orange-200',
-      Autorizada: 'bg-green-100 text-green-700 border-green-200',
-      Pagada: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    };
-    return badges[estado] || 'bg-slate-100 text-slate-700 border-slate-200';
-  };
 
   return (
     <>
       <div className="space-y-8">
+        {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-8 text-white shadow-xl">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
@@ -144,14 +88,29 @@ export default function DireccionFinancieraHome({
               <p className="text-red-100">Cargue formal, control y seguimiento integral del flujo</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-red-100">
-            <Clock className="w-4 h-4" />
-            <span>Ultima actualizacion: Hoy, 14 de Abril 2026 - 11:45 AM</span>
+          <div className="flex items-center justify-between text-sm text-red-100">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>Ultima actualizacion: {formatUltimaActualizacion()}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={recargarDatos} disabled={cargando} className="text-white hover:bg-white/20">
+              <RefreshCw className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
           </div>
         </motion.div>
 
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {stats.map((stat, index) => {
+          {statsData.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
@@ -162,7 +121,7 @@ export default function DireccionFinancieraHome({
                         <Icon className={`w-6 h-6 ${stat.iconColor}`} />
                       </div>
                     </div>
-                    <p className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</p>
+                    <p className="text-3xl font-bold text-slate-800 mb-1">{cargando ? '-' : stat.value}</p>
                     <p className="text-sm text-slate-600 mb-2">{stat.title}</p>
                     <p className="text-xs text-slate-500">{stat.trend}</p>
                   </CardContent>
@@ -172,6 +131,7 @@ export default function DireccionFinancieraHome({
           })}
         </div>
 
+        {/* Kanban Summary */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="border-0 shadow-lg">
             <CardHeader>
@@ -186,19 +146,27 @@ export default function DireccionFinancieraHome({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                {kanbanEstados.map((item) => (
-                  <div key={item.estado} className="rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow">
-                    <p className="text-2xl font-bold text-slate-800 mb-1">{item.cantidad}</p>
-                    <Badge className={`${item.color} border`}>{item.estado}</Badge>
-                  </div>
-                ))}
-              </div>
+              {cargando ? (
+                <div className="flex items-center justify-center py-8 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mr-3" /> Cargando datos...
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-4">
+                  {kanbanEstados.map((item) => (
+                    <div key={item.estado} className="rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow">
+                      <p className="text-2xl font-bold text-slate-800 mb-1">{item.cantidad}</p>
+                      <Badge className={`${item.color} border`}>{item.estado}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
+        {/* Quick Actions & Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Quick Actions */}
           <div className="space-y-6">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
@@ -222,46 +190,66 @@ export default function DireccionFinancieraHome({
             })}
           </div>
 
+          {/* Recent Activity */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
             <Card className="border-0 shadow-lg h-full">
               <CardHeader>
-                <CardTitle className="text-slate-800">Actividad Reciente</CardTitle>
-                <CardDescription>Click para abrir detalle enriquecido del tramite</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-slate-800">Actividad Reciente</CardTitle>
+                    <CardDescription>Click para abrir detalle enriquecido del tramite</CardDescription>
+                  </div>
+                  <Button onClick={recargarDatos} variant="ghost" size="sm" disabled={cargando}>
+                    <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {actividadesRecientes.map((item, index) => (
-                    <motion.button
-                      key={item.numeroFactura}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.55 + index * 0.05 }}
-                      onClick={() => handleClickActividad(item)}
-                      className="w-full text-left p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-slate-800 mb-1">{item.numeroFactura}</p>
-                          <p className="text-sm text-slate-600">{item.proveedor}</p>
+                {cargando ? (
+                  <div className="flex items-center justify-center py-8 text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin mr-3" /> Cargando...
+                  </div>
+                ) : actividadesRecientes.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400">
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No hay actividad reciente</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {actividadesRecientes.map((item, index) => (
+                      <motion.button
+                        key={item.numeroFactura}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.55 + index * 0.05 }}
+                        onClick={() => handleClickActividad(item)}
+                        className="w-full text-left p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-200"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-800 mb-1">{item.numeroFactura}</p>
+                            <p className="text-sm text-slate-600">{item.proveedor}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-slate-800">${item.valorTotal.toLocaleString('es-CO')}</p>
+                            <Badge className={`${getEstadoBadge(item.estado)} border mt-1`}>{item.estado}</Badge>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-slate-800">${item.valorTotal.toLocaleString('es-CO')}</p>
-                          <Badge className={`${getEstadoBadge(item.estado)} border mt-1`}>{item.estado}</Badge>
+                        <div className="mt-2 inline-flex items-center gap-1 text-xs text-red-600">
+                          <Eye className="w-3 h-3" />
+                          Ver detalle del tramite
                         </div>
-                      </div>
-                      <div className="mt-2 inline-flex items-center gap-1 text-xs text-red-600">
-                        <Eye className="w-3 h-3" />
-                        Ver detalle del tramite
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         </div>
       </div>
 
+      {/* Kanban Full View */}
       <KanbanVistaCompleta
         isOpen={showKanbanCompleto}
         onClose={() => setShowKanbanCompleto(false)}
@@ -271,6 +259,7 @@ export default function DireccionFinancieraHome({
         }}
       />
 
+      {/* Detail Modal */}
       <FacturaDetailModal
         factura={selectedFactura}
         isOpen={showDetailModal}

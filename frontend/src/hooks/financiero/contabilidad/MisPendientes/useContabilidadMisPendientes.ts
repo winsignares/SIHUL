@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { facturasService, documentosService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import type { SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 
 export const SLA_DIAS_CONTABILIDAD = 12;
 
@@ -22,28 +22,9 @@ function accionRequerida(factura: Factura): string {
 }
 
 function facturaToDetail(factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail {
+  const base = buildSharedFacturaDetail(factura);
   return {
-    id: String(factura.id),
-    numeroFactura: factura.numero_factura,
-    numeroRadicado: factura.numero_radicado,
-    proveedor: factura.proveedor?.razon_social ?? '',
-    nit: factura.proveedor?.nit ?? '',
-    valorTotal: Number(factura.valor_total),
-    fechaFactura: factura.fecha_factura,
-    fechaRecepcion: factura.fecha_recepcion,
-    areaSolicitante: factura.departamento?.nombre ?? '',
-    estado: factura.estado,
-    diasTranscurridos: factura.dias_transcurridos,
-    descripcion: factura.descripcion,
-    observaciones: factura.observaciones,
-    nivelRiesgo:
-      factura.indicador_riesgo === 'vencida'
-        ? 'vencido'
-        : factura.indicador_riesgo === 'atrasada'
-          ? 'rojo'
-          : factura.indicador_riesgo === 'atencion'
-            ? 'amarillo'
-            : 'verde',
+    ...base,
     documentos: docs.map((d) => ({
       id: String(d.id),
       nombre: d.nombre_archivo,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -8,13 +8,16 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { CheckCircle, Filter, Calendar, FileText, Eye, Building, AlertCircle, CreditCard, ExternalLink } from 'lucide-react';
+import { CheckCircle, Filter, Calendar, Eye, Building, AlertCircle, ExternalLink, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface Factura {
   id: string;
+  facturaId: number;
   numeroFactura: string;
   numeroRadicado: string;
   numeroProcesoPago: string;
@@ -29,6 +32,30 @@ interface Factura {
   diasTranscurridos: number;
   descripcion: string;
 }
+
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const mapFactura = (f: APIFactura): Factura => ({
+  id: String(f.id),
+  facturaId: Number(f.id),
+  numeroFactura: f.numero_factura || `FAC-${f.id}`,
+  numeroRadicado: f.numero_radicado || 'Sin radicado',
+  numeroProcesoPago: f.numero_proceso_pago || 'Sin proceso',
+  proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+  nit: f.proveedor?.nit || 'Sin NIT',
+  valorTotal: Number(f.valor_total || 0),
+  fechaAutorizacion: f.fecha_autorizacion || 'Sin fecha',
+  areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
+  cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
+  centroCosto: f.centro_costo ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}` : 'Sin centro',
+  estado: f.estado,
+  diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
+  descripcion: f.descripcion || 'Sin Asignar',
+});
 
 export default function RegistrarPagoAplicado() {
   const [filtros, setFiltros] = useState({
@@ -50,43 +77,34 @@ export default function RegistrarPagoAplicado() {
   const [archivoComprobante, setArchivoComprobante] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [facturasAutorizadas, setFacturasAutorizadas] = useState<Factura[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const facturasAutorizadas: Factura[] = [
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-018',
-      numeroRadicado: 'RAD-2026-00115',
-      numeroProcesoPago: 'PP-2026-0092',
-      proveedor: 'Construcciones Universitarias SAS',
-      nit: '900123456-7',
-      valorTotal: 45000000,
-      fechaAutorizacion: '2026-04-01',
-      areaSolicitante: 'Infraestructura',
-      cuentaContable: '5180-001',
-      centroCosto: 'CC-010',
-      estado: 'Autorizada para pago',
-      diasTranscurridos: 1,
-      descripcion: 'Obra construccion bloque D - Pago parcial',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-020',
-      numeroRadicado: 'RAD-2026-00118',
-      numeroProcesoPago: 'PP-2026-0095',
-      proveedor: 'Equipos Medicos Especializados',
-      nit: '900234567-8',
-      valorTotal: 28500000,
-      fechaAutorizacion: '2026-04-02',
-      areaSolicitante: 'Ciencias de la Salud',
-      cuentaContable: '5160-002',
-      centroCosto: 'CC-012',
-      estado: 'Autorizada para pago',
-      diasTranscurridos: 0,
-      descripcion: 'Equipamiento laboratorio de fisiologia',
-    },
-  ];
+  const loadFacturas = async () => {
+    const response = await facturasService.getAll({ estado: 'Autorizada', limit: 200 });
+    return toList<APIFactura>(response).map(mapFactura);
+  };
 
-  const facturasFiltradas = facturasAutorizadas.filter((factura) => {
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const rows = await loadFacturas();
+        setFacturasAutorizadas(rows);
+      } catch {
+        setFacturasAutorizadas([]);
+        setLoadError('No fue posible cargar pagos autorizados.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const facturasFiltradas = useMemo(() => facturasAutorizadas.filter((factura) => {
     if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
     if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
     if (filtros.areaSolicitante && !factura.areaSolicitante.toLowerCase().includes(filtros.areaSolicitante.toLowerCase())) return false;
@@ -95,7 +113,7 @@ export default function RegistrarPagoAplicado() {
     if (filtros.fechaInicio && factura.fechaAutorizacion < filtros.fechaInicio) return false;
     if (filtros.fechaFin && factura.fechaAutorizacion > filtros.fechaFin) return false;
     return true;
-  });
+  }), [facturasAutorizadas, filtros]);
 
   const abrirDialogRegistrar = (factura: Factura) => {
     setFacturaSeleccionada(factura);
@@ -136,15 +154,27 @@ export default function RegistrarPagoAplicado() {
 
     setIsProcessing(true);
 
-    setTimeout(() => {
-      toast.success(`Pago aplicado registrado: ${facturaSeleccionada.numeroFactura}`);
-      setIsProcessing(false);
-      setMostrarDialogRegistrar(false);
-      setFacturaSeleccionada(null);
-      setNumeroTransaccion('');
-      setObservaciones('');
-      setArchivoComprobante('');
-    }, 1400);
+    void (async () => {
+      try {
+        await facturasService.registrarPagoAplicado(facturaSeleccionada.facturaId, {
+          numero_transaccion: numeroTransaccion.trim(),
+          fecha_pago_aplicado: fechaPago,
+          observaciones: observaciones.trim() || undefined,
+        });
+        const latest = await loadFacturas();
+        setFacturasAutorizadas(latest);
+        toast.success(`Pago aplicado registrado: ${facturaSeleccionada.numeroFactura}`);
+        setMostrarDialogRegistrar(false);
+        setFacturaSeleccionada(null);
+        setNumeroTransaccion('');
+        setObservaciones('');
+        setArchivoComprobante('');
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible registrar el pago aplicado.');
+      } finally {
+        setIsProcessing(false);
+      }
+    })();
   };
 
   const simularCargaComprobante = () => {
@@ -185,7 +215,7 @@ export default function RegistrarPagoAplicado() {
             <TableFilters
               filters={filtros}
               onFilterChange={setFiltros}
-              estados={['Autorizada para pago']}
+              estados={['Autorizada']}
               proveedores={Array.from(new Set(facturasAutorizadas.map((f) => f.proveedor)))}
               areas={Array.from(new Set(facturasAutorizadas.map((f) => f.areaSolicitante)))}
               showMontoFilter
@@ -214,6 +244,9 @@ export default function RegistrarPagoAplicado() {
             </div>
           </CardHeader>
           <CardContent>
+            {loadError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+            )}
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               <Table>
                 <TableHeader>
@@ -229,7 +262,15 @@ export default function RegistrarPagoAplicado() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasFiltradas.map((factura, index) => (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando pagos autorizados...</TableCell>
+                    </TableRow>
+                  ) : facturasFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay pagos autorizados para registrar.</TableCell>
+                    </TableRow>
+                  ) : facturasFiltradas.map((factura, index) => (
                     <motion.tr key={factura.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="hover:bg-slate-50 transition-colors">
                       <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
                       <TableCell><div className="flex items-center gap-2"><Building className="w-4 h-4 text-slate-400" /><span className="text-slate-700">{factura.proveedor}</span></div></TableCell>
@@ -249,7 +290,7 @@ export default function RegistrarPagoAplicado() {
                 </TableBody>
               </Table>
 
-              {facturasFiltradas.length === 0 && (
+              {!loading && facturasFiltradas.length === 0 && (
                 <div className="text-center py-12 text-slate-500">
                   <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                   <p className="font-medium">No se encontraron pagos autorizados con los filtros aplicados</p>

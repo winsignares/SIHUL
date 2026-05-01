@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -11,17 +11,19 @@ import {
   CheckCircle2,
   XCircle,
   Calendar,
-  FileText,
   ShieldCheck,
   AlertCircle,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
 import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import FacturaDetailModal, { type SharedFacturaDetail, buildSharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface Factura {
   id: string;
+  facturaId: number;
   numeroFactura: string;
   numeroRadicado: string;
   numeroProcesoPago: string;
@@ -37,7 +39,53 @@ interface Factura {
   descripcion: string;
 }
 
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const mapFactura = (f: APIFactura): Factura => ({
+  id: String(f.id),
+  facturaId: Number(f.id),
+  numeroFactura: f.numero_factura || `FAC-${f.id}`,
+  numeroRadicado: f.numero_radicado || 'Sin radicado',
+  numeroProcesoPago: f.numero_proceso_pago || 'Sin proceso',
+  proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+  nit: f.proveedor?.nit || 'Sin NIT',
+  valorTotal: Number(f.valor_total || 0),
+  fechaAlistamiento: f.fecha_alistamiento || 'Sin fecha',
+  areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
+  cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
+  centroCosto: f.centro_costo ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}` : 'Sin centro',
+  estado: f.estado,
+  diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
+  descripcion: f.descripcion || 'Sin Asignar',
+});
+
 export default function ControlPrevio() {
+  const auditoriaChecklist = [
+    { id: 'causacion', label: 'Causacion contable validada' },
+    { id: 'soportes', label: 'Soportes completos y legibles' },
+    { id: 'rubro', label: 'Distribucion correcta en rubro' },
+    { id: 'proceso', label: 'Proceso de pago verificado' },
+  ];
+
+  const documentosEsperados = [
+    'Factura / Cuenta de cobro',
+    'Orden de compra / Contrato',
+    'Certificacion bancaria',
+    'Soporte de cumplimiento / Acta',
+  ];
+
+  const opcionesRechazo = [
+    { id: 'docs', label: 'Soportes incompletos' },
+    { id: 'causacion', label: 'Inconsistencia en causacion contable' },
+    { id: 'rubro', label: 'Distribucion incorrecta en rubro' },
+    { id: 'banco', label: 'Certificacion bancaria faltante' },
+    { id: 'otros', label: 'Otro hallazgo' },
+  ];
+
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
     proveedor: '',
@@ -49,56 +97,9 @@ export default function ControlPrevio() {
     montoMax: '',
   });
 
-  const [facturasAlistadas] = useState<Factura[]>([
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-145',
-      numeroRadicado: 'RAD-2026-00145',
-      numeroProcesoPago: 'PP-2026-00078',
-      proveedor: 'Tecnologia Global SAS',
-      nit: '900123789-4',
-      valorTotal: 8900000,
-      fechaAlistamiento: '2026-03-31',
-      areaSolicitante: 'Sistemas',
-      cuentaContable: '5165-001',
-      centroCosto: 'CC-007',
-      estado: 'Alistada',
-      diasTranscurridos: 5,
-      descripcion: 'Equipos de computo para area administrativa',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-152',
-      numeroRadicado: 'RAD-2026-00152',
-      numeroProcesoPago: 'PP-2026-00079',
-      proveedor: 'Servicios Medicos Especializados',
-      nit: '900234890-5',
-      valorTotal: 12500000,
-      fechaAlistamiento: '2026-04-01',
-      areaSolicitante: 'Enfermeria',
-      cuentaContable: '5170-001',
-      centroCosto: 'CC-010',
-      estado: 'Alistada',
-      diasTranscurridos: 3,
-      descripcion: 'Servicios medicos especializados mes de marzo',
-    },
-    {
-      id: '3',
-      numeroFactura: 'FAC-2026-158',
-      numeroRadicado: 'RAD-2026-00158',
-      numeroProcesoPago: 'PP-2026-00081',
-      proveedor: 'Mantenimiento Pro EU',
-      nit: '900345901-6',
-      valorTotal: 6750000,
-      fechaAlistamiento: '2026-04-01',
-      areaSolicitante: 'Mantenimiento',
-      cuentaContable: '5125-001',
-      centroCosto: 'CC-008',
-      estado: 'Alistada',
-      diasTranscurridos: 4,
-      descripcion: 'Reparaciones de infraestructura fisica',
-    },
-  ]);
+  const [facturasAlistadas, setFacturasAlistadas] = useState<Factura[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
   const [facturaDetalle, setFacturaDetalle] = useState<SharedFacturaDetail | null>(null);
@@ -108,8 +109,36 @@ export default function ControlPrevio() {
   const [observaciones, setObservaciones] = useState('');
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [procesando, setProcesando] = useState(false);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [checklistState, setChecklistState] = useState<Record<string, boolean>>(() => (
+    auditoriaChecklist.reduce((acc, item) => ({ ...acc, [item.id]: false }), {})
+  ));
+  const [rechazoSeleccion, setRechazoSeleccion] = useState<string[]>([]);
 
-  const facturasFiltradas = facturasAlistadas.filter((factura) => {
+  const loadFacturas = async () => {
+    const response = await facturasService.getAll({ estado: 'Alistada', limit: 200 });
+    return toList<APIFactura>(response).map(mapFactura);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const rows = await loadFacturas();
+        setFacturasAlistadas(rows);
+      } catch {
+        setFacturasAlistadas([]);
+        setLoadError('No fue posible cargar las facturas alistadas.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const facturasFiltradas = useMemo(() => facturasAlistadas.filter((factura) => {
     if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
     if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
     if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
@@ -118,51 +147,89 @@ export default function ControlPrevio() {
     if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
     if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
     return true;
-  });
+  }), [facturasAlistadas, filtros]);
 
-  const verDetalle = (factura: Factura) => {
-    setFacturaDetalle({
-      numeroFactura: factura.numeroFactura,
-      numeroRadicado: factura.numeroRadicado,
-      numeroProcesoPago: factura.numeroProcesoPago,
-      proveedor: factura.proveedor,
-      nit: factura.nit,
-      valorTotal: factura.valorTotal,
-      areaSolicitante: factura.areaSolicitante,
-      estado: factura.estado,
-      diasTranscurridos: factura.diasTranscurridos,
-      fechaRecepcion: factura.fechaAlistamiento,
-      descripcion: factura.descripcion,
-      cuentaContable: factura.cuentaContable,
-      centroCosto: factura.centroCosto,
-      observaciones: 'Checklist: causacion contable, soportes y distribucion en rubro correcto',
-      nivelRiesgo: factura.diasTranscurridos >= 18 ? 'rojo' : factura.diasTranscurridos >= 12 ? 'amarillo' : 'verde',
-    });
+  const verDetalle = async (factura: Factura) => {
     setMostrarDialogDetalle(true);
+    setCargandoDetalle(true);
+    try {
+      const detail = await facturasService.getById(factura.facturaId);
+      const baseDetail = buildSharedFacturaDetail(detail);
+      setFacturaDetalle({
+        ...baseDetail,
+        auditoriaView: true,
+        auditoriaNotas: 'Validar causacion contable, soportes completos y distribucion correcta antes de emitir concepto.',
+      });
+    } catch {
+      setFacturaDetalle({
+        facturaId: factura.facturaId,
+        numeroFactura: factura.numeroFactura,
+        numeroRadicado: factura.numeroRadicado,
+        numeroProcesoPago: factura.numeroProcesoPago,
+        proveedor: factura.proveedor,
+        nit: factura.nit,
+        valorTotal: factura.valorTotal,
+        areaSolicitante: factura.areaSolicitante,
+        estado: factura.estado,
+        diasTranscurridos: factura.diasTranscurridos,
+        fechaRecepcion: factura.fechaAlistamiento,
+        descripcion: factura.descripcion,
+        cuentaContable: factura.cuentaContable,
+        centroCosto: factura.centroCosto,
+        observaciones: 'Checklist: causacion contable, soportes y distribucion en rubro correcto',
+        auditoriaView: true,
+        auditoriaNotas: 'Validar causacion contable, soportes completos y distribucion correcta antes de emitir concepto.',
+        nivelRiesgo: factura.diasTranscurridos >= 18 ? 'rojo' : factura.diasTranscurridos >= 12 ? 'amarillo' : 'verde',
+      });
+    } finally {
+      setCargandoDetalle(false);
+    }
   };
 
   const abrirDialogAprobar = (factura: Factura) => {
     setFacturaSeleccionada(factura);
     setObservaciones('');
+    setChecklistState(auditoriaChecklist.reduce((acc, item) => ({ ...acc, [item.id]: false }), {}));
     setMostrarDialogAprobar(true);
   };
 
   const abrirDialogRechazar = (factura: Factura) => {
     setFacturaSeleccionada(factura);
     setMotivoRechazo('');
+    setRechazoSeleccion([]);
     setMostrarDialogRechazar(true);
+  };
+
+  const checklistCompleto = auditoriaChecklist.every((item) => checklistState[item.id]);
+
+  const toggleChecklist = (id: string) => {
+    setChecklistState((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const buildRechazoMotivo = (seleccion: string[]) => {
+    if (seleccion.length === 0) return '';
+    const labels = opcionesRechazo.filter((opt) => seleccion.includes(opt.id)).map((opt) => opt.label);
+    return `Hallazgos: ${labels.join('; ')}.`;
   };
 
   const confirmarAprobacion = () => {
     if (!facturaSeleccionada) return;
 
     setProcesando(true);
-    setTimeout(() => {
-      setProcesando(false);
-      toast.success(`Factura aprobada por Auditoria: ${facturaSeleccionada.numeroFactura}`);
-      setMostrarDialogAprobar(false);
-      setFacturaSeleccionada(null);
-    }, 1200);
+    void (async () => {
+      try {
+        await facturasService.aprobarAuditoria(facturaSeleccionada.facturaId, observaciones.trim() || undefined);
+        const latest = await loadFacturas();
+        setFacturasAlistadas(latest);
+        toast.success(`Factura aprobada por Auditoria: ${facturaSeleccionada.numeroFactura}`);
+        setMostrarDialogAprobar(false);
+        setFacturaSeleccionada(null);
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible aprobar la factura.');
+      } finally {
+        setProcesando(false);
+      }
+    })();
   };
 
   const confirmarRechazo = () => {
@@ -174,13 +241,21 @@ export default function ControlPrevio() {
     }
 
     setProcesando(true);
-    setTimeout(() => {
-      setProcesando(false);
-      toast.warning(`Factura rechazada por Auditoria: ${facturaSeleccionada.numeroFactura}`);
-      setMostrarDialogRechazar(false);
-      setFacturaSeleccionada(null);
-      setMotivoRechazo('');
-    }, 1200);
+    void (async () => {
+      try {
+        await facturasService.rechazarAuditoria(facturaSeleccionada.facturaId, motivoRechazo.trim());
+        const latest = await loadFacturas();
+        setFacturasAlistadas(latest);
+        toast.warning(`Factura rechazada por Auditoria: ${facturaSeleccionada.numeroFactura}`);
+        setMostrarDialogRechazar(false);
+        setFacturaSeleccionada(null);
+        setMotivoRechazo('');
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible rechazar la factura.');
+      } finally {
+        setProcesando(false);
+      }
+    })();
   };
 
   return (
@@ -241,6 +316,9 @@ export default function ControlPrevio() {
               </div>
             </CardHeader>
             <CardContent>
+              {loadError && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+              )}
               <div className="rounded-lg border border-slate-200 overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -259,7 +337,15 @@ export default function ControlPrevio() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {facturasFiltradas.map((factura, index) => {
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center text-slate-500 py-6">Cargando facturas alistadas...</TableCell>
+                      </TableRow>
+                    ) : facturasFiltradas.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoría.</TableCell>
+                      </TableRow>
+                    ) : facturasFiltradas.map((factura, index) => {
                       const colorRiesgo = factura.diasTranscurridos >= 24 ? 'bg-purple-700' : factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';
 
                       return (
@@ -312,22 +398,55 @@ export default function ControlPrevio() {
 
           {facturaSeleccionada && (
             <div className="space-y-4">
-              <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <p className="text-sm text-slate-600">Factura: <span className="font-semibold text-slate-800">{facturaSeleccionada.numeroFactura}</span></p>
                 <p className="text-sm text-slate-600">Proveedor: <span className="font-semibold text-slate-800">{facturaSeleccionada.proveedor}</span></p>
                 <p className="text-sm text-slate-600">Monto: <span className="font-semibold text-green-700">${facturaSeleccionada.valorTotal.toLocaleString('es-CO')}</span></p>
               </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <p className="font-semibold text-slate-800 mb-3">Checklist de validacion</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {auditoriaChecklist.map((item) => {
+                    const activo = checklistState[item.id];
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleChecklist(item.id)}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-all ${
+                          activo ? 'border-green-300 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        {activo ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4 text-slate-400" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <p className="font-semibold text-slate-800 mb-2">Documentos esperados</p>
+                <div className="flex flex-wrap gap-2">
+                  {documentosEsperados.map((doc) => (
+                    <Badge key={doc} className="bg-slate-100 text-slate-700 border-slate-200 border">{doc}</Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Confirme que los soportes esten completos y legibles.</p>
+              </div>
+
               <div>
-                <Label htmlFor="observaciones">Observaciones de auditoria</Label>
-                <Textarea id="observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones de aprobacion" />
+                <Label className="text-sm font-medium text-slate-700">Observaciones</Label>
+                <Textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones de auditoria (opcional)" className="mt-2" />
               </div>
             </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setMostrarDialogAprobar(false)}>Cancelar</Button>
-            <Button onClick={confirmarAprobacion} disabled={procesando} className="bg-green-600 hover:bg-green-700">
-              {procesando ? 'Aprobando...' : 'Confirmar Aprobacion'}
+            <Button onClick={confirmarAprobacion} disabled={procesando || !checklistCompleto} className="bg-green-600 hover:bg-green-700 text-white">
+              {procesando ? 'Aprobando...' : checklistCompleto ? 'Confirmar aprobacion' : 'Complete el checklist'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -337,18 +456,59 @@ export default function ControlPrevio() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Rechazar Factura</DialogTitle>
-            <DialogDescription>Indique el motivo para devolver a Tesoreria</DialogDescription>
+            <DialogDescription>Registre el motivo para devolver a Tesoreria</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <Label htmlFor="motivo">Motivo de rechazo</Label>
-            <Textarea id="motivo" value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Detalle de hallazgos o inconsistencias" />
-          </div>
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-sm text-slate-600">Factura: <span className="font-semibold text-slate-800">{facturaSeleccionada.numeroFactura}</span></p>
+                <p className="text-sm text-slate-600">Proveedor: <span className="font-semibold text-slate-800">{facturaSeleccionada.proveedor}</span></p>
+                <p className="text-sm text-slate-600">Monto: <span className="font-semibold text-red-700">${facturaSeleccionada.valorTotal.toLocaleString('es-CO')}</span></p>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <p className="font-semibold text-slate-800 mb-3">Checklist de hallazgos</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {opcionesRechazo.map((item) => {
+                    const activo = rechazoSeleccion.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          const next = rechazoSeleccion.includes(item.id)
+                            ? rechazoSeleccion.filter((r) => r !== item.id)
+                            : [...rechazoSeleccion, item.id];
+                          setRechazoSeleccion(next);
+                          const auto = buildRechazoMotivo(next);
+                          if (!motivoRechazo.trim() || motivoRechazo.startsWith('Hallazgos:')) {
+                            setMotivoRechazo(auto);
+                          }
+                        }}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-all ${
+                          activo ? 'border-red-300 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        {activo ? <XCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4 text-slate-400" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-slate-700">Motivo de rechazo</Label>
+                <Textarea value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Detalle de la inconsistencia (minimo 10 caracteres)" className="mt-2" />
+              </div>
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setMostrarDialogRechazar(false)}>Cancelar</Button>
-            <Button onClick={confirmarRechazo} disabled={procesando} className="bg-red-600 hover:bg-red-700">
-              {procesando ? 'Rechazando...' : 'Confirmar Rechazo'}
+            <Button onClick={confirmarRechazo} disabled={procesando} className="bg-red-600 hover:bg-red-700 text-white">
+              {procesando ? 'Rechazando...' : 'Confirmar rechazo'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -358,6 +518,7 @@ export default function ControlPrevio() {
         factura={facturaDetalle}
         isOpen={mostrarDialogDetalle}
         onClose={() => {
+          if (cargandoDetalle) return;
           setMostrarDialogDetalle(false);
           setFacturaDetalle(null);
         }}

@@ -1,86 +1,41 @@
-import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
 import { Button } from '../../../share/button';
-import { Textarea } from '../../../share/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
-import { Send, Filter, Calendar, Eye, Building, AlertCircle } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
+import { Loader2, Send, Filter, Calendar, CheckCircle2, Eye, Building, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
+import { Textarea } from '../../../share/textarea';
 import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
-
-interface FacturaEnvio extends SharedFacturaDetail {
-  id: string;
-  nit: string;
-  fechaRevision: string;
-}
-
-const facturasRevisadas: FacturaEnvio[] = [
-  {
-    id: '1',
-    numeroFactura: 'FAC-2026-025',
-    numeroRadicado: 'RAD-2026-00125',
-    numeroProcesoPago: 'PP-2026-0100',
-    proveedor: 'Servicios Integrales SA',
-    nit: '900890123-4',
-    valorTotal: 18500000,
-    fechaRevision: '2026-04-02',
-    fechaRecepcion: '2026-04-02',
-    areaSolicitante: 'Servicios Generales',
-    estado: 'Revisado por direccion financiera',
-    diasTranscurridos: 0,
-    descripcion: 'Servicios de aseo y cafeteria mensual',
-  },
-  {
-    id: '2',
-    numeroFactura: 'FAC-2026-031',
-    numeroRadicado: 'RAD-2026-00131',
-    numeroProcesoPago: 'PP-2026-0110',
-    proveedor: 'Infraestructura Integral EU',
-    nit: '900456789-0',
-    valorTotal: 27800000,
-    fechaRevision: '2026-04-03',
-    fechaRecepcion: '2026-04-03',
-    areaSolicitante: 'Infraestructura',
-    estado: 'Revisado por direccion financiera',
-    diasTranscurridos: 1,
-    descripcion: 'Pago asociado a obra critica de seguridad',
-  },
-];
+import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { useEnviarRectoria } from '../../../hooks/financiero/direccion_financiera';
 
 export default function EnviarRectoria() {
-  const [filtros, setFiltros] = useState({
-    numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
-    fechaInicio: '',
-    fechaFin: '',
-    montoMin: '',
-    montoMax: '',
-  });
-  const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaEnvio | null>(null);
-  const [detalleAbierto, setDetalleAbierto] = useState(false);
-  const [envioAbierto, setEnvioAbierto] = useState(false);
-  const [observaciones, setObservaciones] = useState('');
-
-  const facturasFiltradas = useMemo(() => {
-    return facturasRevisadas.filter((factura) => {
-      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-      if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
-      if (filtros.estado && factura.estado !== filtros.estado) return false;
-      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-      if (filtros.fechaInicio && factura.fechaRevision < filtros.fechaInicio) return false;
-      if (filtros.fechaFin && factura.fechaRevision > filtros.fechaFin) return false;
-      if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-      if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
-      return true;
-    });
-  }, [filtros]);
+  const {
+    facturasFiltradas,
+    cargando,
+    error,
+    procesando,
+    facturaSeleccionada,
+    detalleAbierto,
+    envioAbierto,
+    observaciones,
+    filtros,
+    toast,
+    setFiltros,
+    setObservaciones,
+    setDetalleAbierto,
+    setEnvioAbierto,
+    abrirDetalle,
+    abrirEnvio,
+    cerrarEnvio,
+    enviarARectoria,
+    cargarFacturas,
+  } = useEnviarRectoria();
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-6 text-white shadow-xl">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
@@ -93,20 +48,34 @@ export default function EnviarRectoria() {
         </div>
       </motion.div>
 
+      {/* Toast */}
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-xl text-white font-semibold ${toast.tipo === 'ok' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
+          {toast.tipo === 'ok' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          {toast.msg}
+        </motion.div>
+      )}
+
+      {/* Filtros */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-slate-800">
             <Filter className="w-5 h-5 text-red-600" />
-            Filtros de Busqueda Independientes
+            Filtros de Busqueda
           </CardTitle>
         </CardHeader>
         <CardContent>
           <TableFilters
             filters={filtros}
             onFilterChange={setFiltros}
-            estados={Array.from(new Set(facturasRevisadas.map((f) => f.estado)))}
-            proveedores={Array.from(new Set(facturasRevisadas.map((f) => f.proveedor)))}
-            areas={Array.from(new Set(facturasRevisadas.map((f) => f.areaSolicitante || '').filter(Boolean)))}
+            estados={[]}
+            proveedores={Array.from(new Set(facturasFiltradas.map((f) => f.proveedor)))}
+            areas={Array.from(new Set(facturasFiltradas.map((f) => f.areaSolicitante || '').filter(Boolean)))}
             showMontoFilter
             showFechaFilter
             showAreaFilter
@@ -114,63 +83,90 @@ export default function EnviarRectoria() {
         </CardContent>
       </Card>
 
+      {/* Tabla */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <CardTitle>Pagos Revisados - Listos para Enviar</CardTitle>
-          <CardDescription>{facturasFiltradas.length} pago(s) listo(s) para enviar a Rectoria</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Pagos Revisados - Listos para Enviar</CardTitle>
+              <CardDescription>{facturasFiltradas.length} pago(s) listo(s) para enviar a Rectoria</CardDescription>
+            </div>
+            <Button onClick={cargarFacturas} variant="outline" disabled={cargando}>
+              <Loader2 className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead>N Factura</TableHead>
-                <TableHead>N Radicado</TableHead>
-                <TableHead>N Proceso</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>NIT</TableHead>
-                <TableHead>Monto</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>F. Revision</TableHead>
-                <TableHead>Dias</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {facturasFiltradas.map((factura, index) => (
-                <motion.tr key={factura.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-                  <TableCell className="font-medium">{factura.numeroFactura}</TableCell>
-                  <TableCell className="font-mono text-blue-700 text-xs">{factura.numeroRadicado}</TableCell>
-                  <TableCell className="font-mono text-purple-700 text-xs">{factura.numeroProcesoPago}</TableCell>
-                  <TableCell><div className="flex items-center gap-2"><Building className="w-4 h-4 text-slate-400" />{factura.proveedor}</div></TableCell>
-                  <TableCell className="font-mono text-xs text-slate-600">{factura.nit}</TableCell>
-                  <TableCell className="font-bold text-green-700">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                  <TableCell><Badge variant="outline">{factura.areaSolicitante}</Badge></TableCell>
-                  <TableCell><Calendar className="w-3 h-3 inline mr-1" />{factura.fechaRevision}</TableCell>
-                  <TableCell><Badge className={factura.diasTranscurridos && factura.diasTranscurridos >= 2 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}>{factura.diasTranscurridos || 0}d</Badge></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setFacturaSeleccionada(factura); setDetalleAbierto(true); }}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => { setFacturaSeleccionada(factura); setEnvioAbierto(true); }}>
-                        <Send className="w-4 h-4 mr-1" />Enviar
-                      </Button>
-                    </div>
-                  </TableCell>
-                </motion.tr>
-              ))}
-            </TableBody>
-          </Table>
-
-          {facturasFiltradas.length === 0 && (
-            <div className="text-center py-10 text-slate-500">
-              <AlertCircle className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-              No se encontraron pagos con los filtros aplicados.
+          {cargando ? (
+            <div className="flex items-center justify-center py-16 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin mr-3" /> Cargando facturas...
             </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-16 text-red-500 gap-2">
+              <AlertCircle className="w-5 h-5" /> {error}
+            </div>
+          ) : facturasFiltradas.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">
+              <Send className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No hay pagos listos para enviar a Rectoria</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead>N Factura</TableHead>
+                  <TableHead>N Radicado</TableHead>
+                  <TableHead>N Proceso</TableHead>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead>NIT</TableHead>
+                  <TableHead>Monto</TableHead>
+                  <TableHead>Area</TableHead>
+                  <TableHead>F. Revision</TableHead>
+                  <TableHead>Dias</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {facturasFiltradas.map((factura, index) => (
+                  <motion.tr key={factura.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+                    <TableCell className="font-medium">{factura.numeroFactura}</TableCell>
+                    <TableCell className="font-mono text-blue-700 text-xs">{factura.numeroRadicado}</TableCell>
+                    <TableCell className="font-mono text-purple-700 text-xs">{factura.numeroProcesoPago}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4 text-slate-400" />
+                        {factura.proveedor}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-600">{factura.nit}</TableCell>
+                    <TableCell className="font-bold text-green-700">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
+                    <TableCell><Badge variant="outline">{factura.areaSolicitante}</Badge></TableCell>
+                    <TableCell><Calendar className="w-3 h-3 inline mr-1" />{factura.fechaRevision}</TableCell>
+                    <TableCell>
+                      <Badge className={factura.diasTranscurridos && factura.diasTranscurridos >= 2 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}>
+                        {factura.diasTranscurridos || 0}d
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => abrirDetalle(factura)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => abrirEnvio(factura)}>
+                          <Send className="w-4 h-4 mr-1" />Enviar
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </motion.tr>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
+      {/* Dialog Envio */}
       <Dialog open={envioAbierto} onOpenChange={setEnvioAbierto}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
@@ -184,18 +180,20 @@ export default function EnviarRectoria() {
             <Textarea rows={4} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Contexto de envio y prioridad" />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEnvioAbierto(false)}>Cancelar</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setEnvioAbierto(false)}>Confirmar envio</Button>
+            <Button variant="outline" onClick={cerrarEnvio} disabled={procesando}>Cancelar</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={enviarARectoria} disabled={procesando}>
+              {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : 'Confirmar envio'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Modal Detalle */}
       <FacturaDetailModal
         factura={facturaSeleccionada}
         isOpen={detalleAbierto}
         onClose={() => {
           setDetalleAbierto(false);
-          setFacturaSeleccionada(null);
         }}
       />
     </div>

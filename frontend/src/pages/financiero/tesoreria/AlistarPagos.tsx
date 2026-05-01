@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -13,22 +13,52 @@ import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface Factura {
   id: string;
+  facturaId: number;
   numeroFactura: string;
-  numeroRadicado: string;
+  numeroRadicado?: string;
   proveedor: string;
-  nit: string;
+  nit?: string;
   valorTotal: number;
-  fechaCausacion: string;
-  cuentaContable: string;
+  fechaCausacion?: string;
+  cuentaContable?: string;
   centroCosto?: string;
   areaSolicitante: string;
   estado: string;
   diasTranscurridos: number;
   descripcion: string;
+  numeroProcesoPago?: string;
+  archivoPlanoGenerado?: string;
 }
+
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const mapFactura = (f: APIFactura): Factura => ({
+  id: String(f.id),
+  facturaId: Number(f.id),
+  numeroFactura: f.numero_factura || `FAC-${f.id}`,
+  numeroRadicado: f.numero_radicado,
+  proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+  nit: f.proveedor?.nit,
+  valorTotal: Number(f.valor_total || 0),
+  fechaCausacion: f.fecha_causacion,
+  cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : undefined,
+  centroCosto: f.centro_costo ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}` : undefined,
+  areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
+  estado: f.estado,
+  diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
+  descripcion: f.descripcion || 'Sin Asignar',
+  numeroProcesoPago: f.numero_proceso_pago,
+  archivoPlanoGenerado: f.archivo_plano_generado,
+});
 
 export default function AlistarPagos() {
   const [filtros, setFiltros] = useState({
@@ -45,70 +75,66 @@ export default function AlistarPagos() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
   const [facturaDetalle, setFacturaDetalle] = useState<SharedFacturaDetail | null>(null);
   const [mostrarDialogAlistar, setMostrarDialogAlistar] = useState(false);
-  const [mostrarDialogDevolver, setMostrarDialogDevolver] = useState(false);
+  const [mostrarDialogDetener, setMostrarDialogDetener] = useState(false);
   const [mostrarDialogDetalle, setMostrarDialogDetalle] = useState(false);
   const [numeroProcesoPago, setNumeroProcesoPago] = useState('');
   const [archivoPlano, setArchivoPlano] = useState('');
   const [observaciones, setObservaciones] = useState('');
-  const [motivoDevolucion, setMotivoDevolucion] = useState('');
+  const [motivoDetencion, setMotivoDetencion] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [facturasTesoreria, setFacturasTesoreria] = useState<Factura[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const facturasCausadas: Factura[] = [
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-002',
-      numeroRadicado: 'RAD-2026-087',
-      proveedor: 'Servicios TI Colombia SAS',
-      nit: '900123456-7',
-      valorTotal: 8950000,
-      fechaCausacion: '2026-03-25',
-      cuentaContable: '5165-001',
-      centroCosto: 'CC-007',
-      areaSolicitante: 'Sistemas',
-      estado: 'Causada',
-      diasTranscurridos: 8,
-      descripcion: 'Servicios de mantenimiento de infraestructura tecnologica',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-006',
-      numeroRadicado: 'RAD-2026-089',
-      proveedor: 'Servicios de Aseo Total',
-      nit: '900234567-8',
-      valorTotal: 4200000,
-      fechaCausacion: '2026-03-24',
-      cuentaContable: '5135-001',
-      centroCosto: 'CC-008',
-      areaSolicitante: 'Servicios Generales',
-      estado: 'Causada',
-      diasTranscurridos: 13,
-      descripcion: 'Servicios de aseo y mantenimiento general',
-    },
-  ];
+  const loadFacturas = async () => {
+    const response = await facturasService.getAll({ limit: 200 });
+    return toList<APIFactura>(response)
+      .filter((f) => f.estado === 'Causada' || f.estado === 'Detenida')
+      .map(mapFactura);
+  };
 
-  const facturasFiltradas = facturasCausadas.filter((factura) => {
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const rows = await loadFacturas();
+        setFacturasTesoreria(rows);
+      } catch {
+        setFacturasTesoreria([]);
+        setLoadError('No fue posible cargar facturas para alistamiento.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const facturasFiltradas = useMemo(() => facturasTesoreria.filter((factura) => {
     if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
     if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
+    if (filtros.estado && factura.estado !== filtros.estado) return false;
     if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-    if (filtros.fechaInicio && new Date(factura.fechaCausacion) < new Date(filtros.fechaInicio)) return false;
-    if (filtros.fechaFin && new Date(factura.fechaCausacion) > new Date(filtros.fechaFin)) return false;
+    if (filtros.fechaInicio && factura.fechaCausacion && new Date(factura.fechaCausacion) < new Date(filtros.fechaInicio)) return false;
+    if (filtros.fechaFin && factura.fechaCausacion && new Date(factura.fechaCausacion) > new Date(filtros.fechaFin)) return false;
     if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
     if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
     return true;
-  });
+  }), [facturasTesoreria, filtros]);
 
   const abrirDialogAlistar = (factura: Factura) => {
     setFacturaSeleccionada(factura);
-    setNumeroProcesoPago(`PP-2026-${String(Math.floor(Math.random() * 1000) + 200).padStart(3, '0')}`);
-    setArchivoPlano('');
+    setNumeroProcesoPago(factura.numeroProcesoPago || `PP-${new Date().getFullYear()}-${String(factura.facturaId).padStart(4, '0')}`);
+    setArchivoPlano(factura.archivoPlanoGenerado || '');
     setObservaciones('');
     setMostrarDialogAlistar(true);
   };
 
-  const abrirDialogDevolver = (factura: Factura) => {
+  const abrirDialogDetener = (factura: Factura) => {
     setFacturaSeleccionada(factura);
-    setMotivoDevolucion('');
-    setMostrarDialogDevolver(true);
+    setMotivoDetencion('');
+    setMostrarDialogDetener(true);
   };
 
   const abrirDialogDetalle = (factura: Factura) => {
@@ -131,33 +157,54 @@ export default function AlistarPagos() {
   };
 
   const alistarPago = () => {
-    if (!facturaSeleccionada || !numeroProcesoPago.trim()) {
-      toast.error('Debe completar los datos requeridos');
+    if (!facturaSeleccionada || (!numeroProcesoPago.trim() && !archivoPlano.trim())) {
+      toast.error('Debe registrar número de proceso o archivo plano');
       return;
     }
 
     setIsProcessing(true);
-    setTimeout(() => {
-      toast.success(`Pago alistado: ${facturaSeleccionada.numeroFactura}`);
-      setIsProcessing(false);
-      setMostrarDialogAlistar(false);
-      setFacturaSeleccionada(null);
-    }, 1200);
+    void (async () => {
+      try {
+        await facturasService.alistar(facturaSeleccionada.facturaId, {
+          numero_proceso_pago: numeroProcesoPago.trim() || undefined,
+          archivo_plano_generado: archivoPlano.trim() || undefined,
+          observaciones: observaciones.trim() || undefined,
+        });
+
+        const latest = await loadFacturas();
+        setFacturasTesoreria(latest);
+        toast.success(`Pago alistado: ${facturaSeleccionada.numeroFactura}`);
+        setMostrarDialogAlistar(false);
+        setFacturaSeleccionada(null);
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible completar el alistamiento.');
+      } finally {
+        setIsProcessing(false);
+      }
+    })();
   };
 
-  const devolverFactura = () => {
-    if (!facturaSeleccionada || !motivoDevolucion.trim()) {
-      toast.error('Debe indicar un motivo de devolucion');
+  const detenerFactura = () => {
+    if (!facturaSeleccionada || motivoDetencion.trim().length < 10) {
+      toast.error('Debe indicar una observación mínima de 10 caracteres');
       return;
     }
 
     setIsProcessing(true);
-    setTimeout(() => {
-      toast.warning(`Factura devuelta a Contabilidad: ${facturaSeleccionada.numeroFactura}`);
-      setIsProcessing(false);
-      setMostrarDialogDevolver(false);
-      setFacturaSeleccionada(null);
-    }, 1100);
+    void (async () => {
+      try {
+        await facturasService.detenerEnTesoreria(facturaSeleccionada.facturaId, motivoDetencion.trim());
+        const latest = await loadFacturas();
+        setFacturasTesoreria(latest);
+        toast.warning(`Factura detenida en tesorería: ${facturaSeleccionada.numeroFactura}`);
+        setMostrarDialogDetener(false);
+        setFacturaSeleccionada(null);
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible detener la factura en tesorería.');
+      } finally {
+        setIsProcessing(false);
+      }
+    })();
   };
 
   const generarArchivoPlano = () => {
@@ -198,9 +245,9 @@ export default function AlistarPagos() {
             <TableFilters
               filters={filtros}
               onFilterChange={setFiltros}
-              estados={['Causada']}
-              proveedores={Array.from(new Set(facturasCausadas.map((f) => f.proveedor)))}
-              areas={Array.from(new Set(facturasCausadas.map((f) => f.areaSolicitante)))}
+              estados={['Causada', 'Detenida']}
+              proveedores={Array.from(new Set(facturasTesoreria.map((f) => f.proveedor)))}
+              areas={Array.from(new Set(facturasTesoreria.map((f) => f.areaSolicitante)))}
               showMontoFilter
               showFechaFilter
               showAreaFilter
@@ -219,6 +266,9 @@ export default function AlistarPagos() {
             </div>
           </CardHeader>
           <CardContent>
+            {loadError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+            )}
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               <Table>
                 <TableHeader>
@@ -237,7 +287,15 @@ export default function AlistarPagos() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasFiltradas.map((factura, index) => {
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center text-slate-500 py-6">Cargando facturas de tesorería...</TableCell>
+                    </TableRow>
+                  ) : facturasFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center text-slate-500 py-6">No hay facturas en Causada/Detenida con los filtros actuales.</TableCell>
+                    </TableRow>
+                  ) : facturasFiltradas.map((factura, index) => {
                     const colorRiesgo = factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';
 
                     return (
@@ -259,7 +317,7 @@ export default function AlistarPagos() {
                         <TableCell className="text-slate-600 max-w-[180px] truncate" title={displayText(factura.proveedor)}>{displayText(factura.proveedor)}</TableCell>
                         <TableCell className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</TableCell>
                         <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                        <TableCell><Badge className="bg-purple-100 text-purple-700 border-purple-200 border font-mono text-xs">{factura.cuentaContable}</Badge></TableCell>
+                        <TableCell>{factura.cuentaContable ? <Badge className="bg-purple-100 text-purple-700 border-purple-200 border font-mono text-xs">{factura.cuentaContable}</Badge> : <span className="text-slate-400 text-xs">{displayText(factura.cuentaContable)}</span>}</TableCell>
                         <TableCell>{factura.centroCosto ? <Badge className="bg-cyan-100 text-cyan-700 border-cyan-200 border font-mono text-xs">{factura.centroCosto}</Badge> : <span className="text-slate-400 text-xs">{displayText(factura.centroCosto)}</span>}</TableCell>
                         <TableCell className="text-slate-600 text-sm">
                           <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-slate-400" />{displayDate(factura.fechaCausacion)}</div>
@@ -267,8 +325,8 @@ export default function AlistarPagos() {
                         <TableCell><span className="inline-flex items-center gap-1 font-bold text-sm text-slate-700">{factura.diasTranscurridos}d</span></TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => abrirDialogDevolver(factura)} className="border-red-300 text-red-700 hover:bg-red-50">
-                              <XCircle className="w-4 h-4 mr-1" />Devolver
+                            <Button size="sm" variant="outline" onClick={() => abrirDialogDetener(factura)} className="border-red-300 text-red-700 hover:bg-red-50">
+                              <XCircle className="w-4 h-4 mr-1" />Detener
                             </Button>
                             <Button size="sm" onClick={() => abrirDialogAlistar(factura)} className="bg-blue-600 hover:bg-blue-700 text-white">
                               <FileCheck className="w-4 h-4 mr-1" />Alistar
@@ -292,7 +350,7 @@ export default function AlistarPagos() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-slate-800">Alistar Pago</DialogTitle>
-            <DialogDescription>Complete el proceso previo al envio a Auditoria</DialogDescription>
+            <DialogDescription>Revise soportes, registre número de proceso y/o archivo plano para marcar como Alistada</DialogDescription>
           </DialogHeader>
 
           {facturaSeleccionada && (
@@ -337,22 +395,22 @@ export default function AlistarPagos() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={mostrarDialogDevolver} onOpenChange={setMostrarDialogDevolver}>
+      <Dialog open={mostrarDialogDetener} onOpenChange={setMostrarDialogDetener}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-slate-800">Devolver a Contabilidad</DialogTitle>
-            <DialogDescription>Indique el motivo para devolver la factura</DialogDescription>
+            <DialogTitle className="text-slate-800">Detener en Tesorería</DialogTitle>
+            <DialogDescription>Registre la inconsistencia para mantener el trámite en tesorería hasta corregir</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
-            <Label htmlFor="motivo">Motivo de devolucion</Label>
-            <Textarea id="motivo" value={motivoDevolucion} onChange={(e) => setMotivoDevolucion(e.target.value)} placeholder="Detalle de la inconsistencia detectada" />
+            <Label htmlFor="motivo">Observación de detención</Label>
+            <Textarea id="motivo" value={motivoDetencion} onChange={(e) => setMotivoDetencion(e.target.value)} placeholder="Detalle de la inconsistencia detectada (mínimo 10 caracteres)" />
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMostrarDialogDevolver(false)}>Cancelar</Button>
-            <Button onClick={devolverFactura} disabled={isProcessing} className="bg-red-600 hover:bg-red-700">
-              {isProcessing ? 'Devolviendo...' : 'Confirmar Devolucion'}
+            <Button variant="outline" onClick={() => setMostrarDialogDetener(false)}>Cancelar</Button>
+            <Button onClick={detenerFactura} disabled={isProcessing} className="bg-red-600 hover:bg-red-700">
+              {isProcessing ? 'Deteniendo...' : 'Confirmar Detención'}
             </Button>
           </DialogFooter>
         </DialogContent>

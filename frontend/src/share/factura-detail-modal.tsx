@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
-import { FileText, Clock, DollarSign, Building, MapPin, Hash, CalendarDays, Paperclip, Eye, Download } from 'lucide-react';
+import { FileText, Clock, DollarSign, Building, MapPin, Hash, CalendarDays, Paperclip, Eye, Download, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import FacturaTimeline, { type TimelineEtapa } from './factura-timeline';
 import { displayDate, displayRadicado, displayText } from './field-placeholders';
+import { facturasService } from '../services/financiero';
+import type { Factura as APIFactura } from '../models/financiero/core.models';
 
 type SharedFacturaDocumento = {
   id?: string;
@@ -16,6 +19,7 @@ type SharedFacturaDocumento = {
 
 export interface SharedFacturaDetail {
   id?: string;
+  facturaId?: number;
   numeroFactura: string;
   proveedor: string;
   valorTotal: number;
@@ -39,6 +43,8 @@ export interface SharedFacturaDetail {
   centroCosto?: string;
   documentos?: SharedFacturaDocumento[];
   etapasTimeline?: TimelineEtapa[];
+  auditoriaView?: boolean;
+  auditoriaNotas?: string;
 }
 
 interface FacturaDetailModalProps {
@@ -142,11 +148,58 @@ function getEstadoBadge(estado: string) {
 export default function FacturaDetailModal({ factura, isOpen, onClose }: FacturaDetailModalProps) {
   if (!factura) return null;
 
-  const etapasTimeline = factura.etapasTimeline && factura.etapasTimeline.length > 0
-    ? factura.etapasTimeline
-    : buildDefaultTimeline(factura);
-  const documentos = factura.documentos || [];
+  const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail>(factura);
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
+
+  useEffect(() => {
+    setDetalleFactura(factura);
+  }, [factura]);
+
+  useEffect(() => {
+    if (!isOpen || !factura) return;
+    const rawId = factura.facturaId ?? (factura.id ? Number(factura.id) : undefined);
+    if (!rawId || Number.isNaN(rawId)) return;
+
+    setLoadingDetalle(true);
+    void (async () => {
+      try {
+        const detail = await facturasService.getById(rawId);
+        const mapped = mapFacturaDetail(detail, factura);
+        setDetalleFactura(mapped);
+      } finally {
+        setLoadingDetalle(false);
+      }
+    })();
+  }, [factura, isOpen]);
+
+  const currentFactura = detalleFactura;
+
+  const etapasTimeline = currentFactura.etapasTimeline && currentFactura.etapasTimeline.length > 0
+    ? currentFactura.etapasTimeline
+    : buildDefaultTimeline(currentFactura);
+  const documentos = currentFactura.documentos || [];
   const hasDocumentos = documentos.length > 0;
+  const showAuditoriaTab = Boolean(currentFactura.auditoriaView);
+  const tabsCount = 2 + (hasDocumentos ? 1 : 0) + (showAuditoriaTab ? 1 : 0);
+  const tabsClass = tabsCount === 4 ? 'grid-cols-4' : tabsCount === 3 ? 'grid-cols-3' : 'grid-cols-2';
+
+  const auditoriaItems = [
+    {
+      title: 'Causacion contable',
+      ok: Boolean(currentFactura.cuentaContable),
+      note: currentFactura.cuentaContable || 'Pendiente de validar cuenta contable',
+    },
+    {
+      title: 'Soportes completos',
+      ok: documentos.length > 0,
+      note: documentos.length > 0 ? `${documentos.length} soporte(s) cargado(s)` : 'Sin soportes adjuntos',
+    },
+    {
+      title: 'Distribucion en rubro',
+      ok: Boolean(currentFactura.centroCosto),
+      note: currentFactura.centroCosto || 'Centro de costo por validar',
+    },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -156,14 +209,15 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
             <FileText className="w-6 h-6 text-red-600" />
             Detalles Completos del Tramite
           </DialogTitle>
-          <DialogDescription>Informacion detallada de {factura.numeroFactura}</DialogDescription>
+          <DialogDescription>Informacion detallada de {currentFactura.numeroFactura}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className={`grid w-full ${hasDocumentos ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${tabsClass}`}>
             <TabsTrigger value="general">Informacion General</TabsTrigger>
             <TabsTrigger value="timeline">Timeline del Proceso</TabsTrigger>
             {hasDocumentos && <TabsTrigger value="documentos">Documentos ({documentos.length})</TabsTrigger>}
+            {showAuditoriaTab && <TabsTrigger value="auditoria">Auditoria</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -171,16 +225,16 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600 mb-2">Estado Actual</p>
-                  <Badge className={`${getEstadoBadge(factura.estado)} border text-lg px-4 py-2`}>
-                    {factura.estado}
+                  <Badge className={`${getEstadoBadge(currentFactura.estado)} border text-lg px-4 py-2`}>
+                    {currentFactura.estado}
                   </Badge>
                 </div>
-                {factura.diasTranscurridos !== undefined && (
+                {currentFactura.diasTranscurridos !== undefined && (
                   <div className="text-right">
                     <p className="text-sm text-slate-600 mb-1">Dias Transcurridos</p>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-slate-500" />
-                      <span className="font-bold text-2xl text-amber-600">{Math.max(0, factura.diasTranscurridos)}</span>
+                      <span className="font-bold text-2xl text-amber-600">{Math.max(0, currentFactura.diasTranscurridos)}</span>
                     </div>
                   </div>
                 )}
@@ -192,35 +246,35 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                 <div className="bg-white border border-slate-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Building className="w-5 h-5 text-red-600" />
-                    <h3 className="font-semibold text-slate-800">Datos del Proveedor</h3>
+                    <p className="font-semibold text-slate-800">Datos del Proveedor</p>
                   </div>
                   <div className="space-y-2">
                     <div>
                       <p className="text-xs text-slate-500">Razon Social</p>
-                      <p className="font-semibold text-slate-800">{displayText(factura.proveedor)}</p>
+                      <p className="font-semibold text-slate-800">{displayText(currentFactura.proveedor)}</p>
                     </div>
-                    {factura.nit && (
+                    {currentFactura.nit && (
                       <div>
                         <p className="text-xs text-slate-500">NIT</p>
-                        <p className="font-mono text-slate-800">{factura.nit}</p>
+                        <p className="font-mono text-slate-800">{currentFactura.nit}</p>
                       </div>
                     )}
-                    {factura.contactoProveedor && (
+                    {currentFactura.contactoProveedor && (
                       <div>
                         <p className="text-xs text-slate-500">Contacto</p>
-                        <p className="text-slate-800">{factura.contactoProveedor}</p>
+                        <p className="text-slate-800">{currentFactura.contactoProveedor}</p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {factura.areaSolicitante && (
+                {currentFactura.areaSolicitante && (
                   <div className="bg-white border border-slate-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <MapPin className="w-5 h-5 text-red-600" />
                       <h3 className="font-semibold text-slate-800">Area Solicitante</h3>
                     </div>
-                    <p className="text-slate-700">{displayText(factura.areaSolicitante)}</p>
+                    <p className="text-slate-700">{displayText(currentFactura.areaSolicitante)}</p>
                   </div>
                 )}
 
@@ -232,16 +286,16 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div className="space-y-2 text-sm">
                     <div>
                       <p className="text-xs text-slate-500">Fecha de Factura</p>
-                      <p className="text-slate-800">{displayDate(factura.fechaFactura)}</p>
+                      <p className="text-slate-800">{displayDate(currentFactura.fechaFactura)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Fecha de Recepcion</p>
-                      <p className="text-slate-800">{displayDate(factura.fechaRecepcion)}</p>
+                      <p className="text-slate-800">{displayDate(currentFactura.fechaRecepcion)}</p>
                     </div>
-                    {factura.tipoDocumento && (
+                    {currentFactura.tipoDocumento && (
                       <div>
                         <p className="text-xs text-slate-500">Tipo de Documento</p>
-                        <p className="text-slate-800">{factura.tipoDocumento}</p>
+                        <p className="text-slate-800">{currentFactura.tipoDocumento}</p>
                       </div>
                     )}
                   </div>
@@ -255,21 +309,21 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                     <h3 className="font-semibold text-slate-800">Valores</h3>
                   </div>
                   <div className="space-y-2 text-sm">
-                    {factura.valorSubtotal !== undefined && (
+                    {currentFactura.valorSubtotal !== undefined && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">Subtotal</span>
-                        <span className="font-semibold text-slate-800">${factura.valorSubtotal.toLocaleString('es-CO')}</span>
+                        <span className="font-semibold text-slate-800">${currentFactura.valorSubtotal.toLocaleString('es-CO')}</span>
                       </div>
                     )}
-                    {factura.valorIva !== undefined && (
+                    {currentFactura.valorIva !== undefined && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">IVA</span>
-                        <span className="font-semibold text-slate-800">${factura.valorIva.toLocaleString('es-CO')}</span>
+                        <span className="font-semibold text-slate-800">${currentFactura.valorIva.toLocaleString('es-CO')}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                       <span className="text-slate-700 font-semibold">Total</span>
-                      <span className="text-xl font-bold text-green-700">${factura.valorTotal.toLocaleString('es-CO')}</span>
+                      <span className="text-xl font-bold text-green-700">${currentFactura.valorTotal.toLocaleString('es-CO')}</span>
                     </div>
                   </div>
                 </div>
@@ -282,53 +336,53 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div className="space-y-2">
                     <div>
                       <p className="text-xs text-slate-500">Numero de Factura</p>
-                      <p className="font-mono text-slate-800">{displayText(factura.numeroFactura)}</p>
+                      <p className="font-mono text-slate-800">{displayText(currentFactura.numeroFactura)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Numero de Radicado</p>
-                      <p className="font-mono text-slate-800">{displayRadicado(factura.numeroRadicado)}</p>
+                      <p className="font-mono text-slate-800">{displayRadicado(currentFactura.numeroRadicado)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Numero de Proceso</p>
-                      <p className="font-mono text-slate-800">{displayText(factura.numeroProcesoPago)}</p>
+                      <p className="font-mono text-slate-800">{displayText(currentFactura.numeroProcesoPago)}</p>
                     </div>
                   </div>
                 </div>
 
-                {factura.cuentaBancariaProveedor && (
+                {currentFactura.cuentaBancariaProveedor && (
                   <div className="bg-white border border-slate-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Paperclip className="w-5 h-5 text-teal-600" />
                       <h3 className="font-semibold text-slate-800">Cuenta Bancaria para Pago</h3>
                     </div>
-                    <p className="text-slate-800">{factura.cuentaBancariaProveedor}</p>
+                    <p className="text-slate-800">{currentFactura.cuentaBancariaProveedor}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {factura.descripcion && (
+            {currentFactura.descripcion && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-900 mb-2">Descripcion</h3>
-                <p className="text-blue-800">{factura.descripcion}</p>
+                <p className="text-blue-800">{currentFactura.descripcion}</p>
               </div>
             )}
 
-            {factura.observaciones && (
+            {currentFactura.observaciones && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h3 className="font-semibold text-yellow-900 mb-2">Observaciones</h3>
-                <p className="text-yellow-800">{factura.observaciones}</p>
+                <p className="text-yellow-800">{currentFactura.observaciones}</p>
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="timeline" className="mt-4">
             <FacturaTimeline
-              numeroFactura={factura.numeroFactura}
-              proveedor={factura.proveedor}
-              valorTotal={factura.valorTotal}
+              numeroFactura={currentFactura.numeroFactura}
+              proveedor={currentFactura.proveedor}
+              valorTotal={currentFactura.valorTotal}
               etapas={etapasTimeline}
-              fechaInicio={factura.fechaRecepcion || factura.fechaFactura || new Date().toISOString()}
+              fechaInicio={currentFactura.fechaRecepcion || currentFactura.fechaFactura || new Date().toISOString()}
             />
           </TabsContent>
 
@@ -376,8 +430,147 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
               </div>
             </TabsContent>
           )}
+
+          {showAuditoriaTab && (
+            <TabsContent value="auditoria" className="mt-4 space-y-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-slate-800">Checklist de control previo</p>
+                    <p className="text-sm text-slate-600">
+                      Validacion de causacion contable, soportes y distribucion correcta del rubro.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {auditoriaItems.map((item) => (
+                  <div key={item.title} className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-slate-800">{item.title}</p>
+                      {item.ok ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5 text-amber-500" />
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-600 mt-2">{item.note}</p>
+                    <Badge className={`mt-3 ${item.ok ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'} border`}>
+                      {item.ok ? 'Validado' : 'Pendiente'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+
+              {currentFactura.auditoriaNotas && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <p className="font-semibold text-blue-900 mb-2">Notas de auditoria</p>
+                  <p className="text-blue-800 text-sm">{currentFactura.auditoriaNotas}</p>
+                </div>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
     </Dialog>
   );
+}
+
+export function buildSharedFacturaDetail(f: APIFactura): SharedFacturaDetail {
+  const documentos = (f.documentos || []).map((doc) => ({
+    id: doc.id ? String(doc.id) : undefined,
+    nombre: doc.nombre_archivo,
+    tipo: doc.tipo_documento,
+    fecha: doc.fecha_carga,
+    verificado: doc.verificado,
+    url: doc.archivo_url || doc.url_storage || null,
+  }));
+
+  const contactoProveedor = [f.proveedor?.email, f.proveedor?.telefono].filter(Boolean).join(' | ') || undefined;
+
+  const cuentaBancariaCompleta = f.cuenta_bancaria_proveedor ||
+    (f.proveedor?.banco && f.proveedor?.tipo_cuenta && f.proveedor?.numero_cuenta
+      ? `${f.proveedor.banco} - ${f.proveedor.tipo_cuenta} ${f.proveedor.numero_cuenta}`
+      : f.proveedor?.cuenta_bancaria_completa);
+
+  const nivelRiesgo: SharedFacturaDetail['nivelRiesgo'] =
+    f.indicador_riesgo === 'vencida' ? 'vencido' :
+    f.indicador_riesgo === 'atrasada' ? 'rojo' :
+    f.indicador_riesgo === 'atencion' ? 'amarillo' : 'verde';
+
+  return {
+    facturaId: f.id,
+    numeroFactura: f.numero_factura || `FAC-${f.id}`,
+    proveedor: f.proveedor?.razon_social || 'Sin proveedor',
+    nit: f.proveedor?.nit,
+    valorTotal: Number(f.valor_total || 0),
+    valorSubtotal: f.valor_subtotal ?? undefined,
+    valorIva: f.valor_iva ?? undefined,
+    fechaFactura: f.fecha_factura,
+    fechaRecepcion: f.fecha_recepcion,
+    areaSolicitante: f.departamento?.nombre,
+    estado: f.estado,
+    diasTranscurridos: Math.max(0, f.dias_transcurridos || 0),
+    numeroRadicado: f.numero_radicado,
+    numeroProcesoPago: f.numero_proceso_pago,
+    descripcion: f.descripcion,
+    observaciones: f.observaciones,
+    tipoDocumento: f.tipo_documento,
+    cuentaBancariaProveedor: cuentaBancariaCompleta,
+    contactoProveedor,
+    nivelRiesgo,
+    cuentaContable: f.cuenta_contable
+      ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}`
+      : undefined,
+    centroCosto: f.centro_costo
+      ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}`
+      : undefined,
+    documentos,
+    etapasTimeline: undefined,
+  };
+}
+
+function mapFacturaDetail(detail: APIFactura, base: SharedFacturaDetail): SharedFacturaDetail {
+  const documentos = (detail.documentos || []).map((doc) => ({
+    id: doc.id ? String(doc.id) : undefined,
+    nombre: doc.nombre_archivo,
+    tipo: doc.tipo_documento,
+    fecha: doc.fecha_carga,
+    verificado: doc.verificado,
+    url: doc.archivo_url || doc.url_storage || null,
+  }));
+
+  return {
+    ...base,
+    facturaId: detail.id,
+    numeroFactura: detail.numero_factura || base.numeroFactura,
+    proveedor: detail.proveedor?.razon_social || base.proveedor,
+    valorTotal: Number(detail.valor_total || base.valorTotal || 0),
+    fechaFactura: detail.fecha_factura || base.fechaFactura,
+    fechaRecepcion: detail.fecha_recepcion || base.fechaRecepcion,
+    areaSolicitante: detail.departamento?.nombre || base.areaSolicitante,
+    estado: detail.estado || base.estado,
+    diasTranscurridos: Number(detail.dias_transcurridos || base.diasTranscurridos || 0),
+    numeroRadicado: detail.numero_radicado || base.numeroRadicado,
+    numeroProcesoPago: detail.numero_proceso_pago || base.numeroProcesoPago,
+    descripcion: detail.descripcion || base.descripcion,
+    observaciones: detail.observaciones || base.observaciones,
+    tipoDocumento: detail.tipo_documento || base.tipoDocumento,
+    valorSubtotal: detail.valor_subtotal ?? base.valorSubtotal,
+    valorIva: detail.valor_iva ?? base.valorIva,
+    cuentaBancariaProveedor: detail.cuenta_bancaria_proveedor || base.cuentaBancariaProveedor,
+    contactoProveedor: base.contactoProveedor,
+    nit: detail.proveedor?.nit || base.nit,
+    cuentaContable: detail.cuenta_contable
+      ? `${detail.cuenta_contable.codigo} - ${detail.cuenta_contable.nombre}`
+      : base.cuentaContable,
+    centroCosto: detail.centro_costo
+      ? `${detail.centro_costo.codigo} - ${detail.centro_costo.nombre}`
+      : base.centroCosto,
+    documentos,
+    auditoriaView: base.auditoriaView,
+    auditoriaNotas: base.auditoriaNotas,
+  };
 }

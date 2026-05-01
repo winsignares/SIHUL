@@ -1,6 +1,9 @@
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Shield, FileSearch, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface AuditoriaHomeProps {
   onGoToPendientes: () => void;
@@ -8,30 +11,38 @@ interface AuditoriaHomeProps {
 }
 
 export default function AuditoriaHome({ onGoToPendientes, onGoToControl }: AuditoriaHomeProps) {
-  const stats = [
+  const [statsData, setStatsData] = useState({
+    porRevisar: 0,
+    aprobadas: 0,
+    rechazadas: 0,
+  });
+  const [recentFacturas, setRecentFacturas] = useState<APIFactura[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const stats = useMemo(() => [
     {
       title: 'Facturas por Revisar',
-      value: '14',
+      value: String(statsData.porRevisar),
       icon: FileSearch,
       color: 'from-orange-600 to-orange-700',
       iconColor: 'text-orange-100',
       trend: 'Estado: Alistadas',
     },
     {
-      title: 'Aprobadas Este Mes',
-      value: '98',
+      title: 'Aprobadas (Total)',
+      value: String(statsData.aprobadas),
       icon: CheckCircle2,
       color: 'from-green-600 to-green-700',
       iconColor: 'text-green-100',
-      trend: '+12% vs mes anterior',
+      trend: 'Control previo aprobado',
     },
     {
-      title: 'Rechazadas Este Mes',
-      value: '6',
+      title: 'Rechazadas (Total)',
+      value: String(statsData.rechazadas),
       icon: XCircle,
       color: 'from-red-600 to-red-700',
       iconColor: 'text-red-100',
-      trend: 'Por incumplimientos',
+      trend: 'Devueltas a Tesoreria',
     },
     {
       title: 'Tiempo Promedio Revision',
@@ -41,37 +52,55 @@ export default function AuditoriaHome({ onGoToPendientes, onGoToControl }: Audit
       iconColor: 'text-blue-100',
       trend: 'Cumplimiento de SLA',
     },
-  ];
+  ], [statsData]);
 
-  const recentActivity = [
-    {
-      id: 1,
-      factura: 'FAC-2026-012',
-      proveedor: 'Mantenimiento Integral EU',
-      monto: 6750000,
-      estado: 'Aprobada',
-      fecha: '2026-03-23 14:15',
-      accion: 'Control previo aprobado',
-    },
-    {
-      id: 2,
-      factura: 'FAC-2026-013',
-      proveedor: 'Editorial Academica',
-      monto: 3890000,
-      estado: 'Aprobada',
-      fecha: '2026-03-23 11:30',
-      accion: 'Sin hallazgos',
-    },
-    {
-      id: 3,
-      factura: 'FAC-2026-014',
-      proveedor: 'Insumos Medicos',
-      monto: 4520000,
-      estado: 'Rechazada',
-      fecha: '2026-03-22 16:20',
-      accion: 'Documentos incompletos',
-    },
-  ];
+  const recentActivity = useMemo(() => recentFacturas.map((factura, index) => {
+    const fecha = factura.fecha_alistamiento || factura.fecha_recepcion || '';
+    const accion = factura.estado === 'Aprobada Auditoría'
+      ? 'Control previo aprobado'
+      : factura.estado === 'Rechazada Auditoría'
+        ? 'Control previo rechazado'
+        : 'Actualizacion de auditoria';
+
+    return {
+      id: `${factura.id}-${index}`,
+      factura: factura.numero_factura || `FAC-${factura.id}`,
+      proveedor: factura.proveedor?.razon_social || 'Sin Asignar',
+      monto: Number(factura.valor_total || 0),
+      estado: factura.estado === 'Aprobada Auditoría' ? 'Aprobada' : factura.estado === 'Rechazada Auditoría' ? 'Rechazada' : factura.estado,
+      fecha,
+      accion,
+    };
+  }), [recentFacturas]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [alistadas, aprobadas, rechazadas, recientes] = await Promise.all([
+          facturasService.getAll({ estado: 'Alistada', limit: 200 }),
+          facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
+          facturasService.getAll({ estado: 'Rechazada Auditoría', limit: 200 }),
+          facturasService.getAll({ ordering: '-fecha_recepcion', limit: 5 }),
+        ]);
+
+        const list = (data: unknown) => Array.isArray((data as { results?: APIFactura[] })?.results)
+          ? (data as { results: APIFactura[] }).results
+          : (Array.isArray(data) ? data as APIFactura[] : []);
+
+        setStatsData({
+          porRevisar: list(alistadas).length,
+          aprobadas: list(aprobadas).length,
+          rechazadas: list(rechazadas).length,
+        });
+        setRecentFacturas(list(recientes));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -102,7 +131,7 @@ export default function AuditoriaHome({ onGoToPendientes, onGoToControl }: Audit
         </div>
         <div className="flex items-center gap-2 text-sm text-red-100">
           <Clock className="w-4 h-4" />
-          <span>Ultima actualizacion: Hoy, 14 de Abril 2026 - 11:20 AM</span>
+          <span>Ultima actualizacion: {new Date().toLocaleString('es-CO')}</span>
         </div>
       </motion.div>
 
@@ -119,7 +148,7 @@ export default function AuditoriaHome({ onGoToPendientes, onGoToControl }: Audit
                     </div>
                   </div>
                   <div>
-                    <p className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</p>
+                    <p className="text-3xl font-bold text-slate-800 mb-1">{loading ? '...' : stat.value}</p>
                     <p className="text-sm text-slate-600 mb-2">{stat.title}</p>
                     <p className="text-xs text-slate-500">{stat.trend}</p>
                   </div>

@@ -41,8 +41,43 @@ export const facturasService = {
     return response?.results || [];
   },
 
-  alistar: async (id: number): Promise<Factura> => {
-    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/alistar/`);
+  alistar: async (
+    id: number,
+    opts?: { numero_proceso_pago?: string; archivo_plano_generado?: string; observaciones?: string }
+  ): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/alistar/`, opts || {});
+  },
+
+  enviarDireccionFinanciera: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/enviar_direccion_financiera/`, body);
+  },
+
+  registrarPagoAplicado: async (
+    id: number,
+    opts: { numero_transaccion: string; fecha_pago_aplicado?: string; observaciones?: string }
+  ): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/registrar_pago_aplicado/`, opts);
+  },
+
+  generarComprobante: async (
+    id: number,
+    opts: { numero_comprobante: string; observaciones?: string }
+  ): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/generar_comprobante/`, opts);
+  },
+
+  detenerEnTesoreria: async (id: number, observaciones: string): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/detener_en_tesoreria/`, { observaciones });
+  },
+
+  aprobarAuditoria: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/aprobar_auditoria/`, body);
+  },
+
+  rechazarAuditoria: async (id: number, motivo: string): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar_auditoria/`, { motivo });
   },
 
   rechazar: async (id: number, motivo: string): Promise<Factura> => {

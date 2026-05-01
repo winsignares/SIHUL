@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../share/card';
 import {
@@ -9,6 +10,8 @@ import {
   CheckCircle2,
   FileOutput,
 } from 'lucide-react';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface TesoreriaHomeProps {
   onGoToPendientes: () => void;
@@ -25,18 +28,27 @@ export default function TesoreriaHome({
   onGoToRegistrarPago,
   onGoToComprobante,
 }: TesoreriaHomeProps) {
-  const stats = [
+  const [statsData, setStatsData] = useState({
+    porAlistar: 0,
+    aprobadasAuditoria: 0,
+    porRegistrarPago: 0,
+    valorPendiente: 0,
+  });
+  const [recentFacturas, setRecentFacturas] = useState<APIFactura[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const stats = useMemo(() => [
     {
       title: 'Facturas para Alistar',
-      value: '18',
+      value: String(statsData.porAlistar),
       icon: FileCheck,
       color: 'from-blue-600 to-blue-700',
       iconColor: 'text-blue-100',
-      trend: 'Estado: Causadas',
+      trend: 'Estado: Causadas/Detenidas',
     },
     {
       title: 'Aprobadas por Auditoria',
-      value: '9',
+      value: String(statsData.aprobadasAuditoria),
       icon: CheckCircle2,
       color: 'from-purple-600 to-purple-700',
       iconColor: 'text-purple-100',
@@ -44,7 +56,7 @@ export default function TesoreriaHome({
     },
     {
       title: 'Pagos por Registrar',
-      value: '6',
+      value: String(statsData.porRegistrarPago),
       icon: DollarSign,
       color: 'from-green-600 to-green-700',
       iconColor: 'text-green-100',
@@ -52,13 +64,13 @@ export default function TesoreriaHome({
     },
     {
       title: 'Valor Total Pendiente',
-      value: '$42.5M',
+      value: `$${(statsData.valorPendiente / 1000000).toFixed(1)}M`,
       icon: TrendingUp,
       color: 'from-red-600 to-red-700',
       iconColor: 'text-red-100',
       trend: 'Pendiente de cierre contable',
     },
-  ];
+  ], [statsData]);
 
   const quickActions = [
     {
@@ -98,41 +110,64 @@ export default function TesoreriaHome({
     },
   ];
 
-  const recentActivity = [
-    {
-      id: 1,
-      factura: 'FAC-2026-005',
-      proveedor: 'Editorial Universitaria',
-      monto: 5670000,
-      estado: 'Pago aplicado',
-      fecha: '2026-03-23 14:30',
-      accion: 'Registro de transaccion TRX-8901',
-    },
-    {
-      id: 2,
-      factura: 'FAC-2026-012',
-      proveedor: 'Mantenimiento Integral EU',
-      monto: 6750000,
-      estado: 'Alistada',
-      fecha: '2026-03-23 11:20',
-      accion: 'Proceso PP-2026-245 generado',
-    },
-    {
-      id: 3,
-      factura: 'FAC-2026-007',
-      proveedor: 'Suministros de Oficina',
-      monto: 1850000,
-      estado: 'Enviada',
-      fecha: '2026-03-22 16:45',
-      accion: 'Enviada a Direccion Financiera (RF06)',
-    },
-  ];
+  const recentActivity = useMemo(() => recentFacturas.map((factura, index) => {
+    const fecha = factura.fecha_causacion || factura.fecha_alistamiento || factura.fecha_pago_aplicado || factura.fecha_recepcion || '';
+    const accion = factura.numero_transaccion
+      ? `Transaccion ${factura.numero_transaccion}`
+      : factura.numero_proceso_pago
+        ? `Proceso ${factura.numero_proceso_pago}`
+        : 'Actualizacion de factura';
+
+    return {
+      id: `${factura.id}-${index}`,
+      factura: factura.numero_factura || `FAC-${factura.id}`,
+      proveedor: factura.proveedor?.razon_social || 'Sin Asignar',
+      monto: Number(factura.valor_total || 0),
+      estado: factura.estado,
+      fecha,
+      accion,
+    };
+  }), [recentFacturas]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [causadas, detenidas, aprobadas, autorizadas, pagosAplicados, recientes] = await Promise.all([
+          facturasService.getAll({ estado: 'Causada', limit: 200 }),
+          facturasService.getAll({ estado: 'Detenida', limit: 200 }),
+          facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
+          facturasService.getAll({ estado: 'Autorizada', limit: 200 }),
+          facturasService.getAll({ estado: 'Pago Aplicado', limit: 200 }),
+          facturasService.getAll({ ordering: '-fecha_recepcion', limit: 5 }),
+        ]);
+
+        const list = (data: unknown) => Array.isArray((data as { results?: APIFactura[] })?.results)
+          ? (data as { results: APIFactura[] }).results
+          : (Array.isArray(data) ? data as APIFactura[] : []);
+
+        const porAlistar = list(causadas).length + list(detenidas).length;
+        const aprobadasAuditoria = list(aprobadas).length;
+        const porRegistrarPago = list(autorizadas).length;
+
+        const valorPendiente = [...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas), ...list(pagosAplicados)]
+          .reduce((sum, item) => sum + Number(item.valor_total || 0), 0);
+
+        setStatsData({ porAlistar, aprobadasAuditoria, porRegistrarPago, valorPendiente });
+        setRecentFacturas(list(recientes));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'Alistada':
         return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'Pago aplicado':
+      case 'Pago Aplicado':
         return 'bg-green-100 text-green-700 border-green-200';
       case 'Enviada':
         return 'bg-purple-100 text-purple-700 border-purple-200';
@@ -159,7 +194,7 @@ export default function TesoreriaHome({
         </div>
         <div className="flex items-center gap-2 text-sm text-red-100">
           <Clock className="w-4 h-4" />
-          <span>Ultima actualizacion: Hoy, 14 de Abril 2026 - 10:35 AM</span>
+          <span>Ultima actualizacion: {new Date().toLocaleString('es-CO')}</span>
         </div>
       </motion.div>
 
@@ -180,7 +215,7 @@ export default function TesoreriaHome({
                       <Icon className={`w-6 h-6 ${stat.iconColor}`} />
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</p>
+                  <p className="text-3xl font-bold text-slate-800 mb-1">{loading ? '...' : stat.value}</p>
                   <p className="text-sm text-slate-600 mb-2">{stat.title}</p>
                   <p className="text-xs text-slate-500">{stat.trend}</p>
                 </CardContent>

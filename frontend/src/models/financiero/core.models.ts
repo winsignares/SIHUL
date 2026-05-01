@@ -53,6 +53,7 @@ export type EstadoFactura =
   | 'Alistada'
   | 'Aprobada Auditoría'
   | 'Rechazada Auditoría'
+  | 'Enviado a dirección financiera'
   | 'Cargada'
   | 'Revisada Dir. Financiera'
   | 'Enviada Rectoría'
@@ -73,6 +74,7 @@ export interface Factura {
   numero_proceso_pago?: string;
   numero_transaccion?: string;
   numero_comprobante?: string;
+  archivo_plano_generado?: string;
 
   proveedor_id: number;
   proveedor?: Proveedor;
@@ -82,6 +84,8 @@ export interface Factura {
 
   cuenta_contable_id?: number;
   centro_costo_id?: number;
+  cuenta_contable?: CuentaContable;
+  centro_costo?: CentroCosto;
 
   valor_subtotal: number;
   valor_iva: number;

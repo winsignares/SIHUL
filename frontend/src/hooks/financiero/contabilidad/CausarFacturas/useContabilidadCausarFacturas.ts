@@ -6,32 +6,15 @@ import {
   facturasService,
 } from '../../../../services/financiero';
 import type { CentroCosto, CuentaContable, DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import type { SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 
 const facturaToDetail = (
   factura: Factura,
-  docs: DocumentoAdjunto[],
-  cuentasContables: CuentaContable[] = [],
-  centrosCosto: CentroCosto[] = []
+  docs: DocumentoAdjunto[]
 ): SharedFacturaDetail => {
-  const cuenta = cuentasContables.find((c) => c.id === factura.cuenta_contable_id);
-  const centro = centrosCosto.find((c) => c.id === factura.centro_costo_id);
+  const base = buildSharedFacturaDetail(factura);
   return {
-    id: String(factura.id),
-    numeroFactura: factura.numero_factura,
-    numeroRadicado: factura.numero_radicado,
-    proveedor: factura.proveedor?.razon_social ?? '',
-    nit: factura.proveedor?.nit ?? '',
-    valorTotal: Number(factura.valor_total),
-    fechaFactura: factura.fecha_factura,
-    fechaRecepcion: factura.fecha_recepcion,
-    areaSolicitante: factura.departamento?.nombre ?? '',
-    estado: factura.estado,
-    diasTranscurridos: factura.dias_transcurridos,
-    descripcion: factura.descripcion,
-    observaciones: factura.observaciones,
-    cuentaContable: cuenta ? `${cuenta.codigo} — ${cuenta.nombre}` : undefined,
-    centroCosto: centro ? `${centro.codigo} — ${centro.nombre}` : undefined,
+    ...base,
     documentos: docs.map((d) => ({
       id: String(d.id),
       nombre: d.nombre_archivo,
@@ -181,7 +164,7 @@ export function useContabilidadCausarFacturas() {
   };
 
   const openDetalle = (factura: Factura) => {
-    setModalFactura(facturaToDetail(factura, docsMap[factura.id] ?? [], cuentasContables, centrosCosto));
+    setModalFactura(facturaToDetail(factura, docsMap[factura.id] ?? []));
   };
 
   const getDiasColor = (dias: number) => (dias >= 17 ? 'text-red-600 font-bold' : dias >= 10 ? 'text-orange-600 font-semibold' : 'text-green-700');

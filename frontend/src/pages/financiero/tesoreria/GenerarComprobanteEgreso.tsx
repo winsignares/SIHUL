@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -19,9 +19,12 @@ import {
   FileOutput,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface Factura {
   id: string;
+  facturaId: number;
   numeroFactura: string;
   numeroProcesoPago: string;
   numeroTransaccion: string;
@@ -31,23 +34,55 @@ interface Factura {
   estado: string;
 }
 
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const mapFactura = (f: APIFactura): Factura => ({
+  id: String(f.id),
+  facturaId: Number(f.id),
+  numeroFactura: f.numero_factura || `FAC-${f.id}`,
+  numeroProcesoPago: f.numero_proceso_pago || 'Sin proceso',
+  numeroTransaccion: f.numero_transaccion || 'Sin transaccion',
+  proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+  valorTotal: Number(f.valor_total || 0),
+  fechaPagoAplicado: f.fecha_pago_aplicado || 'Sin fecha',
+  estado: f.estado,
+});
+
 export default function GenerarComprobanteEgreso() {
-  const [facturasPagadas] = useState<Factura[]>([
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-145',
-      numeroProcesoPago: 'PP-2026-00078',
-      numeroTransaccion: 'TRX-1234567890',
-      proveedor: 'Tecnologia Global SAS',
-      valorTotal: 8900000,
-      fechaPagoAplicado: '2026-04-01',
-      estado: 'Pago Aplicado',
-    },
-  ]);
+  const [facturasPagadas, setFacturasPagadas] = useState<Factura[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
   const [numeroComprobante, setNumeroComprobante] = useState('');
   const [procesando, setProcesando] = useState(false);
+
+  const loadFacturas = async () => {
+    const response = await facturasService.getAll({ estado: 'Pago Aplicado', limit: 200 });
+    return toList<APIFactura>(response).map(mapFactura);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const rows = await loadFacturas();
+        setFacturasPagadas(rows);
+      } catch {
+        setFacturasPagadas([]);
+        setLoadError('No fue posible cargar pagos aplicados.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   const verDetalle = (factura: Factura) => {
     setFacturaSeleccionada(factura);
@@ -61,11 +96,21 @@ export default function GenerarComprobanteEgreso() {
     }
 
     setProcesando(true);
-    setTimeout(() => {
-      setProcesando(false);
-      toast.success(`Comprobante generado: ${numeroComprobante}`);
-      setFacturaSeleccionada(null);
-    }, 1400);
+    void (async () => {
+      try {
+        await facturasService.generarComprobante(facturaSeleccionada.facturaId, {
+          numero_comprobante: numeroComprobante.trim(),
+        });
+        const latest = await loadFacturas();
+        setFacturasPagadas(latest);
+        toast.success(`Comprobante generado: ${numeroComprobante}`);
+        setFacturaSeleccionada(null);
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible generar el comprobante.');
+      } finally {
+        setProcesando(false);
+      }
+    })();
   };
 
   const descargarComprobante = () => {
@@ -103,6 +148,9 @@ export default function GenerarComprobanteEgreso() {
             </div>
           </CardHeader>
           <CardContent>
+            {loadError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+            )}
             <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex gap-3">
                 <FileText className="w-5 h-5 text-yellow-600" />
@@ -124,7 +172,15 @@ export default function GenerarComprobanteEgreso() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasPagadas.map((factura) => (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-slate-500 py-6">Cargando pagos aplicados...</TableCell>
+                    </TableRow>
+                  ) : facturasPagadas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-slate-500 py-6">No hay pagos aplicados pendientes de comprobante.</TableCell>
+                    </TableRow>
+                  ) : facturasPagadas.map((factura) => (
                     <TableRow key={factura.id} className="hover:bg-slate-50">
                       <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
                       <TableCell className="text-indigo-600 font-medium">{factura.numeroProcesoPago}</TableCell>

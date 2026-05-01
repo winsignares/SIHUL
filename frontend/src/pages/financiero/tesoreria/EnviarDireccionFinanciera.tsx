@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -6,13 +6,16 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { Send, Eye, Calendar, CheckCircle2, FileText, Building, AlertCircle, Filter } from 'lucide-react';
+import { Send, Eye, Calendar, CheckCircle2, Building, AlertCircle, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import FacturaDetailModal, { type SharedFacturaDetail, buildSharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface Factura {
   id: string;
+  facturaId: number;
   numeroFactura: string;
   numeroRadicado: string;
   numeroProcesoPago: string;
@@ -27,6 +30,30 @@ interface Factura {
   descripcion: string;
   observacionesAuditoria?: string;
 }
+
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const mapFactura = (f: APIFactura): Factura => ({
+  id: String(f.id),
+  facturaId: Number(f.id),
+  numeroFactura: f.numero_factura || `FAC-${f.id}`,
+  numeroRadicado: f.numero_radicado || 'Sin radicado',
+  numeroProcesoPago: f.numero_proceso_pago || 'Sin proceso',
+  proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+  nit: f.proveedor?.nit || 'Sin NIT',
+  valorTotal: Number(f.valor_total || 0),
+  fechaAprobacionAuditoria: f.fecha_aprobacion_auditoria || 'Sin fecha',
+  areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
+  cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
+  estado: f.estado,
+  diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
+  descripcion: f.descripcion || 'Sin Asignar',
+  observacionesAuditoria: f.observaciones,
+});
 
 export default function EnviarDireccionFinanciera() {
   const [filtros, setFiltros] = useState({
@@ -45,43 +72,34 @@ export default function EnviarDireccionFinanciera() {
   const [mostrarDialogDetalle, setMostrarDialogDetalle] = useState(false);
   const [observaciones, setObservaciones] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [facturasAprobadas, setFacturasAprobadas] = useState<Factura[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const facturasAprobadas: Factura[] = [
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-004',
-      numeroRadicado: 'RAD-2026-00095',
-      numeroProcesoPago: 'PP-2026-0078',
-      proveedor: 'Mantenimiento y Obras EU',
-      nit: '900456789-0',
-      valorTotal: 12500000,
-      fechaAprobacionAuditoria: '2026-04-01',
-      areaSolicitante: 'Mantenimiento',
-      cuentaContable: '5135-001',
-      estado: 'Aprobada por Auditoria',
-      diasTranscurridos: 1,
-      descripcion: 'Servicios de mantenimiento preventivo y correctivo edificio principal',
-      observacionesAuditoria: 'Documentacion completa. Aprobado para continuar.',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-007',
-      numeroRadicado: 'RAD-2026-00098',
-      numeroProcesoPago: 'PP-2026-0081',
-      proveedor: 'Transporte Estudiantil SA',
-      nit: '900567890-1',
-      valorTotal: 7200000,
-      fechaAprobacionAuditoria: '2026-04-01',
-      areaSolicitante: 'Bienestar',
-      cuentaContable: '5140-002',
-      estado: 'Aprobada por Auditoria',
-      diasTranscurridos: 1,
-      descripcion: 'Servicio de transporte estudiantil mensual',
-      observacionesAuditoria: 'Todo en orden. Proceder con el pago.',
-    },
-  ];
+  const loadFacturas = async () => {
+    const response = await facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 });
+    return toList<APIFactura>(response).map(mapFactura);
+  };
 
-  const facturasFiltradas = facturasAprobadas.filter((factura) => {
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const rows = await loadFacturas();
+        setFacturasAprobadas(rows);
+      } catch {
+        setFacturasAprobadas([]);
+        setLoadError('No fue posible cargar facturas aprobadas para envio.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const facturasFiltradas = useMemo(() => facturasAprobadas.filter((factura) => {
     if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
     if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
     if (filtros.areaSolicitante && !factura.areaSolicitante.toLowerCase().includes(filtros.areaSolicitante.toLowerCase())) return false;
@@ -90,7 +108,7 @@ export default function EnviarDireccionFinanciera() {
     if (filtros.fechaInicio && factura.fechaAprobacionAuditoria < filtros.fechaInicio) return false;
     if (filtros.fechaFin && factura.fechaAprobacionAuditoria > filtros.fechaFin) return false;
     return true;
-  });
+  }), [facturasAprobadas, filtros]);
 
   const abrirDialogEnviar = (factura: Factura) => {
     setFacturaSeleccionada(factura);
@@ -98,37 +116,51 @@ export default function EnviarDireccionFinanciera() {
     setMostrarDialogEnviar(true);
   };
 
-  const handleVerDetalle = (factura: Factura) => {
-    setFacturaDetalle({
-      numeroFactura: factura.numeroFactura,
-      numeroRadicado: factura.numeroRadicado,
-      proveedor: factura.proveedor,
-      nit: factura.nit,
-      valorTotal: factura.valorTotal,
-      areaSolicitante: factura.areaSolicitante,
-      estado: factura.estado,
-      diasTranscurridos: factura.diasTranscurridos,
-      fechaRecepcion: factura.fechaAprobacionAuditoria,
-      descripcion: factura.descripcion,
-      observaciones: factura.observacionesAuditoria,
-      cuentaContable: factura.cuentaContable,
-      numeroProcesoPago: factura.numeroProcesoPago,
-      nivelRiesgo: factura.diasTranscurridos > 2 ? 'amarillo' : 'verde',
-    });
+  const handleVerDetalle = async (factura: Factura) => {
     setMostrarDialogDetalle(true);
+    try {
+      const detail = await facturasService.getById(factura.facturaId);
+      setFacturaDetalle(buildSharedFacturaDetail(detail));
+    } catch {
+      setFacturaDetalle({
+        facturaId: factura.facturaId,
+        numeroFactura: factura.numeroFactura,
+        numeroRadicado: factura.numeroRadicado,
+        proveedor: factura.proveedor,
+        nit: factura.nit,
+        valorTotal: factura.valorTotal,
+        areaSolicitante: factura.areaSolicitante,
+        estado: factura.estado,
+        diasTranscurridos: factura.diasTranscurridos,
+        fechaRecepcion: factura.fechaAprobacionAuditoria,
+        descripcion: factura.descripcion,
+        observaciones: factura.observacionesAuditoria,
+        cuentaContable: factura.cuentaContable,
+        numeroProcesoPago: factura.numeroProcesoPago,
+        nivelRiesgo: factura.diasTranscurridos > 2 ? 'amarillo' : 'verde',
+      });
+    }
   };
 
   const enviarDireccionFinanciera = () => {
     if (!facturaSeleccionada) return;
     setIsProcessing(true);
 
-    setTimeout(() => {
-      toast.success(`Factura enviada a Direccion Financiera: ${facturaSeleccionada.numeroFactura}`);
-      setIsProcessing(false);
-      setMostrarDialogEnviar(false);
-      setFacturaSeleccionada(null);
-      setObservaciones('');
-    }, 1200);
+    void (async () => {
+      try {
+        await facturasService.enviarDireccionFinanciera(facturaSeleccionada.facturaId, observaciones.trim() || undefined);
+        const latest = await loadFacturas();
+        setFacturasAprobadas(latest);
+        toast.success(`Factura enviada a Direccion Financiera: ${facturaSeleccionada.numeroFactura}`);
+        setMostrarDialogEnviar(false);
+        setFacturaSeleccionada(null);
+        setObservaciones('');
+      } catch (error: any) {
+        toast.error(error?.message || 'No fue posible enviar la factura a Direccion Financiera.');
+      } finally {
+        setIsProcessing(false);
+      }
+    })();
   };
 
   return (
@@ -159,7 +191,7 @@ export default function EnviarDireccionFinanciera() {
             <TableFilters
               filters={filtros}
               onFilterChange={setFiltros}
-              estados={['Aprobada por Auditoria']}
+              estados={['Aprobada Auditoría']}
               proveedores={Array.from(new Set(facturasAprobadas.map((f) => f.proveedor)))}
               areas={Array.from(new Set(facturasAprobadas.map((f) => f.areaSolicitante)))}
               showMontoFilter
@@ -188,6 +220,9 @@ export default function EnviarDireccionFinanciera() {
             </div>
           </CardHeader>
           <CardContent>
+            {loadError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+            )}
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               <Table>
                 <TableHeader>
@@ -203,7 +238,15 @@ export default function EnviarDireccionFinanciera() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasFiltradas.map((factura, index) => (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando facturas aprobadas...</TableCell>
+                    </TableRow>
+                  ) : facturasFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay facturas aprobadas para enviar.</TableCell>
+                    </TableRow>
+                  ) : facturasFiltradas.map((factura, index) => (
                     <motion.tr key={factura.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="hover:bg-slate-50 transition-colors">
                       <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
                       <TableCell><div className="flex items-center gap-2"><Building className="w-4 h-4 text-slate-400" /><span className="text-slate-700">{factura.proveedor}</span></div></TableCell>
@@ -223,7 +266,7 @@ export default function EnviarDireccionFinanciera() {
                 </TableBody>
               </Table>
 
-              {facturasFiltradas.length === 0 && (
+              {!loading && facturasFiltradas.length === 0 && (
                 <div className="text-center py-12 text-slate-500">
                   <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                   <p className="font-medium">No se encontraron facturas con los filtros aplicados</p>

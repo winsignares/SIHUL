@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Button } from '../../../share/button';
-import { AlertCircle, Eye, Clock, FileCheck, Send, FileOutput } from 'lucide-react';
+import { Eye, Clock, FileCheck, Send, FileOutput } from 'lucide-react';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { facturasService } from '../../../services/financiero';
+import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 interface FacturaPendiente {
   id: string;
+  facturaId: number;
   numeroFactura: string;
   numeroRadicado: string;
   proveedor: string;
@@ -24,98 +27,89 @@ interface FacturaPendiente {
   descripcion?: string;
 }
 
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const getNivelRiesgo = (dias: number, max: number): FacturaPendiente['nivelRiesgo'] => {
+  if (dias >= max) return 'vencido';
+  if (dias >= Math.round(max * 0.8)) return 'naranja';
+  if (dias >= Math.round(max * 0.6)) return 'amarillo';
+  return 'verde';
+};
+
+const mapFactura = (f: APIFactura, diasMaximos: number, accionRequerida: string): FacturaPendiente => {
+  const diasTranscurridos = Math.max(0, Number(f.dias_transcurridos || 0));
+  return {
+    id: String(f.id),
+    facturaId: Number(f.id),
+    numeroFactura: f.numero_factura || `FAC-${f.id}`,
+    numeroRadicado: f.numero_radicado || 'Sin radicado',
+    proveedor: f.proveedor?.razon_social || 'Sin Asignar',
+    valorTotal: Number(f.valor_total || 0),
+    fechaCausacion: f.fecha_causacion || f.fecha_alistamiento || f.fecha_pago_aplicado || 'Sin fecha',
+    diasTranscurridos,
+    diasMaximos,
+    nivelRiesgo: getNivelRiesgo(diasTranscurridos, diasMaximos),
+    accionRequerida,
+    areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
+    estado: f.estado,
+    cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
+    descripcion: f.descripcion,
+  };
+};
+
 export default function MisPendientes() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<SharedFacturaDetail | null>(null);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
 
-  const facturasPendientesAlistar: FacturaPendiente[] = [
-    {
-      id: '1',
-      numeroFactura: 'FAC-2026-002',
-      numeroRadicado: 'RAD-2026-087',
-      proveedor: 'Servicios TI Colombia SAS',
-      valorTotal: 8950000,
-      fechaCausacion: '2026-03-25',
-      diasTranscurridos: 8,
-      diasMaximos: 18,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Alistar pago y generar proceso',
-      areaSolicitante: 'Sistemas',
-      estado: 'Causada - Pendiente alistamiento',
-      cuentaContable: '5165-001',
-      descripcion: 'Servicios de mantenimiento de infraestructura tecnologica',
-    },
-    {
-      id: '2',
-      numeroFactura: 'FAC-2026-006',
-      numeroRadicado: 'RAD-2026-089',
-      proveedor: 'Servicios de Aseo Total',
-      valorTotal: 4200000,
-      fechaCausacion: '2026-03-24',
-      diasTranscurridos: 13,
-      diasMaximos: 18,
-      nivelRiesgo: 'amarillo',
-      accionRequerida: 'Alistar pago y generar proceso',
-      areaSolicitante: 'Servicios Generales',
-      estado: 'Causada - Pendiente alistamiento',
-      cuentaContable: '5135-001',
-      descripcion: 'Servicios de aseo y mantenimiento general',
-    },
-  ];
+  const [facturasPendientesAlistar, setFacturasPendientesAlistar] = useState<FacturaPendiente[]>([]);
+  const [facturasAprobadasAuditoria, setFacturasAprobadasAuditoria] = useState<FacturaPendiente[]>([]);
+  const [pagosPendientesComprobante, setPagosPendientesComprobante] = useState<FacturaPendiente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const facturasAprobadasAuditoria: FacturaPendiente[] = [
-    {
-      id: '3',
-      numeroFactura: 'FAC-2026-004',
-      numeroRadicado: 'RAD-2026-00095',
-      proveedor: 'Mantenimiento y Obras EU',
-      valorTotal: 12500000,
-      fechaCausacion: '2026-03-22',
-      diasTranscurridos: 11,
-      diasMaximos: 18,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Enviar a Direccion Financiera',
-      areaSolicitante: 'Mantenimiento',
-      estado: 'Aprobada Auditoria - Enviar Dir. Financiera',
-      cuentaContable: '5135-001',
-      descripcion: 'Servicios de mantenimiento preventivo y correctivo',
-    },
-    {
-      id: '4',
-      numeroFactura: 'FAC-2026-007',
-      numeroRadicado: 'RAD-2026-00098',
-      proveedor: 'Transporte Estudiantil SA',
-      valorTotal: 7200000,
-      fechaCausacion: '2026-03-23',
-      diasTranscurridos: 10,
-      diasMaximos: 18,
-      nivelRiesgo: 'verde',
-      accionRequerida: 'Enviar a Direccion Financiera',
-      areaSolicitante: 'Bienestar',
-      estado: 'Aprobada Auditoria - Enviar Dir. Financiera',
-      cuentaContable: '5140-002',
-      descripcion: 'Servicio de transporte estudiantil mensual',
-    },
-  ];
+  const loadPendientes = async () => {
+    const [causadas, detenidas, aprobadas, pagos] = await Promise.all([
+      facturasService.getAll({ estado: 'Causada', limit: 200 }),
+      facturasService.getAll({ estado: 'Detenida', limit: 200 }),
+      facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
+      facturasService.getAll({ estado: 'Pago Aplicado', limit: 200 }),
+    ]);
 
-  const pagosPendientesComprobante: FacturaPendiente[] = [
-    {
-      id: '5',
-      numeroFactura: 'FAC-2026-012',
-      numeroRadicado: 'RAD-2026-00110',
-      proveedor: 'Papeleria Central Ltda.',
-      valorTotal: 2450000,
-      fechaCausacion: '2026-03-15',
-      diasTranscurridos: 18,
-      diasMaximos: 24,
-      nivelRiesgo: 'amarillo',
-      accionRequerida: 'Generar comprobante de egreso',
-      areaSolicitante: 'Administracion',
-      estado: 'Pago Aplicado - Pendiente comprobante',
-      cuentaContable: '5145-001',
-      descripcion: 'Suministros de oficina y papeleria',
-    },
-  ];
+    const alistar = [...toList<APIFactura>(causadas), ...toList<APIFactura>(detenidas)]
+      .map((f) => mapFactura(f, 18, 'Alistar pago y generar proceso'));
+    const enviar = toList<APIFactura>(aprobadas)
+      .map((f) => mapFactura(f, 18, 'Enviar a Direccion Financiera'));
+    const comprobantes = toList<APIFactura>(pagos)
+      .map((f) => mapFactura(f, 24, 'Generar comprobante de egreso'));
+
+    return { alistar, enviar, comprobantes };
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const { alistar, enviar, comprobantes } = await loadPendientes();
+        setFacturasPendientesAlistar(alistar);
+        setFacturasAprobadasAuditoria(enviar);
+        setPagosPendientesComprobante(comprobantes);
+      } catch {
+        setFacturasPendientesAlistar([]);
+        setFacturasAprobadasAuditoria([]);
+        setPagosPendientesComprobante([]);
+        setLoadError('No fue posible cargar los pendientes de tesoreria.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   const todasFacturas = [...facturasPendientesAlistar, ...facturasAprobadasAuditoria, ...pagosPendientesComprobante];
 
@@ -155,6 +149,9 @@ export default function MisPendientes() {
           <CardDescription>{descripcion}</CardDescription>
         </CardHeader>
         <CardContent>
+          {loadError && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+          )}
           <div className="rounded-lg border border-slate-200 overflow-hidden">
             <Table>
               <TableHeader>
@@ -170,7 +167,15 @@ export default function MisPendientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((factura, index) => {
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando pendientes...</TableCell>
+                  </TableRow>
+                ) : rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay registros con este criterio.</TableCell>
+                  </TableRow>
+                ) : rows.map((factura, index) => {
                   const colorRiesgo =
                     factura.nivelRiesgo === 'vencido'
                       ? 'bg-red-700'
