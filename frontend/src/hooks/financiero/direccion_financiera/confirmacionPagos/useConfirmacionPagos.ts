@@ -7,6 +7,7 @@ export interface FacturaConfirmacion extends SharedFacturaDetail {
   id: string;
   nit: string;
   fechaAutorizacion: string;
+  numeroConfirmacion?: string;
 }
 
 export function useConfirmacionPagos() {
@@ -47,6 +48,7 @@ export function useConfirmacionPagos() {
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
       fechaAutorizacion: factura.fecha_autorizacion ?? factura.fecha_recepcion ?? '',
+      numeroConfirmacion: factura.numero_confirmacion ?? undefined,
       documentos: docs.map((d) => ({
         id: String(d.id),
         nombre: d.nombre_archivo,
@@ -93,6 +95,7 @@ export function useConfirmacionPagos() {
   const facturasFiltradas = useMemo(() => {
     return facturas
       .map((f) => facturaToConfirmacion(f, docsMap[f.id] ?? []))
+      .filter((factura) => !factura.numeroConfirmacion)
       .filter((factura) => {
         if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
         if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
@@ -112,7 +115,7 @@ export function useConfirmacionPagos() {
 
   const abrirConfirmar = (factura: FacturaConfirmacion) => {
     setFacturaSeleccionada(factura);
-    setNumeroConfirmacion('');
+    setNumeroConfirmacion(factura.numeroConfirmacion || 'Se generara automaticamente al confirmar');
     setObservaciones('');
     setConfirmarAbierto(true);
   };
@@ -126,19 +129,14 @@ export function useConfirmacionPagos() {
 
   const confirmarPago = async () => {
     if (!facturaSeleccionada?.facturaId) return;
-    
-    if (!numeroConfirmacion.trim()) {
-      showToast('err', 'El número de confirmación es requerido.');
-      return;
-    }
 
     setProcesando(true);
     try {
-      await facturasService.update(facturaSeleccionada.facturaId, {
-        estado: 'Pago Aplicado',
-        numero_comprobante: numeroConfirmacion.trim(),
-        observaciones: observaciones || undefined,
-      });
+      const facturaActualizada = await facturasService.confirmarControlPago(
+        facturaSeleccionada.facturaId,
+        observaciones || undefined
+      );
+      setNumeroConfirmacion(facturaActualizada.numero_confirmacion || 'CONF no disponible');
       showToast('ok', `Control de pago confirmado para ${facturaSeleccionada.numeroFactura}.`);
       cerrarConfirmar();
       cargarFacturas();

@@ -263,6 +263,7 @@ class Factura(models.Model):
         ('Revisada Dir. Financiera', 'Revisada Dir. Financiera'),
         ('Enviada Rectoría', 'Enviada Rectoría'),
         ('Autorizada', 'Autorizada'),
+        ('Rechazada por Rectoría', 'Rechazada por Rectoría'),
         ('Rechazada', 'Rechazada'),
         ('Pago Aplicado', 'Pago Aplicado'),
         ('Pagada', 'Pagada'),
@@ -283,6 +284,7 @@ class Factura(models.Model):
     numero_factura = models.CharField(max_length=50, unique=True)
     numero_radicado = models.CharField(max_length=50, unique=True, blank=True, null=True)
     numero_proceso_pago = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    numero_confirmacion = models.CharField(max_length=50, unique=True, blank=True, null=True)
     numero_transaccion = models.CharField(max_length=50, unique=True, blank=True, null=True)
     numero_comprobante = models.CharField(max_length=50, unique=True, blank=True, null=True)
 

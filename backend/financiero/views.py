@@ -2,6 +2,7 @@ from rest_framework import viewsets, filters, parsers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db import IntegrityError
 from django.db.models import Q
 import json
 from django_filters.rest_framework import DjangoFilterBackend
@@ -303,6 +304,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     search_fields = ['numero_factura', 'numero_radicado', 'proveedor__razon_social']
     ordering_fields = ['fecha_recepcion', 'valor_total', 'estado']
     ordering = ['-fecha_recepcion']
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
         user = self.request.user
@@ -356,6 +358,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'Cargada': ['Rectoría'],
             'Enviada Rectoría': ['Rectoría'],
             'Autorizada': ['Tesorería'],
+            'Rechazada por Rectoría': ['Dirección Financiera'],
             'Devuelta': ['Dirección Financiera'],
             'Pago Aplicado': ['Tesorería'],
         }
@@ -379,8 +382,28 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 id_usuario=user_id,
                 tipo='FACTURA_ETAPA_ACTUALIZADA',
                 mensaje=mensaje,
-                prioridad='alta' if estado_nuevo in ['Recibida', 'Devuelta', 'Rechazada'] else 'media',
+                prioridad='alta' if estado_nuevo in ['Recibida', 'Devuelta', 'Rechazada', 'Rechazada por Rectoría'] else 'media',
             )
+
+    def _generar_numero_confirmacion(self):
+        year = timezone.now().year
+        prefix = f"CONF-{year}-"
+        last_number = (
+            models.Factura.objects
+            .filter(numero_confirmacion__startswith=prefix)
+            .order_by('-numero_confirmacion')
+            .values_list('numero_confirmacion', flat=True)
+            .first()
+        )
+
+        next_seq = 1
+        if last_number:
+            try:
+                next_seq = int(str(last_number).split('-')[-1]) + 1
+            except (TypeError, ValueError):
+                next_seq = 1
+
+        return f"{prefix}{next_seq:04d}"
 
     def _texto_normalizado(self, value):
         return str(value or '').strip().lower()
@@ -587,24 +610,86 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         estado_anterior = factura.estado
-        factura.estado = 'Devuelta'
-        factura.etapa_actual = 'Devolución Dirección Financiera'
+        factura.estado = 'Rechazada por Rectoría'
+        factura.etapa_actual = 'Corrección Dirección Financiera'
         factura.usuario_responsable = None
         factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Rectoría - Rechazo] {motivo}"]))
         factura.save()
+
+        models.RechazoDevolucion.objects.create(
+            factura=factura,
+            tipo='Rechazo',
+            etapa_rechazo='Rectoría',
+            motivo=motivo,
+            estado_devolucion='Pendiente Corrección',
+            usuario_rechaza=request.user,
+        )
 
         models.HistorialFactura.objects.create(
             factura=factura,
             accion='Factura rechazada por rectoría',
             estado_anterior=estado_anterior,
-            estado_nuevo='Devuelta',
+            estado_nuevo='Rechazada por Rectoría',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=motivo,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Devuelta')
+        self._notificar_transicion(factura, estado_anterior, 'Rechazada por Rectoría')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='confirmar_control_pago')
+    def confirmar_control_pago(self, request, pk=None):
+        """Registrar control de pago sin cerrar la etapa de pago aplicado."""
+        factura = self.get_object()
+
+        if factura.estado != 'Autorizada':
+            return Response(
+                {'error': 'La factura debe estar autorizada para confirmar control de pago'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+
+        if not factura.numero_confirmacion:
+            for _ in range(5):
+                factura.numero_confirmacion = self._generar_numero_confirmacion()
+                try:
+                    factura.save(update_fields=['numero_confirmacion'])
+                    break
+                except IntegrityError:
+                    factura.numero_confirmacion = None
+
+            if not factura.numero_confirmacion:
+                return Response(
+                    {'error': 'No fue posible generar un número de confirmación único'},
+                    status=status.HTTP_409_CONFLICT
+                )
+
+        factura.etapa_actual = 'Control de Pago Confirmado'
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Control Pago] {observaciones}"]))
+
+        factura.save()
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Control de pago confirmado',
+            estado_anterior='Autorizada',
+            estado_nuevo='Autorizada',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+            datos_adicionales={'numero_confirmacion': factura.numero_confirmacion},
+        )
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -859,10 +944,17 @@ class FacturaViewSet(viewsets.ModelViewSet):
         numero_transaccion = (request.data.get('numero_transaccion') or '').strip()
         observaciones = (request.data.get('observaciones') or '').strip()
         fecha_pago = request.data.get('fecha_pago_aplicado')
+        comprobante_bancario = request.FILES.get('comprobante_bancario')
 
         if not numero_transaccion:
             return Response(
                 {'error': 'Debe registrar el número de transacción bancaria'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not comprobante_bancario:
+            return Response(
+                {'error': 'Debe adjuntar el comprobante bancario en archivo (PDF/XML/PNG/JPG).'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -878,6 +970,20 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
 
         factura.save()
+
+        documento_data = {
+            'factura': factura.id,
+            'nombre_archivo': comprobante_bancario.name,
+            'tipo_documento': 'Comprobante de Pago',
+            'url_storage': comprobante_bancario.name,
+            'tamano_bytes': comprobante_bancario.size,
+            'tipo_mime': getattr(comprobante_bancario, 'content_type', '') or None,
+            'archivo': comprobante_bancario,
+        }
+        documento_serializer = serializers.DocumentoAdjuntoSerializer(data=documento_data, context={'request': request})
+        if not documento_serializer.is_valid():
+            return Response(documento_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        documento_serializer.save(cargado_por=request.user)
 
         models.HistorialFactura.objects.create(
             factura=factura,

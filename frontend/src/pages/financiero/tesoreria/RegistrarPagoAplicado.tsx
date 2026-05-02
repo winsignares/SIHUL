@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -8,7 +8,7 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { CheckCircle, Filter, Calendar, Eye, Building, AlertCircle, ExternalLink, FileText } from 'lucide-react';
+import { CheckCircle, Filter, Calendar, Eye, Building, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
@@ -74,7 +74,7 @@ export default function RegistrarPagoAplicado() {
   const [mostrarDialogDetalle, setMostrarDialogDetalle] = useState(false);
   const [numeroTransaccion, setNumeroTransaccion] = useState('');
   const [fechaPago, setFechaPago] = useState(new Date().toISOString().split('T')[0]);
-  const [archivoComprobante, setArchivoComprobante] = useState('');
+  const [archivoComprobante, setArchivoComprobante] = useState<File | null>(null);
   const [observaciones, setObservaciones] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [facturasAutorizadas, setFacturasAutorizadas] = useState<Factura[]>([]);
@@ -119,7 +119,7 @@ export default function RegistrarPagoAplicado() {
     setFacturaSeleccionada(factura);
     setNumeroTransaccion('');
     setFechaPago(new Date().toISOString().split('T')[0]);
-    setArchivoComprobante('');
+    setArchivoComprobante(null);
     setObservaciones('');
     setMostrarDialogRegistrar(true);
   };
@@ -152,6 +152,11 @@ export default function RegistrarPagoAplicado() {
       return;
     }
 
+    if (!archivoComprobante) {
+      toast.error('Debe cargar el comprobante bancario en archivo.');
+      return;
+    }
+
     setIsProcessing(true);
 
     void (async () => {
@@ -160,6 +165,7 @@ export default function RegistrarPagoAplicado() {
           numero_transaccion: numeroTransaccion.trim(),
           fecha_pago_aplicado: fechaPago,
           observaciones: observaciones.trim() || undefined,
+          comprobante_bancario: archivoComprobante,
         });
         const latest = await loadFacturas();
         setFacturasAutorizadas(latest);
@@ -168,7 +174,7 @@ export default function RegistrarPagoAplicado() {
         setFacturaSeleccionada(null);
         setNumeroTransaccion('');
         setObservaciones('');
-        setArchivoComprobante('');
+        setArchivoComprobante(null);
       } catch (error: any) {
         toast.error(error?.message || 'No fue posible registrar el pago aplicado.');
       } finally {
@@ -177,10 +183,32 @@ export default function RegistrarPagoAplicado() {
     })();
   };
 
-  const simularCargaComprobante = () => {
-    const nombre = `SOPORTE_PAGO_${new Date().getTime()}.pdf`;
-    setArchivoComprobante(nombre);
-    toast.success(`Comprobante cargado: ${nombre}`);
+  const onSelectComprobante = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setArchivoComprobante(null);
+      return;
+    }
+
+    const maxSizeBytes = 10 * 1024 * 1024;
+    const allowedExtensions = ['pdf', 'xml', 'png', 'jpg', 'jpeg'];
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+
+    if (!allowedExtensions.includes(extension)) {
+      toast.error('Formato no permitido. Use PDF, XML, PNG o JPG.');
+      event.target.value = '';
+      setArchivoComprobante(null);
+      return;
+    }
+
+    if (file.size > maxSizeBytes) {
+      toast.error('El archivo supera el tamaño máximo permitido (10 MB).');
+      event.target.value = '';
+      setArchivoComprobante(null);
+      return;
+    }
+
+    setArchivoComprobante(file);
   };
 
   return (
@@ -322,7 +350,12 @@ export default function RegistrarPagoAplicado() {
                 <div><Label className="text-xs text-slate-500">Proveedor</Label><p className="font-semibold text-slate-800">{facturaSeleccionada.proveedor}</p></div>
                 <div><Label htmlFor="trans" className="text-xs text-slate-500">Numero de transaccion</Label><Input id="trans" value={numeroTransaccion} onChange={(e) => setNumeroTransaccion(e.target.value)} placeholder="TRX-XXXX" /></div>
                 <div><Label htmlFor="fecha-pago" className="text-xs text-slate-500">Fecha de pago aplicado</Label><Input id="fecha-pago" type="date" value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} /></div>
-                <div className="col-span-2"><Label className="text-xs text-slate-500">Comprobante bancario</Label><div className="flex gap-2"><Input value={archivoComprobante} readOnly placeholder="Sin archivo" /><Button variant="outline" type="button" onClick={simularCargaComprobante}><FileText className="w-4 h-4 mr-1" />Cargar</Button></div></div>
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="comprobante-bancario" className="text-xs text-slate-500">Comprobante bancario (requerido)</Label>
+                  <Input id="comprobante-bancario" type="file" accept=".pdf,.xml,.png,.jpg,.jpeg" onChange={onSelectComprobante} />
+                  <Input value={archivoComprobante?.name || ''} readOnly placeholder="Sin archivo" />
+                  <p className="text-xs text-slate-500">Formatos: PDF, XML, PNG o JPG. Maximo 10 MB.</p>
+                </div>
               </div>
 
               <div>

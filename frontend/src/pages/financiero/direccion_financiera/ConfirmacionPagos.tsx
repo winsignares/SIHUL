@@ -25,7 +25,6 @@ export default function ConfirmacionPagos() {
     filtros,
     toast,
     setFiltros,
-    setNumeroConfirmacion,
     setObservaciones,
     setDetalleAbierto,
     setConfirmarAbierto,
@@ -180,13 +179,13 @@ export default function ConfirmacionPagos() {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">Numero de Confirmacion</label>
+              <label className="text-sm font-medium text-slate-700">Numero de Confirmacion (automatico)</label>
               <Input
                 value={numeroConfirmacion}
-                onChange={(e) => setNumeroConfirmacion(e.target.value)}
-                placeholder="E.g., CONF-2026-XXXX"
-                required
+                readOnly
+                placeholder="Se genera automaticamente al confirmar"
               />
+              <p className="text-xs text-slate-500">El sistema genera este consecutivo y lo guarda en base de datos para trazabilidad.</p>
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">Observaciones</label>

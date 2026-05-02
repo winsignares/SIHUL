@@ -72,6 +72,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'Revisada Dir. Financiera',
     'Cargada',
     'Enviada Rectoría',
+    'Rechazada por Rectoría',
     'Devuelta',
     'Autorizada',
     'Pago Aplicado',
@@ -103,6 +104,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     cargada: 'Cargada',
     autorizada: 'Autorizada',
     'autorizada para pago': 'Autorizada',
+    'rechazada por rectoria': 'Rechazada por Rectoría',
     devuelta: 'Devuelta',
     rechazada: 'Devuelta',
     detenida: 'Devuelta',
@@ -124,7 +126,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Revisada Dir. Financiera', 'Direccion Financiera', 'Revision financiera y trazabilidad de soportes', 2, factura.fechaAprobacionAuditoria],
     ['Cargada', 'Direccion Financiera', 'Cargue formal para autorizacion de Rectoría', 2, factura.fechaCargue],
     ['Enviada Rectoría', 'Direccion Financiera', 'Remitida para decision final institucional', 1, factura.fechaCargue],
-    ['Devuelta', 'Rectoria / Tesoreria', 'Tramite devuelto para ajustes y correcciones', 2, undefined],
+    ['Rechazada por Rectoría', 'Rectoría', 'Rectoría rechaza el tramite y solicita recertificacion previa', 2, undefined],
+    ['Devuelta', 'Direccion Financiera / Tesoreria', 'Tramite devuelto para ajustes operativos y documentales', 2, undefined],
     ['Autorizada', 'Rectoria', 'Autorizacion final de pago', 3, factura.fechaAutorizacion],
     ['Pago Aplicado', 'Tesoreria', 'Aplicacion del pago en portal bancario', 1, factura.fechaPagoAplicado],
     ['Pagada', 'Tesoreria', 'Comprobante emitido y tramite cerrado', 1, factura.fechaComprobante],
@@ -135,6 +138,10 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
 
     if (nombre === 'Devuelta') {
       estado = current === 'Devuelta' ? 'devuelto' : 'pendiente';
+    }
+
+    if (nombre === 'Rechazada por Rectoría') {
+      estado = current === 'Rechazada por Rectoría' ? 'rechazado' : 'pendiente';
     }
 
     return {
@@ -158,8 +165,9 @@ function getEstadoBadge(estado: string) {
     Radicada: 'bg-green-100 text-green-700 border-green-200',
     Causada: 'bg-purple-100 text-purple-700 border-purple-200',
     Alistada: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    'Aprobada Auditoria': 'bg-teal-100 text-teal-700 border-teal-200',
-    'Aprobada auditoria': 'bg-teal-100 text-teal-700 border-teal-200',
+    'Enviada Rectoría': 'bg-pink-100 text-pink-700 border-pink-200',
+    'Rechazada por Rectoría': 'bg-red-100 text-red-700 border-red-200',
+    'Cargada para autorizacion': 'bg-cyan-100 text-cyan-700 border-cyan-200',
     Devuelta: 'bg-red-100 text-red-700 border-red-200',
     Pagada: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   };

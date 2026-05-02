@@ -62,11 +62,21 @@ export const facturasService = {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar_rectoria/`, { motivo });
   },
 
+  confirmarControlPago: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/confirmar_control_pago/`, body);
+  },
+
   registrarPagoAplicado: async (
     id: number,
-    opts: { numero_transaccion: string; fecha_pago_aplicado?: string; observaciones?: string }
+    opts: { numero_transaccion: string; fecha_pago_aplicado?: string; observaciones?: string; comprobante_bancario: File }
   ): Promise<Factura> => {
-    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/registrar_pago_aplicado/`, opts);
+    const formData = new FormData();
+    formData.append('numero_transaccion', opts.numero_transaccion);
+    if (opts.fecha_pago_aplicado) formData.append('fecha_pago_aplicado', opts.fecha_pago_aplicado);
+    if (opts.observaciones) formData.append('observaciones', opts.observaciones);
+    formData.append('comprobante_bancario', opts.comprobante_bancario);
+    return apiClient.postFormData<Factura>(`${API_BASE}/facturas/${id}/registrar_pago_aplicado/`, formData);
   },
 
   generarComprobante: async (

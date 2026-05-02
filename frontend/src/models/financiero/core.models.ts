@@ -48,6 +48,7 @@ export interface CentroCosto {
 
 export type EstadoFactura =
   | 'Recibida'
+  | 'Registrada'
   | 'Radicada'
   | 'Causada'
   | 'Alistada'
@@ -58,6 +59,7 @@ export type EstadoFactura =
   | 'Revisada Dir. Financiera'
   | 'Enviada Rectoría'
   | 'Autorizada'
+  | 'Rechazada por Rectoría'
   | 'Rechazada'
   | 'Pago Aplicado'
   | 'Pagada'
@@ -72,6 +74,7 @@ export interface Factura {
   numero_factura: string;
   numero_radicado?: string;
   numero_proceso_pago?: string;
+  numero_confirmacion?: string;
   numero_transaccion?: string;
   numero_comprobante?: string;
   archivo_plano_generado?: string;

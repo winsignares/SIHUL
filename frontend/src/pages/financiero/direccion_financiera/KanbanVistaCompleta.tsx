@@ -25,6 +25,7 @@ const estadoColor: Record<string, string> = {
   'Cargada para autorización': 'from-purple-500 to-purple-600',
   'Enviada Rectoría': 'from-cyan-500 to-cyan-600',
   'Autorizada para pago': 'from-green-500 to-green-600',
+  'Rechazada por Rectoría': 'from-red-600 to-red-700',
   'Devuelta para ajustes': 'from-red-500 to-red-600',
   'Pago Aplicado': 'from-emerald-500 to-emerald-600',
   Pagada: 'from-emerald-700 to-emerald-800',

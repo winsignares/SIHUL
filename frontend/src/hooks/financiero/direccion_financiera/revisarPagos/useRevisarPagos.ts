@@ -63,12 +63,13 @@ export function useRevisarPagos() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas recibidas en Direccion Financiera y facturas devueltas por Rectoria
-      const [recibidasDF, devueltas] = await Promise.all([
+      // Facturas recibidas en Direccion Financiera, devueltas y rechazadas por Rectoria
+      const [recibidasDF, devueltas, rechazadasRectoria] = await Promise.all([
         facturasService.getByEstado('Revisada Dir. Financiera'),
         facturasService.getByEstado('Devuelta'),
+        facturasService.getByEstado('Rechazada por Rectoría'),
       ]);
-      const lista = [...recibidasDF, ...devueltas].filter(
+      const lista = [...recibidasDF, ...devueltas, ...rechazadasRectoria].filter(
         (factura, index, arr) => arr.findIndex((f) => f.id === factura.id) === index
       );
       

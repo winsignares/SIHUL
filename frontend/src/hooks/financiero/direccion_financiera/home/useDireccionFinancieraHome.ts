@@ -46,6 +46,7 @@ export function useDireccionFinancieraHome() {
         cargadas,
         enviadasRectoria,
         autorizadas,
+        rechazadasRectoria,
         pagosAplicados,
         pagadas,
       ] = await Promise.all([
@@ -61,6 +62,7 @@ export function useDireccionFinancieraHome() {
         facturasService.getByEstado('Cargada'),
         facturasService.getByEstado('Enviada Rectoría'),
         facturasService.getByEstado('Autorizada'),
+        facturasService.getByEstado('Rechazada por Rectoría'),
         facturasService.getByEstado('Pago Aplicado'),
         facturasService.getByEstado('Pagada'),
       ]);
@@ -77,6 +79,7 @@ export function useDireccionFinancieraHome() {
         ...cargadas,
         ...enviadasRectoria,
         ...autorizadas,
+        ...rechazadasRectoria,
         ...devueltas,
         ...pagosAplicados,
         ...pagadas,
@@ -140,6 +143,7 @@ export function useDireccionFinancieraHome() {
       { label: 'Cargada para autorización', sourceEstado: 'Cargada', color: 'bg-purple-100 text-purple-700' },
       { label: 'Enviada Rectoría', sourceEstado: 'Enviada Rectoría', color: 'bg-cyan-100 text-cyan-700' },
       { label: 'Autorizada para pago', sourceEstado: 'Autorizada', color: 'bg-green-100 text-green-700' },
+      { label: 'Rechazada por Rectoría', sourceEstado: 'Rechazada por Rectoría', color: 'bg-red-100 text-red-800' },
       { label: 'Devuelta para ajustes', sourceEstado: 'Devuelta', color: 'bg-red-100 text-red-700' },
       { label: 'Pago Aplicado', sourceEstado: 'Pago Aplicado', color: 'bg-emerald-100 text-emerald-700' },
       { label: 'Pagada', sourceEstado: 'Pagada', color: 'bg-emerald-200 text-emerald-800' },
