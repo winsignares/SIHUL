@@ -7,7 +7,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Building2,
   DollarSign,
   Calendar,
@@ -17,7 +16,7 @@ import {
 import { facturasService } from '../../../services/financiero';
 import type { Factura, HistorialFactura } from '../../../models/financiero/core.models';
 
-const formatMoney = (val: any) => {
+const formatMoney = (val: number | string | null | undefined) => {
   const num = Number(val) || 0;
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
@@ -38,22 +37,22 @@ const ESTADO_STEP: Record<string, number> = {
 };
 
 const ESTADO_COLOR: Record<string, string> = {
-  'Recibida':               'bg-blue-100 text-blue-700',
-  'Registrada':             'bg-indigo-100 text-indigo-700',
-  'Radicada':               'bg-purple-100 text-purple-700',
-  'Causada':                'bg-yellow-100 text-yellow-700',
-  'Alistada':               'bg-orange-100 text-orange-700',
-  'Aprobada Auditoría':     'bg-green-100 text-green-700',
-  'Rechazada Auditoría':    'bg-red-100 text-red-700',
-  'Cargada':                'bg-cyan-100 text-cyan-700',
-  'Revisada Dir. Financiera': 'bg-teal-100 text-teal-700',
-  'Enviada Rectoría':       'bg-violet-100 text-violet-700',
-  'Autorizada':             'bg-green-200 text-green-800',
-  'Pago Aplicado':          'bg-emerald-100 text-emerald-700',
-  'Pagada':                 'bg-green-300 text-green-900',
-  'Devuelta':               'bg-amber-100 text-amber-700',
-  'Rechazada':              'bg-red-200 text-red-800',
-  'Anulada':                'bg-slate-100 text-slate-600',
+  'Recibida': 'bg-amber-100 text-amber-800',
+  'Registrada': 'bg-rose-100 text-rose-800',
+  'Radicada': 'bg-red-100 text-red-800',
+  'Causada': 'bg-orange-100 text-orange-800',
+  'Alistada': 'bg-orange-100 text-orange-800',
+  'Aprobada Auditoría': 'bg-green-100 text-green-800',
+  'Rechazada Auditoría': 'bg-red-100 text-red-800',
+  'Cargada': 'bg-amber-100 text-amber-800',
+  'Revisada Dir. Financiera': 'bg-rose-100 text-rose-800',
+  'Enviada Rectoría': 'bg-red-100 text-red-800',
+  'Autorizada': 'bg-green-200 text-green-900',
+  'Pago Aplicado': 'bg-green-100 text-green-800',
+  'Pagada': 'bg-green-300 text-green-900',
+  'Devuelta': 'bg-amber-100 text-amber-800',
+  'Rechazada': 'bg-red-200 text-red-800',
+  'Anulada': 'bg-slate-100 text-slate-700',
 };
 
 const PROCESO_STEPS = [
@@ -102,7 +101,7 @@ export default function FacturaDetalle() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
         <span className="ml-3 text-slate-500 text-sm">Cargando factura...</span>
       </div>
     );
@@ -139,20 +138,16 @@ export default function FacturaDetalle() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`rounded-xl p-6 text-white shadow-lg ${
-          isPagada ? 'bg-gradient-to-r from-green-600 to-green-700' :
-          isDevuelta ? 'bg-gradient-to-r from-red-600 to-red-700' :
-          'bg-gradient-to-r from-blue-600 to-blue-700'
-        }`}
+        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
       >
-        <div className="flex items-start justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-bold text-xl">{factura.numero_factura}</h2>
             {factura.numero_radicado && (
               <p className="text-sm opacity-80 mt-0.5">Radicado: {factura.numero_radicado}</p>
             )}
             <div className="mt-3 flex items-center gap-3 flex-wrap">
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${ESTADO_COLOR[factura.estado] || 'bg-white/20 text-white'}`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold bg-white/95 ${ESTADO_COLOR[factura.estado] || 'text-slate-700'}`}>
                 {factura.estado}
               </span>
               {factura.urgente && (
@@ -162,9 +157,9 @@ export default function FacturaDetalle() {
               )}
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold">{formatMoney(factura.valor_total)}</p>
-            <p className="text-sm opacity-80">Valor total</p>
+          <div className="text-right rounded-xl bg-white/10 border border-white/20 px-4 py-3 min-w-[180px]">
+            <p className="text-xs uppercase tracking-wide text-red-100">Valor total</p>
+            <p className="text-2xl font-bold mt-1">{formatMoney(factura.valor_total)}</p>
           </div>
         </div>
       </motion.div>
@@ -176,28 +171,25 @@ export default function FacturaDetalle() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
         >
-          <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-sm">Progreso del Proceso</h3>
-          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-sm">Progreso del proceso</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
             {PROCESO_STEPS.map((s, i) => {
               const stepNum = i + 1;
               const done = estadoStep > stepNum || isPagada;
               const current = estadoStep === stepNum;
               const Icon = s.icon;
               return (
-                <div key={s.label} className="flex items-center gap-1 flex-shrink-0">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                      done ? 'bg-green-500 text-white' : current ? 'bg-blue-600 text-white ring-2 ring-blue-300' : 'bg-slate-200 dark:bg-slate-600 text-slate-400'
-                    }`}>
-                      {done ? <CheckCircle2 size={14} /> : <Icon size={14} />}
-                    </div>
-                    <span className={`text-xs text-center whitespace-nowrap max-w-[60px] ${current ? 'text-blue-600 font-semibold' : 'text-slate-500 dark:text-slate-400'}`}>
-                      {s.label}
-                    </span>
+                <div key={s.label} className={`rounded-lg border px-2 py-2 flex items-center gap-2 ${
+                  done
+                    ? 'border-emerald-200 bg-emerald-50/70 text-emerald-700'
+                    : current
+                      ? 'border-red-300 bg-red-50 text-red-700'
+                      : 'border-slate-200 bg-slate-50 text-slate-500'
+                }`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${done ? 'bg-emerald-600 text-white' : current ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                    {done ? <CheckCircle2 size={13} /> : <Icon size={13} />}
                   </div>
-                  {i < PROCESO_STEPS.length - 1 && (
-                    <div className={`h-0.5 w-8 flex-shrink-0 mb-4 ${done ? 'bg-green-400' : 'bg-slate-200 dark:bg-slate-600'}`} />
-                  )}
+                  <span className="text-[11px] leading-tight font-medium">{s.label}</span>
                 </div>
               );
             })}
@@ -228,7 +220,7 @@ export default function FacturaDetalle() {
           className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 space-y-4"
         >
           <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileText size={18} className="text-blue-600" />
+            <FileText size={18} className="text-red-600" />
             Datos del Documento
           </h3>
           <div className="space-y-3 text-sm">
@@ -247,7 +239,7 @@ export default function FacturaDetalle() {
           className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 space-y-4"
         >
           <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar size={18} className="text-blue-600" />
+            <Calendar size={18} className="text-red-600" />
             Fechas del Proceso
           </h3>
           <div className="space-y-3 text-sm">
@@ -269,7 +261,7 @@ export default function FacturaDetalle() {
           className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 space-y-4"
         >
           <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <DollarSign size={18} className="text-blue-600" />
+            <DollarSign size={18} className="text-red-600" />
             Valores
           </h3>
           <div className="space-y-2 text-sm">
@@ -301,7 +293,7 @@ export default function FacturaDetalle() {
             )}
             <div className="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-2 mt-2">
               <span className="font-bold text-slate-900 dark:text-white">Total</span>
-              <span className="font-bold text-blue-600 text-lg">{formatMoney(factura.valor_total)}</span>
+              <span className="font-bold text-red-700 text-lg">{formatMoney(factura.valor_total)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500 dark:text-slate-400">Neto a pagar</span>
@@ -318,7 +310,7 @@ export default function FacturaDetalle() {
           className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 space-y-4"
         >
           <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Building2 size={18} className="text-blue-600" />
+            <Building2 size={18} className="text-red-600" />
             Partes
           </h3>
           <div className="space-y-3 text-sm">
@@ -347,15 +339,15 @@ export default function FacturaDetalle() {
           className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
         >
           <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <MessageSquare size={18} className="text-blue-600" />
+            <MessageSquare size={18} className="text-red-600" />
             Historial de Movimientos
           </h3>
           <div className="space-y-3">
             {historial.slice().reverse().map((h, i) => (
               <div key={h.id} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User size={14} className="text-blue-600" />
+                  <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User size={14} className="text-red-600" />
                   </div>
                   {i < historial.length - 1 && <div className="w-0.5 flex-1 bg-slate-200 dark:bg-slate-700 mt-1" />}
                 </div>
@@ -391,9 +383,9 @@ export default function FacturaDetalle() {
 function InfoRow({ label, value }: { label: string; value: string | undefined }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-slate-500 dark:text-slate-400 flex-shrink-0">{label}</span>
-      <span className="font-medium text-slate-900 dark:text-white text-right">{value}</span>
+    <div className="grid grid-cols-1 sm:grid-cols-[170px,1fr] gap-1 sm:gap-3 py-1">
+      <span className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">{label}</span>
+      <span className="font-medium text-slate-900 dark:text-white text-sm break-words sm:text-right">{value}</span>
     </div>
   );
 }

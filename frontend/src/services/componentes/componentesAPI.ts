@@ -84,6 +84,26 @@ export interface ListComponenteRolesResponse {
     componente_roles: ComponenteRol[];
 }
 
+export interface ComponenteUsuario {
+    id?: number;
+    componente_id: number;
+    usuario_id: number;
+    permiso: 'VER' | 'EDITAR';
+    activo: boolean;
+}
+
+export interface ListComponenteUsuariosResponse {
+    componente_usuarios: ComponenteUsuario[];
+}
+
+interface ComponenteUsuarioApi {
+    id?: number;
+    componente: number;
+    usuario: number;
+    permiso: 'VER' | 'EDITAR';
+    activo: boolean;
+}
+
 interface ComponenteRolApi {
     id?: number;
     componente: number;
@@ -96,6 +116,14 @@ const toFrontendComponenteRol = (item: ComponenteRolApi): ComponenteRol => ({
     componente_id: item.componente,
     rol_id: item.rol,
     permiso: item.permiso,
+});
+
+const toFrontendComponenteUsuario = (item: ComponenteUsuarioApi): ComponenteUsuario => ({
+    id: item.id,
+    componente_id: item.componente,
+    usuario_id: item.usuario,
+    permiso: item.permiso,
+    activo: item.activo,
 });
 
 /**
@@ -210,4 +238,36 @@ export const componenteRolService = {
         await apiClient.delete(`/componentes/roles/${payload.id}/`);
         return { message: 'ComponenteRol eliminado' };
     }
+};
+
+export const componenteUsuarioService = {
+    list: async (usuarioId?: number): Promise<ListComponenteUsuariosResponse> => {
+        const query = usuarioId ? `?usuario=${usuarioId}` : '';
+        const componenteUsuariosApi = await apiClient.get<ComponenteUsuarioApi[]>(`/componentes/usuarios/${query}`);
+        const componente_usuarios = componenteUsuariosApi.map(toFrontendComponenteUsuario);
+        return { componente_usuarios };
+    },
+
+    create: async (payload: Omit<ComponenteUsuario, 'id'>): Promise<ComponenteUsuario> => {
+        const created = await apiClient.post<ComponenteUsuarioApi>('/componentes/usuarios/', {
+            componente: payload.componente_id,
+            usuario: payload.usuario_id,
+            permiso: payload.permiso,
+            activo: payload.activo,
+        });
+        return toFrontendComponenteUsuario(created);
+    },
+
+    update: async (payload: Partial<ComponenteUsuario> & { id: number }): Promise<ComponenteUsuario> => {
+        const updated = await apiClient.patch<ComponenteUsuarioApi>(`/componentes/usuarios/${payload.id}/`, {
+            permiso: payload.permiso,
+            activo: payload.activo,
+        });
+        return toFrontendComponenteUsuario(updated);
+    },
+
+    delete: async (id: number): Promise<{ message: string }> => {
+        await apiClient.delete(`/componentes/usuarios/${id}/`);
+        return { message: 'ComponenteUsuario eliminado' };
+    },
 };

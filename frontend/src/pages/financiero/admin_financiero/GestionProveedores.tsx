@@ -1,429 +1,504 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Input } from '../../../share/input';
 import { Label } from '../../../share/label';
-import { Textarea } from '../../../share/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
 import { Badge } from '../../../share/badge';
-import { Building2, Plus, Search, Edit, Save, X, CreditCard, User, CheckCircle2, Building } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
+import { Building2, FileSpreadsheet, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-react';
+import { proveedoresService } from '../../../services/financiero';
+import type { Proveedor } from '../../../models/financiero/core.models';
+import { userService } from '../../../services/users/authService';
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
-interface ProveedorFormData {
-  id?: string;
-  nombre: string;
-  nit: string;
-  tipoPersona: 'Natural' | 'Juridica';
-  direccion: string;
-  ciudad: string;
-  telefono: string;
-  email: string;
-  cuentaBancaria: string;
-  banco: string;
-  tipoCuenta: 'Ahorros' | 'Corriente';
-  nombreCuenta: string;
-  contactoNombre: string;
-  contactoTelefono: string;
-  contactoEmail: string;
-  observaciones: string;
-  activo: boolean;
-}
+type ProveedorUI = Proveedor & { usuario?: number | null };
+type ProveedorFormState = Partial<ProveedorUI> & { nuevaContrasena?: string };
 
-interface ProveedorListItem {
-  id: string;
-  nombre: string;
-  nit: string;
-  tipoPersona: 'Natural' | 'Juridica';
-  direccion: string;
-  ciudad: string;
-  telefono: string;
-  email: string;
-  cuentaBancaria: string;
-  banco: string;
-  tipoCuenta: 'Ahorros' | 'Corriente';
-  nombreCuenta: string;
-  contactoNombre: string;
-  contactoTelefono: string;
-  contactoEmail: string;
-  observaciones: string;
-  activo: boolean;
-}
+const emptyForm: ProveedorFormState = {
+  razon_social: '',
+  nit: '',
+  tipo_proveedor: 'Servicios',
+  tipo_persona: 'Jurídica',
+  estado: 'Activo',
+  email: '',
+  telefono: '',
+  direccion: '',
+  ciudad: '',
+  banco: '',
+  tipo_cuenta: 'Ahorros',
+  numero_cuenta: '',
+  nuevaContrasena: '',
+};
 
-export default function GestionProveedores() {
-  const [busqueda, setBusqueda] = useState('');
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [proveedorEditando, setProveedorEditando] = useState<string | null>(null);
-  const [guardando, setGuardando] = useState(false);
-  const [exito, setExito] = useState(false);
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
-  const [proveedores, setProveedores] = useState<ProveedorListItem[]>([
-    {
-      id: 'PROV-001',
-      nombre: 'Servicios TI Colombia SAS',
-      nit: '900123456-7',
-      tipoPersona: 'Juridica',
-      direccion: 'Calle 100 #12-45',
-      ciudad: 'Bogota',
-      telefono: '6015551234',
-      email: 'facturacion@serviciosti.co',
-      cuentaBancaria: '1234567890',
-      banco: 'Bancolombia',
-      tipoCuenta: 'Corriente',
-      nombreCuenta: 'Servicios TI Colombia SAS',
-      contactoNombre: 'Laura Perez',
-      contactoTelefono: '3005551122',
-      contactoEmail: 'laura.perez@serviciosti.co',
-      observaciones: 'Proveedor estrategico del area de sistemas',
-      activo: true,
-    },
-    {
-      id: 'PROV-002',
-      nombre: 'Mantenimiento Industrial EU',
-      nit: '900345678-9',
-      tipoPersona: 'Juridica',
-      direccion: 'Av. 68 #45-98',
-      ciudad: 'Barranquilla',
-      telefono: '6053882211',
-      email: 'pagos@mantenimientoeu.com',
-      cuentaBancaria: '9988776655',
-      banco: 'Banco de Bogota',
-      tipoCuenta: 'Ahorros',
-      nombreCuenta: 'Mantenimiento Industrial EU',
-      contactoNombre: 'Jorge Rojas',
-      contactoTelefono: '3102223344',
-      contactoEmail: 'jorge.rojas@mantenimientoeu.com',
-      observaciones: 'Atencion prioritaria para infraestructura',
-      activo: true,
-    },
-  ]);
+export default function GestionProveedoresReal() {
+  const [proveedores, setProveedores] = useState<ProveedorUI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState('all');
+  const [tipoFilter, setTipoFilter] = useState('all');
+  const [ciudadFilter, setCiudadFilter] = useState('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [accionProveedorId, setAccionProveedorId] = useState<number | null>(null);
+  const [form, setForm] = useState<ProveedorFormState>(emptyForm);
 
-  const [formData, setFormData] = useState<ProveedorFormData>({
-    nombre: '',
-    nit: '',
-    tipoPersona: 'Juridica',
-    direccion: '',
-    ciudad: '',
-    telefono: '',
-    email: '',
-    cuentaBancaria: '',
-    banco: '',
-    tipoCuenta: 'Ahorros',
-    nombreCuenta: '',
-    contactoNombre: '',
-    contactoTelefono: '',
-    contactoEmail: '',
-    observaciones: '',
-    activo: true,
+  const extractProveedores = (response: unknown): ProveedorUI[] => {
+    if (Array.isArray(response)) return response as ProveedorUI[];
+    if (response && typeof response === 'object') {
+      const maybePaginated = response as { results?: ProveedorUI[]; proveedores?: ProveedorUI[] };
+      if (Array.isArray(maybePaginated.results)) return maybePaginated.results;
+      if (Array.isArray(maybePaginated.proveedores)) return maybePaginated.proveedores;
+    }
+    return [];
+  };
+
+  const buildProveedorPayload = (source: ProveedorFormState): Partial<Proveedor> => ({
+    razon_social: source.razon_social,
+    nit: source.nit,
+    tipo_proveedor: source.tipo_proveedor,
+    tipo_persona: source.tipo_persona,
+    estado: source.estado,
+    email: source.email,
+    telefono: source.telefono,
+    direccion: source.direccion,
+    ciudad: source.ciudad,
+    banco: source.banco,
+    tipo_cuenta: source.tipo_cuenta,
+    numero_cuenta: source.numero_cuenta,
   });
 
-  const proveedoresFiltrados = proveedores.filter(
-    (p) => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.nit.includes(busqueda)
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await proveedoresService.getAll({ limit: 200, ordering: '-id' });
+      setProveedores(extractProveedores(response));
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No se pudieron cargar los proveedores.'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
+
+  const ciudadesDisponibles = useMemo(
+    () => Array.from(new Set(proveedores.map((p) => (p.ciudad || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es')),
+    [proveedores]
   );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
 
-  const limpiarFormulario = () => {
-    setFormData({
-      nombre: '',
-      nit: '',
-      tipoPersona: 'Juridica',
-      direccion: '',
-      ciudad: '',
-      telefono: '',
-      email: '',
-      cuentaBancaria: '',
-      banco: '',
-      tipoCuenta: 'Ahorros',
-      nombreCuenta: '',
-      contactoNombre: '',
-      contactoTelefono: '',
-      contactoEmail: '',
-      observaciones: '',
-      activo: true,
-    });
-    setProveedorEditando(null);
-    setMostrarFormulario(false);
-  };
-
-  const editarProveedor = (proveedor: ProveedorListItem) => {
-    setFormData({ ...proveedor });
-    setProveedorEditando(proveedor.id);
-    setMostrarFormulario(true);
-  };
-
-  const guardarProveedor = () => {
-    setGuardando(true);
-
-    setTimeout(() => {
-      if (proveedorEditando) {
-        setProveedores((prev) => prev.map((p) => (p.id === proveedorEditando ? ({ ...p, ...formData, id: proveedorEditando } as ProveedorListItem) : p)));
-      } else {
-        const nuevoProveedor: ProveedorListItem = {
-          id: `PROV-${Date.now()}`,
-          nombre: formData.nombre,
-          nit: formData.nit,
-          tipoPersona: formData.tipoPersona,
-          direccion: formData.direccion,
-          ciudad: formData.ciudad,
-          telefono: formData.telefono,
-          email: formData.email,
-          cuentaBancaria: formData.cuentaBancaria,
-          banco: formData.banco,
-          tipoCuenta: formData.tipoCuenta,
-          nombreCuenta: formData.nombreCuenta,
-          contactoNombre: formData.contactoNombre,
-          contactoTelefono: formData.contactoTelefono,
-          contactoEmail: formData.contactoEmail,
-          observaciones: formData.observaciones,
-          activo: formData.activo,
-        };
-        setProveedores((prev) => [nuevoProveedor, ...prev]);
+    const base = proveedores.filter((p) => {
+      if (estadoFilter !== 'all' && p.estado !== estadoFilter) {
+        return false;
       }
 
-      setGuardando(false);
-      setExito(true);
+      if (tipoFilter !== 'all' && p.tipo_proveedor !== tipoFilter) {
+        return false;
+      }
 
-      setTimeout(() => {
-        setExito(false);
-        limpiarFormulario();
-      }, 1500);
-    }, 800);
+      if (ciudadFilter !== 'all' && (p.ciudad || '').trim() !== ciudadFilter) {
+        return false;
+      }
+
+      if (!q) {
+        return true;
+      }
+
+      return [p.razon_social, p.nit, p.email, p.ciudad, p.tipo_proveedor].some((value) =>
+        (value || '').toLowerCase().includes(q)
+      );
+    });
+
+    return [...base].sort((a, b) => (b.id || 0) - (a.id || 0));
+  }, [search, proveedores, estadoFilter, tipoFilter, ciudadFilter]);
+
+  const limpiarFiltros = () => {
+    setSearch('');
+    setEstadoFilter('all');
+    setTipoFilter('all');
+    setCiudadFilter('all');
   };
 
-  const ciudadesColombia = ['Bogota', 'Medellin', 'Cali', 'Barranquilla', 'Cartagena', 'Bucaramanga', 'Pereira', 'Santa Marta', 'Ibague'];
+  const abrirNuevo = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setDialogOpen(true);
+  };
 
-  const bancosColombia = [
-    'Bancolombia',
-    'Banco de Bogota',
-    'Davivienda',
-    'BBVA Colombia',
-    'Banco Popular',
-    'Banco Occidente',
-    'Banco Caja Social',
-    'Scotiabank Colpatria',
-  ];
+  const abrirEdicion = (p: Proveedor) => {
+    setEditingId(p.id);
+    setForm({ ...p });
+    setDialogOpen(true);
+  };
 
-  if (exito) {
-    return (
-      <div>
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-2xl mx-auto">
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="pt-8 text-center pb-8">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }} className="mb-6">
-                <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-12 h-12 text-white" />
-                </div>
-              </motion.div>
-              <h2 className="text-2xl font-bold text-green-700 mb-2">Proveedor guardado exitosamente</h2>
-              <p className="text-green-600">{proveedorEditando ? 'El proveedor fue actualizado' : 'El nuevo proveedor fue agregado'} correctamente al sistema.</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
+  const guardar = async () => {
+    if (!form.razon_social || !form.nit || !form.tipo_proveedor) {
+      toast.error('Razon social, NIT y tipo de proveedor son obligatorios.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editingId) {
+        await proveedoresService.update(editingId, buildProveedorPayload(form));
+
+        const nuevaContrasena = (form.nuevaContrasena || '').trim();
+        if (nuevaContrasena) {
+          if (form.usuario) {
+            await userService.actualizarUsuario({
+              id: form.usuario,
+              contrasena: nuevaContrasena,
+            });
+            toast.success('Proveedor y contraseña actualizados correctamente.');
+          } else {
+            toast.warning('Proveedor actualizado. No se pudo cambiar contraseña porque no tiene usuario vinculado.');
+          }
+        } else {
+          toast.success('Proveedor actualizado correctamente.');
+        }
+      } else {
+        await proveedoresService.create(buildProveedorPayload(form));
+        toast.success('Proveedor creado correctamente.');
+      }
+      setDialogOpen(false);
+      await cargar();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible guardar el proveedor.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleEstado = async (p: Proveedor) => {
+    const next = p.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    setAccionProveedorId(p.id);
+    try {
+      await proveedoresService.update(p.id, { estado: next });
+      toast.success(`Proveedor ${next.toLowerCase()} correctamente.`);
+      await cargar();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible cambiar el estado.'));
+    } finally {
+      setAccionProveedorId(null);
+    }
+  };
+
+  const eliminarProveedor = async (p: Proveedor) => {
+    const confirmar = window.confirm(`¿Seguro que deseas eliminar a ${p.razon_social}? Esta acción no se puede deshacer.`);
+    if (!confirmar) {
+      return;
+    }
+
+    setAccionProveedorId(p.id);
+    try {
+      await proveedoresService.delete(p.id);
+      toast.success('Proveedor eliminado correctamente.');
+      await cargar();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible eliminar el proveedor.'));
+    } finally {
+      setAccionProveedorId(null);
+    }
+  };
+
+  const exportarProveedoresExcel = useCallback(() => {
+    if (filtered.length === 0) {
+      toast.error('No hay proveedores para exportar con los filtros actuales.');
+      return;
+    }
+
+    const rows = filtered.map((proveedor) => ({
+      ID: proveedor.id || '',
+      'Razón Social': proveedor.razon_social || '',
+      NIT: proveedor.nit || '',
+      Tipo: proveedor.tipo_proveedor || '',
+      Estado: proveedor.estado || '',
+      Ciudad: proveedor.ciudad || '',
+      Email: proveedor.email || '',
+      Teléfono: proveedor.telefono || '',
+      Banco: proveedor.banco || '',
+      Cuenta: proveedor.numero_cuenta || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 8 },
+      { wch: 34 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Proveedores');
+    XLSX.writeFile(workbook, `proveedores_financieros_${Date.now()}.xlsx`);
+    toast.success('Excel de proveedores exportado correctamente.');
+  }, [filtered]);
 
   return (
-    <div>
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800 mb-2">Gestion de Proveedores</h1>
-            <p className="text-slate-600">Administre el catalogo de proveedores del sistema</p>
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+      >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Building2 className="w-8 h-8 text-amber-300" />
+              Gestión de Proveedores
+            </h1>
+            <p className="text-red-100 text-sm">Listado y administración de proveedores del módulo financiero.</p>
           </div>
-          <Button onClick={() => setMostrarFormulario(true)} className="bg-red-600 hover:bg-red-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />Nuevo Proveedor
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={abrirNuevo} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo proveedor
+            </Button>
+            <Button onClick={() => void cargar()} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Actualizar datos
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-slate-900">Proveedores registrados</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={exportarProveedoresExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Excel
+              </Button>
+              <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">
+                {filtered.length} proveedores
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="relative lg:col-span-5">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                placeholder="Buscar por ID, razón social, NIT, correo o ciudad"
+              />
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="Activo">Activo</SelectItem>
+                  <SelectItem value="Inactivo">Inactivo</SelectItem>
+                  <SelectItem value="Bloqueado">Bloqueado</SelectItem>
+                  <SelectItem value="Verificación">Verificación</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
+                  <SelectItem value="Servicios">Servicios</SelectItem>
+                  <SelectItem value="Bienes">Bienes</SelectItem>
+                  <SelectItem value="Construcción">Construcción</SelectItem>
+                  <SelectItem value="Mixto">Mixto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={ciudadFilter} onValueChange={setCiudadFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ciudad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las ciudades</SelectItem>
+                  {ciudadesDisponibles.map((ciudad) => (
+                    <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-1">
+              <Button variant="outline" className="w-full" onClick={limpiarFiltros}>Limpiar</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-slate-500">Cargando proveedores...</p>
+          ) : (
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>ID</TableHead>
+                    <TableHead>Razón social</TableHead>
+                    <TableHead>NIT</TableHead>
+                    <TableHead>Ciudad</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-slate-500 py-7">
+                        No hay proveedores para mostrar.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((p) => {
+                      const isProcessing = accionProveedorId === p.id;
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell>{p.id || '—'}</TableCell>
+                          <TableCell className="font-medium text-slate-800">{p.razon_social}</TableCell>
+                          <TableCell>{p.nit}</TableCell>
+                          <TableCell>{p.ciudad || '—'}</TableCell>
+                          <TableCell>{p.tipo_proveedor}</TableCell>
+                          <TableCell>
+                            <Badge className={p.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                              {p.estado}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => abrirEdicion(p)}>
+                                <Building2 className="w-3 h-3 mr-1" />
+                                Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isProcessing}
+                                onClick={() => void toggleEstado(p)}
+                              >
+                                {p.estado === 'Activo' ? 'Desactivar' : 'Activar'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isProcessing}
+                                onClick={() => void eliminarProveedor(p)}
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Eliminar
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent className="w-[96vw] sm:!max-w-[92vw] xl:!max-w-[80vw] max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="border-b bg-slate-50 px-6 py-5">
+          <DialogTitle className="text-xl text-slate-900">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</DialogTitle>
+          <p className="text-sm text-slate-600">
+            Gestiona la información base del proveedor y sus datos de acceso cuando exista usuario vinculado.
+          </p>
+        </DialogHeader>
+
+        <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-150px)]">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <div className="xl:col-span-8 rounded-xl border bg-white p-4 shadow-sm">
+              <p className="text-sm font-semibold text-slate-800 mb-3">Datos del proveedor</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Razón social</Label>
+                  <Input value={form.razon_social || ''} onChange={(e) => setForm((prev) => ({ ...prev, razon_social: e.target.value }))} />
+                </div>
+                <div className="space-y-2"><Label>NIT</Label><Input value={form.nit || ''} onChange={(e) => setForm((prev) => ({ ...prev, nit: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Email</Label><Input value={form.email || ''} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Teléfono</Label><Input value={form.telefono || ''} onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Ciudad</Label><Input value={form.ciudad || ''} onChange={(e) => setForm((prev) => ({ ...prev, ciudad: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Tipo proveedor</Label>
+                  <Select value={form.tipo_proveedor || 'Servicios'} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo_proveedor: value as Proveedor['tipo_proveedor'] }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Servicios">Servicios</SelectItem>
+                      <SelectItem value="Bienes">Bienes</SelectItem>
+                      <SelectItem value="Construcción">Construcción</SelectItem>
+                      <SelectItem value="Mixto">Mixto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>Banco</Label><Input value={form.banco || ''} onChange={(e) => setForm((prev) => ({ ...prev, banco: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Número de cuenta</Label><Input value={form.numero_cuenta || ''} onChange={(e) => setForm((prev) => ({ ...prev, numero_cuenta: e.target.value }))} /></div>
+              </div>
+            </div>
+
+            <div className="xl:col-span-4 rounded-xl border bg-slate-50 p-4 space-y-3">
+              <p className="text-sm font-semibold text-slate-800">Acceso del proveedor</p>
+              <p className="text-xs text-slate-600">
+                Si el proveedor tiene usuario vinculado, puedes cambiar su contraseña desde aquí.
+              </p>
+
+              <div className="space-y-2">
+                <Label>Nueva contraseña (opcional)</Label>
+                <Input
+                  type="password"
+                  value={form.nuevaContrasena || ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nuevaContrasena: e.target.value }))}
+                  placeholder="Solo si deseas cambiarla"
+                />
+              </div>
+
+              <div className="rounded-lg border bg-white px-3 py-2 text-xs text-slate-600">
+                {form.usuario
+                  ? 'Usuario vinculado detectado: el cambio de contraseña se aplicará al guardar.'
+                  : 'Este proveedor no tiene usuario vinculado en backend.'}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <AnimatePresence>
-          {mostrarFormulario && (
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="mb-8">
-              <Card className="border-2 border-red-200">
-                <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50">
-                  <CardTitle className="text-slate-800 flex items-center gap-2">
-                    <Building2 className="w-6 h-6 text-red-600" />
-                    {proveedorEditando ? 'Editar Proveedor' : 'Nuevo Proveedor'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                      <Building className="w-5 h-5 text-red-600" />Informacion Basica
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <Label htmlFor="nombre">Razon Social / Nombre Completo</Label>
-                        <Input id="nombre" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Nombre del proveedor" />
-                      </div>
-                      <div>
-                        <Label htmlFor="nit">NIT / Cedula</Label>
-                        <Input id="nit" name="nit" value={formData.nit} onChange={handleInputChange} placeholder="123456789-0" />
-                      </div>
-                      <div>
-                        <Label htmlFor="tipoPersona">Tipo de Persona</Label>
-                        <select id="tipoPersona" name="tipoPersona" value={formData.tipoPersona} onChange={handleInputChange} className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white">
-                          <option value="Juridica">Persona Juridica</option>
-                          <option value="Natural">Persona Natural</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-green-600" />Informacion Bancaria
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="banco">Banco</Label>
-                        <select id="banco" name="banco" value={formData.banco} onChange={handleInputChange} className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white">
-                          <option value="">Seleccione un banco</option>
-                          {bancosColombia.map((banco) => (
-                            <option key={banco} value={banco}>{banco}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="tipoCuenta">Tipo de Cuenta</Label>
-                        <select id="tipoCuenta" name="tipoCuenta" value={formData.tipoCuenta} onChange={handleInputChange} className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white">
-                          <option value="Ahorros">Ahorros</option>
-                          <option value="Corriente">Corriente</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="cuentaBancaria">Numero de Cuenta</Label>
-                        <Input id="cuentaBancaria" name="cuentaBancaria" value={formData.cuentaBancaria} onChange={handleInputChange} />
-                      </div>
-                      <div>
-                        <Label htmlFor="nombreCuenta">Titular de la Cuenta</Label>
-                        <Input id="nombreCuenta" name="nombreCuenta" value={formData.nombreCuenta} onChange={handleInputChange} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                      <User className="w-5 h-5 text-purple-600" />Persona de Contacto
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="contactoNombre">Nombre Completo</Label>
-                        <Input id="contactoNombre" name="contactoNombre" value={formData.contactoNombre} onChange={handleInputChange} />
-                      </div>
-                      <div>
-                        <Label htmlFor="contactoTelefono">Telefono</Label>
-                        <Input id="contactoTelefono" name="contactoTelefono" value={formData.contactoTelefono} onChange={handleInputChange} />
-                      </div>
-                      <div>
-                        <Label htmlFor="contactoEmail">Correo</Label>
-                        <Input id="contactoEmail" name="contactoEmail" type="email" value={formData.contactoEmail} onChange={handleInputChange} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="direccion">Direccion</Label>
-                    <Input id="direccion" name="direccion" value={formData.direccion} onChange={handleInputChange} className="mb-3" />
-                    <Label htmlFor="ciudad">Ciudad</Label>
-                    <select id="ciudad" name="ciudad" value={formData.ciudad} onChange={handleInputChange} className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white">
-                      <option value="">Seleccione una ciudad</option>
-                      {ciudadesColombia.map((ciudad) => (
-                        <option key={ciudad} value={ciudad}>{ciudad}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="observaciones">Observaciones</Label>
-                    <Textarea id="observaciones" name="observaciones" value={formData.observaciones} onChange={handleInputChange} rows={3} />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <Button variant="outline" onClick={limpiarFormulario} className="border-slate-300">
-                      <X className="w-4 h-4 mr-2" />Cancelar
-                    </Button>
-                    <Button onClick={guardarProveedor} disabled={guardando || !formData.nombre || !formData.nit} className="bg-green-600 hover:bg-green-700 text-white">
-                      {guardando ? (
-                        <>
-                          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                          Guardando...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          {proveedorEditando ? 'Actualizar Proveedor' : 'Guardar Proveedor'}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {!mostrarFormulario && (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input placeholder="Buscar por nombre o NIT..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-10" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!mostrarFormulario && (
-          <div className="grid gap-4">
-            {proveedoresFiltrados.length === 0 ? (
-              <Card>
-                <CardContent className="pt-12 pb-12 text-center">
-                  <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 text-lg">{busqueda ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}</p>
-                  <p className="text-slate-400 text-sm mt-2">{!busqueda && 'Agregue el primer proveedor con Nuevo Proveedor'}</p>
-                </CardContent>
-              </Card>
-            ) : (
-              proveedoresFiltrados.map((proveedor, index) => (
-                <motion.div key={proveedor.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                  <Card className="hover:shadow-lg transition-all border-l-4 border-l-red-600">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 grid grid-cols-4 gap-4">
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Razon Social</p>
-                            <p className="font-semibold text-slate-800">{proveedor.nombre}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">NIT</p>
-                            <p className="font-mono text-slate-700">{proveedor.nit}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Cuenta Bancaria</p>
-                            <p className="font-mono text-slate-700">{proveedor.cuentaBancaria || 'No registrada'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Estado</p>
-                            <Badge className={proveedor.activo ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}>{proveedor.activo ? 'Activo' : 'Inactivo'}</Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button size="sm" variant="outline" onClick={() => editarProveedor(proveedor)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
-                            <Edit className="w-4 h-4 mr-1" />Editar
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+        <DialogFooter className="border-t bg-white px-6 py-4">
+          <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={guardar} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white"><Save className="w-4 h-4 mr-2" />{saving ? 'Guardando...' : 'Guardar'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </div>
   );
 }

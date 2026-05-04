@@ -388,7 +388,7 @@ export const userService = {
       throw new Error('Se requiere el ID del usuario para actualizar');
     }
 
-    const actualizado = await apiClient.put<Usuario>(`/usuarios/${usuario.id}/`, {
+    const actualizado = await apiClient.patch<Usuario>(`/usuarios/${usuario.id}/`, {
       nombre: usuario.nombre,
       correo: usuario.correo,
       contrasena: usuario.contrasena,

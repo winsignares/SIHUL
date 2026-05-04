@@ -7,7 +7,7 @@ from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_GET
 
-from componentes.models import ComponenteRol
+from componentes.models import ComponenteRol, ComponenteUsuario
 from espacios.models import EspacioPermitido
 from usuarios.models import Usuario
 
@@ -17,15 +17,39 @@ def _build_componentes(usuario: Usuario):
         return []
 
     componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
-    return [
-        {
-            'id': cr.componente.id,
-            'nombre': cr.componente.nombre,
-            'descripcion': cr.componente.descripcion,
-            'permiso': cr.permiso,
-        }
-        for cr in componentes_rol
-    ]
+    componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
+    overrides = {item.componente_id: item for item in componentes_usuario}
+
+    componentes = []
+    for cr in componentes_rol:
+        override = overrides.get(cr.componente_id)
+        if override and not override.activo:
+            continue
+
+        permiso = override.permiso if override else cr.permiso
+        componentes.append(
+            {
+                'id': cr.componente.id,
+                'nombre': cr.componente.nombre,
+                'descripcion': cr.componente.descripcion,
+                'permiso': permiso,
+            }
+        )
+
+    componentes_por_id = {item['id']: item for item in componentes}
+    for override in componentes_usuario:
+        if not override.activo:
+            continue
+
+        if override.componente_id not in componentes_por_id:
+            componentes_por_id[override.componente_id] = {
+                'id': override.componente.id,
+                'nombre': override.componente.nombre,
+                'descripcion': override.componente.descripcion,
+                'permiso': override.permiso,
+            }
+
+    return list(componentes_por_id.values())
 
 
 def _build_espacios_permitidos(usuario: Usuario):

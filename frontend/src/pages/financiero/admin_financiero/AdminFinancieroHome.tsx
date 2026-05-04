@@ -1,315 +1,325 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
-import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
-import {
-  ShieldCheck,
-  Users,
-  BarChart3,
-  DollarSign,
-  TrendingUp,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Activity,
-  Eye,
-  Settings,
-} from 'lucide-react';
-import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { Button } from '../../../share/button';
+import { AlertTriangle, ArrowRight, BarChart3, Building2, Clock, DollarSign, FileCheck2, FileText, Layers3, RefreshCw, ShieldAlert, TrendingUp, Users } from 'lucide-react';
+import { reportesFinancieroService, type AdminDashboardResponse } from '../../../services/financiero';
 
 interface AdminFinancieroHomeProps {
   onNavigate: (menu: string) => void;
 }
 
-interface ActividadFactura extends SharedFacturaDetail {
-  id: string;
-  usuario: string;
-  accion: string;
-  tiempo: string;
-  tipo: 'success' | 'warning' | 'info';
-}
+const currency = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
-export default function AdminFinancieroHome({ onNavigate }: AdminFinancieroHomeProps) {
-  const [selectedFactura, setSelectedFactura] = useState<SharedFacturaDetail | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroHomeProps) {
+  const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const statsGlobales = [
-    { title: 'Usuarios Activos', value: '42', icon: Users, color: 'from-blue-600 to-blue-700', iconColor: 'text-blue-100', trend: '+3 este mes', action: () => onNavigate('usuarios') },
-    { title: 'Facturas en Proceso', value: '127', icon: FileText, color: 'from-orange-600 to-orange-700', iconColor: 'text-orange-100', trend: '15 pendientes hoy', action: () => onNavigate('reportes') },
-    { title: 'Monto Total en Tramite', value: '$847M', icon: DollarSign, color: 'from-green-600 to-green-700', iconColor: 'text-green-100', trend: '87 facturas', action: () => onNavigate('reportes') },
-    { title: 'Tiempo Promedio Proceso', value: '5.2 dias', icon: Clock, color: 'from-purple-600 to-purple-700', iconColor: 'text-purple-100', trend: '-0.8 vs mes anterior', action: () => onNavigate('reportes') },
-  ];
+  const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : 'No se pudo cargar el dashboard de administración financiera.');
 
-  const distribucionEstados = [
-    { estado: 'Recibida', cantidad: 18, porcentaje: 14, color: 'bg-gray-500' },
-    { estado: 'Radicada', cantidad: 15, porcentaje: 12, color: 'bg-blue-500' },
-    { estado: 'Causada', cantidad: 12, porcentaje: 9, color: 'bg-indigo-500' },
-    { estado: 'Alistada', cantidad: 20, porcentaje: 16, color: 'bg-yellow-500' },
-    { estado: 'Aprobada Auditoria', cantidad: 17, porcentaje: 13, color: 'bg-orange-500' },
-    { estado: 'Cargada', cantidad: 22, porcentaje: 17, color: 'bg-purple-500' },
-    { estado: 'Autorizada', cantidad: 15, porcentaje: 12, color: 'bg-green-500' },
-    { estado: 'Pagada', cantidad: 8, porcentaje: 7, color: 'bg-emerald-500' },
-  ];
-
-  const actividadesRecientes: ActividadFactura[] = [
-    {
-      id: '1',
-      usuario: 'Maria Gonzalez (Tesoreria)',
-      accion: 'Alisto factura para pago',
-      numeroFactura: 'FAC-2026-0156',
-      proveedor: 'Servicios Generales SAS',
-      valorTotal: 5600000,
-      tiempo: 'Hace 5 minutos',
-      tipo: 'success',
-      estado: 'Alistada',
-      fechaFactura: '2026-03-20',
-      fechaRecepcion: '2026-03-23',
-      areaSolicitante: 'Mantenimiento',
-      diasTranscurridos: 3,
-      descripcion: 'Flujo operativo en tiempo esperado',
-    },
-    {
-      id: '2',
-      usuario: 'Carlos Ruiz (Auditoria)',
-      accion: 'Aprobo control previo',
-      numeroFactura: 'FAC-2026-0145',
-      proveedor: 'Tecnologia y Equipos Ltda.',
-      valorTotal: 12800000,
-      tiempo: 'Hace 12 minutos',
-      tipo: 'success',
-      estado: 'Aprobada Auditoria',
-      fechaFactura: '2026-03-19',
-      fechaRecepcion: '2026-03-22',
-      areaSolicitante: 'Sistemas',
-      diasTranscurridos: 4,
-      descripcion: 'Control previo aprobado sin hallazgos',
-    },
-    {
-      id: '3',
-      usuario: 'Pedro Martinez (Dir. Financiera)',
-      accion: 'Cargo pagos para autorizacion',
-      numeroFactura: 'FAC-2026-0132',
-      proveedor: 'Mantenimiento Industrial',
-      valorTotal: 8900000,
-      tiempo: 'Hace 35 minutos',
-      tipo: 'warning',
-      estado: 'Cargada',
-      fechaFactura: '2026-03-17',
-      fechaRecepcion: '2026-03-20',
-      areaSolicitante: 'Infraestructura',
-      diasTranscurridos: 6,
-      descripcion: 'Requiere autorizacion final de rectoria',
-    },
-  ];
-
-  const rendimientoPorRol = [
-    { rol: 'Funcionario', tareasPendientes: 8, tareasCompletadas: 45, eficiencia: 85 },
-    { rol: 'Contabilidad', tareasPendientes: 12, tareasCompletadas: 38, eficiencia: 76 },
-    { rol: 'Tesoreria', tareasPendientes: 15, tareasCompletadas: 42, eficiencia: 74 },
-    { rol: 'Auditoria', tareasPendientes: 10, tareasCompletadas: 35, eficiencia: 78 },
-    { rol: 'Dir. Financiera', tareasPendientes: 5, tareasCompletadas: 28, eficiencia: 85 },
-  ];
-
-  const handleClickActividad = (actividad: ActividadFactura) => {
-    setSelectedFactura(actividad);
-    setShowDetailModal(true);
-  };
-
-  const getTipoIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-      case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      case 'info':
-        return <Activity className="w-4 h-4 text-blue-600" />;
-      default:
-        return <FileText className="w-4 h-4 text-slate-600" />;
+  const fetchDashboard = useCallback(async (showRefresh = false) => {
+    if (showRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
     }
-  };
+
+    setError(null);
+    try {
+      const data = await reportesFinancieroService.getDashboardAdmin();
+      setDashboard(data);
+      setLastUpdated(new Date());
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
+    } finally {
+      if (showRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchDashboard();
+    const interval = window.setInterval(() => {
+      void fetchDashboard(true);
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, [fetchDashboard]);
+
+  const resumen = dashboard?.resumen;
+  const distribucion = useMemo(() => dashboard?.distribucion_estados?.slice(0, 8) || [], [dashboard]);
+  const alertas = useMemo(() => dashboard?.alertas?.slice(0, 8) || [], [dashboard]);
+  const actividades = useMemo(() => dashboard?.actividades?.slice(0, 6) || [], [dashboard]);
+  const totalFacturas = useMemo(
+    () => resumen?.total_facturas ?? distribucion.reduce((acc, item) => acc + item.cantidad, 0),
+    [resumen?.total_facturas, distribucion]
+  );
+  const totalRiesgo = resumen?.facturas_riesgo ?? 0;
+  const saludOperativa = totalFacturas > 0 ? Math.max(0, Math.min(100, ((totalFacturas - totalRiesgo) / totalFacturas) * 100)) : 100;
+  const avanceProceso = totalFacturas > 0 ? Math.max(0, Math.min(100, ((resumen?.facturas_en_proceso ?? 0) / totalFacturas) * 100)) : 0;
+  const alertasCriticas = resumen?.facturas_vencidas ?? 0;
+
+  const kpiCards = useMemo(
+    () => [
+      {
+        title: 'Facturas en Proceso',
+        value: resumen?.facturas_en_proceso ?? 0,
+        icon: FileText,
+        subtitle: `${avanceProceso.toFixed(0)}% del total del flujo`,
+        progress: avanceProceso,
+        iconClass: 'text-orange-700',
+        bgClass: 'from-amber-50 via-orange-50 to-red-50 border-orange-200',
+        progressClass: 'bg-gradient-to-r from-orange-500 to-red-500',
+        onClick: () => onNavigate('reportes'),
+      },
+      {
+        title: 'Facturas con Riesgo',
+        value: resumen?.facturas_riesgo ?? 0,
+        icon: ShieldAlert,
+        subtitle: `${alertasCriticas} críticas vencidas`,
+        progress: totalFacturas > 0 ? Math.min(100, ((resumen?.facturas_riesgo ?? 0) / totalFacturas) * 100) : 0,
+        iconClass: 'text-red-700',
+        bgClass: 'from-red-50 via-rose-50 to-orange-50 border-rose-200',
+        progressClass: 'bg-gradient-to-r from-red-500 to-rose-500',
+        onClick: () => onNavigate('reportes'),
+      },
+      {
+        title: 'Monto en Trámite',
+        value: currency.format(resumen?.monto_total_tramite ?? 0),
+        icon: DollarSign,
+        subtitle: 'Valor pendiente por procesar',
+        progress: saludOperativa,
+        iconClass: 'text-emerald-700',
+        bgClass: 'from-emerald-50 via-teal-50 to-cyan-50 border-emerald-200',
+        progressClass: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+        onClick: () => onNavigate('reportes'),
+      },
+      {
+        title: 'Pagos Aplicados (Mes)',
+        value: resumen?.pagos_aplicados_mes ?? 0,
+        icon: FileCheck2,
+        subtitle: 'Pagos cerrados en el periodo',
+        progress: totalFacturas > 0 ? Math.min(100, ((resumen?.pagos_aplicados_mes ?? 0) / totalFacturas) * 100) : 0,
+        iconClass: 'text-blue-700',
+        bgClass: 'from-blue-50 via-indigo-50 to-sky-50 border-blue-200',
+        progressClass: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+        onClick: () => onNavigate('reportes'),
+      },
+    ],
+    [alertasCriticas, avanceProceso, onNavigate, resumen, saludOperativa, totalFacturas]
+  );
 
   return (
-    <>
-      <div className="space-y-8">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-8 text-white shadow-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-yellow-400" />
-            </div>
-            <div>
-              <h1 className="text-white mb-1 text-3xl font-bold">Panel de Administracion Financiera</h1>
-              <p className="text-red-100">Monitoreo completo del sistema de cuentas por pagar</p>
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+      >
+        <div className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full bg-red-500/50 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Panel de Administración Financiera</h1>
+            <p className="text-red-100 text-sm mt-1">Monitoreo operativo, alertas y control integral del flujo financiero.</p>
+            <p className="text-red-200/90 text-xs mt-2">
+              {lastUpdated ? `Última actualización: ${lastUpdated.toLocaleString('es-CO')}` : 'Sincronizando información...'}
+            </p>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+              Salud operativa: {saludOperativa.toFixed(0)}%
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-red-100">
-            <Clock className="w-4 h-4" />
-            <span>Ultima actualizacion: Hoy, 14 de Abril 2026 - 16:30 PM</span>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => void fetchDashboard(true)} disabled={refreshing} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Actualizando...' : 'Actualizar'}
+            </Button>
+            <Button onClick={() => onNavigate('reportes')} className="bg-white text-red-700 hover:bg-red-50">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Ver reportes
+            </Button>
           </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statsGlobales.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} onClick={stat.action} className="cursor-pointer">
-                <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden group">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                        <Icon className={`w-6 h-6 ${stat.iconColor}`} />
-                      </div>
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    </div>
-                    <p className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</p>
-                    <p className="text-sm text-slate-600 mb-2">{stat.title}</p>
-                    <p className="text-xs text-slate-500">{stat.trend}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
         </div>
+      </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-            <Card className="border-0 shadow-lg h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-800">
-                  <BarChart3 className="w-5 h-5 text-red-600" />
-                  Distribucion por Estado del Flujo
-                </CardTitle>
-                <CardDescription>127 facturas en proceso total</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {distribucionEstados.map((item, index) => (
-                    <motion.div key={item.estado} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="space-y-2">
+      {loading && <Card><CardContent className="p-6 text-slate-600">Cargando panel...</CardContent></Card>}
+      {error && <Card><CardContent className="p-6 text-red-600">{error}</CardContent></Card>}
+
+      {!loading && !error && resumen && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {kpiCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={card.title}
+                  whileHover={{ y: -5, scale: 1.01 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                >
+                  <Card onClick={card.onClick} className={`cursor-pointer bg-gradient-to-br ${card.bgClass} hover:shadow-lg transition-all`}>
+                    <CardContent className="p-5 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                          <span className="text-sm text-slate-700">{item.estado}</span>
+                        <div>
+                          <p className="text-sm text-slate-600">{card.title}</p>
+                          <p className="text-3xl font-bold text-slate-900">{card.value}</p>
                         </div>
-                        <span className="text-sm font-semibold text-slate-800">{item.cantidad} ({item.porcentaje}%)</span>
+                        <div className="rounded-xl bg-white/70 p-2 shadow-sm">
+                          <Icon className={`w-6 h-6 ${card.iconClass}`} />
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${item.porcentaje}%` }} transition={{ delay: index * 0.1, duration: 0.5 }} className={`h-full ${item.color}`} />
+                      <div className="space-y-1">
+                        <p className="text-xs text-slate-600">{card.subtitle}</p>
+                        <div className="h-1.5 rounded-full bg-white/80 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(100, Math.max(0, card.progress))}%` }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                            className={`h-1.5 ${card.progressClass}`}
+                          />
+                        </div>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-600">Usuarios financieros activos</p>
+                <p className="text-xl font-bold text-slate-900">{resumen.usuarios_activos}</p>
               </CardContent>
             </Card>
-          </motion.div>
+            <Card className="cursor-pointer border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-sm transition-shadow" onClick={() => onNavigate('proveedores')}>
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-600">Proveedores activos</p>
+                <p className="text-xl font-bold text-slate-900">{resumen.proveedores_activos ?? 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="cursor-pointer border-violet-100 bg-gradient-to-r from-violet-50 to-purple-50 hover:shadow-sm transition-shadow" onClick={() => onNavigate('reportes')}>
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-600">Facturas registradas</p>
+                <p className="text-xl font-bold text-slate-900">{totalFacturas}</p>
+              </CardContent>
+            </Card>
+            <Card className="cursor-pointer border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 hover:shadow-sm transition-shadow" onClick={() => onNavigate('sla')}>
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-600">Tiempo promedio</p>
+                <p className="text-xl font-bold text-slate-900">{resumen.tiempo_promedio_dias} días</p>
+              </CardContent>
+            </Card>
+          </div>
 
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
-            <Card className="border-0 shadow-lg h-full">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <Card className="border-red-100 shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-800">
-                  <Activity className="w-5 h-5 text-red-600" />
-                  Actividad del Sistema en Tiempo Real
-                </CardTitle>
-                <CardDescription>Ultimas acciones realizadas</CardDescription>
+                <CardTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-red-600" />Distribución por Estado</CardTitle>
+                <CardDescription>Estado actual del flujo financiero</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {actividadesRecientes.map((actividad, index) => (
-                    <motion.div key={actividad.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} onClick={() => handleClickActividad(actividad)} className="p-4 rounded-lg border border-slate-200 hover:border-red-300 hover:bg-red-50 transition-all cursor-pointer group">
-                      <div className="flex items-start gap-3">
-                        {getTipoIcon(actividad.tipo)}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-800 group-hover:text-red-600 transition-colors">{actividad.usuario}</p>
-                          <p className="text-sm text-slate-600">{actividad.accion}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">{actividad.numeroFactura}</Badge>
-                            <span className="text-xs text-slate-500">{actividad.tiempo}</span>
-                          </div>
-                        </div>
-                        <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Eye className="w-4 h-4" />
-                        </Button>
+              <CardContent className="space-y-3">
+                {distribucion.length === 0 && (
+                  <p className="text-sm text-slate-500">Aún no hay facturas para construir la distribución de estados.</p>
+                )}
+                {distribucion.map((item) => {
+                  const porcentaje = Math.min(100, (item.cantidad / Math.max(1, totalFacturas)) * 100);
+                  return (
+                    <div key={item.estado} className="space-y-1 rounded-lg bg-slate-50/80 p-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-slate-700">{item.estado}</span>
+                        <span className="font-semibold">{item.cantidad} ({porcentaje.toFixed(0)}%)</span>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      <div className="h-2 rounded bg-slate-200 overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${porcentaje}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className="h-2 bg-gradient-to-r from-red-500 via-orange-500 to-amber-400"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
-          </motion.div>
-        </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-slate-800">
-                <Users className="w-5 h-5 text-red-600" />
-                Rendimiento por Rol
-              </CardTitle>
-              <CardDescription>Metricas de eficiencia de cada departamento</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {rendimientoPorRol.map((rol, index) => (
-                  <motion.div key={rol.rol} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }} className="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-red-300 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-slate-800">{rol.rol}</h4>
-                      <Badge className={`${rol.eficiencia >= 80 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{rol.eficiencia}%</Badge>
+            <Card className="border-amber-100 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-600" />Alertas de Riesgo</CardTitle>
+                <CardDescription>Facturas con atención prioritaria</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {alertas.length === 0 && <p className="text-sm text-slate-500">Sin alertas activas. El flujo está estable en este momento.</p>}
+                {alertas.map((alerta) => (
+                  <motion.div key={alerta.id} whileHover={{ x: 3 }} className="border rounded-lg p-3 flex justify-between gap-2 bg-amber-50/40">
+                    <div>
+                      <p className="font-medium text-sm">{alerta.numero_factura}</p>
+                      <p className="text-xs text-slate-500">{alerta.estado} · {alerta.dias_transcurridos} días</p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm"><span className="text-slate-600">Pendientes:</span><span className="font-semibold text-orange-600">{rol.tareasPendientes}</span></div>
-                      <div className="flex items-center justify-between text-sm"><span className="text-slate-600">Completadas:</span><span className="font-semibold text-green-600">{rol.tareasCompletadas}</span></div>
-                    </div>
-                    <div className="mt-3 w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${rol.eficiencia}%` }} transition={{ delay: index * 0.1, duration: 0.5 }} className={`h-full ${rol.eficiencia >= 80 ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                    </div>
+                    <Badge className={alerta.indicador_riesgo === 'vencida' || alerta.indicador_riesgo === 'atrasada' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}>
+                      {alerta.indicador_riesgo}
+                    </Badge>
                   </motion.div>
                 ))}
-              </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-indigo-100 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Layers3 className="w-5 h-5 text-indigo-600" />Actividad Reciente del Flujo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {actividades.length === 0 && <p className="text-sm text-slate-500">Sin actividad reciente registrada en historial.</p>}
+              {actividades.map((a) => (
+                <motion.div key={a.id} whileHover={{ y: -2 }} className="border rounded-lg p-3 bg-indigo-50/30">
+                  <p className="text-sm font-medium">{a.usuario_nombre} · {a.accion}</p>
+                  <p className="text-xs text-slate-500">{a.numero_factura || 'Sin factura'} · {new Date(a.fecha_accion).toLocaleString('es-CO')}</p>
+                </motion.div>
+              ))}
             </CardContent>
           </Card>
-        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-            <Card onClick={() => onNavigate('usuarios')} className="border-0 shadow-lg hover:shadow-2xl transition-all cursor-pointer group bg-gradient-to-br from-blue-600 to-blue-700 text-white">
-              <CardContent className="p-6">
-                <Users className="w-12 h-12 text-blue-100 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="font-bold text-xl mb-2">Gestionar Usuarios</h3>
-                <p className="text-blue-100 text-sm">Crear, editar o desactivar usuarios del sistema</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-            <Card onClick={() => onNavigate('reportes')} className="border-0 shadow-lg hover:shadow-2xl transition-all cursor-pointer group bg-gradient-to-br from-green-600 to-green-700 text-white">
-              <CardContent className="p-6">
-                <BarChart3 className="w-12 h-12 text-green-100 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="font-bold text-xl mb-2">Reportes Consolidados</h3>
-                <p className="text-green-100 text-sm">Ver metricas, estadisticas y exportar datos</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
-            <Card onClick={() => onNavigate('configuracion')} className="border-0 shadow-lg hover:shadow-2xl transition-all cursor-pointer group bg-gradient-to-br from-purple-600 to-purple-700 text-white">
-              <CardContent className="p-6">
-                <Settings className="w-12 h-12 text-purple-100 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="font-bold text-xl mb-2">Configuracion</h3>
-                <p className="text-purple-100 text-sm">Ajustes del sistema y parametros generales</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </div>
-
-      <FacturaDetailModal
-        factura={selectedFactura}
-        isOpen={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false);
-          setSelectedFactura(null);
-        }}
-      />
-    </>
+          <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-700 via-red-700 to-red-600 p-4 shadow-lg">
+            <div className="mb-3 flex items-center justify-between text-white">
+              <p className="text-sm font-semibold">Accesos rápidos</p>
+              <p className="text-xs text-red-100">Navega directo a los módulos principales</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Button
+                onClick={() => onNavigate('usuarios')}
+                className="justify-between bg-red-600/70 hover:bg-red-500 text-white border border-white/20"
+              >
+                <span className="flex items-center gap-2"><Users className="w-4 h-4" />Gestión de usuarios</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => onNavigate('proveedores')}
+                className="justify-between bg-red-600/70 hover:bg-red-500 text-white border border-white/20"
+              >
+                <span className="flex items-center gap-2"><Building2 className="w-4 h-4" />Gestión de proveedores</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => onNavigate('sla')}
+                className="justify-between bg-red-600/70 hover:bg-red-500 text-white border border-white/20"
+              >
+                <span className="flex items-center gap-2"><Clock className="w-4 h-4" />Parametrización SLA</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

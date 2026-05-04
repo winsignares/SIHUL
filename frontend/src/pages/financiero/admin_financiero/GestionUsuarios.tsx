@@ -1,260 +1,910 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
-import { Button } from '../../../share/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
+import { Badge } from '../../../share/badge';
 import { Input } from '../../../share/input';
+import { Button } from '../../../share/button';
 import { Label } from '../../../share/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../share/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { Badge } from '../../../share/badge';
-import { Users, UserPlus, Edit, Search, Mail, Shield } from 'lucide-react';
+import { Checkbox } from '../../../share/checkbox';
+import { Edit3, FileSpreadsheet, Plus, RefreshCw, Search, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { userService, rolService, type Usuario, type Rol } from '../../../services/users/authService';
+import { componenteRolService, componenteService, componenteUsuarioService, type Componente, type ComponenteRol, type ComponenteUsuario } from '../../../services/componentes/componentesAPI';
+import * as XLSX from 'xlsx';
 
-interface Usuario {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: string;
-  estado: 'Activo' | 'Inactivo';
-  ultimoAcceso: string;
-}
+type PermisoTipo = 'VER' | 'EDITAR';
 
-export default function GestionUsuarios() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showNewUserDialog, setShowNewUserDialog] = useState(false);
-  const [newUser, setNewUser] = useState({
-    nombre: '',
-    email: '',
-    rol: '',
-    password: '',
-  });
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  const usuarios: Usuario[] = [
-    { id: '1', nombre: 'Juan Perez', email: 'funcionario@financiera.edu.co', rol: 'Funcionario', estado: 'Activo', ultimoAcceso: '2026-04-14 14:30' },
-    { id: '2', nombre: 'Maria Gonzalez', email: 'contabilidad@financiera.edu.co', rol: 'Contabilidad', estado: 'Activo', ultimoAcceso: '2026-04-14 15:20' },
-    { id: '3', nombre: 'Carlos Ruiz', email: 'tesoreria@financiera.edu.co', rol: 'Tesoreria', estado: 'Activo', ultimoAcceso: '2026-04-14 13:45' },
-    { id: '4', nombre: 'Ana Lopez', email: 'auditoria@financiera.edu.co', rol: 'Auditoria', estado: 'Activo', ultimoAcceso: '2026-04-14 12:15' },
-    { id: '5', nombre: 'Pedro Martinez', email: 'direccion-financiera@financiera.edu.co', rol: 'Direccion Financiera', estado: 'Activo', ultimoAcceso: '2026-04-14 15:30' },
-    { id: '6', nombre: 'Laura Sanchez', email: 'rectoria@financiera.edu.co', rol: 'Rectoria', estado: 'Activo', ultimoAcceso: '2026-04-14 11:00' },
-    { id: '7', nombre: 'Admin Financiero', email: 'admin.financiero@financiera.edu.co', rol: 'Admin Financiero', estado: 'Activo', ultimoAcceso: '2026-04-14 16:10' },
-  ];
+const FINANCIAL_ROLE_NAMES = new Set([
+  'funcionario',
+  'contabilidad',
+  'tesoreria',
+  'auditoria',
+  'direccion financiera',
+  'rectoria',
+  'admin financiero',
+]);
 
-  const handleCreateUser = () => {
-    if (!newUser.nombre || !newUser.email || !newUser.rol || !newUser.password) {
-      toast.error('Todos los campos son obligatorios');
+const isProveedorRole = (roleName: string) => normalizeText(roleName) === 'proveedor';
+
+const isFinancialRole = (roleName: string) => FINANCIAL_ROLE_NAMES.has(normalizeText(roleName));
+
+const getRolNombre = (usuario: Usuario, rolesById: Record<number, string>) =>
+  rolesById[usuario.rol_id || -1] || usuario.rol?.nombre || 'Sin rol';
+
+const formatSede = (sede: Usuario['sede']) => {
+  if (!sede) return 'Sin sede';
+  if (typeof sede === 'string') return sede;
+  return sede.nombre || 'Sin sede';
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const initialNuevoUsuario = {
+  nombre: '',
+  correo: '',
+  contrasena: '',
+  rolId: '',
+  activo: true,
+};
+
+const initialEditarUsuario = {
+  id: null as number | null,
+  nombre: '',
+  correo: '',
+  contrasena: '',
+  rolId: '',
+  activo: true,
+};
+
+export default function GestionUsuariosReal() {
+  const [loading, setLoading] = useState(true);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [roles, setRoles] = useState<Rol[]>([]);
+  const [rolesById, setRolesById] = useState<Record<number, string>>({});
+  const [componentes, setComponentes] = useState<Componente[]>([]);
+  const [componenteRoles, setComponenteRoles] = useState<ComponenteRol[]>([]);
+  const [componenteUsuarios, setComponenteUsuarios] = useState<ComponenteUsuario[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [accionUsuarioId, setAccionUsuarioId] = useState<number | null>(null);
+  const [nuevoUsuario, setNuevoUsuario] = useState(initialNuevoUsuario);
+  const [editarUsuario, setEditarUsuario] = useState(initialEditarUsuario);
+  const [componentesNuevoUsuario, setComponentesNuevoUsuario] = useState<Record<number, PermisoTipo>>({});
+  const [componentesEditarUsuario, setComponentesEditarUsuario] = useState<Record<number, PermisoTipo>>({});
+  const [search, setSearch] = useState('');
+  const [rolFilter, setRolFilter] = useState('all');
+  const [estadoFilter, setEstadoFilter] = useState('all');
+  const [sedeFilter, setSedeFilter] = useState('all');
+
+  const buildRoleComponentSelection = useCallback((rolId: number): Record<number, PermisoTipo> => {
+    if (!rolId) return {};
+    return componenteRoles
+      .filter((item) => item.rol_id === rolId)
+      .reduce<Record<number, PermisoTipo>>((acc, item) => {
+        acc[item.componente_id] = item.permiso;
+        return acc;
+      }, {});
+  }, [componenteRoles]);
+
+  const buildEffectiveSelectionForUser = useCallback((usuarioId: number, rolId: number): Record<number, PermisoTipo> => {
+    const base = buildRoleComponentSelection(rolId);
+    const overrides = componenteUsuarios.filter((item) => item.usuario_id === usuarioId);
+
+    const merged = { ...base };
+    overrides.forEach((override) => {
+      if (override.activo) {
+        merged[override.componente_id] = override.permiso;
+      } else {
+        delete merged[override.componente_id];
+      }
+    });
+
+    return merged;
+  }, [buildRoleComponentSelection, componenteUsuarios]);
+
+  const syncComponentesUsuario = useCallback(async (usuarioId: number, rolId: number, selected: Record<number, PermisoTipo>) => {
+    const base = buildRoleComponentSelection(rolId);
+    const existing = componenteUsuarios.filter((item) => item.usuario_id === usuarioId);
+    const existingByComponente = new Map(existing.map((item) => [item.componente_id, item]));
+
+    const candidateIds = new Set<number>([
+      ...Object.keys(base).map(Number),
+      ...Object.keys(selected).map(Number),
+      ...existing.map((item) => item.componente_id),
+    ]);
+
+    for (const componenteId of candidateIds) {
+      const basePermiso = base[componenteId];
+      const selectedPermiso = selected[componenteId];
+      const existingOverride = existingByComponente.get(componenteId);
+
+      let shouldPersistOverride = false;
+      let payload: { permiso: PermisoTipo; activo: boolean } | null = null;
+
+      if (basePermiso) {
+        if (!selectedPermiso) {
+          shouldPersistOverride = true;
+          payload = { permiso: basePermiso, activo: false };
+        } else if (selectedPermiso !== basePermiso) {
+          shouldPersistOverride = true;
+          payload = { permiso: selectedPermiso, activo: true };
+        }
+      } else if (selectedPermiso) {
+        shouldPersistOverride = true;
+        payload = { permiso: selectedPermiso, activo: true };
+      }
+
+      if (shouldPersistOverride && payload) {
+        if (existingOverride?.id) {
+          if (existingOverride.permiso !== payload.permiso || existingOverride.activo !== payload.activo) {
+            await componenteUsuarioService.update({ id: existingOverride.id, permiso: payload.permiso, activo: payload.activo });
+          }
+        } else {
+          await componenteUsuarioService.create({
+            usuario_id: usuarioId,
+            componente_id: componenteId,
+            permiso: payload.permiso,
+            activo: payload.activo,
+          });
+        }
+      } else if (!shouldPersistOverride && existingOverride?.id) {
+        await componenteUsuarioService.delete(existingOverride.id);
+      }
+    }
+  }, [buildRoleComponentSelection, componenteUsuarios]);
+
+  const cargarData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [usuariosResp, rolesResp, componentesResp, componenteRolesResp, componenteUsuariosResp] = await Promise.all([
+        userService.listarUsuarios(),
+        rolService.listarRoles(),
+        componenteService.list(),
+        componenteRolService.list(),
+        componenteUsuarioService.list(),
+      ]);
+
+      const rolesMap = Object.fromEntries((rolesResp.roles || []).map((r) => [r.id, r.nombre]));
+      setRolesById(rolesMap);
+      setRoles(rolesResp.roles || []);
+      setUsuarios(usuariosResp.usuarios || []);
+      setComponentes(componentesResp.componentes || []);
+      setComponenteRoles(componenteRolesResp.componente_roles || []);
+      setComponenteUsuarios(componenteUsuariosResp.componente_usuarios || []);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No se pudo cargar la gestión de usuarios financieros.'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargarData();
+  }, [cargarData]);
+
+  const rolesGestionables = useMemo(
+    () => roles.filter((rol) => isFinancialRole(rol.nombre) && !isProveedorRole(rol.nombre)),
+    [roles]
+  );
+
+  const usuariosFinancieros = useMemo(() => {
+    return usuarios.filter((usuario) => {
+      const rolNombre = getRolNombre(usuario, rolesById);
+      return isFinancialRole(rolNombre) && !isProveedorRole(rolNombre);
+    });
+  }, [usuarios, rolesById]);
+
+  const sedesDisponibles = useMemo(
+    () => Array.from(new Set(usuariosFinancieros.map((usuario) => formatSede(usuario.sede)))).sort((a, b) => a.localeCompare(b, 'es')),
+    [usuariosFinancieros]
+  );
+
+  const usuariosFiltrados = useMemo(() => {
+    const query = normalizeText(search);
+    return usuariosFinancieros.filter((usuario) => {
+      const rolNombre = getRolNombre(usuario, rolesById);
+      const sede = formatSede(usuario.sede);
+
+      if (rolFilter !== 'all' && normalizeText(rolNombre) !== normalizeText(rolFilter)) {
+        return false;
+      }
+
+      if (estadoFilter === 'activo' && !usuario.activo) {
+        return false;
+      }
+
+      if (estadoFilter === 'inactivo' && usuario.activo) {
+        return false;
+      }
+
+      if (sedeFilter !== 'all' && normalizeText(sede) !== normalizeText(sedeFilter)) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return [String(usuario.id || ''), usuario.nombre, usuario.correo, rolNombre, sede].some((value) =>
+        normalizeText(value || '').includes(query)
+      );
+    });
+  }, [search, usuariosFinancieros, rolesById, rolFilter, estadoFilter, sedeFilter]);
+
+  const crearUsuario = async () => {
+    const nombre = nuevoUsuario.nombre.trim();
+    const correo = nuevoUsuario.correo.trim();
+    const contrasena = nuevoUsuario.contrasena.trim();
+
+    if (!nombre || !correo || !contrasena || !nuevoUsuario.rolId) {
+      toast.error('Completa nombre, correo, contraseña y rol para crear el usuario.');
       return;
     }
 
-    toast.success('Usuario creado exitosamente', {
-      description: `${newUser.nombre} ha sido agregado al sistema`,
-    });
+    setSaving(true);
+    try {
+      const created = await userService.crearUsuario({
+        nombre,
+        correo,
+        contrasena,
+        rol_id: Number(nuevoUsuario.rolId),
+        activo: nuevoUsuario.activo,
+      });
 
-    setShowNewUserDialog(false);
-    setNewUser({ nombre: '', email: '', rol: '', password: '' });
+      await syncComponentesUsuario(created.id, Number(nuevoUsuario.rolId), componentesNuevoUsuario);
+      toast.success('Usuario creado correctamente.');
+      setDialogOpen(false);
+      setNuevoUsuario(initialNuevoUsuario);
+      setComponentesNuevoUsuario({});
+      await cargarData();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible crear el usuario.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleToggleUserStatus = (usuario: Usuario) => {
-    const nuevoEstado = usuario.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    toast.success(`Usuario ${nuevoEstado.toLowerCase()}`, {
-      description: `${usuario.nombre} ahora esta ${nuevoEstado.toLowerCase()}`,
+  const iniciarEdicion = (usuario: Usuario) => {
+    if (!usuario.id) {
+      toast.error('No se puede editar este usuario porque no tiene ID válido.');
+      return;
+    }
+
+    const rolId = usuario.rol_id ?? usuario.rol?.id;
+    setEditarUsuario({
+      id: usuario.id,
+      nombre: usuario.nombre,
+      correo: usuario.correo,
+      contrasena: '',
+      rolId: rolId ? String(rolId) : '',
+      activo: usuario.activo,
     });
+
+    if (rolId) {
+      setComponentesEditarUsuario(buildEffectiveSelectionForUser(usuario.id, rolId));
+    } else {
+      setComponentesEditarUsuario({});
+    }
+    setEditDialogOpen(true);
   };
 
-  const usuariosFiltrados = usuarios.filter(
-    (user) =>
-      user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.rol.toLowerCase().includes(searchTerm.toLowerCase())
+  const actualizarUsuario = async () => {
+    if (!editarUsuario.id) {
+      toast.error('No se pudo identificar el usuario a actualizar.');
+      return;
+    }
+
+    const nombre = editarUsuario.nombre.trim();
+    const correo = editarUsuario.correo.trim();
+    const contrasena = editarUsuario.contrasena.trim();
+
+    if (!nombre || !correo || !editarUsuario.rolId) {
+      toast.error('Completa nombre, correo y rol para actualizar el usuario.');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await userService.actualizarUsuario({
+        id: editarUsuario.id,
+        nombre,
+        correo,
+        contrasena: contrasena || undefined,
+        rol_id: Number(editarUsuario.rolId),
+        activo: editarUsuario.activo,
+      });
+
+      await syncComponentesUsuario(editarUsuario.id, Number(editarUsuario.rolId), componentesEditarUsuario);
+
+      toast.success('Usuario actualizado correctamente.');
+      setEditDialogOpen(false);
+      setEditarUsuario(initialEditarUsuario);
+      setComponentesEditarUsuario({});
+      await cargarData();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible actualizar el usuario.'));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const eliminarUsuario = async (usuario: Usuario) => {
+    if (!usuario.id) {
+      toast.error('No se puede eliminar este usuario porque no tiene ID válido.');
+      return;
+    }
+
+    const confirmar = window.confirm(`¿Seguro que deseas eliminar a ${usuario.nombre}? Esta acción no se puede deshacer.`);
+    if (!confirmar) {
+      return;
+    }
+
+    setAccionUsuarioId(usuario.id);
+    try {
+      await userService.eliminarUsuario(usuario.id);
+      toast.success('Usuario eliminado correctamente.');
+      await cargarData();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible eliminar el usuario.'));
+    } finally {
+      setAccionUsuarioId(null);
+    }
+  };
+
+  const toggleEstadoUsuario = async (usuario: Usuario) => {
+    if (!usuario.id) {
+      toast.error('No se puede cambiar estado de este usuario porque no tiene ID válido.');
+      return;
+    }
+
+    setAccionUsuarioId(usuario.id);
+    try {
+      await userService.actualizarUsuario({
+        id: usuario.id,
+        activo: !usuario.activo,
+      });
+      toast.success(`Usuario ${usuario.activo ? 'desactivado' : 'activado'} correctamente.`);
+      await cargarData();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible cambiar el estado del usuario.'));
+    } finally {
+      setAccionUsuarioId(null);
+    }
+  };
+
+  const permisosRolSeleccionado = useMemo(() => {
+    const rolId = Number(editarUsuario.rolId);
+    if (!rolId) {
+      return [];
+    }
+
+    return componenteRoles.filter((item) => item.rol_id === rolId);
+  }, [editarUsuario.rolId, componenteRoles]);
+
+  const permisosPorComponente = useMemo(
+    () => new Map(permisosRolSeleccionado.map((item) => [item.componente_id, item.permiso])),
+    [permisosRolSeleccionado]
   );
+
+  const componentesOrdenados = useMemo(
+    () => [...componentes].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')),
+    [componentes]
+  );
+
+  const componentesDelRolSeleccionado = useMemo(() => {
+    const idsComponentesRol = new Set(permisosRolSeleccionado.map((item) => item.componente_id));
+    return componentesOrdenados.filter((componente) => Boolean(componente.id) && idsComponentesRol.has(componente.id as number));
+  }, [componentesOrdenados, permisosRolSeleccionado]);
+
+  const componentesDelRolNuevo = useMemo(() => {
+    const rolId = Number(nuevoUsuario.rolId);
+    if (!rolId) return [];
+    const ids = new Set(componenteRoles.filter((item) => item.rol_id === rolId).map((item) => item.componente_id));
+    return componentesOrdenados.filter((componente) => Boolean(componente.id) && ids.has(componente.id as number));
+  }, [nuevoUsuario.rolId, componenteRoles, componentesOrdenados]);
+
+  const handleNuevoRolChange = (value: string) => {
+    setNuevoUsuario((prev) => ({ ...prev, rolId: value }));
+    setComponentesNuevoUsuario(buildRoleComponentSelection(Number(value)));
+  };
+
+  const handleEditarRolChange = (value: string) => {
+    setEditarUsuario((prev) => ({ ...prev, rolId: value }));
+    if (editarUsuario.id) {
+      setComponentesEditarUsuario(buildEffectiveSelectionForUser(editarUsuario.id, Number(value)));
+      return;
+    }
+    setComponentesEditarUsuario(buildRoleComponentSelection(Number(value)));
+  };
+
+  const toggleComponenteNuevo = (componenteId: number) => {
+    setComponentesNuevoUsuario((prev) => {
+      const next = { ...prev };
+      if (next[componenteId]) {
+        delete next[componenteId];
+      } else {
+        next[componenteId] = 'VER';
+      }
+      return next;
+    });
+  };
+
+  const setPermisoComponenteNuevo = (componenteId: number, permiso: PermisoTipo) => {
+    setComponentesNuevoUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
+  };
+
+  const toggleComponenteEditar = (componenteId: number) => {
+    setComponentesEditarUsuario((prev) => {
+      const next = { ...prev };
+      if (next[componenteId]) {
+        delete next[componenteId];
+      } else {
+        next[componenteId] = 'VER';
+      }
+      return next;
+    });
+  };
+
+  const setPermisoComponenteEditar = (componenteId: number, permiso: PermisoTipo) => {
+    setComponentesEditarUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
+  };
+
+  const exportarUsuariosExcel = useCallback(() => {
+    if (usuariosFiltrados.length === 0) {
+      toast.error('No hay usuarios para exportar con los filtros actuales.');
+      return;
+    }
+
+    const rows = usuariosFiltrados.map((usuario) => ({
+      ID: usuario.id || '',
+      Usuario: usuario.nombre || '',
+      Correo: usuario.correo || '',
+      Rol: getRolNombre(usuario, rolesById),
+      Estado: usuario.activo ? 'Activo' : 'Inactivo',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 10 },
+      { wch: 34 },
+      { wch: 38 },
+      { wch: 24 },
+      { wch: 14 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
+    XLSX.writeFile(workbook, `usuarios_financieros_${Date.now()}.xlsx`);
+    toast.success('Excel de usuarios exportado correctamente.');
+  }, [usuariosFiltrados, rolesById]);
+
+  const limpiarFiltros = () => {
+    setSearch('');
+    setRolFilter('all');
+    setEstadoFilter('all');
+    setSedeFilter('all');
+  };
 
   return (
     <div className="space-y-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-6 text-white shadow-xl"
+        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Users className="w-7 h-7 text-yellow-400" />
-            </div>
-            <div>
-              <h1 className="text-white mb-1 text-3xl font-bold">Gestion de Usuarios</h1>
-              <p className="text-red-100 text-sm">Administrar usuarios del sistema financiero</p>
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Users className="w-8 h-8 text-amber-300" />
+              Gestión de Usuarios Financieros
+            </h1>
+            <p className="text-red-100 text-sm">Listado y administración de cuentas del módulo financiero.</p>
           </div>
-          <Button onClick={() => setShowNewUserDialog(true)} className="bg-yellow-400 hover:bg-yellow-500 text-red-900 font-semibold shadow-lg">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Nuevo Usuario
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setDialogOpen(true)} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo usuario
+            </Button>
+            <Button onClick={() => void cargarData()} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Actualizar datos
+            </Button>
+          </div>
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <Input
-                placeholder="Buscar por nombre, email o rol..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-11 border-slate-300 focus:border-red-600 focus:ring-red-600"
-              />
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-slate-900">Usuarios registrados</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={exportarUsuariosExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Excel
+              </Button>
+              <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">
+                {usuariosFiltrados.length} usuarios
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-slate-800">
-              <span>Usuarios del Sistema ({usuariosFiltrados.length})</span>
-              <Badge className="bg-green-100 text-green-700 border-green-200 border">{usuarios.filter((u) => u.estado === 'Activo').length} Activos</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">Nombre</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Email</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Rol</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Estado</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Ultimo Acceso</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {usuariosFiltrados.map((usuario, index) => (
-                    <motion.tr
-                      key={usuario.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <TableCell className="font-medium text-slate-800">{usuario.nombre}</TableCell>
-                      <TableCell className="text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-slate-400" />
-                          {usuario.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-blue-200 text-blue-700">
-                          <Shield className="w-3 h-3 mr-1" />
-                          {usuario.rol}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={usuario.estado === 'Activo' ? 'bg-green-100 text-green-700 border-green-200 border' : 'bg-slate-100 text-slate-700 border-slate-200 border'}>
-                          {usuario.estado}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-sm">{usuario.ultimoAcceso}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleToggleUserStatus(usuario)}
-                            className={usuario.estado === 'Activo' ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}
-                          >
-                            {usuario.estado === 'Activo' ? 'Desactivar' : 'Activar'}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </motion.tr>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-slate-800">
-              <UserPlus className="w-5 h-5 text-blue-600" />
-              Crear Nuevo Usuario
-            </DialogTitle>
-            <DialogDescription>Ingrese los datos del nuevo usuario del sistema financiero</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-slate-700">Nombre Completo</Label>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="relative lg:col-span-5">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
-                placeholder="Ej: Juan Perez"
-                value={newUser.nombre}
-                onChange={(e) => setNewUser({ ...newUser, nombre: e.target.value })}
-                className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                placeholder="Buscar por ID, nombre, correo, rol o sede"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-slate-700">Correo Electronico</Label>
-              <Input
-                type="email"
-                placeholder="usuario@financiera.edu.co"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-slate-700">Rol</Label>
-              <Select value={newUser.rol} onValueChange={(value) => setNewUser({ ...newUser, rol: value })}>
-                <SelectTrigger className="border-slate-300 focus:border-blue-600 focus:ring-blue-600">
-                  <SelectValue placeholder="Seleccionar rol" />
+            <div className="lg:col-span-2">
+              <Select value={rolFilter} onValueChange={setRolFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Funcionario">Funcionario</SelectItem>
-                  <SelectItem value="Contabilidad">Contabilidad</SelectItem>
-                  <SelectItem value="Tesoreria">Tesoreria</SelectItem>
-                  <SelectItem value="Auditoria">Auditoria</SelectItem>
-                  <SelectItem value="Direccion Financiera">Direccion Financiera</SelectItem>
-                  <SelectItem value="Rectoria">Rectoria</SelectItem>
-                  <SelectItem value="Admin Financiero">Admin Financiero</SelectItem>
+                  <SelectItem value="all">Todos los roles</SelectItem>
+                  {rolesGestionables.map((rol) => (
+                    <SelectItem key={rol.id} value={rol.nombre}>{rol.nombre}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-slate-700">Contrasena Inicial</Label>
+            <div className="lg:col-span-2">
+              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="activo">Activos</SelectItem>
+                  <SelectItem value="inactivo">Inactivos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={sedeFilter} onValueChange={setSedeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sede" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las sedes</SelectItem>
+                  {sedesDisponibles.map((sede) => (
+                    <SelectItem key={sede} value={sede}>{sede}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-1">
+              <Button variant="outline" className="w-full" onClick={limpiarFiltros}>Limpiar</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-slate-500">Cargando usuarios...</p>
+          ) : (
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>ID</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Correo</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usuariosFiltrados.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-slate-500 py-7">
+                        No hay usuarios para mostrar.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    usuariosFiltrados.map((usuario) => {
+                      const rolNombre = getRolNombre(usuario, rolesById);
+                      const isProcessing = accionUsuarioId === usuario.id;
+                      return (
+                        <TableRow key={usuario.id}>
+                          <TableCell>{usuario.id || '—'}</TableCell>
+                          <TableCell className="font-medium text-slate-800">{usuario.nombre}</TableCell>
+                          <TableCell>{usuario.correo}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-slate-700">
+                              <ShieldCheck className="w-3 h-3 mr-1" />
+                              {rolNombre}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={usuario.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                              {usuario.activo ? 'Activo' : 'Inactivo'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => iniciarEdicion(usuario)}>
+                                <Edit3 className="w-3 h-3" />
+                                Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isProcessing}
+                                onClick={() => void toggleEstadoUsuario(usuario)}
+                              >
+                                {usuario.activo ? 'Desactivar' : 'Activar'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isProcessing}
+                                onClick={() => void eliminarUsuario(usuario)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Eliminar
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Crear nuevo usuario</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Nombre</Label>
+              <Input
+                value={nuevoUsuario.nombre}
+                onChange={(e) => setNuevoUsuario((prev) => ({ ...prev, nombre: e.target.value }))}
+                placeholder="Nombre completo"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Correo</Label>
+              <Input
+                type="email"
+                value={nuevoUsuario.correo}
+                onChange={(e) => setNuevoUsuario((prev) => ({ ...prev, correo: e.target.value }))}
+                placeholder="correo@dominio.edu.co"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Contraseña</Label>
               <Input
                 type="password"
-                placeholder="Minimo 6 caracteres"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
+                value={nuevoUsuario.contrasena}
+                onChange={(e) => setNuevoUsuario((prev) => ({ ...prev, contrasena: e.target.value }))}
+                placeholder="••••••••"
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Rol</Label>
+              <Select value={nuevoUsuario.rolId} onValueChange={handleNuevoRolChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rolesGestionables.map((rol) => (
+                    <SelectItem key={rol.id} value={String(rol.id)}>{rol.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between border rounded-lg px-3 py-2">
+              <Label>Estado inicial</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setNuevoUsuario((prev) => ({ ...prev, activo: !prev.activo }))}
+              >
+                {nuevoUsuario.activo ? 'Activo' : 'Inactivo'}
+              </Button>
+            </div>
+
+            <div className="space-y-3 border rounded-xl p-4 bg-slate-50/70">
+              <p className="text-sm font-semibold text-slate-900">Componentes para el nuevo usuario</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-52 overflow-auto pr-1">
+                {componentesDelRolNuevo.length === 0 ? (
+                  <p className="text-xs text-slate-500 md:col-span-2">Selecciona un rol para configurar componentes.</p>
+                ) : (
+                  componentesDelRolNuevo.map((componente) => {
+                    const componenteId = componente.id || -1;
+                    const activo = Boolean(componentesNuevoUsuario[componenteId]);
+                    const permiso = componentesNuevoUsuario[componenteId] || 'VER';
+                    return (
+                      <div key={componenteId} className="rounded-lg border bg-white p-3 space-y-2">
+                        <p className="text-sm font-medium text-slate-800 truncate">{componente.nombre}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <Button size="sm" variant={activo ? 'default' : 'outline'} onClick={() => toggleComponenteNuevo(componenteId)}>
+                            {activo ? 'Activo' : 'Inactivo'}
+                          </Button>
+                          <Select value={permiso} onValueChange={(value) => setPermisoComponenteNuevo(componenteId, value as PermisoTipo)} disabled={!activo}>
+                            <SelectTrigger className="h-8 w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="VER">VER</SelectItem>
+                              <SelectItem value="EDITAR">EDITAR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewUserDialog(false)}>Cancelar</Button>
-            <Button onClick={handleCreateUser} className="bg-blue-600 hover:bg-blue-700 text-white">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Crear Usuario
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => void crearUsuario()} disabled={saving} className="bg-red-700 hover:bg-red-800 text-white">
+              {saving ? 'Creando...' : 'Crear usuario'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="w-[98vw] sm:!max-w-[96vw] xl:!max-w-[88vw] max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="border-b bg-slate-50 px-6 py-5">
+            <DialogTitle className="text-xl text-slate-900">Editar usuario financiero</DialogTitle>
+            <p className="text-sm text-slate-600">
+              Actualiza datos principales del usuario y verifica los componentes habilitados por su rol.
+            </p>
+          </DialogHeader>
+
+          <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-150px)]">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+              <div className="xl:col-span-4 space-y-4 rounded-xl border bg-white p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800">Información del usuario</p>
+
+                <div className="space-y-2">
+                  <Label>Nombre</Label>
+                  <Input
+                    value={editarUsuario.nombre}
+                    onChange={(e) => setEditarUsuario((prev) => ({ ...prev, nombre: e.target.value }))}
+                    placeholder="Nombre completo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Correo</Label>
+                  <Input
+                    type="email"
+                    value={editarUsuario.correo}
+                    onChange={(e) => setEditarUsuario((prev) => ({ ...prev, correo: e.target.value }))}
+                    placeholder="correo@dominio.edu.co"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rol</Label>
+                  <Select value={editarUsuario.rolId} onValueChange={handleEditarRolChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rolesGestionables.map((rol) => (
+                        <SelectItem key={rol.id} value={String(rol.id)}>{rol.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nueva contraseña (opcional)</Label>
+                  <Input
+                    type="password"
+                    value={editarUsuario.contrasena}
+                    onChange={(e) => setEditarUsuario((prev) => ({ ...prev, contrasena: e.target.value }))}
+                    placeholder="Solo si deseas cambiarla"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border bg-slate-50 px-3 py-2">
+                  <Label className="text-slate-700">Estado del usuario</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditarUsuario((prev) => ({ ...prev, activo: !prev.activo }))}
+                  >
+                    {editarUsuario.activo ? 'Activo' : 'Inactivo'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="xl:col-span-8 space-y-3 rounded-xl border bg-slate-50 p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-slate-900">Componentes habilitados para el rol seleccionado</p>
+                  <p className="text-xs text-slate-600">Activa/desactiva componentes y define permiso por usuario.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[58vh] overflow-auto pr-1">
+                  {componentesDelRolSeleccionado.length === 0 ? (
+                    <div className="md:col-span-2 xl:col-span-3 text-sm text-slate-500 rounded-lg border bg-white px-3 py-4">
+                      Este rol no tiene componentes asociados en la configuración actual.
+                    </div>
+                  ) : (
+                    componentesDelRolSeleccionado.map((componente) => {
+                      const componenteId = componente.id || -1;
+                      const activo = Boolean(componentesEditarUsuario[componenteId]);
+                      const permisoBase = permisosPorComponente.get(componenteId) || 'VER';
+                      const permiso = componentesEditarUsuario[componenteId] || permisoBase;
+                      return (
+                        <div key={componente.id} className="rounded-lg border bg-white p-3 shadow-sm space-y-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{componente.nombre}</p>
+                            <p className="text-xs text-slate-500 line-clamp-2">{componente.descripcion || 'Sin descripción'}</p>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-slate-600 cursor-pointer" onClick={() => toggleComponenteEditar(componenteId)}>
+                              <Checkbox checked={activo} aria-label={`Permiso para ${componente.nombre}`} />
+                              <span className="text-xs">{activo ? 'Habilitado' : 'Inactivo'}</span>
+                            </div>
+                            <Select value={permiso} onValueChange={(value) => setPermisoComponenteEditar(componenteId, value as PermisoTipo)} disabled={!activo}>
+                              <SelectTrigger className="h-8 w-28">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="VER">VER</SelectItem>
+                                <SelectItem value="EDITAR">EDITAR</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t bg-white px-6 py-4">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => void actualizarUsuario()} disabled={updating} className="bg-red-700 hover:bg-red-800 text-white">
+              {updating ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </DialogFooter>
         </DialogContent>
