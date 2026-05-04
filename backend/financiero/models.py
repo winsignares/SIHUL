@@ -397,7 +397,7 @@ class DocumentoAdjunto(models.Model):
     tipo_mime = models.CharField(max_length=100, blank=True, null=True)
     tamano_bytes = models.BigIntegerField(blank=True, null=True)
     url_storage = models.CharField(max_length=500, blank=True)
-    archivo = models.FileField(upload_to='documentos_financiero/%Y/%m/', blank=True, null=True)
+    archivo = models.FileField(upload_to='documentos_financiero/%Y/%m/%d/', blank=True, null=True)
     hash_archivo = models.CharField(max_length=255, blank=True, null=True)
     obligatorio = models.BooleanField(default=False)
     verificado = models.BooleanField(default=False)
