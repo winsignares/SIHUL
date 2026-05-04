@@ -179,7 +179,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-            <span className="ml-3 text-slate-500 dark:text-slate-400 text-sm">Cargando facturas...</span>
+            <span className="ml-3 text-slate-500 dark:text-slate-400 text-sm">Cargando facturas..</span>
           </div>
         ) : filteredFacturas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 space-y-3">
