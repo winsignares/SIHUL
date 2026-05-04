@@ -98,25 +98,26 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     );
   }
 
+  const tableColumns = 'minmax(220px,1.2fr) minmax(240px,1.6fr) minmax(180px,1.1fr) minmax(150px,1fr) minmax(140px,0.9fr) minmax(120px,0.7fr)';
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+        className="bg-gradient-to-r from-red-700 to-red-800 rounded-2xl p-6 text-white shadow-xl"
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             <FileText size={24} className="flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-bold text-lg mb-1">Mis Facturas</h3>
-              <p className="text-red-100 text-sm">Consulta y haz seguimiento rápido de todas tus facturas enviadas.</p>
+              <p className="text-red-100 text-sm">Consulta y haz seguimiento rapido de todas tus facturas enviadas.</p>
             </div>
           </div>
           <button
             onClick={() => void loadFacturas()}
-            className="p-2 hover:bg-red-600/80 rounded-lg transition-colors border border-red-500/60"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors border border-white/30"
             title="Actualizar"
           >
             <RefreshCw size={18} />
@@ -124,7 +125,6 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         </div>
       </motion.div>
 
-      {/* Stats rápidas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total', value: facturas.length, color: 'text-slate-900 dark:text-white', bg: 'bg-slate-100 dark:bg-slate-700' },
@@ -137,7 +137,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className={`${stat.bg} rounded-xl p-4`}
+            className={`${stat.bg} rounded-xl p-4 border border-slate-200/60 dark:border-slate-600/40`}
           >
             <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
             <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
@@ -145,13 +145,12 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         ))}
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por número, radicado o descripción..."
+            placeholder="Buscar por numero, radicado o descripcion..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
@@ -169,7 +168,6 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         </select>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="rounded-xl border border-red-300 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 flex gap-2">
           <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
@@ -177,7 +175,6 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         </div>
       )}
 
-      {/* Lista */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -188,56 +185,83 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
           <div className="flex flex-col items-center justify-center py-16 space-y-3">
             <FileText className="text-slate-300 dark:text-slate-600" size={48} />
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              {facturas.length === 0 ? 'Aún no has enviado ninguna factura.' : 'No hay facturas que coincidan con los filtros.'}
+              {facturas.length === 0 ? 'Aun no has enviado ninguna factura.' : 'No hay facturas que coincidan con los filtros.'}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-200 dark:divide-slate-700">
-            {filteredFacturas.map((factura, i) => {
-              const cfg = ESTADO_CONFIG[factura.estado] || { color: 'bg-slate-100 text-slate-600', icon: FileText, label: factura.estado };
-              const Icon = cfg.icon;
-              return (
-                <motion.div
-                  key={factura.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  onClick={() => navigate(`/financiero/proveedor/${factura.id}`)}
-                  className="grid grid-cols-1 md:grid-cols-[auto,1fr,auto,auto] md:items-center gap-4 p-4 hover:bg-rose-50/40 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group"
-                >
-                  <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FileText className="text-red-600 dark:text-red-400" size={18} />
-                  </div>
+          <div className="w-full overflow-x-auto">
+            <div style={{ minWidth: 980 }}>
+              <div
+                className="grid gap-4 px-5 py-3 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700"
+                style={{ gridTemplateColumns: tableColumns }}
+              >
+                <span>Factura</span>
+                <span>Descripcion</span>
+                <span>Fechas</span>
+                <span>Estado</span>
+                <span className="text-right">Total</span>
+                <span className="text-right">Acciones</span>
+              </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-slate-900 dark:text-white text-sm">{factura.numero_factura}</p>
-                      <span className="text-xs text-slate-400 dark:text-slate-500">· {displayRadicado(factura.numero_radicado)}</span>
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 truncate">{displayText(factura.descripcion)}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                      Recibida: {displayDate(factura.fecha_recepcion)}
-                      {` · Factura: ${displayDate(factura.fecha_factura)}`}
-                    </p>
-                  </div>
+              <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                {filteredFacturas.map((factura, i) => {
+                  const cfg = ESTADO_CONFIG[factura.estado] || { color: 'bg-slate-100 text-slate-600', icon: FileText, label: factura.estado };
+                  const Icon = cfg.icon;
+                  return (
+                    <motion.div
+                      key={factura.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      onClick={() => navigate(`/financiero/proveedor/${factura.id}`)}
+                      className="grid gap-4 px-5 py-4 items-center hover:bg-rose-50/40 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group"
+                      style={{ gridTemplateColumns: tableColumns }}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText className="text-red-600 dark:text-red-400" size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{factura.numero_factura}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{displayRadicado(factura.numero_radicado)}</p>
+                        </div>
+                      </div>
 
-                  <div className="flex flex-row md:flex-col md:items-end items-center gap-2 flex-shrink-0">
-                    <p className="font-bold text-slate-900 dark:text-white text-sm">{formatMoney(factura.valor_total)}</p>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
-                      <Icon size={10} />
-                      {cfg.label}
-                    </span>
-                  </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{displayText(factura.descripcion)}</p>
+                      </div>
 
-                  <div className="flex items-center justify-end">
-                    <span className="hidden md:inline-flex text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-md px-2 py-1 mr-2">
-                      Ver detalle
-                    </span>
-                    <ChevronRight size={16} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors flex-shrink-0" />
-                  </div>
-                </motion.div>
-              );
-            })}
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Recibida: <span className="text-slate-700 dark:text-slate-200">{displayDate(factura.fecha_recepcion)}</span>
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Factura: <span className="text-slate-700 dark:text-slate-200">{displayDate(factura.fecha_factura)}</span>
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
+                          <Icon size={10} />
+                          {cfg.label}
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-semibold text-slate-900 dark:text-white text-sm">{formatMoney(factura.valor_total)}</p>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-md px-2 py-1">
+                          Ver detalle
+                        </span>
+                        <ChevronRight size={16} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors flex-shrink-0" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
