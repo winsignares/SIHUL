@@ -338,6 +338,20 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       const total = Number(form.valorTotal);
       const cuentaBancariaCompleta = [form.banco, form.tipoCuenta, form.numeroCuenta].filter(Boolean).join(' - ') || form.cuentaBancaria;
 
+      const proveedorUpdates: Partial<Proveedor> = {};
+      if (form.banco && form.banco !== proveedorSeleccionado.banco) proveedorUpdates.banco = form.banco;
+      if (form.tipoCuenta && form.tipoCuenta !== proveedorSeleccionado.tipo_cuenta) proveedorUpdates.tipo_cuenta = form.tipoCuenta;
+      if (form.numeroCuenta && form.numeroCuenta !== proveedorSeleccionado.numero_cuenta) {
+        proveedorUpdates.numero_cuenta = form.numeroCuenta;
+      }
+      if (cuentaBancariaCompleta && cuentaBancariaCompleta !== proveedorSeleccionado.cuenta_bancaria_completa) {
+        proveedorUpdates.cuenta_bancaria_completa = cuentaBancariaCompleta;
+      }
+
+      if (Object.keys(proveedorUpdates).length > 0) {
+        await proveedoresService.update(proveedorSeleccionado.id, proveedorUpdates);
+      }
+
       const payload = {
         proveedor_id: proveedorSeleccionado.id,
         departamento_id: form.departamentoId,

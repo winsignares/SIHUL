@@ -95,7 +95,12 @@ export default function RadicarFacturas() {
               <p className="text-red-100 text-sm">Formalizar la entrada de documentos al sistema institucional</p>
             </div>
           </div>
-          <Button onClick={cargarFacturas} variant="outline" className="border-white/30 text-white hover:bg-white/10" disabled={cargando}>
+          <Button
+            onClick={cargarFacturas}
+            variant="outline"
+            className="border-yellow-300 text-slate-900 bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-400 shadow-lg shadow-yellow-500/30 hover:from-yellow-400 hover:via-yellow-500 hover:to-amber-500 hover:text-slate-900 disabled:opacity-60"
+            disabled={cargando}
+          >
             <RefreshCw className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>

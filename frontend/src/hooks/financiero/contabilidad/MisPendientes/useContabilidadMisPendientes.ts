@@ -57,7 +57,9 @@ export function useContabilidadMisPendientes() {
       [...recibidas, ...registradas, ...radicadas].forEach((f) => {
         mergedMap.set(f.id, f);
       });
-      const todas = Array.from(mergedMap.values());
+      const todas = Array.from(mergedMap.values()).filter(
+        (f) => f.etapa_actual !== 'Corrección Funcionario'
+      );
 
       setFacturas(todas);
       const docsResults = await Promise.all(

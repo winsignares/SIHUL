@@ -63,10 +63,13 @@ export function useContabilidadCausarFacturas() {
         cuentasContablesService.getAll(),
         centrosCostoService.getAll(),
       ]);
-      setFacturas(lista);
+      const filtradas = lista.filter((f) => f.etapa_actual !== 'Corrección Radicación');
+      setFacturas(filtradas);
       setCuentasContables(Array.isArray(cuentas) ? cuentas : (cuentas as { results?: CuentaContable[] }).results ?? []);
       setCentrosCosto(Array.isArray(centros) ? centros : (centros as { results?: CentroCosto[] }).results ?? []);
-      const docsResults = await Promise.all(lista.map((f) => documentosService.getByFactura(f.id).then((d) => ({ id: f.id, docs: d }))));
+      const docsResults = await Promise.all(
+        filtradas.map((f) => documentosService.getByFactura(f.id).then((d) => ({ id: f.id, docs: d })))
+      );
       const map: Record<number, DocumentoAdjunto[]> = {};
       docsResults.forEach(({ id, docs }) => {
         map[id] = docs;
@@ -152,8 +155,8 @@ export function useContabilidadCausarFacturas() {
     }
     setProcesando(true);
     try {
-      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim());
-      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta al funcionario.`);
+      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'radicacion');
+      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta a radicación.`);
       cancelar();
       cargarDatos();
     } catch {

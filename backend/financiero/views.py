@@ -1437,12 +1437,17 @@ class FacturaViewSet(viewsets.ModelViewSet):
         estado_anterior = factura.estado
 
         rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
+        destino = (request.data.get('destino') or '').strip().lower()
 
         if rol_nombre == 'Funcionario':
             estado_destino = 'Devuelta'
             etapa_destino = 'Devolución'
             responsable_destino = None
-        elif estado_anterior in ['Recibida', 'Registrada', 'Radicada']:
+        elif destino == 'radicacion':
+            estado_destino = 'Radicada'
+            etapa_destino = 'Corrección Radicación'
+            responsable_destino = None
+        elif destino == 'funcionario' or estado_anterior in ['Recibida', 'Registrada', 'Radicada']:
             estado_destino = 'Registrada'
             etapa_destino = 'Corrección Funcionario'
             responsable_destino = factura.creado_por

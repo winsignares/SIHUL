@@ -99,8 +99,8 @@ export const facturasService = {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar_auditoria/`, { motivo });
   },
 
-  rechazar: async (id: number, motivo: string): Promise<Factura> => {
-    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar/`, { motivo });
+  rechazar: async (id: number, motivo: string, destino?: 'funcionario' | 'radicacion'): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar/`, { motivo, destino });
   },
 
   getPendientes: async (): Promise<Factura[]> => {

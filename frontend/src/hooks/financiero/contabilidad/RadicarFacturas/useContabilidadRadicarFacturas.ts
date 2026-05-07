@@ -78,16 +78,19 @@ export function useContabilidadRadicarFacturas() {
     setCargando(true);
     setError(null);
     try {
-      const [recibidas, registradas] = await Promise.all([
+      const [recibidas, registradas, radicadas] = await Promise.all([
         facturasService.getByEstado('Recibida'),
         facturasService.getByEstado('Registrada'),
+        facturasService.getByEstado('Radicada'),
       ]);
 
       const mergedMap = new Map<number, Factura>();
-      [...recibidas, ...registradas].forEach((f) => {
+      [...recibidas, ...registradas, ...radicadas].forEach((f) => {
         mergedMap.set(f.id, f);
       });
-      const lista = Array.from(mergedMap.values());
+      const lista = Array.from(mergedMap.values()).filter(
+        (f) => f.estado !== 'Radicada' || f.etapa_actual === 'Corrección Radicación'
+      );
 
       setFacturas(lista);
       const docsResults = await Promise.all(
@@ -184,7 +187,7 @@ export function useContabilidadRadicarFacturas() {
     }
     setProcesando(true);
     try {
-      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim());
+      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'funcionario');
       showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta. El funcionario fue notificado.`);
       cancelarAccion();
       cargarFacturas();
