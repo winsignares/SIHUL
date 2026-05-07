@@ -324,6 +324,7 @@ class Factura(models.Model):
     # Estado y control
     estado = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='Recibida')
     etapa_actual = models.CharField(max_length=100, blank=True, null=True)
+    fecha_inicio_etapa = models.DateField(blank=True, null=True)
     indicador_riesgo = models.CharField(max_length=20, choices=INDICADOR_RIESGO_CHOICES, default='ok')
     sla_cumplido = models.BooleanField(default=True)
 

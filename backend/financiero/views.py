@@ -14,6 +14,7 @@ from openpyxl import Workbook
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from . import models, serializers
+from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
 from usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
 
@@ -703,7 +704,10 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         if not factura.etapa_actual:
             factura.etapa_actual = 'Recepción y Registro'
-            factura.save(update_fields=['etapa_actual', 'fecha_modificacion'])
+        if not factura.fecha_inicio_etapa:
+            factura.fecha_inicio_etapa = factura.fecha_recepcion or timezone.now().date()
+
+        factura.save(update_fields=['etapa_actual', 'fecha_inicio_etapa', 'fecha_modificacion'])
         
         # Crear entrada en historial
         models.HistorialFactura.objects.create(
@@ -715,6 +719,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             usuario_rol=self.request.user.rol.nombre if self.request.user.rol else 'Sin rol'
         )
 
+        actualizar_sla_factura(factura)
         self._notificar_transicion(factura, None, factura.estado)
 
     @action(detail=False, methods=['get'])
@@ -779,8 +784,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.fecha_radicacion = timezone.now().date()
         factura.numero_radicado = f"RAD-{factura.id:06d}"
         factura.etapa_actual = 'Radicación'
+        factura.fecha_inicio_etapa = factura.fecha_radicacion
         factura.usuario_responsable = request.user
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -817,12 +825,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.estado = 'Autorizada'
         factura.fecha_autorizacion = timezone.now().date()
         factura.etapa_actual = 'Autorización Rectoría'
+        factura.fecha_inicio_etapa = factura.fecha_autorizacion
         factura.usuario_responsable = request.user
 
         if observaciones:
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Rectoría] {observaciones}"]))
 
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -863,9 +874,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
         estado_anterior = factura.estado
         factura.estado = 'Rechazada por Rectoría'
         factura.etapa_actual = 'Corrección Dirección Financiera'
+        factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = None
         factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Rectoría - Rechazo] {motivo}"]))
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.RechazoDevolucion.objects.create(
             factura=factura,
@@ -923,12 +937,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 )
 
         factura.etapa_actual = 'Control de Pago Confirmado'
+        factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = request.user
 
         if observaciones:
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Control Pago] {observaciones}"]))
 
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -979,8 +996,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.estado = 'Causada'
         factura.fecha_causacion = timezone.now().date()
         factura.etapa_actual = 'Causación'
+        factura.fecha_inicio_etapa = factura.fecha_causacion
         factura.usuario_responsable = request.user
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1033,8 +1053,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.estado = 'Alistada'
         factura.fecha_alistamiento = timezone.now().date()
         factura.etapa_actual = 'Alistamiento'
+        factura.fecha_inicio_etapa = factura.fecha_alistamiento
         factura.usuario_responsable = request.user
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1071,6 +1094,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.estado = 'Aprobada Auditoría'
         factura.fecha_aprobacion_auditoria = timezone.now().date()
         factura.etapa_actual = 'Control Previo'
+        factura.fecha_inicio_etapa = factura.fecha_aprobacion_auditoria
         factura.usuario_responsable = request.user
 
         if observaciones:
@@ -1117,9 +1141,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
         estado_anterior = factura.estado
         factura.estado = 'Rechazada Auditoría'
         factura.etapa_actual = 'Tesorería - Ajustes internos'
+        factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = None
         factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Auditoría - Rechazo] {motivo}"]))
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1156,12 +1183,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.estado = 'Revisada Dir. Financiera'
         factura.fecha_revision_direccion = timezone.now().date()
         factura.etapa_actual = 'Envío a Dirección Financiera'
+        factura.fecha_inicio_etapa = factura.fecha_revision_direccion
         factura.usuario_responsable = request.user
 
         if observaciones:
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
 
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1215,12 +1245,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.fecha_pago_aplicado = fecha_pago or timezone.now().date()
         factura.estado = 'Pago Aplicado'
         factura.etapa_actual = 'Pago Aplicado'
+        factura.fecha_inicio_etapa = factura.fecha_pago_aplicado
         factura.usuario_responsable = request.user
 
         if observaciones:
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
 
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         documento_data = {
             'factura': factura.id,
@@ -1280,12 +1313,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.fecha_comprobante = timezone.now().date()
         factura.estado = 'Pagada'
         factura.etapa_actual = 'Comprobante de Egreso'
+        factura.fecha_inicio_etapa = factura.fecha_comprobante
         factura.usuario_responsable = request.user
 
         if observaciones:
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
 
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1326,9 +1362,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
         estado_anterior = factura.estado
         factura.estado = 'Detenida'
         factura.etapa_actual = 'Tesorería - Ajustes internos'
+        factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = request.user
         factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería - Detenida] {observaciones}"]))
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1382,8 +1421,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = estado_destino
         factura.etapa_actual = etapa_destino
+        factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = responsable_destino
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -1449,6 +1491,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'atrasadas': atrasadas
         })
 
+    @action(detail=False, methods=['post'], url_path='sincronizar_sla')
+    def sincronizar_sla(self, request):
+        """Sincroniza indicadores SLA para facturas en proceso."""
+        facturas = models.Factura.objects.exclude(estado__in=['Pagada', 'Anulada'])
+        parametros_map = build_parametros_sla_map()
+        actualizadas = sincronizar_sla_facturas(facturas, parametros_map=parametros_map)
+        return Response({'actualizadas': actualizadas, 'total': facturas.count()})
+
     @action(detail=True, methods=['get'])
     def seguimiento(self, request, pk=None):
         """Obtener seguimiento completo de una factura"""
@@ -1490,9 +1540,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             # Asignar responsable si no está asignado
             if not factura.usuario_responsable:
                 factura.usuario_responsable = request.user
+
+            if not factura.fecha_inicio_etapa:
+                factura.fecha_inicio_etapa = timezone.now().date()
             
             serializer.save()
-            factura.save(update_fields=['estado', 'usuario_responsable'])
+            factura.save(update_fields=['estado', 'usuario_responsable', 'fecha_inicio_etapa'])
+
+            actualizar_sla_factura(factura)
             
             # Crear registro en historial
             from .models import HistorialFactura
