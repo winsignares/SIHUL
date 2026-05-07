@@ -228,6 +228,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
   const getIcono = (tipo: string) => {
     switch (tipo.toLowerCase()) {
       case 'factura_etapa_actualizada':
+      case 'factura_devuelta':
         return <Bell className="w-5 h-5 text-red-600 dark:text-red-400" />;
       case 'solicitud':
         return <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
@@ -279,6 +280,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
   const getTipoColor = (tipo: string) => {
     switch (tipo.toLowerCase()) {
       case 'factura_etapa_actualizada':
+      case 'factura_devuelta':
         return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
       case 'solicitud':
         return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
@@ -328,10 +330,23 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
   };
 
   const getFacturaRoute = (notif: { titulo?: string; descripcion?: string; tipo?: string }) => {
-    if ((notif.tipo || '').toLowerCase() !== 'factura_etapa_actualizada') return null;
+    const tipo = (notif.tipo || '').toLowerCase();
+    if (!['factura_etapa_actualizada', 'factura_devuelta'].includes(tipo)) return null;
+
     const raw = `${notif.titulo || ''} ${notif.descripcion || ''}`;
-    const match = raw.match(/\/financiero\/funcionario\/consultar\?factura=\d+/i);
-    return match?.[0] || null;
+    const match = raw.match(/\/financiero\/[^\s]+/i);
+    let route = match?.[0] || null;
+
+    const rolNombre = (user?.rol?.nombre || '').trim().toLowerCase();
+    if (rolNombre === 'proveedor') {
+      const facturaMatch = raw.match(/factura=(\d+)/i);
+      const facturaId = facturaMatch?.[1];
+      if (facturaId) {
+        route = `/financiero/proveedor/mis-facturas/${facturaId}`;
+      }
+    }
+
+    return route;
   };
 
   const getPrioridadBadge = (prioridad: string) => {

@@ -366,7 +366,9 @@ class Factura(models.Model):
     @property
     def dias_transcurridos(self):
         from datetime import date
-        return (date.today() - self.fecha_recepcion).days if self.fecha_recepcion else 0
+        if not self.fecha_recepcion:
+            return 0
+        return max((date.today() - self.fecha_recepcion).days, 0)
 
     @property
     def monto_alto(self):

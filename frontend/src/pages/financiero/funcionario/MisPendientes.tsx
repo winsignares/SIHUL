@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Clock, Eye, FileText, TrendingUp } from 'lucide-react';
+import { AlertCircle, Clock, Eye, FileText, TrendingUp, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero/core.models';
 import type { FuncionarioPendingRow } from '../../../models/financiero/funcionario';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { displayDate, displayText } from '../../../share/field-placeholders';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
+import { Label } from '../../../share/label';
+import { Textarea } from '../../../share/textarea';
 
 function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -49,6 +53,11 @@ export default function MisPendientes() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<SharedFacturaDetail | null>(null);
+  const [rechazarOpen, setRechazarOpen] = useState(false);
+  const [rechazarRow, setRechazarRow] = useState<FuncionarioPendingRow | null>(null);
+  const [rechazarMotivo, setRechazarMotivo] = useState('');
+  const [rechazarError, setRechazarError] = useState<string | null>(null);
+  const [rechazarLoading, setRechazarLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -160,6 +169,37 @@ export default function MisPendientes() {
 
     void loadDetalle();
   }, [openDetail, selectedId, selectedRow]);
+
+  const abrirRechazo = (row: FuncionarioPendingRow) => {
+    setRechazarRow(row);
+    setRechazarMotivo('');
+    setRechazarError(null);
+    setRechazarOpen(true);
+  };
+
+  const confirmarRechazo = async () => {
+    if (!rechazarRow) return;
+
+    const motivo = rechazarMotivo.trim();
+    if (motivo.length < 10) {
+      setRechazarError('Describe el motivo (mínimo 10 caracteres).');
+      return;
+    }
+
+    setRechazarLoading(true);
+    try {
+      await facturasService.rechazar(Number(rechazarRow.id), motivo);
+      setRows((prev) => prev.filter((row) => row.id !== rechazarRow.id));
+      toast.success('Factura rechazada y enviada a corrección del proveedor.');
+      setRechazarOpen(false);
+      setRechazarRow(null);
+      setRechazarMotivo('');
+    } catch {
+      setRechazarError('No fue posible rechazar la factura. Intenta nuevamente.');
+    } finally {
+      setRechazarLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -301,9 +341,15 @@ export default function MisPendientes() {
                           },
                         });
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 text-red-700"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
                     >
                       Registrar
+                    </button>
+                    <button
+                      onClick={() => abrirRechazo(row)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 text-red-700"
+                    >
+                      <XCircle className="w-4 h-4" /> Rechazar
                     </button>
                     <button
                       onClick={() => {
@@ -334,6 +380,49 @@ export default function MisPendientes() {
       {openDetail && detailLoading && (
         <div className="text-sm text-slate-500">Cargando detalles completos de la factura...</div>
       )}
+
+      <Dialog open={rechazarOpen} onOpenChange={setRechazarOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar factura</DialogTitle>
+            <DialogDescription>
+              Este rechazo se registrará en el historial y la factura volverá al proveedor para corrección.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="rechazo-motivo">Motivo del rechazo</Label>
+            <Textarea
+              id="rechazo-motivo"
+              value={rechazarMotivo}
+              onChange={(event) => {
+                setRechazarMotivo(event.target.value);
+                setRechazarError(null);
+              }}
+              placeholder="Describe claramente la razón del rechazo (mínimo 10 caracteres)."
+              rows={4}
+            />
+            {rechazarError && <p className="text-sm text-red-600">{rechazarError}</p>}
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              onClick={() => setRechazarOpen(false)}
+              disabled={rechazarLoading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-70"
+              onClick={confirmarRechazo}
+              disabled={rechazarLoading}
+            >
+              {rechazarLoading ? 'Rechazando...' : 'Confirmar rechazo'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { userService, authService, type Usuario, type ChangePasswordPayload } from '../../services/users/authService';
 import { espacioPermitidoService } from '../../services/espacios/espaciosAPI';
 import { toast } from 'sonner';
@@ -51,24 +51,46 @@ export function useAjustes() {
     });
 
     const [perfilOriginal, setPerfilOriginal] = useState({ ...perfil });
+    const profileErrorNotifiedRef = useRef(false);
 
     // Cargar perfil del usuario al montar
     useEffect(() => {
         const fetchProfile = async () => {
-            if (!usuario?.id) {
-                console.log('No user ID found');
+            let usuarioBase: Usuario | null = usuario;
+
+            if (!usuarioBase?.id) {
+                try {
+                    const sessionUser = await authService.getAuthenticatedUser({ suppressErrorLog: true });
+                    usuarioBase = {
+                        id: sessionUser.id,
+                        nombre: sessionUser.nombre,
+                        correo: sessionUser.correo,
+                        activo: true,
+                        rol: sessionUser.rol ?? undefined,
+                        rol_id: sessionUser.rol?.id ?? null,
+                        facultad: sessionUser.facultad,
+                        facultad_id: sessionUser.facultad?.id ?? null,
+                        sede: sessionUser.sede,
+                    };
+                } catch {
+                    usuarioBase = usuario;
+                }
+            }
+
+            if (!usuarioBase?.id) {
                 return;
             }
 
             try {
                 // Obtener datos del usuario
-                const userData = await userService.obtenerUsuario(usuario.id);
+                const userData = await userService.obtenerUsuario(usuarioBase.id);
 
                 // Construir usuario completo manteniendo los datos del rol y facultad del localStorage
                 const fullUserData: Usuario = {
+                    ...usuarioBase,
                     ...userData,
-                    rol: usuario.rol,
-                    facultad: usuario.facultad
+                    rol: userData.rol || usuarioBase.rol,
+                    facultad: userData.facultad ?? usuarioBase.facultad
                 };
 
                 setUsuario(fullUserData);
@@ -88,9 +110,9 @@ export function useAjustes() {
                 localStorage.setItem('auth_user', JSON.stringify(fullUserData));
 
                 // Si es supervisor general, cargar espacios permitidos
-                if (usuario.rol?.nombre === 'supervisor_general') {
+                if (fullUserData.rol?.nombre === 'supervisor_general') {
                     try {
-                        const espaciosResponse = await espacioPermitidoService.listByUsuario(usuario.id);
+                        const espaciosResponse = await espacioPermitidoService.listByUsuario(fullUserData.id!);
                         // Map to EspacioPermitido interface
                         const espaciosMapped: EspacioPermitido[] = (espaciosResponse.espacios || []).map((e: any) => ({
                             id: e.id,
@@ -105,9 +127,25 @@ export function useAjustes() {
                         setEspaciosPermitidos([]);
                     }
                 }
-            } catch (error) {
-                console.error('Error al cargar perfil:', error);
-                toast.error('Error al cargar la información del perfil');
+            } catch {
+                if (usuarioBase) {
+                    setUsuario(usuarioBase);
+                    const fallbackPerfil = {
+                        nombre: usuarioBase.nombre || '',
+                        correo: usuarioBase.correo || '',
+                        rol_id: usuarioBase.rol_id || usuarioBase.rol?.id || null,
+                        facultad_id: usuarioBase.facultad_id || usuarioBase.facultad?.id || null,
+                        activo: usuarioBase.activo ?? true,
+                    };
+                    setPerfil(fallbackPerfil);
+                    setPerfilOriginal(fallbackPerfil);
+                    return;
+                }
+
+                if (!profileErrorNotifiedRef.current) {
+                    profileErrorNotifiedRef.current = true;
+                    toast.error('Error al cargar la información del perfil');
+                }
             }
         };
 

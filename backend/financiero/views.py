@@ -594,6 +594,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
             Usuario.objects.filter(rol__nombre__in=roles, activo=True).values_list('id', flat=True)
         )
 
+    def _ruta_factura_por_rol(self, factura, usuario):
+        rol_nombre = (getattr(getattr(usuario, 'rol', None), 'nombre', '') or '').strip().lower()
+        if rol_nombre == 'proveedor':
+            return f'/financiero/proveedor/mis-facturas/{factura.id}'
+        return f'/financiero/funcionario/consultar?factura={factura.id}'
+
     def _notificar_transicion(self, factura, estado_anterior, estado_nuevo):
         numero = factura.numero_factura
         creador_id = factura.creado_por_id
@@ -622,19 +628,48 @@ class FacturaViewSet(viewsets.ModelViewSet):
         for user_id in self._usuarios_por_rol(siguientes_roles.get(estado_nuevo, [])):
             destinatarios.add(user_id)
 
-        enlace = f'/financiero/funcionario/consultar?factura={factura.id}'
-        mensaje = (
-            f'Factura actualizada: {numero} cambió de etapa '
-            f'{estado_anterior or "Sin estado"} -> {estado_nuevo}. '
-            f'Enlace: {enlace}'
-        )
+        usuarios_destino = {
+            usuario.id: usuario
+            for usuario in Usuario.objects.filter(id__in=destinatarios).select_related('rol')
+        }
+
+        es_devolucion = estado_nuevo == 'Devuelta' or factura.etapa_actual == 'Corrección Funcionario'
+        motivo_devolucion = None
+        if es_devolucion:
+            motivo_devolucion = (
+                models.RechazoDevolucion.objects
+                .filter(factura=factura)
+                .order_by('-fecha_rechazo')
+                .values_list('motivo', flat=True)
+                .first()
+            )
 
         for user_id in destinatarios:
+            usuario_destino = usuarios_destino.get(user_id)
+            enlace = self._ruta_factura_por_rol(factura, usuario_destino)
+
+            tipo_notificacion = 'FACTURA_ETAPA_ACTUALIZADA'
+            mensaje = (
+                f'Factura actualizada: {numero} cambió de etapa '
+                f'{estado_anterior or "Sin estado"} -> {estado_nuevo}. '
+                f'Enlace: {enlace}'
+            )
+            prioridad = 'alta' if estado_nuevo in ['Recibida', 'Devuelta', 'Rechazada', 'Rechazada por Rectoría'] else 'media'
+
+            if es_devolucion and user_id == creador_id:
+                tipo_notificacion = 'FACTURA_DEVUELTA'
+                mensaje = (
+                    f'La factura {numero} fue devuelta para corrección por el área financiera. '
+                    f'Motivo: {motivo_devolucion or "Revisar observaciones del historial"}. '
+                    f'Enlace: {enlace}'
+                )
+                prioridad = 'alta'
+
             crear_notificacion(
                 id_usuario=user_id,
-                tipo='FACTURA_ETAPA_ACTUALIZADA',
+                tipo=tipo_notificacion,
                 mensaje=mensaje,
-                prioridad='alta' if estado_nuevo in ['Recibida', 'Devuelta', 'Rechazada', 'Rechazada por Rectoría'] else 'media',
+                prioridad=prioridad,
             )
 
     def _generar_numero_confirmacion(self):
@@ -1401,7 +1436,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         estado_anterior = factura.estado
 
-        if estado_anterior in ['Recibida', 'Registrada', 'Radicada']:
+        rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
+
+        if rol_nombre == 'Funcionario':
+            estado_destino = 'Devuelta'
+            etapa_destino = 'Devolución'
+            responsable_destino = None
+        elif estado_anterior in ['Recibida', 'Registrada', 'Radicada']:
             estado_destino = 'Registrada'
             etapa_destino = 'Corrección Funcionario'
             responsable_destino = factura.creado_por
@@ -1442,6 +1483,82 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         return Response(
             {'mensaje': f'Factura rechazada y enviada a {estado_destino}'},
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['patch'])
+    def corregir(self, request, pk=None):
+        """Permite al proveedor corregir y reenviar una factura devuelta/rechazada."""
+        factura = self.get_object()
+        rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
+
+        if rol_nombre != 'Proveedor':
+            return Response({'error': 'No autorizado para corregir esta factura.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if factura.estado not in ['Devuelta', 'Rechazada']:
+            return Response(
+                {'error': 'Solo se pueden corregir facturas en estado Devuelta o Rechazada.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        estado_anterior = factura.estado
+        serializer = serializers.FacturaDetailSerializer(
+            factura,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+
+        factura.estado = 'Recibida'
+        factura.etapa_actual = 'Recepción y Registro'
+        factura.usuario_responsable = None
+        factura.fecha_inicio_etapa = timezone.now().date()
+        factura.fecha_recepcion = timezone.now().date()
+        factura.save(update_fields=['estado', 'etapa_actual', 'usuario_responsable', 'fecha_inicio_etapa', 'fecha_recepcion'])
+
+        observaciones_correccion = (request.data.get('observaciones_correccion') or '').strip()
+        if not observaciones_correccion:
+            observaciones_correccion = 'Corrección enviada por proveedor.'
+
+        ultimo_rechazo = (
+            models.RechazoDevolucion.objects
+            .filter(factura=factura)
+            .order_by('-fecha_rechazo')
+            .first()
+        )
+        if ultimo_rechazo:
+            ultimo_rechazo.estado_devolucion = 'Reenviada'
+            ultimo_rechazo.fecha_correccion = timezone.now()
+            ultimo_rechazo.usuario_corrige = request.user
+            ultimo_rechazo.observaciones_correccion = observaciones_correccion
+            ultimo_rechazo.save(update_fields=[
+                'estado_devolucion',
+                'fecha_correccion',
+                'usuario_corrige',
+                'observaciones_correccion'
+            ])
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Corrección enviada por proveedor',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Recibida',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones_correccion
+        )
+
+        actualizar_sla_factura(factura)
+        self._notificar_transicion(factura, estado_anterior, factura.estado)
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura, context={'request': request}).data,
             status=status.HTTP_200_OK
         )
 

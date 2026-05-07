@@ -123,6 +123,8 @@ export default function FacturaDetalle() {
   const estadoStep = ESTADO_STEP[factura.estado] || 1;
   const isPagada = factura.estado === 'Pagada' || factura.estado === 'Pago Aplicado';
   const isDevuelta = factura.estado === 'Devuelta' || factura.estado === 'Rechazada' || factura.estado === 'Anulada';
+  const canCorregir = factura.estado === 'Devuelta' || factura.estado === 'Rechazada';
+  const diasTranscurridos = Math.max(Number(factura.dias_transcurridos) || 0, 0);
 
   return (
     <div className="min-h-full px-4 md:px-8 py-6 font-['Space_Grotesk']">
@@ -177,7 +179,7 @@ export default function FacturaDetalle() {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <StatCard title="Dias transcurridos" value={`${factura.dias_transcurridos} dias`} icon={Calendar} tone="amber" />
+                <StatCard title="Dias transcurridos" value={`${diasTranscurridos} dias`} icon={Calendar} tone="amber" />
                 <StatCard title="Etapa actual" value={factura.etapa_actual || factura.estado} icon={CheckCircle2} tone="red" />
               </div>
             </div>
@@ -234,6 +236,19 @@ export default function FacturaDetalle() {
               <p className="text-sm text-red-600 dark:text-red-400 mt-1">
                 Esta factura fue devuelta o rechazada. Revisa el historial para ver el motivo y corregirla si aplica.
               </p>
+              {canCorregir && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate('/financiero/proveedor/enviar', {
+                      state: { correccionFactura: factura },
+                    })
+                  }
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700"
+                >
+                  Corregir factura
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -274,7 +289,7 @@ export default function FacturaDetalle() {
               {factura.fecha_causacion && <InfoRow label="Fecha causacion" value={factura.fecha_causacion} />}
               {factura.fecha_autorizacion && <InfoRow label="Fecha autorizacion" value={factura.fecha_autorizacion} />}
               {factura.fecha_pago_aplicado && <InfoRow label="Fecha pago" value={factura.fecha_pago_aplicado} />}
-              <InfoRow label="Dias transcurridos" value={`${factura.dias_transcurridos} dias`} />
+              <InfoRow label="Dias transcurridos" value={`${diasTranscurridos} dias`} />
             </div>
           </motion.section>
 

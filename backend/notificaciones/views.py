@@ -1,9 +1,65 @@
 from django.shortcuts import render
 from .models import Notificacion
 from django.http import JsonResponse
+from django.db.models import Q
 import json
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
+from mysite.auth_helpers import is_admin_global
+
+
+def _get_current_user(request):
+    user = getattr(request, 'user', None)
+    if user and getattr(user, 'is_authenticated', False):
+        return user
+    return getattr(request, 'user_obj', None)
+
+
+def _resolve_target_user_id(request, requested_user_id):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return requested_user_id
+
+    if is_admin_global(current_user):
+        return requested_user_id or current_user.id
+
+    return current_user.id
+
+
+def _filter_relevantes_por_rol(notificaciones, user):
+    if not user:
+        return notificaciones
+
+    if is_admin_global(user):
+        return notificaciones
+
+    rol_nombre = (getattr(getattr(user, 'rol', None), 'nombre', '') or '').strip().lower()
+    if rol_nombre in {'admin', 'admin financiero'}:
+        return notificaciones
+
+    tipos_irrelevantes = [
+        'usuario_creado',
+        'usuario_actualizado',
+        'usuario_eliminado',
+        'rol_creado',
+        'rol_actualizado',
+        'rol_eliminado',
+        'facultad_creada',
+        'facultad_actualizada',
+        'facultad_eliminada',
+        'componente_creado',
+        'componente_actualizado',
+        'componente_eliminado',
+        'componente_rol_asignado',
+        'componente_rol_actualizado',
+        'componente_rol_eliminado',
+    ]
+
+    filtros_admin = Q()
+    for tipo in tipos_irrelevantes:
+        filtros_admin |= Q(tipo_notificacion__iexact=tipo)
+
+    return notificaciones.exclude(filtros_admin)
 
 # ---------- Notificacion CRUD ----------
 @csrf_exempt
@@ -178,7 +234,10 @@ def mis_notificaciones(request):
         filtro_tiempo = request.GET.get('filtro_tiempo', '').strip()
         categoria = request.GET.get('categoria', '').strip()
         
-        if not id_usuario:
+        current_user = _get_current_user(request)
+        id_usuario_resuelto = _resolve_target_user_id(request, id_usuario)
+
+        if not id_usuario_resuelto:
             return JsonResponse({"error": "id_usuario es requerido"}, status=400)
         
         # Validar parámetros de paginación
@@ -188,7 +247,8 @@ def mis_notificaciones(request):
             limite = 10
         
         # Filtro base
-        notificaciones = Notificacion.objects.filter(id_usuario=id_usuario)
+        notificaciones = Notificacion.objects.filter(id_usuario=id_usuario_resuelto)
+        notificaciones = _filter_relevantes_por_rol(notificaciones, current_user)
         
         # Filtro por leídas/no leídas
         if no_leidas:
@@ -196,7 +256,6 @@ def mis_notificaciones(request):
         
         # Filtro por búsqueda en mensaje
         if busqueda:
-            from django.db.models import Q
             notificaciones = notificaciones.filter(
                 Q(mensaje__icontains=busqueda) | Q(tipo_notificacion__icontains=busqueda)
             )
@@ -276,20 +335,22 @@ def estadisticas(request):
     """Obtiene estadísticas de notificaciones del usuario"""
     if request.method == 'GET':
         id_usuario = request.GET.get('id_usuario')
+        current_user = _get_current_user(request)
+        id_usuario_resuelto = _resolve_target_user_id(request, id_usuario)
         
-        if not id_usuario:
+        if not id_usuario_resuelto:
             return JsonResponse({"error": "id_usuario es requerido"}, status=400)
+
+        base_qs = Notificacion.objects.filter(id_usuario=id_usuario_resuelto)
+        base_qs = _filter_relevantes_por_rol(base_qs, current_user)
         
-        total = Notificacion.objects.filter(id_usuario=id_usuario).count()
-        no_leidas = Notificacion.objects.filter(id_usuario=id_usuario, es_leida=False).count()
+        total = base_qs.count()
+        no_leidas = base_qs.filter(es_leida=False).count()
         leidas = total - no_leidas
         
         por_prioridad = {}
         for prioridad in ['alta', 'media', 'baja']:
-            por_prioridad[prioridad] = Notificacion.objects.filter(
-                id_usuario=id_usuario,
-                prioridad=prioridad
-            ).count()
+            por_prioridad[prioridad] = base_qs.filter(prioridad=prioridad).count()
         
         return JsonResponse({
             "total": total,
@@ -306,7 +367,10 @@ def marcar_como_leida(request, id=None):
         if id is None:
             return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
         try:
+            current_user = _get_current_user(request)
             notif = Notificacion.objects.get(id=id)
+            if current_user and not is_admin_global(current_user) and notif.id_usuario != current_user.id:
+                return JsonResponse({"error": "No autorizado para actualizar esta notificación"}, status=403)
             notif.es_leida = True
             notif.save()
             return JsonResponse({
@@ -326,12 +390,13 @@ def marcar_todas_como_leidas(request):
         try:
             data = json.loads(request.body)
             id_usuario = data.get('id_usuario')
+            id_usuario_resuelto = _resolve_target_user_id(request, id_usuario)
             
-            if not id_usuario:
+            if not id_usuario_resuelto:
                 return JsonResponse({"error": "id_usuario es requerido"}, status=400)
             
             count = Notificacion.objects.filter(
-                id_usuario=id_usuario,
+                id_usuario=id_usuario_resuelto,
                 es_leida=False
             ).update(es_leida=True)
             

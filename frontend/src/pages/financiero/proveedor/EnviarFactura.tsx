@@ -13,8 +13,9 @@ import {
   X,
   Search,
 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { departamentosService, documentosService, facturasService, proveedoresService } from '../../../services/financiero';
-import type { Departamento, Proveedor } from '../../../models/financiero/core.models';
+import type { Departamento, Factura, Proveedor } from '../../../models/financiero/core.models';
 import type { EnviarFacturaProps, UploadedDoc } from '../../../models/financiero/proveedor';
 
 const formatMoney = (val: unknown) => {
@@ -89,6 +90,10 @@ const validateDocFile = async (file: File): Promise<string | null> => {
 };
 
 export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const correccionFactura = (location.state as { correccionFactura?: Factura } | null)?.correccionFactura;
+  const isCorreccion = Boolean(correccionFactura);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
@@ -125,6 +130,35 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   }, [miProveedor]);
 
   useEffect(() => {
+    if (!correccionFactura) return;
+
+    const ivaPorcentaje = (() => {
+      const subtotal = Number(correccionFactura.valor_subtotal || 0);
+      const iva = Number(correccionFactura.valor_iva || 0);
+      if (!subtotal) return 19;
+      return Math.min(100, Math.max(0, Math.round((iva / subtotal) * 100)));
+    })();
+
+    setProveedorSeleccionado(correccionFactura.proveedor || miProveedor || null);
+    setForm(prev => ({
+      ...prev,
+      tipoDocumento: correccionFactura.tipo_documento || prev.tipoDocumento,
+      descripcion: correccionFactura.descripcion || prev.descripcion,
+      observaciones: correccionFactura.observaciones || prev.observaciones,
+      departamentoId: correccionFactura.departamento?.id || prev.departamentoId,
+      valorSubtotal: Number(correccionFactura.valor_subtotal || 0),
+      valorIva: Number(correccionFactura.valor_iva || 0),
+      valorTotal: Number(correccionFactura.valor_total || 0),
+      ivaPorcentaje,
+      fechaFactura: correccionFactura.fecha_factura || prev.fechaFactura,
+      fechaRecepcion: getToday(),
+      cuentaBancaria: correccionFactura.cuenta_bancaria_proveedor || prev.cuentaBancaria,
+    }));
+    setStep(2);
+    setNumeroFacturaSugerido(correccionFactura.numero_factura || 'Corrección en curso');
+  }, [correccionFactura, miProveedor]);
+
+  useEffect(() => {
     const loadCatalogos = async () => {
       setCatalogLoading(true);
       try {
@@ -140,6 +174,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   }, []);
 
   useEffect(() => {
+    if (isCorreccion) return;
     const loadNumeroSugerido = async () => {
       try {
         const numero = await facturasService.getNumeroSugerido();
@@ -149,7 +184,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       }
     };
     void loadNumeroSugerido();
-  }, []);
+  }, [isCorreccion]);
 
   useEffect(() => {
     if (!departamentos.length || !proveedorSeleccionado || form.departamentoId > 0) return;
@@ -252,7 +287,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       const total = Number(form.valorTotal);
       const cuentaBancariaCompleta = [form.banco, form.tipoCuenta, form.numeroCuenta].filter(Boolean).join(' - ') || form.cuentaBancaria;
 
-      const factura = await facturasService.create({
+      const payload = {
         proveedor_id: proveedorSeleccionado.id,
         departamento_id: form.departamentoId,
         tipo_documento: form.tipoDocumento as 'Factura' | 'Factura Electrónica' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro',
@@ -264,7 +299,14 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         fecha_factura: form.fechaFactura,
         fecha_recepcion: form.fechaRecepcion,
         cuenta_bancaria_proveedor: cuentaBancariaCompleta || undefined,
-      });
+      };
+
+      const factura = correccionFactura
+        ? await facturasService.corregir(correccionFactura.id, {
+          ...payload,
+          observaciones_correccion: form.observaciones || undefined,
+        })
+        : await facturasService.create(payload);
 
       // Upload documents
       const failedDocTypes: string[] = [];
@@ -309,6 +351,9 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         });
         setDocs([]);
         onSuccess?.();
+        if (isCorreccion) {
+          navigate('/financiero/proveedor/mis-facturas');
+        }
       }, 3000);
     } catch (err: unknown) {
       const msg = (err as { message?: string; detail?: string })?.message
@@ -330,9 +375,14 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
           <CheckCircle2 className="text-green-600" size={40} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">¡Factura enviada!</h2>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+          {isCorreccion ? '¡Corrección enviada!' : '¡Factura enviada!'}
+        </h2>
         <p className="text-slate-600 dark:text-slate-300 text-center max-w-md">
-          Tu factura fue recibida exitosamente. Puedes consultar su estado en <strong>Mis Facturas</strong>.
+          {isCorreccion
+            ? 'La corrección fue enviada y tu factura vuelve al flujo normal. Puedes consultar su estado en '
+            : 'Tu factura fue recibida exitosamente. Puedes consultar su estado en '}
+          <strong>Mis Facturas</strong>.
         </p>
       </motion.div>
     );
@@ -342,7 +392,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     { num: 1, label: 'Identificación' },
     { num: 2, label: 'Datos Factura' },
     { num: 3, label: 'Documentos' },
-    { num: 4, label: 'Confirmar' },
+    { num: 4, label: isCorreccion ? 'Confirmar Corrección' : 'Confirmar' },
   ];
 
   return (
@@ -356,8 +406,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         <div className="flex items-start gap-4">
           <Send size={24} className="flex-shrink-0 mt-1" />
           <div>
-            <h3 className="font-bold text-lg mb-1">Enviar Factura</h3>
-            <p className="text-orange-100 text-sm">Completa los pasos para enviar tu factura al área financiera</p>
+            <h3 className="font-bold text-lg mb-1">{isCorreccion ? 'Corregir Factura' : 'Enviar Factura'}</h3>
+            <p className="text-orange-100 text-sm">
+              {isCorreccion
+                ? 'Actualiza los campos solicitados y reenvía la factura al proceso.'
+                : 'Completa los pasos para enviar tu factura al área financiera'}
+            </p>
           </div>
         </div>
       </motion.div>
@@ -496,7 +550,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    N° Factura <span className="text-slate-400 text-xs">(generado automáticamente por el sistema)</span>
+                    N° Factura{' '}
+                    <span className="text-slate-400 text-xs">
+                      {isCorreccion ? '(número original de la factura)' : '(generado automáticamente por el sistema)'}
+                    </span>
                   </label>
                   <input
                     type="text"
@@ -504,7 +561,11 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     disabled
                     className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 outline-none"
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Evita errores de duplicidad: el consecutivo se asigna automáticamente.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {isCorreccion
+                      ? 'Este número se mantiene y solo actualizas la información requerida.'
+                      : 'Evita errores de duplicidad: el consecutivo se asigna automáticamente.'}
+                  </p>
                 </div>
 
                 <div>
@@ -779,7 +840,9 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
 
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
                   <AlertCircle size={14} className="inline mr-1" />
-                  Al enviar, tu factura quedará en estado <strong>Recibida</strong> y será procesada por el área de cuentas por pagar.
+                  {isCorreccion
+                    ? 'Al enviar la corrección, la factura vuelve a estado Recibida y se reanuda el proceso.'
+                    : 'Al enviar, tu factura quedará en estado Recibida y será procesada por el área de cuentas por pagar.'}
                 </div>
               </div>
             </div>
@@ -790,8 +853,11 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       {/* Navigation */}
       <div className="flex justify-between">
         <button
-          onClick={() => setStep(s => Math.max(1, s - 1))}
-          disabled={step === 1}
+          onClick={() => {
+            if (isCorreccion && step === 2) return;
+            setStep(s => Math.max(1, s - 1));
+          }}
+          disabled={step === 1 || (isCorreccion && step === 2)}
           className="flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronLeft size={16} /> Anterior
@@ -812,7 +878,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
             className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
           >
             <Send size={16} />
-            {loading ? 'Enviando...' : 'Enviar Factura'}
+            {loading ? 'Enviando...' : isCorreccion ? 'Enviar corrección' : 'Enviar Factura'}
           </button>
         )}
       </div>

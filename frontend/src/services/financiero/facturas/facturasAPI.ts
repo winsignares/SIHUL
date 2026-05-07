@@ -125,4 +125,8 @@ export const facturasService = {
   completarRegistro: async (id: number, data: Partial<Factura>): Promise<Factura> => {
     return apiClient.patch<Factura>(`${API_BASE}/facturas/${id}/completar_registro/`, data);
   },
+
+  corregir: async (id: number, data: Partial<Factura> & { observaciones_correccion?: string }): Promise<Factura> => {
+    return apiClient.patch<Factura>(`${API_BASE}/facturas/${id}/corregir/`, data);
+  },
 };
