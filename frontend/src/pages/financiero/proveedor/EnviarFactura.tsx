@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
@@ -17,6 +17,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { departamentosService, documentosService, facturasService, proveedoresService } from '../../../services/financiero';
 import type { Departamento, Factura, Proveedor } from '../../../models/financiero/core.models';
 import type { EnviarFacturaProps, UploadedDoc } from '../../../models/financiero/proveedor';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
+import { Button } from '../../../share/button';
 
 const formatMoney = (val: unknown) => {
   const num = Number(val) || 0;
@@ -107,6 +109,9 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<UploadedDoc | null>(null);
+  const [deletingDoc, setDeletingDoc] = useState(false);
 
   const [form, setForm] = useState({
     tipoDocumento: 'Factura' as string,
@@ -132,6 +137,14 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   useEffect(() => {
     if (!correccionFactura) return;
 
+    const existingDocs = (correccionFactura.documentos || []).map((doc) => ({
+      id: String(doc.id),
+      type: doc.tipo_documento,
+      existingUrl: doc.archivo_url || doc.url_storage || '',
+      existingName: doc.nombre_archivo,
+      isExisting: true,
+    }));
+
     const ivaPorcentaje = (() => {
       const subtotal = Number(correccionFactura.valor_subtotal || 0);
       const iva = Number(correccionFactura.valor_iva || 0);
@@ -154,9 +167,15 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       fechaRecepcion: getToday(),
       cuentaBancaria: correccionFactura.cuenta_bancaria_proveedor || prev.cuentaBancaria,
     }));
+    setDocs(existingDocs);
     setStep(2);
     setNumeroFacturaSugerido(correccionFactura.numero_factura || 'Corrección en curso');
   }, [correccionFactura, miProveedor]);
+
+  const documentTypes = useMemo(() => {
+    const existingTypes = docs.map((doc) => doc.type).filter(Boolean);
+    return Array.from(new Set([...DOC_TYPES, ...existingTypes]));
+  }, [docs]);
 
   useEffect(() => {
     const loadCatalogos = async () => {
@@ -261,7 +280,39 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     e.target.value = '';
   };
 
-  const handleRemoveDoc = (id: string) => setDocs(prev => prev.filter(d => d.id !== id));
+  const handleRemoveDoc = async (doc: UploadedDoc) => {
+    if (doc.isExisting) {
+      const docId = Number(doc.id);
+      if (!Number.isNaN(docId)) {
+        try {
+          await documentosService.delete(docId);
+        } catch {
+          setError('No se pudo eliminar el documento. Intenta nuevamente.');
+          return;
+        }
+      }
+    }
+
+    setDocs(prev => prev.filter(d => d.id !== doc.id));
+  };
+
+  const requestRemoveDoc = (doc: UploadedDoc) => {
+    setDocToDelete(doc);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmRemoveDoc = async () => {
+    if (!docToDelete) return;
+    setDeletingDoc(true);
+    setError(null);
+    try {
+      await handleRemoveDoc(docToDelete);
+      setDeleteDialogOpen(false);
+      setDocToDelete(null);
+    } finally {
+      setDeletingDoc(false);
+    }
+  };
 
   const canGoNext = () => {
     if (step === 1) return !!proveedorSeleccionado;
@@ -310,9 +361,9 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
 
       // Upload documents
       const failedDocTypes: string[] = [];
-      for (const doc of docs) {
+      for (const doc of docs.filter((item) => item.file)) {
         try {
-          await documentosService.upload(factura.id, doc.file, doc.type);
+          await documentosService.upload(factura.id, doc.file as File, doc.type);
         } catch (uploadErr: unknown) {
           const errMsg = (uploadErr as { message?: string })?.message || String(uploadErr);
           console.error(`[EnviarFactura] Falló subida de documento "${doc.type}" para factura ${factura.id}:`, errMsg, uploadErr);
@@ -762,20 +813,37 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
               </p>
 
               <div className="space-y-3">
-                {DOC_TYPES.map(type => {
+                {documentTypes.map(type => {
                   const uploaded = docs.find(d => d.type === type);
                   return (
                     <div key={type} className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-800 dark:text-white">{type}</p>
                         {uploaded && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-xs">{uploaded.file.name}</p>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs space-y-1">
+                            <p className="truncate">
+                              {uploaded.file?.name || uploaded.existingName || 'Documento cargado'}
+                            </p>
+                            {uploaded.existingUrl && (
+                              <a
+                                href={uploaded.existingUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-orange-600 hover:text-orange-700 underline"
+                              >
+                                Ver documento actual
+                              </a>
+                            )}
+                          </div>
                         )}
                       </div>
                       {uploaded ? (
                         <div className="flex items-center gap-2">
                           <CheckCircle2 size={16} className="text-green-500" />
-                          <button onClick={() => handleRemoveDoc(uploaded.id)} className="p-1 hover:bg-red-50 rounded text-red-500">
+                          <button
+                            onClick={() => requestRemoveDoc(uploaded)}
+                            className="p-1 hover:bg-red-50 rounded text-red-500"
+                          >
                             <X size={14} />
                           </button>
                         </div>
@@ -882,6 +950,36 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
           </button>
         )}
       </div>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) setDocToDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <X className="w-5 h-5 text-red-600" />
+              Eliminar documento
+            </DialogTitle>
+            <DialogDescription>
+              {docToDelete
+                ? `¿Deseas eliminar el documento "${docToDelete.existingName || docToDelete.file?.name || docToDelete.type}"? Esta acción no se puede deshacer.`
+                : '¿Deseas eliminar este documento? Esta acción no se puede deshacer.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deletingDoc}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => void confirmRemoveDoc()} disabled={deletingDoc}>
+              {deletingDoc ? 'Eliminando...' : 'Eliminar documento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

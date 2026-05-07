@@ -30,6 +30,16 @@ const toList = <T,>(data: unknown): T[] => {
   return [];
 };
 
+const MIN_ESTADO_CONSULTA = 'Registrada';
+const ESTADO_INDEX = new Map(TIMELINE_BLUEPRINT.map((item, index) => [item.estadoRef, index]));
+const MIN_ESTADO_INDEX = ESTADO_INDEX.get(MIN_ESTADO_CONSULTA) ?? 0;
+
+const isEstadoVisible = (estado: string): boolean => {
+  const index = ESTADO_INDEX.get(estado);
+  if (typeof index === 'number') return index >= MIN_ESTADO_INDEX;
+  return estado !== 'Recibida';
+};
+
 function mapFactura(f: Factura): FuncionarioConsultaRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
   let riesgo: FuncionarioConsultaRow['riesgo'] = 'verde';
@@ -105,6 +115,7 @@ function buildTimelineFromSeguimiento(seguimiento: FuncionarioSeguimientoRespons
 export default function ConsultarFacturas() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<FuncionarioConsultaRow[]>([]);
+  const [facturasData, setFacturasData] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -123,8 +134,12 @@ export default function ConsultarFacturas() {
   const [montoMax, setMontoMax] = useState('999999999');
 
   const loadRows = async () => {
-    const response = await facturasService.getAll({ limit: 100 });
-    return toList<Factura>(response).map(mapFactura);
+    const response = await facturasService.getAll({ limit: 500 });
+    const list = toList<Factura>(response);
+    return {
+      list,
+      rows: list.filter((factura) => isEstadoVisible(factura.estado || '')).map(mapFactura),
+    };
   };
 
   useEffect(() => {
@@ -132,9 +147,12 @@ export default function ConsultarFacturas() {
       setLoading(true);
       setLoadError(null);
       try {
-        setRows(await loadRows());
+        const { list, rows: nextRows } = await loadRows();
+        setFacturasData(list);
+        setRows(nextRows);
       } catch {
         setRows([]);
+        setFacturasData([]);
         setLoadError('No fue posible consultar facturas. Intente nuevamente.');
       } finally {
         setLoading(false);
@@ -148,7 +166,8 @@ export default function ConsultarFacturas() {
     const interval = window.setInterval(() => {
       void (async () => {
         try {
-          const latest = await loadRows();
+          const { list, rows: latest } = await loadRows();
+          setFacturasData(list);
           setRows((prev) => {
             const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
             const changes: FuncionarioEstadoChange[] = [];
@@ -197,6 +216,11 @@ export default function ConsultarFacturas() {
       return true;
     });
   }, [rows, numeroFactura, proveedor, estado, area, fechaInicio, fechaFin, montoMin, montoMax]);
+
+  const filteredFacturas = useMemo(() => {
+    const allowedIds = new Set(filtered.map((row) => row.facturaId));
+    return facturasData.filter((factura) => allowedIds.has(Number(factura.id)));
+  }, [facturasData, filtered]);
 
   const selectedRow = filtered.find((r) => r.id === selectedId) || rows.find((r) => r.id === selectedId) || null;
 
@@ -290,6 +314,137 @@ export default function ConsultarFacturas() {
     if (risk === 'naranja') return 'bg-orange-500';
     if (risk === 'amarillo') return 'bg-yellow-500';
     return 'bg-green-500';
+  };
+
+  const diasBadge = (dias: number) => {
+    if (dias >= 10) return 'bg-red-100 text-red-700 border-red-200';
+    if (dias >= 5) return 'bg-orange-100 text-orange-700 border-orange-200';
+    if (dias >= 2) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  };
+
+  const handleExport = async () => {
+    if (filteredFacturas.length === 0) return;
+
+    const XLSX = await import('xlsx');
+
+    const rows = filteredFacturas.map((factura) => {
+      const documentos = (factura.documentos || [])
+        .map((doc) => `${doc.tipo_documento || 'Documento'}: ${doc.nombre_archivo || 'Sin nombre'}`)
+        .join(' | ');
+
+      return {
+        ID: factura.id,
+        'Numero Factura': factura.numero_factura,
+        'Numero Radicado': factura.numero_radicado || '',
+        'Numero Proceso Pago': factura.numero_proceso_pago || '',
+        'Numero Confirmacion': factura.numero_confirmacion || '',
+        'Numero Transaccion': factura.numero_transaccion || '',
+        'Numero Comprobante': factura.numero_comprobante || '',
+        'Proveedor ID': factura.proveedor_id,
+        Proveedor: factura.proveedor?.razon_social || '',
+        NIT: factura.proveedor?.nit || '',
+        'Tipo Proveedor': factura.proveedor?.tipo_proveedor || '',
+        'Email Proveedor': factura.proveedor?.email || '',
+        'Telefono Proveedor': factura.proveedor?.telefono || '',
+        'Banco Proveedor': factura.proveedor?.banco || '',
+        'Tipo Cuenta Proveedor': factura.proveedor?.tipo_cuenta || '',
+        'Numero Cuenta Proveedor': factura.proveedor?.numero_cuenta || '',
+        'Departamento ID': factura.departamento_id,
+        'Area Solicitante': factura.departamento?.nombre || '',
+        'Cuenta Contable ID': factura.cuenta_contable_id || '',
+        'Cuenta Contable': factura.cuenta_contable?.nombre || '',
+        'Centro Costo ID': factura.centro_costo_id || '',
+        'Centro Costo': factura.centro_costo?.nombre || '',
+        'Valor Subtotal': factura.valor_subtotal,
+        'Valor IVA': factura.valor_iva,
+        'Valor Retencion Renta': factura.valor_retencion_renta,
+        'Valor Retencion IVA': factura.valor_retencion_iva,
+        'Valor Retencion ICA': factura.valor_retencion_ica,
+        'Valor Total': factura.valor_total,
+        'Valor Neto Pagar': factura.valor_neto_pagar,
+        'Tipo Documento': factura.tipo_documento,
+        Descripcion: factura.descripcion,
+        Observaciones: factura.observaciones || '',
+        'Cuenta Bancaria Proveedor': factura.cuenta_bancaria_proveedor || '',
+        'Fecha Factura': factura.fecha_factura,
+        'Fecha Recepcion': factura.fecha_recepcion,
+        'Fecha Radicacion': factura.fecha_radicacion || '',
+        'Fecha Causacion': factura.fecha_causacion || '',
+        'Fecha Alistamiento': factura.fecha_alistamiento || '',
+        'Fecha Aprobacion Auditoria': factura.fecha_aprobacion_auditoria || '',
+        'Fecha Cargue': factura.fecha_cargue || '',
+        'Fecha Autorizacion': factura.fecha_autorizacion || '',
+        'Fecha Pago Aplicado': factura.fecha_pago_aplicado || '',
+        'Fecha Comprobante': factura.fecha_comprobante || '',
+        Estado: factura.estado,
+        Etapa: factura.etapa_actual || '',
+        'Indicador Riesgo': factura.indicador_riesgo,
+        'SLA Cumplido': factura.sla_cumplido ? 'Si' : 'No',
+        'Dias Transcurridos': factura.dias_transcurridos,
+        'Responsable ID': factura.usuario_responsable_id || '',
+        Responsable: factura.usuario_responsable?.nombre || '',
+        Urgente: factura.urgente ? 'Si' : 'No',
+        'Requiere Autorizacion Especial': factura.requiere_autorizacion_especial ? 'Si' : 'No',
+        'Fecha Creacion': factura.fecha_creacion,
+        'Fecha Modificacion': factura.fecha_modificacion,
+        Documentos: documentos,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 8 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 12 },
+      { wch: 32 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 26 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 26 },
+      { wch: 14 },
+      { wch: 26 },
+      { wch: 14 },
+      { wch: 26 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 40 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Facturas');
+    XLSX.writeFile(workbook, `facturas-funcionario-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const clearFilters = () => {
@@ -509,6 +664,8 @@ export default function ConsultarFacturas() {
           <motion.button 
             whileHover={{ scale: 1.05 }} 
             whileTap={{ scale: 0.95 }}
+            onClick={() => void handleExport()}
+            disabled={filteredFacturas.length === 0}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-green-500 text-green-600 hover:bg-green-50 font-semibold transition-all"
           >
             <Download className="w-4 h-4" /> Exportar
@@ -569,7 +726,11 @@ export default function ConsultarFacturas() {
                     }
                   </td>
                   <td className="p-4 text-slate-700">{displayDate(row.fechaRecepcion)}</td>
-                  <td className="p-4 font-semibold text-slate-900">{row.dias === 0 ? '< 1 día' : `${row.dias} días`}</td>
+                  <td className="p-4">
+                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs font-bold ${diasBadge(row.dias)}`}>
+                      {row.dias} {row.dias === 1 ? 'día' : 'días'}
+                    </div>
+                  </td>
                   <td className="p-4 text-center">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
