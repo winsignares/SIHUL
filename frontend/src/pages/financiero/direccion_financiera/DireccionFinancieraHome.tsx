@@ -61,8 +61,8 @@ export default function DireccionFinancieraHome({
       action: onGoToEnviar,
     },
     {
-      title: 'Confirmacion de Pagos',
-      description: 'Control de confirmaciones del proceso bancario',
+      title: 'Control de Pago Bancario',
+      description: 'Confirmacion bancaria de pagos autorizados por Rectoria',
       icon: CheckCircle2,
       color: 'from-emerald-600 to-emerald-700',
       action: onGoToConfirmar,

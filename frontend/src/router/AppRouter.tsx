@@ -186,6 +186,7 @@ export default function AppRouter() {
       normalized.includes('sindicatura') ||
       normalized.includes('revisar pagos') ||
       normalized.includes('confirmacion pagos') ||
+      normalized.includes('control de pago bancario') ||
       normalized.includes('enviar rectoria') ||
       normalized.includes('enviar a rectoria')
     );

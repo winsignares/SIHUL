@@ -53,6 +53,16 @@ export const facturasService = {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/enviar_direccion_financiera/`, body);
   },
 
+  cargarDireccionFinanciera: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/cargar_direccion_financiera/`, body);
+  },
+
+  enviarRectoria: async (id: number, observaciones?: string): Promise<Factura> => {
+    const body = observaciones ? { observaciones } : undefined;
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/enviar_rectoria/`, body);
+  },
+
   autorizarRectoria: async (id: number, observaciones?: string): Promise<Factura> => {
     const body = observaciones ? { observaciones } : undefined;
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/autorizar_rectoria/`, body);

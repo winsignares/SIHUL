@@ -108,6 +108,7 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Revisar Pagos Direccion Financiera': '/financiero/direccion-financiera/revisar',
     'Enviar a Rectoria': '/financiero/direccion-financiera/enviar',
     'Confirmacion Pagos Direccion Financiera': '/financiero/direccion-financiera/confirmar',
+    'Control de Pago Bancario Direccion Financiera': '/financiero/direccion-financiera/confirmar',
     'Dashboard Rectoria': '/financiero/rectoria/dashboard',
     'Mis Pendientes Rectoria': '/financiero/rectoria/pendientes',
     'Autorizar Pagos': '/financiero/rectoria/autorizar',
@@ -205,6 +206,7 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Revisar Pagos Direccion Financiera': ListChecks,
     'Enviar a Rectoria': Send,
     'Confirmacion Pagos Direccion Financiera': CircleCheckBig,
+    'Control de Pago Bancario Direccion Financiera': CircleCheckBig,
     'Dashboard Rectoria': Crown,
     'Mis Pendientes Rectoria': Clock3,
     'Autorizar Pagos': CircleCheckBig,
@@ -282,7 +284,8 @@ function isDireccionFinancieraLikeComponent(name: string): boolean {
         normalized.includes('sindicatura') ||
         normalized.includes('revisar pago') ||
         normalized.includes('enviar a rectoria') ||
-        normalized.includes('confirmacion pago')
+        normalized.includes('confirmacion pago') ||
+        normalized.includes('control de pago bancario')
     );
 }
 

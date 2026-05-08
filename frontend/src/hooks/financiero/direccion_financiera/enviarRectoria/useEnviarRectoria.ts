@@ -126,10 +126,10 @@ export function useEnviarRectoria() {
     
     setProcesando(true);
     try {
-      await facturasService.update(facturaSeleccionada.facturaId, {
-        estado: 'Enviada Rectoría',
-        observaciones: observaciones || undefined,
-      });
+      await facturasService.enviarRectoria(
+        facturaSeleccionada.facturaId,
+        observaciones || undefined
+      );
       showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} enviada a Rectoría exitosamente.`);
       cerrarEnvio();
       cargarFacturas();

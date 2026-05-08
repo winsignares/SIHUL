@@ -44,8 +44,8 @@ export default function ConfirmacionPagos() {
             <CheckCircle className="w-7 h-7 text-yellow-400" />
           </div>
           <div>
-            <h1 className="text-white mb-1 text-2xl font-bold">Confirmacion de Pagos</h1>
-            <p className="text-red-100 text-sm">Control de procesos de pago autorizados por Rectoria</p>
+            <h1 className="text-white mb-1 text-2xl font-bold">Control de Pago Bancario</h1>
+            <p className="text-red-100 text-sm">Confirmacion bancaria de pagos autorizados por Rectoria</p>
           </div>
         </div>
       </motion.div>
@@ -91,7 +91,7 @@ export default function ConfirmacionPagos() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Pagos Autorizados por Rectoria</CardTitle>
-              <CardDescription>{facturasFiltradas.length} pago(s) pendiente(s) de confirmacion</CardDescription>
+              <CardDescription>{facturasFiltradas.length} pago(s) pendiente(s) de confirmacion bancaria</CardDescription>
             </div>
             <Button onClick={cargarFacturas} variant="outline" disabled={cargando}>
               <Loader2 className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
@@ -111,7 +111,7 @@ export default function ConfirmacionPagos() {
           ) : facturasFiltradas.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No hay pagos pendientes de confirmacion</p>
+              <p className="font-medium">No hay pagos pendientes de confirmacion bancaria</p>
             </div>
           ) : (
             <Table>
@@ -172,7 +172,7 @@ export default function ConfirmacionPagos() {
       <Dialog open={confirmarAbierto} onOpenChange={setConfirmarAbierto}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Confirmar Control de Pago</DialogTitle>
+            <DialogTitle>Confirmar Control de Pago Bancario</DialogTitle>
             <DialogDescription>
               {facturaSeleccionada ? `Confirmar proceso de pago para ${facturaSeleccionada.numeroFactura}.` : 'Selecciona una factura.'}
             </DialogDescription>

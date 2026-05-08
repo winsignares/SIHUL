@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters, parsers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum, Count
 from django.http import HttpResponse
 import json
@@ -843,6 +843,96 @@ class FacturaViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    @action(detail=True, methods=['post'], url_path='cargar_direccion_financiera')
+    def cargar_direccion_financiera(self, request, pk=None):
+        """Registrar el cargue formal en Dirección Financiera antes de rectoría."""
+        factura = self.get_object()
+
+        if factura.estado not in ['Revisada Dir. Financiera', 'Devuelta', 'Rechazada por Rectoría']:
+            return Response(
+                {'error': 'La factura debe estar revisada o devuelta para ser cargada en Dirección Financiera'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+        estado_anterior = factura.estado
+
+        factura.estado = 'Cargada'
+        factura.fecha_cargue = timezone.now().date()
+        factura.etapa_actual = 'Cargue Formal'
+        factura.fecha_inicio_etapa = factura.fecha_cargue
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Dirección Financiera] {observaciones}"]))
+
+        factura.save()
+
+        actualizar_sla_factura(factura)
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura cargada en dirección financiera',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Cargada',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Cargada')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='enviar_rectoria')
+    def enviar_rectoria(self, request, pk=None):
+        """Enviar una factura cargada a Rectoría para autorización final."""
+        factura = self.get_object()
+
+        if factura.estado != 'Cargada':
+            return Response(
+                {'error': 'La factura debe estar cargada para enviarla a Rectoría'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        observaciones = (request.data.get('observaciones') or '').strip()
+        estado_anterior = factura.estado
+
+        factura.estado = 'Enviada Rectoría'
+        factura.fecha_envio_rectoria = timezone.now().date()
+        factura.etapa_actual = 'Autorización Rectoría'
+        factura.fecha_inicio_etapa = factura.fecha_envio_rectoria
+        factura.usuario_responsable = request.user
+
+        if observaciones:
+            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Dirección Financiera - Envío] {observaciones}"]))
+
+        factura.save()
+
+        actualizar_sla_factura(factura)
+
+        models.HistorialFactura.objects.create(
+            factura=factura,
+            accion='Factura enviada a rectoría',
+            estado_anterior=estado_anterior,
+            estado_nuevo='Enviada Rectoría',
+            usuario=request.user,
+            usuario_nombre=request.user.nombre,
+            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+            observacion=observaciones or None,
+        )
+
+        self._notificar_transicion(factura, estado_anterior, 'Enviada Rectoría')
+
+        return Response(
+            serializers.FacturaDetailSerializer(factura).data,
+            status=status.HTTP_200_OK
+        )
+
     @action(detail=True, methods=['post'], url_path='autorizar_rectoria')
     def autorizar_rectoria(self, request, pk=None):
         """Autorizar una factura desde Rectoría para continuar con tesorería."""
@@ -971,7 +1061,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_409_CONFLICT
                 )
 
-        factura.etapa_actual = 'Control de Pago Confirmado'
+        factura.etapa_actual = 'Control de Pago Bancario'
         factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = request.user
 
@@ -984,9 +1074,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         models.HistorialFactura.objects.create(
             factura=factura,
-            accion='Control de pago confirmado',
+            accion='Control de pago bancario confirmado',
             estado_anterior='Autorizada',
-            estado_nuevo='Autorizada',
+            estado_nuevo='Control de Pago Bancario',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
@@ -1257,6 +1347,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if not factura.numero_confirmacion:
+            return Response(
+                {'error': 'Debe confirmar el control de pago en Dirección Financiera antes de registrar el pago aplicado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         numero_transaccion = (request.data.get('numero_transaccion') or '').strip()
         observaciones = (request.data.get('observaciones') or '').strip()
         fecha_pago = request.data.get('fecha_pago_aplicado')
@@ -1276,46 +1372,49 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         estado_anterior = factura.estado
 
-        factura.numero_transaccion = numero_transaccion
-        factura.fecha_pago_aplicado = fecha_pago or timezone.now().date()
-        factura.estado = 'Pago Aplicado'
-        factura.etapa_actual = 'Pago Aplicado'
-        factura.fecha_inicio_etapa = factura.fecha_pago_aplicado
-        factura.usuario_responsable = request.user
+        with transaction.atomic():
+            factura.numero_transaccion = numero_transaccion
+            factura.fecha_pago_aplicado = fecha_pago or timezone.now().date()
+            factura.estado = 'Pago Aplicado'
+            factura.etapa_actual = 'Pago Aplicado'
+            factura.fecha_inicio_etapa = factura.fecha_pago_aplicado
+            factura.usuario_responsable = request.user
 
-        if observaciones:
-            factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
+            if observaciones:
+                factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
 
-        factura.save()
+            factura.save()
 
-        actualizar_sla_factura(factura)
+            actualizar_sla_factura(factura)
 
-        documento_data = {
-            'factura': factura.id,
-            'nombre_archivo': comprobante_bancario.name,
-            'tipo_documento': 'Comprobante de Pago',
-            'url_storage': comprobante_bancario.name,
-            'tamano_bytes': comprobante_bancario.size,
-            'tipo_mime': getattr(comprobante_bancario, 'content_type', '') or None,
-            'archivo': comprobante_bancario,
-        }
-        documento_serializer = serializers.DocumentoAdjuntoSerializer(data=documento_data, context={'request': request})
-        if not documento_serializer.is_valid():
-            return Response(documento_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        documento_serializer.save(cargado_por=request.user)
+            documento_data = {
+                'factura': factura.id,
+                'nombre_archivo': comprobante_bancario.name,
+                'tipo_documento': 'Comprobante de Pago',
+                'url_storage': comprobante_bancario.name,
+                'tamano_bytes': comprobante_bancario.size,
+                'tipo_mime': getattr(comprobante_bancario, 'content_type', '') or None,
+                'archivo': comprobante_bancario,
+            }
+            documento_serializer = serializers.DocumentoAdjuntoSerializer(
+                data=documento_data,
+                context={'request': request}
+            )
+            documento_serializer.is_valid(raise_exception=True)
+            documento_serializer.save(cargado_por=request.user)
 
-        models.HistorialFactura.objects.create(
-            factura=factura,
-            accion='Pago aplicado registrado',
-            estado_anterior=estado_anterior,
-            estado_nuevo='Pago Aplicado',
-            usuario=request.user,
-            usuario_nombre=request.user.nombre,
-            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
-            observacion=observaciones or None,
-        )
+            models.HistorialFactura.objects.create(
+                factura=factura,
+                accion='Pago aplicado registrado',
+                estado_anterior=estado_anterior,
+                estado_nuevo='Pago Aplicado',
+                usuario=request.user,
+                usuario_nombre=request.user.nombre,
+                usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
+                observacion=observaciones or None,
+            )
 
-        self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
+            self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,

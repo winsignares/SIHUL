@@ -12,7 +12,7 @@ _ALIAS_MAP = {
     'comprobante de egreso': ['comprobante de egreso', 'generacion comprobante'],
     'envio a direccion financiera': ['envio a direccion financiera', 'direccion financiera', 'cargue formal'],
     'direccion financiera': ['direccion financiera', 'cargue formal', 'envio a direccion financiera'],
-    'control de pago confirmado': ['aplicacion de pago', 'autorizacion de pago'],
+    'control de pago bancario': ['aplicacion de pago', 'autorizacion de pago'],
     'tesoreria - ajustes internos': ['alistamiento'],
     'correccion direccion financiera': ['direccion financiera', 'cargue formal'],
     'devolucion': ['recepcion y registro', 'registro y recepcion'],

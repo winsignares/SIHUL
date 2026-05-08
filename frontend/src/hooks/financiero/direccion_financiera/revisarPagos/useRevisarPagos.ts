@@ -138,10 +138,10 @@ export function useRevisarPagos() {
     setProcesando(true);
     try {
       // Cambiar estado a "Cargada" (lista para autorizacion en Rectoria)
-      await facturasService.update(facturaSeleccionada.facturaId, {
-        estado: 'Cargada',
-        observaciones: observaciones || undefined,
-      });
+      await facturasService.cargarDireccionFinanciera(
+        facturaSeleccionada.facturaId,
+        observaciones || undefined
+      );
       showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} cargada para autorizacion en Rectoria.`);
       cerrarDecision();
       cargarFacturas();

@@ -83,7 +83,9 @@ export default function RegistrarPagoAplicado() {
 
   const loadFacturas = async () => {
     const response = await facturasService.getAll({ estado: 'Autorizada', limit: 200 });
-    return toList<APIFactura>(response).map(mapFactura);
+    return toList<APIFactura>(response)
+      .filter((factura) => !!factura.numero_confirmacion)
+      .map(mapFactura);
   };
 
   useEffect(() => {
@@ -258,6 +260,13 @@ export default function RegistrarPagoAplicado() {
           <Card className="border-0 shadow-lg border-blue-200 bg-blue-50"><CardContent className="p-6"><p className="text-blue-700 text-sm font-semibold">Monto Total</p><p className="text-2xl font-bold text-blue-800 mt-1">${facturasFiltradas.reduce((sum, f) => sum + f.valorTotal, 0).toLocaleString('es-CO')}</p></CardContent></Card>
           <Card className="border-0 shadow-lg border-purple-200 bg-purple-50"><CardContent className="p-6"><p className="text-purple-700 text-sm font-semibold">Por Registrar</p><p className="text-3xl font-bold text-purple-800 mt-1">{facturasFiltradas.length}</p></CardContent></Card>
         </div>
+
+        {!loading && !loadError && facturasFiltradas.length === 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            No hay pagos listos para registrar. Falta la <strong>confirmacion bancaria</strong> en Direccion Financiera
+            (Control de Pago Bancario).
+          </div>
+        )}
 
         <Card className="border-0 shadow-lg">
           <CardHeader>

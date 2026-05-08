@@ -88,6 +88,7 @@ const COMPONENT_TERMS_BY_ROLE: Record<CanonicalFinancialRole, string[]> = {
     'mis pendientes direccion financiera',
     'revisar pagos direccion financiera',
     'confirmacion pagos direccion financiera',
+    'control de pago bancario direccion financiera',
     'enviar a rectoria',
     'enviar rectoria',
     'sindicatura'

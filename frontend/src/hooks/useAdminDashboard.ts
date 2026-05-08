@@ -282,8 +282,8 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                     },
                     {
                         id: 'Confirmacion Pagos Direccion Financiera',
-                        icon: getIconForComponent('Confirmacion Pagos Direccion Financiera'),
-                        label: 'Confirmacion de Pagos',
+                        icon: getIconForComponent('Control de Pago Bancario Direccion Financiera'),
+                        label: 'Control de Pago Bancario',
                         route: '/financiero/direccion-financiera/confirmar',
                         code: 'Confirmacion Pagos Direccion Financiera'
                     }
