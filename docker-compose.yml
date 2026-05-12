@@ -92,16 +92,16 @@ services:
   # ==========================================
   # N8N - AUTOMATIZACIÓN DE WORKFLOWS
   # ==========================================
-  n8n:
-    container_name: sihul-n8n
-    image: n8nio/n8n
-    restart: always
-    ports:
-      - "5678:5678"
-    volumes:
-      - n8n_data:/home/node/.n8n
-    networks:
-      - sihul_network
+  # n8n:
+  #   container_name: sihul-n8n
+  #   image: n8nio/n8n
+  #   restart: always
+  #   ports:
+  #     - "5678:5678"
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #   networks:
+  #     - sihul_network
 
 # ==========================================
 # VOLÚMENES PERSISTENTES
@@ -110,9 +110,9 @@ volumes:
   postgres_data:
     name: sihul_postgres_data
     driver: local
-  n8n_data:
-    name: sihul_n8n_data
-    driver: local
+  # n8n_data:
+  #   name: sihul_n8n_data
+  #   driver: local
 
 # ==========================================
 # RED COMPARTIDA

@@ -109,74 +109,50 @@ class Command(BaseCommand):
             for row in rows:
                 data = dict(zip(columns, row))
 
+                # VW_DOCENTES solo tiene: tip_identificacion, id_docente, nombres, apellidos
                 raw_payload = {
-                    'id_docente': self._first_present(data, ['id_docente', 'cod_docente', 'id_profesor', 'id_doc']),
-                    'tipo_documento': self._first_present(
-                        data,
-                        ['tip_identificacion', 'tipo_documento', 'tip_documento', 'tipo_id'],
-                    ),
-                    'numero_documento': self._first_present(
-                        data,
-                        ['numero_documento', 'num_documento', 'documento', 'identificacion'],
-                    ),
-                    'nombres': self._first_present(data, ['nombres', 'nombre_docente', 'primer_nombre']),
-                    'apellidos': self._first_present(data, ['apellidos', 'apellido_docente', 'primer_apellido']),
-                    'nombre_completo': self._first_present(data, ['nombre_completo', 'nom_docente', 'docente']),
-                    'correo_institucional': self._first_present(
-                        data,
-                        ['correo_institucional', 'email_institucional', 'correo', 'email'],
-                    ),
-                    'correo_personal': self._first_present(data, ['correo_personal', 'email_personal']),
-                    'id_sede': self._first_present(data, ['id_sede']),
-                    'nombre_sede': self._first_present(data, ['nombre_sede']),
-                    'id_facultad': self._first_present(data, ['id_facultad']),
-                    'nombre_facultad': self._first_present(data, ['nombre_facultad']),
-                    'periodo_academico': self._first_present(data, ['periodo_academico']),
-                    'estado_docente': self._first_present(data, ['estado_docente', 'estado', 'activo']),
+                    'tip_identificacion': self._first_present(data, ['tip_identificacion', 'tipo_id']),
+                    'id_docente': self._first_present(data, ['id_docente', 'cod_docente']),
+                    'nombres': self._first_present(data, ['nombres']),
+                    'apellidos': self._first_present(data, ['apellidos']),
                 }
 
+                tipo_documento = self._to_text(raw_payload['tip_identificacion'])
                 id_docente_oracle = self._to_text(raw_payload['id_docente'])
-                tipo_documento = self._to_text(raw_payload['tipo_documento'])
-                numero_documento = self._to_text(raw_payload['numero_documento'])
-                correo_institucional = self._to_text(raw_payload['correo_institucional']).lower()
                 nombres = self._to_text(raw_payload['nombres'])
                 apellidos = self._to_text(raw_payload['apellidos'])
 
-                row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
-                if id_docente_oracle and tipo_documento:
+                # Construir external_id con la información disponible
+                if tipo_documento and id_docente_oracle:
                     external_id = f'{tipo_documento}:{id_docente_oracle}'
                 elif id_docente_oracle:
                     external_id = id_docente_oracle
-                elif numero_documento:
-                    external_id = f'DOC:{numero_documento}'
-                elif correo_institucional:
-                    external_id = f'MAIL:{correo_institucional}'
                 else:
-                    external_id = f'NOID:{self._row_hash({"tipo_documento": tipo_documento, "nombres": nombres, "apellidos": apellidos})[:16]}'
+                    external_id = f'NOID:{self._row_hash({"nombres": nombres, "apellidos": apellidos})[:16]}'
                     summary['staging']['without_strong_id'] += 1
+
+                row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
+                
+                nombre_completo = self._build_nombre_completo(nombres, apellidos, None)
 
                 defaults = {
                     'id_docente_oracle': id_docente_oracle or None,
                     'tipo_documento': tipo_documento or None,
-                    'numero_documento': numero_documento or None,
+                    'numero_documento': None,  # No disponible en VW_DOCENTES
                     'nombres': nombres or None,
                     'apellidos': apellidos or None,
-                    'nombre_completo': self._build_nombre_completo(
-                        nombres,
-                        apellidos,
-                        self._to_text(raw_payload['nombre_completo']),
-                    ),
-                    'correo_institucional': correo_institucional or None,
-                    'correo_personal': self._to_text(raw_payload['correo_personal']).lower() or None,
-                    'id_sede_oracle': self._to_text(raw_payload['id_sede']) or None,
-                    'nombre_sede_oracle': self._to_text(raw_payload['nombre_sede']) or None,
-                    'id_facultad_oracle': self._to_text(raw_payload['id_facultad']) or None,
-                    'nombre_facultad_oracle': self._to_text(raw_payload['nombre_facultad']) or None,
-                    'periodo_academico': self._to_text(raw_payload['periodo_academico']) or None,
-                    'estado_docente': self._to_text(raw_payload['estado_docente']) or None,
+                    'nombre_completo': nombre_completo,
+                    'correo_institucional': None,  # No disponible en VW_DOCENTES
+                    'correo_personal': None,  # No disponible en VW_DOCENTES
+                    'id_sede_oracle': None,  # No disponible en VW_DOCENTES
+                    'nombre_sede_oracle': None,  # No disponible en VW_DOCENTES
+                    'id_facultad_oracle': None,  # No disponible en VW_DOCENTES
+                    'nombre_facultad_oracle': None,  # No disponible en VW_DOCENTES
+                    'periodo_academico': None,  # No disponible en VW_DOCENTES
+                    'estado_docente': None,  # No disponible en VW_DOCENTES
                     'raw_data': data,
                     'row_hash': row_hash,
-                    'estado_registro': 'valido' if id_docente_oracle or numero_documento or correo_institucional else 'sin_identificador',
+                    'estado_registro': 'valido' if (tipo_documento and id_docente_oracle) or nombres or apellidos else 'sin_identificador',
                 }
 
                 if external_id in staged_by_external:
