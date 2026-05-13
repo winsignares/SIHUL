@@ -12,4 +12,16 @@ export const centrosCostoService = {
   getById: async (id: number): Promise<CentroCosto> => {
     return apiClient.get<CentroCosto>(`${API_BASE}/centros-costo/${id}/`);
   },
+
+  create: async (data: Partial<CentroCosto>): Promise<CentroCosto> => {
+    return apiClient.post<CentroCosto>(`${API_BASE}/centros-costo/`, data);
+  },
+
+  update: async (id: number, data: Partial<CentroCosto>): Promise<CentroCosto> => {
+    return apiClient.patch<CentroCosto>(`${API_BASE}/centros-costo/${id}/`, data);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete<void>(`${API_BASE}/centros-costo/${id}/`);
+  },
 };

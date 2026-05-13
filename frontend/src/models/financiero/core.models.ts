@@ -36,7 +36,14 @@ export interface CuentaContable {
   nombre: string;
   tipo_cuenta: 'Activo' | 'Pasivo' | 'Patrimonio' | 'Ingreso' | 'Gasto' | 'Costo';
   nivel: number;
+  cuenta_padre?: string | null;
   naturaleza: 'Débito' | 'Crédito';
+  acepta_movimiento?: boolean;
+  requiere_tercero?: boolean;
+  requiere_centro_costo?: boolean;
+  descripcion?: string | null;
+  estado?: 'Activo' | 'Inactivo';
+  fecha_creacion?: string;
 }
 
 export interface CentroCosto {
@@ -44,6 +51,14 @@ export interface CentroCosto {
   codigo: string;
   nombre: string;
   tipo: 'Administrativo' | 'Académico' | 'Operativo' | 'Investigación' | 'Extensión';
+  departamento_id?: number | null;
+  departamento?: Departamento | number | null;
+  presupuesto_asignado?: number | null;
+  presupuesto_ejecutado?: number | null;
+  porcentaje_ejecucion_display?: number;
+  estado?: 'Activo' | 'Inactivo';
+  fecha_creacion?: string;
+  fecha_modificacion?: string;
 }
 
 export type EstadoFactura =

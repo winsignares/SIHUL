@@ -6,6 +6,7 @@ import {
     Calculator,
     FileCheck,
     HandCoins,
+    Landmark,
     Calendar,
     Bot,
     BarChart3,
@@ -118,6 +119,7 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Gestion de Usuarios Financiero': '/financiero/admin-financiero/usuarios',
     'Gestion Proveedores': '/financiero/admin-financiero/proveedores',
     'Gestion de Proveedores': '/financiero/admin-financiero/proveedores',
+    'Centro Contable': '/financiero/contabilidad/centro-contable',
     'Parametrizacion SLA': '/financiero/admin-financiero/sla',
     'Reportes Consolidados Financiero': '/financiero/admin-financiero/reportes',
     'Reportes Consolidados': '/financiero/admin-financiero/reportes',
@@ -216,6 +218,7 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Gestion de Usuarios Financiero': Shield,
     'Gestion Proveedores': Building2,
     'Gestion de Proveedores': Building2,
+    'Centro Contable': Landmark,
     'Parametrizacion SLA': Clock,
     'Reportes Consolidados Financiero': BarChart3,
     'Reportes Consolidados': BarChart3,
@@ -313,6 +316,7 @@ function isAdminFinancieroLikeComponent(name: string): boolean {
     return (
         normalized.includes('admin financiero') ||
         normalized.includes('gestion proveedores') ||
+        normalized.includes('centro contable') ||
         normalized.includes('parametrizacion sla') ||
         normalized.includes('reportes consolidados') ||
         normalized.includes('configuracion sistema financiero')
@@ -413,6 +417,7 @@ export function getIconForComponent(name: string): LucideIcon {
         if (normalized.includes('autorizar pago')) return CircleCheckBig;
         if (normalized.includes('admin financiero')) return LayoutDashboard;
         if (normalized.includes('proveedores')) return Building2;
+        if (normalized.includes('centro contable')) return Landmark;
         if (normalized.includes('parametrizacion sla')) return Clock;
         if (normalized.includes('reportes consolidados')) return BarChart3;
         if (normalized.includes('configuracion sistema financiero')) return Wrench;

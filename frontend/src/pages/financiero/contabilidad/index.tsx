@@ -2,6 +2,7 @@ import ContabilidadHome from './ContabilidadHome';
 import MisPendientes from './MisPendientes';
 import RadicarFacturas from './RadicarFacturas';
 import CausarFacturas from './CausarFacturas';
+import CentroContable from './CentroContable';
 import { useContabilidadDashboard } from '../../../hooks/financiero/contabilidad';
 
 export default function ContabilidadDashboard() {
@@ -15,6 +16,8 @@ export default function ContabilidadDashboard() {
         return <RadicarFacturas />;
       case 'causar':
         return <CausarFacturas />;
+      case 'centro-contable':
+        return <CentroContable />;
       default:
         return (
           <ContabilidadHome

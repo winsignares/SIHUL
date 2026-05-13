@@ -509,6 +509,13 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         code: 'Mis Pendientes Contabilidad'
                     },
                     {
+                        id: 'Centro Contable',
+                        icon: getIconForComponent('Centro Contable'),
+                        label: 'Cuentas contables',
+                        route: '/financiero/contabilidad/centro-contable',
+                        code: 'Centro Contable'
+                    },
+                    {
                         id: 'Radicar Facturas',
                         icon: getIconForComponent('Radicar Facturas'),
                         label: 'Radicar Facturas',

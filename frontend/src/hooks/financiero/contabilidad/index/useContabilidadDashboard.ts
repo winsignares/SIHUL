@@ -9,6 +9,7 @@ export function useContabilidadDashboard() {
     if (path.includes('/pendientes')) return 'pendientes';
     if (path.includes('/radicar')) return 'radicar';
     if (path.includes('/causar')) return 'causar';
+    if (path.includes('/centro-contable')) return 'centro-contable';
     return 'dashboard';
   })();
 
@@ -17,5 +18,6 @@ export function useContabilidadDashboard() {
     goToPendientes: () => navigate('/financiero/contabilidad/pendientes'),
     goToRadicar: () => navigate('/financiero/contabilidad/radicar'),
     goToCausar: () => navigate('/financiero/contabilidad/causar'),
+    goToCentroContable: () => navigate('/financiero/contabilidad/centro-contable'),
   };
 }

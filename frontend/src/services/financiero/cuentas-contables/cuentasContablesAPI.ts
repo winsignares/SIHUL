@@ -12,4 +12,16 @@ export const cuentasContablesService = {
   getById: async (id: number): Promise<CuentaContable> => {
     return apiClient.get<CuentaContable>(`${API_BASE}/cuentas-contables/${id}/`);
   },
+
+  create: async (data: Partial<CuentaContable>): Promise<CuentaContable> => {
+    return apiClient.post<CuentaContable>(`${API_BASE}/cuentas-contables/`, data);
+  },
+
+  update: async (id: number, data: Partial<CuentaContable>): Promise<CuentaContable> => {
+    return apiClient.patch<CuentaContable>(`${API_BASE}/cuentas-contables/${id}/`, data);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete<void>(`${API_BASE}/cuentas-contables/${id}/`);
+  },
 };

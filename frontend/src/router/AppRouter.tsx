@@ -601,6 +601,11 @@ export default function AppRouter() {
             <ContabilidadDashboard />
           </ProtectedRoute>
         } />
+        <Route path="financiero/contabilidad/centro-contable" element={
+          <ProtectedRoute>
+            <ContabilidadDashboard />
+          </ProtectedRoute>
+        } />
 
         {/* Rutas de Tesoreria */}
         <Route path="financiero/tesoreria" element={
