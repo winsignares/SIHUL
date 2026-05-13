@@ -160,7 +160,12 @@ class Command(BaseCommand):
 
         # Reglas exactas por external_id.
         by_external = {
-            '1': {'canonical_name': 'Sede Cucuta', 'city': 'Cucuta', 'kind': 'sede', 'create_sede_local': True},
+            '1': {
+                'canonical_name': 'Sede Cucuta',
+                'city': 'Cucuta',
+                'kind': 'seccional_with_placeholder_sede',
+                'create_sede_local': True,
+            },
             '10101': {'canonical_name': 'Sede Candelaria', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
             '10102': {'canonical_name': 'Sede Bosque', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
             '20101': {
@@ -175,7 +180,12 @@ class Command(BaseCommand):
             '301': {'canonical_name': 'Sede Belmonte', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
             '30101': {'canonical_name': 'Sede Santa Isabel', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
             '30102': {'canonical_name': 'Sede Valle del Lili', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
-            '5': {'canonical_name': 'Sede Socorro', 'city': 'El Socorro', 'kind': 'sede', 'create_sede_local': True},
+            '5': {
+                'canonical_name': 'Sede Socorro',
+                'city': 'El Socorro',
+                'kind': 'seccional_with_placeholder_sede',
+                'create_sede_local': True,
+            },
             '6': {'canonical_name': 'Sede Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
             '7': {'canonical_name': 'Campus Virtual Unilibre', 'city': 'Virtual', 'kind': 'sede_virtual', 'create_sede_local': True},
             '8': {'canonical_name': 'Autoridades Nacionales', 'city': 'Nacional', 'kind': 'sede_nacional', 'create_sede_local': True},
@@ -190,7 +200,12 @@ class Command(BaseCommand):
 
         # Fallback por nombre cuando no exista regla por id.
         by_name = {
-            'CUCUTA': {'canonical_name': 'Sede Cucuta', 'city': 'Cucuta', 'kind': 'sede', 'create_sede_local': True},
+            'CUCUTA': {
+                'canonical_name': 'Sede Cucuta',
+                'city': 'Cucuta',
+                'kind': 'seccional_with_placeholder_sede',
+                'create_sede_local': True,
+            },
             'CANDELARIA': {'canonical_name': 'Sede Candelaria', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
             'BOSQUE POPULAR': {'canonical_name': 'Sede Bosque', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
             'BARRANQUILLA': {
@@ -203,7 +218,12 @@ class Command(BaseCommand):
             'SEDE PEREIRA': {'canonical_name': 'Sede Belmonte', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
             'VALLE DEL LILI 1 (ANTES SANTA ISABEL)': {'canonical_name': 'Sede Santa Isabel', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
             'VALLE DEL LILI 2 (SEDE HISTORICA)': {'canonical_name': 'Sede Valle del Lili', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
-            'SOCORRO': {'canonical_name': 'Sede Socorro', 'city': 'El Socorro', 'kind': 'sede', 'create_sede_local': True},
+            'SOCORRO': {
+                'canonical_name': 'Sede Socorro',
+                'city': 'El Socorro',
+                'kind': 'seccional_with_placeholder_sede',
+                'create_sede_local': True,
+            },
             'SEDE CARTAGENA': {'canonical_name': 'Sede Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
             'ESCUELA DOCENTE SECCIONAL PEREIRA': {'canonical_name': 'Escuela Docente Seccional Pereira', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
             'ESCUELA DOCENTE SECCIONAL CARTAGENA': {'canonical_name': 'Escuela Docente Seccional Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
@@ -334,6 +354,7 @@ class Command(BaseCommand):
                 'classified_as_seccional': 0,
                 'classified_as_non_physical': 0,
                 'classified_as_sede': 0,
+                'classified_as_special': 0,
             },
             'seccionales': {'created': 0, 'reactivated': 0, 'unchanged': 0},
             'sedes_local': {'created': 0, 'updated': 0, 'unchanged': 0},
@@ -414,12 +435,14 @@ class Command(BaseCommand):
                 )
 
                 kind = classification['kind']
-                if kind in ('seccional_label', 'city_as_sede'):
+                if kind in ('seccional_label', 'city_as_sede') or kind.startswith('seccional_'):
                     summary['sedes']['classified_as_seccional'] += 1
                 elif kind == 'non_physical':
                     summary['sedes']['classified_as_non_physical'] += 1
                 elif kind == 'sede':
                     summary['sedes']['classified_as_sede'] += 1
+                else:
+                    summary['sedes']['classified_as_special'] += 1
 
                 if has_match:
                     summary['sedes']['mapped'] += 1
@@ -428,6 +451,64 @@ class Command(BaseCommand):
 
             if dry_run:
                 # Solo simulacion: no persiste staging/mapping/load.
+                # Pero si estima el impacto esperado sobre Seccional y Sede.
+                existing_seccionales = {
+                    ciudad: activa
+                    for ciudad, activa in Seccional.objects.values_list('ciudad', 'activa')
+                }
+                existing_sedes = {
+                    (s.source_system or '', s.external_id or ''): s
+                    for s in Sede.objects.select_related('seccional')
+                }
+
+                for item in sede_changes:
+                    if not item['has_match']:
+                        continue
+
+                    ciudad = item['city']
+                    if ciudad in existing_seccionales:
+                        if existing_seccionales[ciudad]:
+                            summary['seccionales']['unchanged'] += 1
+                        else:
+                            summary['seccionales']['reactivated'] += 1
+                            existing_seccionales[ciudad] = True
+                    else:
+                        summary['seccionales']['created'] += 1
+                        existing_seccionales[ciudad] = True
+
+                    if item['classification']['create_sede_local']:
+                        key = (source_system, item['external_id'])
+                        current = existing_sedes.get(key)
+                        if current is None:
+                            summary['sedes_local']['created'] += 1
+                            existing_sedes[key] = object()
+                        else:
+                            # Estimacion simple: si existe por external_id en source, se considera unchanged.
+                            # Las diferencias finas nombre/seccional se resuelven en ejecucion real.
+                            summary['sedes_local']['unchanged'] += 1
+
+                        for extra in item.get('extra_sedes', []):
+                            extra_city = extra.get('city') or ciudad
+                            if extra_city in existing_seccionales:
+                                if existing_seccionales[extra_city]:
+                                    summary['seccionales']['unchanged'] += 1
+                                else:
+                                    summary['seccionales']['reactivated'] += 1
+                                    existing_seccionales[extra_city] = True
+                            else:
+                                summary['seccionales']['created'] += 1
+                                existing_seccionales[extra_city] = True
+
+                            extra_key = (
+                                source_system,
+                                str(extra.get('external_id') or f"{item['external_id']}-EXTRA"),
+                            )
+                            if extra_key in existing_sedes:
+                                summary['sedes_local']['unchanged'] += 1
+                            else:
+                                summary['sedes_local']['created'] += 1
+                                existing_sedes[extra_key] = object()
+
                 summary['issues'] += summary['sedes']['pending']
             else:
                 with transaction.atomic():
