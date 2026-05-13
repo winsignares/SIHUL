@@ -116,6 +116,108 @@ class Command(BaseCommand):
 
         return self._canonical_city(raw)
 
+    def _classify_oracle_sede(self, nombre_sede):
+        """
+        Clasifica registros mezclados de Oracle para evitar poblar Sede local
+        con entidades que en realidad son seccionales o unidades no fisicas.
+        """
+        normalized = self._norm_upper(nombre_sede)
+        if not normalized:
+            return {'kind': 'unknown', 'create_sede_local': False, 'reason': 'nombre_vacio'}
+
+        # Casos explicitos de sedes no operativas para horarios.
+        non_physical_markers = [
+            'CAMPUS VIRTUAL',
+            'AUTORIDADES NACIONALES',
+        ]
+        for marker in non_physical_markers:
+            if marker in normalized:
+                return {'kind': 'non_physical', 'create_sede_local': False, 'reason': marker}
+
+        # Casos que representan seccional (ciudad) y no una sede fisica concreta.
+        if 'SECCIONAL' in normalized:
+            return {'kind': 'seccional_label', 'create_sede_local': False, 'reason': 'contains_seccional'}
+
+        city = self._city_from_mixed_name(nombre_sede)
+        if city:
+            city_norm = self._norm_upper(city)
+            stripped = normalized
+            for prefix in ['SEDE ', 'CAMPUS ']:
+                if stripped.startswith(prefix):
+                    stripped = stripped[len(prefix):].strip()
+            if stripped == city_norm:
+                return {'kind': 'city_as_sede', 'create_sede_local': False, 'reason': 'name_equals_city'}
+
+        return {'kind': 'sede', 'create_sede_local': True, 'reason': 'ok'}
+
+    def _oracle_sede_override(self, external_id, nombre_sede):
+        """
+        Reglas de negocio explicitas para normalizar catalogo Oracle mezclado.
+        Permite renombrar sedes y ajustar seccional objetivo por registro.
+        """
+        ext = str(external_id or '').strip()
+        norm_name = self._norm_upper(nombre_sede)
+
+        # Reglas exactas por external_id.
+        by_external = {
+            '1': {'canonical_name': 'Sede Cucuta', 'city': 'Cucuta', 'kind': 'sede', 'create_sede_local': True},
+            '10101': {'canonical_name': 'Sede Candelaria', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
+            '10102': {'canonical_name': 'Sede Bosque', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
+            '20101': {
+                'canonical_name': 'Sede Centro',
+                'city': 'Barranquilla',
+                'kind': 'seccional_with_seed_sedes',
+                'create_sede_local': True,
+                'extra_sedes': [
+                    {'external_id': '20101-NORTE', 'nombre': 'Sede Norte', 'city': 'Barranquilla'},
+                ],
+            },
+            '301': {'canonical_name': 'Sede Belmonte', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
+            '30101': {'canonical_name': 'Sede Santa Isabel', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
+            '30102': {'canonical_name': 'Sede Valle del Lili', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
+            '5': {'canonical_name': 'Sede Socorro', 'city': 'El Socorro', 'kind': 'sede', 'create_sede_local': True},
+            '6': {'canonical_name': 'Sede Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
+            '7': {'canonical_name': 'Campus Virtual Unilibre', 'city': 'Virtual', 'kind': 'sede_virtual', 'create_sede_local': True},
+            '8': {'canonical_name': 'Autoridades Nacionales', 'city': 'Nacional', 'kind': 'sede_nacional', 'create_sede_local': True},
+            '004': {'canonical_name': 'Escuela Docente Seccional Pereira', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
+            '005': {'canonical_name': 'Escuela Docente Seccional Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
+            '006': {'canonical_name': 'Escuela Docente Seccional Cucuta', 'city': 'Cucuta', 'kind': 'sede', 'create_sede_local': True},
+        }
+        if ext in by_external:
+            rule = dict(by_external[ext])
+            rule['reason'] = f'override_external_id:{ext}'
+            return rule
+
+        # Fallback por nombre cuando no exista regla por id.
+        by_name = {
+            'CUCUTA': {'canonical_name': 'Sede Cucuta', 'city': 'Cucuta', 'kind': 'sede', 'create_sede_local': True},
+            'CANDELARIA': {'canonical_name': 'Sede Candelaria', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
+            'BOSQUE POPULAR': {'canonical_name': 'Sede Bosque', 'city': 'Bogota', 'kind': 'sede', 'create_sede_local': True},
+            'BARRANQUILLA': {
+                'canonical_name': 'Sede Centro',
+                'city': 'Barranquilla',
+                'kind': 'seccional_with_seed_sedes',
+                'create_sede_local': True,
+                'extra_sedes': [{'external_id': f'{ext}-NORTE' if ext else 'BARRANQUILLA-NORTE', 'nombre': 'Sede Norte', 'city': 'Barranquilla'}],
+            },
+            'SEDE PEREIRA': {'canonical_name': 'Sede Belmonte', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
+            'VALLE DEL LILI 1 (ANTES SANTA ISABEL)': {'canonical_name': 'Sede Santa Isabel', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
+            'VALLE DEL LILI 2 (SEDE HISTORICA)': {'canonical_name': 'Sede Valle del Lili', 'city': 'Cali', 'kind': 'sede', 'create_sede_local': True},
+            'SOCORRO': {'canonical_name': 'Sede Socorro', 'city': 'El Socorro', 'kind': 'sede', 'create_sede_local': True},
+            'SEDE CARTAGENA': {'canonical_name': 'Sede Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
+            'ESCUELA DOCENTE SECCIONAL PEREIRA': {'canonical_name': 'Escuela Docente Seccional Pereira', 'city': 'Pereira', 'kind': 'sede', 'create_sede_local': True},
+            'ESCUELA DOCENTE SECCIONAL CARTAGENA': {'canonical_name': 'Escuela Docente Seccional Cartagena', 'city': 'Cartagena', 'kind': 'sede', 'create_sede_local': True},
+            'ESCUELA DOCENTE SECCIONAL CUCUTA': {'canonical_name': 'Escuela Docente Seccional Cucuta', 'city': 'Cucuta', 'kind': 'sede', 'create_sede_local': True},
+            'CAMPUS VIRTUAL UNILIBRE': {'canonical_name': 'Campus Virtual Unilibre', 'city': 'Virtual', 'kind': 'sede_virtual', 'create_sede_local': True},
+            'AUTORIDADES NACIONALES': {'canonical_name': 'Autoridades Nacionales', 'city': 'Nacional', 'kind': 'sede_nacional', 'create_sede_local': True},
+        }
+        if norm_name in by_name:
+            rule = dict(by_name[norm_name])
+            rule['reason'] = f'override_nombre:{norm_name}'
+            return rule
+
+        return None
+
     @staticmethod
     def _row_hash(payload):
         return hashlib.sha256(
@@ -223,7 +325,16 @@ class Command(BaseCommand):
         )
 
         summary = {
-            'sedes': {'extracted': 0, 'staged_created': 0, 'staged_updated': 0, 'mapped': 0, 'pending': 0},
+            'sedes': {
+                'extracted': 0,
+                'staged_created': 0,
+                'staged_updated': 0,
+                'mapped': 0,
+                'pending': 0,
+                'classified_as_seccional': 0,
+                'classified_as_non_physical': 0,
+                'classified_as_sede': 0,
+            },
             'seccionales': {'created': 0, 'reactivated': 0, 'unchanged': 0},
             'sedes_local': {'created': 0, 'updated': 0, 'unchanged': 0},
             'facultades': {'extracted': 0, 'staged_created': 0, 'staged_updated': 0, 'loaded_created': 0, 'loaded_updated': 0, 'ignored': 0},
@@ -270,19 +381,45 @@ class Command(BaseCommand):
                     'raw': row,
                 }
                 row_hash = self._row_hash(payload)
-                city = self._city_from_mixed_name(nombre_sede)
-                has_match = bool(city)
+                override = self._oracle_sede_override(ext_id, nombre_sede)
+                if override:
+                    city = override.get('city') or self._city_from_mixed_name(nombre_sede)
+                    has_match = bool(city)
+                    classification = {
+                        'kind': override.get('kind', 'sede'),
+                        'create_sede_local': bool(override.get('create_sede_local', True)),
+                        'reason': override.get('reason', 'override'),
+                    }
+                    normalized_sede_name = override.get('canonical_name') or nombre_sede
+                    extra_sedes = override.get('extra_sedes') or []
+                else:
+                    city = self._city_from_mixed_name(nombre_sede)
+                    has_match = bool(city)
+                    classification = self._classify_oracle_sede(nombre_sede)
+                    normalized_sede_name = nombre_sede
+                    extra_sedes = []
 
                 sede_changes.append(
                     {
                         'external_id': ext_id,
                         'nombre_sede': nombre_sede,
+                        'nombre_sede_normalizado': normalized_sede_name,
                         'row': row,
                         'row_hash': row_hash,
                         'city': city,
                         'has_match': has_match,
+                        'classification': classification,
+                        'extra_sedes': extra_sedes,
                     }
                 )
+
+                kind = classification['kind']
+                if kind in ('seccional_label', 'city_as_sede'):
+                    summary['sedes']['classified_as_seccional'] += 1
+                elif kind == 'non_physical':
+                    summary['sedes']['classified_as_non_physical'] += 1
+                elif kind == 'sede':
+                    summary['sedes']['classified_as_sede'] += 1
 
                 if has_match:
                     summary['sedes']['mapped'] += 1
@@ -328,18 +465,46 @@ class Command(BaseCommand):
                             else:
                                 summary['seccionales']['unchanged'] += 1
 
-                            sede_obj, sede_created, sede_changed = self._upsert_sede_local(
-                                source_system,
-                                item['external_id'],
-                                item['nombre_sede'],
-                                seccional_obj,
-                            )
-                            if sede_created:
-                                summary['sedes_local']['created'] += 1
-                            elif sede_changed:
-                                summary['sedes_local']['updated'] += 1
-                            else:
-                                summary['sedes_local']['unchanged'] += 1
+                            if item['classification']['create_sede_local']:
+                                sede_obj, sede_created, sede_changed = self._upsert_sede_local(
+                                    source_system,
+                                    item['external_id'],
+                                    item['nombre_sede_normalizado'],
+                                    seccional_obj,
+                                )
+                                if sede_created:
+                                    summary['sedes_local']['created'] += 1
+                                elif sede_changed:
+                                    summary['sedes_local']['updated'] += 1
+                                else:
+                                    summary['sedes_local']['unchanged'] += 1
+
+                                for extra in item.get('extra_sedes', []):
+                                    extra_city = extra.get('city') or item['city']
+                                    extra_seccional, extra_sec_created = Seccional.objects.get_or_create(
+                                        ciudad=extra_city, defaults={'activa': True}
+                                    )
+                                    if extra_sec_created:
+                                        summary['seccionales']['created'] += 1
+                                    elif not extra_seccional.activa:
+                                        extra_seccional.activa = True
+                                        extra_seccional.save(update_fields=['activa'])
+                                        summary['seccionales']['reactivated'] += 1
+                                    else:
+                                        summary['seccionales']['unchanged'] += 1
+
+                                    _, extra_created, extra_changed = self._upsert_sede_local(
+                                        source_system,
+                                        str(extra.get('external_id') or f"{item['external_id']}-EXTRA"),
+                                        str(extra.get('nombre') or ''),
+                                        extra_seccional,
+                                    )
+                                    if extra_created:
+                                        summary['sedes_local']['created'] += 1
+                                    elif extra_changed:
+                                        summary['sedes_local']['updated'] += 1
+                                    else:
+                                        summary['sedes_local']['unchanged'] += 1
 
                         map_obj, _ = MapOracleSedeSeccional.objects.update_or_create(
                             source_system=source_system,
@@ -351,7 +516,12 @@ class Command(BaseCommand):
                                 'metodo_asignacion': metodo,
                                 'estado': estado,
                                 'confianza': confianza,
-                                'observaciones': '' if item['has_match'] else 'Pendiente revision manual',
+                                'observaciones': (
+                                    f"Clasificacion={item['classification']['kind']}; "
+                                    f"motivo={item['classification']['reason']}"
+                                    if item['has_match']
+                                    else 'Pendiente revision manual'
+                                ),
                                 'ultimo_hash_oracle': item['row_hash'],
                             },
                         )
