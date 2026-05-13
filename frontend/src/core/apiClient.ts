@@ -134,6 +134,14 @@ class ApiClient {
     });
   }
 
+  async getBlob(endpoint: string, config?: RequestConfig): Promise<Blob> {
+    return this.requestBlob(endpoint, {
+      ...config,
+      cache: config?.cache ?? 'no-store',
+      method: 'GET',
+    });
+  }
+
   async put<T>(
     endpoint: string,
     data?: unknown,

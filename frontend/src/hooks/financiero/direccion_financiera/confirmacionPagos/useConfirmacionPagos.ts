@@ -94,8 +94,8 @@ export function useConfirmacionPagos() {
 
   const facturasFiltradas = useMemo(() => {
     return facturas
+      .filter((f) => f.etapa_actual !== 'Control de Pago Bancario')
       .map((f) => facturaToConfirmacion(f, docsMap[f.id] ?? []))
-      .filter((factura) => !factura.numeroConfirmacion)
       .filter((factura) => {
         if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
         if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
@@ -115,9 +115,23 @@ export function useConfirmacionPagos() {
 
   const abrirConfirmar = (factura: FacturaConfirmacion) => {
     setFacturaSeleccionada(factura);
-    setNumeroConfirmacion(factura.numeroConfirmacion || 'Se generara automaticamente al confirmar');
+    setNumeroConfirmacion('Generando...');
     setObservaciones('');
     setConfirmarAbierto(true);
+
+    if (!factura.facturaId) return;
+
+    void (async () => {
+      try {
+        const actualizada = await facturasService.generarNumeroConfirmacion(factura.facturaId);
+        const numero = actualizada.numero_confirmacion || 'CONF no disponible';
+        setNumeroConfirmacion(numero);
+        setFacturaSeleccionada((prev) => (prev ? { ...prev, numeroConfirmacion: actualizada.numero_confirmacion || prev.numeroConfirmacion } : prev));
+      } catch {
+        setNumeroConfirmacion('No fue posible generar el consecutivo');
+        showToast('err', 'Error al generar el numero de confirmacion.');
+      }
+    })();
   };
 
   const cerrarConfirmar = () => {

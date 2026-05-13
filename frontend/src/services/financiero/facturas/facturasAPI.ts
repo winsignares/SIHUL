@@ -72,6 +72,10 @@ export const facturasService = {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar_rectoria/`, { motivo });
   },
 
+  generarNumeroConfirmacion: async (id: number): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/generar_numero_confirmacion/`);
+  },
+
   confirmarControlPago: async (id: number, observaciones?: string): Promise<Factura> => {
     const body = observaciones ? { observaciones } : undefined;
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/confirmar_control_pago/`, body);
@@ -94,6 +98,10 @@ export const facturasService = {
     opts: { numero_comprobante: string; observaciones?: string }
   ): Promise<Factura> => {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/generar_comprobante/`, opts);
+  },
+
+  descargarComprobantePdf: async (id: number): Promise<Blob> => {
+    return apiClient.getBlob(`${API_BASE}/facturas/${id}/comprobante_pdf/`);
   },
 
   detenerEnTesoreria: async (id: number, observaciones: string): Promise<Factura> => {

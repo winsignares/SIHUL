@@ -73,6 +73,7 @@ function extractApiErrorInfo(errorData: unknown): {
 
 export async function handleApiError(response: Response): Promise<never> {
   let errorMessage = 'Error en la solicitud';
+  let hasServerMessage = false;
   let errors: Record<string, string[]> | undefined;
 
   try {
@@ -80,6 +81,7 @@ export async function handleApiError(response: Response): Promise<never> {
     const extracted = extractApiErrorInfo(errorData);
     if (extracted.message) {
       errorMessage = extracted.message;
+      hasServerMessage = true;
     }
     errors = extracted.errors;
   } catch {
@@ -122,7 +124,9 @@ export async function handleApiError(response: Response): Promise<never> {
       apiError.message = 'Datos de validación incorrectos';
       break;
     case 500:
-      apiError.message = 'Error interno del servidor';
+      if (!hasServerMessage) {
+        apiError.message = 'Error interno del servidor';
+      }
       break;
   }
 
