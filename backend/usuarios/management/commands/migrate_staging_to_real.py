@@ -449,9 +449,19 @@ class Command(BaseCommand):
 
         stg_docentes = StgOracleDocente.objects.filter(estado_registro='valido')
         if seccional_filter:
-            sedes_ids = list(Sede.objects.filter(seccional=seccional_filter).values_list('external_id', flat=True))
-            sedes_ids = [self._to_text(s) for s in sedes_ids if self._to_text(s)]
-            stg_docentes = stg_docentes.filter(id_sede_oracle__in=sedes_ids)
+            # VW_DOCENTES actual solo incluye identificacion y nombre (sin ID_SEDE).
+            # Si no existe dato de sede en staging, no aplicamos filtro a esta etapa.
+            has_sede_data = stg_docentes.exclude(id_sede_oracle__isnull=True).exclude(id_sede_oracle='').exists()
+            if has_sede_data:
+                sedes_ids = list(Sede.objects.filter(seccional=seccional_filter).values_list('external_id', flat=True))
+                sedes_ids = [self._to_text(s) for s in sedes_ids if self._to_text(s)]
+                stg_docentes = stg_docentes.filter(id_sede_oracle__in=sedes_ids)
+            else:
+                self.stdout.write(
+                    self.style.WARNING(
+                        'Docentes: staging sin id_sede_oracle; se omite filtro de seccional en esta etapa.'
+                    )
+                )
         if limit:
             stg_docentes = stg_docentes[:limit]
 
