@@ -328,8 +328,9 @@ VARIANTES:
 
 ESPERADO:
 - Carga grupos académicos desde VW_GRUPOS_ACADEMICOS
-- Inserta en grupos_stgoraclegrupo y grupos_grupoaca...demia
-- Incluye: código, programa, docente, sede, semestre, jornada, periodo
+- Inserta/actualiza en staging `grupos_stgoraclegrupoacademico` (idempotente)
+- Para pasar a tabla real `grupos_grupo` ejecutar:
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa grupos
 
 ================================================================================
 9. ETL ESPACIOS FÍSICOS (VW_ESPACIOS_FISICOS)
@@ -364,8 +365,9 @@ VARIANTES:
 
 ESPERADO:
 - Carga espacios físicos desde VW_ESPACIOS_FISICOS
-- Inserta en espacios_stgoracleespaciofisico y espacios_espaciofisico
-- Incluye: código, nombre, capacidad, piso, sede, tipo, disponibilidad
+- Inserta/actualiza en staging `espacios_stgoracleespaciofisico` (idempotente)
+- Para pasar a tabla real `espacios_espaciofisico` ejecutar:
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa espacios
 
 ================================================================================
 10. ETL HORARIOS (VW_HORARIO)
@@ -400,8 +402,9 @@ VARIANTES:
 
 ESPERADO:
 - Carga horarios desde VW_HORARIO
-- Inserta en horario_stgoraclehorario y horario_horarioaca...demia
-- Incluye: grupo, espacio, día, hora_inicio, hora_fin, docentes, periodo
+- Inserta/actualiza en staging `horario_stgoraclehorario` (idempotente)
+- Para pasar a tabla real `horario_horario` ejecutar:
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios
 
 ================================================================================
 11. ETL STAGING GENÉRICO (FLEXIBLE)
@@ -444,6 +447,47 @@ VARIANTES:
   
   # Límite de runtime
   --max-runtime-min 60
+
+================================================================================
+12. MIGRACIÓN STAGING -> TABLAS REALES (RESTO DE TABLAS)
+================================================================================
+
+COMANDO TODO EN UNO:
+docker-compose exec backend python manage.py migrate_staging_to_real --etapa all
+
+COMANDO TODO EN UNO (FILTRADO POR SECCIONAL):
+docker-compose exec backend python manage.py migrate_staging_to_real --etapa all --seccional "Barranquilla"
+
+COMANDOS POR ETAPA:
+  # Crear/actualizar períodos académicos
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa periodos
+
+  # Migrar grupos
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa grupos
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa grupos --seccional "Barranquilla"
+
+  # Migrar docentes a usuarios
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa docentes
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa docentes --seccional "Barranquilla"
+
+  # Migrar estudiantes a usuarios
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa estudiantes
+
+  # Migrar espacios físicos
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa espacios
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa espacios --seccional "Barranquilla"
+
+  # Migrar horarios
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios --seccional "Barranquilla"
+
+VARIANTES:
+  # DRY-RUN (simulación)
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa all --dry-run
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa all --dry-run --seccional "Barranquilla"
+
+  # Límite para pruebas
+  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios --limit 500
 
 ================================================================================
                         EJECUTAR TODOS LOS ETL (PIPELINE COMPLETO)
@@ -498,6 +542,9 @@ $DOCKER_CMD etl_oracle_espacios --no-input || exit 1
 # 6. Horarios (última etapa)
 echo "🔟 Cargando Horarios..."
 $DOCKER_CMD etl_oracle_horario --no-input || exit 1
+
+echo "1️⃣1️⃣ Migrando Staging -> Reales (Periodos, Grupos, Usuarios, Espacios, Horarios)..."
+$DOCKER_CMD migrate_staging_to_real --etapa all || exit 1
 
 echo ""
 echo "✅ Pipeline ETL Completado Exitosamente"
