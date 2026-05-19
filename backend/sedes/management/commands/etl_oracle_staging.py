@@ -11,6 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from facultades.models import Facultad
+from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 from sedes.models import (
     MapOracleSedeSeccional,
     OracleSyncIssue,
@@ -50,6 +51,12 @@ class Command(BaseCommand):
         parser.add_argument('--limit', type=int, default=None)
         parser.add_argument('--no-input', action='store_true', help='No pedir confirmacion en modo real')
         parser.add_argument('--max-runtime-min', type=int, default=30)
+        parser.add_argument(
+            '--seccional',
+            type=str,
+            default='',
+            help='Filtra por seccional (usa columnas SEDE/NOMBRE_SEDE cuando existan)',
+        )
 
     @staticmethod
     def _norm_upper(value):
@@ -251,8 +258,14 @@ class Command(BaseCommand):
                 return data[key]
         return None
 
-    def _fetch_rows(self, cursor, query, limit=None):
-        cursor.execute(query)
+    def _fetch_rows(self, cursor, query, limit=None, seccional='', seccional_columns=None):
+        execute_oracle_query_with_optional_seccional(
+            cursor,
+            query,
+            seccional=seccional,
+            seccional_columns=seccional_columns or (),
+            stdout=self.stdout,
+        )
         rows = cursor.fetchall()
         columns = [desc[0].lower() for desc in cursor.description]
         if limit:
@@ -323,6 +336,7 @@ class Command(BaseCommand):
         limit = options['limit']
         no_input = options['no_input']
         max_runtime_min = options['max_runtime_min']
+        seccional = options['seccional']
 
         if not all([host, user, password, service]):
             self.stdout.write(self.style.ERROR('Faltan credenciales Oracle (host/user/password/service)'))
@@ -375,7 +389,13 @@ class Command(BaseCommand):
                 raise TimeoutError('Tiempo maximo de ejecucion excedido antes de iniciar extract')
 
             # Extract sedes
-            sedes_rows, sedes_cols = self._fetch_rows(cursor, sedes_query, limit=limit)
+            sedes_rows, sedes_cols = self._fetch_rows(
+                cursor,
+                sedes_query,
+                limit=limit,
+                seccional=seccional,
+                seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+            )
             summary['sedes']['extracted'] = len(sedes_rows)
             self.stdout.write(self.style.SUCCESS(f'Sedes extraidas: {len(sedes_rows)} columnas={sedes_cols}'))
 
@@ -563,7 +583,13 @@ class Command(BaseCommand):
 
             # Extract facultades (opcional)
             if facultades_query:
-                fac_rows, fac_cols = self._fetch_rows(cursor, facultades_query, limit=limit)
+                fac_rows, fac_cols = self._fetch_rows(
+                    cursor,
+                    facultades_query,
+                    limit=limit,
+                    seccional=seccional,
+                    seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                )
                 summary['facultades']['extracted'] = len(fac_rows)
                 self.stdout.write(self.style.SUCCESS(f'Facultades extraidas: {len(fac_rows)} columnas={fac_cols}'))
 

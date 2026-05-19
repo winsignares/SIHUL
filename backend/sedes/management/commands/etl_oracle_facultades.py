@@ -35,6 +35,12 @@ class Command(BaseCommand):
         parser.add_argument('--limit', type=int, default=None)
         parser.add_argument('--no-input', action='store_true')
         parser.add_argument('--max-runtime-min', type=int, default=30)
+        parser.add_argument(
+            '--seccional',
+            type=str,
+            default='',
+            help='Filtra por seccional (usa columnas SEDE/NOMBRE_SEDE cuando existan)',
+        )
 
     def handle(self, *args, **options):
         call_command(
@@ -51,4 +57,5 @@ class Command(BaseCommand):
             limit=options['limit'],
             no_input=options['no_input'],
             max_runtime_min=options['max_runtime_min'],
+            seccional=options['seccional'],
         )

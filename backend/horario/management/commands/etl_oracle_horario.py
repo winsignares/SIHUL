@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from horario.models import StgOracleHorario
+from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 
 
 class Command(BaseCommand):
@@ -28,6 +29,12 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
         parser.add_argument('--no-input', action='store_true', help='No pedir confirmacion en modo real')
         parser.add_argument('--limit', type=int, default=None)
+        parser.add_argument(
+            '--seccional',
+            type=str,
+            default='',
+            help='Filtra por seccional (usa columnas SEDE/NOMBRE_SEDE cuando existan)',
+        )
 
     @staticmethod
     def _to_text(value):
@@ -54,14 +61,6 @@ class Command(BaseCommand):
             json.dumps(payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
         ).hexdigest()
 
-    @staticmethod
-    def _execute_oracle_query(cursor, query, limit=None):
-        if limit and limit > 0:
-            limited_query = f'SELECT * FROM ({query}) WHERE ROWNUM <= :max_rows'
-            cursor.execute(limited_query, {'max_rows': limit})
-            return
-        cursor.execute(query)
-
     def handle(self, *args, **options):
         host = options['host']
         port = options['port']
@@ -73,6 +72,7 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         no_input = options['no_input']
         limit = options['limit']
+        seccional = options['seccional']
 
         if not all([host, user, password, service]):
             self.stdout.write(self.style.ERROR('Faltan credenciales Oracle (host/user/password/service)'))
@@ -103,7 +103,14 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
-            self._execute_oracle_query(cursor, query, limit=limit)
+            execute_oracle_query_with_optional_seccional(
+                cursor,
+                query,
+                seccional=seccional,
+                seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                limit=limit,
+                stdout=self.stdout,
+            )
             columns = [desc[0].lower() for desc in cursor.description]
             summary['extract']['columns'] = columns
 

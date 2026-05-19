@@ -9,6 +9,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from facultades.models import Facultad
+from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 from programas.models import Programa, StgOraclePrograma
 from sedes.models import StgOracleFacultad
 
@@ -42,6 +43,12 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
         parser.add_argument('--no-input', action='store_true', help='No pedir confirmacion en modo real')
         parser.add_argument('--limit', type=int, default=None)
+        parser.add_argument(
+            '--seccional',
+            type=str,
+            default='',
+            help='Filtra por seccional (usa columnas SEDE/NOMBRE_SEDE cuando existan)',
+        )
 
     @staticmethod
     def _to_non_negative_int(value, default=0):
@@ -96,6 +103,7 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         no_input = options['no_input']
         limit = options['limit']
+        seccional = options['seccional']
 
         if not all([host, user, password, service]):
             self.stdout.write(self.style.ERROR('Faltan credenciales Oracle (host/user/password/service)'))
@@ -140,7 +148,13 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
-            cursor.execute(query)
+            execute_oracle_query_with_optional_seccional(
+                cursor,
+                query,
+                seccional=seccional,
+                seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                stdout=self.stdout,
+            )
 
             rows = cursor.fetchall()
             columns = [desc[0].lower() for desc in cursor.description]
