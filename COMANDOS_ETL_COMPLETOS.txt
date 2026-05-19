@@ -57,6 +57,15 @@ docker compose exec -T \
   -e ORACLE_SERVICE="SIULEDU" \
   backend python manage.py etl_oracle_docentes
 
+COMANDO DIRECTO (VALIDADO):
+docker compose exec -T backend python manage.py etl_oracle_docentes \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --no-input
+
 VARIANTES:
   # DRY-RUN (simular sin guardar)
   docker compose exec backend python manage.py etl_oracle_docentes --dry-run
@@ -270,6 +279,15 @@ docker compose exec backend python manage.py etl_oracle_asignatura_programa \
   --user "UHORARIOS" \
   --password "Temporal2026U" \
   --service "SIULEDU"
+
+COMANDO DIRECTO (VALIDADO):
+docker compose exec -T backend python manage.py etl_oracle_asignatura_programa \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --no-input
 
 CON QUERY PERSONALIZADA:
 docker compose exec backend python manage.py etl_oracle_asignatura_programa \
@@ -507,7 +525,7 @@ docker compose exec backend python manage.py etl_oracle_grupos \
   --user "UHORARIOS" \
   --password "Temporal2026U" \
   --service "SIULEDU" \
-  --query "SELECT * FROM UHORARIOS.VW_GRUPOS_ACADEMICOS WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --query "SELECT * FROM UHORARIOS.VW_GRUPOS_ACADEMICOS WHERE UPPER(NOMBRE_SEDE) LIKE UPPER('%BARRANQUILLA%')" \
   --no-input
 
 ESPACIOS FILTRADO:
