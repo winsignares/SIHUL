@@ -30,26 +30,26 @@ $env:ORACLE_SERVICE="SIULEDU"
                       COMANDOS ETL PRINCIPALES (11 TOTAL)
 ================================================================================
 
-NOTA IMPORTANTE: Todos los comandos usan docker-compose para ejecutarse en 
+NOTA IMPORTANTE: Todos los comandos usan docker compose para ejecutarse en 
 el contenedor backend. Reemplaza:
-  docker-compose exec backend python manage.py ...
+  docker compose exec backend python manage.py ...
 por:
-  docker-compose exec -T -e ORACLE_HOST="10.4.100.215" -e ORACLE_PORT="1521" \
+  docker compose exec -T -e ORACLE_HOST="10.4.100.215" -e ORACLE_PORT="1521" \
     -e ORACLE_USER="UHORARIOS" -e ORACLE_PASSWORD="Temporal2026U" \
     -e ORACLE_SERVICE="SIULEDU" backend python manage.py ...
 
 Si las variables de entorno ya están definidas en .env:
-  docker-compose exec backend python manage.py ...
+  docker compose exec backend python manage.py ...
 
 ================================================================================
 1. ETL DOCENTES (VW_DOCENTES)
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_docentes
+docker compose exec backend python manage.py etl_oracle_docentes
 
 COMANDO CON VARIABLES DE ENTORNO EXPLÍCITAS:
-docker-compose exec -T \
+docker compose exec -T \
   -e ORACLE_HOST="10.4.100.215" \
   -e ORACLE_PORT="1521" \
   -e ORACLE_USER="UHORARIOS" \
@@ -59,16 +59,16 @@ docker-compose exec -T \
 
 VARIANTES:
   # DRY-RUN (simular sin guardar)
-  docker-compose exec backend python manage.py etl_oracle_docentes --dry-run
+  docker compose exec backend python manage.py etl_oracle_docentes --dry-run
   
   # Limitar a 100 registros (testing)
-  docker-compose exec backend python manage.py etl_oracle_docentes --limit 100
+  docker compose exec backend python manage.py etl_oracle_docentes --limit 100
   
   # Sin confirmación interactiva
-  docker-compose exec backend python manage.py etl_oracle_docentes --no-input
+  docker compose exec backend python manage.py etl_oracle_docentes --no-input
   
   # Consulta personalizada
-  docker-compose exec backend python manage.py etl_oracle_docentes \
+  docker compose exec backend python manage.py etl_oracle_docentes \
     --query "SELECT * FROM UHORARIOS.VW_DOCENTES WHERE ESTADO_DOCENTE='ACTIVO'"
 
 ESPERADO:
@@ -82,10 +82,10 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_estudiantes
+docker compose exec backend python manage.py etl_oracle_estudiantes
 
 COMANDO COMPLETO:
-docker-compose exec -T \
+docker compose exec -T \
   -e ORACLE_HOST="10.4.100.215" \
   -e ORACLE_PORT="1521" \
   -e ORACLE_USER="UHORARIOS" \
@@ -95,13 +95,13 @@ docker-compose exec -T \
 
 VARIANTES:
   # DRY-RUN
-  docker-compose exec backend python manage.py etl_oracle_estudiantes --dry-run
+  docker compose exec backend python manage.py etl_oracle_estudiantes --dry-run
   
   # Con límite (testing)
-  docker-compose exec backend python manage.py etl_oracle_estudiantes --limit 1000
+  docker compose exec backend python manage.py etl_oracle_estudiantes --limit 1000
   
   # Sin confirmación
-  docker-compose exec backend python manage.py etl_oracle_estudiantes --no-input
+  docker compose exec backend python manage.py etl_oracle_estudiantes --no-input
 
 ESPERADO:
 - Carga desde VW_ESTUDIANTES (~40,000+ estudiantes)
@@ -113,7 +113,7 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_sedes \
+docker compose exec backend python manage.py etl_oracle_sedes \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -121,7 +121,7 @@ docker-compose exec backend python manage.py etl_oracle_sedes \
   --service "SIULEDU"
 
 COMANDO CON QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_sedes \
+docker compose exec backend python manage.py etl_oracle_sedes \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -149,7 +149,7 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_facultades \
+docker compose exec backend python manage.py etl_oracle_facultades \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -157,7 +157,7 @@ docker-compose exec backend python manage.py etl_oracle_facultades \
   --service "SIULEDU"
 
 CON QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_facultades \
+docker compose exec backend python manage.py etl_oracle_facultades \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -182,7 +182,7 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_programas \
+docker compose exec backend python manage.py etl_oracle_programas \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -190,7 +190,7 @@ docker-compose exec backend python manage.py etl_oracle_programas \
   --service "SIULEDU"
 
 COMANDO CON QUERY:
-docker-compose exec backend python manage.py etl_oracle_programas \
+docker compose exec backend python manage.py etl_oracle_programas \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -218,7 +218,7 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_asignaturas \
+docker compose exec backend python manage.py etl_oracle_asignaturas \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -226,7 +226,7 @@ docker-compose exec backend python manage.py etl_oracle_asignaturas \
   --service "SIULEDU"
 
 SOLO ASIGNATURAS ACTIVAS:
-docker-compose exec backend python manage.py etl_oracle_asignaturas \
+docker compose exec backend python manage.py etl_oracle_asignaturas \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -235,7 +235,7 @@ docker-compose exec backend python manage.py etl_oracle_asignaturas \
   --only-active
 
 QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_asignaturas \
+docker compose exec backend python manage.py etl_oracle_asignaturas \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -264,7 +264,7 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_asignatura_programa \
+docker compose exec backend python manage.py etl_oracle_asignatura_programa \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -272,7 +272,7 @@ docker-compose exec backend python manage.py etl_oracle_asignatura_programa \
   --service "SIULEDU"
 
 CON QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_asignatura_programa \
+docker compose exec backend python manage.py etl_oracle_asignatura_programa \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -300,7 +300,7 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_grupos \
+docker compose exec backend python manage.py etl_oracle_grupos \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -308,7 +308,7 @@ docker-compose exec backend python manage.py etl_oracle_grupos \
   --service "SIULEDU"
 
 CON QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_grupos \
+docker compose exec backend python manage.py etl_oracle_grupos \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -330,14 +330,14 @@ ESPERADO:
 - Carga grupos académicos desde VW_GRUPOS_ACADEMICOS
 - Inserta/actualiza en staging `grupos_stgoraclegrupoacademico` (idempotente)
 - Para pasar a tabla real `grupos_grupo` ejecutar:
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa grupos
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa grupos
 
 ================================================================================
 9. ETL ESPACIOS FÍSICOS (VW_ESPACIOS_FISICOS)
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_espacios \
+docker compose exec backend python manage.py etl_oracle_espacios \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -345,7 +345,7 @@ docker-compose exec backend python manage.py etl_oracle_espacios \
   --service "SIULEDU"
 
 CON QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_espacios \
+docker compose exec backend python manage.py etl_oracle_espacios \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -367,14 +367,14 @@ ESPERADO:
 - Carga espacios físicos desde VW_ESPACIOS_FISICOS
 - Inserta/actualiza en staging `espacios_stgoracleespaciofisico` (idempotente)
 - Para pasar a tabla real `espacios_espaciofisico` ejecutar:
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa espacios
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa espacios
 
 ================================================================================
 10. ETL HORARIOS (VW_HORARIO)
 ================================================================================
 
 COMANDO BÁSICO:
-docker-compose exec backend python manage.py etl_oracle_horario \
+docker compose exec backend python manage.py etl_oracle_horario \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -382,7 +382,7 @@ docker-compose exec backend python manage.py etl_oracle_horario \
   --service "SIULEDU"
 
 CON QUERY PERSONALIZADA:
-docker-compose exec backend python manage.py etl_oracle_horario \
+docker compose exec backend python manage.py etl_oracle_horario \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
@@ -404,43 +404,55 @@ ESPERADO:
 - Carga horarios desde VW_HORARIO
 - Inserta/actualiza en staging `horario_stgoraclehorario` (idempotente)
 - Para pasar a tabla real `horario_horario` ejecutar:
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa horarios
 
 ================================================================================
-11. ETL STAGING GENÉRICO (FLEXIBLE)
+11. ETL STAGING GENÉRICO (SEDES/FACULTADES)
 ================================================================================
 
-COMANDO PARA SEDES Y FACULTADES:
-docker-compose exec backend python manage.py etl_oracle_staging \
+NOTA:
+- `etl_oracle_staging` aplica para sedes/facultades.
+- Para el resto de tablas Oracle usa los ETL dedicados (1 al 10).
+- Se usan alias (`AS ...`) para garantizar nombres de columnas esperados.
+
+COMANDO RECOMENDADO (SEDES + FACULTADES):
+docker compose exec backend python manage.py etl_oracle_staging \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
   --password "Temporal2026U" \
   --service "SIULEDU" \
-  --sedes-query "SELECT id_sede, nombre_sede FROM UHORARIOS.VW_SEDES" \
-  --facultades-query "SELECT ID_FACULTAD, ID_SEDE, NOMBRE_SEDE, NOMBRE_FACULTAD FROM UHORARIOS.VW_FACULTAD"
+  --source-system "ORACLE_SIU" \
+  --sedes-query "SELECT ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede FROM UHORARIOS.VW_SEDES" \
+  --facultades-query "SELECT ID_FACULTAD AS id_facultad, ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede, NOMBRE_FACULTAD AS nombre_facultad FROM UHORARIOS.VW_FACULTAD" \
+  --no-input
 
 COMANDO SOLO SEDES:
-docker-compose exec backend python manage.py etl_oracle_staging \
+docker compose exec backend python manage.py etl_oracle_staging \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
   --password "Temporal2026U" \
   --service "SIULEDU" \
-  --sedes-query "SELECT id_sede, nombre_sede FROM UHORARIOS.VW_SEDES"
+  --source-system "ORACLE_SIU" \
+  --sedes-query "SELECT ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede FROM UHORARIOS.VW_SEDES" \
+  --no-input
 
 COMANDO SOLO FACULTADES:
-docker-compose exec backend python manage.py etl_oracle_staging \
+docker compose exec backend python manage.py etl_oracle_staging \
   --host "10.4.100.215" \
   --port 1521 \
   --user "UHORARIOS" \
   --password "Temporal2026U" \
   --service "SIULEDU" \
-  --facultades-query "SELECT ID_FACULTAD, ID_SEDE, NOMBRE_SEDE, NOMBRE_FACULTAD FROM UHORARIOS.VW_FACULTAD"
+  --source-system "ORACLE_SIU" \
+  --sedes-query "SELECT ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede FROM UHORARIOS.VW_SEDES" \
+  --facultades-query "SELECT ID_FACULTAD AS id_facultad, ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede, NOMBRE_FACULTAD AS nombre_facultad FROM UHORARIOS.VW_FACULTAD" \
+  --no-input
 
 VARIANTES:
   # DRY-RUN
-  --dry-run
+  --dry-run --limit 100
   
   # Sin confirmación
   --no-input
@@ -449,45 +461,122 @@ VARIANTES:
   --max-runtime-min 60
 
 ================================================================================
+11A. ETL FILTRADO POR SECCIONAL
+================================================================================
+
+NOTA:
+- Estos son los mismos ETL, pero filtrando por seccional desde Oracle cuando la vista trae `NOMBRE_SEDE`/`SEDE`.
+- Cambia `"Barranquilla"` por la seccional objetivo.
+- En ETL donde no hay columna de sede (ej. docentes/asignaturas), el filtro se hace en migración (`--seccional`).
+
+SEDES + FACULTADES (STAGING GENÉRICO) FILTRADO:
+docker compose exec backend python manage.py etl_oracle_staging \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --source-system "ORACLE_SIU" \
+  --sedes-query "SELECT ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede FROM UHORARIOS.VW_SEDES WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --facultades-query "SELECT ID_FACULTAD AS id_facultad, ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede, NOMBRE_FACULTAD AS nombre_facultad FROM UHORARIOS.VW_FACULTAD WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --no-input
+
+PROGRAMAS FILTRADO:
+docker compose exec backend python manage.py etl_oracle_programas \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --query "SELECT ID_PROGRAMA AS id_programa, ID_SEDE AS id_sede, NOMBRE_SEDE AS nombre_sede, ID_FACULTAD AS id_facultad, NOMBRE_FACULTAD AS nombre_facultad, NOMBRE_PROGRAMA AS nombre_programa, PERIODO_ACADEMICO AS periodo_academico FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --no-input
+
+ESTUDIANTES (SIN FILTRO POR SECCIONAL EN ORACLE):
+docker compose exec backend python manage.py etl_oracle_estudiantes \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --no-input
+
+GRUPOS FILTRADO:
+docker compose exec backend python manage.py etl_oracle_grupos \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --query "SELECT * FROM UHORARIOS.VW_GRUPOS_ACADEMICOS WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --no-input
+
+ESPACIOS FILTRADO:
+docker compose exec backend python manage.py etl_oracle_espacios \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --query "SELECT * FROM UHORARIOS.VW_ESPACIOS_FISICOS WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --no-input
+
+HORARIO FILTRADO:
+docker compose exec backend python manage.py etl_oracle_horario \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --query "SELECT * FROM UHORARIOS.VW_HORARIO WHERE UPPER(SEDE) LIKE UPPER('%BARRANQUILLA%')" \
+  --no-input
+
+MIGRACIÓN A TABLAS REALES FILTRADA POR SECCIONAL:
+docker compose exec backend python manage.py migrate_staging_to_real --etapa all --seccional "Barranquilla"
+
+PARA ETL SIN COLUMNA DE SEDE (DOCENTES, ESTUDIANTES, ASIGNATURAS, ASIGNATURA-PROGRAMA):
+- Ejecutar ETL normal.
+- Filtrar por seccional en la migración a reales con `--seccional`.
+
+================================================================================
 12. MIGRACIÓN STAGING -> TABLAS REALES (RESTO DE TABLAS)
 ================================================================================
 
 COMANDO TODO EN UNO:
-docker-compose exec backend python manage.py migrate_staging_to_real --etapa all
+docker compose exec backend python manage.py migrate_staging_to_real --etapa all
 
 COMANDO TODO EN UNO (FILTRADO POR SECCIONAL):
-docker-compose exec backend python manage.py migrate_staging_to_real --etapa all --seccional "Barranquilla"
+docker compose exec backend python manage.py migrate_staging_to_real --etapa all --seccional "Barranquilla"
 
 COMANDOS POR ETAPA:
   # Crear/actualizar períodos académicos
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa periodos
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa periodos
 
   # Migrar grupos
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa grupos
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa grupos --seccional "Barranquilla"
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa grupos
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa grupos --seccional "Barranquilla"
 
   # Migrar docentes a usuarios
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa docentes
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa docentes --seccional "Barranquilla"
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa docentes
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa docentes --seccional "Barranquilla"
 
   # Migrar estudiantes a usuarios
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa estudiantes
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa estudiantes
 
   # Migrar espacios físicos
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa espacios
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa espacios --seccional "Barranquilla"
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa espacios
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa espacios --seccional "Barranquilla"
 
   # Migrar horarios
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios --seccional "Barranquilla"
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa horarios
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa horarios --seccional "Barranquilla"
 
 VARIANTES:
   # DRY-RUN (simulación)
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa all --dry-run
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa all --dry-run --seccional "Barranquilla"
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa all --dry-run
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa all --dry-run --seccional "Barranquilla"
 
   # Límite para pruebas
-  docker-compose exec backend python manage.py migrate_staging_to_real --etapa horarios --limit 500
+  docker compose exec backend python manage.py migrate_staging_to_real --etapa horarios --limit 500
 
 ================================================================================
                         EJECUTAR TODOS LOS ETL (PIPELINE COMPLETO)
@@ -496,7 +585,7 @@ VARIANTES:
 SCRIPT BASH (Linux/Mac):
 #!/bin/bash
 
-DOCKER_CMD="docker-compose exec -T \
+DOCKER_CMD="docker compose exec -T \
   -e ORACLE_HOST='10.4.100.215' \
   -e ORACLE_PORT='1521' \
   -e ORACLE_USER='UHORARIOS' \
@@ -556,22 +645,22 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 1. MIGRACIONES:
    # Ver estado de migraciones
-   docker-compose exec backend python manage.py showmigrations
+   docker compose exec backend python manage.py showmigrations
    
    # Aplicar todas las migraciones pendientes
-   docker-compose exec backend python manage.py migrate
+   docker compose exec backend python manage.py migrate
    
    # Verificar migraciones de un módulo específico
-   docker-compose exec backend python manage.py showmigrations usuarios
-   docker-compose exec backend python manage.py showmigrations asignaturas
-   docker-compose exec backend python manage.py showmigrations horario
+   docker compose exec backend python manage.py showmigrations usuarios
+   docker compose exec backend python manage.py showmigrations asignaturas
+   docker compose exec backend python manage.py showmigrations horario
 
 2. CREAR SUPERUSUARIO:
    # Interactivo
-   docker-compose exec backend python manage.py createsuperuser
+   docker compose exec backend python manage.py createsuperuser
    
    # Automatizado
-   docker-compose exec backend python manage.py shell << EOF
+   docker compose exec backend python manage.py shell << EOF
 from usuarios.models import Usuario
 from django.contrib.auth.models import Group
 Usuario.objects.create_superuser(
@@ -583,7 +672,7 @@ EOF
 
 3. SHELL DJANGO:
    # Acceder a shell interactivo
-   docker-compose exec backend python manage.py shell
+   docker compose exec backend python manage.py shell
    
    # Dentro del shell:
    from usuarios.models import Usuario, StgOracleDocente
@@ -604,7 +693,7 @@ EOF
 
 4. VER DATOS STAGING:
    # Django shell
-   docker-compose exec backend python manage.py shell << EOF
+   docker compose exec backend python manage.py shell << EOF
 from usuarios.models import StgOracleDocente, StgOracleEstudiante
 from asignaturas.models import Asignatura
 from programas.models import Programa
@@ -629,7 +718,7 @@ for doc in StgOracleDocente.objects.all()[:3]:
 EOF
 
 5. VERIFICAR INTEGRIDAD DE DATOS:
-   docker-compose exec backend python manage.py shell << EOF
+   docker compose exec backend python manage.py shell << EOF
 from usuarios.models import StgOracleDocente
 from asignaturas.models import Asignatura
 
@@ -653,10 +742,10 @@ EOF
 
 6. LIMPIAR DATOS (¡CUIDADO!):
    # Backup ANTES de ejecutar
-   docker-compose exec database pg_dump -U sihul_user -d sihul_db > backup_$(date +%s).sql
+   docker compose exec database pg_dump -U sihul_user -d sihul_db > backup_$(date +%s).sql
    
    # Limpiar tabla staging (mantiene historial)
-   docker-compose exec backend python manage.py shell << EOF
+   docker compose exec backend python manage.py shell << EOF
 from usuarios.models import StgOracleDocente
 StgOracleDocente.objects.all().delete()
 print("Staging docentes limpiado")
@@ -667,7 +756,7 @@ EOF
 ================================================================================
 
 1. ACCEDER A PSQL:
-   docker-compose exec database psql -U sihul_user -d sihul_db
+   docker compose exec database psql -U sihul_user -d sihul_db
 
 2. CONSULTAS SQL ÚTILES:
 
@@ -701,13 +790,13 @@ EOF
 
 3. BACKUP Y RESTORE:
    # Backup completo
-   docker-compose exec database pg_dump -U sihul_user -d sihul_db > backup.sql
+   docker compose exec database pg_dump -U sihul_user -d sihul_db > backup.sql
    
    # Restore desde backup
-   docker-compose exec -T database psql -U sihul_user -d sihul_db < backup.sql
+   docker compose exec -T database psql -U sihul_user -d sihul_db < backup.sql
    
    # Backup solo estructura (sin datos)
-   docker-compose exec database pg_dump -U sihul_user -d sihul_db \
+   docker compose exec database pg_dump -U sihul_user -d sihul_db \
      --schema-only > schema.sql
 
 ================================================================================
@@ -721,9 +810,9 @@ EOF
    Solución:
    - Verificar conectividad: ping 10.4.100.215
    - Verificar credenciales (ORACLE_HOST, ORACLE_PORT, ORACLE_USER, ORACLE_PASSWORD, ORACLE_SERVICE)
-   - Ver logs: docker-compose logs backend | grep -i oracle
+   - Ver logs: docker compose logs backend | grep -i oracle
    - Probar conexión manual: 
-     docker-compose exec backend python << EOF
+     docker compose exec backend python << EOF
      import oracledb
      conn = oracledb.connect(
        user='UHORARIOS',
@@ -739,7 +828,7 @@ EOF
    Error: "Faltan credenciales Oracle"
    
    Solución:
-   - Asegurar variables de entorno: docker-compose exec backend env | grep ORACLE
+   - Asegurar variables de entorno: docker compose exec backend env | grep ORACLE
    - O pasar explícitamente: --host --port --user --password --service
    - Verificar sintaxis comando
 
@@ -748,7 +837,7 @@ EOF
    Error: "Transaction rolled back"
    
    Solución:
-   - Ver error detallado: docker-compose logs backend | tail -100
+   - Ver error detallado: docker compose logs backend | tail -100
    - Ejecutar con --dry-run para simular
    - Verificar datos Oracle: SELECT COUNT(*) FROM vw_...
    - Comprobar constraints: SELECT * FROM information_schema.table_constraints
@@ -769,7 +858,7 @@ EOF
    Solución:
    - Ver tabla staging: SELECT COUNT(*) FROM stg_oracle_...
    - Verificar transacción: SELECT * FROM pg_stat_activity;
-   - Revisar logs: docker-compose logs backend | tail -50
+   - Revisar logs: docker compose logs backend | tail -50
    - Probar dry-run: --dry-run
    - Comprobar datos Oracle: SELECT COUNT(*) FROM UHORARIOS.VW_...
 
@@ -780,10 +869,10 @@ EOF
 PRIMERA EJECUCIÓN (Setup inicial):
 
 1. Verificar conectividad a Oracle:
-   docker-compose exec backend python -c "import oracledb; print('OK')"
+   docker compose exec backend python -c "import oracledb; print('OK')"
 
 2. Ejecutar migraciones Django:
-   docker-compose exec backend python manage.py migrate
+   docker compose exec backend python manage.py migrate
 
 3. Ejecutar ETLs en orden de dependencia:
    
@@ -806,32 +895,32 @@ PRIMERA EJECUCIÓN (Setup inicial):
 EJECUCIONES POSTERIORES (Actualizaciones):
 
 - Ejecutar completo (es idempotente):
-  docker-compose exec backend python manage.py etl_oracle_docentes
-  docker-compose exec backend python manage.py etl_oracle_estudiantes
+  docker compose exec backend python manage.py etl_oracle_docentes
+  docker compose exec backend python manage.py etl_oracle_estudiantes
   ... etc
 
 - O ejecutar selectivo (solo cambios):
-  docker-compose exec backend python manage.py etl_oracle_docentes --limit 100
+  docker compose exec backend python manage.py etl_oracle_docentes --limit 100
 
 ================================================================================
                         MONITOREO Y LOGS
 ================================================================================
 
 VER LOGS EN TIEMPO REAL:
-docker-compose logs -f backend | grep -E "(ETL|Oracle|Migrat)"
+docker compose logs -f backend | grep -E "(ETL|Oracle|Migrat)"
 
 GUARDAR LOGS A ARCHIVO:
-docker-compose logs backend > logs/backend_$(date +%Y%m%d_%H%M%S).log
+docker compose logs backend > logs/backend_$(date +%Y%m%d_%H%M%S).log
 
 VER LOGS HISTÓRICOS:
-docker-compose logs backend --since 1h | tail -100
+docker compose logs backend --since 1h | tail -100
 
 FILTRAR POR ERROR:
-docker-compose logs backend | grep -i error
+docker compose logs backend | grep -i error
 
 NIVEL DE DEBUG DJANGO:
 export DEBUG=True
-docker-compose exec backend python manage.py etl_oracle_docentes
+docker compose exec backend python manage.py etl_oracle_docentes
 
 ================================================================================
                         INFORMACIÓN IMPORTANTE
