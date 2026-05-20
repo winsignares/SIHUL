@@ -516,6 +516,36 @@ docker compose exec backend python manage.py etl_oracle_estudiantes \
   --user "UHORARIOS" \
   --password "Temporal2026U" \
   --service "SIULEDU" \
+  --seccional "Barranquilla" \
+  --no-input
+
+docker compose exec backend python manage.py etl_oracle_estudiantes \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --seccional "Barranquilla" \
+  --fetch-size 10000 \
+  --diff-batch-size 10000 \
+  --write-batch-size 1000 \
+  --progress-every 2000 \
+  --progress-interval-sec 10 \
+  --no-input
+
+docker compose exec backend python manage.py etl_oracle_estudiantes \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU" \
+  --seccional "Barranquilla" \
+  --fetch-size 12000 \
+  --diff-batch-size 8000 \
+  --write-batch-size 800 \
+  --progress-every 2000 \
+  --progress-interval-sec 10 \
+  --skip-raw-data \
   --no-input
 
 GRUPOS FILTRADO:

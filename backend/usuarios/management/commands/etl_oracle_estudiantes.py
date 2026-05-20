@@ -85,6 +85,11 @@ class Command(BaseCommand):
             default='',
             help='Filtra por seccional (directo por sede o indirecto via programa)',
         )
+        parser.add_argument(
+            '--skip-raw-data',
+            action='store_true',
+            help='No persistir raw_data (reduce I/O y almacenamiento en cargas grandes)',
+        )
 
     @staticmethod
     def _to_text(value):
@@ -138,6 +143,7 @@ class Command(BaseCommand):
         write_batch_size = max(1, int(options['write_batch_size'] or 1))
         diff_batch_size = max(1, int(options['diff_batch_size'] or 1))
         seccional = options['seccional']
+        skip_raw_data = options['skip_raw_data']
 
         if not all([host, user, password, service]):
             self.stdout.write(self.style.ERROR('Faltan credenciales Oracle (host/user/password/service)'))
@@ -175,7 +181,8 @@ class Command(BaseCommand):
             self.stdout.write(
                 f'Iniciando ETL estudiantes: fetch_size={fetch_size}, '
                 f'progress_every={progress_every}, progress_interval_sec={progress_interval_sec}, '
-                f'limit={limit_value or "sin limite"}'
+                f'limit={limit_value or "sin limite"}, '
+                f'skip_raw_data={skip_raw_data}'
             )
             sql_execute_started_at = time.monotonic()
             query_filter_status = execute_oracle_query_with_optional_seccional(
@@ -197,6 +204,21 @@ class Command(BaseCommand):
                     'Filtro por seccional aplicado en Oracle via relacion SQL '
                     '(estudiantes -> programas_academicos -> sede).'
                 )
+
+            col_idx = {name: idx for idx, name in enumerate(columns)}
+
+            def _pick(row, *names):
+                for name in names:
+                    idx = col_idx.get(name)
+                    if idx is None:
+                        continue
+                    value = row[idx]
+                    if value is None:
+                        continue
+                    if str(value).strip() == '':
+                        continue
+                    return value
+                return None
 
             update_fields = [
                 'tipo_identificacion',
@@ -331,20 +353,19 @@ class Command(BaseCommand):
                     break
 
                 for row in batch:
-                    data = dict(zip(columns, row))
                     rows_scanned += 1
 
                     rows_processed += 1
 
                     raw_payload = {
-                        'tip_identificacion': self._first_present(data, ['tip_identificacion']),
-                        'id_estudiante': self._first_present(data, ['id_estudiante']),
-                        'codigo_estudiante': self._first_present(data, ['codigo_estudiante']),
-                        'nombres': self._first_present(data, ['nombres']),
-                        'apellidos': self._first_present(data, ['apellidos']),
-                        'semestre': self._first_present(data, ['semestre']),
-                        'periodo_academico': self._first_present(data, ['periodo_academico']),
-                        'programa': self._first_present(data, ['programa']),
+                        'tip_identificacion': _pick(row, 'tip_identificacion'),
+                        'id_estudiante': _pick(row, 'id_estudiante'),
+                        'codigo_estudiante': _pick(row, 'codigo_estudiante'),
+                        'nombres': _pick(row, 'nombres'),
+                        'apellidos': _pick(row, 'apellidos'),
+                        'semestre': _pick(row, 'semestre'),
+                        'periodo_academico': _pick(row, 'periodo_academico'),
+                        'programa': _pick(row, 'programa'),
                     }
 
                     tipo_identificacion = self._to_text(raw_payload['tip_identificacion'])
@@ -362,7 +383,7 @@ class Command(BaseCommand):
                     elif codigo_estudiante:
                         external_id = f'COD:{codigo_estudiante}'
                     else:
-                        external_id = f'NOID:{self._row_hash({"nombres": nombres, "apellidos": apellidos})[:16]}'
+                        external_id = f'NOID:{row_hash[:16]}'
                         summary['staging']['without_strong_id'] += 1
 
                     defaults = {
@@ -375,7 +396,8 @@ class Command(BaseCommand):
                         'semestre_oracle': self._to_non_negative_int(raw_payload['semestre'], default=None),
                         'periodo_academico': self._to_text(raw_payload['periodo_academico']) or None,
                         'programa_oracle': self._to_text(raw_payload['programa']) or None,
-                        'raw_data': data,
+                        # Mantener raw_data compacto (o vacio) reduce serializacion JSON y uso de I/O.
+                        'raw_data': {} if skip_raw_data else raw_payload,
                         'row_hash': row_hash,
                         'estado_registro': 'valido' if id_estudiante else 'sin_identificador',
                     }
