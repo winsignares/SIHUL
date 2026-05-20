@@ -10,6 +10,18 @@ from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_se
 
 class Command(BaseCommand):
     help = 'ETL Oracle dedicado para Asignaturas con upsert idempotente en Asignatura.codigo'
+    _SECCIONAL_RELATED_PREDICATES = (
+        (
+            "UPPER(TRIM(NVL(TO_CHAR(SRC_Q.ID_ASIGNATURA), ''))) IN ("
+            "SELECT /*+ MATERIALIZE */ DISTINCT UPPER(TRIM(NVL(TO_CHAR(REL_AP.ID_ASIGNATURA), ''))) "
+            "FROM UHORARIOS.VW_ASIGNATURA_PROGRAMA REL_AP "
+            "JOIN UHORARIOS.VW_PROGRAMAS_ACADEMICOS REL_PRG "
+            "ON UPPER(TRIM(NVL(TO_CHAR(REL_PRG.ID_PROGRAMA), ''))) = "
+            "UPPER(TRIM(NVL(TO_CHAR(REL_AP.ID_PROGRAMA), ''))) "
+            "WHERE UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
+            ")"
+        ),
+    )
 
     def add_arguments(self, parser):
         parser.add_argument('--host', type=str, default=os.getenv('ORACLE_HOST', ''))
@@ -145,13 +157,19 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
-            execute_oracle_query_with_optional_seccional(
+            query_filter_status = execute_oracle_query_with_optional_seccional(
                 cursor,
                 query,
                 seccional=seccional,
                 seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
                 stdout=self.stdout,
             )
+            if query_filter_status.get('filter_mode') == 'related_sql':
+                self.stdout.write(
+                    'Filtro por seccional aplicado en Oracle via relacion SQL '
+                    '(asignatura -> asignatura_programa -> programas_academicos -> sede).'
+                )
 
             rows = cursor.fetchall()
             columns = [desc[0].lower() for desc in cursor.description]

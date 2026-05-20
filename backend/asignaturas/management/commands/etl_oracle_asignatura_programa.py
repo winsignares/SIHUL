@@ -12,6 +12,22 @@ from programas.models import Programa, StgOraclePrograma
 
 class Command(BaseCommand):
     help = 'ETL Oracle dedicado para AsignaturasPrograma desde VW_ASIGNATURA_PROGRAMA'
+    _SECCIONAL_RELATED_PREDICATES = (
+        (
+            "UPPER(TRIM(NVL(TO_CHAR(SRC_Q.ID_PROGRAMA), ''))) IN ("
+            "SELECT /*+ MATERIALIZE */ DISTINCT UPPER(TRIM(NVL(TO_CHAR(REL_PRG.ID_PROGRAMA), ''))) "
+            "FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS REL_PRG "
+            "WHERE UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
+            ")"
+        ),
+        (
+            "UPPER(TRIM(NVL(TO_CHAR(SRC_Q.NOMBRE_PROGRAMA), ''))) IN ("
+            "SELECT /*+ MATERIALIZE */ DISTINCT UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_PROGRAMA), ''))) "
+            "FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS REL_PRG "
+            "WHERE UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
+            ")"
+        ),
+    )
 
     def add_arguments(self, parser):
         parser.add_argument('--host', type=str, default=os.getenv('ORACLE_HOST', ''))
@@ -33,7 +49,7 @@ class Command(BaseCommand):
             '--seccional',
             type=str,
             default='',
-            help='Filtra por seccional (si la consulta expone SEDE/NOMBRE_SEDE)',
+            help='Filtra por seccional (directo por sede o indirecto por id_sede/programa)',
         )
 
     @staticmethod
@@ -112,16 +128,23 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
-            execute_oracle_query_with_optional_seccional(
+            query_filter_status = execute_oracle_query_with_optional_seccional(
                 cursor,
                 query,
                 seccional=seccional,
                 seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
                 stdout=self.stdout,
             )
 
             rows = cursor.fetchall()
             columns = [desc[0].lower() for desc in cursor.description]
+            if query_filter_status.get('filter_mode') == 'related_sql':
+                self.stdout.write(
+                    'Filtro por seccional aplicado en Oracle via relacion SQL '
+                    '(asignatura_programa -> programas_academicos -> sede).'
+                )
+
             if limit:
                 rows = rows[:limit]
 
