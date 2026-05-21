@@ -131,3 +131,8 @@ networks:
   sihul_network:
     name: sihul_network
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_NETWORK_SUBNET:-10.201.2.0/24}
+          gateway: ${DOCKER_NETWORK_GATEWAY:-10.201.2.1}
