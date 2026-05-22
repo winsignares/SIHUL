@@ -9,6 +9,7 @@ import logging
 import datetime
 import secrets
 import hashlib
+from django.core.cache import cache
 
 
 def _password_valida(usuario, password_plano):
@@ -23,6 +24,17 @@ def _password_valida(usuario, password_plano):
         legacy_ok = False
 
     return legacy_ok, legacy_ok
+# ---------- Protección Auth ----------
+
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 5 * 60
+
+
+def _get_client_ip(request):
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -281,13 +293,42 @@ def login(request):
         contrasena = data.get('contrasena')
         if not correo or not contrasena:
             return JsonResponse({"error": "correo y contrasena son requeridos"}, status=400)
+        correo_normalizado = correo.strip().lower()
+        ip_cliente = _get_client_ip(request)
+        lock_key = f"login_lock:{correo_normalizado}:{ip_cliente}"
+        if cache.get(lock_key):
+            return JsonResponse(
+                {"error": "Demasiados intentos. Intenta de nuevo en unos minutos."},
+                status=429,
+            )
         try:
-            u = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo)
+            u = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo_normalizado)
         except Usuario.DoesNotExist:
+            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
+            attempts = cache.get(attempts_key, 0) + 1
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
+                cache.delete(attempts_key)
+                return JsonResponse(
+                    {"error": "Demasiados intentos. Intenta de nuevo en unos minutos."},
+                    status=429,
+                )
+            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         password_ok, es_legacy = _password_valida(u, contrasena)
         if not password_ok:
+            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
+            attempts = cache.get(attempts_key, 0) + 1
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
+                cache.delete(attempts_key)
+                return JsonResponse(
+                    {"error": "Demasiados intentos. Intenta de nuevo en unos minutos."},
+                    status=429,
+                )
+            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
+        cache.delete(f"login_attempts:{correo_normalizado}:{ip_cliente}")
         if es_legacy:
             nuevo_hash = make_password(contrasena)
             u.contrasena_hash = nuevo_hash
