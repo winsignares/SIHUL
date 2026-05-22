@@ -65,6 +65,22 @@ VW_ESTUDIANTES
   8 | PROGRAMA | VARCHAR2 | len=250 | prec=None | scale=None | null=N
 
 VW_HORARIO
+  1 | ID_GRUPO                            | NUMBER               | 22
+  2 | PROGRAMA                            | VARCHAR2             | 5
+  3 | ID_ASIGNATURA                       | VARCHAR2             | 20
+  4 | NOMBRE_GRUPO                        | VARCHAR2             | 20
+  5 | PERIODO                             | VARCHAR2             | 5
+  6 | CANTIDAD_ESTUDIANTES                | NUMBER               | 22
+  7 | ASIGNATURA                          | VARCHAR2             | 255
+  8 | NOMBRE_PROGRAMA                     | VARCHAR2             | 273
+  9 | ID_SEDE                             | VARCHAR2             | 20
+  10 | NOMBRE_SEDE                         | VARCHAR2             | 50
+  11 | NUM_IDENTIFICACION                  | VARCHAR2             | 30
+  12 | NOMBRE_DOCENTE                      | VARCHAR2             | 501
+  13 | APELLIDOS_DOCENTE                   | VARCHAR2             | 501
+  14 | NOM_AULA                            | VARCHAR2             | 60
+  15 | HOR_INICIO                          | VARCHAR2             | 4000
+  16 | HOR_FIN                             | VARCHAR2             | 4000
 
 VW_ESPACIOS_FISICOS
   1 | IDENT_AULA | VARCHAR2 | len=10 | prec=None | scale=None | null=N
