@@ -263,6 +263,57 @@ class Command(BaseCommand):
             return 'Cancha', 'Espacio deportivo'
         return 'Aula', 'Aula de clase'
 
+    @staticmethod
+    def _is_placeholder_space_name(value):
+        norm = Command._normalize_text(value)
+        if not norm:
+            return True
+        placeholders = {
+            'NO DISPONIBLE',
+            'NO DISPONIBLE)',
+            'N DISPONIBLE',
+            'N ODISPONIBLE',
+            'NO DIPONIBLE',
+        }
+        return norm in placeholders
+
+    @staticmethod
+    def _space_match_key(value):
+        base = Command._normalize_text(value)
+        if not base:
+            return ''
+        return re.sub(r'[^A-Z0-9]+', '', base)
+
+    @staticmethod
+    def _space_match_keys(value):
+        base = Command._normalize_text(value)
+        if not base:
+            return set()
+
+        variants = {base}
+        variants.add(re.sub(r'\([^)]*\)', ' ', base))
+        variants.add(base.replace('-', ' '))
+        variants.add(base.replace('SALON', 'AULA'))
+        variants.add(base.replace('AULA', 'SALON'))
+        variants.add(base.replace('SALA DE COMPUTO', 'SALA COMPUTO'))
+        variants.add(base.replace('SALA DE INFORMATICA', 'SALA INFORMATICA'))
+        variants.add(base.replace('SALA COMPUTO', 'SALA DE COMPUTO'))
+        variants.add(base.replace('SALA INFORMATICA', 'SALA DE INFORMATICA'))
+
+        normalized_variants = set()
+        for variant in variants:
+            cleaned = re.sub(r'\s+', ' ', variant or '').strip()
+            if cleaned:
+                normalized_variants.add(cleaned)
+                normalized_variants.add(re.sub(r'\b([A-Z])\s+(\d{2,4})\b', r'\1\2', cleaned))
+
+        keys = set()
+        for variant in normalized_variants:
+            key = Command._space_match_key(variant)
+            if key:
+                keys.add(key)
+        return keys
+
     def migrate_periodos(self, dry_run=False, limit=None):
         self.stdout.write('=' * 60)
         self.stdout.write('ETAPA 1: Migrando Periodos Academicos')
@@ -700,12 +751,16 @@ class Command(BaseCommand):
                 if created_tipo:
                     tipo_creado += 1
 
-                nombre = self._to_text(stg_espacio.nombre_espacio_oracle) or self._to_text(stg_espacio.ident_aula_oracle)
+                nombre_oracle = self._to_text(stg_espacio.nombre_espacio_oracle)
+                ident = self._to_text(stg_espacio.ident_aula_oracle)
+                if self._is_placeholder_space_name(nombre_oracle) and ident:
+                    nombre = ident
+                else:
+                    nombre = nombre_oracle or ident
                 if not nombre:
                     nombre = f'Espacio {stg_espacio.external_id}'
 
                 bloque = self._to_text(stg_espacio.bloque_oracle)
-                ident = self._to_text(stg_espacio.ident_aula_oracle)
                 ubicacion = ' '.join([piece for piece in [bloque, ident] if piece]).strip() or ident or None
 
                 espacio = EspacioFisico.objects.filter(sede=sede, nombre=nombre).first()
@@ -790,6 +845,7 @@ class Command(BaseCommand):
         grupo_no_encontrado = 0
         asignatura_no_encontrada = 0
         espacio_no_encontrado = 0
+        espacio_autocreado = 0
         hora_default = 0
 
         grupos = list(Grupo.objects.select_related('periodo', 'programa'))
@@ -816,150 +872,236 @@ class Command(BaseCommand):
             docentes_by_name.setdefault(self._normalize_text(doc.nombre), []).append(doc)
 
         espacios = list(EspacioFisico.objects.select_related('sede'))
-        espacios_by_nombre = {}
+        espacios_by_match_key = {}
+        espacios_by_match_key_sede = {}
+
+        def _indexar_espacio(espacio_obj):
+            sede_key = self._to_text(espacio_obj.sede.external_id)
+            for source in [espacio_obj.nombre, espacio_obj.ubicacion]:
+                for key in self._space_match_keys(source):
+                    espacios_by_match_key.setdefault(key, []).append(espacio_obj)
+                    if sede_key:
+                        espacios_by_match_key_sede.setdefault((sede_key, key), []).append(espacio_obj)
+
         for e in espacios:
-            espacios_by_nombre.setdefault(self._normalize_text(e.nombre), []).append(e)
+            _indexar_espacio(e)
 
-        for stg_horario in stg_horarios:
+        signal_validacion_desconectada = False
+        signal_fusionado_desconectada = False
+        if not dry_run:
             try:
-                raw = stg_horario.raw_data or {}
+                from django.db.models.signals import post_save, pre_save
+                from horario.signals import crear_horario_fusionado, validar_horario
+                signal_validacion_desconectada = bool(pre_save.disconnect(validar_horario, sender=Horario))
+                signal_fusionado_desconectada = bool(post_save.disconnect(crear_horario_fusionado, sender=Horario))
+                if signal_validacion_desconectada:
+                    self.stdout.write(self.style.WARNING('Validacion de solapamientos desactivada temporalmente para ETL de horarios.'))
+                if signal_fusionado_desconectada:
+                    self.stdout.write(self.style.WARNING('Generacion de HorarioFusionado desactivada temporalmente para ETL de horarios.'))
+            except Exception as exc:
+                self.stdout.write(self.style.WARNING(f'No fue posible desactivar signals de horarios: {exc}'))
 
-                grupo = None
-                id_grupo_txt = self._to_text(stg_horario.id_grupo_oracle)
-                if id_grupo_txt:
-                    grupo = grupos_by_id.get(id_grupo_txt)
-                if not grupo:
-                    key = (
-                        self._normalize_text(stg_horario.nombre_grupo_oracle),
-                        self._normalize_text(stg_horario.periodo_oracle),
-                    )
-                    candidates = grupos_by_name_periodo.get(key, [])
-                    if len(candidates) == 1:
-                        grupo = candidates[0]
-                    elif len(candidates) > 1:
-                        id_programa = self._to_int(stg_horario.programa_oracle, default=None)
-                        if id_programa:
-                            grupo = next((g for g in candidates if g.programa_id == id_programa), candidates[0])
-                        else:
-                            grupo = candidates[0]
+        try:
+            for stg_horario in stg_horarios:
+                try:
+                    raw = stg_horario.raw_data or {}
 
-                if not grupo:
-                    grupo_no_encontrado += 1
-                    horarios_error += 1
-                    continue
-
-                asignatura = asignaturas_by_codigo.get(self._to_text(stg_horario.id_asignatura_oracle))
-                if not asignatura:
-                    nom_asig = self._normalize_text(stg_horario.asignatura_oracle)
-                    candidates_asg = asignaturas_by_nombre.get(nom_asig, [])
-                    if candidates_asg:
-                        asignatura = candidates_asg[0]
-
-                if not asignatura:
-                    asignatura_no_encontrada += 1
-                    horarios_error += 1
-                    continue
-
-                espacio = None
-                nom_aula = self._normalize_text(stg_horario.nom_aula_oracle)
-                if nom_aula:
-                    candidates_esp = espacios_by_nombre.get(nom_aula, [])
-                    if len(candidates_esp) == 1:
-                        espacio = candidates_esp[0]
-                    elif len(candidates_esp) > 1:
-                        id_sede = self._to_text(stg_horario.id_sede_oracle)
-                        espacio = next(
-                            (e for e in candidates_esp if self._to_text(e.sede.external_id) == id_sede),
-                            candidates_esp[0],
+                    grupo = None
+                    id_grupo_txt = self._to_text(stg_horario.id_grupo_oracle)
+                    if id_grupo_txt:
+                        grupo = grupos_by_id.get(id_grupo_txt)
+                    if not grupo:
+                        key = (
+                            self._normalize_text(stg_horario.nombre_grupo_oracle),
+                            self._normalize_text(stg_horario.periodo_oracle),
                         )
+                        candidates = grupos_by_name_periodo.get(key, [])
+                        if len(candidates) == 1:
+                            grupo = candidates[0]
+                        elif len(candidates) > 1:
+                            id_programa = self._to_int(stg_horario.programa_oracle, default=None)
+                            if id_programa:
+                                grupo = next((g for g in candidates if g.programa_id == id_programa), candidates[0])
+                            else:
+                                grupo = candidates[0]
 
-                if not espacio:
-                    espacio_no_encontrado += 1
-                    horarios_error += 1
-                    continue
+                    if not grupo:
+                        grupo_no_encontrado += 1
+                        horarios_error += 1
+                        continue
 
-                docente = None
-                num_doc = self._to_text(stg_horario.num_identificacion_docente)
-                if num_doc:
-                    docente = docentes_by_email_prefix.get(num_doc)
-                if not docente:
-                    nombre_doc = self._normalize_text(
-                        f'{self._to_text(stg_horario.nombre_docente_oracle)} {self._to_text(stg_horario.apellidos_docente_oracle)}'
-                    )
-                    candidates_doc = docentes_by_name.get(nombre_doc, [])
-                    if candidates_doc:
-                        docente = candidates_doc[0]
+                    asignatura = asignaturas_by_codigo.get(self._to_text(stg_horario.id_asignatura_oracle))
+                    if not asignatura:
+                        nom_asig = self._normalize_text(stg_horario.asignatura_oracle)
+                        candidates_asg = asignaturas_by_nombre.get(nom_asig, [])
+                        if candidates_asg:
+                            asignatura = candidates_asg[0]
 
-                dia_semana = self._resolve_dia_semana(stg_horario)
-                hora_inicio = self._parse_time_value(stg_horario.hor_inicio_raw)
-                hora_fin = self._parse_time_value(stg_horario.hor_fin_raw)
-                if not hora_inicio:
-                    hora_inicio = time_obj(8, 0)
-                    hora_default += 1
-                if not hora_fin:
-                    hora_fin = time_obj(10, 0)
-                    hora_default += 1
-                if hora_fin <= hora_inicio:
-                    hora_fin = time_obj((hora_inicio.hour + 1) % 24, hora_inicio.minute)
-                    hora_default += 1
+                    if not asignatura:
+                        asignatura_no_encontrada += 1
+                        horarios_error += 1
+                        continue
 
-                cantidad = stg_horario.cantidad_estudiantes_oracle
-                if cantidad is None:
-                    cantidad = self._to_int(raw.get('cantidad_estudiantes'), default=None)
+                    espacio = None
+                    id_sede = self._to_text(stg_horario.id_sede_oracle)
+                    nom_aula_raw = self._to_text(stg_horario.nom_aula_oracle)
+                    if nom_aula_raw:
+                        candidates_esp = []
+                        seen_ids = set()
+                        for key in self._space_match_keys(nom_aula_raw):
+                            for c in espacios_by_match_key_sede.get((id_sede, key), []):
+                                if c.id not in seen_ids:
+                                    candidates_esp.append(c)
+                                    seen_ids.add(c.id)
+                            for c in espacios_by_match_key.get(key, []):
+                                if c.id not in seen_ids:
+                                    candidates_esp.append(c)
+                                    seen_ids.add(c.id)
 
-                if dry_run:
-                    exists = Horario.objects.filter(
+                        if len(candidates_esp) == 1:
+                            espacio = candidates_esp[0]
+                        elif len(candidates_esp) > 1:
+                            espacio = next(
+                                (e for e in candidates_esp if self._to_text(e.sede.external_id) == id_sede),
+                                candidates_esp[0],
+                            )
+
+                    if not espacio:
+                        if dry_run:
+                            espacio_no_encontrado += 1
+                            horarios_error += 1
+                            continue
+
+                        source_system = stg_horario.source_system or 'ORACLE_SIU'
+                        sede = self._resolve_sede(source_system, id_sede)
+                        if not sede:
+                            espacio_no_encontrado += 1
+                            horarios_error += 1
+                            continue
+
+                        nombre_espacio = nom_aula_raw or f'Espacio {stg_horario.external_id}'
+                        espacio = EspacioFisico.objects.filter(sede=sede, nombre__iexact=nombre_espacio).first()
+                        if not espacio:
+                            tipo_oracle_hint = 'AULA'
+                            nom_hint = self._normalize_text(nombre_espacio)
+                            if 'LAB' in nom_hint:
+                                tipo_oracle_hint = 'LAB'
+                            elif 'AUD' in nom_hint:
+                                tipo_oracle_hint = 'AUD'
+                            elif any(token in nom_hint for token in ['SALA', 'COMPUTO', 'INFORMATICA']):
+                                tipo_oracle_hint = 'SALA'
+                            tipo_nombre, tipo_desc = self._map_tipo_espacio(tipo_oracle_hint)
+                            tipo, _ = TipoEspacio.objects.get_or_create(
+                                nombre=tipo_nombre,
+                                defaults={'descripcion': tipo_desc},
+                            )
+                            espacio = EspacioFisico.objects.create(
+                                nombre=nombre_espacio,
+                                sede=sede,
+                                tipo=tipo,
+                                capacidad=0,
+                                ubicacion=nombre_espacio[:100],
+                                estado='Disponible',
+                                esta_abierto=True,
+                            )
+                            espacio_autocreado += 1
+                            _indexar_espacio(espacio)
+
+                    docente = None
+                    num_doc = self._to_text(stg_horario.num_identificacion_docente)
+                    if num_doc:
+                        docente = docentes_by_email_prefix.get(num_doc)
+                    if not docente:
+                        nombre_doc = self._normalize_text(
+                            f'{self._to_text(stg_horario.nombre_docente_oracle)} {self._to_text(stg_horario.apellidos_docente_oracle)}'
+                        )
+                        candidates_doc = docentes_by_name.get(nombre_doc, [])
+                        if candidates_doc:
+                            docente = candidates_doc[0]
+
+                    dia_semana = self._resolve_dia_semana(stg_horario)
+                    hora_inicio = self._parse_time_value(stg_horario.hor_inicio_raw)
+                    hora_fin = self._parse_time_value(stg_horario.hor_fin_raw)
+                    if not hora_inicio:
+                        hora_inicio = time_obj(8, 0)
+                        hora_default += 1
+                    if not hora_fin:
+                        hora_fin = time_obj(10, 0)
+                        hora_default += 1
+                    if hora_fin <= hora_inicio:
+                        hora_fin = time_obj((hora_inicio.hour + 1) % 24, hora_inicio.minute)
+                        hora_default += 1
+
+                    cantidad = stg_horario.cantidad_estudiantes_oracle
+                    if cantidad is None:
+                        cantidad = self._to_int(raw.get('cantidad_estudiantes'), default=None)
+
+                    if dry_run:
+                        exists = Horario.objects.filter(
+                            grupo=grupo,
+                            asignatura=asignatura,
+                            espacio=espacio,
+                            dia_semana=dia_semana,
+                            hora_inicio=hora_inicio,
+                            hora_fin=hora_fin,
+                        ).exists()
+                        if exists:
+                            horarios_actualizados += 1
+                        else:
+                            horarios_creados += 1
+                        continue
+
+                    horario, created = Horario.objects.get_or_create(
                         grupo=grupo,
                         asignatura=asignatura,
                         espacio=espacio,
                         dia_semana=dia_semana,
                         hora_inicio=hora_inicio,
                         hora_fin=hora_fin,
-                    ).exists()
-                    if exists:
+                        defaults={
+                            'docente': docente,
+                            'cantidad_estudiantes': cantidad,
+                            'estado': 'pendiente',
+                        },
+                    )
+
+                    if created:
+                        horarios_creados += 1
+                        continue
+
+                    changed = False
+                    if docente and horario.docente_id != docente.id:
+                        horario.docente = docente
+                        changed = True
+                    if horario.cantidad_estudiantes != cantidad:
+                        horario.cantidad_estudiantes = cantidad
+                        changed = True
+                    if horario.estado not in ('pendiente', 'aprobado', 'rechazado'):
+                        horario.estado = 'pendiente'
+                        changed = True
+
+                    if changed:
+                        horario.save()
                         horarios_actualizados += 1
                     else:
-                        horarios_creados += 1
-                    continue
+                        horarios_sin_cambio += 1
 
-                horario, created = Horario.objects.get_or_create(
-                    grupo=grupo,
-                    asignatura=asignatura,
-                    espacio=espacio,
-                    dia_semana=dia_semana,
-                    hora_inicio=hora_inicio,
-                    hora_fin=hora_fin,
-                    defaults={
-                        'docente': docente,
-                        'cantidad_estudiantes': cantidad,
-                        'estado': 'pendiente',
-                    },
-                )
-
-                if created:
-                    horarios_creados += 1
-                    continue
-
-                changed = False
-                if docente and horario.docente_id != docente.id:
-                    horario.docente = docente
-                    changed = True
-                if horario.cantidad_estudiantes != cantidad:
-                    horario.cantidad_estudiantes = cantidad
-                    changed = True
-                if horario.estado not in ('pendiente', 'aprobado', 'rechazado'):
-                    horario.estado = 'pendiente'
-                    changed = True
-
-                if changed:
-                    horario.save()
-                    horarios_actualizados += 1
-                else:
-                    horarios_sin_cambio += 1
-
-            except Exception as exc:
-                self.stdout.write(self.style.ERROR(f'  Error en horario {stg_horario.external_id}: {exc}'))
-                horarios_error += 1
+                except Exception as exc:
+                    self.stdout.write(self.style.ERROR(f'  Error en horario {stg_horario.external_id}: {exc}'))
+                    horarios_error += 1
+        finally:
+            if signal_validacion_desconectada or signal_fusionado_desconectada:
+                try:
+                    from django.db.models.signals import post_save, pre_save
+                    from horario.signals import crear_horario_fusionado, validar_horario
+                    if signal_validacion_desconectada:
+                        pre_save.connect(validar_horario, sender=Horario)
+                        self.stdout.write(self.style.SUCCESS('Validacion de solapamientos reactivada al finalizar ETL de horarios.'))
+                    if signal_fusionado_desconectada:
+                        post_save.connect(crear_horario_fusionado, sender=Horario)
+                        self.stdout.write(self.style.SUCCESS('Generacion de HorarioFusionado reactivada al finalizar ETL de horarios.'))
+                except Exception as exc:
+                    self.stdout.write(self.style.WARNING(f'No fue posible reactivar signals de horarios: {exc}'))
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -971,6 +1113,7 @@ class Command(BaseCommand):
                 f'Grupo no encontrado: {grupo_no_encontrado}, '
                 f'Asignatura no encontrada: {asignatura_no_encontrada}, '
                 f'Espacio no encontrado: {espacio_no_encontrado}, '
+                f'Espacio autocreado: {espacio_autocreado}, '
                 f'Horas por defecto aplicadas: {hora_default}'
             )
         )
