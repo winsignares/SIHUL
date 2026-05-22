@@ -45,7 +45,8 @@ class Command(BaseCommand):
             )
 
         periodo_activo = periodos_activos.first()
-        assert periodo_activo is not None
+        if not periodo_activo:
+            raise CommandError("No se pudo determinar el periodo activo.")
 
         if only_invalid:
             periodos_validos = PeriodoAcademico.objects.values_list("id", flat=True)

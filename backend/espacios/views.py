@@ -1628,7 +1628,7 @@ def generar_pdf_ocupacion_semanal(request):
         )
 
         elements.append(Paragraph('Reporte de Ocupación Semanal de Espacios', title_style))
-        periodo_parrafo = f'<b>Período:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")} - <b>Semana:</b> {semana_offset:+d}'
+        periodo_parrafo = f'Período: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")} - Semana: {semana_offset:+d}'
         elements.append(Paragraph(periodo_parrafo, subtitle_style))
         elements.append(Spacer(1, 0.2 * inch))
 
@@ -2214,7 +2214,7 @@ def generar_pdf_reporte_ocupacion(request):
         elements.append(Paragraph('Reporte: Ocupación de Espacios', title_style))
         elements.append(
             Paragraph(
-                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
+                f'Semana: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
                 subtitle_style
             )
         )
@@ -2666,7 +2666,7 @@ def generar_pdf_reporte_disponibilidad(request):
         elements.append(Paragraph('Reporte: Disponibilidad General de Espacios', title_style))
         elements.append(
             Paragraph(
-                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
+                f'Semana: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
                 subtitle_style
             )
         )
@@ -2825,7 +2825,7 @@ def generar_pdf_reporte_capacidad(request):
         elements.append(Paragraph('Reporte: Capacidad Utilizada', title_style))
         elements.append(
             Paragraph(
-                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
+                f'Semana: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
                 subtitle_style
             )
         )

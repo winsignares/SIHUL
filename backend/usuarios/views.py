@@ -5,6 +5,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from werkzeug.security import check_password_hash
+import logging
 import datetime
 import secrets
 import hashlib
@@ -327,7 +328,12 @@ def login(request):
                 for ep in espacios_permisos
             ]
         except Exception:
-            pass
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "No se pudieron cargar espacios permitidos para usuario %s",
+                u.id,
+                exc_info=True,
+            )
         
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo

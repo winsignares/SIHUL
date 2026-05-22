@@ -1,4 +1,5 @@
 from rest_framework import viewsets, filters, parsers, status
+import logging
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -501,7 +502,12 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
                 instance.url_storage = instance.archivo.url
                 instance.save(update_fields=['url_storage'])
             except Exception:
-                pass
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "No se pudo actualizar url_storage para DocumentoAdjunto %s",
+                    instance.id,
+                    exc_info=True,
+                )
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):

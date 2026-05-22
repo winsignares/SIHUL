@@ -1,4 +1,5 @@
 import json
+import os
 
 from django.test import Client
 
@@ -27,24 +28,28 @@ def login_and_fetch(correo, password):
     return login_resp, api_resp
 
 
+qa_password = os.getenv('QA_TEST_PASSWORD')
+if not qa_password:
+    raise RuntimeError('Define QA_TEST_PASSWORD en el entorno para ejecutar esta prueba.')
+
 cases = [
     {
         'correo': 'qa.norte@sihul.local',
-        'password': 'QaPass123!',
+        'password': qa_password,
         'must_have': {'QA ESPACIO NORTE'},
         'must_not_have': {'QA ESPACIO SUR'},
         'label': 'Usuario Norte',
     },
     {
         'correo': 'qa.sur@sihul.local',
-        'password': 'QaPass123!',
+        'password': qa_password,
         'must_have': {'QA ESPACIO SUR'},
         'must_not_have': {'QA ESPACIO NORTE'},
         'label': 'Usuario Sur',
     },
     {
         'correo': 'qa.admin.global@sihul.local',
-        'password': 'QaPass123!',
+        'password': qa_password,
         'must_have': {'QA ESPACIO NORTE', 'QA ESPACIO SUR'},
         'must_not_have': set(),
         'label': 'Admin Global',

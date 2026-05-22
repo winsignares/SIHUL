@@ -24,6 +24,10 @@ RUN npm ci --prefer-offline --no-audit
 # Copiar código del frontend
 COPY frontend/ .
 
+# Ajustar permisos y ejecutar como usuario no-root
+RUN chown -R node:node /app
+USER node
+
 # Exponer puerto Vite
 EXPOSE 5173
 

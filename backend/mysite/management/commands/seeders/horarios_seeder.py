@@ -1323,7 +1323,7 @@ def create_horarios_sede_centro(stdout, style):
                 # Crear la asignatura automáticamente con código único
                 import hashlib
                 codigo_base = materia_nombre.strip()[:15].upper().replace(' ', '-').replace(':', '')
-                codigo_hash = hashlib.md5(materia_nombre.encode()).hexdigest()[:6].upper()
+                codigo_hash = hashlib.sha256(materia_nombre.encode()).hexdigest()[:6].upper()
                 codigo_unico = f'{codigo_hash}'
                 
                 # Asegurar que el código sea único
