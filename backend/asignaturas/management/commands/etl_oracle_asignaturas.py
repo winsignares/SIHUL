@@ -163,6 +163,7 @@ class Command(BaseCommand):
                 seccional=seccional,
                 seccional_columns=('SEDE', 'NOMBRE_SEDE'),
                 seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
+                limit=limit,
                 stdout=self.stdout,
             )
             if query_filter_status.get('filter_mode') == 'related_sql':
@@ -173,8 +174,6 @@ class Command(BaseCommand):
 
             rows = cursor.fetchall()
             columns = [desc[0].lower() for desc in cursor.description]
-            if limit:
-                rows = rows[:limit]
 
             summary['extracted'] = len(rows)
             self.stdout.write(self.style.SUCCESS(f'Asignaturas extraidas: {len(rows)} columnas={columns}'))

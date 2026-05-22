@@ -108,13 +108,12 @@ class Command(BaseCommand):
                 query,
                 seccional=seccional,
                 seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                limit=limit,
                 stdout=self.stdout,
             )
 
             rows = cursor.fetchall()
             columns = [desc[0].lower() for desc in cursor.description]
-            if limit:
-                rows = rows[:limit]
 
             summary['extract']['rows'] = len(rows)
             summary['extract']['columns'] = columns

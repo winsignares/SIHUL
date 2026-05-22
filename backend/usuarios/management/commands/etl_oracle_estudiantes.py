@@ -6,27 +6,27 @@ import oracledb
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from mysite.oracle_seccional_filter import (
+    execute_oracle_query_with_optional_seccional,
+    normalize_seccional_name,
+)
 from usuarios.models import StgOracleEstudiante
 
 
 class Command(BaseCommand):
     help = 'ETL Oracle para estudiantes: extrae VW_ESTUDIANTES y carga staging idempotente'
     _SECCIONAL_RELATED_PREDICATES = (
+        # Predicado robusto: cubre programa por nombre o por id en una sola pasada.
         (
-            "SRC_Q.PROGRAMA IN ("
-            "SELECT /*+ MATERIALIZE */ DISTINCT REL_PRG.NOMBRE_PROGRAMA "
+            "UPPER(TRIM(NVL(TO_CHAR(SRC_Q.PROGRAMA), ''))) IN ("
+            "SELECT /*+ MATERIALIZE */ DISTINCT UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_PROGRAMA), ''))) "
             "FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS REL_PRG "
-            "WHERE REL_PRG.NOMBRE_SEDE = :seccional_exact "
-            "OR UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
-            ")"
-        ),
-        (
-            "SRC_Q.PROGRAMA IN ("
-            "SELECT /*+ MATERIALIZE */ DISTINCT REL_PRG.ID_PROGRAMA "
+            "WHERE UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
+            ") "
+            "OR UPPER(TRIM(NVL(TO_CHAR(SRC_Q.PROGRAMA), ''))) IN ("
+            "SELECT /*+ MATERIALIZE */ DISTINCT UPPER(TRIM(NVL(TO_CHAR(REL_PRG.ID_PROGRAMA), ''))) "
             "FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS REL_PRG "
-            "WHERE REL_PRG.NOMBRE_SEDE = :seccional_exact "
-            "OR UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
+            "WHERE UPPER(TRIM(NVL(TO_CHAR(REL_PRG.NOMBRE_SEDE), ''))) LIKE UPPER(:seccional_like)"
             ")"
         ),
     )
@@ -86,6 +86,56 @@ class Command(BaseCommand):
         joined = f'{nombres} {apellidos}'.strip()
         return joined or None
 
+    @staticmethod
+    def _chunked(items, chunk_size):
+        for idx in range(0, len(items), chunk_size):
+            yield items[idx : idx + chunk_size]
+
+    def _fetch_program_tokens_for_seccional(self, cursor, seccional):
+        query = """
+            SELECT DISTINCT UPPER(TRIM(NVL(TO_CHAR(id_programa), ''))) AS token
+            FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS
+            WHERE UPPER(TRIM(NVL(TO_CHAR(nombre_sede), ''))) LIKE UPPER(:seccional_like)
+            UNION
+            SELECT DISTINCT UPPER(TRIM(NVL(TO_CHAR(nombre_programa), ''))) AS token
+            FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS
+            WHERE UPPER(TRIM(NVL(TO_CHAR(nombre_sede), ''))) LIKE UPPER(:seccional_like)
+        """
+        cursor.execute(query, {'seccional_like': f'%{seccional}%'})
+        tokens = {
+            self._to_text(row[0]).upper()
+            for row in cursor.fetchall()
+            if self._to_text(row[0])
+        }
+        return sorted(tokens)
+
+    def _execute_students_by_program_tokens(self, cursor, base_query, program_tokens, limit):
+        if not program_tokens:
+            return []
+
+        max_in_list = 900  # Oracle ORA-01795 guard
+        normalized_program_expr = "UPPER(TRIM(NVL(TO_CHAR(SRC_Q.PROGRAMA), '')))"
+        all_clauses = []
+        params = {}
+        bind_idx = 0
+
+        for token_chunk in self._chunked(program_tokens, max_in_list):
+            placeholders = []
+            for token in token_chunk:
+                bind_name = f'p{bind_idx}'
+                bind_idx += 1
+                placeholders.append(f':{bind_name}')
+                params[bind_name] = token
+            all_clauses.append(f"{normalized_program_expr} IN ({', '.join(placeholders)})")
+
+        filtered_query = f"SELECT * FROM ({base_query}) SRC_Q WHERE ({' OR '.join(all_clauses)})"
+        if limit and int(limit) > 0:
+            filtered_query = f"SELECT * FROM ({filtered_query}) LIM_Q WHERE ROWNUM <= :max_rows"
+            params['max_rows'] = int(limit)
+
+        cursor.execute(filtered_query, params)
+        return cursor.fetchall()
+
     def handle(self, *args, **options):
         host = options['host']
         port = options['port']
@@ -128,19 +178,28 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
-            execute_oracle_query_with_optional_seccional(
-                cursor,
-                query,
-                seccional=seccional,
-                seccional_columns=('SEDE', 'NOMBRE_SEDE'),
-                seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
-                stdout=self.stdout,
-            )
+            normalized_seccional = normalize_seccional_name(seccional)
+            rows = []
+            columns = []
 
-            rows = cursor.fetchall()
-            columns = [desc[0].lower() for desc in cursor.description]
-            if limit:
-                rows = rows[:limit]
+            if normalized_seccional:
+                self.stdout.write(f"Filtro seccional optimizado para estudiantes: {normalized_seccional}")
+                program_tokens = self._fetch_program_tokens_for_seccional(cursor, normalized_seccional)
+                self.stdout.write(f'Programas de la seccional detectados: {len(program_tokens)}')
+                rows = self._execute_students_by_program_tokens(cursor, query, program_tokens, limit)
+                columns = [desc[0].lower() for desc in cursor.description]
+            else:
+                execute_oracle_query_with_optional_seccional(
+                    cursor,
+                    query,
+                    seccional=seccional,
+                    seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                    seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
+                    limit=limit,
+                    stdout=self.stdout,
+                )
+                rows = cursor.fetchall()
+                columns = [desc[0].lower() for desc in cursor.description]
 
             summary['extract']['rows'] = len(rows)
             summary['extract']['columns'] = columns

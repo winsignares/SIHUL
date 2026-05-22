@@ -244,7 +244,7 @@ def execute_oracle_query_with_optional_seccional(
                 return {
                     'filter_applied': True,
                     'fallback_without_filter': False,
-                    'filter_mode': 'related_sql',
+                    'filter_mode': 'related_sql_exact' if uses_exact and not uses_like else 'related_sql_like',
                     'match_mode': match_mode,
                 }
             except oracledb.DatabaseError as exc:

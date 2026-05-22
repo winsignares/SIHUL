@@ -134,6 +134,7 @@ class Command(BaseCommand):
                 seccional=seccional,
                 seccional_columns=('SEDE', 'NOMBRE_SEDE'),
                 seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
+                limit=limit,
                 stdout=self.stdout,
             )
 
@@ -144,9 +145,6 @@ class Command(BaseCommand):
                     'Filtro por seccional aplicado en Oracle via relacion SQL '
                     '(asignatura_programa -> programas_academicos -> sede).'
                 )
-
-            if limit:
-                rows = rows[:limit]
 
             summary['extracted'] = len(rows)
             self.stdout.write(self.style.SUCCESS(f'Registros extraidos: {len(rows)} columnas={columns}'))

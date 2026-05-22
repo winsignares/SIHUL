@@ -264,12 +264,11 @@ class Command(BaseCommand):
             query,
             seccional=seccional,
             seccional_columns=seccional_columns or (),
+            limit=limit,
             stdout=self.stdout,
         )
         rows = cursor.fetchall()
         columns = [desc[0].lower() for desc in cursor.description]
-        if limit:
-            rows = rows[:limit]
         dict_rows = [dict(zip(columns, row)) for row in rows]
         return dict_rows, columns
 
