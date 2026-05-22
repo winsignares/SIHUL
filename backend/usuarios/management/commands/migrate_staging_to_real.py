@@ -979,7 +979,9 @@ class Command(BaseCommand):
                             horarios_error += 1
                             continue
 
-                        nombre_espacio = nom_aula_raw or f'Espacio {stg_horario.external_id}'
+                        nombre_espacio = nom_aula_raw
+                        if not nombre_espacio:
+                            nombre_espacio = f'NO DISPONIBLE ETL {id_sede or "SIN_SEDE"}'
                         espacio = EspacioFisico.objects.filter(sede=sede, nombre__iexact=nombre_espacio).first()
                         if not espacio:
                             tipo_oracle_hint = 'AULA'
