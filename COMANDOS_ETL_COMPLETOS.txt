@@ -46,7 +46,12 @@ Si las variables de entorno ya están definidas en .env:
 ================================================================================
 
 COMANDO BÁSICO:
-docker compose exec backend python manage.py etl_oracle_docentes
+docker compose exec backend python manage.py etl_oracle_docentes \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU"
 
 COMANDO CON VARIABLES DE ENTORNO EXPLÍCITAS:
 docker compose exec -T \
@@ -68,13 +73,19 @@ docker compose exec -T backend python manage.py etl_oracle_docentes \
 
 VARIANTES:
   # DRY-RUN (simular sin guardar)
-  docker compose exec backend python manage.py etl_oracle_docentes --dry-run
+  docker compose exec backend python manage.py etl_oracle_docentes \
+    --host "10.4.100.215" --port 1521 --user "UHORARIOS" --password "Temporal2026U" --service "SIULEDU" \
+    --dry-run
   
   # Limitar a 100 registros (testing)
-  docker compose exec backend python manage.py etl_oracle_docentes --limit 100
+  docker compose exec backend python manage.py etl_oracle_docentes \
+    --host "10.4.100.215" --port 1521 --user "UHORARIOS" --password "Temporal2026U" --service "SIULEDU" \
+    --limit 100
   
   # Sin confirmación interactiva
-  docker compose exec backend python manage.py etl_oracle_docentes --no-input
+  docker compose exec backend python manage.py etl_oracle_docentes \
+    --host "10.4.100.215" --port 1521 --user "UHORARIOS" --password "Temporal2026U" --service "SIULEDU" \
+    --no-input
   
   # Consulta personalizada
   docker compose exec backend python manage.py etl_oracle_docentes \
@@ -91,7 +102,12 @@ ESPERADO:
 ================================================================================
 
 COMANDO BÁSICO:
-docker compose exec backend python manage.py etl_oracle_estudiantes
+docker compose exec backend python manage.py etl_oracle_estudiantes \
+  --host "10.4.100.215" \
+  --port 1521 \
+  --user "UHORARIOS" \
+  --password "Temporal2026U" \
+  --service "SIULEDU"
 
 COMANDO COMPLETO:
 docker compose exec -T \
@@ -104,13 +120,19 @@ docker compose exec -T \
 
 VARIANTES:
   # DRY-RUN
-  docker compose exec backend python manage.py etl_oracle_estudiantes --dry-run
+  docker compose exec backend python manage.py etl_oracle_estudiantes \
+    --host "10.4.100.215" --port 1521 --user "UHORARIOS" --password "Temporal2026U" --service "SIULEDU" \
+    --dry-run
   
   # Con límite (testing)
-  docker compose exec backend python manage.py etl_oracle_estudiantes --limit 1000
+  docker compose exec backend python manage.py etl_oracle_estudiantes \
+    --host "10.4.100.215" --port 1521 --user "UHORARIOS" --password "Temporal2026U" --service "SIULEDU" \
+    --limit 1000
   
   # Sin confirmación
-  docker compose exec backend python manage.py etl_oracle_estudiantes --no-input
+  docker compose exec backend python manage.py etl_oracle_estudiantes \
+    --host "10.4.100.215" --port 1521 --user "UHORARIOS" --password "Temporal2026U" --service "SIULEDU" \
+    --no-input
 
 ESPERADO:
 - Carga desde VW_ESTUDIANTES (~40,000+ estudiantes)
@@ -634,51 +656,53 @@ SCRIPT BASH (Linux/Mac):
 #!/bin/bash
 
 DOCKER_CMD="docker compose exec -T \
-  -e ORACLE_HOST='10.4.100.215' \
-  -e ORACLE_PORT='1521' \
-  -e ORACLE_USER='UHORARIOS' \
-  -e ORACLE_PASSWORD='Temporal2026U' \
-  -e ORACLE_SERVICE='SIULEDU' \
+  -e ORACLE_HOST=10.4.100.215 \
+  -e ORACLE_USER=UHORARIOS \
+  -e ORACLE_PASSWORD=Temporal2026U \
+  -e ORACLE_PORT=1521 \
+  -e ORACLE_SERVICE=SIULEDU \
   backend python manage.py"
+
+ORACLE_ARGS="--host 10.4.100.215 --port 1521 --user UHORARIOS --password Temporal2026U --service SIULEDU"
 
 echo "🔄 Iniciando Pipeline ETL Completo..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # 1. Sedes y Facultades (dependencias)
 echo "1️⃣ Cargando Sedes..."
-$DOCKER_CMD etl_oracle_sedes --no-input || exit 1
+$DOCKER_CMD etl_oracle_sedes $ORACLE_ARGS --no-input || exit 1
 
 echo "2️⃣ Cargando Facultades..."
-$DOCKER_CMD etl_oracle_facultades --no-input || exit 1
+$DOCKER_CMD etl_oracle_facultades $ORACLE_ARGS --no-input || exit 1
 
 # 2. Maestros académicos
 echo "3️⃣ Cargando Programas..."
-$DOCKER_CMD etl_oracle_programas --no-input || exit 1
+$DOCKER_CMD etl_oracle_programas $ORACLE_ARGS --no-input || exit 1
 
 echo "4️⃣ Cargando Asignaturas..."
-$DOCKER_CMD etl_oracle_asignaturas --no-input || exit 1
+$DOCKER_CMD etl_oracle_asignaturas $ORACLE_ARGS --no-input || exit 1
 
 echo "5️⃣ Cargando Asignatura-Programa..."
-$DOCKER_CMD etl_oracle_asignatura_programa --no-input || exit 1
+$DOCKER_CMD etl_oracle_asignatura_programa $ORACLE_ARGS --no-input || exit 1
 
 # 3. Usuarios
 echo "6️⃣ Cargando Docentes..."
-$DOCKER_CMD etl_oracle_docentes --no-input || exit 1
+$DOCKER_CMD etl_oracle_docentes $ORACLE_ARGS --no-input || exit 1
 
 echo "7️⃣ Cargando Estudiantes..."
-$DOCKER_CMD etl_oracle_estudiantes --no-input || exit 1
+$DOCKER_CMD etl_oracle_estudiantes $ORACLE_ARGS --no-input || exit 1
 
 # 4. Académico
 echo "8️⃣ Cargando Grupos..."
-$DOCKER_CMD etl_oracle_grupos --no-input || exit 1
+$DOCKER_CMD etl_oracle_grupos $ORACLE_ARGS --no-input || exit 1
 
 # 5. Espacios
 echo "9️⃣ Cargando Espacios..."
-$DOCKER_CMD etl_oracle_espacios --no-input || exit 1
+$DOCKER_CMD etl_oracle_espacios $ORACLE_ARGS --no-input || exit 1
 
 # 6. Horarios (última etapa)
 echo "🔟 Cargando Horarios..."
-$DOCKER_CMD etl_oracle_horario --no-input || exit 1
+$DOCKER_CMD etl_oracle_horario $ORACLE_ARGS --no-input || exit 1
 
 echo "1️⃣1️⃣ Migrando Staging -> Reales (Periodos, Grupos, Usuarios, Espacios, Horarios)..."
 $DOCKER_CMD migrate_staging_to_real --etapa all || exit 1
