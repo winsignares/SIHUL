@@ -33,7 +33,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'nombre',
             'correo',
             'contrasena',
-            'contrasena_hash',
             'rol',
             'activo',
             'facultad',
@@ -42,9 +41,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'espacios_permitidos',
             'es_superusuario',
         ]
-        extra_kwargs = {
-            'contrasena_hash': {'read_only': True},
-        }
 
     def _sync_espacios_permitidos(self, usuario, espacios_ids):
         if espacios_ids is None:
@@ -76,14 +72,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         return usuario
 
-    def update(self, instance, validated_data):
-        espacios_permitidos = validated_data.pop('espacios_permitidos', None)
-        contrasena = validated_data.pop('contrasena', None)
-        if contrasena:
-            instance.contrasena_hash = make_password(contrasena)
 
-        with transaction.atomic():
-            usuario = super().update(instance, validated_data)
-            self._sync_espacios_permitidos(usuario, espacios_permitidos)
-
-        return usuario
+class UsuarioMinimalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = ['id', 'nombre', 'correo']

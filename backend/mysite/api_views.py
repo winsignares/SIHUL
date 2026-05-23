@@ -35,9 +35,9 @@ from sedes.models import Seccional, Sede
 from sedes.serializers import SeccionalSerializer, SedeSerializer
 from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
-from usuarios.serializers import RolSerializer, UsuarioSerializer
+from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global
+from .auth_helpers import is_admin_global, is_admin_sistema
 from .seccional_auth import SeccionalMixin
 from .permissions import IsAuthenticatedReadOnlyOrAdminWrite, IsAdminGlobal, IsAdminSistema
 
@@ -91,6 +91,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
         if user and is_admin_global(user):
             return super().get_queryset()
+
         return Seccional.objects.none()
 
 
@@ -506,6 +507,25 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return super().get_permissions()
 
+    def get_serializer_class(self):
+        if self.action in ('list',):
+            user = self.get_current_user()
+            if not user:
+                return UsuarioMinimalSerializer
+
+            role_name_raw = (getattr(getattr(user, 'rol', None), 'nombre', '') or '').strip().lower()
+            role_name_normalized = unicodedata.normalize('NFD', role_name_raw)
+            role_name_normalized = ''.join(ch for ch in role_name_normalized if unicodedata.category(ch) != 'Mn')
+            role_name_normalized = role_name_normalized.replace('_', ' ')
+            role_name_normalized = ' '.join(role_name_normalized.split())
+
+            if is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero':
+                return UsuarioSerializer
+
+            return UsuarioMinimalSerializer
+
+        return UsuarioSerializer
+
     def get_queryset(self):
         user = self.get_current_user()
 
@@ -516,11 +536,15 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             role_name_normalized = role_name_normalized.replace('_', ' ')
             role_name_normalized = ' '.join(role_name_normalized.split())
 
-            if role_name_normalized == 'admin financiero':
+            if is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero':
                 base_queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
                 if self.action == 'list_docentes':
                     return base_queryset.filter(activo=True, rol__nombre__iexact='docente')
                 return base_queryset
+
+            # Usuarios no administradores: solo su propio registro
+            base_queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
+            return base_queryset.filter(id=user.id)
 
         if self.action == 'list_docentes':
             if not user:
