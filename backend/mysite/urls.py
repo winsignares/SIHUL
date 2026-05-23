@@ -45,7 +45,6 @@ router.register(r'roles', RolViewSet, basename='rol-api')
 router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 
 urlpatterns = [
-    path('', admin.site.urls),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/auth/', include('mysite.auth_urls')),

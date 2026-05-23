@@ -166,11 +166,72 @@ class Command(BaseCommand):
             suffix += 1
 
     @staticmethod
-    def _parse_periodo_year(periodo_nombre):
-        periodo_nombre = str(periodo_nombre or '').strip()
-        if len(periodo_nombre) >= 4 and periodo_nombre[:4].isdigit():
-            return int(periodo_nombre[:4])
-        return datetime.now().year
+    def _resolve_periodo_year_term(periodo_nombre):
+        """
+        Resuelve (anio, semestre) desde codigos de periodo Oracle.
+        Convenciones soportadas:
+        - YYYY1 / YYYY2
+        - YYYYA / YYYYB
+        - Legacy como 063HI, 2006A, 2006B (inferencia controlada)
+        """
+        raw = Command._to_text(periodo_nombre).upper()
+        if not raw:
+            return None, None
+
+        def _term_from_token(token):
+            token = (token or '').strip().upper()
+            if token in ('1', 'A'):
+                return 1
+            if token in ('2', 'B'):
+                return 2
+            return None
+
+        # Preferir codigos con anio de 4 digitos al inicio
+        match_yyyy = re.match(r'^(\d{4})(.*)$', raw)
+        if match_yyyy:
+            year = int(match_yyyy.group(1))
+            tail = match_yyyy.group(2) or ''
+
+            # Buscar primer indicador de semestre explicito
+            for ch in tail:
+                term = _term_from_token(ch)
+                if term:
+                    return year, term
+
+            # Si solo hay digitos > 2 (ej: 20063), inferimos por paridad.
+            digit_tail = ''.join(ch for ch in tail if ch.isdigit())
+            if digit_tail:
+                try:
+                    term_num = int(digit_tail[0])
+                    return year, 1 if (term_num % 2 == 1) else 2
+                except Exception:
+                    pass
+
+            return year, None
+
+        # Fallback legacy: YYx... (ej: 063HI => 2006, termino inferido por 3 -> impar -> 1)
+        match_yy = re.match(r'^(\d{2})(\d?)(.*)$', raw)
+        if match_yy:
+            yy = int(match_yy.group(1))
+            year = 2000 + yy
+
+            explicit_term = _term_from_token(match_yy.group(2))
+            if explicit_term:
+                return year, explicit_term
+
+            if match_yy.group(2).isdigit():
+                term_num = int(match_yy.group(2))
+                return year, 1 if (term_num % 2 == 1) else 2
+
+            tail = match_yy.group(3) or ''
+            for ch in tail:
+                term = _term_from_token(ch)
+                if term:
+                    return year, term
+
+            return year, None
+
+        return None, None
 
     @staticmethod
     def _parse_time_value(raw_value):
@@ -354,6 +415,7 @@ class Command(BaseCommand):
             .filter(estado_registro='valido')
             .exclude(periodo_academico__isnull=True)
             .exclude(periodo_academico='')
+            .order_by('periodo_academico')
             .values_list('periodo_academico', flat=True)
             .distinct()
         )
@@ -362,21 +424,41 @@ class Command(BaseCommand):
             periodos_unicos = periodos_unicos[:limit]
 
         periodos_creados = 0
+        periodos_actualizados = 0
         periodos_existentes = 0
+        periodos_inferidos = 0
+        periodos_con_semestre_default = 0
 
         for periodo_nombre in periodos_unicos:
-            year = self._parse_periodo_year(periodo_nombre)
-            fecha_inicio = datetime(year, 1, 15).date()
-            fecha_fin = datetime(year, 12, 15).date()
+            year, term = self._resolve_periodo_year_term(periodo_nombre)
+
+            if year is None:
+                year = datetime.now().year
+                periodos_inferidos += 1
+
+            if term not in (1, 2):
+                term = 1
+                periodos_con_semestre_default += 1
+
+            if term == 1:
+                fecha_inicio = datetime(year, 2, 2).date()
+                fecha_fin = datetime(year, 6, 30).date()
+            else:
+                fecha_inicio = datetime(year, 7, 28).date()
+                fecha_fin = datetime(year, 12, 19).date()
 
             if dry_run:
-                if PeriodoAcademico.objects.filter(nombre=periodo_nombre).exists():
-                    periodos_existentes += 1
+                existing = PeriodoAcademico.objects.filter(nombre=periodo_nombre).first()
+                if existing:
+                    if existing.fecha_inicio != fecha_inicio or existing.fecha_fin != fecha_fin:
+                        periodos_actualizados += 1
+                    else:
+                        periodos_existentes += 1
                 else:
                     periodos_creados += 1
                 continue
 
-            _, created = PeriodoAcademico.objects.get_or_create(
+            periodo, created = PeriodoAcademico.objects.get_or_create(
                 nombre=periodo_nombre,
                 defaults={
                     'fecha_inicio': fecha_inicio,
@@ -386,12 +468,29 @@ class Command(BaseCommand):
             )
             if created:
                 periodos_creados += 1
+                continue
+
+            changed = False
+            if periodo.fecha_inicio != fecha_inicio:
+                periodo.fecha_inicio = fecha_inicio
+                changed = True
+            if periodo.fecha_fin != fecha_fin:
+                periodo.fecha_fin = fecha_fin
+                changed = True
+            if changed:
+                periodo.save()
+                periodos_actualizados += 1
             else:
                 periodos_existentes += 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Periodos - Creados: {periodos_creados}, Existentes: {periodos_existentes}'
+                'Periodos - '
+                f'Creados: {periodos_creados}, '
+                f'Actualizados: {periodos_actualizados}, '
+                f'Existentes: {periodos_existentes}, '
+                f'Anio inferido: {periodos_inferidos}, '
+                f'Semestre default(1): {periodos_con_semestre_default}'
             )
         )
 
