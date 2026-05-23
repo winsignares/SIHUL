@@ -172,66 +172,23 @@ class Command(BaseCommand):
         Convenciones soportadas:
         - YYYY1 / YYYY2
         - YYYYA / YYYYB
-        - Legacy como 063HI, 2006A, 2006B (inferencia controlada)
+        - YYYY-1 / YYYY-2
+        - YYYY_A / YYYY_B
+        Cualquier otro formato se considera ambiguo y no se infiere.
         """
         raw = Command._to_text(periodo_nombre).upper()
         if not raw:
             return None, None
 
-        def _term_from_token(token):
-            token = (token or '').strip().upper()
-            if token in ('1', 'A'):
-                return 1
-            if token in ('2', 'B'):
-                return 2
-            return None
+        compact = re.sub(r'[\s\-_]+', '', raw)
+        match = re.match(r'^(\d{4})([12AB])$', compact)
+        if not match:
+            return None, None
 
-        # Preferir codigos con anio de 4 digitos al inicio
-        match_yyyy = re.match(r'^(\d{4})(.*)$', raw)
-        if match_yyyy:
-            year = int(match_yyyy.group(1))
-            tail = match_yyyy.group(2) or ''
-
-            # Buscar primer indicador de semestre explicito
-            for ch in tail:
-                term = _term_from_token(ch)
-                if term:
-                    return year, term
-
-            # Si solo hay digitos > 2 (ej: 20063), inferimos por paridad.
-            digit_tail = ''.join(ch for ch in tail if ch.isdigit())
-            if digit_tail:
-                try:
-                    term_num = int(digit_tail[0])
-                    return year, 1 if (term_num % 2 == 1) else 2
-                except Exception:
-                    pass
-
-            return year, None
-
-        # Fallback legacy: YYx... (ej: 063HI => 2006, termino inferido por 3 -> impar -> 1)
-        match_yy = re.match(r'^(\d{2})(\d?)(.*)$', raw)
-        if match_yy:
-            yy = int(match_yy.group(1))
-            year = 2000 + yy
-
-            explicit_term = _term_from_token(match_yy.group(2))
-            if explicit_term:
-                return year, explicit_term
-
-            if match_yy.group(2).isdigit():
-                term_num = int(match_yy.group(2))
-                return year, 1 if (term_num % 2 == 1) else 2
-
-            tail = match_yy.group(3) or ''
-            for ch in tail:
-                term = _term_from_token(ch)
-                if term:
-                    return year, term
-
-            return year, None
-
-        return None, None
+        year = int(match.group(1))
+        term_token = match.group(2)
+        term = 1 if term_token in ('1', 'A') else 2
+        return year, term
 
     @staticmethod
     def _parse_time_value(raw_value):
@@ -426,21 +383,17 @@ class Command(BaseCommand):
         periodos_creados = 0
         periodos_actualizados = 0
         periodos_existentes = 0
-        periodos_inferidos = 0
-        periodos_con_semestre_default = 0
+        periodos_ambiguos = 0
 
         for periodo_nombre in periodos_unicos:
             year, term = self._resolve_periodo_year_term(periodo_nombre)
 
-            if year is None:
-                year = datetime.now().year
-                periodos_inferidos += 1
-
-            if term not in (1, 2):
-                term = 1
-                periodos_con_semestre_default += 1
-
-            if term == 1:
+            if year is None or term not in (1, 2):
+                periodos_ambiguos += 1
+                fallback_year = year if year is not None else datetime.now().year
+                fecha_inicio = datetime(fallback_year, 1, 15).date()
+                fecha_fin = datetime(fallback_year, 12, 15).date()
+            elif term == 1:
                 fecha_inicio = datetime(year, 2, 2).date()
                 fecha_fin = datetime(year, 6, 30).date()
             else:
@@ -489,8 +442,7 @@ class Command(BaseCommand):
                 f'Creados: {periodos_creados}, '
                 f'Actualizados: {periodos_actualizados}, '
                 f'Existentes: {periodos_existentes}, '
-                f'Anio inferido: {periodos_inferidos}, '
-                f'Semestre default(1): {periodos_con_semestre_default}'
+                f'Codigo ambiguo (15-ene a 15-dic): {periodos_ambiguos}'
             )
         )
 

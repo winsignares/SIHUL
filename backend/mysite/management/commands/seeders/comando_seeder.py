@@ -1,0 +1,2 @@
+cd backend
+python manage.py shell -c "from mysite.management.commands.seeders.roles_seeder import create_roles; from django.core.management.base import BaseCommand; c=BaseCommand(); create_roles(c.stdout, c.style)"
