@@ -223,12 +223,42 @@ class Command(BaseCommand):
 
     @staticmethod
     def _resolve_dia_semana(stg_horario):
+        num_dia = Command._to_int(getattr(stg_horario, 'num_dia_oracle', None), default=None)
+        if num_dia is not None:
+            # Convencion operativa SIU esperada: 1=Lunes ... 7=Domingo
+            mapping_num = {
+                1: 'Lunes',
+                2: 'Martes',
+                3: 'Miercoles',
+                4: 'Jueves',
+                5: 'Viernes',
+                6: 'Sabado',
+                7: 'Domingo',
+            }
+            if num_dia in mapping_num:
+                return mapping_num[num_dia]
+
         raw = stg_horario.raw_data or {}
         possible = None
-        for key in ('dia_semana', 'dia', 'nombre_dia', 'dia_clase', 'day'):
+        for key in ('dia_semana', 'dia', 'nombre_dia', 'dia_clase', 'day', 'num_dia', 'numero_dia', 'dia_numero'):
             if key in raw and str(raw[key] or '').strip():
                 possible = raw[key]
                 break
+
+        possible_num = Command._to_int(possible, default=None)
+        if possible_num is not None:
+            mapping_num = {
+                1: 'Lunes',
+                2: 'Martes',
+                3: 'Miercoles',
+                4: 'Jueves',
+                5: 'Viernes',
+                6: 'Sabado',
+                7: 'Domingo',
+            }
+            if possible_num in mapping_num:
+                return mapping_num[possible_num]
+
         norm = Command._normalize_text(possible)
         mapping = {
             'LUNES': 'Lunes',

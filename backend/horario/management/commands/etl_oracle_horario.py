@@ -201,6 +201,7 @@ class Command(BaseCommand):
                     'nombre_docente': self._first_present(data, ['nombre_docente']),
                     'apellidos_docente': self._first_present(data, ['apellidos_docente']),
                     'nom_aula': self._first_present(data, ['nom_aula']),
+                    'num_dia': self._first_present(data, ['num_dia', 'numero_dia', 'dia_numero']),
                     'hor_inicio': self._first_present(data, ['hor_inicio']),
                     'hor_fin': self._first_present(data, ['hor_fin']),
                 }
@@ -211,6 +212,7 @@ class Command(BaseCommand):
                 hor_inicio = self._to_text(raw_payload['hor_inicio'])
                 hor_fin = self._to_text(raw_payload['hor_fin'])
                 nom_aula = self._to_text(raw_payload['nom_aula'])
+                num_dia = self._to_non_negative_int(raw_payload['num_dia'], default=None)
 
                 row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
                 if id_grupo or id_asignatura or periodo:
@@ -218,6 +220,7 @@ class Command(BaseCommand):
                         'id_grupo': id_grupo,
                         'id_asignatura': id_asignatura,
                         'periodo': periodo,
+                        'num_dia': num_dia,
                         'hor_inicio': hor_inicio,
                         'hor_fin': hor_fin,
                         'nom_aula': nom_aula,
@@ -242,6 +245,7 @@ class Command(BaseCommand):
                     'nombre_docente_oracle': self._to_text(raw_payload['nombre_docente']) or None,
                     'apellidos_docente_oracle': self._to_text(raw_payload['apellidos_docente']) or None,
                     'nom_aula_oracle': nom_aula or None,
+                    'num_dia_oracle': num_dia,
                     'hor_inicio_raw': hor_inicio or None,
                     'hor_fin_raw': hor_fin or None,
                     'raw_data': data,

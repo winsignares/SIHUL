@@ -129,6 +129,7 @@ class StgOracleHorario(models.Model):
     nombre_docente_oracle = models.CharField(max_length=501, null=True, blank=True)
     apellidos_docente_oracle = models.CharField(max_length=501, null=True, blank=True)
     nom_aula_oracle = models.CharField(max_length=60, null=True, blank=True)
+    num_dia_oracle = models.IntegerField(null=True, blank=True, db_index=True)
     hor_inicio_raw = models.TextField(null=True, blank=True)
     hor_fin_raw = models.TextField(null=True, blank=True)
     raw_data = models.JSONField(default=dict, blank=True)
