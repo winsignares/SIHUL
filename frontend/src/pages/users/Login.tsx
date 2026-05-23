@@ -21,6 +21,8 @@ export default function Login() {
     isHovered,
     setIsHovered,
     isLoading,
+    isLockedOut,
+    remainingSeconds,
     handleSubmit,
     handlePublicAccess,
     handleMicrosoftLogin
@@ -229,7 +231,7 @@ export default function Login() {
                 >
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isLockedOut}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                     className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg shadow-lg hover:shadow-xl hover:shadow-red-600/40 transition-all duration-300 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-base tracking-wide uppercase"
@@ -241,8 +243,14 @@ export default function Login() {
                       transition={{ duration: 0.5 }}
                     />
                     <span className="relative flex items-center justify-center gap-2">
-                      {isLoading ? 'INICIANDO...' : 'INICIAR SESIÓN'}
-                      {!isLoading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+                      {isLoading
+                        ? 'INICIANDO...'
+                        : isLockedOut
+                          ? `BLOQUEADO (${remainingSeconds}s)`
+                          : 'INICIAR SESIÓN'}
+                      {!isLoading && !isLockedOut && (
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      )}
                     </span>
                   </Button>
                 </motion.div>

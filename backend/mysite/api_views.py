@@ -4,6 +4,7 @@ import secrets
 import unicodedata
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -56,6 +57,17 @@ def _password_valida(usuario, password_plano):
         legacy_ok = False
 
     return legacy_ok, legacy_ok
+
+
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 2 * 60
+
+
+def _get_client_ip(request):
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
 
 
 class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -591,14 +603,45 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if not correo or not contrasena:
             return Response({'error': 'correo y contrasena son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
 
+        correo_normalizado = correo.strip().lower()
+        ip_cliente = _get_client_ip(request)
+        lock_key = f"login_lock:{correo_normalizado}:{ip_cliente}"
+        if cache.get(lock_key):
+            return Response(
+                {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         try:
-            usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo_normalizado)
         except Usuario.DoesNotExist:
+            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
+            attempts = cache.get(attempts_key, 0) + 1
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
+                cache.delete(attempts_key)
+                return Response(
+                    {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
             return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
         password_ok, es_legacy = _password_valida(usuario, contrasena)
         if not password_ok:
+            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
+            attempts = cache.get(attempts_key, 0) + 1
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
+                cache.delete(attempts_key)
+                return Response(
+                    {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
             return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        cache.delete(f"login_attempts:{correo_normalizado}:{ip_cliente}")
 
         if es_legacy:
             nuevo_hash = make_password(contrasena)

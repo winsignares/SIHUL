@@ -27,7 +27,7 @@ def _password_valida(usuario, password_plano):
 # ---------- Protección Auth ----------
 
 MAX_LOGIN_ATTEMPTS = 5
-LOGIN_LOCKOUT_SECONDS = 5 * 60
+LOGIN_LOCKOUT_SECONDS = 2 * 60
 
 
 def _get_client_ip(request):
