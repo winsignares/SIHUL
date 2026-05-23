@@ -926,7 +926,6 @@ class Command(BaseCommand):
         grupo_no_encontrado = 0
         asignatura_no_encontrada = 0
         espacio_no_encontrado = 0
-        espacio_autocreado = 0
         hora_default = 0
 
         grupos = list(Grupo.objects.select_related('periodo', 'programa'))
@@ -1048,47 +1047,7 @@ class Command(BaseCommand):
                             )
 
                     if not espacio:
-                        if dry_run:
-                            espacio_no_encontrado += 1
-                            horarios_error += 1
-                            continue
-
-                        source_system = stg_horario.source_system or 'ORACLE_SIU'
-                        sede = self._resolve_sede(source_system, id_sede)
-                        if not sede:
-                            espacio_no_encontrado += 1
-                            horarios_error += 1
-                            continue
-
-                        nombre_espacio = nom_aula_raw
-                        if not nombre_espacio:
-                            nombre_espacio = f'NO DISPONIBLE ETL {id_sede or "SIN_SEDE"}'
-                        espacio = EspacioFisico.objects.filter(sede=sede, nombre__iexact=nombre_espacio).first()
-                        if not espacio:
-                            tipo_oracle_hint = 'AULA'
-                            nom_hint = self._normalize_text(nombre_espacio)
-                            if 'LAB' in nom_hint:
-                                tipo_oracle_hint = 'LAB'
-                            elif 'AUD' in nom_hint:
-                                tipo_oracle_hint = 'AUD'
-                            elif any(token in nom_hint for token in ['SALA', 'COMPUTO', 'INFORMATICA']):
-                                tipo_oracle_hint = 'SALA'
-                            tipo_nombre, tipo_desc = self._map_tipo_espacio(tipo_oracle_hint)
-                            tipo, _ = TipoEspacio.objects.get_or_create(
-                                nombre=tipo_nombre,
-                                defaults={'descripcion': tipo_desc},
-                            )
-                            espacio = EspacioFisico.objects.create(
-                                nombre=nombre_espacio,
-                                sede=sede,
-                                tipo=tipo,
-                                capacidad=0,
-                                ubicacion=nombre_espacio[:100],
-                                estado='Disponible',
-                                esta_abierto=True,
-                            )
-                            espacio_autocreado += 1
-                            _indexar_espacio(espacio)
+                        espacio_no_encontrado += 1
 
                     docente = None
                     num_doc = self._to_text(stg_horario.num_identificacion_docente)
@@ -1196,7 +1155,6 @@ class Command(BaseCommand):
                 f'Grupo no encontrado: {grupo_no_encontrado}, '
                 f'Asignatura no encontrada: {asignatura_no_encontrada}, '
                 f'Espacio no encontrado: {espacio_no_encontrado}, '
-                f'Espacio autocreado: {espacio_autocreado}, '
                 f'Horas por defecto aplicadas: {hora_default}'
             )
         )

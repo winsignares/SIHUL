@@ -16,7 +16,7 @@ class Horario(models.Model):
     grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='horarios')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='horarios')
     docente = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='horarios_docente')
-    espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='horarios')
+    espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='horarios', null=True, blank=True)
     dia_semana = models.CharField(max_length=15)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
