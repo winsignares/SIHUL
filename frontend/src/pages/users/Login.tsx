@@ -3,15 +3,21 @@ import { Input } from '../../share/input';
 import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { useNavigate } from 'react-router-dom';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
 import { useLogin } from '../../hooks/users/useLogin';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { publicServices } from '../../services/publicServices';
 
 export default function Login() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [publicRecaptchaToken, setPublicRecaptchaToken] = useState<string | null>(null);
+  const [publicAccessError, setPublicAccessError] = useState('');
+  const [isVerifyingPublicAccess, setIsVerifyingPublicAccess] = useState(false);
+  const publicRecaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
   const {
     email,
     setEmail,
@@ -27,6 +33,31 @@ export default function Login() {
     handlePublicAccess,
     handleMicrosoftLogin
   } = useLogin();
+
+  const handlePublicAccessClick = async () => {
+    if (!publicRecaptchaToken) {
+      setPublicAccessError('Debe completar la verificación reCAPTCHA para el acceso público.');
+      return;
+    }
+    setPublicAccessError('');
+    setIsVerifyingPublicAccess(true);
+    try {
+      await publicServices.verifyRecaptcha(publicRecaptchaToken);
+      localStorage.setItem('public_access_verified', 'true');
+      handlePublicAccess();
+    } catch (error) {
+      setPublicAccessError('No se pudo validar reCAPTCHA. Intenta nuevamente.');
+    } finally {
+      setIsVerifyingPublicAccess(false);
+    }
+  };
+
+  const handlePublicRecaptchaChange = (token: string | null) => {
+    setPublicRecaptchaToken(token);
+    if (token) {
+      setPublicAccessError('');
+    }
+  };
 
   return (
     <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
@@ -283,10 +314,27 @@ export default function Login() {
                   transition={{ delay: 0.6, duration: 0.5 }}
                   className="text-center pt-3"
                 >
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-xs text-slate-600">Debes verificar que eres humano para continuar.</p>
+                    {publicRecaptchaSiteKey ? (
+                      <ReCAPTCHA
+                        sitekey={publicRecaptchaSiteKey}
+                        onChange={handlePublicRecaptchaChange}
+                      />
+                    ) : (
+                      <p className="text-xs text-red-600">
+                        Falta configurar VITE_RECAPTCHA_SITE_KEY en el frontend.
+                      </p>
+                    )}
+                    {publicAccessError && (
+                      <p className="text-xs text-red-600">{publicAccessError}</p>
+                    )}
+                  </div>
                   <button
                     type="button"
-                    onClick={handlePublicAccess}
-                    className="text-slate-600 hover:text-red-600 font-semibold hover:underline transition-all duration-200"
+                    onClick={handlePublicAccessClick}
+                    className="mt-3 text-slate-600 hover:text-red-600 font-semibold hover:underline transition-all duration-200"
+                    disabled={!publicRecaptchaToken || isVerifyingPublicAccess}
                   >
                     Acceso Público
                   </button>

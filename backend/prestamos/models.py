@@ -124,6 +124,7 @@ class PrestamoEspacioPublico(models.Model):
     # Datos del préstamo
     administrador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='prestamos_publicos_admin')
     tipo_actividad = models.ForeignKey(TipoActividad, on_delete=models.PROTECT, related_name='prestamos_publicos')
+    token_publico = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     prestamo_padre = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,

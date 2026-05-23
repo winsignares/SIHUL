@@ -1,6 +1,18 @@
 import { apiClient } from '../core/apiClient';
 
 export const publicServices = {
+  verifyRecaptcha: async (token: string) => {
+    try {
+      const response = await apiClient.post('/prestamos/public/recaptcha/', {
+        recaptcha_token: token,
+      });
+      return response;
+    } catch (error) {
+      console.error('Error al validar reCAPTCHA público:', error);
+      throw error;
+    }
+  },
+
   consultaHorario: async () => {
     try {
       const response = await apiClient.get('/public/consulta-horario');

@@ -1,6 +1,13 @@
+import json
+import urllib.parse
+import urllib.request
+import uuid
+
+from django.conf import settings
 from django.db.models import Q
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from mysite.seccional_auth import SeccionalMixin
 from mysite.auth_helpers import get_role_name
@@ -22,8 +29,6 @@ class TipoActividadListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView)
     seccional_lookup = None
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
 
@@ -41,14 +46,12 @@ class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+            return PrestamoEspacio.objects.none()
         return super().get_queryset()
 
 
@@ -66,15 +69,80 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
-        if self.request.method in ['GET', 'POST']:
+        if self.request.method == 'POST':
             return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
+
+    def create(self, request, *args, **kwargs):
+        recaptcha_token = request.data.get('recaptcha_token') or request.data.get('recaptcha')
+        recaptcha_ok, recaptcha_error = _verify_recaptcha(
+            recaptcha_token,
+            request.META.get('REMOTE_ADDR')
+        )
+        if not recaptcha_ok:
+            return Response({"error": recaptcha_error}, status=status.HTTP_403_FORBIDDEN)
+
+        payload = request.data.copy()
+        payload.pop('recaptcha_token', None)
+        payload.pop('recaptcha', None)
+
+        serializer = self.get_serializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        token_publico = uuid.uuid4().hex
+        serializer.save(token_publico=token_publico)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+            return PrestamoEspacioPublico.objects.none()
         return super().get_queryset()
+
+
+def _verify_recaptcha(token, remote_ip=None):
+    if not settings.RECAPTCHA_SECRET_KEY:
+        if settings.DEBUG:
+            return True, ""
+        return False, "reCAPTCHA no está configurado"
+    if not token:
+        return False, "Token reCAPTCHA es requerido"
+
+    payload = {
+        'secret': settings.RECAPTCHA_SECRET_KEY,
+        'response': token,
+    }
+    if remote_ip:
+        payload['remoteip'] = remote_ip
+
+    try:
+        data = urllib.parse.urlencode(payload).encode()
+        req = urllib.request.Request(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data=data,
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=8) as response:
+            parsed = json.loads(response.read().decode('utf-8'))
+        if parsed.get('success'):
+            return True, ""
+        return False, "reCAPTCHA inválido"
+    except Exception:
+        return False, "No se pudo validar reCAPTCHA"
+
+
+class PublicAccessRecaptchaVerifyAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        recaptcha_token = request.data.get('recaptcha_token') or request.data.get('recaptcha')
+        recaptcha_ok, recaptcha_error = _verify_recaptcha(
+            recaptcha_token,
+            request.META.get('REMOTE_ADDR')
+        )
+        if not recaptcha_ok:
+            return Response({"error": recaptcha_error}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"success": True}, status=status.HTTP_200_OK)
 
 
 class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -84,12 +152,12 @@ class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdat
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
-        return [permissions.AllowAny()]
+        return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+            return PrestamoEspacioPublico.objects.none()
         return super().get_queryset()
 
 

@@ -76,6 +76,13 @@ function AppLayout() {
 // Componente Layout para rutas públicas (sin componentes)
 function PublicLayout() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const hasVerified = localStorage.getItem('public_access_verified') === 'true';
+    if (!hasVerified) {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
   
   const handlePublicLogout = () => {
     // Solo limpiar localStorage sin llamar al backend

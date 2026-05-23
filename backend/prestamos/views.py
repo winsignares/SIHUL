@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from django.db import transaction
+from django.conf import settings
+from django.utils.crypto import constant_time_compare
 from .models import PrestamoEspacio, PrestamoEspacioPublico, TipoActividad, PrestamoRecurso
 from espacios.models import EspacioFisico
 from usuarios.models import Usuario
@@ -12,6 +14,8 @@ import json
 import datetime
 import uuid
 import calendar
+import urllib.request
+import urllib.parse
 
 # ========== Helper Functions ==========
 
@@ -164,6 +168,59 @@ def _parse_recurrencia(data, fecha_base):
         'fin_repeticion_fecha': fin_fecha,
         'fin_repeticion_ocurrencias': fin_ocurrencias,
     }
+
+
+def _extract_public_token(request, data=None):
+    token = request.headers.get('X-Public-Token')
+    if not token:
+        token = request.GET.get('token_publico') or request.GET.get('token')
+    if not token and data:
+        token = data.get('token_publico') or data.get('token')
+    return (token or '').strip()
+
+
+def _require_public_token(request, prestamo, data=None):
+    user = getattr(request, 'user', None)
+    if user and user.is_authenticated:
+        return True, None
+
+    token = _extract_public_token(request, data)
+    if not token:
+        return False, JsonResponse({"error": "Token público requerido"}, status=403)
+    if not prestamo.token_publico or not constant_time_compare(prestamo.token_publico, token):
+        return False, JsonResponse({"error": "Token público inválido"}, status=403)
+    return True, None
+
+
+def _verify_recaptcha(token, remote_ip=None):
+    if not settings.RECAPTCHA_SECRET_KEY:
+        if settings.DEBUG:
+            return True, ""
+        return False, "reCAPTCHA no está configurado"
+    if not token:
+        return False, "Token reCAPTCHA es requerido"
+
+    payload = {
+        'secret': settings.RECAPTCHA_SECRET_KEY,
+        'response': token,
+    }
+    if remote_ip:
+        payload['remoteip'] = remote_ip
+
+    try:
+        data = urllib.parse.urlencode(payload).encode()
+        req = urllib.request.Request(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data=data,
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=8) as response:
+            parsed = json.loads(response.read().decode('utf-8'))
+        if parsed.get('success'):
+            return True, ""
+        return False, "reCAPTCHA inválido"
+    except Exception:
+        return False, "No se pudo validar reCAPTCHA"
 
 
 def _add_months(base_date, months):
@@ -964,6 +1021,14 @@ def create_prestamo_publico(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
         data = json.loads(request.body)
+
+        recaptcha_token = data.get('recaptcha_token') or data.get('recaptcha')
+        recaptcha_ok, recaptcha_error = _verify_recaptcha(
+            recaptcha_token,
+            request.META.get('REMOTE_ADDR')
+        )
+        if not recaptcha_ok:
+            return JsonResponse({"error": recaptcha_error}, status=403)
         
         # Datos personales (en lugar de usuario_id)
         nombre_completo = data.get('nombre_completo')
@@ -1039,6 +1104,7 @@ def create_prestamo_publico(request):
                 }, status=409)
 
         serie_id = str(uuid.uuid4()) if recurrencia['es_recurrente'] else None
+        token_publico = uuid.uuid4().hex
         
         with transaction.atomic():
             # Crear préstamo base
@@ -1050,6 +1116,7 @@ def create_prestamo_publico(request):
                 identificacion_solicitante=identificacion,
                 administrador=None,
                 tipo_actividad=tipo_actividad,
+                token_publico=token_publico,
                 prestamo_padre=None,
                 serie_id=serie_id,
                 es_ocurrencia_generada=False,
@@ -1081,6 +1148,7 @@ def create_prestamo_publico(request):
                     identificacion_solicitante=identificacion,
                     administrador=None,
                     tipo_actividad=tipo_actividad,
+                    token_publico=token_publico,
                     prestamo_padre=p,
                     serie_id=serie_id,
                     es_ocurrencia_generada=True,
@@ -1105,7 +1173,8 @@ def create_prestamo_publico(request):
             "id": p.id,
             "serie_id": p.serie_id,
             "es_recurrente": p.es_recurrente,
-            "ocurrencias_creadas": ocurrencias_creadas
+            "ocurrencias_creadas": ocurrencias_creadas,
+            "token_publico": token_publico
         }, status=201)
         
     except EspacioFisico.DoesNotExist:
@@ -1184,6 +1253,10 @@ def list_prestamos_publicos(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
     try:
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
+
         user_sede = getattr(request, 'sede', None)
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
@@ -1247,6 +1320,10 @@ def get_prestamo_publico(request, id=None):
             'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
         ).prefetch_related('ocurrencias_generadas_publicas').get(id=id)
 
+        allowed, error_response = _require_public_token(request, p)
+        if not allowed:
+            return error_response
+
         response = {
             "id": p.id,
             "espacio_id": p.espacio.id,
@@ -1300,6 +1377,9 @@ def update_prestamo_publico(request):
             return JsonResponse({"error": "ID es requerido"}, status=400)
         
         p = PrestamoEspacioPublico.objects.get(id=id)
+        allowed, error_response = _require_public_token(request, p, data)
+        if not allowed:
+            return error_response
         actualizar_serie = bool(data.get('actualizar_serie', False))
 
         if actualizar_serie and p.es_recurrente and p.prestamo_padre is None:
@@ -1497,6 +1577,10 @@ def list_prestamos_publicos_by_identificacion(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
     try:
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
+
         identificacion = (request.GET.get('identificacion') or '').strip()
         correo = (request.GET.get('correo') or '').strip().lower()
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
@@ -1567,6 +1651,9 @@ def delete_prestamo_publico(request):
             return JsonResponse({"error": "ID es requerido"}, status=400)
 
         p = PrestamoEspacioPublico.objects.get(id=prestamo_id)
+        allowed, error_response = _require_public_token(request, p, data)
+        if not allowed:
+            return error_response
 
         if identificacion and correo:
             if p.identificacion_solicitante != identificacion or p.correo_solicitante.lower() != correo:

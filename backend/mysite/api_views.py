@@ -39,7 +39,12 @@ from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, Usuari
 
 from .auth_helpers import is_admin_global, is_admin_sistema
 from .seccional_auth import SeccionalMixin
-from .permissions import IsAuthenticatedReadOnlyOrAdminWrite, IsAdminGlobal, IsAdminSistema
+from .permissions import (
+    IsAdminGlobal,
+    IsAdminSistema,
+    IsAdminUserManagement,
+    IsAuthenticatedReadOnlyOrAdminWrite,
+)
 
 from espacios import api_adapters as espacios_api
 from horario import api_adapters as horario_api
@@ -99,17 +104,15 @@ class SedeViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Sede.objects.all()
     serializer_class = SedeSerializer
     seccional_lookup = 'seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Sede.objects.all()
+            return Sede.objects.none()
         return super().get_queryset()
 
 
@@ -117,17 +120,15 @@ class FacultadViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Facultad.objects.all()
     serializer_class = FacultadSerializer
     seccional_lookup = 'sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Facultad.objects.all()
+            return Facultad.objects.none()
         return super().get_queryset()
 
 
@@ -135,17 +136,15 @@ class ProgramaViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Programa.objects.all()
     serializer_class = ProgramaSerializer
     seccional_lookup = 'facultad__sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Programa.objects.all()
+            return Programa.objects.none()
         return super().get_queryset()
 
 
@@ -153,24 +152,22 @@ class GrupoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Grupo.objects.all()
     serializer_class = GrupoSerializer
     seccional_lookup = 'programa__facultad__sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
 
 class AsignaturaViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Asignatura.objects.all()
     serializer_class = AsignaturaSerializer
     seccional_lookup = 'sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Asignatura.objects.all()
+            return Asignatura.objects.none()
         return super().get_queryset()
 
 
@@ -178,24 +175,22 @@ class AsignaturaProgramaViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = AsignaturaPrograma.objects.select_related('programa', 'asignatura')
     serializer_class = AsignaturaProgramaSerializer
     seccional_lookup = 'asignatura__sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
 
 class TipoEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = TipoEspacio.objects.all()
     serializer_class = TipoEspacioSerializer
     seccional_lookup = None
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return TipoEspacio.objects.all()
+            return TipoEspacio.objects.none()
         return super().get_queryset()
 
 
@@ -203,17 +198,15 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = EspacioFisico.objects.select_related('sede', 'tipo').prefetch_related('espacio_recursos__recurso')
     serializer_class = EspacioFisicoSerializer
     seccional_lookup = 'sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return self.queryset
+            return self.queryset.none()
         return super().get_queryset()
 
     @action(detail=False, methods=['get'], url_path='horarios/all')
@@ -291,7 +284,7 @@ class EspacioPermitidoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = EspacioPermitido.objects.select_related('espacio', 'usuario')
     serializer_class = EspacioPermitidoSerializer
     seccional_lookup = 'espacio__sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     @action(detail=False, methods=['get'], url_path=r'usuario/(?P<usuario_id>\d+)')
     def por_usuario(self, request, usuario_id=None):
@@ -305,16 +298,6 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_permissions(self):
-        public_actions = {
-            'list_extendidos',
-            'por_periodo',
-            'exportar_pdf',
-            'exportar_excel',
-            'exportar_pdf_docente',
-            'exportar_excel_docente',
-        }
-        if self.action in public_actions:
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def create(self, request, *args, **kwargs):
@@ -500,11 +483,13 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
     serializer_class = UsuarioSerializer
     seccional_lookup = 'seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminUserManagement]
 
     def get_permissions(self):
-        if self.action in ('login', 'list_docentes'):
+        if self.action in ('login',):
             return [permissions.AllowAny()]
+        if self.action in ('list', 'retrieve', 'session_auth_state'):
+            return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
     def get_serializer_class(self):
@@ -770,7 +755,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         usuario.save()
         return Response({'message': 'Contraseña cambiada exitosamente'}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='docentes', permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['get'], url_path='docentes', permission_classes=[permissions.IsAuthenticated])
     def list_docentes(self, request):
         docentes = self.get_queryset()
         data = [
@@ -791,17 +776,15 @@ class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Recurso.objects.all()
     serializer_class = RecursoSerializer
     seccional_lookup = None
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Recurso.objects.all().distinct().order_by('nombre')
+            return Recurso.objects.none()
         return super().get_queryset().distinct().order_by('nombre')
 
 
@@ -809,7 +792,7 @@ class EspacioRecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = EspacioRecurso.objects.select_related('espacio', 'recurso').all()
     serializer_class = EspacioRecursoSerializer
     seccional_lookup = 'espacio__sede__seccional'
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     @action(detail=False, methods=['get'], url_path=r'por-ids/(?P<espacio_id>\d+)/(?P<recurso_id>\d+)')
     def por_ids(self, request, espacio_id=None, recurso_id=None):

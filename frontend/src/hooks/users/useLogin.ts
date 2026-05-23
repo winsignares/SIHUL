@@ -67,12 +67,17 @@ export function useLogin() {
 
     const handlePublicAccess = () => {
         console.log('[useLogin] Acceso público solicitado');
+
+        const publicVerified = localStorage.getItem('public_access_verified');
         
         // Limpiar cualquier data de autenticación y cache del localStorage
         localStorage.clear();
         
         // Marcar que es acceso público
         localStorage.setItem('auth_is_public', 'true');
+        if (publicVerified) {
+            localStorage.setItem('public_access_verified', publicVerified);
+        }
         
         navigate('/public/dashboard', { replace: true });
     };

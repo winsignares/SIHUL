@@ -6,17 +6,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import PeriodoAcademico
+from mysite.permissions import IsAuthenticatedReadOnlyOrAdminWrite
 from .serializers import PeriodoAcademicoSerializer
 
 
 class PeriodoAcademicoListCreateAPIView(generics.ListCreateAPIView):
     queryset = PeriodoAcademico.objects.all().order_by('-id')
     serializer_class = PeriodoAcademicoSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
-        if self.request.method == 'GET':
-            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
@@ -27,7 +26,7 @@ class PeriodoAcademicoListCreateAPIView(generics.ListCreateAPIView):
 class PeriodoAcademicoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = PeriodoAcademico.objects.all()
     serializer_class = PeriodoAcademicoSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
@@ -63,7 +62,7 @@ class PeriodoAcademicoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class PeriodoAcademicoCopyAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     @transaction.atomic
     def post(self, request):
@@ -126,7 +125,7 @@ class PeriodoAcademicoCopyAPIView(APIView):
 
 
 class PeriodoAcademicoActivoAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         PeriodoAcademico.sincronizar_activos_por_fecha()
@@ -137,7 +136,7 @@ class PeriodoAcademicoActivoAPIView(APIView):
 
 
 class PeriodoPorRangoFechasAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         """

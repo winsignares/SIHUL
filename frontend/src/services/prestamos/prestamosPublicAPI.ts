@@ -41,6 +41,7 @@ export interface SolicitudPrestamoPublico {
     fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
     fin_repeticion_fecha?: string;
     fin_repeticion_ocurrencias?: number;
+    recaptcha_token?: string;
 }
 
 export interface PrestamoPublicoItem {
@@ -282,7 +283,7 @@ export const prestamosPublicAPI = {
     /**
      * Crea una solicitud de préstamo para usuarios públicos
      */
-    crearSolicitud: async (solicitud: SolicitudPrestamoPublico): Promise<{ message: string; id: number }> => {
+    crearSolicitud: async (solicitud: SolicitudPrestamoPublico): Promise<{ message: string; id: number; token_publico?: string }> => {
         const created = await apiClient.post<PrestamoPublicoApi>('/prestamos/publicos/', {
             espacio: solicitud.espacio_id,
             nombre_solicitante: solicitud.nombre_completo,
@@ -302,8 +303,9 @@ export const prestamosPublicAPI = {
             fin_repeticion_tipo: solicitud.fin_repeticion_tipo,
             fin_repeticion_fecha: solicitud.fin_repeticion_fecha,
             fin_repeticion_ocurrencias: solicitud.fin_repeticion_ocurrencias,
+            recaptcha_token: solicitud.recaptcha_token,
         });
-        return { message: 'Solicitud creada', id: created.id };
+        return { message: 'Solicitud creada', id: created.id, token_publico: (created as any).token_publico };
     },
 
     /**

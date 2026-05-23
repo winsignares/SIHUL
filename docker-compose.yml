@@ -50,6 +50,9 @@ services:
       DB_USER: postgres
       DB_PASSWORD: mysecretpassword
       DB_NAME: mypostgresdb
+      # reCAPTCHA
+      RECAPTCHA_SITE_KEY: "6LcHXPksAAAAAEHasHsSficubqOfvM5DG_vRWrDl"
+      RECAPTCHA_SECRET_KEY: "6LcHXPksAAAAANMp0GJQhYMmJfPA37Wyh6eiRLiX"
       # Python
       PYTHONUNBUFFERED: "1"
       # Memoria
@@ -91,6 +94,7 @@ services:
       VITE_HMR_HOST: "localhost"
       VITE_HMR_PORT: "5173"
       VITE_API_URL: "http://localhost:8000"
+      VITE_RECAPTCHA_SITE_KEY: "6LcHXPksAAAAAEHasHsSficubqOfvM5DG_vRWrDl"
       TZ: "America/Bogota"
     depends_on:
       - backend

@@ -26,6 +26,7 @@ import {
     X as XIcon,
     Search
 } from 'lucide-react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { usePublicPrestamo } from '../../hooks/prestamos/usePublicPrestamo';
 
 export default function PublicPrestamo() {
@@ -73,7 +74,9 @@ export default function PublicPrestamo() {
         finRepeticionOcurrencias,
         setFinRepeticionOcurrencias,
         repeatOptions,
-        recurrenceSummary
+        recurrenceSummary,
+        recaptchaToken,
+        handleRecaptchaChange
     } = usePublicPrestamo();
 
     const getEstadoBadge = (estado: string) => {
@@ -579,6 +582,20 @@ export default function PublicPrestamo() {
                             <p className="text-xs text-slate-600 dark:text-slate-400">{recurrenceSummary}</p>
                         </div>
 
+                        {/* reCAPTCHA */}
+                        <div className="space-y-2">
+                            <Label>Verificación de seguridad</Label>
+                            <div className="flex flex-col items-start gap-2">
+                                <ReCAPTCHA
+                                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                                    onChange={handleRecaptchaChange}
+                                />
+                                {errors.recaptcha && (
+                                    <p className="text-xs text-red-600 dark:text-red-400">{errors.recaptcha}</p>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Error general */}
                         {errors.submit && (
                             <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -593,7 +610,7 @@ export default function PublicPrestamo() {
                         <div className="flex justify-end gap-3 pt-4">
                             <Button
                                 onClick={handleSubmit}
-                                disabled={submitting}
+                                disabled={submitting || !recaptchaToken}
                                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8"
                             >
                                 {submitting ? (

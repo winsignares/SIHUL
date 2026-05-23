@@ -74,6 +74,7 @@ export function usePublicPrestamo() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [showSuccess, setShowSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
     // Datos de catálogos
     const [sedes, setSedes] = useState<Sede[]>([]);
@@ -288,6 +289,17 @@ export function usePublicPrestamo() {
         }
     };
 
+    const handleRecaptchaChange = (token: string | null) => {
+        setRecaptchaToken(token);
+        if (token) {
+            setErrors(prev => {
+                const next = { ...prev };
+                delete next.recaptcha;
+                return next;
+            });
+        }
+    };
+
     const handleSedeChange = (sedeId: number) => {
         setSedeSeleccionada(sedeId);
         // Limpiar selección de espacio cuando cambie la sede
@@ -480,6 +492,10 @@ export function usePublicPrestamo() {
             newErrors.recurrencia_fin_ocurrencias = 'Debe indicar un número de repeticiones mayor que 0';
         }
 
+        if (!recaptchaToken) {
+            newErrors.recaptcha = 'Debe completar la verificación reCAPTCHA';
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -495,6 +511,7 @@ export function usePublicPrestamo() {
             const response = await prestamosPublicAPI.crearSolicitud({
                 ...(formData as SolicitudPrestamoPublico),
                 ...recurrencePayload,
+                recaptcha_token: recaptchaToken || undefined,
             });
             
             setSuccessMessage(response.message);
@@ -527,6 +544,7 @@ export function usePublicPrestamo() {
                 identificacion: formData.identificacion || '',
                 correo: formData.correo_institucional || ''
             });
+            setRecaptchaToken(null);
             await cargarMisSolicitudes(formData.identificacion || '', formData.correo_institucional || '');
             
             // Ocultar mensaje de éxito después de 5 segundos
@@ -571,6 +589,8 @@ export function usePublicPrestamo() {
         cancelarEdicionSolicitud,
         guardarEdicionSolicitud,
         eliminarSolicitud,
+        recaptchaToken,
+        handleRecaptchaChange,
         repeatOption,
         setRepeatOption,
         customPeriod,
