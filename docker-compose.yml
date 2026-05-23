@@ -109,9 +109,11 @@ services:
       VITE_HMR_HOST: "localhost"
       VITE_HMR_PORT: "5173"
       VITE_API_URL: "http://localhost:8000"
+      VITE_CHATBOT_URL: "http://localhost:8001"
       TZ: "America/Bogota"
     depends_on:
       - backend
+      - chatbot
     networks:
       - sihul_network
     stdin_open: true
