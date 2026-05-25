@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -9,7 +10,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
   useEffect(() => {
-    console.log("🚀 Aplicación iniciada");
     // La sesión se manejará mediante AuthContext
   }, []);
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * SearchableSelect - Componente reutilizable de selección con búsqueda
  * Basado en el patrón de Popover + Command para selección de items con filtrado

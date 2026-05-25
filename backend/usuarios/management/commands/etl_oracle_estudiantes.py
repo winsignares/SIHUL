@@ -3,8 +3,10 @@ import json
 import os
 
 import oracledb
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from mysite.oracle_seccional_filter import (
     execute_oracle_query_with_optional_seccional,
@@ -43,11 +45,19 @@ class Command(BaseCommand):
             type=str,
             default=("SELECT * FROM UHORARIOS.VW_ESTUDIANTES"
             "WHERE PERIODO_ACADEMICO = '20261' "),
+            default=f"SELECT * FROM UHORARIOS.VW_ESTUDIANTES WHERE PERIODO_ACADEMICO LIKE '{settings.ETL_PERIODO}'",
             help='Consulta Oracle para estudiantes',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
         parser.add_argument('--no-input', action='store_true', help='No pedir confirmacion en modo real')
         parser.add_argument('--limit', type=int, default=None)
+        parser.add_argument('--offset', type=int, default=0)
+        parser.add_argument(
+            '--batch-size',
+            type=int,
+            default=2000,
+            help='Tamano de lote para lectura Oracle y escritura bulk en PostgreSQL',
+        )
         parser.add_argument(
             '--seccional',
             type=str,
@@ -110,9 +120,9 @@ class Command(BaseCommand):
         }
         return sorted(tokens)
 
-    def _execute_students_by_program_tokens(self, cursor, base_query, program_tokens, limit):
+    def _execute_students_by_program_tokens(self, cursor, base_query, program_tokens):
         if not program_tokens:
-            return []
+            return
 
         max_in_list = 900  # Oracle ORA-01795 guard
         normalized_program_expr = "UPPER(TRIM(NVL(TO_CHAR(SRC_Q.PROGRAMA), '')))"
@@ -130,12 +140,149 @@ class Command(BaseCommand):
             all_clauses.append(f"{normalized_program_expr} IN ({', '.join(placeholders)})")
 
         filtered_query = f"SELECT * FROM ({base_query}) SRC_Q WHERE ({' OR '.join(all_clauses)})"
-        if limit and int(limit) > 0:
-            filtered_query = f"SELECT * FROM ({filtered_query}) LIM_Q WHERE ROWNUM <= :max_rows"
-            params['max_rows'] = int(limit)
-
         cursor.execute(filtered_query, params)
-        return cursor.fetchall()
+
+    @staticmethod
+    def _build_paginated_query(base_query, limit=None, offset=0):
+        safe_offset = max(0, int(offset or 0))
+        safe_limit = int(limit) if limit and int(limit) > 0 else None
+
+        if safe_offset == 0 and safe_limit is None:
+            return base_query
+
+        if safe_limit is not None:
+            upper_bound = safe_offset + safe_limit
+            return (
+                "SELECT * FROM ("
+                "SELECT SRC_Q.*, ROWNUM AS pg_rn "
+                f"FROM ({base_query}) SRC_Q "
+                f"WHERE ROWNUM <= {upper_bound}"
+                f") PAG_Q WHERE pg_rn > {safe_offset}"
+            )
+
+        return (
+            "SELECT * FROM ("
+            "SELECT SRC_Q.*, ROWNUM AS pg_rn "
+            f"FROM ({base_query}) SRC_Q"
+            f") PAG_Q WHERE pg_rn > {safe_offset}"
+        )
+
+    def _build_staged_entry(self, data, summary):
+        raw_payload = {
+            'tip_identificacion': self._first_present(data, ['tip_identificacion', 'tipo_identificacion']),
+            'id_estudiante': self._first_present(data, ['id_estudiante']),
+            'codigo_estudiante': self._first_present(data, ['codigo_estudiante']),
+            'nombres': self._first_present(data, ['nombres']),
+            'apellidos': self._first_present(data, ['apellidos']),
+            'nombre_completo': self._first_present(data, ['nombre_completo']),
+            'semestre': self._first_present(data, ['semestre']),
+            'periodo_academico': self._first_present(data, ['periodo_academico']),
+            'programa': self._first_present(data, ['programa']),
+        }
+
+        tipo_identificacion = self._to_text(raw_payload['tip_identificacion'])
+        id_estudiante_oracle = self._to_text(raw_payload['id_estudiante'])
+        codigo_estudiante_oracle = self._to_text(raw_payload['codigo_estudiante'])
+        nombres = self._to_text(raw_payload['nombres'])
+        apellidos = self._to_text(raw_payload['apellidos'])
+        nombre_completo_oracle = self._to_text(raw_payload['nombre_completo'])
+
+        if tipo_identificacion and id_estudiante_oracle:
+            external_id = f'{tipo_identificacion}:{id_estudiante_oracle}'
+        elif id_estudiante_oracle:
+            external_id = id_estudiante_oracle
+        elif codigo_estudiante_oracle:
+            external_id = codigo_estudiante_oracle
+        else:
+            external_id = f'NOID:{self._row_hash({"nombres": nombres, "apellidos": apellidos})[:16]}'
+            summary['staging']['without_strong_id'] += 1
+
+        row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
+        defaults = {
+            'tipo_identificacion': tipo_identificacion or None,
+            'id_estudiante_oracle': id_estudiante_oracle or None,
+            'codigo_estudiante_oracle': codigo_estudiante_oracle or None,
+            'nombres': nombres or None,
+            'apellidos': apellidos or None,
+            'nombre_completo': self._build_nombre_completo(
+                nombres,
+                apellidos,
+                nombre_completo_oracle,
+            ),
+            'semestre_oracle': self._to_non_negative_int(raw_payload['semestre'], default=None),
+            'periodo_academico': self._to_text(raw_payload['periodo_academico']) or None,
+            'programa_oracle': self._to_text(raw_payload['programa']) or None,
+            'raw_data': data,
+            'row_hash': row_hash,
+            'estado_registro': (
+                'valido'
+                if (tipo_identificacion and id_estudiante_oracle)
+                or id_estudiante_oracle
+                or codigo_estudiante_oracle
+                else 'sin_identificador'
+            ),
+        }
+        return external_id, defaults
+
+    def _upsert_batch(self, source_system, staged_by_external, summary):
+        if not staged_by_external:
+            return
+
+        existing_qs = StgOracleEstudiante.objects.filter(
+            source_system=source_system,
+            external_id__in=staged_by_external.keys(),
+        )
+        existing_by_external = {obj.external_id: obj for obj in existing_qs}
+        now = timezone.now()
+        to_create = []
+        to_update = []
+
+        for external_id, defaults in staged_by_external.items():
+            current = existing_by_external.get(external_id)
+            if current is None:
+                summary['staging']['created'] += 1
+                to_create.append(
+                    StgOracleEstudiante(
+                        source_system=source_system,
+                        external_id=external_id,
+                        fecha_carga=now,
+                        **defaults,
+                    )
+                )
+                continue
+
+            if current.row_hash == defaults['row_hash']:
+                summary['staging']['unchanged'] += 1
+                continue
+
+            summary['staging']['updated'] += 1
+            for field_name, field_value in defaults.items():
+                setattr(current, field_name, field_value)
+            current.fecha_carga = now
+            to_update.append(current)
+
+        if to_create:
+            StgOracleEstudiante.objects.bulk_create(to_create, batch_size=1000)
+        if to_update:
+            StgOracleEstudiante.objects.bulk_update(
+                to_update,
+                fields=[
+                    'tipo_identificacion',
+                    'id_estudiante_oracle',
+                    'codigo_estudiante_oracle',
+                    'nombres',
+                    'apellidos',
+                    'nombre_completo',
+                    'semestre_oracle',
+                    'periodo_academico',
+                    'programa_oracle',
+                    'raw_data',
+                    'row_hash',
+                    'estado_registro',
+                    'fecha_carga',
+                ],
+                batch_size=1000,
+            )
 
     def handle(self, *args, **options):
         host = options['host']
@@ -148,6 +295,8 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         no_input = options['no_input']
         limit = options['limit']
+        offset = options['offset']
+        batch_size = max(100, int(options['batch_size'] or 2000))
         seccional = options['seccional']
 
         if not all([host, user, password, service]):
@@ -179,131 +328,64 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
+            cursor.arraysize = batch_size
             normalized_seccional = normalize_seccional_name(seccional)
-            rows = []
             columns = []
+            paginated_query = self._build_paginated_query(query, limit=limit, offset=offset)
 
             if normalized_seccional:
                 self.stdout.write(f"Filtro seccional optimizado para estudiantes: {normalized_seccional}")
                 program_tokens = self._fetch_program_tokens_for_seccional(cursor, normalized_seccional)
                 self.stdout.write(f'Programas de la seccional detectados: {len(program_tokens)}')
-                rows = self._execute_students_by_program_tokens(cursor, query, program_tokens, limit)
+                self._execute_students_by_program_tokens(cursor, paginated_query, program_tokens)
                 columns = [desc[0].lower() for desc in cursor.description]
             else:
                 execute_oracle_query_with_optional_seccional(
                     cursor,
-                    query,
+                    paginated_query,
                     seccional=seccional,
                     seccional_columns=('SEDE', 'NOMBRE_SEDE'),
                     seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
-                    limit=limit,
+                    limit=None,
                     stdout=self.stdout,
                 )
-                rows = cursor.fetchall()
                 columns = [desc[0].lower() for desc in cursor.description]
 
-            summary['extract']['rows'] = len(rows)
             summary['extract']['columns'] = columns
-            self.stdout.write(self.style.SUCCESS(f'Registros Oracle extraidos: {len(rows)}'))
+            processed_external_ids_global = set()
+            while True:
+                fetched = cursor.fetchmany(batch_size)
+                if not fetched:
+                    break
 
-            staged_by_external = {}
-            for row in rows:
-                data = dict(zip(columns, row))
+                summary['extract']['rows'] += len(fetched)
+                staged_by_external = {}
 
-                raw_payload = {
-                    'tip_identificacion': self._first_present(data, ['tip_identificacion', 'tipo_identificacion']),
-                    'id_estudiante': self._first_present(data, ['id_estudiante']),
-                    'codigo_estudiante': self._first_present(data, ['codigo_estudiante']),
-                    'nombres': self._first_present(data, ['nombres']),
-                    'apellidos': self._first_present(data, ['apellidos']),
-                    'nombre_completo': self._first_present(data, ['nombre_completo']),
-                    'semestre': self._first_present(data, ['semestre']),
-                    'periodo_academico': self._first_present(data, ['periodo_academico']),
-                    'programa': self._first_present(data, ['programa']),
-                }
+                for row in fetched:
+                    data = dict(zip(columns, row))
+                    external_id, defaults = self._build_staged_entry(data, summary)
+                    if external_id in staged_by_external:
+                        summary['staging']['duplicate_external_ids_in_batch'] += 1
+                    staged_by_external[external_id] = defaults
 
-                tipo_identificacion = self._to_text(raw_payload['tip_identificacion'])
-                id_estudiante_oracle = self._to_text(raw_payload['id_estudiante'])
-                codigo_estudiante_oracle = self._to_text(raw_payload['codigo_estudiante'])
-                nombres = self._to_text(raw_payload['nombres'])
-                apellidos = self._to_text(raw_payload['apellidos'])
-                nombre_completo_oracle = self._to_text(raw_payload['nombre_completo'])
+                processed_external_ids_global.update(staged_by_external.keys())
+                summary['staging']['unique_external_ids'] = len(processed_external_ids_global)
 
-                if tipo_identificacion and id_estudiante_oracle:
-                    external_id = f'{tipo_identificacion}:{id_estudiante_oracle}'
-                elif id_estudiante_oracle:
-                    external_id = id_estudiante_oracle
-                elif codigo_estudiante_oracle:
-                    external_id = codigo_estudiante_oracle
-                else:
-                    external_id = f'NOID:{self._row_hash({"nombres": nombres, "apellidos": apellidos})[:16]}'
-                    summary['staging']['without_strong_id'] += 1
+                if not dry_run:
+                    with transaction.atomic():
+                        self._upsert_batch(source_system, staged_by_external, summary)
 
-                row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
+                self.stdout.write(
+                    f"Lote procesado: {len(fetched)} filas | "
+                    f"Total: {summary['extract']['rows']}"
+                )
 
-                defaults = {
-                    'tipo_identificacion': tipo_identificacion or None,
-                    'id_estudiante_oracle': id_estudiante_oracle or None,
-                    'codigo_estudiante_oracle': codigo_estudiante_oracle or None,
-                    'nombres': nombres or None,
-                    'apellidos': apellidos or None,
-                    'nombre_completo': self._build_nombre_completo(
-                        nombres,
-                        apellidos,
-                        nombre_completo_oracle,
-                    ),
-                    'semestre_oracle': self._to_non_negative_int(raw_payload['semestre'], default=None),
-                    'periodo_academico': self._to_text(raw_payload['periodo_academico']) or None,
-                    'programa_oracle': self._to_text(raw_payload['programa']) or None,
-                    'raw_data': data,
-                    'row_hash': row_hash,
-                    'estado_registro': (
-                        'valido'
-                        if (tipo_identificacion and id_estudiante_oracle)
-                        or id_estudiante_oracle
-                        or codigo_estudiante_oracle
-                        else 'sin_identificador'
-                    ),
-                }
-
-                if external_id in staged_by_external:
-                    summary['staging']['duplicate_external_ids_in_batch'] += 1
-
-                # Keep latest row for duplicated external_id within the same extraction batch.
-                staged_by_external[external_id] = defaults
-
-            processed_external_ids = list(staged_by_external.keys())
-            summary['staging']['unique_external_ids'] = len(processed_external_ids)
-
-            existing_by_external = {
-                row['external_id']: row['row_hash']
-                for row in StgOracleEstudiante.objects.filter(
-                    source_system=source_system,
-                    external_id__in=processed_external_ids,
-                ).values('external_id', 'row_hash')
-            }
-
-            for external_id, defaults in staged_by_external.items():
-                previous_hash = existing_by_external.get(external_id)
-                if previous_hash is None:
-                    summary['staging']['created'] += 1
-                elif previous_hash != defaults['row_hash']:
-                    summary['staging']['updated'] += 1
-                else:
-                    summary['staging']['unchanged'] += 1
+            self.stdout.write(self.style.SUCCESS(f"Registros Oracle extraidos: {summary['extract']['rows']}"))
 
             if dry_run:
                 self.stdout.write(self.style.WARNING('DRY-RUN: no se guarda staging de estudiantes'))
                 self.stdout.write(str(summary))
                 return
-
-            with transaction.atomic():
-                for external_id, defaults in staged_by_external.items():
-                    StgOracleEstudiante.objects.update_or_create(
-                        source_system=source_system,
-                        external_id=external_id,
-                        defaults=defaults,
-                    )
 
             self.stdout.write(self.style.SUCCESS('ETL estudiantes finalizado (Oracle -> staging)'))
             self.stdout.write(str(summary))

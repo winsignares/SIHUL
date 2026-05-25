@@ -218,3 +218,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# ETL configurations
+ETL_PERIODO = os.getenv('ETL_PERIODO', '20261')
+

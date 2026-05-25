@@ -575,7 +575,7 @@ export default function ConsultaEspacios() {
             const sortedDays = [...selectedDays].sort((a, b) => a - b);
 
             // Buscar el siguiente día en la semana actual
-            let nextDay = sortedDays.find(d => d > currentMondayIndex);
+            const nextDay = sortedDays.find(d => d > currentMondayIndex);
 
             if (nextDay !== undefined) {
               // Hay un día posterior en esta semana

@@ -147,7 +147,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             });
 
             // El backend ya hace el filtrado correcto, solo mapeamos
-            let notifsMapeadas = response.notificaciones.map(mapearNotificacion);
+            const notifsMapeadas = response.notificaciones.map(mapearNotificacion);
 
             setNotificaciones(notifsMapeadas);
             

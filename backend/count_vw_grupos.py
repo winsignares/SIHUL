@@ -1,6 +1,6 @@
-#!/usr/bin/env python
 import oracledb
 import sys
+import os
 
 def count_grupos():
     try:
@@ -15,7 +15,9 @@ def count_grupos():
         cursor = connection.cursor()
         
         print("Contando registros en VW_GRUPOS_ACADEMICOS...")
-        cursor.execute("SELECT COUNT(*) as total FROM VW_GRUPOS_ACADEMICOS")
+        periodo = os.getenv('ETL_PERIODO', '20261')
+        print(f"Buscando periodo: {periodo}")
+        cursor.execute(f"SELECT COUNT(*) as total FROM VW_GRUPOS_ACADEMICOS WHERE PERIODO_ACADEMICO LIKE '{periodo}'")
         result = cursor.fetchone()
         total = result[0]
         

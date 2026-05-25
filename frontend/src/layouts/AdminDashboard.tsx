@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';

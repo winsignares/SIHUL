@@ -3,6 +3,7 @@ import json
 import os
 
 import oracledb
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -23,7 +24,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-            default='SELECT * FROM UHORARIOS.VW_GRUPOS_ACADEMICOS',
+            default=f"SELECT * FROM UHORARIOS.VW_GRUPOS_ACADEMICOS WHERE PERIODO_ACADEMICO LIKE '{settings.ETL_PERIODO}'",
             help='Consulta Oracle para grupos academicos',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
