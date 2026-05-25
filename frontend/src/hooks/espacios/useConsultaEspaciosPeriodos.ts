@@ -34,18 +34,20 @@ function normalizarDia(dia: string): string {
 }
 
 function mapearHorariosAOcupacion(horarios: HorarioExtendido[]): OcupacionView[] {
-  return horarios.map((h) => ({
-    id: h.id,
-    espacioId: h.espacio_id.toString(),
-    dia: normalizarDia(h.dia_semana),
-    horaInicio: parseInt(h.hora_inicio.split(':')[0], 10),
-    horaFin: parseInt(h.hora_fin.split(':')[0], 10),
-    materia: h.asignatura_nombre,
-    docente: h.docente_nombre,
-    grupo: h.grupo_nombre,
-    estado: h.estado === 'pendiente' ? 'pendiente' : 'ocupado',
-    tipo: 'horario'
-  }));
+  return horarios
+    .filter((h) => h.espacio_id != null)
+    .map((h) => ({
+      id: h.id,
+      espacioId: String(h.espacio_id),
+      dia: normalizarDia(h.dia_semana),
+      horaInicio: parseInt(h.hora_inicio.split(':')[0], 10),
+      horaFin: parseInt(h.hora_fin.split(':')[0], 10),
+      materia: h.asignatura_nombre,
+      docente: h.docente_nombre,
+      grupo: h.grupo_nombre,
+      estado: h.estado === 'pendiente' ? 'pendiente' : 'ocupado',
+      tipo: 'horario'
+    }));
 }
 
 function ordenarPeriodosPorRelevancia(periodos: PeriodoConMetricas[]): PeriodoConMetricas[] {

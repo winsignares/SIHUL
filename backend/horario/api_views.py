@@ -157,20 +157,24 @@ def list_horarios_extendidos(request):
 
     lst = []
     for i in qs:
+        grupo = i.grupo
+        programa = grupo.programa if grupo else None
+        asignatura = i.asignatura
+        espacio = i.espacio
         lst.append(
             {
                 'id': i.id,
-                'grupo_id': i.grupo.id,
-                'grupo_nombre': i.grupo.nombre,
-                'programa_id': i.grupo.programa.id,
-                'programa_nombre': i.grupo.programa.nombre,
-                'semestre': i.grupo.semestre,
-                'asignatura_id': i.asignatura.id,
-                'asignatura_nombre': i.asignatura.nombre,
+                'grupo_id': grupo.id if grupo else None,
+                'grupo_nombre': grupo.nombre if grupo else 'Sin grupo',
+                'programa_id': programa.id if programa else None,
+                'programa_nombre': programa.nombre if programa else 'Sin programa',
+                'semestre': grupo.semestre if grupo else None,
+                'asignatura_id': asignatura.id if asignatura else None,
+                'asignatura_nombre': asignatura.nombre if asignatura else 'Sin asignatura',
                 'docente_id': (i.docente.id if i.docente else None),
                 'docente_nombre': i.docente.nombre if i.docente else 'Sin asignar',
-                'espacio_id': i.espacio.id,
-                'espacio_nombre': i.espacio.nombre,
+                'espacio_id': espacio.id if espacio else None,
+                'espacio_nombre': espacio.nombre if espacio else 'Sin espacio',
                 'dia_semana': i.dia_semana,
                 'hora_inicio': str(i.hora_inicio),
                 'hora_fin': str(i.hora_fin),
@@ -355,21 +359,26 @@ def horarios_por_periodo(request):
 
         lst = []
         for h in horarios_qs:
+            grupo = h.grupo
+            periodo_grupo = grupo.periodo if grupo else None
+            programa = grupo.programa if grupo else None
+            asignatura = h.asignatura
+            espacio = h.espacio
             lst.append({
                 'id': h.id,
-                'grupo_id': h.grupo.id,
-                'grupo_nombre': h.grupo.nombre,
-                'periodo_id': h.grupo.periodo.id,
-                'periodo_nombre': h.grupo.periodo.nombre,
-                'programa_id': h.grupo.programa.id,
-                'programa_nombre': h.grupo.programa.nombre,
-                'semestre': h.grupo.semestre,
-                'asignatura_id': h.asignatura.id,
-                'asignatura_nombre': h.asignatura.nombre,
+                'grupo_id': grupo.id if grupo else None,
+                'grupo_nombre': grupo.nombre if grupo else 'Sin grupo',
+                'periodo_id': periodo_grupo.id if periodo_grupo else None,
+                'periodo_nombre': periodo_grupo.nombre if periodo_grupo else None,
+                'programa_id': programa.id if programa else None,
+                'programa_nombre': programa.nombre if programa else 'Sin programa',
+                'semestre': grupo.semestre if grupo else None,
+                'asignatura_id': asignatura.id if asignatura else None,
+                'asignatura_nombre': asignatura.nombre if asignatura else 'Sin asignatura',
                 'docente_id': h.docente.id if h.docente else None,
                 'docente_nombre': h.docente.nombre if h.docente else 'Sin asignar',
-                'espacio_id': h.espacio.id,
-                'espacio_nombre': h.espacio.nombre,
+                'espacio_id': espacio.id if espacio else None,
+                'espacio_nombre': espacio.nombre if espacio else 'Sin espacio',
                 'dia_semana': h.dia_semana,
                 'hora_inicio': str(h.hora_inicio),
                 'hora_fin': str(h.hora_fin),

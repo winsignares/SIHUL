@@ -80,7 +80,7 @@ export interface HorarioExtendido {
     asignatura_nombre: string;
     docente_id: number | null;
     docente_nombre: string;
-    espacio_id: number;
+    espacio_id: number | null;
     espacio_nombre: string;
     dia_semana: string;
     hora_inicio: string;

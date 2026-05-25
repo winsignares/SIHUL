@@ -27,12 +27,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-<<<<<<< Updated upstream
-            default=("SELECT * FROM UHORARIOS.VW_HORARIO"
-                    "WHERE PERIODO_ACADEMICO = '20261'"),
-=======
             default=f"SELECT * FROM UHORARIOS.VW_HORARIO WHERE PERIODO LIKE '{settings.ETL_PERIODO}'",
->>>>>>> Stashed changes
             help='Consulta Oracle para horario',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
