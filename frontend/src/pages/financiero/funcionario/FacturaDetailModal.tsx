@@ -82,7 +82,12 @@ export default function FacturaDetailModal({ open, onClose, factura }: Props) {
                   <h3 className="text-3xl font-bold text-slate-900">Detalles Completos del Tramite</h3>
                   <p className="text-slate-600">Informacion detallada, timeline y seguimiento de la factura</p>
                 </div>
-                <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">
+                <button 
+                  onClick={onClose} 
+                  aria-label="Cerrar detalles de la factura"
+                  title="Cerrar"
+                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>

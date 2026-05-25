@@ -162,6 +162,8 @@ export default function ComponentesRoles() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
+              id="buscar-roles"
+              aria-label="Buscar roles"
               type="text"
               placeholder="Buscar roles..."
               value={terminoBusqueda}
@@ -212,7 +214,9 @@ export default function ComponentesRoles() {
                         <div className="flex items-center justify-center gap-2">
                           {/* Botón Gestionar Permisos */}
                           <button
+                            type="button"
                             onClick={() => abrirModalPermisos(rol)}
+                            aria-label="Gestionar componentes"
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Gestionar componentes"
                           >
@@ -244,8 +248,10 @@ export default function ComponentesRoles() {
               
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => cambiarPagina(paginaActual - 1)}
                   disabled={paginaActual === 1}
+                  aria-label="Página anterior"
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -254,7 +260,9 @@ export default function ComponentesRoles() {
                 {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((pagina) => (
                   <button
                     key={pagina}
+                    type="button"
                     onClick={() => cambiarPagina(pagina)}
+                    aria-label={`Página ${pagina}`}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                       pagina === paginaActual
                         ? 'bg-red-600 text-white'
@@ -266,8 +274,10 @@ export default function ComponentesRoles() {
                 ))}
                 
                 <button
+                  type="button"
                   onClick={() => cambiarPagina(paginaActual + 1)}
                   disabled={paginaActual === totalPaginas}
+                  aria-label="Página siguiente"
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
@@ -292,6 +302,8 @@ export default function ComponentesRoles() {
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
+                  id="buscar-componentes"
+                  aria-label="Buscar componentes"
                   type="text"
                   placeholder="Buscar componentes..."
                   value={busquedaComponentes}
@@ -307,6 +319,8 @@ export default function ComponentesRoles() {
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
                         <input
+                          id="select-all-componentes"
+                          aria-label="Seleccionar todos los componentes"
                           type="checkbox"
                           checked={componentesFiltrados.length > 0 && componentesFiltrados.every(p => p.seleccionado)}
                           onChange={(e) => {
@@ -341,6 +355,8 @@ export default function ComponentesRoles() {
                         <tr key={permiso.componente.id} className={permiso.seleccionado ? 'bg-blue-50' : ''}>
                         <td className="px-4 py-3">
                           <input
+                            id={`componente-${permiso.componente.id}`}
+                            aria-label={`Seleccionar ${permiso.componente.nombre}`}
                             type="checkbox"
                             checked={permiso.seleccionado}
                             onChange={() => toggleComponente(index)}
@@ -359,7 +375,9 @@ export default function ComponentesRoles() {
                           {permiso.seleccionado ? (
                             <div className="flex gap-2 justify-center">
                               <button
+                                type="button"
                                 onClick={() => cambiarPermiso(index, 'VER')}
+                                aria-label="Permiso de ver"
                                 className={`px-3 py-1 text-xs font-medium rounded border transition-all ${
                                   permiso.permiso === 'VER'
                                     ? 'bg-blue-100 text-blue-800 border-blue-300'
@@ -369,7 +387,9 @@ export default function ComponentesRoles() {
                                 VER
                               </button>
                               <button
+                                type="button"
                                 onClick={() => cambiarPermiso(index, 'EDITAR')}
+                                aria-label="Permiso de editar"
                                 className={`px-3 py-1 text-xs font-medium rounded border transition-all ${
                                   permiso.permiso === 'EDITAR'
                                     ? 'bg-green-100 text-green-800 border-green-300'
@@ -401,12 +421,14 @@ export default function ComponentesRoles() {
               {/* Botones */}
               <div className="flex gap-3 mt-6">
                 <button
+                  type="button"
                   onClick={() => setMostrarModalPermisos(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleGuardarPermisos}
                   disabled={loading}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

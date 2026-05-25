@@ -129,8 +129,10 @@ export default function CausarFacturas() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">* Cuenta Contable (Requerida)</label>
+                <label htmlFor="cuenta-contable" className="text-sm font-semibold text-slate-700">* Cuenta Contable (Requerida)</label>
                 <select
+                  id="cuenta-contable"
+                  aria-label="Seleccionar cuenta contable"
                   value={cuentaId}
                   onChange={(e) => setCuentaId(e.target.value)}
                   className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
@@ -144,8 +146,10 @@ export default function CausarFacturas() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Centro de Costo (Opcional)</label>
+                <label htmlFor="centro-costo" className="text-sm font-semibold text-slate-700">Centro de Costo (Opcional)</label>
                 <select
+                  id="centro-costo"
+                  aria-label="Seleccionar centro de costo"
                   value={centroId}
                   onChange={(e) => setCentroId(e.target.value)}
                   className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"

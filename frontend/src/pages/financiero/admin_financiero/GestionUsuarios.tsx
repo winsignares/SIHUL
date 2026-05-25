@@ -546,6 +546,8 @@ export default function GestionUsuariosReal() {
             <div className="relative lg:col-span-5">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
+                id="buscar-usuarios"
+                aria-label="Buscar usuarios"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"

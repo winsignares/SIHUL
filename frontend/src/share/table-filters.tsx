@@ -97,7 +97,10 @@ export default function TableFilters({
             />
             {filters.numeroFactura && (
               <button
+                type="button"
                 onClick={() => handleInputChange('numeroFactura', '')}
+                aria-label="Limpiar filtro de número de factura"
+                title="Limpiar"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
@@ -113,6 +116,7 @@ export default function TableFilters({
           </Label>
           <select
             id="filter-proveedor"
+            aria-label="Filtrar por proveedor"
             value={filters.proveedor || ''}
             onChange={(e) => handleInputChange('proveedor', e.target.value)}
             className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
@@ -133,6 +137,7 @@ export default function TableFilters({
           </Label>
           <select
             id="filter-estado"
+            aria-label="Filtrar por estado"
             value={filters.estado || ''}
             onChange={(e) => handleInputChange('estado', e.target.value)}
             className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
@@ -154,6 +159,7 @@ export default function TableFilters({
             </Label>
             <select
               id="filter-area"
+              aria-label="Filtrar por área solicitante"
               value={filters.areaSolicitante || ''}
               onChange={(e) => handleInputChange('areaSolicitante', e.target.value)}
               className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"

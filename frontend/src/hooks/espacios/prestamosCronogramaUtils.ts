@@ -51,7 +51,7 @@ function nthWeekdayOfMonth(
 }
 
 function lastWeekdayOfMonth(year: number, monthIndex: number, weekdayJS: number): Date | null {
-  let d = new Date(year, monthIndex + 1, 0);
+  const d = new Date(year, monthIndex + 1, 0);
   while (d.getMonth() === monthIndex) {
     if (d.getDay() === weekdayJS) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
     d.setDate(d.getDate() - 1);
@@ -300,7 +300,7 @@ export function fechasSemanalesEnRango(
   if (p.fin_repeticion_tipo === 'count' && typeof p.fin_repeticion_ocurrencias === 'number' && p.fin_repeticion_ocurrencias >= 1) {
     const maxN = p.fin_repeticion_ocurrencias;
     const todas: string[] = [];
-    let d = new Date(base);
+    const d = new Date(base);
     let tomadas = 0;
     while (tomadas < maxN && d.getFullYear() < 2100) {
       const wd = mondayBasedWeekday(d);
@@ -316,7 +316,7 @@ export function fechasSemanalesEnRango(
     return todas.filter((iso) => iso >= rangeStart && iso <= r1 && iso <= limiteSuperior);
   }
 
-  let d = new Date(Math.max(inicioRango.getTime(), base.getTime()));
+  const d = new Date(Math.max(inicioRango.getTime(), base.getTime()));
   while (d <= finRango) {
     const wd = mondayBasedWeekday(d);
     if (dias.includes(wd) && encajaIntervalo(d)) {

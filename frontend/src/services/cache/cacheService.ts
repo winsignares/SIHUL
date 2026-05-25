@@ -7,9 +7,20 @@ export interface CacheEntry<T> {
     timestamp: number;
 }
 
+interface EspacioItem {
+    id: string | number;
+    nombre: string;
+    [key: string]: unknown;
+}
+
+interface HorarioItem {
+    id: string | number;
+    [key: string]: unknown;
+}
+
 interface EspaciosCache {
-    espacios: any[];
-    horarios: any[];
+    espacios: EspacioItem[];
+    horarios: HorarioItem[];
     timestamp: number;
 }
 
@@ -48,7 +59,7 @@ export const getEspaciosFromCache = (cacheKey: string): EspaciosCache | null => 
 /**
  * Guarda espacios en el caché
  */
-export const setEspaciosInCache = (cacheKey: string, espacios: any[], horarios: any[]): void => {
+export const setEspaciosInCache = (cacheKey: string, espacios: EspacioItem[], horarios: HorarioItem[]): void => {
     try {
         const entry: CacheEntry<EspaciosCache> = {
             data: {
@@ -78,13 +89,13 @@ export const clearEspaciosCache = (cacheKey: string): void => {
 /**
  * Obtiene la clave de caché según el usuario
  */
-export const getCacheKey = (user: any): string => {
+export const getCacheKey = (user: { id?: string | number; rol?: string }): string => {
     if (!user?.id) {
         // Usuario público
         return CACHE_KEYS.ESPACIOS_PUBLICOS;
     } else if (String(user.rol) === 'supervisor_general') {
         // Supervisor general
-        return CACHE_KEYS.ESPACIOS_SUPERVISOR(user.id);
+        return CACHE_KEYS.ESPACIOS_SUPERVISOR(Number(user.id));
     } else {
         // Otros roles
         return CACHE_KEYS.ESPACIOS_OTROS;
@@ -94,7 +105,7 @@ export const getCacheKey = (user: any): string => {
 /**
  * Obtiene el hash de los espacios (para detectar cambios)
  */
-export const getEspaciosHash = (espacios: any[]): string => {
+export const getEspaciosHash = (espacios: EspacioItem[]): string => {
     try {
         return String(espacios.length);
     } catch {

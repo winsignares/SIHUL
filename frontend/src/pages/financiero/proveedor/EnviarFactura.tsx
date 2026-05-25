@@ -599,10 +599,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="tipo-documento" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Tipo de Documento <span className="text-red-500">*</span>
                   </label>
                   <select
+                    id="tipo-documento"
+                    aria-label="Seleccionar tipo de documento"
                     value={form.tipoDocumento}
                     onChange={e => handleFieldChange('tipoDocumento', e.target.value)}
                     className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
@@ -614,13 +616,15 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="numero-factura-env" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     N° Factura{' '}
                     <span className="text-slate-400 text-xs">
                       {isCorreccion ? '(número original de la factura)' : '(generado automáticamente por el sistema)'}
                     </span>
                   </label>
                   <input
+                    id="numero-factura-env"
+                    aria-label="Número de factura"
                     type="text"
                     value={numeroFacturaSugerido}
                     disabled
@@ -634,10 +638,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="fecha-factura-env" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Fecha de la Factura <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="fecha-factura-env"
+                    aria-label="Fecha de la factura"
                     type="date"
                     value={form.fechaFactura}
                     max={new Date().toISOString().split('T')[0]}
@@ -648,10 +654,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="fecha-recepcion-env" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Fecha de Recepción <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="fecha-recepcion-env"
+                    aria-label="Fecha de recepción"
                     type="date"
                     value={form.fechaRecepcion}
                     max={new Date().toISOString().split('T')[0]}
@@ -662,10 +670,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="departamento-id" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Área / Departamento Solicitante <span className="text-red-500">*</span>
                   </label>
                   <select
+                    id="departamento-id"
+                    aria-label="Seleccionar área o departamento solicitante"
                     value={form.departamentoId}
                     onChange={e => handleFieldChange('departamentoId', Number(e.target.value))}
                     disabled={catalogLoading || !!proveedorSeleccionado}
@@ -708,8 +718,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subtotal <span className="text-red-500">*</span></label>
+                    <label htmlFor="subtotal-env" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subtotal <span className="text-red-500">*</span></label>
                     <input
+                      id="subtotal-env"
+                      aria-label="Subtotal"
                       type="number"
                       min={0}
                       value={form.valorSubtotal || ''}
@@ -720,8 +732,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Valor antes de impuestos.</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (%)</label>
+                    <label htmlFor="iva-porcentaje" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (%)</label>
                     <select
+                      id="iva-porcentaje"
+                      aria-label="Seleccionar porcentaje de IVA"
                       value={form.ivaPorcentaje}
                       onChange={e => handleFieldChange('ivaPorcentaje', Number(e.target.value))}
                       className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
@@ -733,8 +747,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">El valor de IVA se calcula automáticamente.</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (valor)</label>
+                    <label htmlFor="iva-env" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (valor)</label>
                     <input
+                      id="iva-env"
+                      aria-label="IVA"
                       type="number"
                       min={0}
                       value={form.valorIva || ''}
@@ -744,10 +760,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     />
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label htmlFor="total-env" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Total <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="total-env"
+                      aria-label="Valor total"
                       type="number"
                       min={0}
                       value={form.valorTotal || ''}
@@ -767,6 +785,8 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <select
+                    id="banco"
+                    aria-label="Seleccionar banco"
                     value={form.banco}
                     onChange={e => handleFieldChange('banco', e.target.value)}
                     className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
@@ -778,6 +798,8 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                   </select>
 
                   <select
+                    id="tipo-cuenta"
+                    aria-label="Seleccionar tipo de cuenta"
                     value={form.tipoCuenta}
                     onChange={e => handleFieldChange('tipoCuenta', e.target.value)}
                     className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
@@ -856,6 +878,8 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                           <CheckCircle2 size={16} className="text-green-500" />
                           <button
                             onClick={() => requestRemoveDoc(uploaded)}
+                            aria-label="Eliminar documento"
+                            title="Eliminar documento"
                             className="p-1 hover:bg-red-50 rounded text-red-500"
                           >
                             <X size={14} />

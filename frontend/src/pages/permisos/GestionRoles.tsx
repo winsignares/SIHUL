@@ -98,6 +98,8 @@ export default function GestionRoles() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
+              id="buscar-roles-gestion"
+              aria-label="Buscar roles"
               type="text"
               placeholder="Buscar roles..."
               value={terminoBusqueda}
@@ -106,6 +108,7 @@ export default function GestionRoles() {
             />
           </div>
           <button
+            type="button"
             onClick={abrirModalCrear}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
@@ -136,14 +139,18 @@ export default function GestionRoles() {
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
                         <button
+                          type="button"
                           onClick={() => abrirModalEditar(rol)}
+                          aria-label="Editar rol"
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Editar rol"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleEliminar(rol)}
+                          aria-label="Eliminar rol"
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Eliminar rol"
                         >
@@ -170,8 +177,10 @@ export default function GestionRoles() {
               <p className="text-sm text-gray-600">Página {paginaActual} de {totalPaginas}</p>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => cambiarPagina(paginaActual - 1)}
                   disabled={paginaActual === 1}
+                  aria-label="Página anterior"
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -179,7 +188,9 @@ export default function GestionRoles() {
                 {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((p) => (
                   <button
                     key={p}
+                    type="button"
                     onClick={() => cambiarPagina(p)}
+                    aria-label={`Página ${p}`}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                       p === paginaActual ? 'bg-red-600 text-white' : 'border border-gray-300 hover:bg-gray-50'
                     }`}
@@ -188,8 +199,10 @@ export default function GestionRoles() {
                   </button>
                 ))}
                 <button
+                  type="button"
                   onClick={() => cambiarPagina(paginaActual + 1)}
                   disabled={paginaActual === totalPaginas}
+                  aria-label="Página siguiente"
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
@@ -211,6 +224,8 @@ export default function GestionRoles() {
                     Nombre del Rol *
                   </label>
                   <input
+                    id="nombre-rol"
+                    aria-label="Nombre del rol"
                     type="text"
                     value={nombreRol}
                     onChange={(e) => setNombreRol(e.target.value)}
@@ -233,12 +248,14 @@ export default function GestionRoles() {
               </div>
               <div className="flex gap-3 mt-6">
                 <button
+                  type="button"
                   onClick={() => setMostrarModal(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleGuardar}
                   disabled={loading}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

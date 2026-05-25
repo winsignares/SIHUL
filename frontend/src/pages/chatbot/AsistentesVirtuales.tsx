@@ -21,6 +21,13 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function AsistentesVirtuales() {
   const isMobile = useIsMobile();
+  const floatingDotPositions = [
+    'left-[10%] top-[15%]',
+    'left-[25%] top-[65%]',
+    'left-[50%] top-[20%]',
+    'left-[70%] top-[55%]',
+    'left-[85%] top-[30%]'
+  ];
   const {
     asistenteActivo,
     inputMensaje,
@@ -286,11 +293,7 @@ export default function AsistentesVirtuales() {
           {[...Array(5)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-2 h-2 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
+              className={`absolute w-2 h-2 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full ${floatingDotPositions[i]}`}
               animate={{
                 y: [0, -30, 0],
                 opacity: [0, 1, 0],
@@ -489,10 +492,7 @@ export default function AsistentesVirtuales() {
 
             {/* Área de Mensajes */}
             <div
-              className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 relative z-10 scrollbar-hidden"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23cbd5e1' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-              }}
+              className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 relative z-10 scrollbar-hidden chatbot-messages-bg"
             >
               <AnimatePresence>
                 {mensajesActuales.map((mensaje, index) => (

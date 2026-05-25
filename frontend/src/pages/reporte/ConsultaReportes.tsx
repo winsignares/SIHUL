@@ -9,6 +9,11 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaReportes() {
   const isMobile = useIsMobile();
+  const getWidthClass = (value: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
+    return `w-pct-${clamped}`;
+  };
+  const barHeightClasses = ['h-px-68', 'h-px-72', 'h-px-65', 'h-px-58', 'h-px-45'];
   const {
     periodo,
     setPeriodo,
@@ -118,8 +123,7 @@ export default function ConsultaReportes() {
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-3">
                   <div
-                    className={`${dato.color} h-3 rounded-full transition-all`}
-                    style={{ width: `${dato.ocupacion}%` }}
+                    className={`${dato.color} h-3 rounded-full transition-all ${getWidthClass(dato.ocupacion)}`}
                   ></div>
                 </div>
               </div>
@@ -171,8 +175,7 @@ export default function ConsultaReportes() {
                 <div key={dia} className="text-center">
                   <div className="bg-slate-100 rounded-lg p-4 mb-2">
                     <div
-                      className="bg-gradient-to-t from-yellow-600 to-yellow-400 rounded mx-auto transition-all"
-                      style={{ height: `${clases}px`, width: '40px' }}
+                      className={`bg-gradient-to-t from-yellow-600 to-yellow-400 rounded mx-auto transition-all w-[40px] ${barHeightClasses[index]}`}
                     ></div>
                   </div>
                   <p className="text-slate-900 mb-1">{clases}</p>

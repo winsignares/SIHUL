@@ -98,8 +98,6 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     );
   }
 
-  const tableColumns = 'minmax(220px,1.2fr) minmax(240px,1.6fr) minmax(180px,1.1fr) minmax(150px,1fr) minmax(140px,0.9fr) minmax(120px,0.7fr)';
-
   return (
     <div className="space-y-6">
       <motion.div
@@ -157,6 +155,8 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
           />
         </div>
         <select
+          id="estado-filtro"
+          aria-label="Filtrar por estado de factura"
           value={estadoFiltro}
           onChange={e => setEstadoFiltro(e.target.value)}
           className="px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
@@ -190,10 +190,9 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
           </div>
         ) : (
           <div className="w-full overflow-x-auto">
-            <div style={{ minWidth: 980 }}>
+            <div className="min-w-[980px]">
               <div
-                className="grid gap-4 px-5 py-3 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700"
-                style={{ gridTemplateColumns: tableColumns }}
+                className="grid gap-4 px-5 py-3 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 mis-facturas-grid"
               >
                 <span>Factura</span>
                 <span>Descripcion</span>
@@ -214,8 +213,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03 }}
                       onClick={() => navigate(`/financiero/proveedor/${factura.id}`)}
-                      className="grid gap-4 px-5 py-4 items-center hover:bg-rose-50/40 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group"
-                      style={{ gridTemplateColumns: tableColumns }}
+                      className="grid gap-4 px-5 py-4 items-center hover:bg-rose-50/40 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group mis-facturas-grid"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center flex-shrink-0">

@@ -489,6 +489,8 @@ export default function EspaciosFisicos() {
                             setRecursosAgregados(recursosAgregados.filter(r => r.id !== recurso.id));
                             setMostrandoRecursos(true);
                           }}
+                          aria-label="Eliminar recurso"
+                          title="Eliminar recurso"
                           className="ml-2 hover:text-red-600"
                         >
                           <X className="w-3 h-3" />
@@ -704,6 +706,8 @@ export default function EspaciosFisicos() {
                             setRecursosAgregados(recursosAgregados.filter(r => r.id !== recurso.id));
                             setMostrandoRecursos(true);
                           }}
+                          aria-label="Eliminar recurso"
+                          title="Eliminar recurso"
                           className="ml-2 hover:text-red-600"
                         >
                           <X className="w-3 h-3" />

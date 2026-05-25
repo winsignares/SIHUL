@@ -88,6 +88,81 @@ function getHoyColombia(): Date {
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
+  const gridColumnClasses = [
+    '',
+    'col-start-1',
+    'col-start-2',
+    'col-start-3',
+    'col-start-4',
+    'col-start-5',
+    'col-start-6',
+    'col-start-7'
+  ];
+  const gridRowClasses = [
+    '',
+    'row-start-1',
+    'row-start-2',
+    'row-start-3',
+    'row-start-4',
+    'row-start-5',
+    'row-start-6',
+    'row-start-7',
+    'row-start-8',
+    'row-start-9',
+    'row-start-10',
+    'row-start-11',
+    'row-start-12',
+    'row-start-13',
+    'row-start-14',
+    'row-start-15',
+    'row-start-16',
+    'row-start-17',
+    'row-start-18',
+    'row-start-19',
+    'row-start-20',
+    'row-start-21',
+    'row-start-22',
+    'row-start-23',
+    'row-start-24'
+  ];
+  const rowSpanClasses = [
+    '',
+    'row-span-1',
+    'row-span-2',
+    'row-span-3',
+    'row-span-4',
+    'row-span-5',
+    'row-span-6',
+    'row-span-7',
+    'row-span-8',
+    'row-span-9',
+    'row-span-10',
+    'row-span-11',
+    'row-span-12',
+    'row-span-13',
+    'row-span-14',
+    'row-span-15',
+    'row-span-16'
+  ];
+  const minHeightClasses = [
+    '',
+    'min-h-[60px]',
+    'min-h-[120px]',
+    'min-h-[180px]',
+    'min-h-[240px]',
+    'min-h-[300px]',
+    'min-h-[360px]',
+    'min-h-[420px]',
+    'min-h-[480px]',
+    'min-h-[540px]',
+    'min-h-[600px]',
+    'min-h-[660px]',
+    'min-h-[720px]',
+    'min-h-[780px]',
+    'min-h-[840px]',
+    'min-h-[900px]',
+    'min-h-[960px]'
+  ];
   
   const {
     searchTerm,
@@ -575,7 +650,7 @@ export default function ConsultaEspacios() {
             const sortedDays = [...selectedDays].sort((a, b) => a - b);
 
             // Buscar el siguiente día en la semana actual
-            let nextDay = sortedDays.find(d => d > currentMondayIndex);
+            const nextDay = sortedDays.find(d => d > currentMondayIndex);
 
             if (nextDay !== undefined) {
               // Hay un día posterior en esta semana
@@ -1656,7 +1731,7 @@ export default function ConsultaEspacios() {
                         </div>
                       </div>
                     )}
-                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
+                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1 auto-rows-[60px]">
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
                         const diaBloqueado = isDiaBloqueado(dia);
@@ -1677,11 +1752,7 @@ export default function ConsultaEspacios() {
                       {horas.map((hora, idx) => (
                         <div
                           key={`time-${hora}`}
-                          className="text-xs text-slate-500 flex items-center justify-end pr-2"
-                          style={{
-                            gridColumn: 1,
-                            gridRow: idx + 2
-                          }}
+                          className={`text-xs text-slate-500 flex items-center justify-end pr-2 col-start-1 ${gridRowClasses[idx + 2]}`}
                         >
                           {hora}:00
                         </div>
@@ -1733,12 +1804,7 @@ export default function ConsultaEspacios() {
                                       ? 'bg-purple-500 border-purple-700 cursor-grabbing'
                                       : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
                                     : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                              }`}
-                              style={{
-                                gridColumn: diaIdx + 2,
-                                gridRow: horaIdx + 2,
-                                zIndex: isDragOver && canDrop ? 20 : 1
-                              }}
+                              } ${gridColumnClasses[diaIdx + 2]} ${gridRowClasses[horaIdx + 2]} ${isDragOver && canDrop ? 'z-20' : 'z-10'}`}
                               onMouseDown={() => {
                                 if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
                                   iniciarSeleccion(espacio.id, dia, hora);
@@ -1859,13 +1925,7 @@ export default function ConsultaEspacios() {
                                       editModeEnabled && (!isPrestamo || isPrestamoPendiente)
                                         ? 'cursor-move hover:ring-2 hover:ring-purple-400 group' 
                                         : 'cursor-pointer'
-                                    } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative`}
-                                    style={{
-                                      gridColumn: `${colStart} / span 1`,
-                                      gridRow: `${rowStart} / span ${rowSpan}`,
-                                      zIndex: 10,
-                                      minHeight: `${rowSpan * 60}px`
-                                    }}
+                                    } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative ${gridColumnClasses[colStart]} ${gridRowClasses[rowStart]} ${rowSpanClasses[rowSpan]} ${minHeightClasses[rowSpan]} z-10`}
                                   >
                                     {editModeEnabled && (!isPrestamo || isPrestamoPendiente) && (
                                       <>
@@ -2406,7 +2466,7 @@ export default function ConsultaEspacios() {
 
       {/* Diálogo para Mover Clase a Otro Espacio */}
       <Dialog open={moveClassDialogOpen} onOpenChange={setMoveClassDialogOpen}>
-        <DialogContent className="w-[90vw] h-[85vh] max-w-none max-h-none overflow-y-auto p-4 sm:p-8 rounded-lg" style={{ maxWidth: '50vw' }}>
+        <DialogContent className="w-[90vw] h-[85vh] max-w-[50vw] max-h-none overflow-y-auto p-4 sm:p-8 rounded-lg">
           <DialogHeader>
             <DialogTitle>Mover Clase a Otro Espacio</DialogTitle>
           </DialogHeader>
@@ -2494,7 +2554,7 @@ export default function ConsultaEspacios() {
                 <Card className="border-slate-200 dark:border-slate-700">
                   <CardContent className="p-4">
                     <div className="w-full">
-                      <div className="grid grid-cols-[50px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '32px' }}>
+                      <div className="grid grid-cols-[50px_repeat(6,1fr)] gap-1 auto-rows-[32px]">
                         {/* Headers */}
                         <div className="p-1"></div>
                         {diasSemana.map((dia) => (
@@ -2510,8 +2570,10 @@ export default function ConsultaEspacios() {
 
                         {/* Time slots */}
                         {horas.map((hora, idx) => (
-                          <div key={`time-${hora}`} className="text-xs text-slate-500 flex items-center justify-end pr-1"
-                            style={{ gridColumn: 1, gridRow: idx + 2 }}>
+                          <div
+                            key={`time-${hora}`}
+                            className={`text-xs text-slate-500 flex items-center justify-end pr-1 col-start-1 ${gridRowClasses[idx + 2]}`}
+                          >
                             {hora}:00
                           </div>
                         ))}
@@ -2570,8 +2632,7 @@ export default function ConsultaEspacios() {
                             return (
                               <div
                                 key={`preview-${dia}-${hora}`}
-                                className={`border rounded text-xs flex items-center justify-center ${bgClass} ${hoverClass} transition-colors`}
-                                style={{ gridColumn: diaIdx + 2, gridRow: horaIdx + 2 }}
+                                className={`border rounded text-xs flex items-center justify-center ${bgClass} ${hoverClass} transition-colors ${gridColumnClasses[diaIdx + 2]} ${gridRowClasses[horaIdx + 2]}`}
                                 onClick={() => {
                                   if (canSelect) {
                                     setTargetMoveDia(dia);

@@ -430,6 +430,8 @@ export default function DocentePrestamos() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <Input
+            id="buscar-prestamos"
+            aria-label="Buscar préstamos"
             placeholder="Buscar por espacio, tipo de actividad o motivo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -731,10 +733,13 @@ export default function DocentePrestamos() {
                           <Badge key={index} variant="outline" className="flex items-center gap-1">
                             {recurso}
                             <button
+                              type="button"
                               onClick={() => {
                                 const nuevosRecursos = prestamoEditando.recursosNecesarios.filter((_, i) => i !== index);
                                 setPrestamoEditando({ ...prestamoEditando, recursosNecesarios: nuevosRecursos });
                               }}
+                              aria-label="Eliminar recurso"
+                              title="Eliminar recurso"
                               className="ml-1 hover:text-red-600"
                             >
                               <XIcon className="w-3 h-3" />

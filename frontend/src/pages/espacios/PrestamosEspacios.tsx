@@ -512,12 +512,12 @@ export default function PrestamosEspacios() {
                                         onCheckedChange={(checked) => setPrestamoEditando({
                                           ...prestamoEditando,
                                           es_recurrente: Boolean(checked),
-                                          frecuencia: Boolean(checked) ? (prestamoEditando.frecuencia || 'weekly') : 'none',
-                                          intervalo: Boolean(checked) ? (prestamoEditando.intervalo || 1) : 1,
-                                          dias_semana: Boolean(checked) ? (prestamoEditando.dias_semana || []) : [],
-                                          fin_repeticion_tipo: Boolean(checked) ? (prestamoEditando.fin_repeticion_tipo || 'never') : 'never',
-                                          fin_repeticion_fecha: Boolean(checked) ? (prestamoEditando.fin_repeticion_fecha || null) : null,
-                                          fin_repeticion_ocurrencias: Boolean(checked) ? (prestamoEditando.fin_repeticion_ocurrencias || null) : null,
+                                          frecuencia: checked ? (prestamoEditando.frecuencia || 'weekly') : 'none',
+                                          intervalo: checked ? (prestamoEditando.intervalo || 1) : 1,
+                                          dias_semana: checked ? (prestamoEditando.dias_semana || []) : [],
+                                          fin_repeticion_tipo: checked ? (prestamoEditando.fin_repeticion_tipo || 'never') : 'never',
+                                          fin_repeticion_fecha: checked ? (prestamoEditando.fin_repeticion_fecha || null) : null,
+                                          fin_repeticion_ocurrencias: checked ? (prestamoEditando.fin_repeticion_ocurrencias || null) : null,
                                         })}
                                       />
                                       <Label htmlFor="edit-es-recurrente">Repetir préstamo</Label>

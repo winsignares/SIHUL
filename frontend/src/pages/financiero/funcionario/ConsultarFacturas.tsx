@@ -517,10 +517,12 @@ export default function ConsultarFacturas() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 pb-3 border-b border-slate-200">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Número de factura</label>
+            <label htmlFor="numero-factura" className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Número de factura</label>
             <div className="relative">
               <Search className="w-4 h-4 text-red-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 
+                id="numero-factura"
+                aria-label="Buscar por número de factura"
                 value={numeroFactura} 
                 onChange={e => setNumeroFactura(e.target.value)} 
                 className="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
@@ -530,8 +532,10 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Proveedor</label>
+            <label htmlFor="proveedor-filter" className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Proveedor</label>
             <select 
+              id="proveedor-filter"
+              aria-label="Filtrar por proveedor"
               value={proveedor} 
               onChange={e => setProveedor(e.target.value)} 
               className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
@@ -542,8 +546,10 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Estado</label>
+            <label htmlFor="estado-filter" className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Estado</label>
             <select 
+              id="estado-filter"
+              aria-label="Filtrar por estado"
               value={estado} 
               onChange={e => setEstado(e.target.value)} 
               className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
@@ -554,8 +560,10 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Área solicitante</label>
+            <label htmlFor="area-filter" className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Área solicitante</label>
             <select 
+              id="area-filter"
+              aria-label="Filtrar por área solicitante"
               value={area} 
               onChange={e => setArea(e.target.value)} 
               className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
@@ -574,9 +582,11 @@ export default function ConsultarFacturas() {
           </div>
           
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">desde</label>
+            <label htmlFor="fecha-inicio" className="block text-xs text-slate-600 mb-2 font-semibold">desde</label>
             <div className="relative">
               <input 
+                id="fecha-inicio"
+                aria-label="Fecha de inicio"
                 type="date" 
                 value={fechaInicio} 
                 onChange={e => setFechaInicio(e.target.value)} 
@@ -587,9 +597,11 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">hasta</label>
+            <label htmlFor="fecha-fin" className="block text-xs text-slate-600 mb-2 font-semibold">hasta</label>
             <div className="relative">
               <input 
+                id="fecha-fin"
+                aria-label="Fecha de fin"
                 type="date" 
                 value={fechaFin} 
                 onChange={e => setFechaFin(e.target.value)} 
@@ -615,10 +627,12 @@ export default function ConsultarFacturas() {
           </div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">mínimo</label>
+            <label htmlFor="monto-minimo" className="block text-xs text-slate-600 mb-2 font-semibold">mínimo</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
               <input 
+                id="monto-minimo"
+                aria-label="Monto mínimo"
                 type="number" 
                 value={montoMin} 
                 onChange={e => setMontoMin(e.target.value)} 
@@ -628,10 +642,12 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">máximo</label>
+            <label htmlFor="monto-maximo" className="block text-xs text-slate-600 mb-2 font-semibold">máximo</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
               <input 
+                id="monto-maximo"
+                aria-label="Monto máximo"
                 type="number" 
                 value={montoMax} 
                 onChange={e => setMontoMax(e.target.value)} 

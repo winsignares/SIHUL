@@ -401,7 +401,7 @@ export default function Reportes() {
                       <p className="text-slate-600 dark:text-slate-400 mb-2">Promedio de Ocupación</p>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                          <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full" style={{ width: '56%' }}></div>
+                          <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full w-pct-55"></div>
                         </div>
                         <span className="text-slate-900 dark:text-slate-100">56%</span>
                       </div>

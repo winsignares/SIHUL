@@ -175,13 +175,12 @@ function getEstadoBadge(estado: string) {
 }
 
 export default function FacturaDetailModal({ factura, isOpen, onClose }: FacturaDetailModalProps) {
-  if (!factura) return null;
-
-  const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail>(factura);
-  const [loadingDetalle, setLoadingDetalle] = useState(false);
+  const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail>(factura || {} as SharedFacturaDetail);
 
   useEffect(() => {
-    setDetalleFactura(factura);
+    if (factura) {
+      setDetalleFactura(factura);
+    }
   }, [factura]);
 
   useEffect(() => {
@@ -189,17 +188,18 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     const rawId = factura.facturaId ?? (factura.id ? Number(factura.id) : undefined);
     if (!rawId || Number.isNaN(rawId)) return;
 
-    setLoadingDetalle(true);
     void (async () => {
       try {
         const detail = await facturasService.getById(rawId);
         const mapped = mapFacturaDetail(detail, factura);
         setDetalleFactura(mapped);
-      } finally {
-        setLoadingDetalle(false);
+      } catch (error) {
+        console.error('Error loading factura detail:', error);
       }
     })();
   }, [factura, isOpen]);
+
+  if (!factura) return null;
 
   const currentFactura = detalleFactura;
 

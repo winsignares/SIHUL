@@ -12,6 +12,10 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function OcupacionSemanal() {
   const isMobile = useIsMobile();
+  const getWidthClass = (value: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
+    return `w-pct-${clamped}`;
+  };
   const {
     periodoActual,
     tipoEspacio,
@@ -213,8 +217,7 @@ export default function OcupacionSemanal() {
                           <div className="flex-1 min-w-[65px]">
                             <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                               <div
-                                className={`${getBarColor(valor)} h-2 rounded-full transition-all`}
-                                style={{ width: `${valor}%` }}
+                                className={`${getBarColor(valor)} h-2 rounded-full transition-all ${getWidthClass(valor)}`}
                               ></div>
                             </div>
                           </div>

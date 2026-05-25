@@ -248,6 +248,8 @@ export default function GestionUsuarios() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label="Mostrar/ocultar contraseña"
+                        title="Mostrar/ocultar contraseña"
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -268,6 +270,8 @@ export default function GestionUsuarios() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label="Mostrar/ocultar confirmación de contraseña"
+                        title="Mostrar/ocultar confirmación de contraseña"
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors"
                       >
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -376,6 +380,8 @@ export default function GestionUsuarios() {
                                   <button
                                     type="button"
                                     onClick={() => eliminarEspacioPermitido(espacioId)}
+                                    aria-label="Eliminar espacio"
+                                    title="Eliminar espacio"
                                     className="ml-2 hover:text-red-200"
                                   >
                                     <X className="w-3 h-3" />
@@ -428,6 +434,8 @@ export default function GestionUsuarios() {
                                 <button
                                   type="button"
                                   onClick={() => setAsignarTodosEspaciosPorTipo(false)}
+                                  aria-label="Eliminar asignación de todos"
+                                  title="Eliminar asignación de todos"
                                   className="ml-2 hover:text-red-200"
                                 >
                                   <X className="w-3 h-3" />
@@ -442,6 +450,8 @@ export default function GestionUsuarios() {
                                   <button
                                     type="button"
                                     onClick={() => eliminarTipoEspacioPermitido(tipoId)}
+                                    aria-label="Eliminar tipo de espacio"
+                                    title="Eliminar tipo de espacio"
                                     className="ml-2 hover:text-red-200"
                                   >
                                     <X className="w-3 h-3" />
@@ -547,6 +557,7 @@ export default function GestionUsuarios() {
                         <Button
                           size="sm"
                           onClick={() => abrirEdicion(usuario)}
+                          aria-label="Editar usuario"
                           className="bg-blue-600 hover:bg-blue-700 text-white h-8 w-8 p-0"
                           title="Editar"
                         >
@@ -555,6 +566,7 @@ export default function GestionUsuarios() {
                         <Button
                           size="sm"
                           onClick={() => cambiarEstadoUsuario(usuario.id as number)}
+                          aria-label={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
                           className={`h-8 w-8 p-0 ${usuario.activo
                             ? 'bg-orange-600 hover:bg-orange-700 text-white'
                             : 'bg-green-600 hover:bg-green-700 text-white'
@@ -569,6 +581,7 @@ export default function GestionUsuarios() {
                             setUserToDelete(usuario);
                             setDeleteDialogOpen(true);
                           }}
+                          aria-label="Eliminar usuario"
                           className="bg-red-600 hover:bg-red-700 text-white h-8 w-8 p-0"
                           title="Eliminar"
                         >
@@ -813,6 +826,8 @@ export default function GestionUsuarios() {
                                   <button
                                     type="button"
                                     onClick={() => eliminarEspacioPermitidoEdit(espacioId)}
+                                    aria-label="Eliminar espacio"
+                                    title="Eliminar espacio"
                                     className="ml-2 hover:text-red-200"
                                   >
                                     <X className="w-3 h-3" />
@@ -864,6 +879,8 @@ export default function GestionUsuarios() {
                                 <button
                                   type="button"
                                   onClick={() => setAsignarTodosEspaciosPorTipoEdit(false)}
+                                  aria-label="Eliminar asignación de todos"
+                                  title="Eliminar asignación de todos"
                                   className="ml-2 hover:text-red-200"
                                 >
                                   <X className="w-3 h-3" />
@@ -878,6 +895,8 @@ export default function GestionUsuarios() {
                                   <button
                                     type="button"
                                     onClick={() => eliminarTipoEspacioPermitidoEdit(tipoId)}
+                                    aria-label="Eliminar tipo de espacio"
+                                    title="Eliminar tipo de espacio"
                                     className="ml-2 hover:text-red-200"
                                   >
                                     <X className="w-3 h-3" />

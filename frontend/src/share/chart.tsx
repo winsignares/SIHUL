@@ -95,6 +95,11 @@ ${colorConfig
   })
   .join("\n")}
 }
+${colorConfig
+  .map(([key]) => {
+    return `${prefix} [data-chart=${id}] [data-indicator-color="${key}"] {\n  background-color: var(--color-${key});\n  border-color: var(--color-${key});\n}\n${prefix} [data-chart=${id}] [data-legend-color="${key}"] {\n  background-color: var(--color-${key});\n}`;
+  })
+  .join("\n")}
 `,
           )
           .join("\n"),
@@ -209,8 +214,9 @@ function ChartTooltipContent({
                   ) : (
                     !hideIndicator && (
                       <div
+                        data-indicator-color={key}
                         className={cn(
-                          "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
+                          "shrink-0 rounded-[2px] border",
                           {
                             "h-2.5 w-2.5": indicator === "dot",
                             "w-1": indicator === "line",
@@ -219,12 +225,6 @@ function ChartTooltipContent({
                             "my-0.5": nestLabel && indicator === "dashed",
                           },
                         )}
-                        style={
-                          {
-                            "--color-bg": indicatorColor,
-                            "--color-border": indicatorColor,
-                          } as React.CSSProperties
-                        }
                       />
                     )
                   )}
@@ -300,10 +300,8 @@ function ChartLegendContent({
               <itemConfig.icon />
             ) : (
               <div
+                data-legend-color={key}
                 className="h-2 w-2 shrink-0 rounded-[2px]"
-                style={{
-                  backgroundColor: item.color,
-                }}
               />
             )}
             {itemConfig?.label}

@@ -12,6 +12,10 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaOcupacion() {
   const isMobile = useIsMobile();
+  const getWidthClass = (value: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
+    return `w-pct-${clamped}`;
+  };
   const {
     periodo,
     setPeriodo,
@@ -196,8 +200,7 @@ export default function ConsultaOcupacion() {
                       <div className="flex-1 w-20">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                           <div
-                            className={`${getBarColor(espacio.jornada.manana)} h-2 rounded-full transition-all`}
-                            style={{ width: `${espacio.jornada.manana}%` }}
+                            className={`${getBarColor(espacio.jornada.manana)} h-2 rounded-full transition-all ${getWidthClass(espacio.jornada.manana)}`}
                           ></div>
                         </div>
                       </div>
@@ -209,8 +212,7 @@ export default function ConsultaOcupacion() {
                       <div className="flex-1 w-20">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                           <div
-                            className={`${getBarColor(espacio.jornada.tarde)} h-2 rounded-full transition-all`}
-                            style={{ width: `${espacio.jornada.tarde}%` }}
+                            className={`${getBarColor(espacio.jornada.tarde)} h-2 rounded-full transition-all ${getWidthClass(espacio.jornada.tarde)}`}
                           ></div>
                         </div>
                       </div>
@@ -222,8 +224,7 @@ export default function ConsultaOcupacion() {
                       <div className="flex-1 w-20">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                           <div
-                            className={`${getBarColor(espacio.jornada.noche)} h-2 rounded-full transition-all`}
-                            style={{ width: `${espacio.jornada.noche}%` }}
+                            className={`${getBarColor(espacio.jornada.noche)} h-2 rounded-full transition-all ${getWidthClass(espacio.jornada.noche)}`}
                           ></div>
                         </div>
                       </div>

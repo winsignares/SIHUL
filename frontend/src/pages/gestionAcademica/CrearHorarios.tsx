@@ -35,6 +35,21 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
   const isMobile = useIsMobile();
   const [draggedHorario, setDraggedHorario] = useState<any>(null);
   const [dragSource, setDragSource] = useState<{ dia: string; hora: string } | null>(null);
+  const rowHeightClasses = [
+    '',
+    'h-[5rem]',
+    'h-[10rem]',
+    'h-[15rem]',
+    'h-[20rem]',
+    'h-[25rem]',
+    'h-[30rem]',
+    'h-[35rem]',
+    'h-[40rem]',
+    'h-[45rem]',
+    'h-[50rem]',
+    'h-[55rem]',
+    'h-[60rem]'
+  ];
 
   const {
     facultades,
@@ -375,9 +390,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                             return (
                               <td 
                                 key={`${dia}-${hora}`} 
-                                className="border-2 border-slate-300 p-2 align-top bg-slate-50 hover:bg-slate-100 transition-colors"
+                                className={`border-2 border-slate-300 p-2 align-top bg-slate-50 hover:bg-slate-100 transition-colors ${rowHeightClasses[esInicioClase ? rowspan : 1]}`}
                                 rowSpan={esInicioClase ? rowspan : 1}
-                                style={esInicioClase ? { height: `${rowspan * 5}rem` } : { height: '5rem' }}
                                 onDragOver={(e) => e.preventDefault()}
                                 onDrop={(e) => {
                                   e.preventDefault();
@@ -436,6 +450,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                                       </div>
                                       <button
                                         onClick={() => handleEliminarHorarioAsignado(clase.id)}
+                                        aria-label="Eliminar horario"
+                                        title="Eliminar horario"
                                         className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded"
                                       >
                                         <X className="w-4 h-4" />
@@ -589,6 +605,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                   Cantidad de Estudiantes <span className="text-red-600">*</span>
                 </Label>
                 <Input
+                  id="cantidad-estudiantes"
+                  aria-label="Cantidad de estudiantes"
                   type="number"
                   min="1"
                   placeholder="Ejemplo: 30"

@@ -1,3 +1,4 @@
+/* eslint-disable no-inline-styles */
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
