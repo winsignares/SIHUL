@@ -206,6 +206,16 @@ class Command(BaseCommand):
         if not text:
             return None
 
+        # Soporte para formatos 12h con AM/PM, por ejemplo:
+        # 11:00 am, 12:00 PM, 07:30a.m., 7 pm
+        text_ampm = re.sub(r'\s+', ' ', text.lower()).strip()
+        text_ampm = text_ampm.replace('.', '')
+        for fmt in ('%I:%M %p', '%I %p', '%I:%M%p', '%I%p'):
+            try:
+                return datetime.strptime(text_ampm.upper(), fmt).time()
+            except ValueError:
+                pass
+
         text = text.replace('.', ':')
         text = re.sub(r'\s+', '', text)
 
@@ -927,6 +937,7 @@ class Command(BaseCommand):
         asignatura_no_encontrada = 0
         espacio_no_encontrado = 0
         hora_default = 0
+        duplicados_horario_reutilizados = 0
 
         grupos = list(Grupo.objects.select_related('periodo', 'programa'))
         grupos_by_id = {str(g.id): g for g in grupos}
@@ -1093,19 +1104,29 @@ class Command(BaseCommand):
                             horarios_creados += 1
                         continue
 
-                    horario, created = Horario.objects.get_or_create(
-                        grupo=grupo,
-                        asignatura=asignatura,
-                        espacio=espacio,
-                        dia_semana=dia_semana,
-                        hora_inicio=hora_inicio,
-                        hora_fin=hora_fin,
-                        defaults={
-                            'docente': docente,
-                            'cantidad_estudiantes': cantidad,
-                            'estado': 'pendiente',
-                        },
-                    )
+                    lookup = {
+                        'grupo': grupo,
+                        'asignatura': asignatura,
+                        'espacio': espacio,
+                        'dia_semana': dia_semana,
+                        'hora_inicio': hora_inicio,
+                        'hora_fin': hora_fin,
+                    }
+
+                    coincidencias = Horario.objects.filter(**lookup).order_by('id')
+                    if coincidencias.exists():
+                        horario = coincidencias.first()
+                        created = False
+                        if coincidencias.count() > 1:
+                            duplicados_horario_reutilizados += 1
+                    else:
+                        horario = Horario.objects.create(
+                            **lookup,
+                            docente=docente,
+                            cantidad_estudiantes=cantidad,
+                            estado='pendiente',
+                        )
+                        created = True
 
                     if created:
                         horarios_creados += 1
@@ -1152,6 +1173,7 @@ class Command(BaseCommand):
                 f'Actualizados: {horarios_actualizados}, '
                 f'Sin cambio: {horarios_sin_cambio}, '
                 f'Errores: {horarios_error}, '
+                f'Duplicados reutilizados: {duplicados_horario_reutilizados}, '
                 f'Grupo no encontrado: {grupo_no_encontrado}, '
                 f'Asignatura no encontrada: {asignatura_no_encontrada}, '
                 f'Espacio no encontrado: {espacio_no_encontrado}, '
