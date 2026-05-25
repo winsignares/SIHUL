@@ -190,12 +190,12 @@ html {
   font-size: var(--font-size);
 }
 
-/* Scrollbar invisible pero funcional */
+/* Scrollbar invisible pero funcional 
 .scrollbar-hidden {
   scrollbar-width: none; 
   -ms-overflow-style: none; 
 }
-
+*/
 .scrollbar-hidden::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
