@@ -325,17 +325,12 @@ export const prestamosPublicAPI = {
         identificacion: string,
         correo: string
     ): Promise<{ prestamos: PrestamoPublicoItem[] }> => {
-        const prestamos = await apiClient.get<PrestamoPublicoApi[]>('/prestamos/publicos/');
-        const correoNormalizado = correo.trim().toLowerCase();
-        const identificacionNormalizada = identificacion.trim();
-        const prestamosNormalizados = prestamos.map(toPrestamoPublicoItem);
-        return {
-            prestamos: prestamosNormalizados.filter((item) => {
-                const correoItem = (item.usuario_correo || '').toLowerCase();
-                const identificacionItem = item.identificacion || '';
-                return correoItem === correoNormalizado && identificacionItem === identificacionNormalizada;
-            }),
-        };
+        const params = new URLSearchParams({
+            identificacion: identificacion.trim(),
+            correo: correo.trim(),
+        });
+        const prestamos = await apiClient.get<PrestamoPublicoApi[]>(`/prestamos/publicos/?${params}`);
+        return { prestamos: prestamos.map(toPrestamoPublicoItem) };
     },
 
     /**

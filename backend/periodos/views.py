@@ -5,9 +5,19 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 
+
+def _require_auth(request):
+    user = getattr(request, 'user', None)
+    if not user or not user.is_authenticated:
+        return JsonResponse({"error": "Autenticación requerida"}, status=403)
+    return None
+
 # ---------- PeriodoAcademico CRUD ----------
 @csrf_exempt
 def create_periodo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -34,6 +44,9 @@ def create_periodo(request):
 
 @csrf_exempt
 def update_periodo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'PUT':
         try:
             data = json.loads(request.body)
@@ -63,6 +76,9 @@ def update_periodo(request):
 
 @csrf_exempt
 def delete_periodo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'DELETE':
         try:
             data = json.loads(request.body)
@@ -82,6 +98,9 @@ def delete_periodo(request):
 
 @csrf_exempt
 def get_periodo(request, id=None):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
@@ -94,6 +113,9 @@ def get_periodo(request, id=None):
 
 @csrf_exempt
 def list_periodos(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'GET':
         try:
             from horario.models import Horario
@@ -133,6 +155,9 @@ def list_periodos(request):
 
 @csrf_exempt
 def get_periodo_activo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     """Obtiene el período académico activo actual"""
     if request.method == 'GET':
         try:
@@ -156,6 +181,9 @@ def get_periodo_activo(request):
 
 @csrf_exempt
 def copy_periodo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     """Copia un periodo académico junto con todos sus grupos"""
     if request.method == 'POST':
         try:

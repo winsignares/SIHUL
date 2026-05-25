@@ -107,12 +107,14 @@ class SedeViewSet(SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Sede.objects.none()
+            return Sede.objects.filter(activa=True)
         return super().get_queryset()
 
 

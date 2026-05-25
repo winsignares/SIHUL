@@ -19,6 +19,13 @@ import urllib.parse
 
 # ========== Helper Functions ==========
 
+
+def _require_auth(request):
+    user = getattr(request, 'user', None)
+    if not user or not user.is_authenticated:
+        return JsonResponse({"error": "Autenticación requerida"}, status=403)
+    return None
+
 def check_espacio_disponible(espacio_id, fecha, hora_inicio, hora_fin, prestamo_id=None, es_publico=False):
     """
     Verifica si un espacio está disponible en la fecha y horas especificadas
@@ -265,6 +272,9 @@ def _recurrencia_payload(prestamo):
 @csrf_exempt
 def list_tipos_actividad(request):
     """Lista todos los tipos de actividad"""
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'GET':
         tipos = TipoActividad.objects.all()
         lst = [{
@@ -278,6 +288,9 @@ def list_tipos_actividad(request):
 @csrf_exempt
 def create_tipo_actividad(request):
     """Crea un nuevo tipo de actividad"""
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method != 'POST':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -300,6 +313,9 @@ def create_tipo_actividad(request):
 
 @csrf_exempt
 def create_prestamo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method != 'POST':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -463,6 +479,9 @@ def create_prestamo(request):
 
 @csrf_exempt
 def update_prestamo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method != 'PUT':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -678,6 +697,9 @@ def update_prestamo(request):
 
 @csrf_exempt
 def delete_prestamo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method != 'DELETE':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -710,6 +732,9 @@ def delete_prestamo(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 def get_prestamo(request, id=None):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
@@ -777,6 +802,9 @@ def list_prestamos(request):
     """
     Lista préstamos de usuarios AUTENTICADOS solamente
     """
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'GET':
         # Obtener sede del usuario desde middleware
         user_sede = getattr(request, 'sede', None)
@@ -837,6 +865,9 @@ def list_prestamos_todos_admin(request):
     Lista TODOS los préstamos (autenticados y públicos) para el panel de administración
     Combina ambas tablas en una sola respuesta
     """
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'GET':
         user_sede = getattr(request, 'sede', None)
         lst = []
@@ -951,6 +982,9 @@ def list_prestamos_by_user(request, usuario_id):
     """
     Lista todos los préstamos de un usuario específico
     """
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
     if request.method == 'GET':
         try:
             # Verificar que el usuario existe

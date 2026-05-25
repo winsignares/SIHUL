@@ -29,7 +29,14 @@ class TipoActividadListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView)
     seccional_lookup = None
 
     def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return TipoActividad.objects.all().order_by('nombre')
+        return super().get_queryset()
 
 
 class TipoActividadDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -69,7 +76,7 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
-        if self.request.method == 'POST':
+        if self.request.method in permissions.SAFE_METHODS or self.request.method == 'POST':
             return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
@@ -96,7 +103,16 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.none()
+            if self.request.method not in permissions.SAFE_METHODS:
+                return PrestamoEspacioPublico.objects.none()
+            identificacion = (self.request.query_params.get('identificacion') or '').strip()
+            correo = (self.request.query_params.get('correo') or '').strip()
+            if not identificacion or not correo:
+                return PrestamoEspacioPublico.objects.none()
+            return PrestamoEspacioPublico.objects.filter(
+                identificacion_solicitante=identificacion,
+                correo_solicitante__iexact=correo,
+            )
         return super().get_queryset()
 
 
