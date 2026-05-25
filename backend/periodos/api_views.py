@@ -1,6 +1,7 @@
 import datetime
 
 from django.db import transaction
+from django.db.models import Count, Q
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -170,11 +171,12 @@ class PeriodoPorRangoFechasAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        from django.db.models import Q
-
         periodos = PeriodoAcademico.objects.filter(
             Q(fecha_inicio__lte=fecha_fin) & Q(fecha_fin__gte=fecha_inicio)
-        ).order_by('fecha_inicio')
+        ).annotate(
+            total_horarios=Count('grupos__horarios', distinct=True),
+            total_programas=Count('grupos__programa', distinct=True),
+        ).order_by('-total_horarios', '-total_programas', '-activo', '-fecha_inicio', '-id')
 
         if not periodos.exists():
             return Response(

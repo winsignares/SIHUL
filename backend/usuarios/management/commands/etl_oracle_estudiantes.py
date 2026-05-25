@@ -41,7 +41,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-            default='SELECT * FROM UHORARIOS.VW_ESTUDIANTES',
+            default=("SELECT * FROM UHORARIOS.VW_ESTUDIANTES"
+            "WHERE PERIODO_ACADEMICO = '20261' "),
             help='Consulta Oracle para estudiantes',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')

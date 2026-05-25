@@ -28,15 +28,16 @@ class Command(BaseCommand):
             '--query',
             type=str,
             default=(
-                'SELECT '
-                'ID_PROGRAMA AS id_programa, '
-                'ID_SEDE AS id_sede, '
-                'NOMBRE_SEDE AS nombre_sede, '
-                'ID_FACULTAD AS id_facultad, '
-                'NOMBRE_FACULTAD AS nombre_facultad, '
-                'NOMBRE_PROGRAMA AS nombre_programa, '
-                'PERIODO_ACADEMICO AS periodo_academico '
-                'FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS'
+                "SELECT "
+                "ID_PROGRAMA AS id_programa, "
+                "ID_SEDE AS id_sede, "
+                "NOMBRE_SEDE AS nombre_sede, "
+                "ID_FACULTAD AS id_facultad, "
+                "NOMBRE_FACULTAD AS nombre_facultad, "
+                "NOMBRE_PROGRAMA AS nombre_programa, "
+                "PERIODO_ACADEMICO AS periodo_academico "
+                "FROM UHORARIOS.VW_PROGRAMAS_ACADEMICOS "
+                "WHERE PERIODO_ACADEMICO = '20261'"
             ),
             help='Consulta Oracle para programas academicos',
         )
