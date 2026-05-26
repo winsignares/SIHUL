@@ -23,7 +23,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-            default='SELECT * FROM UHORARIOS.VW_DOCENTES',
+            default=("SELECT * FROM UHORARIOS.VW_DOCENTES"
+            f"WHERE PERIODO = '{settings.ETL_PERIODO}'"),
             help='Consulta Oracle para docentes',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')

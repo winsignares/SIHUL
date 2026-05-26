@@ -44,7 +44,7 @@ class Command(BaseCommand):
             '--query',
             type=str,
             default=("SELECT * FROM UHORARIOS.VW_ESTUDIANTES"
-            "WHERE PERIODO_ACADEMICO = '20261' "),
+            f"WHERE PERIODO_ACADEMICO = '{settings.ETL_PERIODO}' "),
             default=f"SELECT * FROM UHORARIOS.VW_ESTUDIANTES WHERE PERIODO_ACADEMICO LIKE '{settings.ETL_PERIODO}'",
             help='Consulta Oracle para estudiantes',
         )
