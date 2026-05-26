@@ -3,6 +3,7 @@ import json
 import os
 
 import oracledb
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -23,8 +24,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-            default=("SELECT * FROM UHORARIOS.VW_DOCENTES"
-            f"WHERE PERIODO = '{settings.ETL_PERIODO}'"),
+            default=f"SELECT * FROM UHORARIOS.VW_DOCENTES WHERE PERIODO = '{settings.ETL_PERIODO}'",
             help='Consulta Oracle para docentes',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
@@ -107,7 +107,7 @@ class Command(BaseCommand):
                 cursor,
                 query,
                 seccional=seccional,
-                seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                seccional_columns=('ID_SEDE', 'SEDE', 'NOMBRE_SEDE'),
                 limit=limit,
                 stdout=self.stdout,
             )
@@ -123,12 +123,15 @@ class Command(BaseCommand):
             for row in rows:
                 data = dict(zip(columns, row))
 
-                # VW_DOCENTES solo tiene: tip_identificacion, id_docente, nombres, apellidos
+                # VW_DOCENTES actual:
+                # TIP_IDENTIFICACION, ID_DOCENTE, NOMBRES, APELLIDOS, PERIODO, ID_SEDE
                 raw_payload = {
                     'tip_identificacion': self._first_present(data, ['tip_identificacion', 'tipo_id']),
                     'id_docente': self._first_present(data, ['id_docente', 'cod_docente']),
                     'nombres': self._first_present(data, ['nombres']),
                     'apellidos': self._first_present(data, ['apellidos']),
+                    'periodo': self._first_present(data, ['periodo', 'periodo_academico']),
+                    'id_sede': self._first_present(data, ['id_sede']),
                 }
 
                 tipo_documento = self._to_text(raw_payload['tip_identificacion'])
@@ -152,17 +155,17 @@ class Command(BaseCommand):
                 defaults = {
                     'id_docente_oracle': id_docente_oracle or None,
                     'tipo_documento': tipo_documento or None,
-                    'numero_documento': None,  # No disponible en VW_DOCENTES
+                    'numero_documento': id_docente_oracle or None,
                     'nombres': nombres or None,
                     'apellidos': apellidos or None,
                     'nombre_completo': nombre_completo,
                     'correo_institucional': None,  # No disponible en VW_DOCENTES
                     'correo_personal': None,  # No disponible en VW_DOCENTES
-                    'id_sede_oracle': None,  # No disponible en VW_DOCENTES
+                    'id_sede_oracle': self._to_text(raw_payload['id_sede']) or None,
                     'nombre_sede_oracle': None,  # No disponible en VW_DOCENTES
                     'id_facultad_oracle': None,  # No disponible en VW_DOCENTES
                     'nombre_facultad_oracle': None,  # No disponible en VW_DOCENTES
-                    'periodo_academico': None,  # No disponible en VW_DOCENTES
+                    'periodo_academico': self._to_text(raw_payload['periodo']) or None,
                     'estado_docente': None,  # No disponible en VW_DOCENTES
                     'raw_data': data,
                     'row_hash': row_hash,

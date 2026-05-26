@@ -60,7 +60,7 @@ class Command(BaseCommand):
         if etapa in ['docentes', 'all']:
             self.migrate_docentes(dry_run, limit, seccional_filter=seccional_filter)
         if etapa in ['estudiantes', 'all']:
-            self.migrate_estudiantes(dry_run, limit)
+            self.migrate_estudiantes(dry_run, limit, seccional_filter=seccional_filter)
         if etapa in ['espacios', 'all']:
             self.migrate_espacios(dry_run, limit, seccional_filter=seccional_filter)
         if etapa in ['horarios', 'all']:
@@ -591,19 +591,9 @@ class Command(BaseCommand):
 
         stg_docentes = StgOracleDocente.objects.filter(estado_registro='valido')
         if seccional_filter:
-            # VW_DOCENTES actual solo incluye identificacion y nombre (sin ID_SEDE).
-            # Si no existe dato de sede en staging, no aplicamos filtro a esta etapa.
-            has_sede_data = stg_docentes.exclude(id_sede_oracle__isnull=True).exclude(id_sede_oracle='').exists()
-            if has_sede_data:
-                sedes_ids = list(Sede.objects.filter(seccional=seccional_filter).values_list('external_id', flat=True))
-                sedes_ids = [self._to_text(s) for s in sedes_ids if self._to_text(s)]
-                stg_docentes = stg_docentes.filter(id_sede_oracle__in=sedes_ids)
-            else:
-                self.stdout.write(
-                    self.style.WARNING(
-                        'Docentes: staging sin id_sede_oracle; se omite filtro de seccional en esta etapa.'
-                    )
-                )
+            sedes_ids = list(Sede.objects.filter(seccional=seccional_filter).values_list('external_id', flat=True))
+            sedes_ids = [self._to_text(s) for s in sedes_ids if self._to_text(s)]
+            stg_docentes = stg_docentes.filter(id_sede_oracle__in=sedes_ids)
         if limit:
             stg_docentes = stg_docentes[:limit]
 
@@ -710,12 +700,16 @@ class Command(BaseCommand):
             )
         )
 
-    def migrate_estudiantes(self, dry_run=False, limit=None):
+    def migrate_estudiantes(self, dry_run=False, limit=None, seccional_filter=None):
         self.stdout.write('=' * 60)
         self.stdout.write('ETAPA 3B: Migrando Estudiantes')
         self.stdout.write('=' * 60)
 
         stg_estudiantes = StgOracleEstudiante.objects.filter(estado_registro='valido')
+        if seccional_filter:
+            sedes_ids = list(Sede.objects.filter(seccional=seccional_filter).values_list('external_id', flat=True))
+            sedes_ids = [self._to_text(s) for s in sedes_ids if self._to_text(s)]
+            stg_estudiantes = stg_estudiantes.filter(id_sede_oracle__in=sedes_ids)
         if limit:
             stg_estudiantes = stg_estudiantes[:limit]
 
@@ -746,6 +740,8 @@ class Command(BaseCommand):
                     id_est = self._to_text(stg_estudiante.id_estudiante_oracle)
                     if id_est:
                         usuario = Usuario.objects.filter(correo=f'{id_est}@estudiante.local').first()
+                source_system = stg_estudiante.source_system or 'ORACLE_SIU'
+                sede = self._resolve_sede(source_system, getattr(stg_estudiante, 'id_sede_oracle', None))
 
                 if dry_run:
                     if usuario:
@@ -762,6 +758,7 @@ class Command(BaseCommand):
                         activo=True,
                         is_active=True,
                         rol=rol_estudiante,
+                        sede=sede,
                     )
                     estudiantes_creados += 1
                     continue
@@ -776,6 +773,9 @@ class Command(BaseCommand):
                 if not usuario.activo:
                     usuario.activo = True
                     usuario.is_active = True
+                    changed = True
+                if sede and usuario.sede_id != sede.id:
+                    usuario.sede = sede
                     changed = True
 
                 correo_canon = self._to_text(usuario.correo).lower()

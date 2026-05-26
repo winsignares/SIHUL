@@ -146,6 +146,7 @@ class StgOracleEstudiante(models.Model):
     semestre_oracle = models.IntegerField(null=True, blank=True)
     periodo_academico = models.CharField(max_length=5, null=True, blank=True, db_index=True)
     programa_oracle = models.CharField(max_length=250, null=True, blank=True)
+    id_sede_oracle = models.CharField(max_length=50, null=True, blank=True, db_index=True)
     raw_data = models.JSONField(default=dict, blank=True)
     row_hash = models.CharField(max_length=64, db_index=True)
     estado_registro = models.CharField(max_length=30, default='valido', db_index=True)

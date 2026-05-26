@@ -43,8 +43,6 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-            default=("SELECT * FROM UHORARIOS.VW_ESTUDIANTES"
-            f"WHERE PERIODO_ACADEMICO = '{settings.ETL_PERIODO}' "),
             default=f"SELECT * FROM UHORARIOS.VW_ESTUDIANTES WHERE PERIODO_ACADEMICO LIKE '{settings.ETL_PERIODO}'",
             help='Consulta Oracle para estudiantes',
         )
@@ -178,6 +176,7 @@ class Command(BaseCommand):
             'semestre': self._first_present(data, ['semestre']),
             'periodo_academico': self._first_present(data, ['periodo_academico']),
             'programa': self._first_present(data, ['programa']),
+            'id_sede': self._first_present(data, ['id_sede']),
         }
 
         tipo_identificacion = self._to_text(raw_payload['tip_identificacion'])
@@ -212,6 +211,7 @@ class Command(BaseCommand):
             'semestre_oracle': self._to_non_negative_int(raw_payload['semestre'], default=None),
             'periodo_academico': self._to_text(raw_payload['periodo_academico']) or None,
             'programa_oracle': self._to_text(raw_payload['programa']) or None,
+            'id_sede_oracle': self._to_text(raw_payload['id_sede']) or None,
             'raw_data': data,
             'row_hash': row_hash,
             'estado_registro': (
@@ -234,14 +234,13 @@ class Command(BaseCommand):
         )
         existing_by_external = {obj.external_id: obj for obj in existing_qs}
         now = timezone.now()
-        to_create = []
-        to_update = []
+        to_upsert = []
 
         for external_id, defaults in staged_by_external.items():
             current = existing_by_external.get(external_id)
             if current is None:
                 summary['staging']['created'] += 1
-                to_create.append(
+                to_upsert.append(
                     StgOracleEstudiante(
                         source_system=source_system,
                         external_id=external_id,
@@ -249,24 +248,28 @@ class Command(BaseCommand):
                         **defaults,
                     )
                 )
-                continue
-
-            if current.row_hash == defaults['row_hash']:
+            elif current.row_hash != defaults['row_hash']:
+                summary['staging']['updated'] += 1
+                to_upsert.append(
+                    StgOracleEstudiante(
+                        source_system=source_system,
+                        external_id=external_id,
+                        fecha_carga=now,
+                        **defaults,
+                    )
+                )
+            else:
                 summary['staging']['unchanged'] += 1
-                continue
 
-            summary['staging']['updated'] += 1
-            for field_name, field_value in defaults.items():
-                setattr(current, field_name, field_value)
-            current.fecha_carga = now
-            to_update.append(current)
-
-        if to_create:
-            StgOracleEstudiante.objects.bulk_create(to_create, batch_size=1000)
-        if to_update:
-            StgOracleEstudiante.objects.bulk_update(
-                to_update,
-                fields=[
+        if to_upsert:
+            # Upsert atomico en PostgreSQL: evita IntegrityError cuando
+            # un external_id aparece en lotes posteriores o ejecuciones concurrentes.
+            StgOracleEstudiante.objects.bulk_create(
+                to_upsert,
+                batch_size=1000,
+                update_conflicts=True,
+                unique_fields=['source_system', 'external_id'],
+                update_fields=[
                     'tipo_identificacion',
                     'id_estudiante_oracle',
                     'codigo_estudiante_oracle',
@@ -276,12 +279,12 @@ class Command(BaseCommand):
                     'semestre_oracle',
                     'periodo_academico',
                     'programa_oracle',
+                    'id_sede_oracle',
                     'raw_data',
                     'row_hash',
                     'estado_registro',
                     'fecha_carga',
                 ],
-                batch_size=1000,
             )
 
     def handle(self, *args, **options):
@@ -344,7 +347,7 @@ class Command(BaseCommand):
                     cursor,
                     paginated_query,
                     seccional=seccional,
-                    seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                    seccional_columns=('ID_SEDE', 'SEDE', 'NOMBRE_SEDE'),
                     seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
                     limit=None,
                     stdout=self.stdout,

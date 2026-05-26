@@ -1,11 +1,13 @@
 import os
 
 import oracledb
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from asignaturas.models import Asignatura
 from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from sedes.models import Sede
 
 
 class Command(BaseCommand):
@@ -32,8 +34,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--query',
             type=str,
-            default=("SELECT * FROM UHORARIOS.ASIGNATURA"
-            f"WHERE COD_PERIODO = '{settings.ETL_PERIODO}'"),
+            default=f"SELECT * FROM UHORARIOS.VW_ASIGNATURA WHERE COD_PERIODO = '{settings.ETL_PERIODO}'",
             help='Consulta Oracle para asignaturas',
         )
         parser.add_argument('--dry-run', action='store_true', help='Simular sin guardar cambios')
@@ -162,7 +163,7 @@ class Command(BaseCommand):
                 cursor,
                 query,
                 seccional=seccional,
-                seccional_columns=('SEDE', 'NOMBRE_SEDE'),
+                seccional_columns=('ID_SEDE', 'SEDE', 'NOMBRE_SEDE'),
                 seccional_related_predicates=self._SECCIONAL_RELATED_PREDICATES,
                 limit=limit,
                 stdout=self.stdout,
@@ -240,6 +241,7 @@ class Command(BaseCommand):
                         'creditos': creditos,
                         'horas': horas,
                         'estado_activo': estado_activo,
+                        'id_sede_oracle': str(self._first_present(data, ['id_sede']) or '').strip() or None,
                     }
                 )
 
@@ -262,6 +264,10 @@ class Command(BaseCommand):
                     or current.tipo != item['tipo']
                     or current.creditos != item['creditos']
                     or current.horas != item['horas']
+                    or (
+                        (current.sede.external_id if current.sede else None)
+                        != item['id_sede_oracle']
+                    )
                 )
                 if changed:
                     summary['to_update'] += 1
@@ -275,6 +281,9 @@ class Command(BaseCommand):
                 for item in parsed:
                     if not item['estado_activo'] and not import_inactive:
                         continue
+                    sede = None
+                    if item.get('id_sede_oracle'):
+                        sede = Sede.objects.filter(external_id=item['id_sede_oracle']).first()
 
                     asignatura, created = Asignatura.objects.get_or_create(
                         codigo=item['codigo'],
@@ -283,6 +292,7 @@ class Command(BaseCommand):
                             'tipo': item['tipo'],
                             'creditos': item['creditos'],
                             'horas': item['horas'],
+                            'sede': sede,
                         },
                     )
 
@@ -302,6 +312,9 @@ class Command(BaseCommand):
                         changed = True
                     if asignatura.horas != item['horas']:
                         asignatura.horas = item['horas']
+                        changed = True
+                    if (asignatura.sede.external_id if asignatura.sede else None) != item['id_sede_oracle']:
+                        asignatura.sede = sede
                         changed = True
 
                     if changed:
