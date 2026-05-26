@@ -54,6 +54,7 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Gestión de Componentes': '/admin/componentes-roles',
     'Componentes y Roles': '/admin/componentes-roles',
     'Asignación Automática': '/admin/asignacion',
+    'Asignación de espacios por seccional': '/asignacion-espacios-seccional',
 
     // Supervisor General
     'Dashboard Supervisor': '/supervisor/dashboard',
@@ -116,6 +117,7 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Asistentes Virtuales Docente': Bot,
     'Asistentes Virtuales Estudiante': Bot,
     'Asignación Automática': Zap,
+    'Asignación de espacios por seccional': MapPin,
     'Ocupación Semanal': BarChart3,
     'Reportes Generales': FileText,
     'Gestión de Usuarios': Shield,

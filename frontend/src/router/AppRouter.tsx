@@ -33,6 +33,7 @@ const DynamicComponentPage = lazy(() => import('../pages/shared/DynamicComponent
 const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/SolicitudesEspacio'));
 const ComponentesRoles = lazy(() => import('../pages/permisos/ComponentesRoles'));
 const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
+const AsignacionEspaciosSeccionalPage = lazy(() => import('../pages/gestionAcademica/AsignacionEspaciosSeccionalPage'));
 
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
@@ -203,6 +204,12 @@ export default function AppRouter() {
         <Route path="admin/asignacion" element={
           <ProtectedRoute requiredComponent="Asignación Automática">
             <EnConstruccion />
+          </ProtectedRoute>
+        } />
+
+        <Route path="asignacion-espacios-seccional" element={
+          <ProtectedRoute requiredComponent="Asignación de espacios por seccional">
+            <AsignacionEspaciosSeccionalPage />
           </ProtectedRoute>
         } />
 

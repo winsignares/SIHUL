@@ -15,6 +15,7 @@ def create_componentes(stdout, style):
         {'nombre': 'Centro Institucional', 'descripcion': 'Gestión de facultades y programas'},
         {'nombre': 'Centro de Horarios', 'descripcion': 'Gestión central de horarios'},
         {'nombre': 'Asignación Automática', 'descripcion': 'Asignación automática de espacios'},
+        {'nombre': 'Asignación de espacios por seccional', 'descripcion': 'Asignación manual de espacios por seccional'},
         {'nombre': 'Préstamos de Espacios', 'descripcion': 'Gestión de préstamos de espacios'},
         {'nombre': 'Periodos Académicos', 'descripcion': 'Gestión de periodos académicos'},
         {'nombre': 'Asistentes Virtuales', 'descripcion': 'Chatbots y asistentes virtuales'},

@@ -78,3 +78,8 @@ def generar_pdf_reporte_capacidad(request):
 
 def list_espacios_by_usuario(request, usuario_id=None):
     return api_views.list_espacios_by_usuario(request, usuario_id=usuario_id)
+
+
+def list_espacios_disponibles_por_horario(request):
+    return legacy_views.list_espacios_disponibles_por_horario(request)
+
