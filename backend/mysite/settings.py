@@ -23,6 +23,7 @@ MICROSOFT_CLIENT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET', '')
 MICROSOFT_TENANT = os.getenv('MICROSOFT_TENANT', 'common')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
 MICROSOFT_OAUTH_ENABLED = bool(MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET)
+CHATBOT_FASTAPI_URL = os.getenv('CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1').rstrip('/')
 
 
 # Application definition

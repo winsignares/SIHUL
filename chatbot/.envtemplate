@@ -1,0 +1,18 @@
+
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+
+# POSTGRESQL (credenciales SIHUL)
+POSTGRES_USER     =postgres
+POSTGRES_PASSWORD =mysecretpassword
+POSTGRES_DB       =mypostgresdb
+
+# ==========================================
+# CHATBOT RAG
+# ==========================================
+DATABASE_URL      =postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
+CHUNK_SIZE        =500
+CHUNK_OVERLAP     =50
+EMBEDDING_MODEL   =text-embedding-3-small
+CHAT_MODEL        =gpt-4o-mini
+
+
