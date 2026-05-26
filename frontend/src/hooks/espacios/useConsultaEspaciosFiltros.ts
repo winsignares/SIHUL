@@ -14,22 +14,10 @@ function getFechaColombia(): Date {
   return new Date(utc + 3600000 * -5);
 }
 
-function getSabadoSemanaActual(fecha: Date): Date {
+function getFechaMasDias(fecha: Date, dias: number): Date {
   const resultado = new Date(fecha);
-  const dia = resultado.getDay();
-
-  if (dia === 6) {
-    return resultado;
-  }
-
-  const diasHastaSabado = 6 - dia;
-  resultado.setDate(resultado.getDate() + diasHastaSabado);
+  resultado.setDate(resultado.getDate() + dias);
   return resultado;
-}
-
-function esDomingo(fechaStr: string): boolean {
-  const fecha = new Date(fechaStr + 'T00:00:00');
-  return fecha.getDay() === 0;
 }
 
 export function useConsultaEspaciosFiltros() {
@@ -54,12 +42,8 @@ export function useConsultaEspaciosFiltros() {
       const hoy = getFechaColombia();
       hoy.setHours(0, 0, 0, 0);
 
-      if (hoy.getDay() === 0) {
-        return;
-      }
-
       const fechaInicioStr = formatFechaLocalYYYYMMDD(hoy);
-      const fechaFinStr = formatFechaLocalYYYYMMDD(getSabadoSemanaActual(hoy));
+      const fechaFinStr = formatFechaLocalYYYYMMDD(getFechaMasDias(hoy, 7));
 
       setFilterFechaInicio(fechaInicioStr);
       setFilterFechaFin(fechaFinStr);
@@ -71,14 +55,6 @@ export function useConsultaEspaciosFiltros() {
       setFilterFechaInicio('');
       setFilterFechaFin('');
       setMensajeFiltroFecha(null);
-      return;
-    }
-
-    if (esDomingo(fecha)) {
-      setMensajeFiltroFecha({
-        tipo: 'error',
-        texto: 'No se permite seleccionar domingo como fecha de inicio. Elige tu día actual o un día futuro.'
-      });
       return;
     }
 
@@ -95,7 +71,7 @@ export function useConsultaEspaciosFiltros() {
     }
 
     setFilterFechaInicio(fecha);
-    setFilterFechaFin(formatFechaLocalYYYYMMDD(getSabadoSemanaActual(fechaInicio)));
+    setFilterFechaFin(formatFechaLocalYYYYMMDD(getFechaMasDias(fechaInicio, 7)));
     setMensajeFiltroFecha({
       tipo: 'info',
       texto: 'Rango actualizado. Puedes ajustar la fecha manualmente si necesitas consultar un intervalo específico.'
@@ -114,14 +90,6 @@ export function useConsultaEspaciosFiltros() {
         setMensajeFiltroFecha({
           tipo: 'error',
           texto: 'Primero selecciona la fecha de inicio. Luego podrás elegir la fecha fin.'
-        });
-        return;
-      }
-
-      if (esDomingo(fecha)) {
-        setMensajeFiltroFecha({
-          tipo: 'error',
-          texto: 'No se permite seleccionar domingo como fecha fin. Elige el día actual o un día futuro válido.'
         });
         return;
       }
@@ -265,7 +233,7 @@ export function useConsultaEspaciosFiltros() {
     const hoy = getFechaColombia();
     hoy.setHours(0, 0, 0, 0);
     const fechaInicioStr = formatFechaLocalYYYYMMDD(hoy);
-    const fechaFinStr = formatFechaLocalYYYYMMDD(getSabadoSemanaActual(hoy));
+    const fechaFinStr = formatFechaLocalYYYYMMDD(getFechaMasDias(hoy, 7));
 
     setFilterFechaInicio(fechaInicioStr);
     setFilterFechaFin(fechaFinStr);

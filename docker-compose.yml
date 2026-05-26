@@ -7,11 +7,11 @@ name: sihul
 
 services:
   # ==========================================
-  # BASE DE DATOS POSTGRESQL
+  # BASE DE DATOS POSTGRESQL + PGVECTOR
   # ==========================================
   db:
     container_name: postgres_db
-    image: postgres:15
+    image: pgvector/pgvector:pg16
     restart: always
     ports:
       - "5432:5432"
@@ -21,6 +21,7 @@ services:
       POSTGRES_PASSWORD: mysecretpassword
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
     networks:
       - sihul_network
     healthcheck:
@@ -50,6 +51,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: mysecretpassword
       DB_NAME: mypostgresdb
+      CHATBOT_FASTAPI_URL: http://chatbot:8001/api/v1
       # Python
       PYTHONUNBUFFERED: "1"
       # Memoria
@@ -67,6 +69,34 @@ services:
         condition: service_healthy
     networks:
       - sihul_network
+
+  # ==========================================
+  # CHATBOT FASTAPI + RAG
+  # ==========================================
+  chatbot:
+    container_name: sihul-chatbot
+    build:
+      context: .
+      dockerfile: chatbot.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./chatbot/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./chatbot:/app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
+      CHUNK_SIZE: ${CHUNK_SIZE:-500}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sihul_network  
 
   # ==========================================
   # FRONTEND REACT + VITE
@@ -91,9 +121,11 @@ services:
       VITE_HMR_HOST: "localhost"
       VITE_HMR_PORT: "5173"
       VITE_API_URL: "http://localhost:8000"
+      VITE_CHATBOT_URL: "http://localhost:8001"
       TZ: "America/Bogota"
     depends_on:
       - backend
+      - chatbot
     networks:
       - sihul_network
     stdin_open: true
@@ -131,3 +163,8 @@ networks:
   sihul_network:
     name: sihul_network
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_NETWORK_SUBNET:-10.201.2.0/24}
+          gateway: ${DOCKER_NETWORK_GATEWAY:-10.201.2.1}
