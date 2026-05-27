@@ -4,7 +4,7 @@ import os
 
 import oracledb
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from horario.models import StgOracleHorario
@@ -298,12 +298,16 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('ETL horario finalizado (Oracle -> staging)'))
             self.stdout.write(str(summary))
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as exc:
             self.stdout.write(self.style.WARNING('Operacion interrumpida por usuario durante la lectura de Oracle'))
+            raise CommandError('ETL horario interrumpido por usuario') from exc
+
         except Exception as exc:
             self.stdout.write(self.style.ERROR(f'Error en ETL horario: {exc}'))
             import traceback
             traceback.print_exc()
+            raise CommandError(f'Falló el ETL horario: {exc}') from exc
+            
         finally:
             if cursor:
                 cursor.close()
