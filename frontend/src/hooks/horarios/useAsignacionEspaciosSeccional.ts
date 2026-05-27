@@ -5,12 +5,10 @@ import {
   type EspacioDisponible,
   type HorarioSinEspacioFilters,
 } from '../../services/horarios/asignacionEspaciosService';
-import { sedeService, type Seccional } from '../../services/sedes/sedeAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { asignaturaService, type Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
-import { userService, type Usuario } from '../../services/users/authService';
 import { useAuth } from '../../context/AuthContext';
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -18,9 +16,28 @@ const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 const getSeccionalIdFromUser = (user: ReturnType<typeof useAuth>['user']) => {
   if (!user || !user.sede) return null;
   if (typeof user.sede === 'object' && 'seccional_id' in user.sede) {
-    return user.sede.seccional_id ?? null;
+    const seccionalId = user.sede.seccional_id;
+    return typeof seccionalId === 'number' ? seccionalId : null;
   }
   return null;
+};
+
+const resolveCurrentPeriodoId = (periodos: PeriodoAcademico[]): number | null => {
+  const now = new Date();
+
+  for (const periodo of periodos) {
+    if (!periodo.id) continue;
+
+    const fechaInicio = new Date(`${periodo.fecha_inicio}T00:00:00`);
+    const fechaFin = new Date(`${periodo.fecha_fin}T23:59:59`);
+
+    if (!Number.isNaN(fechaInicio.getTime()) && !Number.isNaN(fechaFin.getTime()) && now >= fechaInicio && now <= fechaFin) {
+      return periodo.id;
+    }
+  }
+
+  const periodoActivo = periodos.find((periodo) => Boolean(periodo.activo && periodo.id));
+  return periodoActivo?.id ?? null;
 };
 
 export function useAsignacionEspaciosSeccional() {
@@ -35,10 +52,8 @@ export function useAsignacionEspaciosSeccional() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [seccionales, setSeccionales] = useState<Seccional[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
-  const [docentes, setDocentes] = useState<Usuario[]>([]);
   const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
 
@@ -59,7 +74,7 @@ export function useAsignacionEspaciosSeccional() {
 
   useEffect(() => {
     const userSeccionalId = getSeccionalIdFromUser(user);
-    if (userSeccionalId && !filtros.seccionalId) {
+    if (userSeccionalId !== null && filtros.seccionalId !== userSeccionalId) {
       setFiltrosState((prev) => ({ ...prev, seccionalId: userSeccionalId }));
     }
   }, [user, filtros.seccionalId]);
@@ -71,21 +86,26 @@ export function useAsignacionEspaciosSeccional() {
 
   const cargarFiltros = useCallback(async () => {
     try {
-      const [seccionalesRes, programasRes, gruposRes, docentesRes, asignaturasRes, periodosRes] = await Promise.all([
-        sedeService.listarSeccionales(),
+      const [programasRes, gruposRes, asignaturasRes, periodosRes] = await Promise.all([
         programaService.listarProgramas(),
         grupoService.list(),
-        userService.listarDocentes(),
         asignaturaService.list(),
         periodoService.listarPeriodos(),
       ]);
 
-      setSeccionales(seccionalesRes.seccionales ?? []);
       setProgramas(programasRes.programas ?? []);
       setGrupos(gruposRes.grupos ?? []);
-      setDocentes(docentesRes.usuarios ?? []);
       setAsignaturas(asignaturasRes.asignaturas ?? []);
-      setPeriodos(periodosRes.periodos ?? []);
+
+      const periodosCatalogo = periodosRes.periodos ?? [];
+      setPeriodos(periodosCatalogo);
+
+      setFiltrosState((prev) => {
+        if (prev.periodoId) return prev;
+        const periodoActualId = resolveCurrentPeriodoId(periodosCatalogo);
+        if (!periodoActualId) return prev;
+        return { ...prev, periodoId: periodoActualId };
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cargar los filtros';
       setError(message);
@@ -204,10 +224,8 @@ export function useAsignacionEspaciosSeccional() {
     limpiarSeleccion,
     recargarHorarios,
     setEspacioSeleccionado,
-    seccionales,
     programas,
     grupos: gruposFiltrados,
-    docentes,
     asignaturas,
     periodos,
     diasSemana: DIAS_SEMANA,
