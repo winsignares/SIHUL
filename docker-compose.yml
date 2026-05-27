@@ -92,6 +92,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./chatbot/.env
+    ports:
       - "8001:8001"
     volumes:
       - ./chatbot:/app
