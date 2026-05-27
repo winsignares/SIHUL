@@ -61,6 +61,29 @@ class Command(BaseCommand):
             return default
 
     @staticmethod
+    def _programa_pk_from_oracle_id(id_programa_oracle):
+        """
+        Convierte el ID Oracle a PK entera para Programa.
+        - Numerico positivo: se usa tal cual.
+        - Alfanumerico: se mapea de forma deterministica a un entero alto.
+        """
+        raw_id = str(id_programa_oracle or '').strip()
+        if not raw_id:
+            return None, False
+
+        numeric = Command._to_non_negative_int(raw_id, default=None)
+        if numeric and numeric > 0:
+            return numeric, False
+
+        # Rango alto para minimizar choques con IDs numericos "naturales" de Oracle.
+        # Max AutoField (int32 signed): 2,147,483,647
+        base = 1_500_000_000
+        span = 600_000_000
+        digest = hashlib.sha1(raw_id.encode('utf-8')).hexdigest()
+        mapped = base + (int(digest[:10], 16) % span)
+        return mapped, True
+
+    @staticmethod
     def _first_present(data, keys):
         for key in keys:
             if key in data and data[key] is not None and str(data[key]).strip() != '':
@@ -133,6 +156,7 @@ class Command(BaseCommand):
             'load_programa': {
                 'valid': 0,
                 'invalid_id_programa': 0,
+                'alfanumeric_id_mapped': 0,
                 'facultad_not_found': 0,
                 'skipped_without_facultad': 0,
                 'facultad_resolved_by_external_id': 0,
@@ -263,10 +287,12 @@ class Command(BaseCommand):
 
             parsed = []
             for stg in staged_queryset:
-                id_programa = self._to_non_negative_int(stg.id_programa_oracle, default=None)
+                id_programa, was_alphanumeric = self._programa_pk_from_oracle_id(stg.id_programa_oracle)
                 if not id_programa:
                     summary['load_programa']['invalid_id_programa'] += 1
                     continue
+                if was_alphanumeric:
+                    summary['load_programa']['alfanumeric_id_mapped'] += 1
 
                 id_fac_oracle = self._to_text(stg.id_facultad_oracle)
                 facultad = None
