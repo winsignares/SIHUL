@@ -37,6 +37,7 @@ class Command(BaseCommand):
             {'nombre': 'Reportes Generales', 'descripcion': 'Reportes Generales'},
             {'nombre': 'Gestión de Usuarios', 'descripcion': 'Gestión de Usuarios Completa'},
             {'nombre': 'Asignación Automática', 'descripcion': 'Asignación Automática de Espacios'},
+            {'nombre': 'Asignación de espacios por seccional', 'descripcion': 'Asignación de espacios por seccional'},
         ]
 
         supervisor_components = [

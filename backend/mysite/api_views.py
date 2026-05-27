@@ -210,6 +210,11 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def horarios_disponibles_all(self, request):
         return espacios_api.list_all_espacios_disponibles_with_horarios(request._request)
 
+    @action(detail=False, methods=['get'], url_path='disponibles/por-horario')
+    def disponibles_por_horario(self, request):
+        return espacios_api.list_espacios_disponibles_por_horario(request._request)
+
+
     @action(detail=False, methods=['get'], url_path=r'horarios/supervisor/(?P<usuario_id>\d+)')
     def horarios_supervisor(self, request, usuario_id=None):
         return espacios_api.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
@@ -399,6 +404,15 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='list/extendidos')
     def list_extendidos(self, request):
         return horario_api.list_horarios_extendidos(request._request)
+
+    @action(detail=False, methods=['get'], url_path='sin-espacio')
+    def sin_espacio(self, request):
+        return horario_api.list_horarios_asignacion_espacios(request._request)
+
+    @action(detail=False, methods=['post'], url_path='asignar-espacio')
+    def asignar_espacio(self, request):
+        return horario_api.asignar_espacio_horario(request._request)
+
 
     @action(detail=False, methods=['get'], url_path='mi-horario')
     def mi_horario(self, request):

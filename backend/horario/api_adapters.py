@@ -58,3 +58,12 @@ def aprobar_solicitud_espacio(request):
 
 def rechazar_solicitud_espacio(request):
     return api_views.rechazar_solicitud_espacio(request)
+
+
+def list_horarios_asignacion_espacios(request):
+    return api_views.list_horarios_asignacion_espacios(request)
+
+
+def asignar_espacio_horario(request):
+    return api_views.asignar_espacio_horario(request)
+

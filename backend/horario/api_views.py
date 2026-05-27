@@ -1,12 +1,14 @@
 import datetime
 import json
 
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from notificaciones.signals import crear_notificacion
 from usuarios.models import Usuario
+from espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
 
@@ -184,6 +186,187 @@ def list_horarios_extendidos(request):
         )
 
     return JsonResponse({'horarios': lst}, status=200)
+
+
+@csrf_exempt
+def list_horarios_asignacion_espacios(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    user_sede = getattr(request, 'sede', None)
+
+    seccional_id = request.GET.get('seccional_id')
+    programa_id = request.GET.get('programa_id')
+    grupo_id = request.GET.get('grupo_id')
+    docente_id = request.GET.get('docente_id')
+    asignatura_id = request.GET.get('asignatura_id')
+    periodo_id = request.GET.get('periodo_id')
+    dia_semana = request.GET.get('dia_semana')
+    estado = request.GET.get('estado')
+    solo_sin_espacio = request.GET.get('solo_sin_espacio', '1').lower() in ('1', 'true', 'yes')
+
+    qs = Horario.objects.select_related(
+        'grupo',
+        'grupo__programa',
+        'grupo__programa__facultad',
+        'grupo__programa__facultad__sede',
+        'asignatura',
+        'docente',
+        'espacio',
+        'espacio__sede',
+    )
+
+    if estado:
+        estados = [item.strip() for item in estado.split(',') if item.strip()]
+        if estados:
+            qs = qs.filter(estado__in=estados)
+    else:
+        qs = qs.filter(estado__in=['aprobado', 'pendiente'])
+
+    if solo_sin_espacio:
+        qs = qs.filter(espacio__isnull=True)
+
+    if programa_id:
+        qs = qs.filter(grupo__programa_id=programa_id)
+
+    if grupo_id:
+        qs = qs.filter(grupo_id=grupo_id)
+
+    if docente_id:
+        qs = qs.filter(docente_id=docente_id)
+
+    if asignatura_id:
+        qs = qs.filter(asignatura_id=asignatura_id)
+
+    if periodo_id:
+        qs = qs.filter(grupo__periodo_id=periodo_id)
+
+    if dia_semana:
+        qs = qs.filter(dia_semana__iexact=dia_semana)
+
+    seccional_filter_id = None
+    if user_sede and user_sede.seccional_id:
+        seccional_filter_id = user_sede.seccional_id
+
+    if seccional_filter_id:
+        qs = qs.filter(
+            Q(espacio__sede__seccional_id=seccional_filter_id)
+            | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=seccional_filter_id)
+        )
+
+    def resolve_sede(horario):
+        if horario.espacio and horario.espacio.sede:
+            return horario.espacio.sede
+
+        grupo = horario.grupo
+        programa = grupo.programa if grupo else None
+        facultad = programa.facultad if programa else None
+        return facultad.sede if facultad else None
+
+    lst = []
+    for i in qs:
+        grupo = i.grupo
+        programa = grupo.programa if grupo else None
+        asignatura = i.asignatura
+        espacio = i.espacio
+        sede = resolve_sede(i)
+        seccional = sede.seccional if sede else None
+
+        lst.append(
+            {
+                'id': i.id,
+                'grupo_id': grupo.id if grupo else None,
+                'grupo_nombre': grupo.nombre if grupo else 'Sin grupo',
+                'programa_id': programa.id if programa else None,
+                'programa_nombre': programa.nombre if programa else 'Sin programa',
+                'semestre': grupo.semestre if grupo else None,
+                'asignatura_id': asignatura.id if asignatura else None,
+                'asignatura_nombre': asignatura.nombre if asignatura else 'Sin asignatura',
+                'docente_id': (i.docente.id if i.docente else None),
+                'docente_nombre': i.docente.nombre if i.docente else 'Sin asignar',
+                'espacio_id': espacio.id if espacio else None,
+                'espacio_nombre': espacio.nombre if espacio else 'Sin espacio',
+                'dia_semana': i.dia_semana,
+                'hora_inicio': str(i.hora_inicio),
+                'hora_fin': str(i.hora_fin),
+                'cantidad_estudiantes': i.cantidad_estudiantes,
+                'estado': i.estado,
+                'sede_id': sede.id if sede else None,
+                'sede_nombre': sede.nombre if sede else None,
+                'seccional_id': seccional.id if seccional else None,
+                'seccional_nombre': seccional.ciudad if seccional else None,
+                'periodo_id': grupo.periodo_id if grupo else None,
+            }
+        )
+
+    return JsonResponse({'horarios': lst}, status=200)
+
+
+@csrf_exempt
+def asignar_espacio_horario(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        horario_id = data.get('horario_id')
+        espacio_id = data.get('espacio_id')
+
+        if not horario_id or not espacio_id:
+            return JsonResponse({'error': 'horario_id y espacio_id son requeridos'}, status=400)
+
+        horario = Horario.objects.select_related(
+            'grupo',
+            'grupo__programa',
+            'grupo__programa__facultad',
+            'grupo__programa__facultad__sede',
+            'espacio',
+            'espacio__sede',
+        ).get(id=horario_id)
+        espacio = EspacioFisico.objects.select_related('sede').get(id=espacio_id)
+
+        user_sede = getattr(request, 'sede', None)
+        espacio_seccional_id = espacio.sede.seccional_id if espacio.sede else None
+
+        horario_sede = None
+        if horario.espacio and horario.espacio.sede:
+            horario_sede = horario.espacio.sede
+        else:
+            grupo = horario.grupo
+            programa = grupo.programa if grupo else None
+            facultad = programa.facultad if programa else None
+            horario_sede = facultad.sede if facultad else None
+
+        horario_seccional_id = horario_sede.seccional_id if horario_sede else None
+
+        if horario_seccional_id and espacio_seccional_id and horario_seccional_id != espacio_seccional_id:
+            return JsonResponse({'error': 'El espacio no pertenece a la misma seccional del horario.'}, status=400)
+
+        if user_sede and user_sede.seccional_id and espacio_seccional_id and user_sede.seccional_id != espacio_seccional_id:
+            return JsonResponse({'error': 'El espacio no pertenece a la seccional del usuario.'}, status=403)
+
+        horario.espacio = espacio
+        horario.save()
+
+        return JsonResponse(
+            {
+                'message': 'Espacio asignado correctamente',
+                'horario_id': horario.id,
+                'espacio_id': espacio.id,
+                'espacio_nombre': espacio.nombre,
+            },
+            status=200,
+        )
+    except ValidationError as e:
+        return JsonResponse({'error': str(e.message)}, status=400)
+    except Horario.DoesNotExist:
+        return JsonResponse({'error': 'Horario no encontrado'}, status=404)
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({'error': 'Espacio no encontrado'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @csrf_exempt
