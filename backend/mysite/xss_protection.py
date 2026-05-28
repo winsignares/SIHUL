@@ -714,3 +714,136 @@ CENTRO_COSTO_SCHEMA = {
         'required': False,
     },
 }
+
+# Esquemas de validación para módulo Usuarios
+ROL_SCHEMA = {
+    'nombre': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 100,
+        'required': True,
+    },
+    'descripcion': {
+        'type': 'string',
+        'field_type': 'descripcion',
+        'max_length': 500,
+        'required': True,
+    },
+}
+
+USUARIO_SCHEMA = {
+    'nombre': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 255,
+        'required': True,
+    },
+    'correo': {
+        'type': 'string',
+        'field_type': 'email',
+        'max_length': 255,
+        'required': True,
+    },
+    'sede': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 255,
+        'required': False,
+    },
+}
+
+# Esquemas de validación para módulo Préstamos
+TIPO_ACTIVIDAD_SCHEMA = {
+    'nombre': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 150,
+        'required': True,
+    },
+    'descripcion': {
+        'type': 'string',
+        'field_type': 'descripcion',
+        'max_length': 500,
+        'required': False,
+    },
+}
+
+PRESTAMO_SCHEMA = {
+    'motivo': {
+        'type': 'string',
+        'field_type': 'descripcion',
+        'max_length': 500,
+        'required': False,
+    },
+    'telefono': {
+        'type': 'string',
+        'field_type': 'codigo',
+        'max_length': 50,
+        'required': False,
+    },
+}
+
+PRESTAMO_PUBLICO_SCHEMA = {
+    'nombre_completo': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 255,
+        'required': True,
+    },
+    'correo_institucional': {
+        'type': 'string',
+        'field_type': 'email',
+        'max_length': 255,
+        'required': True,
+    },
+    'telefono': {
+        'type': 'string',
+        'field_type': 'codigo',
+        'max_length': 50,
+        'required': True,
+    },
+    'identificacion': {
+        'type': 'string',
+        'field_type': 'codigo',
+        'max_length': 50,
+        'required': True,
+    },
+    'motivo': {
+        'type': 'string',
+        'field_type': 'descripcion',
+        'max_length': 500,
+        'required': True,
+    },
+}
+
+# Esquemas de validación para módulo Componentes
+COMPONENTE_SCHEMA = {
+    'nombre': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 150,
+        'required': True,
+    },
+    'descripcion': {
+        'type': 'string',
+        'field_type': 'descripcion',
+        'max_length': 500,
+        'required': False,
+    },
+}
+
+# Esquemas de validación para módulo Notificaciones
+NOTIFICACION_SCHEMA = {
+    'mensaje': {
+        'type': 'string',
+        'field_type': 'descripcion',
+        'max_length': 1000,
+        'required': True,
+    },
+    'tipo': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 100,
+        'required': False,
+    },
+}

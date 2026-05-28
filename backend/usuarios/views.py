@@ -10,6 +10,8 @@ import datetime
 import secrets
 import hashlib
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from mysite.xss_protection import sanitize_dict, ROL_SCHEMA, USUARIO_SCHEMA
 
 
 def _password_valida(usuario, password_plano):
@@ -42,8 +44,15 @@ def create_rol(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            nombre = data.get('nombre')
-            descripcion = data.get('descripcion')
+            
+            # Sanitizar y validar inputs contra XSS
+            try:
+                sanitized_data = sanitize_dict(data, ROL_SCHEMA)
+            except ValidationError as e:
+                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+            
+            nombre = sanitized_data.get('nombre')
+            descripcion = sanitized_data.get('descripcion')
             if not nombre or not descripcion:
                 return JsonResponse({"error": "El nombre y la descripción son requeridos"}, status=400)
             nuevo_rol = Rol(nombre=nombre, descripcion=descripcion)
@@ -60,10 +69,19 @@ def update_rol(request):
         try:
             data = json.loads(request.body)
             id = data.get('id')
-            nombre = data.get('nombre')
-            descripcion = data.get('descripcion')
-            if not id or not nombre or not descripcion:
-                return JsonResponse({"error": "ID, nombre y descripción son requeridos"}, status=400)
+            
+            # Sanitizar y validar inputs contra XSS
+            try:
+                sanitized_data = sanitize_dict(data, ROL_SCHEMA)
+            except ValidationError as e:
+                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+            
+            if not id:
+                return JsonResponse({"error": "ID es requerido"}, status=400)
+            nombre = sanitized_data.get('nombre')
+            descripcion = sanitized_data.get('descripcion')
+            if not nombre or not descripcion:
+                return JsonResponse({"error": "nombre y descripción son requeridos"}, status=400)
             rol_existente = Rol.objects.get(id=id)
             rol_existente.nombre = nombre
             rol_existente.descripcion = descripcion
@@ -146,12 +164,19 @@ def create_usuario(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
         data = json.loads(request.body)
-        nombre = data.get('nombre')
-        correo = data.get('correo')
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, USUARIO_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
+        nombre = sanitized_data.get('nombre')
+        correo = sanitized_data.get('correo')
         contrasena = data.get('contrasena') or data.get('contrasena_hash')
         rol_id = data.get('rol_id')
         facultad_id = data.get('facultad_id')
-        sede = data.get('sede')  # Agregar campo sede
+        sede = sanitized_data.get('sede')  # Agregar campo sede
         activo = data.get('activo', True)
         espacios_permitidos = data.get('espacios_permitidos', []) # Lista de IDs de espacios
 
@@ -210,11 +235,18 @@ def update_usuario(request):
         id = data.get('id')
         if not id:
             return JsonResponse({"error": "ID es requerido"}, status=400)
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, USUARIO_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
         u = Usuario.objects.get(id=id)
         if 'nombre' in data:
-            u.nombre = data.get('nombre')
+            u.nombre = sanitized_data.get('nombre')
         if 'correo' in data:
-            u.correo = data.get('correo')
+            u.correo = sanitized_data.get('correo')
         if 'contrasena' in data or 'contrasena_hash' in data:
             nueva_contrasena = data.get('contrasena') or data.get('contrasena_hash')
             u.contrasena_hash = make_password(nueva_contrasena)

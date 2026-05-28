@@ -5,11 +5,13 @@ from django.db.models import Q
 from django.db import transaction
 from django.conf import settings
 from django.utils.crypto import constant_time_compare
+from django.core.exceptions import ValidationError
 from .models import PrestamoEspacio, PrestamoEspacioPublico, TipoActividad, PrestamoRecurso
 from espacios.models import EspacioFisico
 from usuarios.models import Usuario
 from recursos.models import Recurso
 from horario.models import Horario
+from mysite.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
 import json
 import datetime
 import uuid
@@ -295,8 +297,15 @@ def create_tipo_actividad(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
         data = json.loads(request.body)
-        nombre = data.get('nombre')
-        descripcion = data.get('descripcion', '')
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, TIPO_ACTIVIDAD_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
+        nombre = sanitized_data.get('nombre')
+        descripcion = sanitized_data.get('descripcion', '')
         
         if not nombre:
             return JsonResponse({"error": "El nombre es requerido"}, status=400)
@@ -320,6 +329,13 @@ def create_prestamo(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
         data = json.loads(request.body)
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, PRESTAMO_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
         espacio_id = data.get('espacio_id')
         usuario_id = data.get('usuario_id')
         administrador_id = data.get('administrador_id')
@@ -327,9 +343,9 @@ def create_prestamo(request):
         fecha = data.get('fecha')
         hora_inicio = data.get('hora_inicio')
         hora_fin = data.get('hora_fin')
-        motivo = data.get('motivo')
+        motivo = sanitized_data.get('motivo')
         asistentes = data.get('asistentes', 0)
-        telefono = data.get('telefono', '')
+        telefono = sanitized_data.get('telefono', '')
         estado = data.get('estado', 'Pendiente')
         recursos = data.get('recursos', [])  # Array de {recurso_id, cantidad}
         
@@ -1064,11 +1080,17 @@ def create_prestamo_publico(request):
         if not recaptcha_ok:
             return JsonResponse({"error": recaptcha_error}, status=403)
         
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, PRESTAMO_PUBLICO_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
         # Datos personales (en lugar de usuario_id)
-        nombre_completo = data.get('nombre_completo')
-        correo_institucional = data.get('correo_institucional')
-        telefono = data.get('telefono')
-        identificacion = data.get('identificacion')
+        nombre_completo = sanitized_data.get('nombre_completo')
+        correo_institucional = sanitized_data.get('correo_institucional')
+        telefono = sanitized_data.get('telefono')
+        identificacion = sanitized_data.get('identificacion')
         
         # Datos del préstamo
         espacio_id = data.get('espacio_id')
@@ -1076,7 +1098,7 @@ def create_prestamo_publico(request):
         fecha = data.get('fecha')
         hora_inicio = data.get('hora_inicio')
         hora_fin = data.get('hora_fin')
-        motivo = data.get('motivo')
+        motivo = sanitized_data.get('motivo')
         asistentes = data.get('asistentes', 0)
         
         # Validar campos requeridos
