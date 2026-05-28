@@ -4,23 +4,67 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_http_methods
 import json
+from django.core.exceptions import ValidationError
 from .models import Asignatura, AsignaturaPrograma
 from programas.models import Programa
+
+from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
+
+
+def _get_request_user(request):
+    return getattr(request, 'user_obj', None)
+
+
+def _is_admin_user(user):
+    if not user:
+        return False
+    if getattr(user, 'es_superusuario', False):
+        return True
+    role_name = get_role_name(user)
+    return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+
+
+def _require_auth(request):
+    user = _get_request_user(request)
+    if not user:
+        return None, JsonResponse({"error": "Autenticación requerida"}, status=403)
+    return user, None
+
+
+def _require_admin(request):
+    user, auth_error = _require_auth(request)
+    if auth_error:
+        return None, auth_error
+    if not _is_admin_user(user):
+        return None, JsonResponse({"error": "No autorizado"}, status=403)
+    return user, None
 
 # ---------- Asignatura CRUD ----------
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_asignatura(request):
     try:
+        user, auth_error = _require_admin(request)
+        if auth_error:
+            return auth_error
+
         #sede del usuario actual
         sede_actual = getattr(request, 'sede', None)
         
         data = json.loads(request.body)
-        nombre = data.get('nombre')
-        codigo = data.get('codigo')
-        creditos = data.get('creditos')
-        tipo = data.get('tipo', 'teórica')
-        horas = data.get('horas', 0)
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, ASIGNATURA_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({'error': f'Validación fallida: {str(e)}'}, status=400)
+        
+        nombre = sanitized_data.get('nombre')
+        codigo = sanitized_data.get('codigo')
+        creditos = sanitized_data.get('creditos')
+        tipo = sanitized_data.get('tipo', 'teórica')
+        horas = sanitized_data.get('horas', 0)
         sede = sede_actual  
 
         if not all([nombre, codigo, creditos]):
@@ -51,6 +95,10 @@ def update_asignatura(request, id=None):
     # Voy a mantener consistencia con el estilo de recibir request y extraer ID del body si id es None.
     
     try:
+        user, auth_error = _require_admin(request)
+        if auth_error:
+            return auth_error
+
         data = json.loads(request.body)
         if id is None:
             id = data.get('id')
@@ -58,18 +106,27 @@ def update_asignatura(request, id=None):
         if not id:
              return JsonResponse({'error': 'ID es requerido'}, status=400)
 
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, ASIGNATURA_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({'error': f'Validación fallida: {str(e)}'}, status=400)
+
         asignatura = Asignatura.objects.get(id=id)
 
-        asignatura.nombre = data.get('nombre', asignatura.nombre)
-        asignatura.codigo = data.get('codigo', asignatura.codigo)
+        if 'nombre' in sanitized_data:
+            asignatura.nombre = sanitized_data.get('nombre')
+        if 'codigo' in sanitized_data:
+            asignatura.codigo = sanitized_data.get('codigo')
         
-        if 'creditos' in data:
-            asignatura.creditos = int(data.get('creditos'))
+        if 'creditos' in sanitized_data:
+            asignatura.creditos = int(sanitized_data.get('creditos'))
             
-        asignatura.tipo = data.get('tipo', asignatura.tipo)
+        if 'tipo' in sanitized_data:
+            asignatura.tipo = sanitized_data.get('tipo')
         
-        if 'horas' in data:
-            asignatura.horas = int(data.get('horas'))
+        if 'horas' in sanitized_data:
+            asignatura.horas = int(sanitized_data.get('horas'))
 
         asignatura.save()
 
@@ -85,6 +142,10 @@ def update_asignatura(request, id=None):
 @require_http_methods(["DELETE"])
 def delete_asignatura(request, id=None):
     try:
+        user, auth_error = _require_admin(request)
+        if auth_error:
+            return auth_error
+
         if id is None:
             data = json.loads(request.body)
             id = data.get('id')
@@ -104,6 +165,10 @@ def delete_asignatura(request, id=None):
 @require_http_methods(["GET"])
 def get_asignatura(request, id):
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         asignatura = Asignatura.objects.get(id=id)
         data = {
             'id': asignatura.id,
@@ -123,6 +188,10 @@ def get_asignatura(request, id):
 @require_http_methods(["GET"])
 def list_asignaturas(request):
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         #sede del usuario actual
         sede_actual = getattr(request, 'sede', None)
         
@@ -152,6 +221,10 @@ def list_asignaturas(request):
 @require_http_methods(["POST"])
 def create_asignatura_programa(request):
     try:
+        user, auth_error = _require_admin(request)
+        if auth_error:
+            return auth_error
+
         data = json.loads(request.body)
         programa_id = data.get('programa_id')
         asignatura_id = data.get('asignatura_id')
@@ -197,6 +270,10 @@ def create_asignatura_programa(request):
 @require_http_methods(["PUT"])
 def update_asignatura_programa(request, id=None):
     try:
+        user, auth_error = _require_admin(request)
+        if auth_error:
+            return auth_error
+
         data = json.loads(request.body)
         if id is None:
             id = data.get('id')
@@ -230,6 +307,10 @@ def update_asignatura_programa(request, id=None):
 @require_http_methods(["DELETE"])
 def delete_asignatura_programa(request, id=None):
     try:
+        user, auth_error = _require_admin(request)
+        if auth_error:
+            return auth_error
+
         if id is None:
             data = json.loads(request.body)
             id = data.get('id')
@@ -250,6 +331,10 @@ def delete_asignatura_programa(request, id=None):
 @require_http_methods(["GET"])
 def get_asignatura_programa(request, id):
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         asignatura_programa = AsignaturaPrograma.objects.select_related('programa', 'asignatura').get(id=id)
         data = {
             'id': asignatura_programa.id,
@@ -278,6 +363,10 @@ def list_asignaturas_programa(request):
     Puede filtrar por programa_id si se pasa como query parameter.
     """
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         programa_id = request.GET.get('programa_id')
         
         if programa_id:

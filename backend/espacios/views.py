@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db.models import Count
+from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
@@ -20,11 +21,49 @@ def _filtrar_espacios_por_sede_usuario(request, queryset):
         return queryset.filter(sede__seccional_id=user_sede.seccional_id)
     return queryset
 
+
+def _get_request_user(request):
+    return getattr(request, 'user_obj', None)
+
+
+def _is_admin_user(user):
+    if not user:
+        return False
+    if getattr(user, 'es_superusuario', False):
+        return True
+    role_name = get_role_name(user)
+    return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+
+
+def _require_auth(request):
+    user = _get_request_user(request)
+    if not user:
+        return None, JsonResponse({'error': 'Autenticación requerida'}, status=403)
+    return user, None
+
+
+def _require_supervisor_or_admin(request, usuario_id=None):
+    user, auth_error = _require_auth(request)
+    if auth_error:
+        return None, auth_error
+
+    role_name = get_role_name(user)
+    if not (_is_admin_user(user) or role_name.startswith('supervisor')):
+        return None, JsonResponse({'error': 'No autorizado'}, status=403)
+
+    if usuario_id and not _is_admin_user(user) and user.id != int(usuario_id):
+        return None, JsonResponse({'error': 'No autorizado'}, status=403)
+
+    return user, None
+
 # ---------- TipoEspacio CRUD ----------
 @csrf_exempt
 def list_tipos_espacio(request):
     """Lista todos los tipos de espacio"""
     if request.method == 'GET':
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
         tipos = TipoEspacio.objects.all()
         lst = [{"id": t.id, "nombre": t.nombre, "descripcion": t.descripcion} for t in tipos]
         return JsonResponse({"tipos_espacio": lst}, status=200)
@@ -35,6 +74,9 @@ def get_tipo_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
         tipo = TipoEspacio.objects.get(id=id)
         return JsonResponse({"id": tipo.id, "nombre": tipo.nombre, "descripcion": tipo.descripcion}, status=200)
     except TipoEspacio.DoesNotExist:
@@ -49,6 +91,12 @@ def create_tipo_espacio(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+        if not _is_admin_user(user):
+            return JsonResponse({"error": "No autorizado"}, status=403)
+
         data = json.loads(request.body)
         nombre = (data.get('nombre') or '').strip()
         descripcion = (data.get('descripcion') or '').strip()
@@ -78,6 +126,12 @@ def create_tipo_espacio(request):
 def create_espacio(request):
     if request.method == 'POST':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
+            if not _is_admin_user(user):
+                return JsonResponse({"error": "No autorizado"}, status=403)
+
             data = json.loads(request.body)
             sede_id = data.get('sede_id')
             nombre = data.get('nombre')
@@ -127,6 +181,12 @@ def create_espacio(request):
 def update_espacio(request):
     if request.method == 'PUT':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
+            if not _is_admin_user(user):
+                return JsonResponse({"error": "No autorizado"}, status=403)
+
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
@@ -186,6 +246,12 @@ def update_espacio(request):
 def delete_espacio(request):
     if request.method == 'DELETE':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
+            if not _is_admin_user(user):
+                return JsonResponse({"error": "No autorizado"}, status=403)
+
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
@@ -209,6 +275,10 @@ def get_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
@@ -249,6 +319,10 @@ def get_espacio(request, id=None):
 @csrf_exempt
 def list_espacios(request):
     if request.method == 'GET':
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
@@ -299,6 +373,10 @@ def list_all_espacios_with_horarios(request):
         return JsonResponse({"error": "Solo se permite GET"}, status=405)
     
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         from horario.models import Horario
         from django.db.models import Prefetch
         
@@ -377,6 +455,10 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         return JsonResponse({"error": "usuario_id es requerido"}, status=400)
     
     try:
+        user, auth_error = _require_supervisor_or_admin(request, usuario_id=usuario_id)
+        if auth_error:
+            return auth_error
+
         from horario.models import Horario
         from django.db.models import Prefetch
         
@@ -448,6 +530,12 @@ def create_espacio_permitido(request):
     """Crear un nuevo EspacioPermitido"""
     if request.method == 'POST':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
+            if not _is_admin_user(user):
+                return JsonResponse({"error": "No autorizado"}, status=403)
+
             data = json.loads(request.body)
             espacio_id = data.get('espacio_id')
             usuario_id = data.get('usuario_id')
@@ -487,6 +575,12 @@ def list_espacios_permitidos(request):
     """Listar todos los EspaciosPermitidos"""
     if request.method == 'GET':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
+            if not _is_admin_user(user):
+                return JsonResponse({"error": "No autorizado"}, status=403)
+
             espacios_permitidos = EspacioPermitido.objects.all().select_related('espacio', 'usuario')
             lista = [
                 {
@@ -512,7 +606,13 @@ def get_espacio_permitido(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         espacio_permitido = EspacioPermitido.objects.select_related('espacio', 'usuario').get(id=id)
+        if not _is_admin_user(user) and espacio_permitido.usuario_id != user.id:
+            return JsonResponse({"error": "No autorizado"}, status=403)
         return JsonResponse({
             "id": espacio_permitido.id,
             "espacio_id": espacio_permitido.espacio.id,
@@ -533,6 +633,12 @@ def delete_espacio_permitido(request):
     """Eliminar un EspacioPermitido"""
     if request.method == 'DELETE':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
+            if not _is_admin_user(user):
+                return JsonResponse({"error": "No autorizado"}, status=403)
+
             data = json.loads(request.body)
             id = data.get('id')
             
@@ -560,6 +666,12 @@ def list_espacios_by_usuario(request, usuario_id=None):
     if usuario_id is None:
         return JsonResponse({"error": "El usuario_id es requerido en la URL"}, status=400)
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+        if not _is_admin_user(user) and user.id != int(usuario_id):
+            return JsonResponse({"error": "No autorizado"}, status=403)
+
         usuario = Usuario.objects.get(id=usuario_id)
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio')
         lista = []

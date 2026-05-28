@@ -83,6 +83,43 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     ordering_fields = ['fecha_creacion', 'razon_social']
     ordering = ['-fecha_creacion']
 
+    def get_queryset(self):
+        user = self.request.user
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema, get_role_name
+        
+        # Admins ven todos los proveedores
+        if is_admin_global(user) or is_admin_sistema(user):
+            return super().get_queryset()
+        
+        # Proveedores solo ven su propio perfil
+        role_name = get_role_name(user)
+        if role_name == 'proveedor':
+            return super().get_queryset().filter(usuario=user)
+        
+        # Otros roles ven todos (funcionarios, etc.)
+        return super().get_queryset()
+
+    def perform_create(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
+
     @action(detail=False, methods=['get'], url_path='mi_perfil')
     def mi_perfil(self, request):
         """Encuentra el proveedor asociado al usuario actual por vínculo directo, email o NIT."""
@@ -126,6 +163,27 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo', 'estado']
     search_fields = ['codigo', 'nombre']
+
+    def perform_create(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
 
     @action(detail=False, methods=['get'])
     def areas_solicitantes(self, request):
@@ -171,6 +229,27 @@ class CuentaContableViewSet(viewsets.ModelViewSet):
                 models.CuentaContable.objects.get_or_create(codigo=cuenta['codigo'], defaults=cuenta)
         return super().list(request, *args, **kwargs)
 
+    def perform_create(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
+
 
 class CentroCostoViewSet(viewsets.ModelViewSet):
     queryset = models.CentroCosto.objects.all()
@@ -186,6 +265,27 @@ class CentroCostoViewSet(viewsets.ModelViewSet):
                 models.CentroCosto.objects.get_or_create(codigo=centro['codigo'], defaults=centro)
         return super().list(request, *args, **kwargs)
 
+    def perform_create(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
+
 
 class ParametroSLAViewSet(viewsets.ModelViewSet):
     queryset = models.ParametroSLA.objects.all()
@@ -195,10 +295,25 @@ class ParametroSLAViewSet(viewsets.ModelViewSet):
     search_fields = ['etapa', 'rol_responsable']
 
     def perform_create(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
         serializer.save(modificado_por=self.request.user)
 
     def perform_update(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
         serializer.save(modificado_por=self.request.user)
+
+    def perform_destroy(self, instance):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
 
 
 class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
@@ -209,10 +324,25 @@ class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
     filterset_fields = ['categoria']
 
     def perform_create(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
         serializer.save(modificado_por=self.request.user)
 
     def perform_update(self, serializer):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
         serializer.save(modificado_por=self.request.user)
+
+    def perform_destroy(self, instance):
+        from mysite.auth_helpers import is_admin_global, is_admin_sistema
+        user = self.request.user
+        if not (is_admin_global(user) or is_admin_sistema(user)):
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
 
     @action(detail=False, methods=['get'])
     def por_categoria(self, request):

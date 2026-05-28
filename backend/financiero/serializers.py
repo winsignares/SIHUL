@@ -4,6 +4,8 @@ from usuarios.serializers import UsuarioSerializer
 from decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from mysite.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, FACTURA_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
 
 
 ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg'}
@@ -26,6 +28,16 @@ class ProveedorSerializer(serializers.ModelSerializer):
         model = models.Proveedor
         fields = '__all__'
         read_only_fields = ['fecha_creacion', 'fecha_modificacion', 'numero_facturas_procesadas', 'total_pagado_historico']
+    
+    def validate(self, data):
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, PROVEEDOR_SCHEMA)
+            # Actualizar data con valores sanitizados
+            data.update(sanitized_data)
+        except ValidationError as e:
+            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
+        return data
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):
@@ -36,6 +48,16 @@ class DepartamentoSerializer(serializers.ModelSerializer):
         model = models.Departamento
         fields = '__all__'
         read_only_fields = ['fecha_creacion', 'fecha_modificacion']
+    
+    def validate(self, data):
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, DEPARTAMENTO_SCHEMA)
+            # Actualizar data con valores sanitizados
+            data.update(sanitized_data)
+        except ValidationError as e:
+            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
+        return data
 
 
 class CuentaContableSerializer(serializers.ModelSerializer):
@@ -43,6 +65,16 @@ class CuentaContableSerializer(serializers.ModelSerializer):
         model = models.CuentaContable
         fields = '__all__'
         read_only_fields = ['fecha_creacion']
+    
+    def validate(self, data):
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, CUENTA_CONTABLE_SCHEMA)
+            # Actualizar data con valores sanitizados
+            data.update(sanitized_data)
+        except ValidationError as e:
+            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
+        return data
 
 
 class CentroCostoSerializer(serializers.ModelSerializer):
@@ -52,6 +84,16 @@ class CentroCostoSerializer(serializers.ModelSerializer):
         model = models.CentroCosto
         fields = '__all__'
         read_only_fields = ['fecha_creacion', 'fecha_modificacion']
+    
+    def validate(self, data):
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, CENTRO_COSTO_SCHEMA)
+            # Actualizar data con valores sanitizados
+            data.update(sanitized_data)
+        except ValidationError as e:
+            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
+        return data
 
 
 class ParametroSLASerializer(serializers.ModelSerializer):
@@ -245,6 +287,14 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, FACTURA_SCHEMA)
+            # Actualizar data con valores sanitizados
+            data.update(sanitized_data)
+        except ValidationError as e:
+            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
+        
         subtotal = Decimal(str(data.get('valor_subtotal', 0)))
         total = Decimal(str(data.get('valor_total', 0)))
         iva = Decimal(str(data.get('valor_iva', 0)))

@@ -4,15 +4,59 @@ from espacios.models import EspacioFisico
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
+
+from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.xss_protection import sanitize_dict, RECURSO_SCHEMA
+
+
+def _get_request_user(request):
+    return getattr(request, 'user_obj', None)
+
+
+def _is_admin_user(user):
+    if not user:
+        return False
+    if getattr(user, 'es_superusuario', False):
+        return True
+    role_name = get_role_name(user)
+    return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+
+
+def _require_auth(request):
+    user = _get_request_user(request)
+    if not user:
+        return None, JsonResponse({"error": "Autenticación requerida"}, status=403)
+    return user, None
+
+
+def _require_admin(request):
+    user, auth_error = _require_auth(request)
+    if auth_error:
+        return None, auth_error
+    if not _is_admin_user(user):
+        return None, JsonResponse({"error": "No autorizado"}, status=403)
+    return user, None
 
 # ---------- Recurso CRUD ----------
 @csrf_exempt
 def create_recurso(request):
     if request.method == 'POST':
         try:
+            user, auth_error = _require_admin(request)
+            if auth_error:
+                return auth_error
+
             data = json.loads(request.body)
-            nombre = data.get('nombre')
-            descripcion = data.get('descripcion')
+            
+            # Sanitizar y validar inputs contra XSS
+            try:
+                sanitized_data = sanitize_dict(data, RECURSO_SCHEMA)
+            except ValidationError as e:
+                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+            
+            nombre = sanitized_data.get('nombre')
+            descripcion = sanitized_data.get('descripcion')
             r = Recurso(nombre=nombre, descripcion=descripcion)
             r.save()
             return JsonResponse({"message": "Recurso creado", "id": r.id}, status=201)
@@ -26,15 +70,26 @@ def create_recurso(request):
 def update_recurso(request):
     if request.method == 'PUT':
         try:
+            user, auth_error = _require_admin(request)
+            if auth_error:
+                return auth_error
+
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
                 return JsonResponse({"error": "ID es requerido"}, status=400)
+            
+            # Sanitizar y validar inputs contra XSS
+            try:
+                sanitized_data = sanitize_dict(data, RECURSO_SCHEMA)
+            except ValidationError as e:
+                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+            
             r = Recurso.objects.get(id=id)
-            if 'nombre' in data:
-                r.nombre = data.get('nombre')
-            if 'descripcion' in data:
-                r.descripcion = data.get('descripcion')
+            if 'nombre' in sanitized_data:
+                r.nombre = sanitized_data.get('nombre')
+            if 'descripcion' in sanitized_data:
+                r.descripcion = sanitized_data.get('descripcion')
             r.save()
             return JsonResponse({"message": "Recurso actualizado", "id": r.id}, status=200)
         except Recurso.DoesNotExist:
@@ -49,6 +104,10 @@ def update_recurso(request):
 def delete_recurso(request):
     if request.method == 'DELETE':
         try:
+            user, auth_error = _require_admin(request)
+            if auth_error:
+                return auth_error
+
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
@@ -69,6 +128,10 @@ def get_recurso(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         user_sede = getattr(request, 'sede', None)
         if user_sede and user_sede.seccional_id:
             r = Recurso.objects.filter(
@@ -90,6 +153,10 @@ def get_recurso(request, id=None):
 @csrf_exempt
 def list_recursos(request):
     if request.method == 'GET':
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         items = Recurso.objects.all()
         lst = [{"id": i.id, "nombre": i.nombre, "descripcion": i.descripcion} for i in items]
         return JsonResponse({"recursos": lst}, status=200)
@@ -100,6 +167,10 @@ def list_recursos(request):
 def create_espacio_recurso(request):
     if request.method == 'POST':
         try:
+            user, auth_error = _require_admin(request)
+            if auth_error:
+                return auth_error
+
             data = json.loads(request.body)
             espacio_id = data.get('espacio_id')
             recurso_id = data.get('recurso_id')
@@ -125,6 +196,10 @@ def create_espacio_recurso(request):
 def update_espacio_recurso(request):
     if request.method == 'PUT':
         try:
+            user, auth_error = _require_admin(request)
+            if auth_error:
+                return auth_error
+
             data = json.loads(request.body)
             espacio_id = data.get('espacio_id')
             recurso_id = data.get('recurso_id')
@@ -147,6 +222,10 @@ def update_espacio_recurso(request):
 def delete_espacio_recurso(request):
     if request.method == 'DELETE':
         try:
+            user, auth_error = _require_admin(request)
+            if auth_error:
+                return auth_error
+
             data = json.loads(request.body)
             espacio_id = data.get('espacio_id')
             recurso_id = data.get('recurso_id')
@@ -168,6 +247,10 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
     if espacio_id is None or recurso_id is None:
         return JsonResponse({"error": "espacio_id y recurso_id son requeridos en la URL"}, status=400)
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 

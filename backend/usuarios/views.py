@@ -107,8 +107,30 @@ def get_rol(request, id=None):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
+def _is_admin_user(user):
+    if not user:
+        return False
+    if getattr(user, 'es_superusuario', False):
+        return True
+    role_name = (getattr(getattr(user, 'rol', None), 'nombre', '') or '').strip().lower()
+    role_name = role_name.replace('_', ' ')
+    return role_name in {'admin', 'admin global', 'admin sistema', 'admin financiero'}
+
+
+def _require_admin(request):
+    user = getattr(request, 'user_obj', None)
+    if not user:
+        return JsonResponse({"error": "Autenticación requerida"}, status=403)
+    if not _is_admin_user(user):
+        return JsonResponse({"error": "No autorizado"}, status=403)
+    return None
+
 @csrf_exempt
 def list_roles(request):
+    auth_error = _require_admin(request)
+    if auth_error:
+        return auth_error
     if request.method == 'GET':
         roles = Rol.objects.all()
         roles_list = [{"id": rol.id, "nombre": rol.nombre, "descripcion": rol.descripcion} for rol in roles]
@@ -117,6 +139,9 @@ def list_roles(request):
 # ---------- Usuario CRUD ----------
 @csrf_exempt
 def create_usuario(request):
+    auth_error = _require_admin(request)
+    if auth_error:
+        return auth_error
     if request.method != 'POST':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -175,6 +200,9 @@ def create_usuario(request):
 
 @csrf_exempt
 def update_usuario(request):
+    auth_error = _require_admin(request)
+    if auth_error:
+        return auth_error
     if request.method != 'PUT':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -229,6 +257,9 @@ def update_usuario(request):
 
 @csrf_exempt
 def delete_usuario(request):
+    auth_error = _require_admin(request)
+    if auth_error:
+        return auth_error
     if request.method != 'DELETE':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -252,6 +283,12 @@ def get_usuario(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         usuario_actual = getattr(request, 'user_obj', None)
+        if not usuario_actual:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
+
+        if not _is_admin_user(usuario_actual) and usuario_actual.id != int(id):
+            return JsonResponse({"error": "No autorizado"}, status=403)
+
         sede_actual = getattr(request, 'sede', None)
 
         if usuario_actual and sede_actual and sede_actual.seccional_id:
@@ -269,12 +306,18 @@ def get_usuario(request, id=None):
 def list_usuarios(request):
     if request.method == 'GET':
         usuario_actual = getattr(request, 'user_obj', None)
+        if not usuario_actual:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
+
         sede_actual = getattr(request, 'sede', None)
 
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            items = Usuario.objects.select_related('sede').filter(sede__seccional_id=sede_actual.seccional_id)
+        if _is_admin_user(usuario_actual):
+            if sede_actual and sede_actual.seccional_id:
+                items = Usuario.objects.select_related('sede').filter(sede__seccional_id=sede_actual.seccional_id)
+            else:
+                items = Usuario.objects.all()
         else:
-            items = Usuario.objects.all()
+            items = Usuario.objects.select_related('sede').filter(id=usuario_actual.id)
 
         lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
         return JsonResponse({"usuarios": lst}, status=200)

@@ -1,5 +1,7 @@
 from rest_framework import generics, permissions
 
+from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+
 from .models import Componente, ComponenteRol, ComponenteUsuario
 from .serializers import ComponenteRolSerializer, ComponenteSerializer, ComponenteUsuarioSerializer
 
@@ -34,13 +36,33 @@ class ComponenteUsuarioListCreateAPIView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = ComponenteUsuario.objects.select_related('componente', 'usuario').all()
-        usuario_id = self.request.query_params.get('usuario')
-        if usuario_id:
-            queryset = queryset.filter(usuario_id=usuario_id)
-        return queryset
+        user = getattr(self.request, 'user', None)
+        if not user or not getattr(user, 'is_authenticated', False):
+            return queryset.none()
+
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            usuario_id = self.request.query_params.get('usuario')
+            if usuario_id:
+                return queryset.filter(usuario_id=usuario_id)
+            return queryset
+
+        return queryset.filter(usuario_id=user.id)
 
 
 class ComponenteUsuarioDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ComponenteUsuario.objects.select_related('componente', 'usuario').all()
     serializer_class = ComponenteUsuarioSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = getattr(self.request, 'user', None)
+        if not user or not getattr(user, 'is_authenticated', False):
+            return queryset.none()
+
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            return queryset
+
+        return queryset.filter(usuario_id=user.id)

@@ -1,5 +1,7 @@
 from rest_framework import generics, permissions
 
+from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+
 from .models import Agente, Conversacion, PreguntaSugerida
 from .serializers import AgenteSerializer, ConversacionSerializer, PreguntaSugeridaSerializer
 
@@ -33,8 +35,26 @@ class ConversacionListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = ConversacionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        user = getattr(self.request, 'user', None)
+        if not user or not getattr(user, 'is_authenticated', False):
+            return super().get_queryset().none()
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            return super().get_queryset()
+        return super().get_queryset().filter(id_usuario=user.id)
+
 
 class ConversacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Conversacion.objects.select_related('chatbot').all()
     serializer_class = ConversacionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = getattr(self.request, 'user', None)
+        if not user or not getattr(user, 'is_authenticated', False):
+            return super().get_queryset().none()
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            return super().get_queryset()
+        return super().get_queryset().filter(id_usuario=user.id)

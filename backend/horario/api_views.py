@@ -6,9 +6,36 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from notificaciones.signals import crear_notificacion
+from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 from usuarios.models import Usuario
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
+
+
+def _get_request_user(request):
+    user = getattr(request, 'user_obj', None)
+    if user:
+        return user
+    user = getattr(request, 'user', None)
+    if user and getattr(user, 'is_authenticated', False):
+        return user
+    return None
+
+
+def _is_admin_user(user):
+    if not user:
+        return False
+    if getattr(user, 'es_superusuario', False):
+        return True
+    role_name = get_role_name(user)
+    return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+
+
+def _require_auth(request):
+    user = _get_request_user(request)
+    if not user:
+        return None, JsonResponse({'error': 'Autenticación requerida'}, status=403)
+    return user, None
 
 
 @csrf_exempt
@@ -17,9 +44,16 @@ def mi_horario_docente(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         usuario_id = request.GET.get('usuario_id') or request.headers.get('X-Usuario-Id')
         if not usuario_id:
             return JsonResponse({'error': 'usuario_id es requerido'}, status=400)
+
+        if not _is_admin_user(user) and user.id != int(usuario_id):
+            return JsonResponse({'error': 'No autorizado'}, status=403)
 
         try:
             docente = Usuario.objects.get(id=usuario_id)
@@ -63,9 +97,16 @@ def mi_horario_estudiante(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         usuario_id = request.GET.get('usuario_id') or request.headers.get('X-Usuario-Id')
         if not usuario_id:
             return JsonResponse({'error': 'usuario_id es requerido'}, status=400)
+
+        if not _is_admin_user(user) and user.id != int(usuario_id):
+            return JsonResponse({'error': 'No autorizado'}, status=403)
 
         try:
             estudiante = Usuario.objects.get(id=usuario_id)
@@ -309,6 +350,10 @@ def horarios_por_periodo(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     try:
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         periodo_id = request.GET.get('periodo_id')
         estado_raw = request.GET.get('estado')
         estados_array = request.GET.getlist('estados[]') or request.GET.getlist('estados')

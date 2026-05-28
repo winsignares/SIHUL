@@ -186,7 +186,10 @@ class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdat
         user = self.get_current_user()
         if not user:
             return PrestamoEspacioPublico.objects.none()
-        return super().get_queryset()
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            return super().get_queryset()
+        return PrestamoEspacioPublico.objects.none()
 
 
 class PrestamoRecursoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
@@ -195,12 +198,30 @@ class PrestamoRecursoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'prestamo__espacio__sede__seccional'
 
+    def get_queryset(self):
+        user = self.get_current_user()
+        if not user:
+            return PrestamoRecurso.objects.none()
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            return super().get_queryset()
+        return super().get_queryset().filter(prestamo__usuario_id=user.id)
+
 
 class PrestamoRecursoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoRecurso.objects.select_related('prestamo', 'recurso').all()
     serializer_class = PrestamoRecursoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'prestamo__espacio__sede__seccional'
+
+    def get_queryset(self):
+        user = self.get_current_user()
+        if not user:
+            return PrestamoRecurso.objects.none()
+        role_name = get_role_name(user)
+        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+            return super().get_queryset()
+        return super().get_queryset().filter(prestamo__usuario_id=user.id)
 
 
 class SupervisorEspaciosPermitidosPrestamosAPIView(SeccionalMixin, generics.ListAPIView):
