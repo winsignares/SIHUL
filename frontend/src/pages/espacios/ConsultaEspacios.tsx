@@ -250,27 +250,13 @@ export default function ConsultaEspacios() {
 
   const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
     const hoy = getHoyColombia();
-    const inicioPeriodo = new Date(`${periodo.fecha_inicio}T00:00:00`);
     const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
-
-    inicioPeriodo.setHours(0, 0, 0, 0);
     finPeriodo.setHours(0, 0, 0, 0);
 
-    const inicioBase = new Date(Math.max(hoy.getTime(), inicioPeriodo.getTime()));
-    const inicioLunes = new Date(inicioBase);
-    const diaSemana = inicioLunes.getDay();
-
-    // Siempre calcular inicio automático en lunes:
-    // si hoy ya es lunes, se usa ese día; en otro caso, se toma el próximo lunes.
-    if (diaSemana !== 1) {
-      const diasHastaLunes = diaSemana === 0 ? 1 : 8 - diaSemana;
-      inicioLunes.setDate(inicioLunes.getDate() + diasHastaLunes);
-    }
-
-    if (inicioLunes <= finPeriodo) {
+    if (hoy <= finPeriodo) {
       return {
-        inicio: formatFechaLocalYYYYMMDD(inicioLunes),
-        ajustadoPorDomingo: inicioBase.getDay() === 0 && inicioLunes.getDay() === 1
+        inicio: formatFechaLocalYYYYMMDD(hoy),
+        ajustadoPorDomingo: false
       };
     }
 

@@ -45,6 +45,31 @@ Eso es todo. El sistema completo estará disponible en:
 | 🎨 **Frontend** | http://localhost:5173 | 5173 |
 | 🔧 **Backend API** | http://localhost:8000 | 8000 |
 | 🗄️ **PostgreSQL** | localhost:5432 | 5432 |
+| 🐘 **pgAdmin** | http://localhost:5050 | 5050 |
+
+### Levantar Solo La Base De Datos
+
+Si solo necesitas PostgreSQL (sin backend ni frontend), usando el `docker-compose.yml` principal:
+
+```bash
+docker compose up -d db
+```
+
+Comandos útiles:
+
+```bash
+# Ver logs de la base
+docker compose logs -f db
+
+# Entrar por psql a la base local
+docker compose exec db psql -U postgres -d mypostgresdb
+
+# Ejemplo de consulta
+docker compose exec db psql -U postgres -d mypostgresdb -c "SELECT NOW();"
+
+# Apagar solo la base
+docker compose stop db
+```
 
 ---
 
@@ -74,13 +99,14 @@ Eso es todo. El sistema completo estará disponible en:
 
 ### 1️⃣ Database (PostgreSQL)
 
-- **Imagen:** `postgres:15-alpine`
-- **Container:** `sihul_database`
+- **Imagen:** `postgres:15`
+- **Service:** `db`
+- **Container:** `postgres_db`
 - **Puerto:** `5432`
 - **Credenciales:**
-  - Usuario: `sihul_user`
-  - Password: `sihul_password_2025`
-  - Database: `sihul_db`
+  - Usuario: `postgres`
+  - Password: `mysecretpassword`
+  - Database: `mypostgresdb`
 - **Volumen persistente:** `sihul_postgres_data`
 - **Healthcheck:** Activo cada 10s
 
@@ -94,13 +120,30 @@ Eso es todo. El sistema completo estará disponible en:
 - **Depende de:** Database (espera healthcheck)
 - **Variables de entorno:**
   ```env
-  DB_HOST=database
-  DB_NAME=sihul_db
-  DB_USER=sihul_user
-  DB_PASSWORD=sihul_password_2025
+  DB_HOST=db
+  DB_NAME=mypostgresdb
+  DB_USER=postgres
+  DB_PASSWORD=mysecretpassword
   ```
 
-### 3️⃣ Frontend (React + Vite)
+### 3️⃣ pgAdmin
+
+- **Imagen:** `dpage/pgadmin4:8`
+- **Service:** `pgadmin`
+- **Container:** `sihul-pgadmin`
+- **Puerto:** `5050`
+- **Acceso web:** `http://localhost:5050`
+- **Credenciales:**
+  - Email: `admin@sihul.com`
+  - Password: `admin123`
+- **Conexión al servidor PostgreSQL dentro de pgAdmin:**
+  - Host: `db`
+  - Port: `5432`
+  - Username: `postgres`
+  - Password: `mysecretpassword`
+  - Database maintenance: `mypostgresdb`
+
+### 4️⃣ Frontend (React + Vite)
 
 - **Dockerfile:** `frontend.Dockerfile`
 - **Container:** `sihul_frontend`
@@ -158,7 +201,8 @@ docker compose logs -f
 # Ver logs de un servicio específico
 docker compose logs -f frontend
 docker compose logs -f backend
-docker compose logs -f database
+docker compose logs -f db
+docker compose logs -f pgadmin
 
 # Detener todo
 docker compose down
@@ -182,7 +226,7 @@ docker compose exec frontend npm run build
 docker compose exec frontend npm run lint
 
 # Database - PostgreSQL
-docker compose exec database psql -U sihul_user -d sihul_db
+docker compose exec db psql -U postgres -d mypostgresdb
 ```
 
 ### Abrir Terminal en Contenedores
@@ -195,7 +239,7 @@ docker compose exec backend bash
 docker compose exec frontend sh
 
 # Database
-docker compose exec database sh
+docker compose exec db sh
 ```
 
 ### Inspeccionar Red
@@ -269,25 +313,25 @@ docker compose up
 
 **Desde host:**
 ```bash
-psql -h localhost -p 5432 -U sihul_user -d sihul_db
-# Password: sihul_password_2025
+psql -h localhost -p 5432 -U postgres -d mypostgresdb
+# Password: mysecretpassword
 ```
 
 **Desde contenedor:**
 ```bash
-docker compose exec database psql -U sihul_user -d sihul_db
+docker compose exec db psql -U postgres -d mypostgresdb
 ```
 
 ### Backup y Restore
 
 **Backup:**
 ```bash
-docker compose exec database pg_dump -U sihul_user sihul_db > backup.sql
+docker compose exec db pg_dump -U postgres mypostgresdb > backup.sql
 ```
 
 **Restore:**
 ```bash
-cat backup.sql | docker compose exec -T database psql -U sihul_user -d sihul_db
+cat backup.sql | docker compose exec -T db psql -U postgres -d mypostgresdb
 ```
 
 ---
@@ -300,10 +344,10 @@ cat backup.sql | docker compose exec -T database psql -U sihul_user -d sihul_db
 DJANGO_SECRET_KEY: "dev-secret-key-change-in-production"
 DJANGO_DEBUG: "True"
 DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
-DB_HOST: "database"
-DB_NAME: "sihul_db"
-DB_USER: "sihul_user"
-DB_PASSWORD: "sihul_password_2025"
+DB_HOST: "db"
+DB_NAME: "mypostgresdb"
+DB_USER: "postgres"
+DB_PASSWORD: "mysecretpassword"
 DB_PORT: "5432"
 ```
 
@@ -320,9 +364,9 @@ VITE_HMR_PORT: "5173"
 ### Database (`docker-compose.yml`)
 
 ```yaml
-POSTGRES_DB: "sihul_db"
-POSTGRES_USER: "sihul_user"
-POSTGRES_PASSWORD: "sihul_password_2025"
+POSTGRES_DB: "mypostgresdb"
+POSTGRES_USER: "postgres"
+POSTGRES_PASSWORD: "mysecretpassword"
 ```
 
 ---

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from 'react';
 
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';

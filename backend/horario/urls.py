@@ -9,6 +9,8 @@ urlpatterns = [
     
     # Horario endpoints
     path('por-periodo/', api_views.horarios_por_periodo, name='horarios_por_periodo'),
+    path('sin-espacio/', api_views.list_horarios_asignacion_espacios, name='list_horarios_asignacion_espacios'),
+    path('asignar-espacio/', api_views.asignar_espacio_horario, name='asignar_espacio_horario'),
     path('list/extendidos/', views.list_horarios_extendidos, name='list_horarios_extendidos'),
     path('mi-horario/', views.mi_horario_docente, name='mi_horario_docente'),
     path('mi-horario-estudiante/', views.mi_horario_estudiante, name='mi_horario_estudiante'),

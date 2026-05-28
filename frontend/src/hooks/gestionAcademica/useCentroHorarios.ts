@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../share/notificationBanner';
 import { horarioService, horarioFusionadoService } from '../../services/horarios/horariosAPI';
@@ -9,6 +9,7 @@ import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { useValidacionHorarios } from './useValidacionHorarios';
+import type { HorarioValidable } from './useValidacionHorarios';
 
 const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios';
 
@@ -29,7 +30,7 @@ export interface HorarioExtendido {
     asignatura_nombre: string;
     docente_id: number | null;
     docente_nombre: string;
-    espacio_id: number;
+    espacio_id: number | null;
     espacio_nombre: string;
     dia_semana: string;
     hora_inicio: string;
@@ -65,13 +66,25 @@ export interface HorarioFusionadoExtendido {
     comentario: string | null;
 }
 
+type TabMode = 'consulta' | 'crear' | 'modificacion' | 'fusionados';
+
+interface UsuariosListResponse {
+    usuarios: Array<{
+        id: number;
+        nombre: string;
+        correo: string;
+    }>;
+}
+
 export function useCentroHorarios() {
     const { user, role } = useAuth();
     const { notification, showNotification } = useNotification();
     const [searchParams] = useSearchParams();
     const modeParam = searchParams.get('mode');
-    const initialMode = modeParam === 'consulta' ? 'consulta' : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
-    const [activeTab, setActiveTab] = useState<'consulta' | 'crear' | 'modificacion' | 'fusionados'>(initialMode as any);
+    const initialMode: TabMode = modeParam === 'consulta'
+        ? 'consulta'
+        : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
+    const [activeTab, setActiveTab] = useState<TabMode>(initialMode);
     const [loading, setLoading] = useState(false);
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
     const [horariosFusionados, setHorariosFusionados] = useState<HorarioFusionadoExtendido[]>([]);
@@ -114,29 +127,43 @@ export function useCentroHorarios() {
     const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
     const [progresoEliminacion, setProgresoEliminacion] = useState(0);
 
+    const horariosValidables: HorarioValidable[] = horarios
+        .filter((h): h is HorarioExtendido & { espacio_id: number } => h.espacio_id != null)
+        .map((h) => ({
+            id: h.id,
+            grupo_id: h.grupo_id,
+            grupo_nombre: h.grupo_nombre,
+            asignatura_id: h.asignatura_id,
+            asignatura_nombre: h.asignatura_nombre,
+            docente_id: h.docente_id,
+            docente_nombre: h.docente_nombre,
+            espacio_id: h.espacio_id,
+            espacio_nombre: h.espacio_nombre,
+            dia_semana: h.dia_semana,
+            hora_inicio: h.hora_inicio,
+            hora_fin: h.hora_fin,
+            cantidad_estudiantes: h.cantidad_estudiantes,
+        }));
+
     const { validarConflictosHorario } = useValidacionHorarios({
-        horarios,
+        horarios: horariosValidables,
         grupos,
         espacios,
     });
 
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-    useEffect(() => {
-        loadData();
-    }, [user, role]);
-
     // Si cambian los query params, sincronizar la pestaña activa
     useEffect(() => {
         const mode = searchParams.get('mode');
         if (mode === 'crear' || mode === 'modificacion' || mode === 'consulta') {
-            setActiveTab(mode as any);
+            setActiveTab(mode);
         } else {
             setActiveTab('crear');
         }
     }, [searchParams]);
 
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
@@ -227,7 +254,7 @@ export function useCentroHorarios() {
             // Filtrar facultades si es planeacion_facultad
             if (role?.nombre === 'planeacion_facultad' && user?.facultad) {
                 const userFacultadId = user.facultad.id.toString();
-                allFacultades = allFacultades.filter(f => f.id.toString() === userFacultadId);
+                allFacultades = allFacultades.filter((f) => String(f.id ?? '') === userFacultadId);
                 setFiltroFacultad(userFacultadId);
             }
             setFacultades(allFacultades);
@@ -244,8 +271,8 @@ export function useCentroHorarios() {
             const apiUrl = import.meta.env.VITE_API_URL;
             const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
             if (docentesResponse.ok) {
-                const docentesData = await docentesResponse.json();
-                const docentesList: Docente[] = docentesData.usuarios.map((u: any) => ({
+                const docentesData = (await docentesResponse.json()) as unknown as UsuariosListResponse;
+                const docentesList: Docente[] = docentesData.usuarios.map((u) => ({
                     id: u.id,
                     nombre: u.nombre,
                     correo: u.correo
@@ -274,7 +301,11 @@ export function useCentroHorarios() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [role?.nombre, showNotification, user?.facultad, user?.id]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     // Generar horas para el grid semanal
     const generarHoras = () => {
@@ -373,6 +404,9 @@ export function useCentroHorarios() {
 
     // Validar conflictos de horario al editar
     const validarConflictosEdicion = (horarioEditado: HorarioExtendido): { valido: boolean; mensaje: string } => {
+        if (horarioEditado.espacio_id == null) {
+            return { valido: false, mensaje: 'El horario no tiene un espacio asignado' };
+        }
         return validarConflictosHorario({
             horarioId: horarioEditado.id,
             grupoId: horarioEditado.grupo_id,
@@ -390,6 +424,10 @@ export function useCentroHorarios() {
 
     const handleGuardarEdicion = async () => {
         if (!horarioEditar) return;
+        if (horarioEditar.espacio_id == null) {
+            showNotification('No se puede guardar un horario sin espacio asignado', 'error');
+            return;
+        }
 
         // Validar conflictos antes de guardar
         const validacion = validarConflictosEdicion(horarioEditar);
@@ -552,7 +590,7 @@ export function useCentroHorarios() {
                 } else {
                     showNotification('Error al eliminar los horarios', 'error');
                 }
-            } catch (error) {
+            } catch {
                 showNotification('Error al eliminar los horarios', 'error');
             } finally {
                 setLoading(false);
@@ -565,7 +603,8 @@ export function useCentroHorarios() {
         return programa?.nombre || 'N/A';
     };
 
-    const getNombreEspacio = (espacioId: number) => {
+    const getNombreEspacio = (espacioId: number | null) => {
+        if (espacioId == null) return 'Sin espacio';
         const espacio = espacios.find(e => e.id === espacioId);
         return espacio?.nombre || 'N/A';
     };

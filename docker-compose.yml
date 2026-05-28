@@ -7,11 +7,11 @@ name: sihul
 
 services:
   # ==========================================
-  # BASE DE DATOS POSTGRESQL
+  # BASE DE DATOS POSTGRESQL + PGVECTOR
   # ==========================================
   db:
     container_name: postgres_db
-    image: postgres:15
+    image: pgvector/pgvector:pg16
     restart: always
     ports:
       - "5432:5432"
@@ -21,6 +21,7 @@ services:
       POSTGRES_PASSWORD: mysecretpassword
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
     networks:
       - sihul_network
     healthcheck:
@@ -28,6 +29,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ==========================================
+  # PGADMIN - ADMINISTRACIÓN DE POSTGRESQL
+  # ==========================================
+  pgadmin:
+    container_name: sihul-pgadmin
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sihul.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sihul_network
 
   # ==========================================
   # BACKEND DJANGO
@@ -53,6 +75,8 @@ services:
       # reCAPTCHA
       RECAPTCHA_SITE_KEY: "6LcHXPksAAAAAEHasHsSficubqOfvM5DG_vRWrDl"
       RECAPTCHA_SECRET_KEY: "6LcHXPksAAAAANMp0GJQhYMmJfPA37Wyh6eiRLiX"
+      # ChatBot
+      CHATBOT_FASTAPI_URL: http://chatbot:8001/api/v1
       # Python
       PYTHONUNBUFFERED: "1"
       # Memoria
@@ -70,6 +94,34 @@ services:
         condition: service_healthy
     networks:
       - sihul_network
+
+  # ==========================================
+  # CHATBOT FASTAPI + RAG
+  # ==========================================
+  chatbot:
+    container_name: sihul-chatbot
+    build:
+      context: .
+      dockerfile: chatbot.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./chatbot/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./chatbot:/app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
+      CHUNK_SIZE: ${CHUNK_SIZE:-500}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sihul_network  
 
   # ==========================================
   # FRONTEND REACT + VITE
@@ -95,9 +147,11 @@ services:
       VITE_HMR_PORT: "5173"
       VITE_API_URL: "http://localhost:8000"
       VITE_RECAPTCHA_SITE_KEY: "6LcHXPksAAAAAEHasHsSficubqOfvM5DG_vRWrDl"
+      VITE_CHATBOT_URL: "http://localhost:8001"
       TZ: "America/Bogota"
     depends_on:
       - backend
+      - chatbot
     networks:
       - sihul_network
     stdin_open: true
@@ -123,16 +177,16 @@ services:
   # ==========================================
   # N8N - AUTOMATIZACIÓN DE WORKFLOWS
   # ==========================================
-  n8n:
-    container_name: sihul-n8n
-    image: n8nio/n8n
-    restart: always
-    ports:
-      - "5678:5678"
-    volumes:
-      - n8n_data:/home/node/.n8n
-    networks:
-      - sihul_network
+  # n8n:
+  #   container_name: sihul-n8n
+  #   image: n8nio/n8n
+  #   restart: always
+  #   ports:
+  #     - "5678:5678"
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #   networks:
+  #     - sihul_network
 
 # ==========================================
 # VOLÚMENES PERSISTENTES
@@ -141,9 +195,12 @@ volumes:
   postgres_data:
     name: sihul_postgres_data
     driver: local
-  n8n_data:
-    name: sihul_n8n_data
+  pgadmin_data:
+    name: sihul_pgadmin_data
     driver: local
+  # n8n_data:
+  #   name: sihul_n8n_data
+  #   driver: local
 
 # ==========================================
 # RED COMPARTIDA

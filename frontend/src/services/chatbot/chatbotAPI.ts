@@ -257,7 +257,9 @@ export const chatbotAPI = {
     enviarPreguntaPublico: async (data: {
         agente_id: number;
         pregunta: string;
+        seccional: string;
         pregunta_sugerida_id?: number;
+        nombre_usuario?: string;
     }): Promise<{ chat_id: string; respuesta: string; timestamp: string }> => {
         return apiClient.post('/chatbot/public/pregunta/', data);
     }

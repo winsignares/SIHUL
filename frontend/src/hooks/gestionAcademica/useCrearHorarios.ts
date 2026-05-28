@@ -7,10 +7,11 @@ import { asignaturaService, asignaturaProgramaService, type Asignatura, type Asi
 import { userService, type Usuario } from '../../services/users/authService';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
-import { solicitudEspacioService, type SolicitudEspacio } from '../../services/horarios/solicitudEspacioAPI';
+import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { useValidacionHorarios } from './useValidacionHorarios';
+import type { HorarioValidable } from './useValidacionHorarios';
 
 const CREAR_HORARIOS_CACHE_KEY = 'gestion-academica-crear-horarios';
 
@@ -79,8 +80,26 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
     const [horasPorDia, setHorasPorDia] = useState<{ [key: string]: { inicio: string; fin: string } }>({});
 
+    const horariosValidables: HorarioValidable[] = todosLosHorarios
+        .filter((h): h is HorarioExtendido & { espacio_id: number } => h.espacio_id != null)
+        .map((h) => ({
+            id: h.id,
+            grupo_id: h.grupo_id,
+            grupo_nombre: h.grupo_nombre,
+            asignatura_id: h.asignatura_id,
+            asignatura_nombre: h.asignatura_nombre,
+            docente_id: h.docente_id,
+            docente_nombre: h.docente_nombre,
+            espacio_id: h.espacio_id,
+            espacio_nombre: h.espacio_nombre,
+            dia_semana: h.dia_semana,
+            hora_inicio: h.hora_inicio,
+            hora_fin: h.hora_fin,
+            cantidad_estudiantes: h.cantidad_estudiantes,
+        }));
+
     const { validarConflictosHorario } = useValidacionHorarios({
-        horarios: todosLosHorarios,
+        horarios: horariosValidables,
         grupos,
         espacios,
     });
@@ -495,6 +514,10 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             const horarioAMover = horariosAsignados.find(h => h.id === horarioId);
             if (!horarioAMover) {
                 showNotification('Horario no encontrado', 'error');
+                return;
+            }
+            if (horarioAMover.espacio_id == null) {
+                showNotification('El horario no tiene espacio asignado', 'error');
                 return;
             }
 

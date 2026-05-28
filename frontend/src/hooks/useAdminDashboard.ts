@@ -621,7 +621,8 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             'Centro de Horarios',
             'Préstamos de Espacios',
             'Periodos Académicos',
-            'Asignación Automática'
+            'Asignación Automática',
+            'Asignación de espacios por seccional'
         ];
         const gestionComponents = components.filter(c => gestionNames.includes(c.nombre));
         if (gestionComponents.length > 0) {

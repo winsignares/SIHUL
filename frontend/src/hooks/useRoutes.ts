@@ -24,7 +24,8 @@ export const routesByRole: Record<Role, Array<{ path: string; component: string 
     { path: '/admin/reportes', component: 'Reportes' },
     { path: '/admin/usuarios', component: 'GestionUsuarios' },
     { path: '/notificaciones', component: 'Notificaciones' },
-    { path: '/ajustes', component: 'Ajustes' }
+    { path: '/ajustes', component: 'Ajustes' },
+    { path: '/asignacion-espacios-seccional', component: 'AsignacionEspaciosSeccionalPage' }
   ],
   supervisor_general: [
     { path: '/supervisor/dashboard', component: 'SupervisorGeneralHome' },
