@@ -2,10 +2,12 @@ from django.shortcuts import render
 from .models import Notificacion
 from django.http import JsonResponse
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 import json
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 from mysite.auth_helpers import is_admin_global
+from mysite.xss_protection import NOTIFICACION_SCHEMA, sanitize_dict
 
 
 def _get_current_user(request):
@@ -13,6 +15,13 @@ def _get_current_user(request):
     if user and getattr(user, 'is_authenticated', False):
         return user
     return getattr(request, 'user_obj', None)
+
+
+def _require_auth(request):
+    user = _get_current_user(request)
+    if not user:
+        return None, JsonResponse({"error": "Autenticación requerida"}, status=403)
+    return user, None
 
 
 def _resolve_target_user_id(request, requested_user_id):
@@ -66,11 +75,25 @@ def _filter_relevantes_por_rol(notificaciones, user):
 def create_notificacion(request):
     if request.method == 'POST':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
             data = json.loads(request.body)
-            id_usuario = data.get('id_usuario')
-            tipo_notificacion = data.get('tipo_notificacion')
-            mensaje = data.get('mensaje')
-            prioridad = data.get('prioridad', 'media')
+
+            # Sanitizar inputs contra XSS
+            try:
+                sanitized_data = sanitize_dict(data, NOTIFICACION_SCHEMA)
+            except ValidationError as e:
+                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+
+            if is_admin_global(user):
+                id_usuario = data.get('id_usuario')
+            else:
+                id_usuario = user.id
+
+            tipo_notificacion = sanitized_data.get('tipo_notificacion')
+            mensaje = sanitized_data.get('mensaje')
+            prioridad = sanitized_data.get('prioridad', 'media')
             
             if not id_usuario:
                 return JsonResponse({"error": "El id_usuario es requerido"}, status=400)
@@ -102,15 +125,30 @@ def create_notificacion(request):
 def update_notificacion(request):
     if request.method == 'PUT':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
                 return JsonResponse({"error": "ID es requerido"}, status=400)
             
             notif = Notificacion.objects.get(id=id)
-            notif.tipo_notificacion = data.get('tipo_notificacion', notif.tipo_notificacion)
-            notif.mensaje = data.get('mensaje', notif.mensaje)
-            notif.prioridad = data.get('prioridad', notif.prioridad)
+            if not is_admin_global(user) and notif.id_usuario != user.id:
+                return JsonResponse({"error": "No autorizado para actualizar esta notificación"}, status=403)
+
+            schema = {k: {**v, 'required': False} for k, v in NOTIFICACION_SCHEMA.items()}
+            try:
+                sanitized_data = sanitize_dict(data, schema)
+            except ValidationError as e:
+                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+
+            if 'tipo_notificacion' in sanitized_data:
+                notif.tipo_notificacion = sanitized_data.get('tipo_notificacion')
+            if 'mensaje' in sanitized_data:
+                notif.mensaje = sanitized_data.get('mensaje')
+            if 'prioridad' in sanitized_data:
+                notif.prioridad = sanitized_data.get('prioridad')
             if 'es_leida' in data:
                 notif.es_leida = bool(data.get('es_leida'))
             notif.save()
@@ -127,12 +165,17 @@ def update_notificacion(request):
 def delete_notificacion(request):
     if request.method == 'DELETE':
         try:
+            user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
                 return JsonResponse({"error": "ID es requerido"}, status=400)
             
             notif = Notificacion.objects.get(id=id)
+            if not is_admin_global(user) and notif.id_usuario != user.id:
+                return JsonResponse({"error": "No autorizado para eliminar esta notificación"}, status=403)
             notif.delete()
             return JsonResponse({"message": "Notificación eliminada"}, status=200)
         except Notificacion.DoesNotExist:
@@ -148,19 +191,13 @@ def get_notificacion(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        #obtenemos la sede del usuario autenticado
-        user_sede = getattr(request, 'sede', None)
-        #buscamos la notificación solo si pertenece a un usuario de la misma seccional que la sede del usuario autenticado
-        if user_sede and user_sede.seccional_id:
-            from usuarios.models import Usuario
-            #obtenemos los ids de los usuarios que pertenecen a la misma seccional que la sede del usuario autenticado
-            usuarios_misma_seccional = Usuario.objects.filter(
-                sede__seccional_id=user_sede.seccional_id
-            ).values_list('id', flat=True)
-            #buscamos la notificación solo si su id_usuario está en la lista de usuarios de la misma seccional
-            notif = Notificacion.objects.get(id=id, id_usuario__in=usuarios_misma_seccional)
-        else:
-            notif = Notificacion.objects.get(id=id)
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
+        notif = Notificacion.objects.get(id=id)
+        if not is_admin_global(user) and notif.id_usuario != user.id:
+            return JsonResponse({"error": "No autorizado"}, status=403)
         return JsonResponse({
             "id": notif.id,
             "id_usuario": notif.id_usuario,
@@ -179,25 +216,20 @@ def get_notificacion(request, id=None):
 @csrf_exempt
 def list_notificaciones(request):
     if request.method == 'GET': 
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
         # Filtros opcionales
         id_usuario = request.GET.get('id_usuario')
         no_leidas = request.GET.get('no_leidas', 'false').lower() == 'true'
-        
-        # Obtener sede del usuario desde middleware
-        user_sede = getattr(request, 'sede', None)
-        
-        # Filtrar notificaciones por usuarios de la misma seccional
-        if user_sede and user_sede.seccional_id:
-            from usuarios.models import Usuario
-            usuarios_misma_seccional = Usuario.objects.filter(
-                sede__seccional_id=user_sede.seccional_id
-            ).values_list('id', flat=True)
-            notificaciones = Notificacion.objects.filter(id_usuario__in=usuarios_misma_seccional)
+
+        if not is_admin_global(user):
+            id_usuario = user.id
+
+        if id_usuario:
+            notificaciones = Notificacion.objects.filter(id_usuario=id_usuario)
         else:
             notificaciones = Notificacion.objects.all()
-        
-        if id_usuario:
-            notificaciones = notificaciones.filter(id_usuario=id_usuario)
         
         if no_leidas:
             notificaciones = notificaciones.filter(es_leida=False)
@@ -223,7 +255,11 @@ def mis_notificaciones(request):
     if request.method == 'GET':
         from datetime import timedelta
         from django.utils import timezone
-        
+
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         id_usuario = request.GET.get('id_usuario')
         no_leidas = request.GET.get('no_leidas', 'false').lower() == 'true'
         pagina = int(request.GET.get('pagina', 1))
@@ -234,7 +270,7 @@ def mis_notificaciones(request):
         filtro_tiempo = request.GET.get('filtro_tiempo', '').strip()
         categoria = request.GET.get('categoria', '').strip()
         
-        current_user = _get_current_user(request)
+        current_user = user
         id_usuario_resuelto = _resolve_target_user_id(request, id_usuario)
 
         if not id_usuario_resuelto:
@@ -334,8 +370,12 @@ def mis_notificaciones(request):
 def estadisticas(request):
     """Obtiene estadísticas de notificaciones del usuario"""
     if request.method == 'GET':
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
+
         id_usuario = request.GET.get('id_usuario')
-        current_user = _get_current_user(request)
+        current_user = user
         id_usuario_resuelto = _resolve_target_user_id(request, id_usuario)
         
         if not id_usuario_resuelto:
@@ -367,7 +407,9 @@ def marcar_como_leida(request, id=None):
         if id is None:
             return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
         try:
-            current_user = _get_current_user(request)
+            current_user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
             notif = Notificacion.objects.get(id=id)
             if current_user and not is_admin_global(current_user) and notif.id_usuario != current_user.id:
                 return JsonResponse({"error": "No autorizado para actualizar esta notificación"}, status=403)
@@ -389,6 +431,9 @@ def marcar_todas_como_leidas(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
+            current_user, auth_error = _require_auth(request)
+            if auth_error:
+                return auth_error
             id_usuario = data.get('id_usuario')
             id_usuario_resuelto = _resolve_target_user_id(request, id_usuario)
             

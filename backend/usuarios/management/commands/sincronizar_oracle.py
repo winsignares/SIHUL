@@ -205,6 +205,30 @@ class Command(BaseCommand):
         ciudades_unicas = list(dict.fromkeys(ciudades))
         return ciudades_unicas, col_ciudad, col_nombre
 
+    @staticmethod
+    def _validar_query(query):
+        if not isinstance(query, str):
+            return False, 'La query debe ser texto'
+
+        query_limpia = query.strip()
+        if not query_limpia:
+            return False, 'La query no puede estar vacía'
+
+        if not query_limpia.upper().startswith('SELECT'):
+            return False, 'Solo se permiten queries SELECT'
+
+        if ';' in query_limpia:
+            return False, 'No se permiten múltiples sentencias'
+
+        patrones_prohibidos = r'\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|MERGE|GRANT|REVOKE)\b'
+        if re.search(patrones_prohibidos, query_limpia, flags=re.IGNORECASE):
+            return False, 'La query contiene palabras prohibidas'
+
+        if re.search(r'--|/\*|\*/', query_limpia):
+            return False, 'La query contiene comentarios SQL'
+
+        return True, ''
+
     def handle(self, *args, **options):
         host = options.get('host')
         port = options.get('port')
@@ -225,6 +249,11 @@ class Command(BaseCommand):
                     'o variables ORACLE_HOST ORACLE_USER ORACLE_PASSWORD ORACLE_SERVICE'
                 )
             )
+            return
+
+        es_valida, error_query = self._validar_query(query)
+        if not es_valida:
+            self.stdout.write(self.style.ERROR(f'Query inválida: {error_query}'))
             return
 
         connection = None

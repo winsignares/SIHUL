@@ -840,10 +840,16 @@ NOTIFICACION_SCHEMA = {
         'max_length': 1000,
         'required': True,
     },
-    'tipo': {
+    'tipo_notificacion': {
         'type': 'string',
         'field_type': 'nombre',
         'max_length': 100,
+        'required': True,
+    },
+    'prioridad': {
+        'type': 'string',
+        'field_type': 'nombre',
+        'max_length': 20,
         'required': False,
     },
 }
