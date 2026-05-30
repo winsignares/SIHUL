@@ -57,5 +57,29 @@ jobs:
       - name: Install dependencies (clean)
         run: npm ci
 
-      - name: npm audit (fail on High/Critical)
-        run: npm audit --omit=dev --audit-level=high
+      - name: npm audit (fail on High/Critical, excluding unfixable xlsx)
+        run: |
+          npm audit --omit=dev --json > audit.json 2>&1 || true
+          node -e "
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
+          const vulns = Object.entries(data.vulnerabilities || {});
+          const nonXlsxVulns = vulns.filter(([key, vuln]) => !key.includes('xlsx'));
+          
+          if (nonXlsxVulns.length > 0) {
+            console.error('❌ Found non-xlsx vulnerabilities:');
+            nonXlsxVulns.forEach(([key, vuln]) => {
+              console.error(\`  - \${key}: \${vuln.severity}\`);
+            });
+            process.exit(1);
+          }
+          
+          if (vulns.length > 0 && vulns.some(([key]) => key.includes('xlsx'))) {
+            console.log('⚠️  Note: xlsx has unfixable HIGH vulnerabilities (known and accepted risk)');
+            console.log('   See: GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9');
+            process.exit(0);
+          }
+          
+          console.log('✅ No vulnerabilities found');
+          process.exit(0);
+          "
