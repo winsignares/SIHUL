@@ -3,6 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from mysite.csrf_protection import get_csrf_token_view
 
 from mysite.api_views import (
     AsignaturaProgramaViewSet,
@@ -47,6 +48,7 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/csrf-token/', get_csrf_token_view, name='csrf_token'),
     path('api/', include(router.urls)),
     path('api/auth/', include('mysite.auth_urls')),
     path('api/periodos/', include('periodos.api_urls')),

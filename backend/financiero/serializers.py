@@ -6,6 +6,10 @@ from django.db import IntegrityError
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from mysite.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, FACTURA_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
+import os
+import re
+import uuid
+from urllib.parse import urlparse
 
 
 ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg'}
@@ -174,6 +178,56 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('El contenido del archivo no corresponde a un XML válido.')
 
         return archivo
+
+    def validate_nombre_archivo(self, value):
+        base = os.path.basename((value or '').strip())
+        if not base:
+            raise serializers.ValidationError('El nombre del archivo es requerido.')
+        # Sustituir caracteres peligrosos
+        safe = re.sub(r'[^A-Za-z0-9._-]+', '_', base)
+        return safe[:255]
+
+    def validate_url_storage(self, value):
+        v = (value or '').strip()
+        if not v:
+            return ''
+        parsed = urlparse(v)
+        # Solo permitir http/https o rutas relativas
+        if parsed.scheme and parsed.scheme.lower() not in ('http', 'https'):
+            raise serializers.ValidationError('Esquema de URL no permitido para url_storage.')
+        return v
+
+    def _safe_filename(self, original_name: str) -> str:
+        base = os.path.basename((original_name or '').strip())
+        ext = base.rsplit('.', 1)[-1].lower() if '.' in base else ''
+        if ext not in ALLOWED_DOC_EXTENSIONS:
+            ext = 'bin'
+        return f"{uuid.uuid4().hex}.{ext}"
+
+    def validate(self, data):
+        archivo = data.get('archivo')
+        url_storage = (data.get('url_storage') or '').strip()
+
+        if not archivo and not url_storage:
+            raise serializers.ValidationError('Debe adjuntar un archivo o especificar url_storage.')
+
+        # Asegurar nombre_archivo legible y seguro
+        nombre = data.get('nombre_archivo') or getattr(archivo, 'name', '')
+        if nombre:
+            data['nombre_archivo'] = self.validate_nombre_archivo(nombre)
+
+        # Randomizar el nombre físico almacenado para evitar colisiones/filtración de nombres
+        if archivo is not None and hasattr(archivo, 'name'):
+            archivo.name = self._safe_filename(archivo.name)
+            data['archivo'] = archivo
+
+        return data
+
+    def create(self, validated_data):
+        # Revalidar url_storage cuando es pasado via kwargs en serializer.save(...)
+        if 'url_storage' in validated_data:
+            validated_data['url_storage'] = self.validate_url_storage(validated_data.get('url_storage'))
+        return super().create(validated_data)
 
 
 class HistorialFacturaSerializer(serializers.ModelSerializer):

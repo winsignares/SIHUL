@@ -25,4 +25,22 @@ temp_*.py
 
 # Django media uploads
 backend/media/
-backend/financiero/media/
+backend/financiero/media/# Frontend build and deps
+frontend/node_modules/
+frontend/dist/
+
+# Frontend/Chatbot env files
+frontend/.env
+frontend/.env.local
+chatbot/.env
+chatbot/.env.local
+
+# Any nested env files
+**/.env
+**/.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

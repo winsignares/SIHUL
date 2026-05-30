@@ -1,0 +1,29 @@
+# ZAP Baseline local scan (safe, passive)
+# Usage:
+#   1) Ensure stack is up: docker compose up -d db backend frontend nginx
+#   2) Run scan: docker compose -f docker-compose.yml -f docker-compose.zap.yml run --rm zap
+#   3) Open report: ./zap-reports/zap-baseline.html
+
+services:
+  zap:
+    image: owasp/zap2docker-stable
+    container_name: zap-baseline
+    # Passive baseline scan against local nginx service
+    command: >
+      zap-baseline.py
+      -t http://nginx
+      -r /zap/reports/zap-baseline.html
+      -d
+      -a
+    depends_on:
+      nginx:
+        condition: service_started
+    networks:
+      - sihul_network
+    volumes:
+      - ./zap-reports:/zap/reports
+
+networks:
+  sihul_network:
+    external: true
+    name: sihul_network

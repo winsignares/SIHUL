@@ -73,7 +73,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'mysite.csrf_protection.JSONCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -237,6 +237,10 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
+# DRF Throttling configurable por entorno
+API_THROTTLE_USER = os.getenv('API_THROTTLE_USER', '200/min')
+API_THROTTLE_ANON = os.getenv('API_THROTTLE_ANON', '50/min')
+
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -248,8 +252,58 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': API_THROTTLE_USER,
+        'anon': API_THROTTLE_ANON,
+    },
 }
 
 # ETL configurations
 ETL_PERIODO = os.getenv('ETL_PERIODO', '20261')
+
+# Endurecimiento de Producción (activado si ENVIRONMENT/DJANGO_ENV=production)
+ENVIRONMENT = (os.getenv('ENVIRONMENT') or os.getenv('DJANGO_ENV') or 'development').lower()
+if ENVIRONMENT == 'production':
+    DEBUG = False
+
+    # ALLOWED_HOSTS desde env o dominio por defecto
+    _env_hosts = os.getenv('ALLOWED_HOSTS', '')
+    if _env_hosts:
+        ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(',') if h.strip()]
+    else:
+        ALLOWED_HOSTS = ['sihul.unilibre.edu.co']
+
+    # Cookies seguras y redirección a HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+
+    # HSTS y headers de seguridad
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+    # CORS y CSRF Trusted Origins desde env
+    _env_cors = os.getenv('CORS_ALLOWED_ORIGINS', '')
+    if _env_cors:
+        CORS_ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in _env_cors.split(',') if o.strip()]
+    _env_csrf = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+    if _env_csrf:
+        CSRF_TRUSTED_ORIGINS = [o.strip().rstrip('/') for o in _env_csrf.split(',') if o.strip()]
+    else:
+        # Derivar de ALLOWED_HOSTS si no se provee lista explícita
+        CSRF_TRUSTED_ORIGINS = [
+            (f"https://{h}" if not h.startswith('http') else h).rstrip('/')
+            for h in ALLOWED_HOSTS if h != '*'
+        ]
+
+    # Requerir SECRET_KEY definido por entorno en producción
+    if not os.getenv('DJANGO_SECRET_KEY'):
+        raise RuntimeError('DJANGO_SECRET_KEY debe estar definido en producción')
 
