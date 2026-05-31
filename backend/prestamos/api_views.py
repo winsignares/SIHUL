@@ -5,6 +5,8 @@ import uuid
 
 from django.conf import settings
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -159,6 +161,7 @@ def _verify_recaptcha(token, remote_ip=None):
         return False, "No se pudo validar reCAPTCHA"
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PublicAccessRecaptchaVerifyAPIView(APIView):
     permission_classes = [permissions.AllowAny]
 
