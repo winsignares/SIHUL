@@ -1,4 +1,4 @@
-﻿fastapi==0.115.6
+﻿fastapi==0.120.0
 uvicorn==0.34.0
 sqlalchemy==2.0.36
 asyncpg==0.30.0
@@ -10,4 +10,4 @@ pydantic-settings==2.7.1
 langchain-text-splitters==1.1.2
 pymupdf==1.25.3
 cryptography==46.0.7
-starlette==0.40.0
+starlette==0.48.0
