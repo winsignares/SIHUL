@@ -23,19 +23,13 @@ jobs:
       - name: Install audit tools
         run: |
           python -m pip install --upgrade pip
-          pip install pip-audit safety
+          pip install pip-audit
 
       - name: pip-audit backend
         run: pip-audit -r backend/requirements.txt
 
       - name: pip-audit chatbot
         run: pip-audit -r chatbot/requirements.txt
-
-      - name: safety backend
-        run: safety check -r backend/requirements.txt
-
-      - name: safety chatbot
-        run: safety check -r chatbot/requirements.txt
 
   node-audit:
     name: Node Audit (frontend)
