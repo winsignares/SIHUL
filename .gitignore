@@ -1,11 +1,29 @@
 .devcontainer/
 
-# Environment variables (NUNCA subir archivos .env con credenciales)
+# ==========================================
+# SECRETOS Y VARIABLES DE ENTORNO
+# ==========================================
+# NUNCA commitear archivos con credenciales reales
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 backend/.env
 backend/.env.local
+
+# Claves privadas y certificados
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+
+# Archivos de configuración sensibles
+config/secrets*
+config/private*
+secrets.json
+private.json
 
 # Python
 __pycache__/

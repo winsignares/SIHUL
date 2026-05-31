@@ -73,7 +73,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-change-me}
       DB_NAME: ${DB_NAME:-mypostgresdb}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-unsafe-do-not-use-in-prod}
-      # reCAPTCHA
+      # reCAPTCHA (desde .env - NUNCA hardcodear en producción)
       RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
       # ChatBot
