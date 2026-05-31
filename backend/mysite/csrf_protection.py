@@ -35,6 +35,7 @@ class JSONCsrfMiddleware(CsrfViewMiddleware):
         '/api/usuarios/change-password/',
         '/usuarios/change-password/',
         '/api/csrf-token/',
+        '/api/prestamos/public/recaptcha/',  # Public reCAPTCHA validation
     }
     
     def process_view(self, request, view_func, view_args, view_kwargs):
