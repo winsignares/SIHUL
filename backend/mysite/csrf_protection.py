@@ -19,9 +19,29 @@ class JSONCsrfMiddleware(CsrfViewMiddleware):
     2. Mantiene compatibilidad con SessionAuthentication
     3. Permite requests sin token solo para GET/HEAD/OPTIONS/TRACE
     4. Requiere token CSRF para POST/PUT/DELETE/PATCH
+    5. Exempta endpoints públicos como login, logout
     """
     
+    # Endpoints exemptados de CSRF (públicos/sin autenticación)
+    CSRF_EXEMPT_PATHS = {
+        '/api/usuarios/login/',
+        '/usuarios/login/',
+        '/api/usuarios/logout/',
+        '/usuarios/logout/',
+        '/api/auth/logout/',
+        '/auth/logout/',
+        '/api/usuarios/session-auth-state/',
+        '/usuarios/session-auth-state/',
+        '/api/usuarios/change-password/',
+        '/usuarios/change-password/',
+        '/api/csrf-token/',
+    }
+    
     def process_view(self, request, view_func, view_args, view_kwargs):
+        # Exemtar endpoints públicos
+        if request.path in self.CSRF_EXEMPT_PATHS:
+            return None
+        
         # GET, HEAD, OPTIONS, TRACE son seguros (no modifican estado)
         if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
             return None
