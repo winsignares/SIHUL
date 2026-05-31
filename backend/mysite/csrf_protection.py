@@ -43,6 +43,10 @@ class JSONCsrfMiddleware(CsrfViewMiddleware):
         if request.path in self.CSRF_EXEMPT_PATHS:
             return None
         
+        # Respetar decorador @csrf_exempt en vistas
+        if getattr(view_func, 'csrf_exempt', False):
+            return None
+        
         # GET, HEAD, OPTIONS, TRACE son seguros (no modifican estado)
         if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
             return None
