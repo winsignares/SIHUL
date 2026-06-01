@@ -15,7 +15,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--sedes-query',
             type=str,
-            default='SELECT id_sede, nombre_sede FROM UHORARIOS.VW_SEDES',
+            default='SELECT id_sede, cod_sede, nombre_sede FROM UHORARIOS.VW_SEDES',
             help='Consulta de sedes Oracle',
         )
         parser.add_argument('--dry-run', action='store_true')

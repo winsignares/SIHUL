@@ -15,7 +15,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--sedes-query',
             type=str,
-            default='SELECT id_sede, nombre_sede FROM UHORARIOS.VW_SEDES',
+            default='SELECT id_sede, cod_sede, nombre_sede FROM UHORARIOS.VW_SEDES',
             help='Consulta de sedes Oracle para mantener mapping actualizado',
         )
         parser.add_argument(
@@ -25,6 +25,7 @@ class Command(BaseCommand):
                 'SELECT '
                 'ID_FACULTAD AS id_facultad, '
                 'ID_SEDE AS id_sede, '
+                'COD_SEDE AS cod_sede, '
                 'NOMBRE_SEDE AS nombre_sede, '
                 'NOMBRE_FACULTAD AS nombre_facultad '
                 'FROM UHORARIOS.VW_FACULTAD'

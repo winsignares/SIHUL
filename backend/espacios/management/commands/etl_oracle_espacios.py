@@ -121,12 +121,13 @@ class Command(BaseCommand):
                     'nombre_espacio': self._first_present(data, ['nombre_espacio']),
                     'tipo_espacio': self._first_present(data, ['tipo_espacio']),
                     'id_sede': self._first_present(data, ['id_sede']),
+                    'cod_sede': self._first_present(data, ['cod_sede']),
                     'sede': self._first_present(data, ['sede']),
                     'nombre_facultad': self._first_present(data, ['nombre_facultad']),
                 }
 
                 ident_aula = self._to_text(raw_payload['ident_aula'])
-                id_sede = self._to_text(raw_payload['id_sede'])
+                id_sede = self._to_text(raw_payload['cod_sede']) or self._to_text(raw_payload['id_sede'])
                 nombre_espacio = self._to_text(raw_payload['nombre_espacio'])
 
                 row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})

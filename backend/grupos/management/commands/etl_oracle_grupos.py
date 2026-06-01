@@ -127,6 +127,7 @@ class Command(BaseCommand):
                 raw_payload = {
                     'id_grupo': self._first_present(data, ['id_grupo']),
                     'id_sede': self._first_present(data, ['id_sede']),
+                    'cod_sede': self._first_present(data, ['cod_sede']),
                     'nombre_sede': self._first_present(data, ['nombre_sede']),
                     'id_facultad': self._first_present(data, ['id_facultad']),
                     'nombre_facultad': self._first_present(data, ['nombre_facultad']),
@@ -152,7 +153,9 @@ class Command(BaseCommand):
 
                 defaults = {
                     'id_grupo_oracle': id_grupo or None,
-                    'id_sede_oracle': self._to_text(raw_payload['id_sede']) or None,
+                    'id_sede_oracle': (
+                        self._to_text(raw_payload['cod_sede']) or self._to_text(raw_payload['id_sede']) or None
+                    ),
                     'nombre_sede_oracle': self._to_text(raw_payload['nombre_sede']) or None,
                     'id_facultad_oracle': self._to_text(raw_payload['id_facultad']) or None,
                     'nombre_facultad_oracle': self._to_text(raw_payload['nombre_facultad']) or None,
