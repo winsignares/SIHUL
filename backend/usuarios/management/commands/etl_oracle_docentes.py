@@ -103,6 +103,18 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
+            # Mapa de traduccion ID_SEDE -> COD_SEDE para armonizar con Sede.external_id local.
+            sede_id_to_cod = {}
+            try:
+                cursor.execute("SELECT ID_SEDE, COD_SEDE FROM UHORARIOS.VW_SEDES")
+                for sid, cod in cursor.fetchall():
+                    sid_txt = self._to_text(sid)
+                    cod_txt = self._to_text(cod)
+                    if sid_txt and cod_txt:
+                        sede_id_to_cod[sid_txt] = cod_txt
+            except Exception:
+                sede_id_to_cod = {}
+
             execute_oracle_query_with_optional_seccional(
                 cursor,
                 query,
@@ -163,7 +175,10 @@ class Command(BaseCommand):
                     'correo_institucional': None,  # No disponible en VW_DOCENTES
                     'correo_personal': None,  # No disponible en VW_DOCENTES
                     'id_sede_oracle': (
-                        self._to_text(raw_payload['cod_sede']) or self._to_text(raw_payload['id_sede']) or None
+                        self._to_text(raw_payload['cod_sede'])
+                        or sede_id_to_cod.get(self._to_text(raw_payload['id_sede']))
+                        or self._to_text(raw_payload['id_sede'])
+                        or None
                     ),
                     'nombre_sede_oracle': None,  # No disponible en VW_DOCENTES
                     'id_facultad_oracle': None,  # No disponible en VW_DOCENTES

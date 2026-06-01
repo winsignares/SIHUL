@@ -165,7 +165,8 @@ class Command(BaseCommand):
             f") PAG_Q WHERE pg_rn > {safe_offset}"
         )
 
-    def _build_staged_entry(self, data, summary):
+    def _build_staged_entry(self, data, summary, sede_id_to_cod=None):
+        sede_id_to_cod = sede_id_to_cod or {}
         raw_payload = {
             'tip_identificacion': self._first_present(data, ['tip_identificacion', 'tipo_identificacion']),
             'id_estudiante': self._first_present(data, ['id_estudiante']),
@@ -211,7 +212,11 @@ class Command(BaseCommand):
             'semestre_oracle': self._to_non_negative_int(raw_payload['semestre'], default=None),
             'periodo_academico': self._to_text(raw_payload['periodo_academico']) or None,
             'programa_oracle': self._to_text(raw_payload['programa']) or None,
-            'id_sede_oracle': self._to_text(raw_payload['id_sede']) or None,
+            'id_sede_oracle': (
+                sede_id_to_cod.get(self._to_text(raw_payload['id_sede']))
+                or self._to_text(raw_payload['id_sede'])
+                or None
+            ),
             'raw_data': data,
             'row_hash': row_hash,
             'estado_registro': (
@@ -331,6 +336,16 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
+            sede_id_to_cod = {}
+            try:
+                cursor.execute("SELECT ID_SEDE, COD_SEDE FROM UHORARIOS.VW_SEDES")
+                for sid, cod in cursor.fetchall():
+                    sid_txt = self._to_text(sid)
+                    cod_txt = self._to_text(cod)
+                    if sid_txt and cod_txt:
+                        sede_id_to_cod[sid_txt] = cod_txt
+            except Exception:
+                sede_id_to_cod = {}
             cursor.arraysize = batch_size
             normalized_seccional = normalize_seccional_name(seccional)
             columns = []
@@ -366,7 +381,11 @@ class Command(BaseCommand):
 
                 for row in fetched:
                     data = dict(zip(columns, row))
-                    external_id, defaults = self._build_staged_entry(data, summary)
+                    external_id, defaults = self._build_staged_entry(
+                        data,
+                        summary,
+                        sede_id_to_cod=sede_id_to_cod,
+                    )
                     if external_id in staged_by_external:
                         summary['staging']['duplicate_external_ids_in_batch'] += 1
                     staged_by_external[external_id] = defaults
