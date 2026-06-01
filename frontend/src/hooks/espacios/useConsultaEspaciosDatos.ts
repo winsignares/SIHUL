@@ -69,6 +69,7 @@ function normalizarDia(dia: string): string {
     viernes: 'Viernes',
     friday: 'Viernes',
     'sábado': 'Sábado',
+    'sabado': 'Sábado',  // Backend envía sin tilde
     saturday: 'Sábado',
     domingo: 'Domingo',
     sunday: 'Domingo'

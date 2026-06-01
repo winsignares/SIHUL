@@ -21,11 +21,7 @@ import {
   FileDown, 
   FileSpreadsheet,
   Pencil,
-  ArrowLeftRight,
   AlertCircle,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   X,
@@ -93,11 +89,13 @@ function formatHoraDecimal(hora: number): string {
 }
 
 // Helper para redondear hora a múltiplo de 15 minutos (0.25 horas)
+// Usa ceil para redondear hacia arriba y asegurar que la celda cubra todo el horario
 function roundTo15Min(hora: number): number {
   // Agregar pequeña tolerancia para errores de precisión flotante
   const horaConTolerancia = hora + 0.001;
-  // Redondear a múltiplo de 0.25 (15 minutos)
-  return Math.round(horaConTolerancia * 4) / 4;
+  // Redondear hacia arriba (ceil) al múltiplo de 0.25 (15 minutos)
+  // Ej: 12.40 -> 12.666... -> 13 -> 12.75 (12:45)
+  return Math.ceil(horaConTolerancia * 4) / 4;
 }
 
 export default function ConsultaEspacios() {
@@ -117,6 +115,8 @@ export default function ConsultaEspacios() {
     setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
+    filterOcupacion,
+    setFilterOcupacion,
     mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
@@ -162,7 +162,6 @@ export default function ConsultaEspacios() {
     dialogSolicitudOpen,
     setDialogSolicitudOpen,
     nuevaSolicitudData,
-    setNuevaSolicitudData,
     // Período académico
     periodos,
     periodosLoading,
@@ -696,8 +695,8 @@ export default function ConsultaEspacios() {
         setEspaciosDisponibles(response.espacios || []);
         setFormData(prev => ({ 
           ...prev, 
-          sede_id: sede.id,
-          espacio_id: nuevaSolicitudData.espacio_id
+          sede_id: sede.id!,
+          espacio_id: nuevaSolicitudData?.espacio_id || 0
         }));
       } catch (err) {
         console.error('Error cargando espacios disponibles:', err);
@@ -1290,6 +1289,20 @@ export default function ConsultaEspacios() {
                 className={`pl-10 h-9 ${isMobile ? 'text-sm' : ''}`}
               />
             </div>
+            {/* Filtro de ocupación - al lado del buscador */}
+            <Select value={filterOcupacion} onValueChange={setFilterOcupacion}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[220px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
+                <SelectValue placeholder="Ocupación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="solo_horario">Solo con horario</SelectItem>
+                <SelectItem value="solo_prestamo">Solo con préstamos</SelectItem>
+                <SelectItem value="sin_horario_ni_prestamo">Sin horario ni préstamos</SelectItem>
+                <SelectItem value="sin_horario">Sin horario</SelectItem>
+                <SelectItem value="sin_prestamo">Sin préstamo</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filterTipo} onValueChange={setFilterTipo}>
               <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
                 <SelectValue placeholder="Tipo" />

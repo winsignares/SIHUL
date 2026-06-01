@@ -67,19 +67,48 @@ export function useConsultaEspacios() {
         e.nombre.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
         (e.edificio && e.edificio.toLowerCase().includes(filtros.searchTerm.toLowerCase()));
       const matchesTipo = filtros.filterTipo === 'todos' || e.tipo === filtros.filterTipo;
-      const matchesApertura = 
-        filtros.filterApertura === 'todas' || 
+      const matchesApertura =
+        filtros.filterApertura === 'todas' ||
         (filtros.filterApertura === 'abierto' && e.estaAbierto) ||
         (filtros.filterApertura === 'cerrado' && !e.estaAbierto);
       const matchesSede = filtros.filterSede === 'todas' || e.sede === filtros.filterSede;
-      return matchesSearch && matchesTipo && matchesApertura && matchesSede;
+
+      // Filtrar por ocupación (horarios/préstamos)
+      const horariosEspacio = horariosMostrados.filter(h => h.espacioId === e.id);
+      const tieneHorarios = horariosEspacio.some(h => h.tipo !== 'prestamo');
+      const tienePrestamos = horariosEspacio.some(h => h.tipo === 'prestamo');
+
+      let matchesOcupacion = true;
+      switch (filtros.filterOcupacion) {
+        case 'solo_horario':
+          matchesOcupacion = tieneHorarios;
+          break;
+        case 'solo_prestamo':
+          matchesOcupacion = tienePrestamos;
+          break;
+        case 'sin_horario_ni_prestamo':
+          matchesOcupacion = !tieneHorarios && !tienePrestamos;
+          break;
+        case 'sin_horario':
+          matchesOcupacion = !tieneHorarios;
+          break;
+        case 'sin_prestamo':
+          matchesOcupacion = !tienePrestamos;
+          break;
+        default:
+          matchesOcupacion = true; // 'todos'
+      }
+
+      return matchesSearch && matchesTipo && matchesApertura && matchesSede && matchesOcupacion;
     });
   }, [
     datos.espacios,
     filtros.filterApertura,
     filtros.filterSede,
     filtros.filterTipo,
-    filtros.searchTerm
+    filtros.filterOcupacion,
+    filtros.searchTerm,
+    horariosMostrados
   ]);
 
   const paginacion = useConsultaEspaciosPaginacion(filteredEspacios);
@@ -119,6 +148,8 @@ export function useConsultaEspacios() {
     setFilterPeriodo: filtros.setFilterPeriodo,
     filterFechaInicio: filtros.filterFechaInicio,
     filterFechaFin: filtros.filterFechaFin,
+    filterOcupacion: filtros.filterOcupacion,
+    setFilterOcupacion: filtros.setFilterOcupacion,
     mensajeFiltroFecha: filtros.mensajeFiltroFecha,
     handleFechaInicioChange: filtros.handleFechaInicioChange,
     handleFechaFinChange: filtros.handleFechaFinChange,

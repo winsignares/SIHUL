@@ -28,6 +28,7 @@ export function useConsultaEspaciosFiltros() {
   const [filterPeriodo, setFilterPeriodo] = useState<number | null>(null);
   const [filterFechaInicio, setFilterFechaInicio] = useState<string>('');
   const [filterFechaFin, setFilterFechaFin] = useState<string>('');
+  const [filterOcupacion, setFilterOcupacion] = useState('todos');
   const [mensajeFiltroFecha, setMensajeFiltroFecha] = useState<MensajeFiltroFecha | null>(null);
 
   const diasSemana = useMemo(
@@ -253,6 +254,7 @@ export function useConsultaEspaciosFiltros() {
     setFilterApertura('todas');
     setFilterSede('todas');
     setFilterPeriodo(null);
+    setFilterOcupacion('todos');
 
     const hoy = getFechaColombia();
     hoy.setHours(0, 0, 0, 0);
@@ -277,6 +279,8 @@ export function useConsultaEspaciosFiltros() {
     setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
+    filterOcupacion,
+    setFilterOcupacion,
     mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
