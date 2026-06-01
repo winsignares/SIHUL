@@ -8,11 +8,21 @@ import {
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
 import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
-import { sedeService } from '../../services/sedes/sedeAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
+const SECCIONALES_PUBLICAS_CHATBOT = [
+    'Barranquilla',
+    'Bogota',
+    'Cali',
+    'Cartagena',
+    'Cucuta',
+    'Pereira',
+    'El Socorro',
+    'Nacional',
+    'Virtual',
+];
 
 // Mapeo de nombres de iconos a componentes de icono
 const iconMap: Record<string, any> = {
@@ -165,29 +175,14 @@ export function useAsistentesVirtuales() {
             setSeccionalPublica(stored);
         }
 
-        const cargarSeccionales = async () => {
-            setCargandoSeccionales(true);
-            try {
-                const { sedes } = await sedeService.listarSedes();
-                const unique = Array.from(
-                    new Set(
-                        sedes
-                            .map((sede) => sede.seccional_ciudad)
-                            .filter((ciudad): ciudad is string => Boolean(ciudad))
-                    )
-                ).sort((a, b) => a.localeCompare(b));
-                setSeccionalesPublico(unique);
-                if (!seccionalPublica && unique.length > 0) {
-                    guardarSeccionalPublica(unique[0]);
-                }
-            } catch (error) {
-                console.error('Error al cargar seccionales para chatbot:', error);
-            } finally {
-                setCargandoSeccionales(false);
-            }
-        };
-
-        cargarSeccionales();
+        // En acceso público no depende de /sedes/ (protegido) para evitar 401 -> redirect a login.
+        setCargandoSeccionales(true);
+        const unique = [...SECCIONALES_PUBLICAS_CHATBOT];
+        setSeccionalesPublico(unique);
+        if (!seccionalPublica && unique.length > 0) {
+            guardarSeccionalPublica(unique[0]);
+        }
+        setCargandoSeccionales(false);
     }, [user?.id]);
 
     // Cargar agentes y datos persistidos desde el backend

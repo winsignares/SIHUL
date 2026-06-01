@@ -62,7 +62,7 @@ def _get_authenticated_user(request):
 def user_view(request):
     auth_user = _get_authenticated_user(request)
     if not auth_user:
-        return JsonResponse({'error': 'No autenticado'}, status=401)
+        return JsonResponse({'authenticated': False}, status=200)
 
     usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(id=auth_user.id)
 
@@ -79,6 +79,7 @@ def user_view(request):
 
     return JsonResponse(
         {
+            'authenticated': True,
             'id': usuario.id,
             'nombre': usuario.nombre,
             'correo': usuario.correo,

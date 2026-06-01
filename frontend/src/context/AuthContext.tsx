@@ -13,14 +13,28 @@ interface AuthContextType extends AuthState {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+    const readJsonFromStorage = <T,>(key: string, fallback: T): T => {
+        const raw = localStorage.getItem(key);
+        if (raw === null || raw === '' || raw === 'undefined' || raw === 'null') {
+            return fallback;
+        }
+
+        try {
+            return JSON.parse(raw) as T;
+        } catch {
+            localStorage.removeItem(key);
+            return fallback;
+        }
+    };
+
     const authSignatureRef = useRef<string>(localStorage.getItem('auth_signature') || '');
     const [state, setState] = useState<AuthState>({
         token: localStorage.getItem('auth_token'),
-        user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
-        role: JSON.parse(localStorage.getItem('auth_role') || 'null'),
-        components: JSON.parse(localStorage.getItem('auth_components') || '[]'),
-        faculties: JSON.parse(localStorage.getItem('auth_faculties') || 'null') || undefined,
-        areas: JSON.parse(localStorage.getItem('auth_areas') || 'null') || undefined,
+        user: readJsonFromStorage('auth_user', null),
+        role: readJsonFromStorage('auth_role', null),
+        components: readJsonFromStorage('auth_components', []),
+        faculties: readJsonFromStorage('auth_faculties', null) || undefined,
+        areas: readJsonFromStorage('auth_areas', null) || undefined,
         isAuthenticated: !!localStorage.getItem('auth_token'),
         isLoading: false,
     });
@@ -134,13 +148,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            setState(prev => ({ ...prev, isLoading: true }));
-            try {
-                const response = await authService.getAuthenticatedUser();
-                persistAuthState(response);
-            } catch {
+        setState(prev => ({ ...prev, isLoading: true }));
+        try {
+            const response = await authService.getAuthenticatedUser();
+            if (response.authenticated === false) {
                 setState(prev => ({ ...prev, isLoading: false }));
+                return;
             }
+            persistAuthState(response);
+        } catch {
+            setState(prev => ({ ...prev, isLoading: false }));
+        }
         };
 
         void tryHydrateFromSession();
