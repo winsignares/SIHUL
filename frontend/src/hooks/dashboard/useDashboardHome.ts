@@ -165,6 +165,7 @@ export function useDashboardHome() {
             // Procesar espacios más ocupados
             let topEspacios: EspacioOcupacion[] = [];
             if (ocupacionSemanalResponse?.ocupacion) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const espaciosMapeados: EspacioOcupacion[] = ocupacionSemanalResponse.ocupacion.map((espacio: any) => ({
                     id: espacio.id.toString(),
                     nombre: espacio.nombre,
@@ -215,11 +216,13 @@ export function useDashboardHome() {
                 })
                 : dashboardHomeActivities;
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             setActivities(nextActivities as any);
             setIsLoadingActivities(false);
 
             setSessionCacheData(DASHBOARD_HOME_CACHE_KEY, activeToken, {
                 stats: updatedStats,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 activities: nextActivities as any,
                 occupationStats: nextOccupationStats,
                 occupationDetails: nextOccupationDetails,

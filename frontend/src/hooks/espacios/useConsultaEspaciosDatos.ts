@@ -215,7 +215,9 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
         const espaciosView: EspacioView[] = [];
         let debugCounter = 0;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         espaciosConHorarios.forEach((espacio: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           espacio.horarios.forEach((h: any) => {
             debugCounter++;
             const horarioMeta = findHorarioMeta(

@@ -25,21 +25,17 @@ import { motion } from 'motion/react';
 import { useState } from 'react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCrearHorarios } from '../../hooks/gestionAcademica/useCrearHorarios';
-import { useIsMobile } from '../../hooks/useIsMobile';
-
 interface CrearHorariosProps {
   onHorarioCreado?: () => void;
 }
 
 export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = {}) {
-  const isMobile = useIsMobile();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [draggedHorario, setDraggedHorario] = useState<any>(null);
   const [dragSource, setDragSource] = useState<{ dia: string; hora: string } | null>(null);
 
   const {
     facultades,
-    espacios,
-    asignaturas,
     docentes,
     filtroFacultad, setFiltroFacultad,
     filtroPrograma, setFiltroPrograma,
@@ -74,7 +70,6 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     horas,
     obtenerClaseEnHora,
     notification,
-    user,
     role
   } = useCrearHorarios({ onHorarioCreado });
 

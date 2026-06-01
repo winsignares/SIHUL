@@ -235,6 +235,7 @@ export default function ConsultaEspacios() {
 
     aplicarPeriodoConIntervaloValido(vigente, true);
     setInicializacionAplicada(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicializacionAplicada, periodosLoading, periodos]);
 
   // Integrar búsqueda de período cuando se cambian las fechas
@@ -649,6 +650,7 @@ export default function ConsultaEspacios() {
       const dates = generateRecurrenceDates();
       setRecurrencePreviewDates(dates);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repeatOption, customPeriod, formData.intervalo, formData.dias_semana, formData.fin_repeticion_tipo, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, nuevaSolicitudData?.fecha]);
 
   // Cargar datos para el formulario
@@ -860,6 +862,7 @@ export default function ConsultaEspacios() {
       setTimeout(() => {
         window.location.reload();
       }, 1000); // Dar tiempo para que se muestre el toast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setFormError(err.message || 'Error al crear la solicitud');
       setSubmitting(false);
@@ -984,6 +987,7 @@ export default function ConsultaEspacios() {
       setConfirmDeleteDialogOpen(false);
       setHorarioToDelete(null);
       recargarDatos();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error al eliminar horario:', error);
       const errorMessage = error?.message || error?.response?.data?.message || 'Error desconocido';
@@ -1043,9 +1047,11 @@ export default function ConsultaEspacios() {
         await prestamoService.actualizarPrestamo({
           id: horario.id,
           estado: horario.estado || 'Pendiente',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           fecha: (horario as any).fecha || (horario.prestamo?.fecha),
           hora_inicio: horario.horaInicio ? `${String(horario.horaInicio).padStart(2, '0')}:00:00` : undefined,
           hora_fin: horario.horaFin ? `${String(horario.horaFin).padStart(2, '0')}:00:00` : undefined
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
       } else {
         // Para horarios académicos, usar horarioService
@@ -1061,6 +1067,7 @@ export default function ConsultaEspacios() {
 
       // Recargar los datos
       recargarDatos();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error completo al mover horario:', error);
       const errorMessage = error?.message || error?.response?.data?.message || 'Error desconocido';
@@ -1122,9 +1129,11 @@ export default function ConsultaEspacios() {
           id: selectedClassToMove.id,
           espacio_id: parseInt(targetEspacioId),
           estado: selectedClassToMove.estado || 'Pendiente',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           fecha: (selectedClassToMove as any).fecha || (selectedClassToMove.prestamo?.fecha),
           hora_inicio: formatHora(targetMoveHoraInicio),
           hora_fin: formatHora(targetHoraFin)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
       } else {
         // Para horarios académicos, usar horarioService
@@ -1146,7 +1155,7 @@ export default function ConsultaEspacios() {
       setTargetMoveDia('');
       setTargetMoveHoraInicio(null);
       recargarDatos();
-    } catch (error) {
+    } catch {
       setMoveClassError('Error al mover la clase');
     } finally {
       setMovingClass(false);
@@ -1823,21 +1832,6 @@ export default function ConsultaEspacios() {
                           const slotEnd = Math.round((ocupacion.horaFin - 6) * 4);
                           const rowStart = slotStart + 2;
                           const rowSpan = Math.max(1, slotEnd - slotStart);
-
-                          // DEBUG: Log horarios A104C
-                          if (espacio.nombre === 'A104C') {
-                            console.log('[DEBUG A104C]', {
-                              materia: ocupacion.materia,
-                              dia: ocupacion.dia,
-                              horaInicio: ocupacion.horaInicio,
-                              horaFin: ocupacion.horaFin,
-                              slotStart,
-                              slotEnd,
-                              rowStart,
-                              rowSpan,
-                              colStart
-                            });
-                          }
 
                           // Validar rango: ahora tenemos 64 slots (16 horas * 4) + 1 header = 66 filas
                           if (rowStart < 2 || rowStart > 66) return null;

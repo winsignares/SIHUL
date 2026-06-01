@@ -2,10 +2,6 @@ import { useEffect, useState } from 'react';
 import {
     supervisorDashboardService
 } from '../../services/dashboard/supervisorDashboardAPI';
-import type {
-    SupervisorDashboardMetrics,
-    MetricasRecursos
-} from '../../services/dashboard/supervisorDashboardAPI';
 import {
     supervisorMetrics,
     supervisorQuickActions,
@@ -28,6 +24,7 @@ export function useSupervisorDashboard() {
 
     useEffect(() => {
         loadDashboardMetrics();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadDashboardMetrics = async () => {

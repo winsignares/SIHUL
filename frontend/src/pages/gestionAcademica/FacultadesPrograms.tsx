@@ -6,31 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import * as React from 'react';
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { useMemo } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { Popover, PopoverContent, PopoverTrigger } from '../../share/popover';
 import { SearchableSelect } from '../../share/searchableSelect';
 
-// Hook personalizado para debounce
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  
-  return debouncedValue;
-}
-
-import { useFacultadesPrograms, type TabOption } from '../../hooks/gestionAcademica/useFacultadesPrograms';
+import { useFacultadesPrograms } from '../../hooks/gestionAcademica/useFacultadesPrograms';
 
 import Asignaturas from './Asignaturas';
 import EspaciosFisicos from './EspaciosFisicos';
@@ -45,9 +26,6 @@ export default function FacultadesPrograms() {
   const {
     searchTerm, setSearchTerm,
     activeTab, setActiveTab,
-    facultades,
-    asignaturas,
-    asignaturasPrograma,
     showCreateFacultad, setShowCreateFacultad,
     showEditFacultad, setShowEditFacultad,
     showDeleteFacultad, setShowDeleteFacultad,
@@ -81,7 +59,6 @@ export default function FacultadesPrograms() {
     handleAddAsignatura,
     handleRemoveAsignatura,
     handleUpdateAsignaturaPrograma,
-    filteredFacultades,
     paginatedFacultades,
     totalFilteredFacultades,
     currentFacultadPage,
@@ -94,7 +71,6 @@ export default function FacultadesPrograms() {
     hasNextFacultadPageWindow,
     goToPrevFacultadPageWindow,
     goToNextFacultadPageWindow,
-    filteredProgramas,
     paginatedProgramas,
     totalFilteredProgramas,
     currentProgramaPage,
@@ -317,7 +293,7 @@ export default function FacultadesPrograms() {
                         <TableRow key={facultad.id}>
                           <TableCell className="text-slate-900">{facultad.nombre}</TableCell>
                           <TableCell className="text-slate-600">
-                            {getProgramasCount(facultad.id)} programa(s)
+                            {facultad.id ? getProgramasCount(facultad.id) : 0} programa(s)
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -695,7 +671,7 @@ export default function FacultadesPrograms() {
                 <p className="text-slate-600">Facultad a eliminar:</p>
                 <p className="text-slate-900">{selectedFacultad.nombre}</p>
                 <p className="text-slate-500 mt-2">
-                  Programas asociados: {getProgramasCount(selectedFacultad.id)}
+                  Programas asociados: {selectedFacultad.id ? getProgramasCount(selectedFacultad.id) : 0}
                 </p>
               </div>
             </div>
@@ -972,6 +948,7 @@ export default function FacultadesPrograms() {
                                   <TableCell>
                                     <Select
                                       value={ap.componente_formativo}
+                                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                       onValueChange={(value: any) => handleUpdateAsignaturaPrograma(ap, { componente_formativo: value })}
                                     >
                                       <SelectTrigger className="w-40">
@@ -1057,7 +1034,9 @@ export default function FacultadesPrograms() {
             {/* Tipo */}
             <div className="space-y-2">
               <Label>Tipo de Asignatura <span className="text-red-600">*</span></Label>
-              <Select value={asignaturaForm.componente_formativo} onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, componente_formativo: value })}>
+              <Select value={asignaturaForm.componente_formativo}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, componente_formativo: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="básica">Básica</SelectItem>

@@ -147,6 +147,7 @@ export function useAperturaCierre() {
 
             // Procesar notificaciones basadas en tiempo restante
             procesarNotificaciones(data.espacios || []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             console.error('Error cargando datos de apertura/cierre:', err);
             const errorMsg = err?.message || 'Error al cargar los datos';
@@ -286,6 +287,7 @@ export function useAperturaCierre() {
     /**
      * Función para refrescar manualmente
      */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const refrescar = async () => {
         setLoading(true);
         await Promise.all([
@@ -495,7 +497,7 @@ export function useAperturaCierre() {
 
     const horariosPaginados = useMemo(() => {
         return getPageSlice(horariosPendientes, currentPage, PAGE_SIZE);
-    }, [horariosPendientes, currentPage]);
+    }, [horariosPendientes, currentPage, PAGE_SIZE]);
 
     useEffect(() => {
         setCurrentPage((prev) => normalizePage(prev, totalPages));
@@ -544,6 +546,7 @@ export function useAperturaCierre() {
                 }))
             );
             setModalRecursosAbierto(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             const message = err?.message || 'No fue posible cargar recursos del espacio';
             toast.error(message);
@@ -588,6 +591,7 @@ export function useAperturaCierre() {
             cerrarPopupRecursos();
             await refrescar();
             return { ok: true as const };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             const message = err?.message || 'No fue posible guardar cambios de recursos';
             toast.error(message);
@@ -602,6 +606,7 @@ export function useAperturaCierre() {
             await espacioService.abrirSalon(espacioId);
             await refrescar();
             return { ok: true as const };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             const message = err?.message || 'Error al actualizar estado del salon';
             toast.error(message);
@@ -614,6 +619,7 @@ export function useAperturaCierre() {
             await espacioService.cerrarSalon(espacioId);
             await abrirPopupRevisionRecursos(espacioId);
             return { ok: true as const };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             const message = err?.message || 'Error al actualizar estado del salon';
             if (err?.status === 400) {

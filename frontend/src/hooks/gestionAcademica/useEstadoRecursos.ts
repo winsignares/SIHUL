@@ -112,6 +112,7 @@ export function useEstadoRecursos() {
                 sedeService.listarSedes()
             ]);
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
 
             setEspacios(espaciosData || []);

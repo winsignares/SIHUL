@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import type { EspacioView } from './types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GetOcupacionPorHoraFn = (espacioId: string, dia: string, hora: number) => any;
 
 export function useConsultaEspaciosExport({
@@ -228,6 +229,7 @@ export function useConsultaEspaciosExport({
       const espaciosAExportar = espaciosToExport || filteredEspacios;
 
       espaciosAExportar.forEach((espacio) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data: any[][] = [];
         data.push(diasNombres);
 

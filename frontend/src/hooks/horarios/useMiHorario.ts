@@ -45,6 +45,7 @@ export function useMiHorario() {
         } else {
             setLoading(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
 
     const loadData = async ({ force = false }: { force?: boolean } = {}) => {

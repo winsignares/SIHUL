@@ -15,7 +15,6 @@ import {
   CheckCheck,
   Search,
   Zap,
-  Star,
   MessageCircle,
   RotateCcw,
   History,
@@ -24,10 +23,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAsistentesVirtuales } from '../../hooks/chatbot/useAsistentesVirtuales';
-import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function AsistentesVirtuales() {
-  const isMobile = useIsMobile();
   const {
     asistenteActivo,
     esPublico,

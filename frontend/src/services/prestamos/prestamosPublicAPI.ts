@@ -404,9 +404,7 @@ export const prestamosPublicAPI = {
      * Elimina una solicitud pública
      */
     eliminarSolicitud: async (
-        id: number,
-        identificacion?: string,
-        correo?: string
+        id: number
     ): Promise<{ message: string }> => {
         await apiClient.delete(`/prestamos/publicos/${id}/`);
         return { message: 'Solicitud eliminada' };

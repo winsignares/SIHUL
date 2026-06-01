@@ -109,6 +109,7 @@ export function useConsultaEspaciosPeriodos() {
       const result = await horarioService.horariosPorPeriodo(periodoId, estado);
       const ocupacion = mapearHorariosAOcupacion(result.horarios);
       setHorariosPeriodo(ocupacion);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const status = error?.status;
       if (status !== 404) {
@@ -149,6 +150,7 @@ export function useConsultaEspaciosPeriodos() {
         await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente']);
 
         return periodo;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const status = error?.status;
         if (status !== 404) {

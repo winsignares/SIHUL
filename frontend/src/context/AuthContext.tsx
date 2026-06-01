@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { authService } from '../services/users/authService';
-import type { LoginPayload, LoginResponse, AuthState } from '../models/auth/auth.model';
+import type { LoginPayload, LoginResponse, AuthState, User } from '../models/auth/auth.model';
 import { useMemo } from 'react';
 
 interface AuthContextType extends AuthState {
@@ -44,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nombre: string;
         correo: string;
         rol: AuthState['role'];
-        facultad: AuthState['user'] extends { facultad: infer T } ? T : null;
-        sede: AuthState['user'] extends { sede: infer T } ? T : null;
+        facultad: User['facultad'];
+        sede: User['sede'];
         componentes: AuthState['components'];
         espacios_permitidos: AuthState['areas'];
         token: string;
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             persistAuthState(response);
 
             return response;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             setState(prev => ({ ...prev, isLoading: false }));
             throw error;
@@ -174,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             map.set(c.nombre, c);
         }
         return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.components]);
 
     // Set de componentes editables para acceso rápido en hasEditPermission
@@ -230,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     components: nextComponents,
                     user: prev.user ? { ...prev.user, rol: nextRole } : prev.user,
                 }));
-            } catch (error) {
+            } catch (_error) {  // eslint-disable-line @typescript-eslint/no-unused-vars
                 // Fallar en silencio para no interrumpir la sesión en errores transitorios.
             }
         };

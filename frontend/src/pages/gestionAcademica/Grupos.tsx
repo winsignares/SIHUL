@@ -14,8 +14,6 @@ export default function Grupos() {
   const isMobile = useIsMobile();
   const {
     searchTerm, setSearchTerm,
-    loading,
-    grupos,
     programas,
     periodos,
     selectedProgramaFilter, setSelectedProgramaFilter,
@@ -32,7 +30,6 @@ export default function Grupos() {
     handleDeleteGrupo,
     toggleGrupoActivo,
     resetForm,
-    filteredGrupos,
     paginatedGrupos,
     totalFilteredGrupos,
     currentPage,
@@ -46,7 +43,6 @@ export default function Grupos() {
     hasNextPageWindow,
     goToPrevPageWindow,
     goToNextPageWindow,
-    semestresDisponibles,
     getProgramaNombre,
     getPeriodoNombre,
     getSemestresDisponiblesPorPrograma

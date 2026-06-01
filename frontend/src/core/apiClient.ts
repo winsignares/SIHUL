@@ -62,6 +62,7 @@ class ApiClient {
 
       const data = await response.json();
       return data as T;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       // Don't log expected errors:
       // - 409 Conflict validation scenarios
@@ -97,6 +98,7 @@ class ApiClient {
       }
 
       return await response.blob();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const isExpected401 = error?.status === 401 && !requiresAuth;
       if (!suppressErrorLog && error.status !== 409 && !isExpected401) {

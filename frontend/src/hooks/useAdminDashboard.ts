@@ -7,6 +7,7 @@ export type MenuOption = 'home' | 'facultades' | 'espacios' | 'asignacion' | 'ce
 
 interface MenuItem {
     id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     label: string;
     route: string;

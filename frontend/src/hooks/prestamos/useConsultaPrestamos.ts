@@ -54,6 +54,7 @@ export function useConsultaPrestamos() {
     // Cargar datos iniciales
     useEffect(() => {
         loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadData = async () => {

@@ -78,6 +78,7 @@ export default function PrestamosEspacios() {
     6: 'Domingo'
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recurrenceSummary = (prestamo: any) => {
     if (!prestamo?.es_recurrente) return 'No se repite';
     const freq = FRECUENCIA_LABELS[prestamo.frecuencia || 'none']?.toLowerCase() || 'semanal';
@@ -530,6 +531,7 @@ export default function PrestamosEspacios() {
                                             <Label className="text-slate-600 dark:text-slate-400 text-xs">Frecuencia</Label>
                                             <Select
                                               value={prestamoEditando.frecuencia || 'weekly'}
+                                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                               onValueChange={(v: any) => setPrestamoEditando({
                                                 ...prestamoEditando,
                                                 frecuencia: v,
@@ -598,6 +600,7 @@ export default function PrestamosEspacios() {
                                             <Label className="text-slate-600 dark:text-slate-400 text-xs">Finaliza repetición</Label>
                                             <Select
                                               value={prestamoEditando.fin_repeticion_tipo || 'never'}
+                                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                               onValueChange={(v: any) => setPrestamoEditando({
                                                 ...prestamoEditando,
                                                 fin_repeticion_tipo: v,

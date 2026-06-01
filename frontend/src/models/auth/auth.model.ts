@@ -22,7 +22,7 @@ export interface Component {
 export interface Sede {
     id: number;
     nombre: string;
-    ciudad: string;
+    ciudad?: string;
     direccion?: string;
 }
 

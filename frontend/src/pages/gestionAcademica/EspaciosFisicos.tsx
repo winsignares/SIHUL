@@ -620,6 +620,7 @@ export default function EspaciosFisicos() {
               <Label htmlFor="edit-estado">Estado *</Label>
               <Select
                 value={espacioForm.estado}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onValueChange={(value: any) => setEspacioForm({ ...espacioForm, estado: value })}
               >
                 <SelectTrigger>

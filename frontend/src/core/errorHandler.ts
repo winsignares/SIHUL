@@ -118,7 +118,7 @@ export async function handleApiError(
       try {
         window.history.pushState({}, '', '/login');
         window.dispatchEvent(new PopStateEvent('popstate'));
-      } catch (e) {
+      } catch (_e) {  // eslint-disable-line @typescript-eslint/no-unused-vars
         // Fallback: navegación tradicional si algo falla
         window.location.href = '/login';
       }

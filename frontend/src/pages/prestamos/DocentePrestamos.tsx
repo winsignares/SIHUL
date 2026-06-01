@@ -38,7 +38,6 @@ export default function DocentePrestamos() {
     recursosSeleccionados,
     agregarRecurso,
     eliminarRecurso,
-    actualizarCantidadRecurso,
     crearSolicitud,
     prestamos,
     paginatedPrestamos,
@@ -54,7 +53,6 @@ export default function DocentePrestamos() {
     hasNextPageWindow,
     goToPrevPageWindow,
     goToNextPageWindow,
-    filteredPrestamos,
     estadisticas,
     error,
     modoEdicion,
@@ -202,7 +200,7 @@ export default function DocentePrestamos() {
                     </SelectTrigger>
                     <SelectContent>
                       {sedes.map(sede => (
-                        <SelectItem key={sede.id} value={sede.id.toString()}>{sede.nombre}</SelectItem>
+                        <SelectItem key={sede.id ?? 0} value={sede.id?.toString() ?? ''}>{sede.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

@@ -38,7 +38,6 @@ export default function CentroHorarios() {
   const {
     activeTab, setActiveTab,
     loading,
-    horariosFusionados,
     facultades,
     espacios,
     docentes,

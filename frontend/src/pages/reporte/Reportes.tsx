@@ -7,7 +7,7 @@ import { Download, Calendar, FileSpreadsheet, Loader, Eye, Clock, MapPin, Search
 import { Badge } from '../../share/badge';
 import { Toaster } from '../../share/sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useReportes } from '../../hooks/reporte/useReportes';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import type { HorarioPrograma, HorarioDocente } from '../../models/reporte/reportes-general.model';
@@ -142,7 +142,7 @@ export default function Reportes() {
           </div>
         );
 
-      case 'horarios-docente':
+      case 'horarios-docente': {
         // Agrupar horarios por docente y filtrar según el filtro aplicado
         const docentesAgrupados = horariosDocente
           .filter(horario => 
@@ -230,8 +230,9 @@ export default function Reportes() {
             </CardContent>
           </Card>
         );
+      }
 
-      case 'horarios-programa':
+      case 'horarios-programa': {
         // Agrupar horarios por programa, grupo y semestre
         const horariosAgrupados = horariosPrograma
           .filter(horario => 
@@ -322,6 +323,7 @@ export default function Reportes() {
             </CardContent>
           </Card>
         );
+      }
 
       case 'disponibilidad':
         return (

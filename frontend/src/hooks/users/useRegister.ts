@@ -167,6 +167,7 @@ export function useRegister() {
           successMessage: 'Registro exitoso. Tu cuenta será activada por el administrador. Por favor, espera la confirmación.'
         }
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Error al registrar:', err);
       

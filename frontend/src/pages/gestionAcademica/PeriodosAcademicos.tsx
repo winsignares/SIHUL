@@ -7,7 +7,6 @@ import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Copy, Calendar, CheckCircle2, Clock, TrendingUp, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { usePeriodosAcademicos } from '../../hooks/gestionAcademica/usePeriodosAcademicos';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -15,7 +14,6 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 export default function PeriodosAcademicos() {
   const isMobile = useIsMobile();
   const {
-    loading,
     periodos,
     periodosOrdenados,
     periodoActivo,

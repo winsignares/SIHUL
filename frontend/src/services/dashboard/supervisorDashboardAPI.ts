@@ -1,5 +1,5 @@
 import { apiClient } from '../../core/apiClient';
-import { espacioService, espacioPermitidoService } from '../espacios/espaciosAPI';
+import { espacioPermitidoService } from '../espacios/espaciosAPI';
 
 /**
  * Interfaz para las métricas del dashboard del supervisor general
@@ -149,7 +149,9 @@ export const supervisorDashboardService = {
      * Obtiene información de apertura y cierre de salones
      */
     getAperturaCierre: async (): Promise<{
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         aperturasPendientes: any[];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cierresPendientes: any[];
         horaActual: string;
         diaActual: string;

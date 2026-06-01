@@ -54,14 +54,6 @@ const horariosDocente: HorarioDocente[] = [
     { dia: 'Viernes', hora: '09:00-11:00', asignatura: 'Algoritmos', grupo: 'INSI-A', espacio: 'Lab 401', docente: 'Dr. Juan Pérez' }
 ];
 
-const horariosPrograma: HorarioPrograma[] = [
-    { grupo: 'INSI-A', dia: 'Lunes', hora: '07:00-09:00', asignatura: 'Programación I', docente: 'Dr. Juan Pérez', espacio: 'Aula 101' },
-    { grupo: 'INSI-A', dia: 'Lunes', hora: '09:00-11:00', asignatura: 'Cálculo I', docente: 'Dra. María López', espacio: 'Aula 101' },
-    { grupo: 'INSI-A', dia: 'Miércoles', hora: '14:00-16:00', asignatura: 'Física I', docente: 'Dr. Pedro González', espacio: 'Lab 201' },
-    { grupo: 'INSI-B', dia: 'Martes', hora: '07:00-09:00', asignatura: 'Bases de Datos', docente: 'Dr. Juan Pérez', espacio: 'Lab 301' },
-    { grupo: 'INSI-B', dia: 'Jueves', hora: '09:00-11:00', asignatura: 'Estructuras de Datos', docente: 'Ing. Ana Martínez', espacio: 'Aula 205' }
-];
-
 const disponibilidadEspaciosDefault: DisponibilidadEspacio[] = [
     { nombre: 'Aula 101', tipo: 'Aula', horasDisponibles: 12, horasOcupadas: 38, porcentajeOcupacion: 76 },
     { nombre: 'Lab 301', tipo: 'Laboratorio', horasDisponibles: 20, horasOcupadas: 30, porcentajeOcupacion: 60 },
@@ -84,9 +76,6 @@ const reportesDisponibles: ReporteDisponible[] = [
     { id: 'disponibilidad', nombre: 'Disponibilidad General', icon: PieChart, color: 'text-green-600', descripcion: 'Disponibilidad de espacios físicos (RF20-3)' },
     { id: 'capacidad', nombre: 'Capacidad Utilizada', icon: TrendingUp, color: 'text-purple-600', descripcion: 'Análisis de capacidad instalada (RF20-4)' }
 ];
-
-const docentes = ['Todos', 'Dr. Juan Pérez', 'Dra. María López', 'Mg. Carlos Ruiz', 'Ing. Ana Martínez', 'Dr. Pedro González'];
-const programas = ['Todos', 'Ingeniería de Sistemas', 'Administración de Empresas', 'Ingeniería Industrial', 'Contaduría Pública'];
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -212,6 +201,7 @@ export function useReportes() {
                         const docentesData = await docentesResponse.json();
                         const docentesList: Docente[] = [
                             { id: 'todos', nombre: 'Todos', correo: '' },
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             ...docentesData.usuarios.map((u: any) => ({
                                 id: u.id,
                                 nombre: u.nombre,
@@ -253,6 +243,7 @@ export function useReportes() {
         };
 
         cargarHorarios();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Cargar datos de ocupación cuando el componente monta

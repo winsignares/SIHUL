@@ -41,7 +41,6 @@ export default function AsignacionAutomatica() {
   const isMobile = useIsMobile();
   const {
     horariosImportados,
-    procesando,
     progreso,
     resultados,
     etapa,

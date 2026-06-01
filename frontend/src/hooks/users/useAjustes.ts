@@ -92,6 +92,7 @@ export function useAjustes() {
                     try {
                         const espaciosResponse = await espacioPermitidoService.listByUsuario(usuario.id);
                         // Map to EspacioPermitido interface
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const espaciosMapped: EspacioPermitido[] = (espaciosResponse.espacios || []).map((e: any) => ({
                             id: e.id,
                             nombre: e.nombre || e.tipo || 'Espacio',
@@ -112,7 +113,8 @@ export function useAjustes() {
         };
 
         fetchProfile();
-    }, []); // Solo ejecutar al montar
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Solo ejecutar al montar - usuario se obtiene del contexto
 
     const handleEditProfile = () => {
         setIsEditingProfile(true);
@@ -153,6 +155,7 @@ export function useAjustes() {
             setPerfilOriginal({ ...perfil });
             setIsEditingProfile(false);
             toast.success('✅ Perfil actualizado correctamente');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al actualizar perfil:', error);
             toast.error(error.message || 'Error al actualizar el perfil');
@@ -202,6 +205,7 @@ export function useAjustes() {
                 newPassword: '',
                 confirmPassword: ''
             });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al cambiar contraseña:', error);
             setPasswordError(error.message || 'Error al cambiar la contraseña');

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -15,7 +14,7 @@ import { Avatar, AvatarFallback } from '../share/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../share/tooltip';
 import { Button } from '../share/button';
 
-import { useAdminDashboard, type MenuOption } from '../hooks/useAdminDashboard';
+import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface AdminDashboardProps {
@@ -33,7 +32,6 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     userRole,
     userName,
     userFacultyName,
-    isSidebarHovered,
     setIsSidebarHovered,
     shouldShowExpanded,
     notificacionesSinLeer,
@@ -110,6 +108,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
 
                     {/* Menu Items */}
                     <div className="space-y-1 mt-2">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {section.items.map((item: any) => {
                         const Icon = item.icon;
                         const path = item.route;
@@ -357,6 +356,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     <span className="uppercase tracking-wider text-xs font-semibold">{section.label}</span>
                   </div>
                   <div className="space-y-1">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {section.items.map((item: any) => {
                       const Icon = item.icon;
                       const path = item.route;

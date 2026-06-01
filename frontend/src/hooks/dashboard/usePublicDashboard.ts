@@ -1,11 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { Clock, MapPin, Gift, Bot } from 'lucide-react';
-import { publicServices } from '../../services/publicServices';
-
 export interface QuickAccessItem {
   id: string;
   label: string;
   description: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any;
   gradient: string;
   bgGradient: string;
@@ -59,7 +58,8 @@ export function usePublicDashboard() {
     }
   ];
 
-  const handleNavigateToService = (route: string, serviceId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleNavigateToService = (route: string, _serviceId: string) => {
     // Solo navegar directamente sin llamar servicios que no existen
     navigate(route);
   };

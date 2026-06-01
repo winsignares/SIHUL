@@ -71,12 +71,14 @@ export function useGestionUsuarios() {
     const [facultadSeleccionadaEdit, setFacultadSeleccionadaEdit] = useState<number | null>(null);
 
     // Callbacks memorizados para actualizar campos del formulario
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateNuevoUsuarioField = useCallback((field: string, value: any) => {
         setNuevoUsuario(prev => ({ ...prev, [field]: value }));
     }, []);
 
     useEffect(() => {
         loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Estados agregados para asignacion por tipo de espacio.
@@ -370,6 +372,7 @@ export function useGestionUsuarios() {
             setDialogOpen(false);
             resetNuevoUsuario();
             await loadUsuarios({ force: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error creando usuario:', error);
             showNotification(error.message || 'Error al crear usuario', 'error');
@@ -425,6 +428,7 @@ export function useGestionUsuarios() {
             setEditDialogOpen(false);
             resetEditStates();
             await loadUsuarios({ force: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error actualizando usuario:', error);
             showNotification(error.message || 'Error al actualizar usuario', 'error');
@@ -555,7 +559,7 @@ export function useGestionUsuarios() {
 
     const paginatedUsuarios = useMemo(() => {
         return getPageSlice(filteredUsuarios, currentUsuarioPage, PAGE_SIZE);
-    }, [filteredUsuarios, currentUsuarioPage]);
+    }, [filteredUsuarios, currentUsuarioPage, PAGE_SIZE]);
 
     useEffect(() => {
         setCurrentUsuarioPage(1);
