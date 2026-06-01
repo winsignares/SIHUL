@@ -131,6 +131,8 @@ export function useConsultaEspacios() {
     horas: filtros.horas,
     isDiaBloqueado: filtros.isDiaBloqueado,
     isCeldaBloqueada: filtros.isCeldaBloqueada,
+    horaToSlotIndex: filtros.horaToSlotIndex,
+    isHoraExacta: filtros.isHoraExacta,
     filteredEspacios,
     paginatedEspacios: paginacion.paginatedEspacios,
     totalFilteredEspacios: paginacion.totalFilteredEspacios,

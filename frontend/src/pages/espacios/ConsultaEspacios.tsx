@@ -85,6 +85,21 @@ function getHoyColombia(): Date {
   return colombia;
 }
 
+// Helper para formatear hora decimal (e.g., 7.5) a formato de tiempo (e.g., "7:30")
+function formatHoraDecimal(hora: number): string {
+  const horas = Math.floor(hora);
+  const minutos = Math.round((hora % 1) * 60);
+  return `${horas}:${String(minutos).padStart(2, '0')}`;
+}
+
+// Helper para redondear hora a múltiplo de 15 minutos (0.25 horas)
+function roundTo15Min(hora: number): number {
+  // Agregar pequeña tolerancia para errores de precisión flotante
+  const horaConTolerancia = hora + 0.001;
+  // Redondear a múltiplo de 0.25 (15 minutos)
+  return Math.round(horaConTolerancia * 4) / 4;
+}
+
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
@@ -114,6 +129,8 @@ export default function ConsultaEspacios() {
     horas,
     isDiaBloqueado,
     isCeldaBloqueada,
+    horaToSlotIndex,
+    isHoraExacta,
     filteredEspacios,
     paginatedEspacios,
     totalFilteredEspacios,
@@ -711,8 +728,12 @@ export default function ConsultaEspacios() {
   };
 
   const getHourRowIndex = (hora: number) => {
-    const row = hora - 5 + 1;
-    return row;
+    // Redondear hora a múltiplo de 15 minutos para evitar desplazamientos por decimales imprecisos
+    const horaRedondeada = roundTo15Min(hora);
+    // Usar la función de slot para calcular la fila correcta
+    // horaToSlotIndex devuelve el índice del slot (0-63), sumamos 2 para el header
+    const slotIndex = horaToSlotIndex(horaRedondeada);
+    return slotIndex + 2;
   };
 
   // Funciones del formulario
@@ -901,7 +922,7 @@ export default function ConsultaEspacios() {
       const conflicto = conflictos[0];
       return {
         valido: false,
-        error: `Conflicto con: ${conflicto.materia} (${conflicto.horaInicio}:00-${conflicto.horaFin}:00)`
+        error: `Conflicto con: ${conflicto.materia} (${formatHoraDecimal(conflicto.horaInicio)}-${formatHoraDecimal(conflicto.horaFin)})`
       };
     }
 
@@ -935,7 +956,7 @@ export default function ConsultaEspacios() {
       const pHoraFin = parseInt(conflicto.hora_fin.split(':')[0]);
       return {
         valido: false,
-        error: `Conflicto con préstamo aprobado: ${conflicto.motivo} (${pHoraInicio}:00-${pHoraFin}:00)`
+        error: `Conflicto con préstamo aprobado: ${conflicto.motivo} (${formatHoraDecimal(pHoraInicio)}-${formatHoraDecimal(pHoraFin)})`
       };
     }
 
@@ -1031,7 +1052,7 @@ export default function ConsultaEspacios() {
         });
       }
 
-      toast.success(`Horario movido exitosamente a ${targetDia} ${targetHoraInicio}:00-${targetHoraFin}:00`);
+      toast.success(`Horario movido exitosamente a ${targetDia} ${formatHoraDecimal(targetHoraInicio)}-${formatHoraDecimal(targetHoraFin)}`);
 
       // Recargar los datos
       recargarDatos();
@@ -1111,7 +1132,7 @@ export default function ConsultaEspacios() {
         });
       }
 
-      toast.success(`Clase movida exitosamente a ${targetEspacio.nombre} - ${targetMoveDia} ${targetMoveHoraInicio}:00-${targetHoraFin}:00`);
+      toast.success(`Clase movida exitosamente a ${targetEspacio.nombre} - ${targetMoveDia} ${formatHoraDecimal(targetMoveHoraInicio)}-${formatHoraDecimal(targetHoraFin)}`);
 
       // Cerrar diálogo y recargar
       setMoveClassDialogOpen(false);
@@ -1642,7 +1663,7 @@ export default function ConsultaEspacios() {
                         </div>
                       </div>
                     )}
-                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '60px' }}>
+                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '30px' }}>
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
                         const diaBloqueado = isDiaBloqueado(dia);
@@ -1663,13 +1684,13 @@ export default function ConsultaEspacios() {
                       {horas.map((hora, idx) => (
                         <div
                           key={`time-${hora}`}
-                          className="text-xs text-slate-500 flex items-center justify-end pr-2"
+                          className={`text-xs text-slate-500 flex items-start justify-end pr-2 ${isHoraExacta(hora) ? 'font-semibold' : 'text-[9px] opacity-60'}`}
                           style={{
                             gridColumn: 1,
                             gridRow: idx + 2
                           }}
                         >
-                          {hora}:00
+                          {isHoraExacta(hora) ? `${hora}:00` : `${hora % 1 === 0.25 ? '15' : hora % 1 === 0.5 ? '30' : '45'}`}
                         </div>
                       ))}
 
@@ -1691,12 +1712,13 @@ export default function ConsultaEspacios() {
                           
                           // Verificar si esta celda es parte del rango donde se está arrastrando
                           // Para horarios de múltiples horas, resaltar todas las celdas que ocupará
-                          const duracionHoras = draggedHorario ? draggedHorario.horaFin - draggedHorario.horaInicio : 0;
-                          const dropStartIdx = dragOverCell ? dragOverCell.hora - 6 : -1;
+                          // Ahora usamos slots de 15 minutos (4 slots por hora)
+                          const duracionSlots = draggedHorario ? Math.round((draggedHorario.horaFin - draggedHorario.horaInicio) * 4) : 0;
+                          const dropStartIdx = dragOverCell ? horaToSlotIndex(dragOverCell.hora) : -1;
                           const isDragOver = dragOverCell?.dia === dia && 
                             draggedHorario && 
                             horaIdx >= dropStartIdx && 
-                            horaIdx < dropStartIdx + duracionHoras;
+                            horaIdx < dropStartIdx + duracionSlots;
                           
                           // Verificar si hay un horario arrastrado que puede soltarse aquí
                           // Para horarios, no bloquear por fecha pasada (son recurrentes)
@@ -1789,9 +1811,14 @@ export default function ConsultaEspacios() {
                         .map((ocupacion, idx) => {
                           const colStart = getDayColumnIndex(ocupacion.dia);
                           const rowStart = getHourRowIndex(ocupacion.horaInicio);
-                          const rowSpan = ocupacion.horaFin - ocupacion.horaInicio;
+                          // Calcular rowSpan en intervalos de 15 minutos (4 slots por hora)
+                          // Redondear horas a múltiplos de 15 min para evitar errores de precisión
+                          const horaInicioRounded = roundTo15Min(ocupacion.horaInicio);
+                          const horaFinRounded = roundTo15Min(ocupacion.horaFin);
+                          const rowSpan = Math.max(1, Math.round((horaFinRounded - horaInicioRounded) * 4));
 
-                          if (rowStart < 2 || rowStart > 18) return null;
+                          // Validar rango: ahora tenemos 64 slots (16 horas * 4) + 1 header = 66 filas
+                          if (rowStart < 2 || rowStart > 66) return null;
 
                           // Determinar si es un préstamo o un horario académico
                           const isPrestamo = ocupacion.tipo === 'prestamo';
@@ -1850,7 +1877,7 @@ export default function ConsultaEspacios() {
                                       gridColumn: `${colStart} / span 1`,
                                       gridRow: `${rowStart} / span ${rowSpan}`,
                                       zIndex: 10,
-                                      minHeight: `${rowSpan * 60}px`
+                                      minHeight: `${rowSpan * 30}px`
                                     }}
                                   >
                                     {editModeEnabled && (!isPrestamo || isPrestamoPendiente) && (
@@ -1881,7 +1908,10 @@ export default function ConsultaEspacios() {
                                     <p className="font-semibold text-[9px] sm:text-[10px] md:text-[11px] leading-tight break-words w-full line-clamp-2">{ocupacion.materia}</p>
                                     <p className="text-[8px] sm:text-[9px] opacity-90 leading-tight break-words w-full line-clamp-1">{ocupacion.docente}</p>
                                     {rowSpan > 1 && (
-                                      <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">{ocupacion.horaInicio}:00-{ocupacion.horaFin}:00</p>
+                                      <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">
+                                        {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')}-
+                                        {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}
+                                      </p>
                                     )}
                                   </div>
                                 </TooltipTrigger>
@@ -1901,7 +1931,7 @@ export default function ConsultaEspacios() {
                                         {ocupacion.prestamo?.telefono && (
                                           <p className="text-xs">Teléfono: {ocupacion.prestamo.telefono}</p>
                                         )}
-                                        <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                        <p className="text-xs">Horario: {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')} - {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}</p>
                                         <p className="text-xs">Fecha: {ocupacion.prestamo?.fecha}</p>
                                       </>
                                     ) : (
@@ -1909,7 +1939,7 @@ export default function ConsultaEspacios() {
                                         <p className="font-semibold text-sm">{ocupacion.materia}</p>
                                         <p className="text-xs">Docente: {ocupacion.docente || 'No asignado'}</p>
                                         <p className="text-xs">Grupo: {ocupacion.grupo || 'N/A'}</p>
-                                        <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                        <p className="text-xs">Horario: {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')} - {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}</p>
                                         <p className="text-xs capitalize">Estado: {ocupacion.estado}</p>
                                       </>
                                     )}
@@ -2351,7 +2381,7 @@ export default function ConsultaEspacios() {
                 <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Horario Actual:</p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {pendingMove.horario.materia} - {pendingMove.horario.dia} {pendingMove.horario.horaInicio}:00-{pendingMove.horario.horaFin}:00
+                    {pendingMove.horario.materia} - {pendingMove.horario.dia} {formatHoraDecimal(pendingMove.horario.horaInicio)}-{formatHoraDecimal(pendingMove.horario.horaFin)}
                   </p>
                 </div>
                 <div className="flex items-center justify-center">
@@ -2362,7 +2392,7 @@ export default function ConsultaEspacios() {
                 <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                   <p className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Nuevo Horario:</p>
                   <p className="text-sm text-purple-600 dark:text-purple-400">
-                    {pendingMove.targetDia} {pendingMove.targetHoraInicio}:00-{pendingMove.targetHoraInicio + (pendingMove.horario.horaFin - pendingMove.horario.horaInicio)}:00
+                    {pendingMove.targetDia} {formatHoraDecimal(pendingMove.targetHoraInicio)}-{formatHoraDecimal(pendingMove.targetHoraInicio + (pendingMove.horario.horaFin - pendingMove.horario.horaInicio))}
                   </p>
                 </div>
               </div>
@@ -2421,7 +2451,7 @@ export default function ConsultaEspacios() {
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Horario Actual:</span>
-                    <p className="font-medium">{selectedClassToMove.dia} {selectedClassToMove.horaInicio}:00-{selectedClassToMove.horaFin}:00</p>
+                    <p className="font-medium">{selectedClassToMove.dia} {formatHoraDecimal(selectedClassToMove.horaInicio)}-{formatHoraDecimal(selectedClassToMove.horaFin)}</p>
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Grupo:</span>
@@ -2432,7 +2462,7 @@ export default function ConsultaEspacios() {
                   <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                     <span className="text-purple-600 dark:text-purple-400 font-medium">Nuevo Horario:</span>
                     <p className="font-medium text-purple-700 dark:text-purple-300">
-                      {targetMoveDia} {targetMoveHoraInicio}:00-{targetMoveHoraInicio + (selectedClassToMove.horaFin - selectedClassToMove.horaInicio)}:00
+                      {targetMoveDia} {formatHoraDecimal(targetMoveHoraInicio)}-{formatHoraDecimal(targetMoveHoraInicio + (selectedClassToMove.horaFin - selectedClassToMove.horaInicio))}
                     </p>
                   </div>
                 )}
@@ -2634,7 +2664,7 @@ export default function ConsultaEspacios() {
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
                   <p className="text-sm font-medium text-red-700 dark:text-red-300 mb-1">Horario a eliminar:</p>
                   <p className="text-sm text-red-600 dark:text-red-400">
-                    {horarioToDelete.materia} - {horarioToDelete.dia} {horarioToDelete.horaInicio}:00-{horarioToDelete.horaFin}:00
+                    {horarioToDelete.materia} - {horarioToDelete.dia} {formatHoraDecimal(horarioToDelete.horaInicio)}-{formatHoraDecimal(horarioToDelete.horaFin)}
                   </p>
                   {horarioToDelete.docente && (
                     <p className="text-sm text-red-600 dark:text-red-400 mt-1">

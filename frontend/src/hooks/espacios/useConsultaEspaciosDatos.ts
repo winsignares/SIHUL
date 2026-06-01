@@ -12,7 +12,8 @@ import {
 } from './prestamosCronogramaUtils';
 import type { EspacioView, OcupacionView } from './types';
 
-const CONSULTA_ESPACIOS_CACHE_KEY = 'espacios-consulta-espacios';
+const CONSULTA_ESPACIOS_CACHE_VERSION = 'v2';
+const CONSULTA_ESPACIOS_CACHE_KEY = `espacios-consulta-espacios-${CONSULTA_ESPACIOS_CACHE_VERSION}`;
 
 type UserLike = {
   id?: number;
@@ -48,7 +49,9 @@ function rangoSemanaVisibleCronograma(fechaInicioISO: string): { desde: string; 
 
 function horaANumero(hora: string): number {
   const partes = hora.split(':');
-  return parseInt(partes[0], 10);
+  const horas = parseInt(partes[0], 10);
+  const minutos = parseInt(partes[1], 10) || 0;
+  return horas + minutos / 60;
 }
 
 function normalizarDia(dia: string): string {
@@ -59,6 +62,7 @@ function normalizarDia(dia: string): string {
     martes: 'Martes',
     tuesday: 'Martes',
     'miércoles': 'Miércoles',
+    'miercoles': 'Miércoles',  // Backend envía sin tilde
     wednesday: 'Miércoles',
     jueves: 'Jueves',
     thursday: 'Jueves',
@@ -185,8 +189,8 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
           const diaNormalizado = normalizarDia(dia);
           const match = horariosExtendidos.find((h) => {
             const hDiaNormalizado = normalizarDia(h.dia_semana);
-            const hHoraInicio = parseInt(h.hora_inicio.split(':')[0], 10);
-            const hHoraFin = parseInt(h.hora_fin.split(':')[0], 10);
+            const hHoraInicio = horaANumero(h.hora_inicio);
+            const hHoraFin = horaANumero(h.hora_fin);
             return (
               String(h.espacio_id) === espacioId &&
               hDiaNormalizado === diaNormalizado &&
@@ -207,8 +211,8 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
             const horarioMeta = findHorarioMeta(
               espacio.id!.toString(),
               h.dia,
-              h.hora_inicio,
-              h.hora_fin,
+              horaANumero(h.hora_inicio),
+              horaANumero(h.hora_fin),
               h.materia
             );
 
@@ -216,8 +220,8 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
               id: horarioMeta?.id,
               espacioId: espacio.id!.toString(),
               dia: normalizarDia(h.dia),
-              horaInicio: h.hora_inicio,
-              horaFin: h.hora_fin,
+              horaInicio: horaANumero(h.hora_inicio),
+              horaFin: horaANumero(h.hora_fin),
               materia: h.materia,
               docente: h.docente,
               grupo: h.grupo,
