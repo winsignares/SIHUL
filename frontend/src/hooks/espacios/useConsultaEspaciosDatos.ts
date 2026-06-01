@@ -54,6 +54,12 @@ function horaANumero(hora: string): number {
   return horas + minutos / 60;
 }
 
+// Normalizar hora a múltiplo de 15 minutos (0.25 horas) para alinearse con el grid
+function normalizarHoraGrid(hora: number): number {
+  // Redondear al múltiplo de 0.25 más cercano
+  return Math.round(hora * 4) / 4;
+}
+
 function normalizarDia(dia: string): string {
   const diaLower = dia.toLowerCase().trim();
   const mapeo: Record<string, string> = {
@@ -190,8 +196,9 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
           const diaNormalizado = normalizarDia(dia);
           const match = horariosExtendidos.find((h) => {
             const hDiaNormalizado = normalizarDia(h.dia_semana);
-            const hHoraInicio = horaANumero(h.hora_inicio);
-            const hHoraFin = horaANumero(h.hora_fin);
+            // Normalizar horas para comparación consistente
+            const hHoraInicio = normalizarHoraGrid(horaANumero(h.hora_inicio));
+            const hHoraFin = normalizarHoraGrid(horaANumero(h.hora_fin));
             return (
               String(h.espacio_id) === espacioId &&
               hDiaNormalizado === diaNormalizado &&
@@ -206,9 +213,11 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
 
         const allHorarios: OcupacionView[] = [];
         const espaciosView: EspacioView[] = [];
+        let debugCounter = 0;
 
         espaciosConHorarios.forEach((espacio: any) => {
           espacio.horarios.forEach((h: any) => {
+            debugCounter++;
             const horarioMeta = findHorarioMeta(
               espacio.id!.toString(),
               h.dia,
@@ -217,12 +226,32 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
               h.materia
             );
 
+            // Normalizar horas al grid de 15 minutos
+            const horaInicioRaw = horaANumero(h.hora_inicio);
+            const horaFinRaw = horaANumero(h.hora_fin);
+            const horaInicioNorm = normalizarHoraGrid(horaInicioRaw);
+            const horaFinNorm = normalizarHoraGrid(horaFinRaw);
+
+            // DEBUG: Log normalización de horas
+            if (debugCounter <= 5) { // Log solo los primeros 5 para no saturar
+              console.log('[DEBUG DATOS]', {
+                espacio: espacio.nombre,
+                materia: h.materia,
+                hora_inicio_raw: h.hora_inicio,
+                hora_fin_raw: h.hora_fin,
+                horaInicioRaw,
+                horaFinRaw,
+                horaInicioNorm,
+                horaFinNorm
+              });
+            }
+
             allHorarios.push({
               id: horarioMeta?.id,
               espacioId: espacio.id!.toString(),
               dia: normalizarDia(h.dia),
-              horaInicio: horaANumero(h.hora_inicio),
-              horaFin: horaANumero(h.hora_fin),
+              horaInicio: horaInicioNorm,
+              horaFin: horaFinNorm,
               materia: h.materia,
               docente: h.docente,
               grupo: h.grupo,
@@ -313,8 +342,8 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
     const prestamosComoOcupacion: OcupacionView[] = prestamosVisibles.map((p) => ({
       espacioId: p.espacio_id.toString(),
       dia: getDiaSemanaEspanolDesdeISO(p.fecha),
-      horaInicio: horaANumero(p.hora_inicio),
-      horaFin: horaANumero(p.hora_fin),
+      horaInicio: normalizarHoraGrid(horaANumero(p.hora_inicio)),
+      horaFin: normalizarHoraGrid(horaANumero(p.hora_fin)),
       materia: p.tipo_actividad_nombre || 'Préstamo',
       docente: p.usuario_nombre || p.solicitante_publico_nombre,
       grupo: p.motivo,
