@@ -37,7 +37,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--sedes-query',
             type=str,
-            default='SELECT id_sede, nombre_sede FROM UHORARIOS.VW_SEDES',
+            default='SELECT id_sede, cod_sede, nombre_sede FROM UHORARIOS.VW_SEDES',
             help='Consulta Oracle para sedes/seccionales mezcladas',
         )
         parser.add_argument(
@@ -400,7 +400,7 @@ class Command(BaseCommand):
 
             sede_changes = []
             for row in sedes_rows:
-                ext_id = str(self._first_present(row, ['id_sede', 'idsede', 'id']) or '').strip()
+                ext_id = str(self._first_present(row, ['cod_sede', 'id_sede', 'idsede', 'id']) or '').strip()
                 nombre_sede = str(self._first_present(row, ['nombre_sede', 'sede', 'nombre']) or '').strip()
                 if not ext_id or not nombre_sede:
                     summary['issues'] += 1
@@ -597,7 +597,9 @@ class Command(BaseCommand):
                         for row in fac_rows:
                             ext_id = str(self._first_present(row, ['id_facultad', 'cod_facultad', 'id']) or '').strip()
                             nombre_fac = str(self._first_present(row, ['nombre_facultad', 'facultad', 'nombre']) or '').strip()
-                            id_sede_oracle = str(self._first_present(row, ['id_sede', 'id_sede_oracle']) or '').strip()
+                            id_sede_oracle = str(
+                                self._first_present(row, ['cod_sede', 'id_sede', 'id_sede_oracle']) or ''
+                            ).strip()
                             nombre_sede_oracle = str(self._first_present(row, ['nombre_sede', 'sede']) or '').strip()
 
                             if not ext_id or not nombre_fac:
