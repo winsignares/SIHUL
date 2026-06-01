@@ -4,6 +4,10 @@ export interface ApiError {
   errors?: Record<string, string[]>;
 }
 
+interface ErrorHandlingOptions {
+  redirectOn401?: boolean;
+}
+
 function normalizeMessages(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
@@ -71,7 +75,11 @@ function extractApiErrorInfo(errorData: unknown): {
   return {};
 }
 
-export async function handleApiError(response: Response): Promise<never> {
+export async function handleApiError(
+  response: Response,
+  options: ErrorHandlingOptions = {}
+): Promise<never> {
+  const { redirectOn401 = true } = options;
   let errorMessage = 'Error en la solicitud';
   let errors: Record<string, string[]> | undefined;
 
@@ -95,6 +103,9 @@ export async function handleApiError(response: Response): Promise<never> {
   // Manejo específico por código de estado
   switch (response.status) {
     case 401:
+      if (!redirectOn401) {
+        break;
+      }
       // Limpiar sesión local y navegar al login sin recargar toda la página
       try {
         // Evitar dependencias circulares importando dinámicamente
