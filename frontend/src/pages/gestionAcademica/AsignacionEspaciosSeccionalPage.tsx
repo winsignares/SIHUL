@@ -4,7 +4,7 @@ import type { HorarioAsignacion } from '../../services/horarios/asignacionEspaci
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../share/dialog';
 import { Alert, AlertDescription, AlertTitle } from '../../share/alert';
@@ -160,102 +160,82 @@ export default function AsignacionEspaciosSeccionalPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             <div className="space-y-2">
               <Label className="text-xs font-bold text-red-700 uppercase tracking-wider">Programa</Label>
-              <Select
-                value={filtros.programaId ? String(filtros.programaId) : 'all'}
-                onValueChange={(value) => setFiltros({ programaId: value === 'all' ? null : Number(value), grupoId: null })}
-              >
-                <SelectTrigger className="border-slate-300 hover:border-red-500 focus:ring-red-500 focus:ring-2 hover:bg-red-50/50 transition-all">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {programas.map((programa) => (
-                    <SelectItem key={programa.id} value={String(programa.id)}>
-                      {programa.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                items={[{ id: null, nombre: 'Todos' }, ...programas]}
+                value={filtros.programaId}
+                onSelect={(item) => setFiltros({ programaId: item.id, grupoId: null })}
+                getItemId={(item) => item.id ?? 'all'}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Todos"
+                searchPlaceholder="Buscar programa..."
+                emptyMessage="No se encontró ningún programa."
+                clearable
+                onClear={() => setFiltros({ programaId: null, grupoId: null })}
+              />
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-red-700 uppercase tracking-wider">Grupo</Label>
-              <Select
-                value={filtros.grupoId ? String(filtros.grupoId) : 'all'}
-                onValueChange={(value) => setFiltros({ grupoId: value === 'all' ? null : Number(value) })}
-              >
-                <SelectTrigger className="border-slate-300 hover:border-red-500 focus:ring-red-500 focus:ring-2 hover:bg-red-50/50 transition-all">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {grupos.map((grupo) => (
-                    <SelectItem key={grupo.id} value={String(grupo.id)}>
-                      {grupo.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                items={[{ id: null, nombre: 'Todos' }, ...grupos]}
+                value={filtros.grupoId}
+                onSelect={(item) => setFiltros({ grupoId: item.id })}
+                getItemId={(item) => item.id ?? 'all'}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Todos"
+                searchPlaceholder="Buscar grupo..."
+                emptyMessage="No se encontró ningún grupo."
+                clearable
+                onClear={() => setFiltros({ grupoId: null })}
+              />
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-red-700 uppercase tracking-wider">Asignatura</Label>
-              <Select
-                value={filtros.asignaturaId ? String(filtros.asignaturaId) : 'all'}
-                onValueChange={(value) => setFiltros({ asignaturaId: value === 'all' ? null : Number(value) })}
-              >
-                <SelectTrigger className="border-slate-300 hover:border-red-500 focus:ring-red-500 focus:ring-2 hover:bg-red-50/50 transition-all">
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {asignaturas.map((asignatura) => (
-                    <SelectItem key={asignatura.id} value={String(asignatura.id)}>
-                      {asignatura.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                items={[{ id: null, nombre: 'Todas' }, ...asignaturas]}
+                value={filtros.asignaturaId}
+                onSelect={(item) => setFiltros({ asignaturaId: item.id })}
+                getItemId={(item) => item.id ?? 'all'}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Todas"
+                searchPlaceholder="Buscar asignatura..."
+                emptyMessage="No se encontró ninguna asignatura."
+                clearable
+                onClear={() => setFiltros({ asignaturaId: null })}
+              />
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-red-700 uppercase tracking-wider">Día</Label>
-              <Select
-                value={filtros.diaSemana ?? 'all'}
-                onValueChange={(value) => setFiltros({ diaSemana: value === 'all' ? null : value })}
-              >
-                <SelectTrigger className="border-slate-300 hover:border-red-500 focus:ring-red-500 focus:ring-2 hover:bg-red-50/50 transition-all">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {diasSemana.map((dia) => (
-                    <SelectItem key={dia} value={dia}>
-                      {dia}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                items={[{ valor: null, nombre: 'Todos' }, ...diasSemana.map(d => ({ valor: d, nombre: d }))]}
+                value={filtros.diaSemana}
+                onSelect={(item) => setFiltros({ diaSemana: item.valor })}
+                getItemId={(item) => item.valor ?? 'all'}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Todos"
+                searchPlaceholder="Buscar día..."
+                emptyMessage="No se encontró ningún día."
+                clearable
+                onClear={() => setFiltros({ diaSemana: null })}
+              />
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-red-700 uppercase tracking-wider">Período</Label>
-              <Select
-                value={filtros.periodoId ? String(filtros.periodoId) : 'all'}
-                onValueChange={(value) => setFiltros({ periodoId: value === 'all' ? null : Number(value) })}
-              >
-                <SelectTrigger className="border-slate-300 hover:border-red-500 focus:ring-red-500 focus:ring-2 hover:bg-red-50/50 transition-all">
-                  <SelectValue placeholder="Período actual" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {periodos.map((periodo) => (
-                    <SelectItem key={periodo.id} value={String(periodo.id)}>
-                      {periodo.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                items={[{ id: null, nombre: 'Todos' }, ...periodos]}
+                value={filtros.periodoId}
+                onSelect={(item) => setFiltros({ periodoId: item.id })}
+                getItemId={(item) => item.id ?? 'all'}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Todos"
+                searchPlaceholder="Buscar período..."
+                emptyMessage="No se encontró ningún período."
+                clearable
+                onClear={() => setFiltros({ periodoId: null })}
+              />
             </div>
           </div>
         </CardContent>
