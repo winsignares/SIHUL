@@ -102,6 +102,19 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
+            # Mapa de traduccion ID_SEDE -> COD_SEDE para compatibilidad entre vistas Oracle.
+            sede_id_to_cod = {}
+            try:
+                cursor.execute("SELECT ID_SEDE, COD_SEDE FROM UHORARIOS.VW_SEDES")
+                for sid, cod in cursor.fetchall():
+                    sid_txt = self._to_text(sid)
+                    cod_txt = self._to_text(cod)
+                    if sid_txt and cod_txt:
+                        sede_id_to_cod[sid_txt] = cod_txt
+            except Exception:
+                # Si la vista no expone COD_SEDE o falla este lookup, continuamos con ID_SEDE directo.
+                sede_id_to_cod = {}
+
             if limit and int(limit) > 0:
                 cursor.execute(
                     f"SELECT * FROM ({query}) SRC_Q WHERE ROWNUM <= :max_rows",
@@ -130,11 +143,13 @@ class Command(BaseCommand):
                 if code.isdigit():
                     asignaturas_by_codigo.setdefault(str(int(code)), a)
 
-            updates = []
+            updates_by_id = {}
             for row in rows:
                 data = dict(zip(columns, row))
                 codigo = self._to_text(data.get('id_asignatura'))
-                id_sede_oracle = self._to_text(data.get('id_sede'))
+                id_sede_oracle = self._to_text(data.get('cod_sede')) or self._to_text(data.get('id_sede'))
+                if id_sede_oracle:
+                    id_sede_oracle = sede_id_to_cod.get(id_sede_oracle, id_sede_oracle)
 
                 if not codigo:
                     continue
@@ -169,11 +184,11 @@ class Command(BaseCommand):
                 summary['updated'] += 1
                 if not dry_run:
                     asignatura.sede = sede
-                    updates.append(asignatura)
+                    updates_by_id[asignatura.id] = asignatura
 
-            if not dry_run and updates:
+            if not dry_run and updates_by_id:
                 with transaction.atomic():
-                    Asignatura.objects.bulk_update(updates, ['sede'])
+                    Asignatura.objects.bulk_update(list(updates_by_id.values()), ['sede'])
 
             self.stdout.write(self.style.SUCCESS('Sincronizacion de sede en asignaturas finalizada'))
             self.stdout.write(str(summary))
