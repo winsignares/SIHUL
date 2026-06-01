@@ -313,7 +313,7 @@ Este proyecto es propiedad de la Universidad Libre.
 - GitHub: [@HarlemHM](https://github.com/HarlemHM)
 
 **Desarrollador 4**
-- GitHub: [@GabrielP1711](https://github.com/GabrielP1711)
+- GitHub: [@GabrielDevCO](https://github.com/gabrieldevco)
 
 **Desarrollador 5**
 - GitHub: [@Andrewsy1004](https://github.com/Andrewsy1004)
