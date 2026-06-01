@@ -37,16 +37,26 @@ export function useConsultaEspaciosSeleccion({
   const [dialogSolicitudOpen, setDialogSolicitudOpen] = useState(false);
   const [nuevaSolicitudData, setNuevaSolicitudData] = useState<NuevaSolicitudData | null>(null);
 
+  // Redondear hora al entero más cercano (para selección en celdas de 1 hora)
+  const roundToHour = (hora: number): number => Math.floor(hora);
+
   const iniciarSeleccion = useCallback(
     (espacioId: string, dia: string, hora: number) => {
       if (!puedeCrearSolicitudes) return;
 
-      const ocupado = getOcupacionPorHora(espacioId, dia, hora);
+      // Redondear hora al entero más cercano (inicio de la celda de 1 hora)
+      const horaEntera = roundToHour(hora);
+
+      // Validar que no exceda el horario permitido
+      if (horaEntera >= 22) return;
+
+      const ocupado = getOcupacionPorHora(espacioId, dia, horaEntera);
       if (ocupado) return;
 
       setIsDragging(true);
-      setSeleccionInicio({ espacioId, dia, hora });
-      setSeleccionRango({ espacioId, dia, horaInicio: hora, horaFin: hora + 1 });
+      setSeleccionInicio({ espacioId, dia, hora: horaEntera });
+      // Iniciar con 1 hora de duración
+      setSeleccionRango({ espacioId, dia, horaInicio: horaEntera, horaFin: horaEntera + 1 });
     },
     [getOcupacionPorHora, puedeCrearSolicitudes]
   );
@@ -56,9 +66,19 @@ export function useConsultaEspaciosSeleccion({
       if (!isDragging || !seleccionInicio) return;
       if (espacioId !== seleccionInicio.espacioId || dia !== seleccionInicio.dia) return;
 
-      const horaInicio = Math.min(seleccionInicio.hora, hora);
-      const horaFin = Math.max(seleccionInicio.hora, hora) + 1;
-      setSeleccionRango({ espacioId, dia, horaInicio, horaFin });
+      // Redondear hora al entero más cercano
+      const horaEntera = roundToHour(hora);
+
+      // Calcular la hora de inicio (la menor entre inicio y actual)
+      const horaInicio = Math.min(seleccionInicio.hora, horaEntera);
+      // Calcular la hora de fin (la mayor + 1, permitiendo múltiples horas)
+      // Si arrastra hacia abajo, expande la selección
+      const horaFin = Math.max(seleccionInicio.hora + 1, horaEntera + 1);
+
+      // Validar que no exceda las 22:00
+      const horaFinValidada = Math.min(horaFin, 22);
+
+      setSeleccionRango({ espacioId, dia, horaInicio, horaFin: horaFinValidada });
     },
     [isDragging, seleccionInicio]
   );

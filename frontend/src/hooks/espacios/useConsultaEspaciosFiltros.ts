@@ -32,7 +32,7 @@ export function useConsultaEspaciosFiltros() {
   const [mensajeFiltroFecha, setMensajeFiltroFecha] = useState<MensajeFiltroFecha | null>(null);
 
   const diasSemana = useMemo(
-    () => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+    () => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
     []
   );
 

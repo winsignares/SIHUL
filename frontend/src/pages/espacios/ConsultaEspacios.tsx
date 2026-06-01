@@ -88,15 +88,6 @@ function formatHoraDecimal(hora: number): string {
   return `${horas}:${String(minutos).padStart(2, '0')}`;
 }
 
-// Helper para redondear hora a múltiplo de 15 minutos (0.25 horas)
-// Usa ceil para redondear hacia arriba y asegurar que la celda cubra todo el horario
-function roundTo15Min(hora: number): number {
-  // Agregar pequeña tolerancia para errores de precisión flotante
-  const horaConTolerancia = hora + 0.001;
-  // Redondear hacia arriba (ceil) al múltiplo de 0.25 (15 minutos)
-  // Ej: 12.40 -> 12.666... -> 13 -> 12.75 (12:45)
-  return Math.ceil(horaConTolerancia * 4) / 4;
-}
 
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
@@ -284,6 +275,9 @@ export default function ConsultaEspacios() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [recurrencePreviewDates, setRecurrencePreviewDates] = useState<Date[]>([]);
+
+  // Estado para hora fin editable en el formulario de solicitud
+  const [horaFinEditable, setHoraFinEditable] = useState<number | null>(null);
 
   // Estados para edición de horarios (drag and drop)
   const [editModeEnabled, setEditModeEnabled] = useState(false);
@@ -623,6 +617,7 @@ export default function ConsultaEspacios() {
       setFormError(null);
       setSubmitting(false);
       setRecursosSeleccionados([]);
+      setHoraFinEditable(null);
       setFormData({
         sede_id: 0,
         espacio_id: 0,
@@ -641,8 +636,12 @@ export default function ConsultaEspacios() {
       setRepeatOption('none');
       setCustomPeriod('week');
       setRecurrencePreviewDates([]);
+    } else if (nuevaSolicitudData?.horaFin) {
+      // Inicializar hora fin editable cuando se abre el modal
+      const horaFinNum = parseInt(nuevaSolicitudData.horaFin.split(':')[0], 10);
+      setHoraFinEditable(horaFinNum);
     }
-  }, [dialogSolicitudOpen]);
+  }, [dialogSolicitudOpen, nuevaSolicitudData]);
 
   // Actualizar preview de fechas cuando cambian los parámetros de repetición
   useEffect(() => {
@@ -674,27 +673,32 @@ export default function ConsultaEspacios() {
   // Cargar espacios disponibles cuando cambian sede/fecha/hora
   useEffect(() => {
     const loadEspaciosDisponibles = async () => {
-      if (!nuevaSolicitudData?.fecha || !nuevaSolicitudData?.horaInicio || !nuevaSolicitudData?.horaFin) {
+      if (!nuevaSolicitudData?.fecha || !nuevaSolicitudData?.horaInicio) {
         return;
       }
-      
+
+      // Usar hora fin editable si está disponible, sino usar la hora fin original
+      const horaFinParaBusqueda = horaFinEditable
+        ? `${String(horaFinEditable).padStart(2, '0')}:00`
+        : nuevaSolicitudData.horaFin;
+
       try {
         // Buscar el sede_id del espacio seleccionado
         const espacio = filteredEspacios.find(e => e.id === nuevaSolicitudData.espacio_id.toString());
         if (!espacio) return;
-        
+
         const sede = sedesList.find(s => s.nombre === espacio.sede);
         if (!sede) return;
 
         const response = await prestamosPublicAPI.listarEspaciosDisponibles(
           nuevaSolicitudData.fecha,
           `${nuevaSolicitudData.horaInicio}:00`,
-          `${nuevaSolicitudData.horaFin}:00`,
+          `${horaFinParaBusqueda}:00`,
           sede.id
         );
         setEspaciosDisponibles(response.espacios || []);
-        setFormData(prev => ({ 
-          ...prev, 
+        setFormData(prev => ({
+          ...prev,
           sede_id: sede.id!,
           espacio_id: nuevaSolicitudData?.espacio_id || 0
         }));
@@ -702,11 +706,11 @@ export default function ConsultaEspacios() {
         console.error('Error cargando espacios disponibles:', err);
       }
     };
-    
+
     if (dialogSolicitudOpen) {
       loadEspaciosDisponibles();
     }
-  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList]);
+  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList, horaFinEditable]);
 
   // Determinar qué espacios mostrar
   const espaciosToShow = espacioSeleccionado 
@@ -724,15 +728,6 @@ export default function ConsultaEspacios() {
   const getDayColumnIndex = (dia: string) => {
     const index = diasSemana.indexOf(dia);
     return index !== -1 ? index + 2 : 1;
-  };
-
-  const getHourRowIndex = (hora: number) => {
-    // Redondear hora a múltiplo de 15 minutos para evitar desplazamientos por decimales imprecisos
-    const horaRedondeada = roundTo15Min(hora);
-    // Usar la función de slot para calcular la fila correcta
-    // horaToSlotIndex devuelve el índice del slot (0-63), sumamos 2 para el header
-    const slotIndex = horaToSlotIndex(horaRedondeada);
-    return slotIndex + 2;
   };
 
   // Funciones del formulario
@@ -761,8 +756,19 @@ export default function ConsultaEspacios() {
       return;
     }
 
-    if (nuevaSolicitudData.horaFin <= nuevaSolicitudData.horaInicio) {
+    if (!horaFinEditable) {
+      setFormError('Por favor seleccione la hora de finalización');
+      return;
+    }
+
+    const horaInicioNum = parseInt(nuevaSolicitudData.horaInicio.split(':')[0], 10);
+    if (horaFinEditable <= horaInicioNum) {
       setFormError('La hora fin debe ser mayor que la hora inicio');
+      return;
+    }
+
+    if (horaFinEditable > 22) {
+      setFormError('La hora fin no puede exceder las 22:00');
       return;
     }
 
@@ -814,7 +820,7 @@ export default function ConsultaEspacios() {
         tipo_actividad_id: formData.tipo_actividad_id,
         fecha: nuevaSolicitudData.fecha,
         hora_inicio: `${nuevaSolicitudData.horaInicio}:00`,
-        hora_fin: `${nuevaSolicitudData.horaFin}:00`,
+        hora_fin: `${String(horaFinEditable).padStart(2, '0')}:00`,
         motivo: formData.motivo,
         asistentes: asistentesNum,
         telefono: formData.telefono,
@@ -1219,17 +1225,6 @@ export default function ConsultaEspacios() {
               >
                 <Grid3x3 className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
                 {isMobile ? 'Tarjetas' : 'Vista Tarjetas'}
-              </Button>
-              <Button
-                variant={vistaActual === 'cronograma' ? 'default' : 'outline'}
-                onClick={() => setVistaActual('cronograma')}
-                className={`flex-1 sm:flex-none ${vistaActual === 'cronograma'
-                  ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white'
-                  : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950'
-                } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
-              >
-                <CalendarDays className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-                {isMobile ? 'Cronograma' : 'Vista Cronograma'}
               </Button>
             </>
           )}
@@ -1676,7 +1671,7 @@ export default function ConsultaEspacios() {
                         </div>
                       </div>
                     )}
-                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '30px' }}>
+                    <div className="min-w-[1000px] grid grid-cols-[60px_repeat(7,1fr)] gap-1" style={{ gridAutoRows: '30px' }}>
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
                         const diaBloqueado = isDiaBloqueado(dia);
@@ -1820,15 +1815,29 @@ export default function ConsultaEspacios() {
 
                       {/* Horarios ocupados */}
                       {horarios
-                        .filter(h => h.espacioId === espacio.id)
+                        .filter(h => h.espacioId === espacio.id && encabezadosDiasCronograma.some(d => d.dia === h.dia))
                         .map((ocupacion, idx) => {
                           const colStart = getDayColumnIndex(ocupacion.dia);
-                          const rowStart = getHourRowIndex(ocupacion.horaInicio);
-                          // Calcular rowSpan en intervalos de 15 minutos (4 slots por hora)
-                          // Redondear horas a múltiplos de 15 min para evitar errores de precisión
-                          const horaInicioRounded = roundTo15Min(ocupacion.horaInicio);
-                          const horaFinRounded = roundTo15Min(ocupacion.horaFin);
-                          const rowSpan = Math.max(1, Math.round((horaFinRounded - horaInicioRounded) * 4));
+                          // Calcular fila directamente para evitar desfases
+                          const slotStart = Math.round((ocupacion.horaInicio - 6) * 4);
+                          const slotEnd = Math.round((ocupacion.horaFin - 6) * 4);
+                          const rowStart = slotStart + 2;
+                          const rowSpan = Math.max(1, slotEnd - slotStart);
+
+                          // DEBUG: Log horarios A104C
+                          if (espacio.nombre === 'A104C') {
+                            console.log('[DEBUG A104C]', {
+                              materia: ocupacion.materia,
+                              dia: ocupacion.dia,
+                              horaInicio: ocupacion.horaInicio,
+                              horaFin: ocupacion.horaFin,
+                              slotStart,
+                              slotEnd,
+                              rowStart,
+                              rowSpan,
+                              colStart
+                            });
+                          }
 
                           // Validar rango: ahora tenemos 64 slots (16 horas * 4) + 1 header = 66 filas
                           if (rowStart < 2 || rowStart > 66) return null;
@@ -2006,7 +2015,33 @@ export default function ConsultaEspacios() {
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Horario:</span>
-                    <p className="font-medium">{nuevaSolicitudData.horaInicio} - {nuevaSolicitudData.horaFin}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-medium">{nuevaSolicitudData.horaInicio}</span>
+                      <span className="text-slate-400">-</span>
+                      <Select
+                        value={horaFinEditable?.toString() || ''}
+                        onValueChange={(v) => setHoraFinEditable(parseInt(v, 10))}
+                      >
+                        <SelectTrigger className="h-8 text-sm w-[100px]">
+                          <SelectValue placeholder="Hora fin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(() => {
+                            const horaInicioNum = parseInt(nuevaSolicitudData.horaInicio.split(':')[0], 10);
+                            // Generar opciones desde hora inicio + 1 hasta 22:00
+                            const opciones = [];
+                            for (let h = horaInicioNum + 1; h <= 22; h++) {
+                              opciones.push(
+                                <SelectItem key={h} value={h.toString()}>
+                                  {String(h).padStart(2, '0')}:00
+                                </SelectItem>
+                              );
+                            }
+                            return opciones;
+                          })()}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
