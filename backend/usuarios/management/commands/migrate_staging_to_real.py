@@ -372,6 +372,35 @@ class Command(BaseCommand):
                 keys.add(key)
         return keys
 
+    @staticmethod
+    def _space_alias_candidates(value):
+        """
+        Genera alias para acercar NOM_AULA descriptivo a codigos de espacio.
+        Ej: "Aula C 104" -> "C104", "A104C", "104C".
+        """
+        base = Command._normalize_text(value)
+        if not base:
+            return []
+
+        aliases = set()
+        pattern = re.search(
+            r'\b(?:AULA|SALON|SALA DE COMPUTO|SALA COMPUTO)\s+([A-Z])\s*(\d{2,4})\b',
+            base,
+        )
+        if pattern:
+            bloque = pattern.group(1)
+            numero = pattern.group(2)
+            aliases.update(
+                {
+                    f'{bloque}{numero}',
+                    f'{numero}{bloque}',
+                    f'A{numero}{bloque}',
+                    f'A{numero}{bloque}C',
+                }
+            )
+
+        return sorted(aliases)
+
     def migrate_periodos(self, dry_run=False, limit=None):
         self.stdout.write('=' * 60)
         self.stdout.write('ETAPA 1: Migrando Periodos Academicos')
@@ -936,6 +965,8 @@ class Command(BaseCommand):
         grupo_no_encontrado = 0
         asignatura_no_encontrada = 0
         espacio_no_encontrado = 0
+        espacio_autocreado = 0
+        espacio_autocreado_sede_no_resuelta = 0
         hora_default = 0
         duplicados_horario_reutilizados = 0
 
@@ -1034,7 +1065,11 @@ class Command(BaseCommand):
                         continue
 
                     espacio = None
-                    id_sede = self._to_text(stg_horario.id_sede_oracle)
+                    id_sede_raw = self._to_text(stg_horario.id_sede_oracle)
+                    cod_sede_raw = self._to_text((raw or {}).get('cod_sede'))
+                    # En VW_HORARIO, ID_SEDE puede venir como codigo corto (4,49,89...)
+                    # y COD_SEDE como codigo homologado (10102,30101,301...).
+                    id_sede = cod_sede_raw or id_sede_raw
                     nom_aula_raw = self._to_text(stg_horario.nom_aula_oracle)
                     if nom_aula_raw:
                         candidates_esp = []
@@ -1059,6 +1094,58 @@ class Command(BaseCommand):
 
                     if not espacio:
                         espacio_no_encontrado += 1
+                        if nom_aula_raw and not self._is_placeholder_space_name(nom_aula_raw):
+                            source_system = stg_horario.source_system or 'ORACLE_SIU'
+                            sede_horario = self._resolve_sede(source_system, id_sede)
+                            if sede_horario:
+                                # Reintento por alias de aula descriptiva antes de crear fallback.
+                                alias_sources = [nom_aula_raw] + self._space_alias_candidates(nom_aula_raw)
+                                alias_candidates = []
+                                seen_alias_ids = set()
+                                for alias in alias_sources:
+                                    for key in self._space_match_keys(alias):
+                                        for c in espacios_by_match_key_sede.get((id_sede, key), []):
+                                            if c.id not in seen_alias_ids:
+                                                alias_candidates.append(c)
+                                                seen_alias_ids.add(c.id)
+                                        for c in espacios_by_match_key.get(key, []):
+                                            if c.id not in seen_alias_ids:
+                                                alias_candidates.append(c)
+                                                seen_alias_ids.add(c.id)
+                                if len(alias_candidates) == 1:
+                                    espacio = alias_candidates[0]
+                                elif len(alias_candidates) > 1:
+                                    espacio = next(
+                                        (e for e in alias_candidates if self._to_text(e.sede.external_id) == id_sede),
+                                        alias_candidates[0],
+                                    )
+
+                                # Si no hay match por nomenclatura, crear/reusar espacio fallback por sede+nombre.
+                                if not espacio:
+                                    espacio = EspacioFisico.objects.filter(
+                                        sede=sede_horario,
+                                        nombre__iexact=nom_aula_raw,
+                                    ).first()
+
+                                if not espacio and not dry_run:
+                                    tipo_nombre, tipo_desc = self._map_tipo_espacio(nom_aula_raw)
+                                    tipo_fallback, _ = TipoEspacio.objects.get_or_create(
+                                        nombre=tipo_nombre,
+                                        defaults={'descripcion': tipo_desc},
+                                    )
+                                    espacio = EspacioFisico.objects.create(
+                                        nombre=nom_aula_raw,
+                                        sede=sede_horario,
+                                        tipo=tipo_fallback,
+                                        capacidad=0,
+                                        ubicacion=nom_aula_raw,
+                                        estado='Disponible',
+                                        esta_abierto=True,
+                                    )
+                                    espacio_autocreado += 1
+                                    _indexar_espacio(espacio)
+                            else:
+                                espacio_autocreado_sede_no_resuelta += 1
 
                     docente = None
                     num_doc = self._to_text(stg_horario.num_identificacion_docente)
@@ -1114,6 +1201,24 @@ class Command(BaseCommand):
                     }
 
                     coincidencias = Horario.objects.filter(**lookup).order_by('id')
+                    # Evita duplicados cuando ya existe el mismo bloque horario sin espacio.
+                    # Caso comun: corrida anterior creo slot con espacio=NULL y una nueva corrida
+                    # encuentra/crea espacio para el mismo bloque; reutilizamos el existente.
+                    if not coincidencias.exists() and espacio is not None:
+                        coincidencias = Horario.objects.filter(
+                            grupo=grupo,
+                            asignatura=asignatura,
+                            espacio__isnull=True,
+                            dia_semana=dia_semana,
+                            hora_inicio=hora_inicio,
+                            hora_fin=hora_fin,
+                        ).order_by('id')
+                        if coincidencias.exists():
+                            horario_base = coincidencias.first()
+                            horario_base.espacio = espacio
+                            horario_base.save(update_fields=['espacio'])
+                            coincidencias = Horario.objects.filter(id=horario_base.id)
+
                     if coincidencias.exists():
                         horario = coincidencias.first()
                         created = False
@@ -1177,6 +1282,8 @@ class Command(BaseCommand):
                 f'Grupo no encontrado: {grupo_no_encontrado}, '
                 f'Asignatura no encontrada: {asignatura_no_encontrada}, '
                 f'Espacio no encontrado: {espacio_no_encontrado}, '
+                f'Espacio autocreado fallback: {espacio_autocreado}, '
+                f'Espacio fallback sin sede resuelta: {espacio_autocreado_sede_no_resuelta}, '
                 f'Horas por defecto aplicadas: {hora_default}'
             )
         )
