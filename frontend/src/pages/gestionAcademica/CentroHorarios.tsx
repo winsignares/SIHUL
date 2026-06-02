@@ -54,6 +54,19 @@ export default function CentroHorarios() {
     generarHoras,
     obtenerClaseEnHora,
     gruposAgrupados,
+    gruposAgrupadosTotal,
+    // Paginación
+    currentPage,
+    totalPages,
+    pageNumbers,
+    pageSize,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
+    hasPrevPageWindow,
+    hasNextPageWindow,
+    goToPrevPageWindow,
+    goToNextPageWindow,
     gruposUnicos,
     semestresUnicos,
     programasFiltrados,
@@ -161,7 +174,7 @@ export default function CentroHorarios() {
                     <SelectContent>
                       {facultades.length > 1 && <SelectItem value="all">Todas</SelectItem>}
                       {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id.toString()}>{f.nombre}</SelectItem>
+                        <SelectItem key={f.id ?? 'unknown'} value={(f.id ?? '').toString()}>{f.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -177,7 +190,7 @@ export default function CentroHorarios() {
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
                       {programasFiltrados.map(p => (
-                        <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>
+                        <SelectItem key={p.id ?? 'unknown'} value={(p.id ?? '').toString()}>{p.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -242,7 +255,8 @@ export default function CentroHorarios() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
-                Grupos Encontrados ({gruposAgrupados.length})
+                Grupos Encontrados ({gruposAgrupadosTotal}) 
+                {/* DEBUG: totalPages={totalPages}, currentPage={currentPage} */}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -290,6 +304,55 @@ export default function CentroHorarios() {
                   </table>
                 </div>
               )}
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p className="text-sm text-slate-600">
+                      Mostrando {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, gruposAgrupadosTotal)} de {gruposAgrupadosTotal} grupos
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </Button>
+                      {hasPrevPageWindow && (
+                        <Button variant="ghost" size="sm" onClick={goToPrevPageWindow}>
+                          ...
+                        </Button>
+                      )}
+                      {pageNumbers.map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => goToPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      {hasNextPageWindow && (
+                        <Button variant="ghost" size="sm" onClick={goToNextPageWindow}>
+                          ...
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={currentPage === totalPages}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -326,7 +389,7 @@ export default function CentroHorarios() {
                     <SelectContent>
                       {facultades.length > 1 && <SelectItem value="all">Todas</SelectItem>}
                       {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id.toString()}>{f.nombre}</SelectItem>
+                        <SelectItem key={f.id ?? 'unknown'} value={(f.id ?? '').toString()}>{f.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -342,7 +405,7 @@ export default function CentroHorarios() {
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
                       {programasFiltrados.map(p => (
-                        <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>
+                        <SelectItem key={p.id ?? 'unknown'} value={(p.id ?? '').toString()}>{p.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -408,7 +471,7 @@ export default function CentroHorarios() {
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Edit className="w-5 h-5 text-orange-600" />
-                  Modificación y Eliminación de Grupos ({gruposAgrupados.length})
+                  Modificación y Eliminación de Grupos ({gruposAgrupadosTotal})
                 </span>
               </CardTitle>
             </CardHeader>
@@ -579,6 +642,55 @@ export default function CentroHorarios() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p className="text-sm text-slate-600">
+                      Mostrando {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, gruposAgrupadosTotal)} de {gruposAgrupadosTotal} grupos
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </Button>
+                      {hasPrevPageWindow && (
+                        <Button variant="ghost" size="sm" onClick={goToPrevPageWindow}>
+                          ...
+                        </Button>
+                      )}
+                      {pageNumbers.map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => goToPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      {hasNextPageWindow && (
+                        <Button variant="ghost" size="sm" onClick={goToNextPageWindow}>
+                          ...
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={currentPage === totalPages}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -825,10 +937,10 @@ export default function CentroHorarios() {
                     value={horarioEditar.espacio_id}
                     onSelect={(espacio) => setHorarioEditar({ 
                       ...horarioEditar, 
-                      espacio_id: espacio.id,
+                      espacio_id: espacio.id ?? null,
                       espacio_nombre: espacio.nombre
                     })}
-                    getItemId={(espacio) => espacio.id}
+                    getItemId={(espacio) => espacio.id ?? 0}
                     getItemLabel={(espacio) => espacio.nombre}
                     getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad}`}
                     placeholder="Seleccionar espacio..."

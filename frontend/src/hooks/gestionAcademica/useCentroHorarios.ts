@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../share/notificationBanner';
 import { horarioService, horarioFusionadoService } from '../../services/horarios/horariosAPI';
+import { useConsultaEspaciosPaginacion } from '../espacios/useConsultaEspaciosPaginacion';
 import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
@@ -372,6 +373,9 @@ export function useCentroHorarios() {
     // Obtener grupos agrupados después de filtrar
     const gruposAgrupados = agruparHorarios(horariosFiltrados);
 
+    // Aplicar paginación a los grupos (10 por página)
+    const paginacion = useConsultaEspaciosPaginacion(gruposAgrupados);
+
     // Obtener listas únicas para filtros
     const gruposUnicos = [...new Set(horarios.map(h => h.grupo_nombre).filter(Boolean))].sort();
     const semestresUnicos = [...new Set(horarios.map(h => h.semestre).filter(Boolean))].sort((a, b) => a - b);
@@ -724,7 +728,20 @@ export function useCentroHorarios() {
         obtenerClaseEnHora,
         agruparHorarios,
         horariosFiltrados,
-        gruposAgrupados,
+        gruposAgrupados: paginacion.paginatedEspacios,
+        gruposAgrupadosTotal: gruposAgrupados.length,
+        // Paginación
+        currentPage: paginacion.currentPage,
+        totalPages: paginacion.totalPages,
+        pageNumbers: paginacion.pageNumbers,
+        pageSize: paginacion.pageSize,
+        goToPage: paginacion.goToPage,
+        goToNextPage: paginacion.goToNextPage,
+        goToPrevPage: paginacion.goToPrevPage,
+        hasPrevPageWindow: paginacion.hasPrevPageWindow,
+        hasNextPageWindow: paginacion.hasNextPageWindow,
+        goToPrevPageWindow: paginacion.goToPrevPageWindow,
+        goToNextPageWindow: paginacion.goToNextPageWindow,
         gruposUnicos,
         semestresUnicos,
         programasFiltrados,
