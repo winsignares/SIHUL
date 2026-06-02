@@ -47,7 +47,12 @@ function rangoSemanaVisibleCronograma(fechaInicioISO: string): { desde: string; 
   };
 }
 
-function horaANumero(hora: string): number {
+function horaANumero(hora: string | number): number {
+  // Si ya es un número (ej: hora_inicio=10 del backend), convertirlo directamente
+  if (typeof hora === 'number') {
+    return hora;
+  }
+  // Si es string (ej: "10:00" o "10:30:00"), parsearlo
   const partes = hora.split(':');
   const horas = parseInt(partes[0], 10);
   const minutos = parseInt(partes[1], 10) || 0;

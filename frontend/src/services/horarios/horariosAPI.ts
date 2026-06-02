@@ -313,7 +313,7 @@ export const horarioService = {
      */
     listExtendidos: async (options: ListHorariosExtendidosOptions = {}): Promise<ListHorariosExtendidosResponse> => {
         const query = options.includePending ? '?include_pending=1' : '';
-        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`);
+        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`, { requiresAuth: false });
     },
 
     /**

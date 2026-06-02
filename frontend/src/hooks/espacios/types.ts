@@ -34,6 +34,13 @@ export interface SeleccionRango {
   horaFin: number;
 }
 
+export interface ConflictoInfo {
+  tipo: 'horario' | 'prestamo';
+  materia: string;
+  horaInicio: number;
+  horaFin: number;
+}
+
 export interface NuevaSolicitudData {
   espacio_id: number;
   espacio_nombre: string;
@@ -41,6 +48,7 @@ export interface NuevaSolicitudData {
   horaInicio: string;
   horaFin: string;
   diaSemana: string;
+  conflictos?: ConflictoInfo[];
 }
 
 export interface MensajeFiltroFecha {

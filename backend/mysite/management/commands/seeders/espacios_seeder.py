@@ -11,7 +11,7 @@ def create_espacios_fisicos(stdout, style):
     stdout.write('  → Creando espacios físicos...')
     stdout.write('     Este proceso puede tomar unos segundos...')
     
-    sede_principal = Sede.objects.get(nombre='Sede Norte')
+    sede_principal = Sede.objects.get(nombre='Sede Principal')
     sede_centro = Sede.objects.get(nombre='Sede Centro')
     
     tipo_torreon = TipoEspacio.objects.get(nombre='Torreon')

@@ -116,8 +116,14 @@ export function useConsultaEspacios() {
     ) => {
       if (horaInicio >= horaFin) return null;
 
+      // Combinar todos los horarios disponibles (base + periodo + prestamos)
+      const todosLosHorarios = [
+        ...datos.horarios,
+        ...horariosMostrados.filter(h => !datos.horarios.some(dh => dh.id === h.id && dh.espacioId === h.espacioId && dh.dia === h.dia && dh.horaInicio === h.horaInicio))
+      ];
+
       let ocupacionIgnoradaConsumida = false;
-      const matches = horariosMostrados.filter((h) => {
+      const matches = todosLosHorarios.filter((h) => {
         if (h.espacioId !== espacioId || h.dia !== dia) return false;
         if (
           ocupacionIgnorada &&
@@ -132,7 +138,7 @@ export function useConsultaEspacios() {
 
       return matches.find((h) => h.tipo === 'prestamo') ?? matches[0] ?? null;
     },
-    [esMismaOcupacion, horariosMostrados]
+    [esMismaOcupacion, horariosMostrados, datos.horarios]
   );
 
   const filteredEspacios = useMemo(() => {
@@ -187,11 +193,41 @@ export function useConsultaEspacios() {
 
   const paginacion = useConsultaEspaciosPaginacion(filteredEspacios);
 
+  // Combinar TODOS los horarios para detección de conflictos
+  const todosLosHorarios = useMemo(() => {
+    const horariosSet = new Map<string, OcupacionView>();
+    
+    // Agregar horarios del período
+    periodos.horariosPeriodo.forEach(h => {
+      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}`;
+      horariosSet.set(key, h);
+    });
+    
+    // Agregar horarios base
+    datos.horarios.forEach(h => {
+      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}`;
+      if (!horariosSet.has(key)) {
+        horariosSet.set(key, h);
+      }
+    });
+    
+    // Agregar préstamos
+    datos.horariosConPrestamos.forEach(h => {
+      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}-${h.tipo}`;
+      if (!horariosSet.has(key)) {
+        horariosSet.set(key, h);
+      }
+    });
+    
+    return Array.from(horariosSet.values());
+  }, [datos.horarios, datos.horariosConPrestamos, periodos.horariosPeriodo]);
+
   const seleccion = useConsultaEspaciosSeleccion({
     puedeCrearSolicitudes,
     espacios: datos.espacios,
     filterFechaInicio: filtros.filterFechaInicio,
-    getConflictoEnRango
+    getConflictoEnRango,
+    horarios: todosLosHorarios
   });
 
   const exportacion = useConsultaEspaciosExport({
