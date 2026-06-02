@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../share/notificationBanner';
-import { apiClient } from '../../core/apiClient';
+import { horarioService } from '../../services/horarios/horariosAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const MI_HORARIO_CACHE_KEY = 'horarios-mi-horario';
@@ -22,10 +22,6 @@ export interface HorarioExtendido {
     cantidadEstudiantes?: number;
     programa?: string;
     semestre?: number;
-}
-
-interface HorarioResponse {
-    horarios: HorarioExtendido[];
 }
 
 export function useMiHorario() {
@@ -68,14 +64,29 @@ export function useMiHorario() {
                 return;
             }
 
-            // Determinar endpoint basado en el rol
-            const endpoint = esEstudiante
-                ? `/horario/mi-horario-estudiante/?usuario_id=${user.id}`
-                : `/horario/mi-horario/?usuario_id=${user.id}`;
+            // Obtener horarios usando el servicio según el rol
+            const response = esEstudiante
+                ? await horarioService.miHorarioEstudiante(user.id)
+                : await horarioService.miHorario(user.id);
 
-            const response = await apiClient.get<HorarioResponse>(endpoint);
-
-            const horariosData = response.horarios || [];
+            // Mapear horarios del servicio al formato local
+            const horariosData: HorarioExtendido[] = (response.horarios || []).map(h => ({
+                id: h.id,
+                diaSemana: h.dia_semana,
+                horaInicio: h.hora_inicio,
+                horaFin: h.hora_fin,
+                asignatura: h.asignatura_nombre,
+                asignaturaId: h.asignatura_id,
+                docente: h.docente_nombre,
+                docenteId: h.docente_id ?? undefined,
+                grupo: h.grupo_nombre,
+                grupoId: h.grupo_id,
+                espacio: h.espacio_nombre,
+                espacioId: h.espacio_id ?? 0,
+                cantidadEstudiantes: h.cantidad_estudiantes ?? undefined,
+                programa: h.programa_nombre,
+                semestre: h.semestre
+            }));
             setHorarios(horariosData);
             setSessionCacheData(cacheKey, activeToken, {
                 horarios: horariosData
@@ -126,17 +137,7 @@ const handleDescargarPDF = async () => {
     showNotification('Preparando descarga...', 'info');
 
     try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const url = `${apiUrl}/horario/exportar-pdf-usuario/?usuario_id=${user.id}`;
-
-        const response = await fetch(url, { method: 'GET' });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Error al generar PDF');
-        }
-
-        const blob = await response.blob();
+        const blob = await horarioService.exportarPdfUsuario(user.id);
         const objectUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = objectUrl;
@@ -171,17 +172,7 @@ const handleDescargarExcel = async () => {
     showNotification('Preparando descarga...', 'info');
 
     try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const url = `${apiUrl}/horario/exportar-excel-usuario/?usuario_id=${user.id}`;
-
-        const response = await fetch(url, { method: 'GET' });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Error al generar Excel');
-        }
-
-        const blob = await response.blob();
+        const blob = await horarioService.exportarExcelUsuario(user.id);
         const objectUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = objectUrl;

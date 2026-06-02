@@ -21,6 +21,7 @@ import { capacidadService } from '../../services/reporte/capacidadAPI';
 import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
+import { userService } from '../../services/users/authService';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const REPORTES_PERIODO_CACHE_KEY = 'reporte-reportes-periodo';
@@ -193,24 +194,21 @@ export function useReportes() {
 
                 let docentesFinales: Docente[] = [];
 
-                // Cargar docentes completos desde el endpoint
+                // Cargar docentes completos usando el servicio
                 try {
-                    const apiUrl = import.meta.env.VITE_API_URL;
-                    const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
-                    if (docentesResponse.ok) {
-                        const docentesData = await docentesResponse.json();
-                        const docentesList: Docente[] = [
-                            { id: 'todos', nombre: 'Todos', correo: '' },
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            ...docentesData.usuarios.map((u: any) => ({
+                    const docentesResponse = await userService.listarDocentes();
+                    const docentesList: Docente[] = [
+                        { id: 'todos', nombre: 'Todos', correo: '' },
+                        ...docentesResponse.usuarios
+                            .filter((u): u is typeof u & { id: number } => u.id !== undefined)
+                            .map((u) => ({
                                 id: u.id,
                                 nombre: u.nombre,
                                 correo: u.correo
                             }))
-                        ];
-                        setDocentes(docentesList);
-                        docentesFinales = docentesList;
-                    }
+                    ];
+                    setDocentes(docentesList);
+                    docentesFinales = docentesList;
                 } catch (error) {
                     console.error('Error al cargar docentes:', error);
                     // Fallback: usar nombres únicos de horarios

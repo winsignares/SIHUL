@@ -8,6 +8,7 @@ import { espacioService, type EspacioFisico } from '../../services/espacios/espa
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { userService } from '../../services/users/authService';
 import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
 
@@ -67,14 +68,6 @@ export interface HorarioFusionadoExtendido {
 }
 
 type TabMode = 'consulta' | 'crear' | 'modificacion' | 'fusionados';
-
-interface UsuariosListResponse {
-    usuarios: Array<{
-        id: number;
-        nombre: string;
-        correo: string;
-    }>;
-}
 
 export function useCentroHorarios() {
     const { user, role } = useAuth();
@@ -201,46 +194,59 @@ export function useCentroHorarios() {
             const horariosResponse = await horarioService.listExtendidos();
             setHorarios(horariosResponse.horarios);
 
-            // Cargar horarios fusionados
+            // Cargar horarios fusionados - procesamiento por lotes para evitar saturación
             const fusionadosResponse = await horarioFusionadoService.list();
-            const fusionadosConInfo: HorarioFusionadoExtendido[] = await Promise.all(
-                fusionadosResponse.horarios_fusionados.map(async (hf): Promise<HorarioFusionadoExtendido> => {
-                    if (!hf.grupo1_id || !hf.grupo2_id) {
-                        throw new Error(`Horario fusionado inválido (id=${hf.id ?? 'sin-id'}): grupo1_id/grupo2_id requeridos`);
-                    }
+            const fusionadosConInfo: HorarioFusionadoExtendido[] = [];
+            const BATCH_SIZE = 5; // Procesar máximo 5 horarios fusionados en paralelo
 
-                    // Obtener información de los grupos
-                    const [grupo1, grupo2, grupo3] = await Promise.all([
-                        grupoService.get(hf.grupo1_id),
-                        grupoService.get(hf.grupo2_id),
-                        hf.grupo3_id ? grupoService.get(hf.grupo3_id) : Promise.resolve(null)
-                    ]);
+            for (let i = 0; i < fusionadosResponse.horarios_fusionados.length; i += BATCH_SIZE) {
+                const batch = fusionadosResponse.horarios_fusionados.slice(i, i + BATCH_SIZE);
+                const batchResults = await Promise.all(
+                    batch.map(async (hf): Promise<HorarioFusionadoExtendido | null> => {
+                        if (!hf.grupo1_id || !hf.grupo2_id) {
+                            console.warn(`Horario fusionado inválido (id=${hf.id ?? 'sin-id'}): grupo1_id/grupo2_id requeridos`);
+                            return null;
+                        }
 
-                    // Buscar información adicional de horarios
-                    const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
-                    
-                    return {
-                        id: hf.id as number,
-                        grupo1_id: hf.grupo1_id,
-                        grupo2_id: hf.grupo2_id,
-                        grupo3_id: hf.grupo3_id ?? null,
-                        grupo1_nombre: grupo1.nombre,
-                        grupo2_nombre: grupo2.nombre,
-                        grupo3_nombre: grupo3?.nombre || null,
-                        asignatura_id: hf.asignatura_id,
-                        asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
-                        docente_id: horario1?.docente_id ?? null,
-                        docente_nombre: horario1?.docente_nombre || 'N/A',
-                        espacio_id: horario1?.espacio_id ?? hf.espacio_id,
-                        espacio_nombre: horario1?.espacio_nombre || 'N/A',
-                        dia_semana: hf.dia_semana,
-                        hora_inicio: hf.hora_inicio,
-                        hora_fin: hf.hora_fin,
-                        cantidad_estudiantes: hf.cantidad_estudiantes ?? null,
-                        comentario: hf.comentario ?? null
-                    };
-                })
-            );
+                        try {
+                            // Obtener información de los grupos
+                            const [grupo1, grupo2, grupo3] = await Promise.all([
+                                grupoService.get(hf.grupo1_id),
+                                grupoService.get(hf.grupo2_id),
+                                hf.grupo3_id ? grupoService.get(hf.grupo3_id) : Promise.resolve(null)
+                            ]);
+
+                            // Buscar información adicional de horarios
+                            const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
+                            
+                            return {
+                                id: hf.id as number,
+                                grupo1_id: hf.grupo1_id,
+                                grupo2_id: hf.grupo2_id,
+                                grupo3_id: hf.grupo3_id ?? null,
+                                grupo1_nombre: grupo1.nombre,
+                                grupo2_nombre: grupo2.nombre,
+                                grupo3_nombre: grupo3?.nombre || null,
+                                asignatura_id: hf.asignatura_id,
+                                asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
+                                docente_id: horario1?.docente_id ?? null,
+                                docente_nombre: horario1?.docente_nombre || 'N/A',
+                                espacio_id: horario1?.espacio_id ?? hf.espacio_id,
+                                espacio_nombre: horario1?.espacio_nombre || 'N/A',
+                                dia_semana: hf.dia_semana,
+                                hora_inicio: hf.hora_inicio,
+                                hora_fin: hf.hora_fin,
+                                cantidad_estudiantes: hf.cantidad_estudiantes ?? null,
+                                comentario: hf.comentario ?? null
+                            };
+                        } catch (error) {
+                            console.warn(`Error cargando horario fusionado ${hf.id}:`, error);
+                            return null;
+                        }
+                    })
+                );
+                fusionadosConInfo.push(...batchResults.filter((item): item is HorarioFusionadoExtendido => item !== null));
+            }
             setHorariosFusionados(fusionadosConInfo);
 
             // Cargar grupos
@@ -267,31 +273,29 @@ export function useCentroHorarios() {
             const espaciosResponse = await espacioService.list();
             setEspacios(espaciosResponse.espacios);
 
-            // Cargar docentes (usuarios)
-            const apiUrl = import.meta.env.VITE_API_URL;
-            const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
-            if (docentesResponse.ok) {
-                const docentesData = (await docentesResponse.json()) as unknown as UsuariosListResponse;
-                const docentesList: Docente[] = docentesData.usuarios.map((u) => ({
+            // Cargar docentes (usuarios) usando el servicio de autenticación
+            const docentesResponse = await userService.listarDocentes();
+            const docentesList: Docente[] = docentesResponse.usuarios
+                .filter((u): u is typeof u & { id: number } => u.id !== undefined)
+                .map((u) => ({
                     id: u.id,
                     nombre: u.nombre,
                     correo: u.correo
                 }));
-                setDocentes(docentesList);
+            setDocentes(docentesList);
 
-                setSessionCacheData(cacheKey, activeToken, {
-                    horarios: horariosResponse.horarios,
-                    horariosFusionados: fusionadosConInfo,
-                    grupos: gruposResponse.grupos,
-                    facultades: allFacultades,
-                    programas: programasResponse.programas,
-                    espacios: espaciosResponse.espacios,
-                    docentes: docentesList,
-                    filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
-                        ? user.facultad.id.toString()
-                        : undefined
-                });
-            }
+            setSessionCacheData(cacheKey, activeToken, {
+                horarios: horariosResponse.horarios,
+                horariosFusionados: fusionadosConInfo,
+                grupos: gruposResponse.grupos,
+                facultades: allFacultades,
+                programas: programasResponse.programas,
+                espacios: espaciosResponse.espacios,
+                docentes: docentesList,
+                filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
+                    ? user.facultad.id.toString()
+                    : undefined
+            });
             
         } catch (error) {
             showNotification(
