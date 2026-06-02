@@ -14,18 +14,18 @@ function getFechaColombia(): Date {
   return new Date(utc + 3600000 * -5);
 }
 
-type GetOcupacionFn = (espacioId: string, dia: string, hora: number) => unknown;
+type GetConflictoFn = (espacioId: string, dia: string, horaInicio: number, horaFin: number) => unknown;
 
 export function useConsultaEspaciosSeleccion({
   puedeCrearSolicitudes,
   espacios,
   filterFechaInicio,
-  getOcupacionPorHora
+  getConflictoEnRango
 }: {
   puedeCrearSolicitudes: boolean;
   espacios: EspacioView[];
   filterFechaInicio: string;
-  getOcupacionPorHora: GetOcupacionFn;
+  getConflictoEnRango: GetConflictoFn;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [seleccionInicio, setSeleccionInicio] = useState<{
@@ -50,7 +50,7 @@ export function useConsultaEspaciosSeleccion({
       // Validar que no exceda el horario permitido
       if (horaEntera >= 22) return;
 
-      const ocupado = getOcupacionPorHora(espacioId, dia, horaEntera);
+      const ocupado = getConflictoEnRango(espacioId, dia, horaEntera, horaEntera + 1);
       if (ocupado) return;
 
       setIsDragging(true);
@@ -58,7 +58,7 @@ export function useConsultaEspaciosSeleccion({
       // Iniciar con 1 hora de duración
       setSeleccionRango({ espacioId, dia, horaInicio: horaEntera, horaFin: horaEntera + 1 });
     },
-    [getOcupacionPorHora, puedeCrearSolicitudes]
+    [getConflictoEnRango, puedeCrearSolicitudes]
   );
 
   const actualizarSeleccion = useCallback(
@@ -78,13 +78,29 @@ export function useConsultaEspaciosSeleccion({
       // Validar que no exceda las 22:00
       const horaFinValidada = Math.min(horaFin, 22);
 
+      if (getConflictoEnRango(espacioId, dia, horaInicio, horaFinValidada)) return;
+
       setSeleccionRango({ espacioId, dia, horaInicio, horaFin: horaFinValidada });
     },
-    [isDragging, seleccionInicio]
+    [getConflictoEnRango, isDragging, seleccionInicio]
   );
 
   const finalizarSeleccion = useCallback(() => {
     if (!isDragging || !seleccionRango) {
+      setIsDragging(false);
+      setSeleccionInicio(null);
+      setSeleccionRango(null);
+      return;
+    }
+
+    if (
+      getConflictoEnRango(
+        seleccionRango.espacioId,
+        seleccionRango.dia,
+        seleccionRango.horaInicio,
+        seleccionRango.horaFin
+      )
+    ) {
       setIsDragging(false);
       setSeleccionInicio(null);
       setSeleccionRango(null);
@@ -169,7 +185,7 @@ export function useConsultaEspaciosSeleccion({
     setIsDragging(false);
     setSeleccionInicio(null);
     setSeleccionRango(null);
-  }, [espacios, filterFechaInicio, isDragging, seleccionRango]);
+  }, [espacios, filterFechaInicio, getConflictoEnRango, isDragging, seleccionRango]);
 
   const cancelarSeleccion = useCallback(() => {
     setIsDragging(false);

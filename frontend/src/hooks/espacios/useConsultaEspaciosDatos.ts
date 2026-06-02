@@ -342,6 +342,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
     const prestamosVisibles = expandirPrestamosParaCronograma(prestamos, desde, hasta);
 
     const prestamosComoOcupacion: OcupacionView[] = prestamosVisibles.map((p) => ({
+      id: p.id,
       espacioId: p.espacio_id.toString(),
       dia: getDiaSemanaEspanolDesdeISO(p.fecha),
       horaInicio: normalizarHoraGrid(horaANumero(p.hora_inicio)),

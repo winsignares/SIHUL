@@ -81,7 +81,7 @@ def check_espacio_disponible(espacio_id, fecha, hora_inicio, hora_fin, prestamo_
             dia_semana__iexact=dia_nombre, # Case insensitive por seguridad
             hora_inicio__lt=hora_fin,
             hora_fin__gt=hora_inicio,
-            estado='aprobado'
+            estado__in=['pendiente', 'aprobado']
         )
         
         if horarios_conflicto.exists():

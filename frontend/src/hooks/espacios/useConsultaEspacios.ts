@@ -6,7 +6,7 @@ import { useConsultaEspaciosPaginacion } from './useConsultaEspaciosPaginacion';
 import { useConsultaEspaciosSeleccion } from './useConsultaEspaciosSeleccion';
 import { useConsultaEspaciosExport } from './useConsultaEspaciosExport';
 import { useConsultaEspaciosPeriodos } from './useConsultaEspaciosPeriodos';
-import type { EspacioView } from './types';
+import type { EspacioView, OcupacionView } from './types';
 
 export type {
   EspacioView,
@@ -59,6 +59,80 @@ export function useConsultaEspacios() {
       return matches.find((h) => h.tipo === 'prestamo') ?? matches[0];
     },
     [horariosMostrados]
+  );
+
+  const esMismaOcupacion = useCallback((ocupacionActual: OcupacionView, ocupacionObjetivo: OcupacionView) => {
+    if (ocupacionActual === ocupacionObjetivo) return true;
+
+    if (
+      ocupacionActual.tipo === 'horario' &&
+      ocupacionObjetivo.tipo === 'horario' &&
+      ocupacionActual.id &&
+      ocupacionObjetivo.id
+    ) {
+      return (
+        ocupacionActual.id === ocupacionObjetivo.id &&
+        ocupacionActual.espacioId === ocupacionObjetivo.espacioId &&
+        ocupacionActual.dia === ocupacionObjetivo.dia &&
+        ocupacionActual.horaInicio === ocupacionObjetivo.horaInicio &&
+        ocupacionActual.horaFin === ocupacionObjetivo.horaFin
+      );
+    }
+
+    if (
+      ocupacionActual.tipo === 'prestamo' &&
+      ocupacionObjetivo.tipo === 'prestamo' &&
+      ocupacionActual.id &&
+      ocupacionObjetivo.id
+    ) {
+      return (
+        ocupacionActual.id === ocupacionObjetivo.id &&
+        ocupacionActual.espacioId === ocupacionObjetivo.espacioId &&
+        ocupacionActual.dia === ocupacionObjetivo.dia &&
+        ocupacionActual.prestamo?.fecha === ocupacionObjetivo.prestamo?.fecha &&
+        ocupacionActual.horaInicio === ocupacionObjetivo.horaInicio &&
+        ocupacionActual.horaFin === ocupacionObjetivo.horaFin
+      );
+    }
+
+    return (
+      ocupacionActual.espacioId === ocupacionObjetivo.espacioId &&
+      ocupacionActual.dia === ocupacionObjetivo.dia &&
+      ocupacionActual.horaInicio === ocupacionObjetivo.horaInicio &&
+      ocupacionActual.horaFin === ocupacionObjetivo.horaFin &&
+      ocupacionActual.materia === ocupacionObjetivo.materia &&
+      ocupacionActual.tipo === ocupacionObjetivo.tipo &&
+      ocupacionActual.prestamo?.fecha === ocupacionObjetivo.prestamo?.fecha
+    );
+  }, []);
+
+  const getConflictoEnRango = useCallback(
+    (
+      espacioId: string,
+      dia: string,
+      horaInicio: number,
+      horaFin: number,
+      ocupacionIgnorada?: typeof horariosMostrados[number] | null
+    ) => {
+      if (horaInicio >= horaFin) return null;
+
+      let ocupacionIgnoradaConsumida = false;
+      const matches = horariosMostrados.filter((h) => {
+        if (h.espacioId !== espacioId || h.dia !== dia) return false;
+        if (
+          ocupacionIgnorada &&
+          !ocupacionIgnoradaConsumida &&
+          esMismaOcupacion(h, ocupacionIgnorada)
+        ) {
+          ocupacionIgnoradaConsumida = true;
+          return false;
+        }
+        return horaInicio < h.horaFin && horaFin > h.horaInicio;
+      });
+
+      return matches.find((h) => h.tipo === 'prestamo') ?? matches[0] ?? null;
+    },
+    [esMismaOcupacion, horariosMostrados]
   );
 
   const filteredEspacios = useMemo(() => {
@@ -117,7 +191,7 @@ export function useConsultaEspacios() {
     puedeCrearSolicitudes,
     espacios: datos.espacios,
     filterFechaInicio: filtros.filterFechaInicio,
-    getOcupacionPorHora
+    getConflictoEnRango
   });
 
   const exportacion = useConsultaEspaciosExport({
@@ -180,6 +254,7 @@ export function useConsultaEspacios() {
     goToNextPageWindow: paginacion.goToNextPageWindow,
     estadisticas: datos.estadisticas,
     getOcupacionPorHora,
+    getConflictoEnRango,
     loading: datos.loading,
     horarios: horariosMostrados,
     prestamos: datos.prestamos,

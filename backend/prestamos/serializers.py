@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .availability import validar_disponibilidad_prestamo
 from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
 
 
@@ -21,6 +22,13 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
         model = PrestamoEspacio
         fields = '__all__'
 
+    def validate(self, attrs):
+        instance = self.instance or PrestamoEspacio()
+        for field, value in attrs.items():
+            setattr(instance, field, value)
+        validar_disponibilidad_prestamo(instance)
+        return attrs
+
 
 class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     espacio_nombre = serializers.CharField(source='espacio.nombre', read_only=True)
@@ -35,6 +43,13 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrestamoEspacioPublico
         fields = '__all__'
+
+    def validate(self, attrs):
+        instance = self.instance or PrestamoEspacioPublico()
+        for field, value in attrs.items():
+            setattr(instance, field, value)
+        validar_disponibilidad_prestamo(instance)
+        return attrs
 
 
 class PrestamoRecursoSerializer(serializers.ModelSerializer):
