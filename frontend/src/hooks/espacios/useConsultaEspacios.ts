@@ -153,8 +153,14 @@ export function useConsultaEspacios() {
         (filtros.filterApertura === 'cerrado' && !e.estaAbierto);
       const matchesSede = filtros.filterSede === 'todas' || e.sede === filtros.filterSede;
 
-      // Filtrar por ocupación (horarios/préstamos)
-      const horariosEspacio = horariosMostrados.filter(h => h.espacioId === e.id);
+      // Filtrar por ocupación (horarios/préstamos) - USAR HORARIOS DEL PERIODO SELECCIONADO
+      // Si hay un período específico seleccionado, usar solo horarios de ese período
+      // Si no, usar horariosMostrados (que incluye horarios base + préstamos)
+      const horariosParaFiltro = filtros.filterPeriodo 
+        ? periodos.horariosPeriodo 
+        : horariosMostrados;
+      
+      const horariosEspacio = horariosParaFiltro.filter(h => h.espacioId === e.id);
       const tieneHorarios = horariosEspacio.some(h => h.tipo !== 'prestamo');
       const tienePrestamos = horariosEspacio.some(h => h.tipo === 'prestamo');
 
@@ -187,8 +193,10 @@ export function useConsultaEspacios() {
     filtros.filterSede,
     filtros.filterTipo,
     filtros.filterOcupacion,
+    filtros.filterPeriodo,
     filtros.searchTerm,
-    horariosMostrados
+    horariosMostrados,
+    periodos.horariosPeriodo
   ]);
 
   const paginacion = useConsultaEspaciosPaginacion(filteredEspacios);
@@ -317,6 +325,7 @@ export function useConsultaEspacios() {
     periodosLoading: periodos.periodosLoading,
     horariosLoading: periodos.horariosLoading,
     errorBusquedaPeriodo: periodos.errorBusquedaPeriodo,
-    buscarPeriodoPorRangoFechas: periodos.buscarPeriodoPorRangoFechas
+    buscarPeriodoPorRangoFechas: periodos.buscarPeriodoPorRangoFechas,
+    cargarHorariosPorPeriodo: periodos.cargarHorariosPorPeriodo
   };
 }

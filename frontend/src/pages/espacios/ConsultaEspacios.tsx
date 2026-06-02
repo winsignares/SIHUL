@@ -241,6 +241,7 @@ export default function ConsultaEspacios() {
     horariosLoading,
     errorBusquedaPeriodo,
     buscarPeriodoPorRangoFechas,
+    cargarHorariosPorPeriodo,
     // Vista individual
     espacioSeleccionado,
     verCronogramaIndividual,
@@ -759,6 +760,13 @@ export default function ConsultaEspacios() {
       };
     }
   }, [isDragging, puedeCrearSolicitudes, editModeEnabled, finalizarSeleccion]);
+
+  // Efecto para cargar horarios del período seleccionado cuando cambia el filtro de período
+  useEffect(() => {
+    if (filterPeriodo) {
+      cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente']);
+    }
+  }, [filterPeriodo, cargarHorariosPorPeriodo]);
 
   // Actualizar preview de fechas cuando cambian los parámetros de repetición
   useEffect(() => {
