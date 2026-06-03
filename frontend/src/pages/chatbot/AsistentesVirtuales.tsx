@@ -1,13 +1,6 @@
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '../../share/select';
-import {
   Bot,
   User,
   Sparkles,
@@ -37,11 +30,6 @@ export default function AsistentesVirtuales() {
   ];
   const {
     asistenteActivo,
-    esPublico,
-    seccionalesPublico,
-    seccionalPublica,
-    setSeccionalPublica,
-    cargandoSeccionales,
     inputMensaje,
     setInputMensaje,
     isTyping,
@@ -352,35 +340,7 @@ export default function AsistentesVirtuales() {
                     )}
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-slate-900 dark:text-slate-100">{asistenteActivo.nombre}</h2>
-                      {esPublico && (
-                        <div className="min-w-[200px]">
-                          <Select
-                            value={seccionalPublica}
-                            onValueChange={setSeccionalPublica}
-                            disabled={cargandoSeccionales || seccionalesPublico.length === 0}
-                          >
-                            <SelectTrigger className="h-8 bg-white/90 dark:bg-slate-900/50">
-                              <SelectValue
-                                placeholder={
-                                  cargandoSeccionales
-                                    ? 'Cargando seccionales...'
-                                    : 'Selecciona tu seccional'
-                                }
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {seccionalesPublico.map((seccional) => (
-                                <SelectItem key={seccional} value={seccional}>
-                                  {seccional}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
+                    <h2 className="text-slate-900 dark:text-slate-100">{asistenteActivo.nombre}</h2>
                     <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
                       {isTyping ? (
                         <motion.span
@@ -447,7 +407,6 @@ export default function AsistentesVirtuales() {
                   </motion.div>
                 </div>
               </div>
-
             </motion.div>
 
             {/* Panel de Historial */}

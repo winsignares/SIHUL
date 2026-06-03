@@ -461,8 +461,8 @@ export default function DocentePrestamos() {
                 <TableHead>Espacio</TableHead>
                 <TableHead>Fecha y Hora</TableHead>
                 <TableHead>Tipo de Actividad</TableHead>
+                <TableHead>Recursos</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Detalles</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -497,19 +497,34 @@ export default function DocentePrestamos() {
                     <TableCell>
                       <Badge variant="outline" className="text-slate-900 dark:text-slate-100">{prestamo.tipoEvento}</Badge>
                     </TableCell>
+                    <TableCell>
+                      {prestamo.recursosNecesarios.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {prestamo.recursosNecesarios.map((recurso, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-xs"
+                            >
+                              {recurso}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-sm">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>{getEstadoBadge(prestamo.estado)}</TableCell>
                     <TableCell>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setDialogPrestamoId(prestamo.id)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver Detalles
-                      </Button>
-                    </TableCell>
-                    <TableCell>
                       <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setDialogPrestamoId(prestamo.id)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver
+                        </Button>
                         {(prestamo.estado === 'pendiente' || prestamo.estado === 'rechazado') && (
                           <>
                             <Button

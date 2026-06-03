@@ -105,7 +105,7 @@ export function useConsultaHorario() {
                 grupo: h.grupo_nombre,
                 espacio: h.espacio_nombre,
                 docente: h.docente_nombre,
-                docente_id: h.docente_id,
+                docente_id: h.docente_id ?? undefined,
                 facultad: h.programa_nombre
             }));
 

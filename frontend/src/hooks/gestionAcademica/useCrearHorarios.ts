@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
@@ -59,12 +59,19 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [asignaturasPrograma, setAsignaturasPrograma] = useState<AsignaturaPrograma[]>([]);
     const [docentes, setDocentes] = useState<Usuario[]>([]);
     const [todosLosHorarios, setTodosLosHorarios] = useState<HorarioExtendido[]>([]);
+    const loadedRef = useRef(false);
 
     // Filtros
-    const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
-    const [filtroPrograma, setFiltroPrograma] = useState<number | string>('all');
-    const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
-    const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
+    const [filtroFacultad, setFiltroFacultadState] = useState<string>('all');
+    const [filtroPrograma, setFiltroProgramaState] = useState<number | string>('all');
+    const [filtroSemestre, setFiltroSemestreState] = useState<string>('all');
+    const [filtroGrupo, setFiltroGrupoState] = useState<string>('all');
+
+    // Stable setters wrapped in useCallback
+    const setFiltroFacultad = useCallback((v: string) => setFiltroFacultadState(v), []);
+    const setFiltroPrograma = useCallback((v: number | string) => setFiltroProgramaState(v), []);
+    const setFiltroSemestre = useCallback((v: string) => setFiltroSemestreState(v), []);
+    const setFiltroGrupo = useCallback((v: string) => setFiltroGrupoState(v), []);
 
     // Estados de la UI
     const [vistaActual, setVistaActual] = useState<'lista' | 'asignar'>('lista');
@@ -104,16 +111,11 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         espacios,
     });
 
-    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const semestres = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-    useEffect(() => {
-        loadData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const diasSemana = useMemo(() => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'], []);
+    const semestres = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], []);
 
     // Carga progresiva: primero datos pequeños, luego grupos masivos
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
         const activeToken = localStorage.getItem('auth_token');
         const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
         const cacheKey = `${CREAR_HORARIOS_CACHE_KEY}-${userScope}`;
@@ -267,7 +269,6 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 console.warn('Error al cargar horarios:', error);
                 return { todosHorarios: [] as HorarioExtendido[] };
             }
-            
         } catch (error) {
             showNotification(
                 `Error al cargar datos: ${getErrorMessage(error)}`,
@@ -276,22 +277,25 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             setLoading(false);
             return { todosHorarios: [] as HorarioExtendido[] };
         }
-    };
+    }, [role?.nombre, user?.id, user?.facultad, showNotification, setFiltroFacultad]);
 
-    // Obtener grupos sin horario (o con horarios incompletos)
-    const obtenerGrupos = (): GrupoConInfo[] => {
-        return grupos;
-    };
+    // Load data once when user/role available - guarded by loadedRef
+    useEffect(() => {
+        if (user && role && !loadedRef.current) {
+            loadedRef.current = true;
+            loadData();
+        }
+    }, [user, role, loadData]);
 
     // Filtrar grupos
-    const gruposSinHorarioFiltrados = obtenerGrupos().filter(grupo => {
+    const gruposSinHorarioFiltrados = useMemo(() => grupos.filter(grupo => {
         const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
         const matchPrograma = filtroPrograma === 'all' || grupo.programa_id?.toString() === filtroPrograma.toString();
         const matchSemestre = filtroSemestre === 'all' || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
         const matchGrupo = filtroGrupo === 'all' || (grupo.nombre && grupo.nombre.toLowerCase().includes(filtroGrupo.toLowerCase()));
 
         return matchFacultad && matchPrograma && matchSemestre && matchGrupo;
-    });
+    }), [grupos, filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo]);
 
     // Paginación para grupos sin horario
     const [currentPage, setCurrentPage] = useState(1);
@@ -300,25 +304,37 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const totalPages = Math.ceil(gruposSinHorarioFiltrados.length / pageSize);
     const paginatedGrupos = gruposSinHorarioFiltrados.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-    const goToPage = (page: number) => setCurrentPage(page);
-    const goToNextPage = () => setCurrentPage(p => Math.min(p + 1, totalPages));
-    const goToPrevPage = () => setCurrentPage(p => Math.max(p - 1, 1));
+    const goToPage = useCallback((page: number) => setCurrentPage(page), []);
+    const goToNextPage = useCallback(() => setCurrentPage(p => Math.min(p + 1, totalPages)), [totalPages]);
+    const goToPrevPage = useCallback(() => setCurrentPage(p => Math.max(p - 1, 1)), []);
 
     // Resetear a página 1 cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
     }, [filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo]);
 
-    const programasFiltrados = programas.filter(p =>
-        filtroFacultad === 'all' || p.facultad_id?.toString() === filtroFacultad
+    const programasFiltrados = useMemo(() =>
+        programas.filter(p => filtroFacultad === 'all' || p.facultad_id?.toString() === filtroFacultad),
+        [programas, filtroFacultad]
     );
 
-    const limpiarFiltros = () => {
-        setFiltroFacultad('all');
-        setFiltroPrograma('all');
-        setFiltroSemestre('all');
-        setFiltroGrupo('all');
-    };
+    // Resetear programa seleccionado si ya no está en la lista filtrada
+    useEffect(() => {
+        if (filtroPrograma !== 'all') {
+            const programIdStr = filtroPrograma.toString();
+            const stillValid = programasFiltrados.some(p => p.id?.toString() === programIdStr);
+            if (!stillValid) {
+                setFiltroProgramaState('all');
+            }
+        }
+    }, [programasFiltrados, filtroPrograma]);
+
+    const limpiarFiltros = useCallback(() => {
+        setFiltroFacultadState('all');
+        setFiltroProgramaState('all');
+        setFiltroSemestreState('all');
+        setFiltroGrupoState('all');
+    }, []);
 
     // Obtener asignaturas de un programa específico y semestre
     const getAsignaturasByProgramaYSemestre = (programaId: number, semestre: number): Asignatura[] => {

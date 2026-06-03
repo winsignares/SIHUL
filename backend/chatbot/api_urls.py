@@ -8,12 +8,7 @@ from .api_views import (
     PreguntaSugeridaDetailAPIView,
     PreguntaSugeridaListCreateAPIView,
 )
-from .views import (
-    enviar_pregunta,
-    enviar_pregunta_publico,
-    list_agentes_publico,
-    obtener_historial,
-)
+from .views import enviar_pregunta_publico, list_agentes_publico
 
 urlpatterns = [
     # Endpoints privados (requieren autenticacion)
@@ -27,8 +22,4 @@ urlpatterns = [
     # Endpoints publicos (sin autenticacion)
     path('public/agentes/', list_agentes_publico, name='api-public-agentes'),
     path('public/pregunta/', enviar_pregunta_publico, name='api-public-pregunta'),
-
-    # Endpoints legacy usados por el frontend
-    path('pregunta/', enviar_pregunta, name='api-legacy-pregunta'),
-    path('historial/', obtener_historial, name='api-legacy-historial'),
 ]

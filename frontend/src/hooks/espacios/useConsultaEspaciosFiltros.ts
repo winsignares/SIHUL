@@ -36,10 +36,11 @@ export function useConsultaEspaciosFiltros() {
     []
   );
 
-  // Generar slots de 15 minutos desde las 6:00 hasta las 22:00 (16 horas * 4 = 64 slots)
+  // Generar slots de 15 minutos desde las 6:00 hasta las 23:00 (17 horas * 4 = 68 slots)
+  // Se mantienen para mostrar horarios correctamente, pero la selección de préstamos agrupa por horas
   const horas = useMemo(() => {
     const slots: number[] = [];
-    for (let h = 6; h < 22; h++) {
+    for (let h = 6; h < 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         slots.push(h + m / 60);
       }

@@ -4,7 +4,6 @@ import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { SearchableSelect } from '../../share/searchableSelect';
 import {
   Clock,
@@ -105,6 +104,9 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
   // Obtener espacios disponibles según la cantidad de estudiantes
   const espaciosDisponibles = getEspaciosDisponibles(cantidadEstudiantes as number);
 
+  // Valor string para el select de programa
+  const filtroProgramaValue = String(filtroPrograma);
+
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {
     return (
@@ -137,53 +139,68 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>Facultad</Label>
-                  <Select value={filtroFacultad} onValueChange={setFiltroFacultad}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las facultades</SelectItem>
-                      {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todas las facultades' },
+                      ...facultades.map(f => ({
+                        id: f.id?.toString() || '',
+                        nombre: f.nombre
+                      }))
+                    ]}
+                    value={filtroFacultad}
+                    onSelect={(item) => setFiltroFacultad(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar facultad..."
+                    searchPlaceholder="Buscar facultad..."
+                    emptyMessage="No se encontró ninguna facultad"
+                  />
                 </div>
 
                 <div>
                   <Label>Programa</Label>
-                  <Select value={filtroPrograma.toString()} onValueChange={setFiltroPrograma}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los programas</SelectItem>
-                      {programasFiltrados.map(p => (
-                        <SelectItem key={p.id} value={p.id?.toString() || ''}>{p.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los programas' },
+                      ...programasFiltrados.map(p => ({
+                        id: p.id?.toString() || '',
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroProgramaValue}
+                    onSelect={(item) => setFiltroPrograma(item.id === 'all' ? 'all' : Number(item.id))}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar programa..."
+                    searchPlaceholder="Buscar programa..."
+                    emptyMessage="No se encontró ningún programa"
+                  />
                 </div>
 
                 <div>
                   <Label>Semestre</Label>
-                  <Select value={filtroSemestre} onValueChange={setFiltroSemestre}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los semestres</SelectItem>
-                      {semestres.map(s => (
-                        <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los semestres' },
+                      ...semestres.map(s => ({
+                        id: s.toString(),
+                        nombre: `Semestre ${s}`
+                      }))
+                    ]}
+                    value={filtroSemestre}
+                    onSelect={(item) => setFiltroSemestre(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar semestre..."
+                    searchPlaceholder="Buscar semestre..."
+                    emptyMessage="No se encontró ningún semestre"
+                  />
                 </div>
 
                 <div>
                   <Label>Grupo</Label>
                   <Input
-                    placeholder="Buscar grupo..."
+                    placeholder="Filtrar grupo por nombre..."
                     value={filtroGrupo === 'all' ? '' : filtroGrupo}
                     onChange={(e) => setFiltroGrupo(e.target.value || 'all')}
                   />
@@ -692,8 +709,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <SearchableSelect
                   items={docentes}
                   value={docenteSeleccionado}
-                  onSelect={(docente) => setDocenteSeleccionado(docente.id)}
-                  getItemId={(docente) => docente.id}
+                  onSelect={(docente) => setDocenteSeleccionado(docente.id ?? '')}
+                  getItemId={(docente) => docente.id ?? ''}
                   getItemLabel={(docente) => docente.nombre}
                   getItemSecondary={(docente) => docente.correo}
                   placeholder="Seleccionar docente..."
@@ -711,8 +728,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <SearchableSelect
                   items={espaciosDisponibles}
                   value={espacioSeleccionado}
-                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id)}
-                  getItemId={(espacio) => espacio.id}
+                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id ?? '')}
+                  getItemId={(espacio) => espacio.id ?? ''}
                   getItemLabel={(espacio) => espacio.nombre}
                   getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad} personas`}
                   placeholder="Seleccionar espacio..."

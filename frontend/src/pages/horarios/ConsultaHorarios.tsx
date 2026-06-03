@@ -5,7 +5,7 @@ import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
 import { Search, Clock, MapPin, User, Calendar, BookOpen, Filter } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useConsultaHorarios } from '../../hooks/horarios/useConsultaHorarios';
+import { useConsultaHorarios, type Horario } from '../../hooks/horarios/useConsultaHorarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function ConsultaHorarios() {
@@ -80,7 +80,7 @@ export default function ConsultaHorarios() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los espacios</SelectItem>
-                {espacios.filter(e => e !== 'todos').map(espacio => (
+                {espacios.filter((e: string) => e !== 'todos').map((espacio: string) => (
                   <SelectItem key={espacio} value={espacio}>{espacio}</SelectItem>
                 ))}
               </SelectContent>
@@ -92,7 +92,7 @@ export default function ConsultaHorarios() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los docentes</SelectItem>
-                {docentes.filter(d => d !== 'todos').map(docente => (
+                {docentes.filter((d: string) => d !== 'todos').map((docente: string) => (
                   <SelectItem key={docente} value={docente}>{docente}</SelectItem>
                 ))}
               </SelectContent>
@@ -104,7 +104,7 @@ export default function ConsultaHorarios() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los programas</SelectItem>
-                {programas.filter(p => p !== 'todos').map(programa => (
+                {programas.filter((p: string) => p !== 'todos').map((programa: string) => (
                   <SelectItem key={programa} value={programa}>{programa}</SelectItem>
                 ))}
               </SelectContent>
@@ -116,7 +116,7 @@ export default function ConsultaHorarios() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todas las facultades</SelectItem>
-                {facultades.filter(f => f !== 'todos').map(facultad => (
+                {facultades.filter((f: string) => f !== 'todos').map((facultad: string) => (
                   <SelectItem key={facultad} value={facultad}>{facultad}</SelectItem>
                 ))}
               </SelectContent>
@@ -142,8 +142,8 @@ export default function ConsultaHorarios() {
 
       {/* Horarios Grid */}
       <div className="grid lg:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 gap-4">
-        {dias.map(dia => {
-          const clasesDelDia = filteredHorarios.filter(h => h.dia === dia);
+        {dias.map((dia: string) => {
+          const clasesDelDia = filteredHorarios.filter((h: Horario) => h.dia === dia);
           return (
             <motion.div
               key={dia}
@@ -157,7 +157,7 @@ export default function ConsultaHorarios() {
                 </CardHeader>
                 <CardContent className="p-4 space-y-3 min-h-[300px]">
                   {clasesDelDia.length > 0 ? (
-                    clasesDelDia.map(horario => (
+                    clasesDelDia.map((horario: Horario) => (
                       <motion.div
                         key={horario.id}
                         initial={{ opacity: 0, scale: 0.95 }}
