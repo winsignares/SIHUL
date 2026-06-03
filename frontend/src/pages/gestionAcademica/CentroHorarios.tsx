@@ -163,69 +163,86 @@ export default function CentroHorarios() {
                 {/* Facultad */}
                 <div>
                   <Label>Facultad</Label>
-                  <Select
+                  <SearchableSelect
+                    items={[
+                      ...(facultades.length > 1 ? [{ id: 'all', nombre: 'Todas las facultades' }] : []),
+                      ...facultades.map(f => ({
+                        id: (f.id ?? '').toString(),
+                        nombre: f.nombre
+                      }))
+                    ]}
                     value={filtroFacultad}
-                    onValueChange={setFiltroFacultad}
+                    onSelect={(item) => setFiltroFacultad(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar facultad..."
+                    searchPlaceholder="Buscar facultad..."
+                    emptyMessage="No se encontró ninguna facultad"
                     disabled={facultades.length === 1}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facultades.length > 1 && <SelectItem value="all">Todas</SelectItem>}
-                      {facultades.map(f => (
-                        <SelectItem key={f.id ?? 'unknown'} value={(f.id ?? '').toString()}>{f.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
 
                 {/* Programa */}
                 <div>
                   <Label>Programa</Label>
-                  <Select value={filtroPrograma} onValueChange={setFiltroPrograma}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {programasFiltrados.map(p => (
-                        <SelectItem key={p.id ?? 'unknown'} value={(p.id ?? '').toString()}>{p.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los programas' },
+                      ...programasFiltrados.map(p => ({
+                        id: (p.id ?? '').toString(),
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroPrograma}
+                    onSelect={(item) => setFiltroPrograma(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar programa..."
+                    searchPlaceholder="Buscar programa..."
+                    emptyMessage="No se encontró ningún programa"
+                  />
                 </div>
 
                 {/* Grupo */}
                 <div>
                   <Label>Grupo</Label>
-                  <Select value={filtroGrupo} onValueChange={setFiltroGrupo}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {gruposUnicos.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los grupos' },
+                      ...gruposUnicos.map(g => ({
+                        id: g,
+                        nombre: g
+                      }))
+                    ]}
+                    value={filtroGrupo}
+                    onSelect={(item) => setFiltroGrupo(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar grupo..."
+                    searchPlaceholder="Buscar grupo..."
+                    emptyMessage="No se encontró ningún grupo"
+                  />
                 </div>
 
                 {/* Semestre */}
                 <div>
                   <Label>Semestre</Label>
-                  <Select value={filtroSemestre} onValueChange={setFiltroSemestre}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {semestresUnicos.map(s => (
-                        <SelectItem key={s} value={s.toString()}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los semestres' },
+                      ...semestresUnicos.map(s => ({
+                        id: s.toString(),
+                        nombre: `Semestre ${s}`
+                      }))
+                    ]}
+                    value={filtroSemestre}
+                    onSelect={(item) => setFiltroSemestre(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar semestre..."
+                    searchPlaceholder="Buscar semestre..."
+                    emptyMessage="No se encontró ningún semestre"
+                  />
                 </div>
               </div>
 
@@ -378,69 +395,86 @@ export default function CentroHorarios() {
                 {/* Facultad */}
                 <div>
                   <Label>Facultad</Label>
-                  <Select
+                  <SearchableSelect
+                    items={[
+                      ...(facultades.length > 1 ? [{ id: 'all', nombre: 'Todas las facultades' }] : []),
+                      ...facultades.map(f => ({
+                        id: (f.id ?? '').toString(),
+                        nombre: f.nombre
+                      }))
+                    ]}
                     value={filtroFacultad}
-                    onValueChange={setFiltroFacultad}
+                    onSelect={(item) => setFiltroFacultad(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar facultad..."
+                    searchPlaceholder="Buscar facultad..."
+                    emptyMessage="No se encontró ninguna facultad"
                     disabled={facultades.length === 1}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facultades.length > 1 && <SelectItem value="all">Todas</SelectItem>}
-                      {facultades.map(f => (
-                        <SelectItem key={f.id ?? 'unknown'} value={(f.id ?? '').toString()}>{f.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
 
                 {/* Programa */}
                 <div>
                   <Label>Programa</Label>
-                  <Select value={filtroPrograma} onValueChange={setFiltroPrograma}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {programasFiltrados.map(p => (
-                        <SelectItem key={p.id ?? 'unknown'} value={(p.id ?? '').toString()}>{p.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los programas' },
+                      ...programasFiltrados.map(p => ({
+                        id: (p.id ?? '').toString(),
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroPrograma}
+                    onSelect={(item) => setFiltroPrograma(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar programa..."
+                    searchPlaceholder="Buscar programa..."
+                    emptyMessage="No se encontró ningún programa"
+                  />
                 </div>
 
                 {/* Grupo */}
                 <div>
                   <Label>Grupo</Label>
-                  <Select value={filtroGrupo} onValueChange={setFiltroGrupo}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {gruposUnicos.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los grupos' },
+                      ...gruposUnicos.map(g => ({
+                        id: g,
+                        nombre: g
+                      }))
+                    ]}
+                    value={filtroGrupo}
+                    onSelect={(item) => setFiltroGrupo(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar grupo..."
+                    searchPlaceholder="Buscar grupo..."
+                    emptyMessage="No se encontró ningún grupo"
+                  />
                 </div>
 
                 {/* Semestre */}
                 <div>
                   <Label>Semestre</Label>
-                  <Select value={filtroSemestre} onValueChange={setFiltroSemestre}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {semestresUnicos.map(s => (
-                        <SelectItem key={s} value={s.toString()}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los semestres' },
+                      ...semestresUnicos.map(s => ({
+                        id: s.toString(),
+                        nombre: `Semestre ${s}`
+                      }))
+                    ]}
+                    value={filtroSemestre}
+                    onSelect={(item) => setFiltroSemestre(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar semestre..."
+                    searchPlaceholder="Buscar semestre..."
+                    emptyMessage="No se encontró ningún semestre"
+                  />
                 </div>
               </div>
 

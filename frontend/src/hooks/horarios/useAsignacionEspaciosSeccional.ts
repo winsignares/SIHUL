@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   asignacionEspaciosService,
   type HorarioAsignacion,
@@ -10,8 +10,10 @@ import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { asignaturaService, type Asignatura } from '../../services/asignaturas/asignaturaAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { useAuth } from '../../context/AuthContext';
+import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const ASIGNACION_ESPACIOS_CACHE_KEY = 'asignacion-espacios-seccional';
 
 const getSeccionalIdFromUser = (user: ReturnType<typeof useAuth>['user']) => {
   if (!user || !user.sede) return null;
@@ -57,6 +59,10 @@ export function useAsignacionEspaciosSeccional() {
   const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
 
+  // Refs para controlar carga
+  const filtrosLoadedRef = useRef(false);
+  const horariosLoadedRef = useRef(false);
+
   const [filtros, setFiltrosState] = useState<HorarioSinEspacioFilters>(() => ({
     seccionalId: getSeccionalIdFromUser(user),
     programaId: null,
@@ -84,8 +90,40 @@ export function useAsignacionEspaciosSeccional() {
     return grupos.filter((g) => g.programa_id === filtros.programaId);
   }, [grupos, filtros.programaId]);
 
-  const cargarFiltros = useCallback(async () => {
+  const cargarFiltros = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    if (!force && filtrosLoadedRef.current) return;
+
     try {
+      const activeToken = localStorage.getItem('auth_token');
+      const cacheKey = `${ASIGNACION_ESPACIOS_CACHE_KEY}-filtros`;
+      
+      // Verificar caché
+      if (!force) {
+        const cached = getSessionCacheData<{
+          programas: Programa[];
+          grupos: Grupo[];
+          asignaturas: Asignatura[];
+          periodos: PeriodoAcademico[];
+        }>(cacheKey, activeToken);
+        
+        if (cached) {
+          setProgramas(cached.programas);
+          setGrupos(cached.grupos);
+          setAsignaturas(cached.asignaturas);
+          setPeriodos(cached.periodos);
+          
+          setFiltrosState((prev) => {
+            if (prev.periodoId) return prev;
+            const periodoActualId = resolveCurrentPeriodoId(cached.periodos);
+            if (!periodoActualId) return prev;
+            return { ...prev, periodoId: periodoActualId };
+          });
+          
+          filtrosLoadedRef.current = true;
+          return;
+        }
+      }
+
       const [programasRes, gruposRes, asignaturasRes, periodosRes] = await Promise.all([
         programaService.listarProgramas(),
         grupoService.list(),
@@ -93,12 +131,23 @@ export function useAsignacionEspaciosSeccional() {
         periodoService.listarPeriodos(),
       ]);
 
-      setProgramas(programasRes.programas ?? []);
-      setGrupos(gruposRes.grupos ?? []);
-      setAsignaturas(asignaturasRes.asignaturas ?? []);
-
+      const programasData = programasRes.programas ?? [];
+      const gruposData = gruposRes.grupos ?? [];
+      const asignaturasData = asignaturasRes.asignaturas ?? [];
       const periodosCatalogo = periodosRes.periodos ?? [];
+
+      setProgramas(programasData);
+      setGrupos(gruposData);
+      setAsignaturas(asignaturasData);
       setPeriodos(periodosCatalogo);
+
+      // Guardar en caché
+      setSessionCacheData(cacheKey, activeToken, {
+        programas: programasData,
+        grupos: gruposData,
+        asignaturas: asignaturasData,
+        periodos: periodosCatalogo,
+      });
 
       setFiltrosState((prev) => {
         if (prev.periodoId) return prev;
@@ -106,13 +155,28 @@ export function useAsignacionEspaciosSeccional() {
         if (!periodoActualId) return prev;
         return { ...prev, periodoId: periodoActualId };
       });
+      
+      filtrosLoadedRef.current = true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cargar los filtros';
       setError(message);
     }
   }, []);
 
-  const recargarHorarios = useCallback(async () => {
+  const recargarHorarios = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    if (!force && horariosLoadedRef.current) {
+      // Verificar si los filtros cambiaron significativamente
+      const activeToken = localStorage.getItem('auth_token');
+      const userScope = `${filtros.seccionalId || 'no-seccional'}-${filtros.periodoId || 'no-periodo'}`;
+      const cacheKey = `${ASIGNACION_ESPACIOS_CACHE_KEY}-horarios-${userScope}`;
+      const cached = getSessionCacheData<{ horarios: HorarioAsignacion[] }>(cacheKey, activeToken);
+      
+      if (cached) {
+        setHorarios(cached.horarios);
+        return;
+      }
+    }
+
     setLoadingHorarios(true);
     setError(null);
 
@@ -120,7 +184,16 @@ export function useAsignacionEspaciosSeccional() {
       const response = await asignacionEspaciosService.getHorariosSinEspacio({
         ...filtros,
       });
-      setHorarios(response.horarios ?? []);
+      const horariosData = response.horarios ?? [];
+      setHorarios(horariosData);
+      
+      // Guardar en caché
+      const activeToken = localStorage.getItem('auth_token');
+      const userScope = `${filtros.seccionalId || 'no-seccional'}-${filtros.periodoId || 'no-periodo'}`;
+      const cacheKey = `${ASIGNACION_ESPACIOS_CACHE_KEY}-horarios-${userScope}`;
+      setSessionCacheData(cacheKey, activeToken, { horarios: horariosData });
+      
+      horariosLoadedRef.current = true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cargar horarios';
       setError(message);
@@ -181,7 +254,8 @@ export function useAsignacionEspaciosSeccional() {
         espacioId: espacioSeleccionado.id,
       });
       setSuccessMessage('Espacio asignado correctamente.');
-      await recargarHorarios();
+      horariosLoadedRef.current = false;
+      await recargarHorarios({ force: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al asignar el espacio';
       setError(message);
@@ -199,12 +273,16 @@ export function useAsignacionEspaciosSeccional() {
   }, []);
 
   useEffect(() => {
-    cargarFiltros();
+    if (!filtrosLoadedRef.current) {
+      cargarFiltros();
+    }
   }, [cargarFiltros]);
 
   useEffect(() => {
-    recargarHorarios();
-  }, [recargarHorarios]);
+    if (!horariosLoadedRef.current || filtros.seccionalId) {
+      recargarHorarios();
+    }
+  }, [recargarHorarios, filtros.seccionalId, filtros.periodoId]);
 
   return {
     horarios,
@@ -222,7 +300,7 @@ export function useAsignacionEspaciosSeccional() {
     consultarEspaciosDisponibles,
     asignarEspacio,
     limpiarSeleccion,
-    recargarHorarios,
+    recargarHorarios: () => recargarHorarios({ force: true }),
     setEspacioSeleccionado,
     programas,
     grupos: gruposFiltrados,

@@ -124,53 +124,68 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>Facultad</Label>
-                  <select
-                    className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todas las facultades' },
+                      ...facultades.map(f => ({
+                        id: f.id?.toString() || '',
+                        nombre: f.nombre
+                      }))
+                    ]}
                     value={filtroFacultad}
-                    onChange={(e) => setFiltroFacultad(e.target.value)}
-                  >
-                    <option value="all">Todas las facultades</option>
-                    {facultades.map(f => (
-                      <option key={f.id} value={f.id?.toString() || ''}>{f.nombre}</option>
-                    ))}
-                  </select>
+                    onSelect={(item) => setFiltroFacultad(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar facultad..."
+                    searchPlaceholder="Buscar facultad..."
+                    emptyMessage="No se encontró ninguna facultad"
+                  />
                 </div>
 
                 <div>
                   <Label>Programa</Label>
-                  <select
-                    className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los programas' },
+                      ...programasFiltrados.map(p => ({
+                        id: p.id?.toString() || '',
+                        nombre: p.nombre
+                      }))
+                    ]}
                     value={filtroProgramaValue}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFiltroPrograma(v === 'all' ? 'all' : Number(v));
-                    }}
-                  >
-                    <option value="all">Todos los programas</option>
-                    {programasFiltrados.map(p => (
-                      <option key={p.id} value={p.id?.toString() || ''}>{p.nombre}</option>
-                    ))}
-                  </select>
+                    onSelect={(item) => setFiltroPrograma(item.id === 'all' ? 'all' : Number(item.id))}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar programa..."
+                    searchPlaceholder="Buscar programa..."
+                    emptyMessage="No se encontró ningún programa"
+                  />
                 </div>
 
                 <div>
                   <Label>Semestre</Label>
-                  <select
-                    className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los semestres' },
+                      ...semestres.map(s => ({
+                        id: s.toString(),
+                        nombre: `Semestre ${s}`
+                      }))
+                    ]}
                     value={filtroSemestre}
-                    onChange={(e) => setFiltroSemestre(e.target.value)}
-                  >
-                    <option value="all">Todos los semestres</option>
-                    {semestres.map(s => (
-                      <option key={s} value={s.toString()}>Semestre {s}</option>
-                    ))}
-                  </select>
+                    onSelect={(item) => setFiltroSemestre(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar semestre..."
+                    searchPlaceholder="Buscar semestre..."
+                    emptyMessage="No se encontró ningún semestre"
+                  />
                 </div>
 
                 <div>
                   <Label>Grupo</Label>
                   <Input
-                    placeholder="Buscar grupo..."
+                    placeholder="Filtrar grupo por nombre..."
                     value={filtroGrupo === 'all' ? '' : filtroGrupo}
                     onChange={(e) => setFiltroGrupo(e.target.value || 'all')}
                   />

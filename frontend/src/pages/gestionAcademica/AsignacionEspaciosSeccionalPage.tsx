@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAsignacionEspaciosSeccional } from '../../hooks/horarios/useAsignacionEspaciosSeccional';
 import type { HorarioAsignacion } from '../../services/horarios/asignacionEspaciosService';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -27,6 +27,9 @@ export default function AsignacionEspaciosSeccionalPage() {
   const [currentPageEspacios, setCurrentPageEspacios] = useState(1);
   const [itemsPerPageEspacios, setItemsPerPageEspacios] = useState(8);
 
+  // Filter state for espacios
+  const [filtroEspacioId, setFiltroEspacioId] = useState<string>('all');
+
   const {
     horarios,
     espaciosDisponibles,
@@ -52,12 +55,21 @@ export default function AsignacionEspaciosSeccionalPage() {
     diasSemana,
   } = useAsignacionEspaciosSeccional();
 
+  // Force reload function
+  const handleForceReload = useCallback(async () => {
+    // Clear cache and reload
+    localStorage.removeItem('sihul_cache_asignacion-espacios-seccional-horarios');
+    localStorage.removeItem('sihul_cache_asignacion-espacios-seccional-filtros');
+    await recargarHorarios();
+  }, [recargarHorarios]);
+
   useEffect(() => {
     if (!successMessage) return;
     setModalOpen(false);
     limpiarSeleccion();
     setCurrentPageHorarios(1);
     setCurrentPageEspacios(1);
+    setFiltroEspacioId('all');
   }, [successMessage, limpiarSeleccion]);
 
   useEffect(() => {
@@ -73,6 +85,7 @@ export default function AsignacionEspaciosSeccionalPage() {
   const handleCerrarModal = () => {
     setModalOpen(false);
     setCurrentPageEspacios(1);
+    setFiltroEspacioId('all');
     limpiarSeleccion();
   };
 
@@ -99,10 +112,18 @@ export default function AsignacionEspaciosSeccionalPage() {
     return <Badge variant="outline">{estado}</Badge>;
   };
 
-  const horariosPaginados = horarios.slice(
-    (currentPageHorarios - 1) * itemsPerPageHorarios,
-    currentPageHorarios * itemsPerPageHorarios
-  );
+  // Memoizar paginación para evitar recálculos
+  const horariosPaginados = useMemo(() => {
+    return horarios.slice(
+      (currentPageHorarios - 1) * itemsPerPageHorarios,
+      currentPageHorarios * itemsPerPageHorarios
+    );
+  }, [horarios, currentPageHorarios, itemsPerPageHorarios]);
+
+  // Memoizar total de páginas
+  const totalPagesHorarios = useMemo(() => {
+    return Math.ceil(horarios.length / itemsPerPageHorarios);
+  }, [horarios.length, itemsPerPageHorarios]);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -147,7 +168,7 @@ export default function AsignacionEspaciosSeccionalPage() {
               </label>
 
               <Button
-                onClick={() => recargarHorarios()}
+                onClick={handleForceReload}
                 className="bg-white text-red-700 hover:bg-red-50 transition-all shadow-lg hover:shadow-xl font-semibold"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -358,71 +379,89 @@ export default function AsignacionEspaciosSeccionalPage() {
                   </TableRow>
                 ) : null}
 
-                {horariosPaginados
-                  .map((horario, idx) => (
-                    <TableRow
-                      key={horario.id}
-                      className={`transition-colors border-b border-slate-200 ${
-                        idx % 2 === 0
-                          ? 'bg-white hover:bg-red-50/70'
-                          : 'bg-slate-50/60 hover:bg-red-50/70'
-                      }`}
-                    >
-                      <TableCell className="text-slate-900 font-bold text-[11px]">
-                        <span className="bg-red-100 text-red-800 border border-red-200 px-1.5 py-0.5 rounded-md font-semibold text-[10px]">
-                          {horario.seccional_nombre || 'Sin seccional'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-slate-700 font-medium text-[11px]">{horario.sede_nombre || 'Sin sede'}</TableCell>
-                      <TableCell className="text-slate-600 text-[11px]" title={horario.programa_nombre}>
-                        {horario.programa_nombre}
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-[11px]" title={horario.asignatura_nombre}>
-                        {horario.asignatura_nombre}
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-[11px] font-medium">{horario.grupo_nombre}</TableCell>
-                      <TableCell className="text-slate-600 text-[11px] flex items-center justify-center gap-1.5">
-                        <div className="w-2 h-2 bg-red-500 rounded-full" />
-                        {horario.docente_nombre}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-medium text-[10px] px-1.5 py-0">
-                          {horario.dia_semana}
+                {/* Skeleton loader para desktop */}
+                {loadingHorarios && horarios.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={12} className="py-4">
+                      <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, idx) => (
+                          <div key={idx} className="flex gap-2 animate-pulse">
+                            <div className="h-8 bg-red-100 rounded flex-1"></div>
+                            <div className="h-8 bg-red-50 rounded w-24"></div>
+                            <div className="h-8 bg-red-50 rounded w-32"></div>
+                            <div className="h-8 bg-red-50 rounded w-20"></div>
+                            <div className="h-8 bg-red-50 rounded w-16"></div>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {horariosPaginados.map((horario, idx) => (
+                  <TableRow
+                    key={horario.id}
+                    className={`transition-colors border-b border-slate-200 ${
+                      idx % 2 === 0
+                        ? 'bg-white hover:bg-red-50/70'
+                        : 'bg-slate-50/60 hover:bg-red-50/70'
+                    }`}
+                  >
+                    <TableCell className="text-slate-900 font-bold text-[11px]">
+                      <span className="bg-red-100 text-red-800 border border-red-200 px-1.5 py-0.5 rounded-md font-semibold text-[10px]">
+                        {horario.seccional_nombre || 'Sin seccional'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-700 font-medium text-[11px]">{horario.sede_nombre || 'Sin sede'}</TableCell>
+                    <TableCell className="text-slate-600 text-[11px]" title={horario.programa_nombre}>
+                      {horario.programa_nombre}
+                    </TableCell>
+                    <TableCell className="text-slate-600 text-[11px]" title={horario.asignatura_nombre}>
+                      {horario.asignatura_nombre}
+                    </TableCell>
+                    <TableCell className="text-slate-600 text-[11px] font-medium">{horario.grupo_nombre}</TableCell>
+                    <TableCell className="text-slate-600 text-[11px] flex items-center justify-center gap-1.5">
+                      <div className="w-2 h-2 bg-red-500 rounded-full" />
+                      {horario.docente_nombre}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-medium text-[10px] px-1.5 py-0">
+                        {horario.dia_semana}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-600 text-[11px] font-mono">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-red-500" />
+                        {horario.hora_inicio}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-slate-600 text-[11px] font-mono">
+                      <div className="flex items-center justify-center">{horario.hora_fin}</div>
+                    </TableCell>
+                    <TableCell>
+                      {horario.espacio_nombre ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-200 font-medium text-[10px] px-1.5 py-0">
+                          {horario.espacio_nombre}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-[11px] font-mono">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-red-500" />
-                          {horario.hora_inicio}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-[11px] font-mono">
-                        <div className="flex items-center justify-center">{horario.hora_fin}</div>
-                      </TableCell>
-                      <TableCell>
-                        {horario.espacio_nombre ? (
-                          <Badge className="bg-red-100 text-red-800 border-red-200 font-medium text-[10px] px-1.5 py-0">
-                            {horario.espacio_nombre}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-300 font-medium text-[10px] px-1.5 py-0">
-                            Sin asignar
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{resolveEstadoBadge(horario.estado)}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          className="h-7 px-2 text-[10px] whitespace-nowrap bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all shadow-sm hover:shadow font-semibold"
-                          onClick={() => handleAbrirAsignacion(horario)}
-                        >
-                          <MapPin className="w-3.5 h-3.5 mr-1" />
-                          {horario.espacio_id ? 'Cambiar' : 'Asignar'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      ) : (
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-300 font-medium text-[10px] px-1.5 py-0">
+                          Sin asignar
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{resolveEstadoBadge(horario.estado)}</TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[10px] whitespace-nowrap bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all shadow-sm hover:shadow font-semibold"
+                        onClick={() => handleAbrirAsignacion(horario)}
+                      >
+                        <MapPin className="w-3.5 h-3.5 mr-1" />
+                        {horario.espacio_id ? 'Cambiar' : 'Asignar'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
@@ -430,7 +469,7 @@ export default function AsignacionEspaciosSeccionalPage() {
           {horarios.length > itemsPerPageHorarios && (
             <Pagination
               currentPage={currentPageHorarios}
-              totalPages={Math.ceil(horarios.length / itemsPerPageHorarios)}
+              totalPages={totalPagesHorarios}
               onPageChange={setCurrentPageHorarios}
               itemsPerPage={itemsPerPageHorarios}
               onItemsPerPageChange={setItemsPerPageHorarios}
@@ -528,7 +567,10 @@ export default function AsignacionEspaciosSeccionalPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => consultarEspaciosDisponibles(horarioSeleccionado)}
+                    onClick={() => {
+                      consultarEspaciosDisponibles(horarioSeleccionado);
+                      setFiltroEspacioId('all');
+                    }}
                     disabled={loadingEspacios}
                     className="border-red-200 hover:bg-red-50"
                   >
@@ -537,8 +579,33 @@ export default function AsignacionEspaciosSeccionalPage() {
                   </Button>
                 </div>
 
+                {/* Filtro de espacios */}
+                {!loadingEspacios && espaciosDisponibles.length > 0 && (
+                  <div className="mb-4">
+                    <SearchableSelect
+                      items={[
+                        { id: 'all', nombre: `Todos los espacios (${espaciosDisponibles.length})` },
+                        ...espaciosDisponibles.map(e => ({
+                          id: e.id.toString(),
+                          nombre: `${e.nombre} - ${e.sede_nombre || 'Sin sede'} (Cap: ${e.capacidad})`
+                        }))
+                      ]}
+                      value={filtroEspacioId}
+                      onSelect={(item) => setFiltroEspacioId(item.id)}
+                      getItemId={(item) => item.id}
+                      getItemLabel={(item) => item.nombre}
+                      placeholder="Filtrar espacio por nombre..."
+                      searchPlaceholder="Buscar espacio..."
+                      emptyMessage="No se encontró ningún espacio"
+                    />
+                  </div>
+                )}
+
                 <EspaciosDisponiblesTable
-                  espacios={espaciosDisponibles.slice(
+                  espacios={(filtroEspacioId === 'all' 
+                    ? espaciosDisponibles 
+                    : espaciosDisponibles.filter(e => e.id.toString() === filtroEspacioId)
+                  ).slice(
                     (currentPageEspacios - 1) * itemsPerPageEspacios,
                     currentPageEspacios * itemsPerPageEspacios
                   )}
