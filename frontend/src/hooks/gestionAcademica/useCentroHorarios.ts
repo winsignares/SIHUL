@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../share/notificationBanner';
 import { horarioService, horarioFusionadoService } from '../../services/horarios/horariosAPI';
@@ -308,8 +308,13 @@ export function useCentroHorarios() {
         }
     }, [role?.nombre, showNotification, user?.facultad, user?.id]);
 
+    const loadedRef = useRef(false);
+
     useEffect(() => {
-        loadData();
+        if (!loadedRef.current) {
+            loadedRef.current = true;
+            loadData();
+        }
     }, [loadData]);
 
     // Generar horas para el grid semanal

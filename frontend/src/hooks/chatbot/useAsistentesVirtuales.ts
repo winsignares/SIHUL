@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
     BookOpen,
     DoorOpen,
@@ -7,14 +8,14 @@ import {
     Bot
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
-import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
+import { chatbotAPI, type AgenteAPI, type Conversacion } from '../../services/chatbot/chatbotAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
 
 // Mapeo de nombres de iconos a componentes de icono
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
     'BookOpen': BookOpen,
     'DoorOpen': DoorOpen,
     'Trophy': Trophy,
@@ -118,7 +119,7 @@ export function useAsistentesVirtuales() {
             // Convertir las fechas de string a Date
             const mensajesConvertidos: { [key: string]: Mensaje[] } = {};
             for (const [key, mensajes] of Object.entries(parsed)) {
-                mensajesConvertidos[key] = (mensajes as any[]).map(msg => ({
+                mensajesConvertidos[key] = (mensajes as Mensaje[]).map(msg => ({
                     ...msg,
                     timestamp: new Date(msg.timestamp)
                 }));
@@ -214,14 +215,16 @@ export function useAsistentesVirtuales() {
         };
 
         cargarAgentes();
-    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol. cargarChatIdsDesdeStorage y cargarMensajesDesdeStorage son estables (solo usan localStorage)
 
     // Guardar mensajes en localStorage cada vez que cambien
     useEffect(() => {
         if (Object.keys(mensajes).length > 0) {
             guardarMensajesEnStorage(mensajes);
         }
-    }, [mensajes]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mensajes]); // guardarMensajesEnStorage es estable (solo usa localStorage)
 
     // Rotación de preguntas sugeridas
     useEffect(() => {
@@ -524,7 +527,7 @@ export function useAsistentesVirtuales() {
     };
 
     const [mostrarHistorial, setMostrarHistorial] = useState(false);
-    const [conversacionesHistorial, setConversacionesHistorial] = useState<any[]>([]);
+    const [conversacionesHistorial, setConversacionesHistorial] = useState<Conversacion[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
     const cargarHistorialConversaciones = async () => {

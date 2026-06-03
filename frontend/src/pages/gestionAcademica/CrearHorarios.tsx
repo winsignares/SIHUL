@@ -4,7 +4,6 @@ import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { SearchableSelect } from '../../share/searchableSelect';
 import {
   Clock,
@@ -90,6 +89,9 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
   // Obtener espacios disponibles según la cantidad de estudiantes
   const espaciosDisponibles = getEspaciosDisponibles(cantidadEstudiantes as number);
 
+  // Valor string para el select de programa
+  const filtroProgramaValue = String(filtroPrograma);
+
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {
     return (
@@ -122,47 +124,47 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>Facultad</Label>
-                  <Select value={filtroFacultad} onValueChange={setFiltroFacultad}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las facultades</SelectItem>
-                      {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    value={filtroFacultad}
+                    onChange={(e) => setFiltroFacultad(e.target.value)}
+                  >
+                    <option value="all">Todas las facultades</option>
+                    {facultades.map(f => (
+                      <option key={f.id} value={f.id?.toString() || ''}>{f.nombre}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <Label>Programa</Label>
-                  <Select value={filtroPrograma.toString()} onValueChange={setFiltroPrograma}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los programas</SelectItem>
-                      {programasFiltrados.map(p => (
-                        <SelectItem key={p.id} value={p.id?.toString() || ''}>{p.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    value={filtroProgramaValue}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFiltroPrograma(v === 'all' ? 'all' : Number(v));
+                    }}
+                  >
+                    <option value="all">Todos los programas</option>
+                    {programasFiltrados.map(p => (
+                      <option key={p.id} value={p.id?.toString() || ''}>{p.nombre}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <Label>Semestre</Label>
-                  <Select value={filtroSemestre} onValueChange={setFiltroSemestre}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los semestres</SelectItem>
-                      {semestres.map(s => (
-                        <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    value={filtroSemestre}
+                    onChange={(e) => setFiltroSemestre(e.target.value)}
+                  >
+                    <option value="all">Todos los semestres</option>
+                    {semestres.map(s => (
+                      <option key={s} value={s.toString()}>Semestre {s}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -674,8 +676,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <SearchableSelect
                   items={docentes}
                   value={docenteSeleccionado}
-                  onSelect={(docente) => setDocenteSeleccionado(docente.id)}
-                  getItemId={(docente) => docente.id}
+                  onSelect={(docente) => setDocenteSeleccionado(docente.id ?? '')}
+                  getItemId={(docente) => docente.id ?? ''}
                   getItemLabel={(docente) => docente.nombre}
                   getItemSecondary={(docente) => docente.correo}
                   placeholder="Seleccionar docente..."
@@ -693,8 +695,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <SearchableSelect
                   items={espaciosDisponibles}
                   value={espacioSeleccionado}
-                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id)}
-                  getItemId={(espacio) => espacio.id}
+                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id ?? '')}
+                  getItemId={(espacio) => espacio.id ?? ''}
                   getItemLabel={(espacio) => espacio.nombre}
                   getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad} personas`}
                   placeholder="Seleccionar espacio..."

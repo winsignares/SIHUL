@@ -32,7 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
@@ -51,81 +51,6 @@ type RepeatQuickOption =
   | 'custom';
 
 type CustomPeriod = 'day' | 'week' | 'month' | 'year';
-
-// Componente memoizado para celdas individuales - evita re-renders innecesarios
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const CeldaHorario = memo(function CeldaHorario({
-  espacioId: _espacioId,
-  dia: _dia,
-  hora: _hora,
-  horaIdx,
-  diaIdx,
-  ocupado,
-  celdaBloqueada,
-  estaSeleccionada,
-  puedeCrearSolicitudes,
-  editModeEnabled: _editModeEnabled,
-  isDragOver,
-  canDrop,
-  onMouseDown,
-  onMouseEnter,
-  onMouseUp,
-  onDragOver,
-  onDragLeave,
-  onDrop
-}: {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  espacioId: string;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  dia: string;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  hora: number;
-  horaIdx: number;
-  diaIdx: number;
-  ocupado: boolean;
-  celdaBloqueada: boolean;
-  estaSeleccionada: boolean;
-  puedeCrearSolicitudes: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  editModeEnabled: boolean;
-  isDragOver: boolean;
-  canDrop: boolean;
-  onMouseDown: () => void;
-  onMouseEnter: () => void;
-  onMouseUp: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent) => void;
-}) {
-  const className = isDragOver && canDrop
-    ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/30 ring-2 ring-purple-500'
-    : celdaBloqueada
-      ? 'border-slate-300 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-900/60 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.06)] cursor-not-allowed'
-      : ocupado
-        ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50'
-        : puedeCrearSolicitudes
-          ? estaSeleccionada
-            ? 'bg-purple-500 border-purple-700 cursor-grabbing'
-            : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
-          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800';
-
-  return (
-    <div
-      className={`border rounded transition-all ${className}`}
-      style={{
-        gridColumn: diaIdx + 2,
-        gridRow: horaIdx + 2,
-        zIndex: isDragOver && canDrop ? 20 : 1
-      }}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      onMouseUp={onMouseUp}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    />
-  );
-});
 
 const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -1052,8 +977,8 @@ export default function ConsultaEspacios() {
     targetHoraInicio: number,
     targetHoraFin: number
   ): { valido: boolean; error?: string } => {
-    if (targetHoraFin > 22) {
-      return { valido: false, error: 'El horario excede el límite permitido (22:00)' };
+    if (targetHoraFin > 23) {
+      return { valido: false, error: 'El horario excede el límite permitido (23:00)' };
     }
 
     if (targetHoraInicio >= targetHoraFin) {
@@ -1796,7 +1721,7 @@ export default function ConsultaEspacios() {
                         </div>
                       </div>
                     )}
-                    <div className="min-w-[1000px] grid grid-cols-[60px_repeat(7,1fr)] gap-1" style={{ gridAutoRows: '30px' }}>
+                    <div className="min-w-[1000px] grid grid-cols-[60px_repeat(7,1fr)] gap-1" style={{ gridAutoRows: '32px' }}>
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
                         const diaBloqueado = isDiaBloqueado(dia);
@@ -1845,12 +1770,12 @@ export default function ConsultaEspacios() {
                           
                           // Verificar si esta celda es parte del rango donde se está arrastrando
                           // Para horarios de múltiples horas, resaltar todas las celdas que ocupará
-                          // Ahora usamos slots de 15 minutos (4 slots por hora)
+                          // Slots de 15 minutos (4 slots por hora) para precisión en horarios
                           const duracionSlots = draggedHorario ? Math.round((draggedHorario.horaFin - draggedHorario.horaInicio) * 4) : 0;
                           const dropStartIdx = dragOverCell ? horaToSlotIndex(dragOverCell.hora) : -1;
-                          const isDragOver = dragOverCell?.dia === dia && 
-                            draggedHorario && 
-                            horaIdx >= dropStartIdx && 
+                          const isDragOver = dragOverCell?.dia === dia &&
+                            draggedHorario &&
+                            horaIdx >= dropStartIdx &&
                             horaIdx < dropStartIdx + duracionSlots;
                           const conflictoDrop = draggedHorario
                             ? getConflictoEnRango(
@@ -1913,7 +1838,7 @@ export default function ConsultaEspacios() {
                               const nuevaHoraInicio = hora;
                               const nuevaHoraFin = nuevaHoraInicio + duracion;
                               
-                              if (nuevaHoraFin <= 22) {
+                              if (nuevaHoraFin <= 23) {
                                 const validacion = validarMovimiento(
                                   draggedHorario,
                                   espacio.id,
@@ -1935,10 +1860,14 @@ export default function ConsultaEspacios() {
                                 });
                                 setConfirmMoveDialogOpen(true);
                               } else {
-                                toast.error('No se puede mover el horario: las clases solo se permiten hasta las 22:00');
+                                toast.error('No se puede mover el horario: las clases solo se permiten hasta las 23:00');
                               }
                             }
                           };
+
+                          // Simplificado: solo verificar si es hora exacta para marcar visualmente
+                          // La selección ahora es por bloques de 1 hora pero visualmente simple
+                          const esHoraExactaSeleccion = estaSeleccionada && hora % 1 === 0;
 
                           return (
                             <div
@@ -1950,11 +1879,13 @@ export default function ConsultaEspacios() {
                                 celdaBloqueada
                                   ? 'border-slate-300 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-900/60 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.06)] cursor-not-allowed'
                                   :
-                                ocupado 
-                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50' 
+                                ocupado
+                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50'
                                   : puedeCrearSolicitudes
                                     ? estaSeleccionada
-                                      ? 'bg-purple-500 border-purple-700 cursor-grabbing'
+                                      ? esHoraExactaSeleccion
+                                        ? 'bg-purple-500 border-purple-700 cursor-grabbing'
+                                        : 'bg-purple-400 border-purple-600 cursor-grabbing'
                                       : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
                                     : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
                               }`}
@@ -1979,14 +1910,14 @@ export default function ConsultaEspacios() {
                         .filter(h => h.espacioId === espacio.id && encabezadosDiasCronograma.some(d => d.dia === h.dia))
                         .map((ocupacion, idx) => {
                           const colStart = getDayColumnIndex(ocupacion.dia);
-                          // Calcular fila directamente para evitar desfases
+                          // Calcular fila usando slots de 15 minutos (precisión para horarios)
                           const slotStart = Math.round((ocupacion.horaInicio - 6) * 4);
                           const slotEnd = Math.round((ocupacion.horaFin - 6) * 4);
                           const rowStart = slotStart + 2;
                           const rowSpan = Math.max(1, slotEnd - slotStart);
 
-                          // Validar rango: ahora tenemos 64 slots (16 horas * 4) + 1 header = 66 filas
-                          if (rowStart < 2 || rowStart > 66) return null;
+                          // Validar rango: tenemos 68 slots (17 horas * 4) + 1 header = 69 filas
+                          if (rowStart < 2 || rowStart > 70) return null;
 
                           // Determinar si es un préstamo o un horario académico
                           const isPrestamo = ocupacion.tipo === 'prestamo';
@@ -2174,9 +2105,9 @@ export default function ConsultaEspacios() {
                         <SelectContent>
                           {(() => {
                             const horaInicioNum = parseInt(nuevaSolicitudData.horaInicio.split(':')[0], 10);
-                            // Generar opciones desde hora inicio + 1 hasta 22:00
+                            // Generar opciones desde hora inicio + 1 hasta 23:00
                             const opciones = [];
-                            for (let h = horaInicioNum + 1; h <= 22; h++) {
+                            for (let h = horaInicioNum + 1; h <= 23; h++) {
                               opciones.push(
                                 <SelectItem key={h} value={h.toString()}>
                                   {String(h).padStart(2, '0')}:00

@@ -15,7 +15,14 @@ function getFechaColombia(): Date {
   return new Date(utc + 3600000 * -5);
 }
 
-type GetConflictoFn = (espacioId: string, dia: string, horaInicio: number, horaFin: number, ocupacionIgnorada?: any) => any;
+// Helper para formatear hora decimal (e.g., 14.75) a formato de tiempo (e.g., "14:45")
+function formatHoraDecimal(hora: number): string {
+  const horas = Math.floor(hora);
+  const minutos = Math.round((hora % 1) * 60);
+  return `${horas}:${String(minutos).padStart(2, '0')}`;
+}
+
+type GetConflictoFn = (espacioId: string, dia: string, horaInicio: number, horaFin: number, ocupacionIgnorada?: OcupacionView | null) => OcupacionView | null;
 
 export function useConsultaEspaciosSeleccion({
   puedeCrearSolicitudes,
@@ -59,13 +66,13 @@ export function useConsultaEspaciosSeleccion({
       if (!puedeCrearSolicitudes) return;
 
       const horaEntera = roundToHour(hora);
-      if (horaEntera >= 22) return;
+      if (horaEntera >= 23) return;
 
       const ocupado = getConflictoEnRango(espacioId, dia, horaEntera, horaEntera + 1);
       if (ocupado) {
         const tipoConflicto = ocupado.tipo === 'prestamo' ? 'un préstamo' : 'una clase';
         const detalle = ocupado.materia || ocupado.tipo || 'Horario ocupado';
-        toast.error(`Conflicto con ${tipoConflicto}: ${detalle} (${ocupado.horaInicio}:00-${ocupado.horaFin}:00)`);
+        toast.error(`Conflicto con ${tipoConflicto}: ${detalle} (${formatHoraDecimal(ocupado.horaInicio)}-${formatHoraDecimal(ocupado.horaFin)})`);
         return;
       }
 
@@ -101,7 +108,7 @@ export function useConsultaEspaciosSeleccion({
         const horaEntera = roundToHour(pendingUpdateRef.current.hora);
         const horaInicio = Math.min(seleccionInicioRef.current.hora, horaEntera);
         const horaFin = Math.max(seleccionInicioRef.current.hora + 1, horaEntera + 1);
-        const horaFinValidada = Math.min(horaFin, 22);
+        const horaFinValidada = Math.min(horaFin, 23);
 
         setSeleccionRango({ 
           espacioId: pendingUpdateRef.current.espacioId, 
@@ -149,20 +156,6 @@ export function useConsultaEspaciosSeleccion({
       return matchEspacio && matchDia && overlap;
     });
     
-    // Mostrar toast de advertencia inmediatamente si hay conflictos
-    if (conflictosEnRango.length > 0) {
-      const listaConflictos = conflictosEnRango
-        .map(c => `• ${c.materia || 'Horario ocupado'} (${c.horaInicio}:00-${c.horaFin}:00)`)
-        .join('\n');
-      toast.warning(
-        `⚠️ El espacio ${espacio?.nombre || 'seleccionado'} tiene ${conflictosEnRango.length} horario(s) ocupado(s):\n${listaConflictos}`,
-        { 
-          duration: 6000,
-          position: 'top-center'
-        }
-      );
-    }
-
     const conflictoFinal = getConflictoEnRango(
       seleccionRango.espacioId,
       seleccionRango.dia,
@@ -172,7 +165,7 @@ export function useConsultaEspaciosSeleccion({
     if (conflictoFinal) {
       const tipoConflicto = conflictoFinal.tipo === 'prestamo' ? 'un préstamo' : 'una clase';
       const detalle = conflictoFinal.materia || conflictoFinal.tipo || 'Horario ocupado';
-      toast.error(`❌ No se puede crear la solicitud. Hay ${tipoConflicto}: ${detalle} (${conflictoFinal.horaInicio}:00-${conflictoFinal.horaFin}:00)`);
+      toast.error(`❌ No se puede crear la solicitud. Hay ${tipoConflicto}: ${detalle} (${formatHoraDecimal(conflictoFinal.horaInicio)}-${formatHoraDecimal(conflictoFinal.horaFin)})`);
       isDraggingRef.current = false;
       seleccionInicioRef.current = null;
       setIsDragging(false);
