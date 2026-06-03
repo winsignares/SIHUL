@@ -269,7 +269,6 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 console.warn('Error al cargar horarios:', error);
                 return { todosHorarios: [] as HorarioExtendido[] };
             }
-            
         } catch (error) {
             showNotification(
                 `Error al cargar datos: ${getErrorMessage(error)}`,
