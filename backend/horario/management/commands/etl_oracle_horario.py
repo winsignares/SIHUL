@@ -197,10 +197,11 @@ class Command(BaseCommand):
                     'asignatura': self._first_present(data, ['asignatura']),
                     'nombre_programa': self._first_present(data, ['nombre_programa']),
                     'id_sede': self._first_present(data, ['id_sede']),
+                    'cod_sede': self._first_present(data, ['cod_sede']),
                     'nombre_sede': self._first_present(data, ['nombre_sede']),
                     'num_identificacion': self._first_present(data, ['num_identificacion']),
-                    'nombre_docente': self._first_present(data, ['nombre_docente']),
-                    'apellidos_docente': self._first_present(data, ['apellidos_docente']),
+                    'nombre_docente': self._first_present(data, ['nombre_docente', 'nombres']),
+                    'apellidos_docente': self._first_present(data, ['apellidos_docente', 'apellidos']),
                     'nom_aula': self._first_present(data, ['nom_aula']),
                     'num_dia': self._first_present(data, ['num_dia', 'numero_dia', 'dia_numero']),
                     'hor_inicio': self._first_present(data, ['hor_inicio']),
@@ -231,6 +232,7 @@ class Command(BaseCommand):
                     external_id = f'NOID:{row_hash[:16]}'
                     summary['staging']['without_strong_id'] += 1
 
+                effective_sede_id = self._to_text(raw_payload['cod_sede']) or self._to_text(raw_payload['id_sede'])
                 defaults = {
                     'id_grupo_oracle': id_grupo or None,
                     'programa_oracle': self._to_text(raw_payload['programa']) or None,
@@ -240,7 +242,8 @@ class Command(BaseCommand):
                     'cantidad_estudiantes_oracle': self._to_non_negative_int(raw_payload['cantidad_estudiantes'], default=None),
                     'asignatura_oracle': self._to_text(raw_payload['asignatura']) or None,
                     'nombre_programa_oracle': self._to_text(raw_payload['nombre_programa']) or None,
-                    'id_sede_oracle': self._to_text(raw_payload['id_sede']) or None,
+                    # Priorizamos COD_SEDE por ser el identificador homologado de sede.
+                    'id_sede_oracle': effective_sede_id or None,
                     'nombre_sede_oracle': self._to_text(raw_payload['nombre_sede']) or None,
                     'num_identificacion_docente': self._to_text(raw_payload['num_identificacion']) or None,
                     'nombre_docente_oracle': self._to_text(raw_payload['nombre_docente']) or None,

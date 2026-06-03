@@ -8,13 +8,24 @@ import {
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
 import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
-import { sedeService } from '../../services/sedes/sedeAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
+const SECCIONALES_PUBLICAS_CHATBOT = [
+    'Barranquilla',
+    'Bogota',
+    'Cali',
+    'Cartagena',
+    'Cucuta',
+    'Pereira',
+    'El Socorro',
+    'Nacional',
+    'Virtual',
+];
 
 // Mapeo de nombres de iconos a componentes de icono
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const iconMap: Record<string, any> = {
     'BookOpen': BookOpen,
     'DoorOpen': DoorOpen,
@@ -82,6 +93,7 @@ export function useAsistentesVirtuales() {
     const [seccionalPublica, setSeccionalPublica] = useState('');
     const [cargandoSeccionales, setCargandoSeccionales] = useState(false);
     const [mostrarHistorial, setMostrarHistorial] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [conversacionesHistorial, setConversacionesHistorial] = useState<any[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -125,6 +137,7 @@ export function useAsistentesVirtuales() {
             // Convertir las fechas de string a Date
             const mensajesConvertidos: { [key: string]: Mensaje[] } = {};
             for (const [key, mensajes] of Object.entries(parsed)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 mensajesConvertidos[key] = (mensajes as any[]).map(msg => ({
                     ...msg,
                     timestamp: new Date(msg.timestamp)
@@ -165,29 +178,15 @@ export function useAsistentesVirtuales() {
             setSeccionalPublica(stored);
         }
 
-        const cargarSeccionales = async () => {
-            setCargandoSeccionales(true);
-            try {
-                const { sedes } = await sedeService.listarSedes();
-                const unique = Array.from(
-                    new Set(
-                        sedes
-                            .map((sede) => sede.seccional_ciudad)
-                            .filter((ciudad): ciudad is string => Boolean(ciudad))
-                    )
-                ).sort((a, b) => a.localeCompare(b));
-                setSeccionalesPublico(unique);
-                if (!seccionalPublica && unique.length > 0) {
-                    guardarSeccionalPublica(unique[0]);
-                }
-            } catch (error) {
-                console.error('Error al cargar seccionales para chatbot:', error);
-            } finally {
-                setCargandoSeccionales(false);
-            }
-        };
-
-        cargarSeccionales();
+        // En acceso público no depende de /sedes/ (protegido) para evitar 401 -> redirect a login.
+        setCargandoSeccionales(true);
+        const unique = [...SECCIONALES_PUBLICAS_CHATBOT];
+        setSeccionalesPublico(unique);
+        if (!seccionalPublica && unique.length > 0) {
+            guardarSeccionalPublica(unique[0]);
+        }
+        setCargandoSeccionales(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
 
     // Cargar agentes y datos persistidos desde el backend
@@ -265,6 +264,7 @@ export function useAsistentesVirtuales() {
         };
 
         cargarAgentes();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol
 
     // Guardar mensajes en localStorage cada vez que cambien
@@ -272,6 +272,7 @@ export function useAsistentesVirtuales() {
         if (Object.keys(mensajes).length > 0) {
             guardarMensajesEnStorage(mensajes);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mensajes]);
 
     // Rotación de preguntas sugeridas

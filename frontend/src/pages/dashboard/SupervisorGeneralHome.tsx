@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
-import { Button } from '../../share/button';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,14 +12,10 @@ import {
 import { useSupervisorDashboard } from '../../hooks/dashboard/useSupervisorDashboard';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
-interface SupervisorGeneralHomeProps {
-  onNavigate?: (page: string) => void;
-}
-
-export default function SupervisorGeneralHome({ onNavigate }: SupervisorGeneralHomeProps = {}) {
+export default function SupervisorGeneralHome() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { metricsCards, recursosCards, quickActions, activityLogs, loading, error } = useSupervisorDashboard();
+  const { metricsCards, recursosCards, quickActions, loading } = useSupervisorDashboard();
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>

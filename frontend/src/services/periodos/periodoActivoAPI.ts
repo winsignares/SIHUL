@@ -29,6 +29,7 @@ const periodoActivoService = {
         fecha_fin: '2025-06-30',
         activo: true
       };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error fetching active period:', error);
       // Retornar un período por defecto en caso de error

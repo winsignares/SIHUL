@@ -6,6 +6,7 @@ export type Role = 'admin' | 'supervisor_general' | 'docente' | 'estudiante';
 
 export interface RouteConfig {
   path: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: React.ComponentType<any>;
   roles: Role[];
   exact?: boolean;
@@ -52,6 +53,7 @@ export const routesByRole: Record<Role, Array<{ path: string; component: string 
 
 export function useRoutes() {
   const { usuario } = useUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const currentRole = normalizeRole(usuario?.rol as any) as Role | undefined;
 
   // Devuelve la ruta home por rol

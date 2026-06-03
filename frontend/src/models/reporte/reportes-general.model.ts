@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface HorarioDocente {
     dia: string;
     hora: string;
@@ -39,6 +38,7 @@ export interface CapacidadUtilizada {
 export interface ReporteDisponible {
     id: string;
     nombre: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     color: string;
     descripcion: string;

@@ -362,6 +362,18 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Rutas públicas disponibles incluso si hay sesión activa */}
+        <Route path="/public" element={<PublicLayout />}>
+          <Route index element={<Navigate to="/public/dashboard" replace />} />
+          <Route path="dashboard" element={<PublicDashboard />} />
+          <Route path="consulta-horario" element={<PublicConsultaHorario />} />
+          <Route path="disponibilidad-espacios" element={<ConsultaEspacios />} />
+          <Route path="prestamo" element={<PublicPrestamo />} />
+          <Route path="asistente-virtual" element={<AsistentesVirtuales />} />
+          <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/public/dashboard" replace />} />
+        </Route>
+
         {/* Todas las rutas protegidas usan el layout compartido */}
         <Route path="/" element={<AppLayout />}>
         {/* Ruta raíz - redirige al home del rol */}

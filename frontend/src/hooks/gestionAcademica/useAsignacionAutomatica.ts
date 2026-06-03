@@ -68,6 +68,7 @@ export function useAsignacionAutomatica() {
             console.log('📄 Datos crudos del Excel:', jsonData);
 
             // Mapear datos del archivo a nuestro formato
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const horariosParseados: HorarioImportado[] = jsonData.map((row: any) => {
                 const horario = {
                     programa: row['Programa'] || row['programa'] || '',
@@ -175,6 +176,7 @@ export function useAsignacionAutomatica() {
     // Encontrar espacio compatible
     const encontrarEspacioCompatible = (
         horario: HorarioImportado,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         espacios: any[],
         asignacionesPrevias: ResultadoAsignacion[]
     ) => {
@@ -348,6 +350,7 @@ export function useAsignacionAutomatica() {
                 grupoId: grupo.id,
                 espacioId: espacioId,
                 periodoId: grupo.periodoId,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 diaSemana: horario.diaSemana as any,
                 horaInicio: horario.horaInicio,
                 horaFin: horario.horaFin,
@@ -360,6 +363,7 @@ export function useAsignacionAutomatica() {
                 grupo: horario.grupo,
                 programaId: programa.id,
                 semestre: 1
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any);
 
             return true;

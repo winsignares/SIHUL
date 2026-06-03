@@ -151,7 +151,7 @@ services:
       TZ: "America/Bogota"
     depends_on:
       - backend
-      - chatbot
+
     networks:
       - sihul_network
     stdin_open: true

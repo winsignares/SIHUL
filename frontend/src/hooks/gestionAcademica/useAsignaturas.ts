@@ -35,9 +35,6 @@ export function useAsignaturas() {
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
     const [programas, setProgramas] = useState<Programa[]>([]);
 
-    // Filtros
-    const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
-
     // Modales
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);

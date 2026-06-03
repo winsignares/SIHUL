@@ -326,7 +326,7 @@ export const espacioHorariosService = {
             }[];
         })[];
     }> => {
-        return apiClient.get('/espacios/horarios/all/');
+        return apiClient.get('/espacios/horarios/all/', { requiresAuth: false });
     },
 
     /**
@@ -345,7 +345,7 @@ export const espacioHorariosService = {
             }[];
         })[];
     }> => {
-        return apiClient.get('/espacios/horarios/disponibles/all/');
+        return apiClient.get('/espacios/horarios/disponibles/all/', { requiresAuth: false });
     },
 
     /**

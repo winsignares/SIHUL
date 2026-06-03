@@ -22,8 +22,6 @@ export default function SupervisorSalonHome() {
   };
 
   const {
-    espacios,
-    espaciosFiltrados,
     sedes,
     tiposUso,
     estaAbiertoPorEspacioId,

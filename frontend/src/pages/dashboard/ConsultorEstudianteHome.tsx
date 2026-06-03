@@ -1,15 +1,11 @@
 import { Card, CardContent } from '../../share/card';
 import { motion } from 'motion/react';
-import { Clock, BookOpen, Calendar, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useConsultorEstudiante } from '../../hooks/dashboard/useConsultorEstudiante';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
-interface ConsultorEstudianteHomeProps {
-  onNavigate?: (menu: string) => void;
-}
-
-export default function ConsultorEstudianteHome({ onNavigate }: ConsultorEstudianteHomeProps) {
+export default function ConsultorEstudianteHome() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { stats } = useConsultorEstudiante();

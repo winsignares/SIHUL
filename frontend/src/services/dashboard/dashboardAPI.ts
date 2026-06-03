@@ -1,6 +1,4 @@
-import { apiClient } from '../../core/apiClient';
 import { prestamoService } from '../prestamos/prestamoAPI';
-import type { PrestamoEspacio } from '../prestamos/prestamoAPI';
 import { espacioService } from '../espacios/espaciosAPI';
 import { listarNotificaciones } from '../notificaciones/notificacionesAPI';
 
@@ -33,6 +31,7 @@ export interface ActivityRecent {
   time: string;
   date: string;
   status: 'pending' | 'completed';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any;
   color: string;
 }
@@ -245,7 +244,7 @@ const calcularTiempoTranscurrido = (fecha: Date): string => {
  * Obtiene las actividades recientes del sistema desde las NOTIFICACIONES REALES
  * El backend Django ya registra TODAS las acciones del sistema automáticamente vía signals
  */
-export const obtenerActividadesRecientes = async (usuarioId?: number): Promise<ActivityRecent[]> => {
+export const obtenerActividadesRecientes = async (): Promise<ActivityRecent[]> => {
   try {
     const actividades: ActivityRecent[] = [];
 
@@ -337,10 +336,10 @@ export const obtenerActividadesRecientes = async (usuarioId?: number): Promise<A
 /**
  * Obtiene todas las estadísticas del dashboard
  */
-export const obtenerEstadisticasDashboard = async (usuarioId?: number): Promise<DashboardStats> => {
+export const obtenerEstadisticasDashboard = async (): Promise<DashboardStats> => {
   const [ocupacion, actividades] = await Promise.all([
     obtenerEstadisticasOcupacion(),
-    obtenerActividadesRecientes(usuarioId)
+    obtenerActividadesRecientes()
   ]);
 
   return {

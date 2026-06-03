@@ -12,6 +12,13 @@ type PeriodoConMetricas = PeriodoAcademico & {
   programas_activos?: number;
 };
 
+function horaANumero(hora: string): number {
+  const partes = hora.split(':');
+  const horas = parseInt(partes[0], 10);
+  const minutos = parseInt(partes[1], 10) || 0;
+  return horas + minutos / 60;
+}
+
 function normalizarDia(dia: string): string {
   const diaLower = dia.toLowerCase().trim();
   const mapeo: Record<string, string> = {
@@ -20,12 +27,14 @@ function normalizarDia(dia: string): string {
     martes: 'Martes',
     tuesday: 'Martes',
     'miércoles': 'Miércoles',
+    'miercoles': 'Miércoles',  // Backend envía sin tilde
     wednesday: 'Miércoles',
     jueves: 'Jueves',
     thursday: 'Jueves',
     viernes: 'Viernes',
     friday: 'Viernes',
     'sábado': 'Sábado',
+    'sabado': 'Sábado',  // Backend envía sin tilde
     saturday: 'Sábado',
     domingo: 'Domingo',
     sunday: 'Domingo'
@@ -40,8 +49,8 @@ function mapearHorariosAOcupacion(horarios: HorarioExtendido[]): OcupacionView[]
       id: h.id,
       espacioId: String(h.espacio_id),
       dia: normalizarDia(h.dia_semana),
-      horaInicio: parseInt(h.hora_inicio.split(':')[0], 10),
-      horaFin: parseInt(h.hora_fin.split(':')[0], 10),
+      horaInicio: horaANumero(h.hora_inicio),
+      horaFin: horaANumero(h.hora_fin),
       materia: h.asignatura_nombre,
       docente: h.docente_nombre,
       grupo: h.grupo_nombre,
@@ -100,6 +109,7 @@ export function useConsultaEspaciosPeriodos() {
       const result = await horarioService.horariosPorPeriodo(periodoId, estado);
       const ocupacion = mapearHorariosAOcupacion(result.horarios);
       setHorariosPeriodo(ocupacion);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const status = error?.status;
       if (status !== 404) {
@@ -140,6 +150,7 @@ export function useConsultaEspaciosPeriodos() {
         await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente']);
 
         return periodo;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const status = error?.status;
         if (status !== 404) {

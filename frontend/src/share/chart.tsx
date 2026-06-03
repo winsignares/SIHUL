@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 // @ts-nocheck
 
@@ -127,14 +126,17 @@ function ChartTooltipContent({
   labelKey,
 }: {
   active?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any[];
   className?: string;
   indicator?: "line" | "dot" | "dashed";
   hideLabel?: boolean;
   hideIndicator?: boolean;
   label?: string | number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   labelFormatter?: (value: any, payload: any[]) => React.ReactNode;
   labelClassName?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formatter?: (value: any, name: string, item: any, index: number, payload: any) => React.ReactNode;
   color?: string;
   nameKey?: string;
@@ -268,6 +270,7 @@ function ChartLegendContent({
 }: {
   className?: string;
   hideIcon?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any[];
   verticalAlign?: "top" | "bottom";
   nameKey?: string;

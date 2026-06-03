@@ -57,6 +57,7 @@ export default function EstadoRecursos() {
   const firstItemIndex = totalEspaciosFiltrados === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastItemIndex = Math.min(currentPage * pageSize, totalEspaciosFiltrados);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderIcon = (iconData: any) => {
     if (!iconData) return null;
     const Icon = iconData.component;

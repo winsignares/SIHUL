@@ -1,11 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import {
-  Building2,
   MapPin,
   Clock,
-  BookOpen,
-  Users,
   TrendingUp,
   Bot,
   Activity,
@@ -18,7 +15,7 @@ import {
   BarChart3,
   AlertCircle
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Badge } from '../../share/badge';
 import {
   Dialog,
@@ -32,20 +29,13 @@ import { useDashboardHome } from '../../hooks/dashboard/useDashboardHome';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
-interface DashboardHomeProps {
-  onNavigate?: (page: string) => void;
-}
-
-export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
+export default function DashboardHome() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const {
     stats,
     recentActivities,
     activities,
-    quickStats,
-    occupationDetails,
-    occupationStats,
     topEspaciosOcupados,
     periodoActivo,
     state,
@@ -59,7 +49,6 @@ export default function DashboardHome({ onNavigate }: DashboardHomeProps) {
     reportGenerated,
     showOccupationDetails,
     showAllActivities,
-    isLoadingStats,
     isLoadingOccupation,
     isLoadingActivities,
     isLoadingPeriodo

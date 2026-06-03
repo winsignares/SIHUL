@@ -313,7 +313,21 @@ export const horarioService = {
      */
     listExtendidos: async (options: ListHorariosExtendidosOptions = {}): Promise<ListHorariosExtendidosResponse> => {
         const query = options.includePending ? '?include_pending=1' : '';
-        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`);
+        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`, { requiresAuth: false });
+    },
+
+    /**
+     * Obtiene el horario del docente autenticado
+     */
+    miHorario: async (usuarioId: number): Promise<ListHorariosExtendidosResponse> => {
+        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/mi-horario/?usuario_id=${usuarioId}`);
+    },
+
+    /**
+     * Obtiene el horario del estudiante autenticado
+     */
+    miHorarioEstudiante: async (usuarioId: number): Promise<ListHorariosExtendidosResponse> => {
+        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/mi-horario-estudiante/?usuario_id=${usuarioId}`);
     },
 
     /**
@@ -342,6 +356,20 @@ export const horarioService = {
      */
     exportarExcelDocente: async (horarios: HorarioExtendido[]): Promise<Blob> => {
         return downloadHorariosBlob('/horarios/exportar-excel-docente/', horarios);
+    },
+
+    /**
+     * Exporta horarios del usuario actual a PDF.
+     */
+    exportarPdfUsuario: async (usuarioId: number): Promise<Blob> => {
+        return apiClient.getBlob(`/horarios/exportar-pdf-usuario/?usuario_id=${usuarioId}`);
+    },
+
+    /**
+     * Exporta horarios del usuario actual a Excel.
+     */
+    exportarExcelUsuario: async (usuarioId: number): Promise<Blob> => {
+        return apiClient.getBlob(`/horarios/exportar-excel-usuario/?usuario_id=${usuarioId}`);
     },
 
     /**

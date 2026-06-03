@@ -159,6 +159,19 @@ class Command(BaseCommand):
         try:
             conn = oracledb.connect(user=user, password=password, dsn=f'{host}:{port}/{service}')
             cursor = conn.cursor()
+            # Mapa de traduccion ID_SEDE -> COD_SEDE para armonizar con Sede.external_id local.
+            sede_id_to_cod = {}
+            try:
+                cursor.execute("SELECT ID_SEDE, COD_SEDE FROM UHORARIOS.VW_SEDES")
+                for sid, cod in cursor.fetchall():
+                    sid_txt = str(sid or '').strip()
+                    cod_txt = str(cod or '').strip()
+                    if sid_txt and cod_txt:
+                        sede_id_to_cod[sid_txt] = cod_txt
+            except Exception:
+                # Si no se puede consultar VW_SEDES, seguimos con ID_SEDE directo.
+                sede_id_to_cod = {}
+
             query_filter_status = execute_oracle_query_with_optional_seccional(
                 cursor,
                 query,
@@ -233,6 +246,14 @@ class Command(BaseCommand):
                 else:
                     summary['inactive'] += 1
 
+                sede_code = (
+                    str(self._first_present(data, ['cod_sede']) or '').strip()
+                    or str(self._first_present(data, ['id_sede']) or '').strip()
+                    or None
+                )
+                if sede_code:
+                    sede_code = sede_id_to_cod.get(sede_code, sede_code)
+
                 parsed.append(
                     {
                         'codigo': codigo,
@@ -241,7 +262,7 @@ class Command(BaseCommand):
                         'creditos': creditos,
                         'horas': horas,
                         'estado_activo': estado_activo,
-                        'id_sede_oracle': str(self._first_present(data, ['id_sede']) or '').strip() or None,
+                        'id_sede_oracle': sede_code,
                     }
                 )
 

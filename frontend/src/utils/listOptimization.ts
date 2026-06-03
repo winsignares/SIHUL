@@ -23,9 +23,11 @@ export const withListMemo = <P extends object>(
  * Hook para optimizar callbacks en listas
  * Evita crear nuevas funciones en cada render
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useListCallback = <T extends (...args: any[]) => any>(
   callback: T,
   dependencies: React.DependencyList
 ): T => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return React.useCallback(callback, dependencies) as T;
 };

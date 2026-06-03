@@ -8,6 +8,7 @@ from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from datetime import datetime, timedelta
+import unicodedata
 from .models import Horario, HorarioFusionado
 
 
@@ -28,6 +29,39 @@ def hay_solapamiento(inicio1, fin1, inicio2, fin2):
         (fin1_min > inicio2_min and fin1_min <= fin2_min) or
         (inicio1_min < inicio2_min and fin1_min > fin2_min)
     )
+
+
+def normalizar_nombre_dia(nombre_dia):
+    """Normaliza tildes y mayúsculas para comparar nombres de días."""
+    return ''.join(
+        caracter
+        for caracter in unicodedata.normalize('NFD', nombre_dia or '')
+        if unicodedata.category(caracter) != 'Mn'
+    ).lower()
+
+
+def obtener_conflicto_prestamo(instance):
+    """Busca préstamos activos que coincidan con una clase recurrente."""
+    from prestamos.models import PrestamoEspacio, PrestamoEspacioPublico
+
+    periodo = instance.grupo.periodo
+    dia_horario = normalizar_nombre_dia(instance.dia_semana)
+    dias_semana = ('lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo')
+
+    filtros = {
+        'espacio_id': instance.espacio_id,
+        'fecha__range': (periodo.fecha_inicio, periodo.fecha_fin),
+        'hora_inicio__lt': instance.hora_fin,
+        'hora_fin__gt': instance.hora_inicio,
+        'estado__in': ['Pendiente', 'Aprobado'],
+    }
+
+    for modelo in (PrestamoEspacio, PrestamoEspacioPublico):
+        for prestamo in modelo.objects.filter(**filtros).order_by('fecha', 'hora_inicio'):
+            if dias_semana[prestamo.fecha.weekday()] == dia_horario:
+                return prestamo
+
+    return None
 
 
 @receiver(pre_save, sender=Horario)
@@ -59,6 +93,14 @@ def validar_horario(sender, instance, **kwargs):
             pass
     
     periodo_id = instance.grupo.periodo_id
+
+    conflicto_prestamo = obtener_conflicto_prestamo(instance)
+    if conflicto_prestamo:
+        raise ValidationError(
+            f"El espacio ya está reservado el {conflicto_prestamo.fecha} "
+            f"de {conflicto_prestamo.hora_inicio.strftime('%H:%M')} a "
+            f"{conflicto_prestamo.hora_fin.strftime('%H:%M')} por un préstamo activo"
+        )
 
     # Buscar horarios que usan el mismo espacio en el mismo día y periodo
     horarios_mismo_espacio = Horario.objects.filter(

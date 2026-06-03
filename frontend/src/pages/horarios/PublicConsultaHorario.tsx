@@ -77,6 +77,7 @@ export default function PublicConsultaHorario() {
           }
           acc[key].horarios.push(horario);
           return acc;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }, {} as Record<string, { docente: string; facultad?: string; horarios: any[] }>);
 
       const docentesListaAgrupada = Object.values(docentesAgrupados);
@@ -239,6 +240,7 @@ export default function PublicConsultaHorario() {
         }
         acc[key].horarios.push(horario);
         return acc;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }, {} as Record<string, { programa?: string; grupo: string; horarios: any[] }>);
 
     const gruposAgrupados = Object.values(horariosAgrupados);

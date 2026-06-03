@@ -6,8 +6,7 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../../share/dialog';
 import SearchableSelect from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Switch } from '../../share/switch';
-import { Search, UserPlus, Edit, Trash2, UserCog, Users, BookOpen, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight, User, Lock, Shield } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, UserCog, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight, User, Lock, Shield } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -46,7 +45,6 @@ export default function GestionUsuarios() {
     goToPrevUsuarioPageWindow,
     goToNextUsuarioPageWindow,
     pageSize,
-    filteredUsuarios,
     notification,
     rolesDisponibles,
     facultadesDisponibles,
@@ -83,6 +81,7 @@ export default function GestionUsuarios() {
   const firstUsuarioItemIndex = totalFilteredUsuarios === 0 ? 0 : (currentUsuarioPage - 1) * pageSize + 1;
   const lastUsuarioItemIndex = Math.min(currentUsuarioPage * pageSize, totalFilteredUsuarios);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getRolBadge = (usuario: any) => {
     // Intentar obtener el nombre del rol del objeto anidado o buscarlo por ID
     let rolNombre = usuario.rol?.nombre;

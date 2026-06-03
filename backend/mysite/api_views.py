@@ -211,11 +211,11 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return self.queryset.none()
         return super().get_queryset()
 
-    @action(detail=False, methods=['get'], url_path='horarios/all')
+    @action(detail=False, methods=['get'], url_path='horarios/all', permission_classes=[permissions.AllowAny])
     def horarios_all(self, request):
         return espacios_api.list_all_espacios_with_horarios(request._request)
 
-    @action(detail=False, methods=['get'], url_path='horarios/disponibles/all')
+    @action(detail=False, methods=['get'], url_path='horarios/disponibles/all', permission_classes=[permissions.AllowAny])
     def horarios_disponibles_all(self, request):
         return espacios_api.list_all_espacios_disponibles_with_horarios(request._request)
 

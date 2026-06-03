@@ -465,7 +465,9 @@ export default function PublicPrestamo() {
                         {/* Repetición */}
                         <div className="space-y-3 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/30">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Repetición</label>
-                            <Select value={repeatOption} onValueChange={(v: any) => setRepeatOption(v)}>
+                            <Select value={repeatOption}
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                onValueChange={(v: any) => setRepeatOption(v)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="No se repite" />
                                 </SelectTrigger>
@@ -493,7 +495,9 @@ export default function PublicPrestamo() {
                                         </div>
                                         <div className="space-y-1">
                                             <Label>Periodo</Label>
-                                            <Select value={customPeriod} onValueChange={(v: any) => setCustomPeriod(v)}>
+                                            <Select value={customPeriod}
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                onValueChange={(v: any) => setCustomPeriod(v)}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Periodo" />
                                                 </SelectTrigger>
@@ -540,7 +544,9 @@ export default function PublicPrestamo() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border rounded-md p-3 bg-white dark:bg-slate-900/40">
                                     <div className="space-y-1">
                                         <Label>Finaliza</Label>
-                                        <Select value={finRepeticionTipo} onValueChange={(v: any) => setFinRepeticionTipo(v)}>
+                                        <Select value={finRepeticionTipo}
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                onValueChange={(v: any) => setFinRepeticionTipo(v)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Nunca" />
                                             </SelectTrigger>

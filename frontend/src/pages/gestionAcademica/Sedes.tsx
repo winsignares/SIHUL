@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Badge } from '../../share/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { SearchableSelect } from '../../share/searchableSelect';
 import { useSedes } from '../../hooks/gestionAcademica/useSedes';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -26,7 +25,6 @@ export default function Sedes() {
     toggleActiva,
     openEdit,
     openDelete,
-    filteredSedes,
     paginatedSedes,
     totalFilteredSedes,
     currentPage,

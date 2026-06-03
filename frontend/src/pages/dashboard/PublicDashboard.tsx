@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
+import { Card, CardContent } from '../../share/card';
 import { Button } from '../../share/button';
 import {
   ChevronRight,

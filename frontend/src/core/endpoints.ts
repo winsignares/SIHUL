@@ -1,6 +1,3 @@
-// Base URL del backend Django
-const API_BASE = '';
-
 export const ENDPOINTS = {
   // ========== Autenticación y Usuarios ==========
   USUARIOS: {

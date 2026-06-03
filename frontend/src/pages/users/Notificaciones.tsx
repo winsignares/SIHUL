@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Bell, Check, CheckCheck, AlertCircle, MessageSquare, Calendar, Settings, X, AlertTriangle, CheckCircle, Edit, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { useNotificaciones } from '../../hooks/users/useNotificaciones';
 import { useAuth } from '../../context/AuthContext';
@@ -26,13 +25,13 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
   const [procesando, setProcesando] = React.useState(false);
   const [showModalRechazo, setShowModalRechazo] = React.useState(false);
   const [motivoRechazo, setMotivoRechazo] = React.useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [notificacionSeleccionada, setNotificacionSeleccionada] = React.useState<any>(null);
   const {
     filterTab,
     setFilterTab,
     marcarComoLeida,
     marcarTodasComoLeidas,
-    eliminarNotificacion,
     filteredNotificaciones,
     stats,
     isLoading,
@@ -49,6 +48,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     setFiltroPrioridad,
   } = useNotificaciones(onNotificacionesChange);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleAprobarSolicitud = async (notificacion: any) => {
     if (!user?.id) return;
     try {
@@ -95,6 +95,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       await marcarComoLeida(notificacion.id);
       await recargar();
       toast.success('✅ Solicitud aprobada correctamente');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error completo:', error);
       const errorMsg = error?.response?.data?.error || error?.message || 'Error desconocido';
@@ -104,6 +105,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleModificarSolicitud = async (notificacion: any) => {
     if (!user?.id) return;
     try {
@@ -142,6 +144,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       
       // Navegar a la página de solicitudes para editar
       window.location.href = `/admin/solicitudes-espacio?edit=${solicitudId}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error:', error);
       toast.error('Error al intentar modificar la solicitud');
@@ -150,6 +153,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleAbrirModalRechazo = (notificacion: any) => {
     setNotificacionSeleccionada(notificacion);
     setMotivoRechazo('');
@@ -216,6 +220,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       setShowModalRechazo(false);
       setMotivoRechazo('');
       setNotificacionSeleccionada(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error completo:', error);
       const errorMsg = error?.response?.data?.error || error?.message || 'Error desconocido';
@@ -465,7 +470,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Período de Tiempo
               </Label>
-              <Select value={filtroTiempo} onValueChange={(value) => setFiltroTiempo(value as any)}>
+              <Select value={filtroTiempo} onValueChange={(value) => setFiltroTiempo(value as any)}> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
                 <SelectTrigger className="w-full border border-slate-300 dark:border-slate-600">
                   <SelectValue placeholder="Seleccionar período" />
                 </SelectTrigger>
@@ -483,7 +488,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Prioridad
               </Label>
-              <Select value={filtroPrioridad} onValueChange={(value) => setFiltroPrioridad(value as any)}>
+              <Select value={filtroPrioridad} onValueChange={(value) => setFiltroPrioridad(value as any)}> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
                 <SelectTrigger className="w-full border border-slate-300 dark:border-slate-600">
                   <SelectValue placeholder="Seleccionar prioridad" />
                 </SelectTrigger>

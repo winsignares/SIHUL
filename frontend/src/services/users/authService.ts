@@ -154,7 +154,8 @@ export interface SessionAuthStateResponse {
   }>;
 }
 
-export interface SessionUserResponse {
+export interface SessionUserAuthenticatedResponse {
+  authenticated?: true;
   id: number;
   nombre: string;
   correo: string;
@@ -193,6 +194,12 @@ export interface SessionUserResponse {
   token: string;
   signature?: string;
 }
+
+export interface SessionUserUnauthenticatedResponse {
+  authenticated: false;
+}
+
+export type SessionUserResponse = SessionUserAuthenticatedResponse | SessionUserUnauthenticatedResponse;
 
 const resolveSedeId = (usuario: CreateUsuarioPayload): number | undefined => {
   if (usuario.sede_id !== null && usuario.sede_id !== undefined) {

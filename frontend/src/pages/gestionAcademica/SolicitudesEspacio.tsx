@@ -3,13 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Button } from '../../share/button';
 import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../share/dialog';
-import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import {
   CheckCircle2,
   XCircle,
-  Clock,
   Filter,
   AlertCircle,
   MessageSquare
@@ -106,7 +104,7 @@ export default function SolicitudesEspacio() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="filtro-estado">Estado</Label>
-                <Select value={filtroEstado} onValueChange={(value: any) => setFiltroEstado(value)}>
+                <Select value={filtroEstado} onValueChange={(value: any) => setFiltroEstado(value)}> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
                   <SelectTrigger id="filtro-estado">
                     <SelectValue placeholder="Seleccionar estado" />
                   </SelectTrigger>

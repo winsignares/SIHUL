@@ -6,8 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, BookOpen, AlertTriangle, Check, X, Eye, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Plus, Edit, Trash2, Search, AlertTriangle, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useAsignaturas, tiposAsignatura } from '../../hooks/gestionAcademica/useAsignaturas';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -27,7 +26,6 @@ export default function Asignaturas() {
     openDeleteDialog,
     handleDeleteAsignatura,
     resetForm,
-    filteredAsignaturas,
     paginatedAsignaturas,
     totalFilteredAsignaturas,
     currentPage,
@@ -312,6 +310,7 @@ export default function Asignaturas() {
               </Label>
               <Select
                 value={asignaturaForm.tipo}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, tipo: value })}
               >
                 <SelectTrigger>
@@ -422,6 +421,7 @@ export default function Asignaturas() {
               </Label>
               <Select
                 value={asignaturaForm.tipo}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onValueChange={(value: any) => setAsignaturaForm({ ...asignaturaForm, tipo: value })}
               >
                 <SelectTrigger>

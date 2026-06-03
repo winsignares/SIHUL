@@ -52,7 +52,7 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        await handleApiError(response);
+        await handleApiError(response, { redirectOn401: requiresAuth });
       }
 
       // Si la respuesta es 204 No Content, retornar objeto vacío
@@ -62,9 +62,13 @@ class ApiClient {
 
       const data = await response.json();
       return data as T;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      // Don't log 409 Conflict errors as they are expected validation errors
-      if (!suppressErrorLog && error.status !== 409) {
+      // Don't log expected errors:
+      // - 409 Conflict validation scenarios
+      // - 401 during optional session-hydration calls (requiresAuth = false)
+      const isExpected401 = error?.status === 401 && !requiresAuth;
+      if (!suppressErrorLog && error.status !== 409 && !isExpected401) {
         console.error('API Request Error:', error);
       }
       throw error;
@@ -90,12 +94,14 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        await handleApiError(response);
+        await handleApiError(response, { redirectOn401: requiresAuth });
       }
 
       return await response.blob();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      if (!suppressErrorLog && error.status !== 409) {
+      const isExpected401 = error?.status === 401 && !requiresAuth;
+      if (!suppressErrorLog && error.status !== 409 && !isExpected401) {
         console.error('API Request Error:', error);
       }
       throw error;
@@ -119,6 +125,16 @@ class ApiClient {
       ...config,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async getBlob(
+    endpoint: string,
+    config?: RequestConfig
+  ): Promise<Blob> {
+    return this.requestBlob(endpoint, {
+      ...config,
+      method: 'GET',
     });
   }
 

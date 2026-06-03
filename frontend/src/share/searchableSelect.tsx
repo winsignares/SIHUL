@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * SearchableSelect - Componente reutilizable de selección con búsqueda
  * Basado en el patrón de Popover + Command para selección de items con filtrado
@@ -32,6 +31,7 @@ export interface SearchableSelectProps<T> {
   items: T[];
   
   /** Valor seleccionado actualmente (puede ser el ID o el objeto completo) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
   
   /** Callback cuando se selecciona un item */

@@ -20,8 +20,6 @@ export function useOcupacionSemanal() {
   const [periodoInfo, setPeriodoInfo] = useState({ nombre: '', inicio: '', fin: '' });
   const [validacionPeriodo, setValidacionPeriodo] = useState<{ valido: boolean; mensaje: string }>({ valido: true, mensaje: '' });
 
-  const PERIODO_DEFAULT = '2025-1';
-
   // Cargar período activo
   useEffect(() => {
     const cargarPeriodo = async () => {
@@ -126,6 +124,7 @@ export function useOcupacionSemanal() {
         setValidacionPeriodo(validacion);
 
         // Mapear datos del backend al formato esperado por el modelo
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ocupacionMapeada: EspacioOcupacion[] = response.ocupacion.map((espacio: any) => ({
           id: espacio.id.toString(),
           nombre: espacio.nombre,
@@ -166,6 +165,7 @@ export function useOcupacionSemanal() {
     };
 
     cargarOcupacion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoEspacio, periodoInfo]);
 
   const normalizePercentage = (value: number | string | undefined | null) => {

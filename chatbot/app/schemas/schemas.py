@@ -20,7 +20,7 @@ class ChatRequest(BaseModel):
         ...,
         min_length=1,
         max_length=150,
-        examples=["Laura Martínez"],
+        examples=["Jesús Peña"],
         description="Nombre completo del estudiante",
     )
     sede: Sede = Field(
@@ -30,7 +30,7 @@ class ChatRequest(BaseModel):
     )
     question: str = Field(
         ...,
-        min_length=5,
+        min_length=2,
         examples=["¿Cuál es el proceso de matrícula en Barranquilla?"],
         description="Pregunta del usuario",
     )
