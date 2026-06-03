@@ -2206,7 +2206,7 @@ export default function ConsultaEspacios() {
                       <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
                       <span className="font-medium">{conflicto.materia}</span>
                       <span className="text-red-600 dark:text-red-400">
-                        ({String(conflicto.horaInicio).padStart(2, '0')}:00 - {String(conflicto.horaFin).padStart(2, '0')}:00)
+                        ({formatHoraDecimal(conflicto.horaInicio)} - {formatHoraDecimal(conflicto.horaFin)})
                       </span>
                     </div>
                   ))}

@@ -308,11 +308,19 @@ export default function PrestamosEspacios() {
                           {prestamo.tipoEvento}
                         </Badge>
                         {prestamo.recursosNecesarios.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <Package className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600 dark:text-slate-400">
-                              {prestamo.recursosNecesarios.length} recurso{prestamo.recursosNecesarios.length !== 1 ? 's' : ''}
-                            </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Package className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <div className="flex flex-wrap gap-1">
+                              {prestamo.recursosNecesarios.map((recurso, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="outline"
+                                  className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-xs"
+                                >
+                                  {recurso}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
