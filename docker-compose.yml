@@ -31,27 +31,6 @@ services:
       retries: 5
 
   # ==========================================
-  # PGADMIN - ADMINISTRACIÓN DE POSTGRESQL
-  # ==========================================
-  pgadmin:
-    container_name: sihul-pgadmin
-    image: dpage/pgadmin4:8
-    restart: unless-stopped
-    ports:
-      - "5050:80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@sihul.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - sihul_network
-
-  # ==========================================
   # BACKEND DJANGO
   # ==========================================
   backend:
@@ -72,7 +51,6 @@ services:
       DB_USER: postgres
       DB_PASSWORD: mysecretpassword
       DB_NAME: mypostgresdb
-      CHATBOT_FASTAPI_URL: http://chatbot:8001/api/v1
       # Python
       PYTHONUNBUFFERED: "1"
     depends_on:
@@ -84,7 +62,29 @@ services:
   # ==========================================
   # CHATBOT FASTAPI + RAG
   # ==========================================
-
+  chatbot:
+    container_name: sihul-chatbot
+    build:
+      context: .
+      dockerfile: chatbot.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./chatbot:/app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CHUNK_SIZE: ${CHUNK_SIZE:-500}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sihul_network  
 
   # ==========================================
   # FRONTEND REACT + VITE
@@ -113,7 +113,7 @@ services:
       TZ: "America/Bogota"
     depends_on:
       - backend
-
+      - chatbot
     networks:
       - sihul_network
     stdin_open: true
@@ -122,16 +122,16 @@ services:
   # ==========================================
   # N8N - AUTOMATIZACIÓN DE WORKFLOWS
   # ==========================================
-  # n8n:
-  #   container_name: sihul-n8n
-  #   image: n8nio/n8n
-  #   restart: always
-  #   ports:
-  #     - "5678:5678"
-  #   volumes:
-  #     - n8n_data:/home/node/.n8n
-  #   networks:
-  #     - sihul_network
+  n8n:
+    container_name: sihul-n8n
+    image: n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - sihul_network
 
 # ==========================================
 # VOLÚMENES PERSISTENTES
@@ -140,12 +140,9 @@ volumes:
   postgres_data:
     name: sihul_postgres_data
     driver: local
-  pgadmin_data:
-    name: sihul_pgadmin_data
+  n8n_data:
+    name: sihul_n8n_data
     driver: local
-  # n8n_data:
-  #   name: sihul_n8n_data
-  #   driver: local
 
 # ==========================================
 # RED COMPARTIDA
