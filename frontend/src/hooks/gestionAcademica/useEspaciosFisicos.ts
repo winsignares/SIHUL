@@ -33,7 +33,6 @@ export function useEspaciosFisicos() {
     const [sedes, setSedes] = useState<Sede[]>([]);
     const [tiposEspacio, setTiposEspacio] = useState<TipoEspacio[]>([]);
     const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
-    const [loading, setLoading] = useState(false);
 
     // Modales
     const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -102,7 +101,6 @@ export function useEspaciosFisicos() {
     }, []);
 
     const loadData = async ({ force = false }: { force?: boolean } = {}) => {
-        setLoading(true);
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedData = force
@@ -129,9 +127,13 @@ export function useEspaciosFisicos() {
                 recursoService.listarRecursos()
             ]);
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const espaciosData = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const tiposData = (tiposRes as any).tipos_espacio || (Array.isArray(tiposRes) ? tiposRes : []);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const recursosData = (recursosRes as any).recursos || (Array.isArray(recursosRes) ? recursosRes : []);
 
             setEspacios(espaciosData);
@@ -147,8 +149,6 @@ export function useEspaciosFisicos() {
         } catch (error) {
             console.error('Error loading data:', error);
             toast.error('Error al cargar los datos');
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -165,6 +165,7 @@ export function useEspaciosFisicos() {
             }
 
             const espaciosRes = await espacioService.list();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const data = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
 
             setEspacios(data);

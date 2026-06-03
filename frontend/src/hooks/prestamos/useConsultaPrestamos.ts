@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import type { Prestamo } from '../../models/index';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
@@ -51,7 +51,13 @@ export function useConsultaPrestamos() {
         'Aire Acondicionado'
     ];
 
-    const loadData = useCallback(async () => {
+    // Cargar datos iniciales
+    useEffect(() => {
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const loadData = async () => {
         try {
             setLoading(true);
             
@@ -98,12 +104,7 @@ export function useConsultaPrestamos() {
         } finally {
             setLoading(false);
         }
-    }, [user]);
-
-    // Cargar datos iniciales
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    };
 
     const crearSolicitud = async () => {
         if (!nuevaSolicitud.espacio || !nuevaSolicitud.fecha || 
@@ -133,7 +134,6 @@ export function useConsultaPrestamos() {
                 espacio_id: espacioSeleccionado.id,
                 usuario_id: user?.id || null,
                 administrador_id: null,
-                tipo_actividad_id: 1,
                 fecha: nuevaSolicitud.fecha,
                 hora_inicio: nuevaSolicitud.horaInicio + ':00',
                 hora_fin: nuevaSolicitud.horaFin + ':00',

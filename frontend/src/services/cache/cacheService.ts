@@ -8,7 +8,9 @@ export interface CacheEntry<T> {
 }
 
 interface EspaciosCache {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     espacios: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     horarios: any[];
     timestamp: number;
 }
@@ -48,6 +50,7 @@ export const getEspaciosFromCache = (cacheKey: string): EspaciosCache | null => 
 /**
  * Guarda espacios en el caché
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const setEspaciosInCache = (cacheKey: string, espacios: any[], horarios: any[]): void => {
     try {
         const entry: CacheEntry<EspaciosCache> = {
@@ -78,6 +81,7 @@ export const clearEspaciosCache = (cacheKey: string): void => {
 /**
  * Obtiene la clave de caché según el usuario
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getCacheKey = (user: any): string => {
     if (!user?.id) {
         // Usuario público
@@ -94,6 +98,7 @@ export const getCacheKey = (user: any): string => {
 /**
  * Obtiene el hash de los espacios (para detectar cambios)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getEspaciosHash = (espacios: any[]): string => {
     try {
         return String(espacios.length);

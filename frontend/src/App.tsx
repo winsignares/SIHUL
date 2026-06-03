@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { UserProvider } from "./context/UserContext";
@@ -9,7 +9,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
   useEffect(() => {
-    console.log("🚀 Aplicación iniciada");
     // La sesión se manejará mediante AuthContext
   }, []);
 

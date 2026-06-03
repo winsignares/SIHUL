@@ -17,6 +17,26 @@
 
 <body>
   <div id="root"></div>
+  <script>
+    (function () {
+      const target = 'Download the React DevTools for a better development experience';
+      const shouldFilter = function (args) {
+        return typeof args[0] === 'string' && args[0].includes(target);
+      };
+
+      const originalInfo = console.info;
+      console.info = function (...args) {
+        if (shouldFilter(args)) return;
+        originalInfo.apply(console, args);
+      };
+
+      const originalLog = console.log;
+      console.log = function (...args) {
+        if (shouldFilter(args)) return;
+        originalLog.apply(console, args);
+      };
+    })();
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

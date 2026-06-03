@@ -13,8 +13,7 @@ import {
   getTotalPages,
   hasNextPageWindow,
   hasPrevPageWindow,
-  normalizePage,
-  PAGE_SIZE_DEFAULT
+  normalizePage
 } from '../gestionAcademica/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
@@ -72,6 +71,7 @@ export function usePrestamosEspacios() {
     // Cargar datos iniciales
     useEffect(() => {
         loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadData = async ({ force = false }: { force?: boolean } = {}) => {
@@ -159,7 +159,8 @@ export function usePrestamosEspacios() {
         }
     };
 
-    const aprobarSolicitud = async (id: string, comentarios: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const aprobarSolicitud = async (id: string, _comentarios: string) => {
         try {
             setLoading(true);
 
@@ -212,6 +213,7 @@ export function usePrestamosEspacios() {
                 if (!response.ok) throw new Error('Error al actualizar préstamo público');
             } else {
                 // Actualizar préstamo autenticado
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const updatePayload: any = {
                     id: numericId,
                     espacio_id: prestamoCompleto.espacio_id,
@@ -315,6 +317,7 @@ export function usePrestamosEspacios() {
                 if (!response.ok) throw new Error('Error al actualizar préstamo público');
             } else {
                 // Actualizar préstamo autenticado
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const updatePayload: any = {
                     id: numericId,
                     espacio_id: prestamoCompleto.espacio_id,

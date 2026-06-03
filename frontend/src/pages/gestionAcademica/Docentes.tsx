@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
-import { Plus, Edit, Trash2, Search, User, Check, X, Eye, Mail, Phone, GraduationCap } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, User, X, Eye, Mail, Phone, GraduationCap } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useDocentes } from '../../hooks/gestionAcademica/useDocentes';
@@ -313,6 +313,7 @@ export default function Docentes() {
                 <Label className="text-slate-700 mb-2">Estado *</Label>
                 <Select
                   value={docenteForm.estado}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onValueChange={(value: any) => setDocenteForm({ ...docenteForm, estado: value })}
                 >
                   <SelectTrigger>
@@ -467,6 +468,7 @@ export default function Docentes() {
                 <Label className="text-slate-700 mb-2">Estado *</Label>
                 <Select
                   value={docenteForm.estado}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onValueChange={(value: any) => setDocenteForm({ ...docenteForm, estado: value })}
                 >
                   <SelectTrigger>

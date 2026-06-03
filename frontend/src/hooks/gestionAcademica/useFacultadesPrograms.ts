@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { db } from '../../services/database';
 import { toast } from 'sonner';
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import type { Facultad as FacultadAPI } from '../../services/facultades/facultadesAPI';
 import { programaService } from '../../services/programas/programaAPI';
-import type { Programa as ProgramaAPI } from '../../services/programas/programaAPI';
 import { asignaturaService, asignaturaProgramaService } from '../../services/asignaturas/asignaturaAPI';
 import type { Asignatura, AsignaturaPrograma } from '../../services/asignaturas/asignaturaAPI';
 import {
@@ -227,7 +225,7 @@ export function useFacultadesPrograms() {
         }
 
         setAsignaturasPrograma((current) => enrichAsignaturasPrograma(current, asignaturas));
-    }, [asignaturas]);
+    }, [asignaturas, asignaturasPrograma.length]);
 
     // Función para recargar todos los datos
     const reloadAllData = () => {

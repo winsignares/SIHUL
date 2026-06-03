@@ -78,6 +78,7 @@ export default function PrestamosEspacios() {
     6: 'Domingo'
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recurrenceSummary = (prestamo: any) => {
     if (!prestamo?.es_recurrente) return 'No se repite';
     const freq = FRECUENCIA_LABELS[prestamo.frecuencia || 'none']?.toLowerCase() || 'semanal';
@@ -307,11 +308,19 @@ export default function PrestamosEspacios() {
                           {prestamo.tipoEvento}
                         </Badge>
                         {prestamo.recursosNecesarios.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <Package className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600 dark:text-slate-400">
-                              {prestamo.recursosNecesarios.length} recurso{prestamo.recursosNecesarios.length !== 1 ? 's' : ''}
-                            </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Package className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <div className="flex flex-wrap gap-1">
+                              {prestamo.recursosNecesarios.map((recurso, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="outline"
+                                  className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-xs"
+                                >
+                                  {recurso}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -512,12 +521,12 @@ export default function PrestamosEspacios() {
                                         onCheckedChange={(checked) => setPrestamoEditando({
                                           ...prestamoEditando,
                                           es_recurrente: Boolean(checked),
-                                          frecuencia: Boolean(checked) ? (prestamoEditando.frecuencia || 'weekly') : 'none',
-                                          intervalo: Boolean(checked) ? (prestamoEditando.intervalo || 1) : 1,
-                                          dias_semana: Boolean(checked) ? (prestamoEditando.dias_semana || []) : [],
-                                          fin_repeticion_tipo: Boolean(checked) ? (prestamoEditando.fin_repeticion_tipo || 'never') : 'never',
-                                          fin_repeticion_fecha: Boolean(checked) ? (prestamoEditando.fin_repeticion_fecha || null) : null,
-                                          fin_repeticion_ocurrencias: Boolean(checked) ? (prestamoEditando.fin_repeticion_ocurrencias || null) : null,
+                                          frecuencia: checked ? (prestamoEditando.frecuencia || 'weekly') : 'none',
+                                          intervalo: checked ? (prestamoEditando.intervalo || 1) : 1,
+                                          dias_semana: checked ? (prestamoEditando.dias_semana || []) : [],
+                                          fin_repeticion_tipo: checked ? (prestamoEditando.fin_repeticion_tipo || 'never') : 'never',
+                                          fin_repeticion_fecha: checked ? (prestamoEditando.fin_repeticion_fecha || null) : null,
+                                          fin_repeticion_ocurrencias: checked ? (prestamoEditando.fin_repeticion_ocurrencias || null) : null,
                                         })}
                                       />
                                       <Label htmlFor="edit-es-recurrente">Repetir préstamo</Label>
@@ -530,6 +539,7 @@ export default function PrestamosEspacios() {
                                             <Label className="text-slate-600 dark:text-slate-400 text-xs">Frecuencia</Label>
                                             <Select
                                               value={prestamoEditando.frecuencia || 'weekly'}
+                                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                               onValueChange={(v: any) => setPrestamoEditando({
                                                 ...prestamoEditando,
                                                 frecuencia: v,
@@ -598,6 +608,7 @@ export default function PrestamosEspacios() {
                                             <Label className="text-slate-600 dark:text-slate-400 text-xs">Finaliza repetición</Label>
                                             <Select
                                               value={prestamoEditando.fin_repeticion_tipo || 'never'}
+                                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                               onValueChange={(v: any) => setPrestamoEditando({
                                                 ...prestamoEditando,
                                                 fin_repeticion_tipo: v,

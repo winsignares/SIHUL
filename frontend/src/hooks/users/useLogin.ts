@@ -28,6 +28,7 @@ export function useLogin() {
             }
             
             // La redirección se maneja en el useEffect cuando isAuthenticated cambia
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             console.error('Error en login:', err);
             const errorMessage = err?.response?.data?.message || err?.message || 'Error al iniciar sesión. Verifique sus credenciales.';

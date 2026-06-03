@@ -8,6 +8,7 @@ export type MenuOption = 'home' | 'facultades' | 'espacios' | 'asignacion' | 'ce
 
 interface MenuItem {
     id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     label: string;
     route: string;
@@ -621,7 +622,8 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             'Centro de Horarios',
             'Préstamos de Espacios',
             'Periodos Académicos',
-            'Asignación Automática'
+            'Asignación Automática',
+            'Asignación de espacios por seccional'
         ];
         const gestionComponents = components.filter(c => gestionNames.includes(c.nombre));
         if (gestionComponents.length > 0) {

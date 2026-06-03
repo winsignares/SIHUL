@@ -93,8 +93,9 @@ class Database {
 
   // DELETE
   delete(tableName: string, id: string): boolean {
-    const table = this.getTable<{ id: string }>(tableName);
-    const filtered = table.filter((item) => item.id !== id);
+    const table = this.getTable(tableName);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filtered = table.filter((item: any) => item.id !== id);
 
     if (filtered.length === table.length) return false;
 
@@ -103,10 +104,10 @@ class Database {
   }
 
   // DELETE MULTIPLE
-  deleteMany<T>(tableName: string, predicate: (item: T) => boolean): number {
-    const table = this.getTable<T>(tableName);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deleteMany(tableName: string, predicate: (item: any) => boolean): number {
+    const table = this.getTable(tableName);
     const filtered = table.filter(item => !predicate(item));
-
     const deletedCount = table.length - filtered.length;
 
     if (deletedCount > 0) {
@@ -284,7 +285,7 @@ class Database {
     return this.getById<Docente>(TABLES.docentes, id);
   }
 
-  createDocente(docente: Omit<Docente, 'id'>): Docente {
+  createDocente(docente: Docente): Docente {
     return this.create<Docente>(TABLES.docentes, docente);
   }
 
@@ -322,15 +323,7 @@ class Database {
     return this.getAll<HorarioAcademico>(TABLES.horarios);
   }
 
-  getHorariosExtendidos(): Array<HorarioAcademico & {
-    asignatura: string;
-    docente: string;
-    grupo: string;
-    programaId: string;
-    semestre: number;
-    espacioCodigo: string;
-    espacioNombre: string;
-  }> {
+  getHorariosExtendidos(): HorarioAcademico[] {
     const horarios = this.getAll<HorarioAcademico>(TABLES.horarios);
     const grupos = this.getGrupos();
     const asignaturas = this.getAsignaturas();

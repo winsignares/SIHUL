@@ -187,11 +187,13 @@ export function useDocentePrestamos() {
         if (tiposActividad.length > 0) {
             fetchPrestamos();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, tiposActividad]);
 
     // Fetch espacios cuando cambian sede, fecha o horarios
     useEffect(() => {
         fetchEspaciosDisponibles();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nuevaSolicitud.sede_id, nuevaSolicitud.fecha, nuevaSolicitud.horaInicio, nuevaSolicitud.horaFin]);
 
     // Funciones para manejar recursos dinámicamente
@@ -299,6 +301,7 @@ export function useDocentePrestamos() {
 
             // TODO: Show success notification
             console.log('Solicitud enviada exitosamente');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             // Handle availability conflict errors
             if (err.message?.includes('reservado') || err.message?.includes('disponible') || err.status === 409) {

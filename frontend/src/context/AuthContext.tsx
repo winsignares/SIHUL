@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
-import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../services/users/authService';
-import type { AuthState } from '../models/auth/auth.model';
+import { authService } from '../services/users/authService';
+import type { LoginPayload, LoginResponse, AuthState, User } from '../models/auth/auth.model';
 import { useMemo } from 'react';
 
 interface AuthContextType extends AuthState {
@@ -13,102 +14,44 @@ interface AuthContextType extends AuthState {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+    const readJsonFromStorage = <T,>(key: string, fallback: T): T => {
+        const raw = localStorage.getItem(key);
+        if (raw === null || raw === '' || raw === 'undefined' || raw === 'null') {
+            return fallback;
+        }
+
+        try {
+            return JSON.parse(raw) as T;
+        } catch {
+            localStorage.removeItem(key);
+            return fallback;
+        }
+    };
+
     const authSignatureRef = useRef<string>(localStorage.getItem('auth_signature') || '');
-    const [isSessionHydrated, setIsSessionHydrated] = useState(false);
     const [state, setState] = useState<AuthState>({
         token: localStorage.getItem('auth_token'),
-        user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
-        role: JSON.parse(localStorage.getItem('auth_role') || 'null'),
-        components: JSON.parse(localStorage.getItem('auth_components') || '[]'),
-        faculties: JSON.parse(localStorage.getItem('auth_faculties') || 'null') || undefined,
-        areas: JSON.parse(localStorage.getItem('auth_areas') || 'null') || undefined,
+        user: readJsonFromStorage('auth_user', null),
+        role: readJsonFromStorage('auth_role', null),
+        components: readJsonFromStorage('auth_components', []),
+        faculties: readJsonFromStorage('auth_faculties', null) || undefined,
+        areas: readJsonFromStorage('auth_areas', null) || undefined,
         isAuthenticated: !!localStorage.getItem('auth_token'),
         isLoading: false,
     });
 
-    const clearAuthState = () => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_role');
-        localStorage.removeItem('auth_components');
-        localStorage.removeItem('auth_faculties');
-        localStorage.removeItem('auth_areas');
-        localStorage.removeItem('auth_signature');
-
-        authSignatureRef.current = '';
-        setState({
-            token: null,
-            user: null,
-            role: null,
-            components: [],
-            faculties: undefined,
-            areas: undefined,
-            isAuthenticated: false,
-            isLoading: false,
-        });
-    };
-
-    const getErrorStatus = (error: unknown): number | undefined => {
-        if (typeof error !== 'object' || error === null || !('status' in error)) {
-            return undefined;
-        }
-
-        const status = (error as { status?: unknown }).status;
-        return typeof status === 'number' ? status : undefined;
-    };
-
-    const persistAuthState = (response: LoginResponse) => {
-        const user = {
-            id: response.id,
-            nombre: response.nombre,
-            correo: response.correo,
-            rol: response.rol,
-            facultad: response.facultad,
-            sede: response.sede
-        };
-
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('auth_user', JSON.stringify(user));
-        localStorage.setItem('auth_role', JSON.stringify(response.rol));
-        localStorage.setItem('auth_components', JSON.stringify(response.componentes || []));
-
-        if (response.facultad) {
-            localStorage.setItem('auth_faculties', JSON.stringify([response.facultad]));
-        } else {
-            localStorage.removeItem('auth_faculties');
-        }
-
-        if (response.sede) {
-            localStorage.setItem('auth_sede', JSON.stringify(response.sede));
-        } else {
-            localStorage.removeItem('auth_sede');
-        }
-
-        if (response.espacios_permitidos) {
-            localStorage.setItem('auth_areas', JSON.stringify(response.espacios_permitidos));
-        } else {
-            localStorage.removeItem('auth_areas');
-        }
-
-        if ('signature' in response && response.signature) {
-            const signature = String(response.signature);
-            localStorage.setItem('auth_signature', signature);
-            authSignatureRef.current = signature;
-        }
-
-        setState({
-            token: response.token,
-            user,
-            role: response.rol,
-            components: response.componentes || [],
-            faculties: response.facultad ? [response.facultad] : undefined,
-            areas: response.espacios_permitidos,
-            isAuthenticated: true,
-            isLoading: false,
-        });
-    };
-
-    const persistSessionUserState = (response: SessionUserResponse) => {
+    const persistAuthState = (response: {
+        id: number;
+        nombre: string;
+        correo: string;
+        rol: AuthState['role'];
+        facultad: User['facultad'];
+        sede: User['sede'];
+        componentes: AuthState['components'];
+        espacios_permitidos: AuthState['areas'];
+        token: string;
+        signature?: string;
+    }) => {
         const user = {
             id: response.id,
             nombre: response.nombre,
@@ -173,7 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             persistAuthState(response);
 
             return response;
-        } catch (error: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
             setState(prev => ({ ...prev, isLoading: false }));
             throw error;
         }
@@ -187,45 +131,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.clear();
 
         // Limpiar estado
-        clearAuthState();
+        authSignatureRef.current = '';
+        setState({
+            token: null,
+            user: null,
+            role: null,
+            components: [],
+            faculties: undefined,
+            areas: undefined,
+            isAuthenticated: false,
+            isLoading: false,
+        });
     };
 
     useEffect(() => {
         const tryHydrateFromSession = async () => {
-            if (state.isLoading) {
+            if (state.isAuthenticated || state.isLoading) {
                 return;
             }
 
-            setState(prev => ({ ...prev, isLoading: true }));
-            try {
-                const response = await authService.getAuthenticatedUser({ suppressErrorLog: true });
-                persistSessionUserState(response);
-            } catch (error: unknown) {
-                const status = getErrorStatus(error);
-                if (status === 401 || status === 403) {
-                    clearAuthState();
-                    return;
-                }
-
-                const storedToken = localStorage.getItem('auth_token');
-                const storedUser = localStorage.getItem('auth_user');
-
-                // En recargas o errores transitorios de red/backend, conservar sesión local
-                // para no expulsar al usuario al login inesperadamente.
-                if (storedToken && storedUser) {
-                    setState(prev => ({
-                        ...prev,
-                        isAuthenticated: true,
-                        isLoading: false,
-                    }));
-                    return;
-                }
-
-                // Si no existe estado local utilizable, limpiar autenticación.
-                clearAuthState();
-            } finally {
-                setIsSessionHydrated(true);
+        setState(prev => ({ ...prev, isLoading: true }));
+        try {
+            const response = await authService.getAuthenticatedUser();
+            if (response.authenticated === false) {
+                setState(prev => ({ ...prev, isLoading: false }));
+                return;
             }
+            persistAuthState(response);
+        } catch {
+            setState(prev => ({ ...prev, isLoading: false }));
+        }
         };
 
         void tryHydrateFromSession();
@@ -241,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             map.set(c.nombre, c);
         }
         return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.components]);
 
     // Set de componentes editables para acceso rápido en hasEditPermission
@@ -263,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        if (!isSessionHydrated || !state.isAuthenticated) {
+        if (!state.isAuthenticated) {
             return;
         }
 
@@ -271,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const syncSessionAuthState = async () => {
             try {
-                const response = await authService.getSessionAuthState(authSignatureRef.current || undefined, { suppressErrorLog: true });
+                const response = await authService.getSessionAuthState(authSignatureRef.current || undefined);
                 if (isCancelled) {
                     return;
                 }
@@ -297,14 +233,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     components: nextComponents,
                     user: prev.user ? { ...prev.user, rol: nextRole } : prev.user,
                 }));
-            } catch (error: unknown) {
-                const status = getErrorStatus(error);
-                if (status === 401 || status === 403) {
-                    if (!isCancelled) {
-                        clearAuthState();
-                    }
-                    return;
-                }
+            } catch (_error) {  // eslint-disable-line @typescript-eslint/no-unused-vars
+                // Fallar en silencio para no interrumpir la sesión en errores transitorios.
             }
         };
 
@@ -330,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.removeEventListener('focus', syncIfVisible);
             document.removeEventListener('visibilitychange', syncIfVisible);
         };
-    }, [isSessionHydrated, state.isAuthenticated]);
+    }, [state.isAuthenticated]);
 
     return (
         <AuthContext.Provider value={{ ...state, login, logout, hasPermission, hasEditPermission }}>

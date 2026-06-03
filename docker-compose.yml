@@ -51,7 +51,6 @@ services:
       DB_USER: postgres
       DB_PASSWORD: mysecretpassword
       DB_NAME: mypostgresdb
-      CHATBOT_FASTAPI_URL: http://chatbot:8001/api/v1
       # Python
       PYTHONUNBUFFERED: "1"
       # Memoria

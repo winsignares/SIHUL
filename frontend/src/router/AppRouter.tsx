@@ -35,6 +35,7 @@ const DynamicComponentPage = lazy(() => import('../pages/shared/DynamicComponent
 const SolicitudesEspacio = lazy(() => import('../pages/gestionAcademica/SolicitudesEspacio'));
 const ComponentesRoles = lazy(() => import('../pages/permisos/ComponentesRoles'));
 const GestionRoles = lazy(() => import('../pages/permisos/GestionRoles'));
+const AsignacionEspaciosSeccionalPage = lazy(() => import('../pages/gestionAcademica/AsignacionEspaciosSeccionalPage'));
 
 // Lazy load de componentes Financiero
 const FuncionarioDashboard = lazy(() => import('../pages/financiero/funcionario'));
@@ -354,6 +355,18 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Rutas públicas disponibles incluso si hay sesión activa */}
+        <Route path="/public" element={<PublicLayout />}>
+          <Route index element={<Navigate to="/public/dashboard" replace />} />
+          <Route path="dashboard" element={<PublicDashboard />} />
+          <Route path="consulta-horario" element={<PublicConsultaHorario />} />
+          <Route path="disponibilidad-espacios" element={<ConsultaEspacios />} />
+          <Route path="prestamo" element={<PublicPrestamo />} />
+          <Route path="asistente-virtual" element={<AsistentesVirtuales />} />
+          <Route path="espacios" element={<Navigate to="/public/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/public/dashboard" replace />} />
+        </Route>
+
         {/* Todas las rutas protegidas usan el layout compartido */}
         <Route path="/" element={<AppLayout />}>
         {/* Ruta raíz - redirige al home del rol */}
@@ -381,6 +394,12 @@ export default function AppRouter() {
         <Route path="admin/asignacion" element={
           <ProtectedRoute requiredComponent="Asignación Automática">
             <EnConstruccion />
+          </ProtectedRoute>
+        } />
+
+        <Route path="asignacion-espacios-seccional" element={
+          <ProtectedRoute requiredComponent="Asignación de espacios por seccional">
+            <AsignacionEspaciosSeccionalPage />
           </ProtectedRoute>
         } />
 

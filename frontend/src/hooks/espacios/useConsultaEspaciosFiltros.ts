@@ -28,14 +28,40 @@ export function useConsultaEspaciosFiltros() {
   const [filterPeriodo, setFilterPeriodo] = useState<number | null>(null);
   const [filterFechaInicio, setFilterFechaInicio] = useState<string>('');
   const [filterFechaFin, setFilterFechaFin] = useState<string>('');
+  const [filterOcupacion, setFilterOcupacion] = useState('todos');
   const [mensajeFiltroFecha, setMensajeFiltroFecha] = useState<MensajeFiltroFecha | null>(null);
 
   const diasSemana = useMemo(
-    () => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+    () => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
     []
   );
 
-  const horas = useMemo(() => Array.from({ length: 17 }, (_, i) => i + 6), []);
+  // Generar slots de 15 minutos desde las 6:00 hasta las 23:00 (17 horas * 4 = 68 slots)
+  // Se mantienen para mostrar horarios correctamente, pero la selección de préstamos agrupa por horas
+  const horas = useMemo(() => {
+    const slots: number[] = [];
+    for (let h = 6; h < 23; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        slots.push(h + m / 60);
+      }
+    }
+    return slots;
+  }, []);
+
+  // Función auxiliar para convertir hora decimal a índice de slot
+  const horaToSlotIndex = useCallback((hora: number): number => {
+    // Agregar pequeña tolerancia para errores de precisión flotante
+    const horaConTolerancia = hora + 0.001;
+    // Redondear a múltiplo de 0.25 (15 minutos)
+    const horaRedondeada = Math.round(horaConTolerancia * 4) / 4;
+    // hora 6.0 = slot 0, hora 6.25 = slot 1, etc.
+    return Math.round((horaRedondeada - 6) * 4);
+  }, []);
+
+  // Función auxiliar para verificar si un slot es hora exacta (para mostrar etiquetas)
+  const isHoraExacta = useCallback((hora: number): boolean => {
+    return hora % 1 === 0;
+  }, []);
 
   useEffect(() => {
     if (!filterFechaInicio) {
@@ -229,6 +255,7 @@ export function useConsultaEspaciosFiltros() {
     setFilterApertura('todas');
     setFilterSede('todas');
     setFilterPeriodo(null);
+    setFilterOcupacion('todos');
 
     const hoy = getFechaColombia();
     hoy.setHours(0, 0, 0, 0);
@@ -253,6 +280,8 @@ export function useConsultaEspaciosFiltros() {
     setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
+    filterOcupacion,
+    setFilterOcupacion,
     mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
@@ -261,6 +290,8 @@ export function useConsultaEspaciosFiltros() {
     encabezadosDiasCronograma,
     horas,
     isDiaBloqueado,
-    isCeldaBloqueada
+    isCeldaBloqueada,
+    horaToSlotIndex,
+    isHoraExacta
   };
 }

@@ -27,23 +27,6 @@ const getWeekdayMondayIndex = (dateStr?: string): number => {
     return jsDay === 0 ? 6 : jsDay - 1;
 };
 
-const getOrdinalWeekdayText = (dateStr?: string): string => {
-    if (!dateStr) return 'primer lunes';
-    const date = new Date(`${dateStr}T00:00:00`);
-    const day = date.getDate();
-    const ordinalNum = Math.floor((day - 1) / 7) + 1;
-    const ordinals = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto'];
-    const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(dateStr)];
-    return `${ordinals[Math.min(ordinalNum - 1, 4)]} ${weekdayName}`;
-};
-
-const isLastWeekdayOfMonth = (dateStr?: string): boolean => {
-    if (!dateStr) return false;
-    const date = new Date(`${dateStr}T00:00:00`);
-    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    return date.getDate() + 7 > lastDay;
-};
-
 export function usePublicPrestamo() {
     // Estado del formulario
     const [formData, setFormData] = useState<Partial<SolicitudPrestamoPublico>>({
@@ -121,6 +104,7 @@ export function usePublicPrestamo() {
         } else {
             setEspaciosDisponibles([]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData.fecha, formData.hora_inicio, formData.hora_fin, sedeSeleccionada]);
 
     const cargarEspaciosDisponibles = async () => {
@@ -276,6 +260,7 @@ export function usePublicPrestamo() {
         };
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleChange = (field: keyof SolicitudPrestamoPublico, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         // Limpiar error del campo cuando el usuario empiece a escribir
@@ -316,6 +301,7 @@ export function usePublicPrestamo() {
                 delete next.consulta;
                 return next;
             });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             setErrors(prev => ({
                 ...prev,
@@ -362,6 +348,7 @@ export function usePublicPrestamo() {
             cancelarEdicionSolicitud();
             setSuccessMessage('Solicitud actualizada correctamente');
             setShowSuccess(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             setErrors(prev => ({
                 ...prev,
@@ -375,14 +362,11 @@ export function usePublicPrestamo() {
     const eliminarSolicitud = async (id: number) => {
         try {
             setSubmitting(true);
-            await prestamosPublicAPI.eliminarSolicitud(
-                id,
-                consultaCredenciales.identificacion,
-                consultaCredenciales.correo
-            );
+            await prestamosPublicAPI.eliminarSolicitud(id);
             await cargarMisSolicitudes();
             setSuccessMessage('Solicitud eliminada correctamente');
             setShowSuccess(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             setErrors(prev => ({
                 ...prev,
@@ -534,6 +518,7 @@ export function usePublicPrestamo() {
                 setShowSuccess(false);
             }, 5000);
             
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al enviar solicitud:', error);
             const errorMessage = error?.message || 'Error al enviar la solicitud. Por favor, intente nuevamente.';

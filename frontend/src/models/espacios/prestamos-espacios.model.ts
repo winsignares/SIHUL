@@ -34,6 +34,7 @@ export interface PrestamoEspacioUI {
 export interface StatsData {
     title: string;
     value: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     color: string;
     bgColor: string;

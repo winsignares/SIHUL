@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
     BookOpen,
     DoorOpen,
@@ -7,15 +8,14 @@ import {
     Bot
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
-import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
-import { sedeService } from '../../services/sedes/sedeAPI';
+import { chatbotAPI, type AgenteAPI, type Conversacion } from '../../services/chatbot/chatbotAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
 
 // Mapeo de nombres de iconos a componentes de icono
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
     'BookOpen': BookOpen,
     'DoorOpen': DoorOpen,
     'Trophy': Trophy,
@@ -78,12 +78,6 @@ export function useAsistentesVirtuales() {
     const [loading, setLoading] = useState(true);
     const [preguntasRotadas, setPreguntasRotadas] = useState<string[]>([]);
     const [chatIds, setChatIds] = useState<{ [key: string]: string }>({}); // Mapeo agente_id -> chat_id
-    const [seccionalesPublico, setSeccionalesPublico] = useState<string[]>([]);
-    const [seccionalPublica, setSeccionalPublica] = useState('');
-    const [cargandoSeccionales, setCargandoSeccionales] = useState(false);
-    const [mostrarHistorial, setMostrarHistorial] = useState(false);
-    const [conversacionesHistorial, setConversacionesHistorial] = useState<any[]>([]);
-    const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Funciones para persistir chat_ids y mensajes en localStorage POR USUARIO
@@ -125,7 +119,7 @@ export function useAsistentesVirtuales() {
             // Convertir las fechas de string a Date
             const mensajesConvertidos: { [key: string]: Mensaje[] } = {};
             for (const [key, mensajes] of Object.entries(parsed)) {
-                mensajesConvertidos[key] = (mensajes as any[]).map(msg => ({
+                mensajesConvertidos[key] = (mensajes as Mensaje[]).map(msg => ({
                     ...msg,
                     timestamp: new Date(msg.timestamp)
                 }));
@@ -145,50 +139,6 @@ export function useAsistentesVirtuales() {
             console.error('Error al guardar mensajes en localStorage:', error);
         }
     };
-
-    const guardarSeccionalPublica = (valor: string) => {
-        setSeccionalPublica(valor);
-        if (valor) {
-            localStorage.setItem('sihul_chatbot_public_seccional', valor);
-        } else {
-            localStorage.removeItem('sihul_chatbot_public_seccional');
-        }
-    };
-
-    useEffect(() => {
-        if (user?.id) {
-            return;
-        }
-
-        const stored = localStorage.getItem('sihul_chatbot_public_seccional');
-        if (stored) {
-            setSeccionalPublica(stored);
-        }
-
-        const cargarSeccionales = async () => {
-            setCargandoSeccionales(true);
-            try {
-                const { sedes } = await sedeService.listarSedes();
-                const unique = Array.from(
-                    new Set(
-                        sedes
-                            .map((sede) => sede.seccional_ciudad)
-                            .filter((ciudad): ciudad is string => Boolean(ciudad))
-                    )
-                ).sort((a, b) => a.localeCompare(b));
-                setSeccionalesPublico(unique);
-                if (!seccionalPublica && unique.length > 0) {
-                    guardarSeccionalPublica(unique[0]);
-                }
-            } catch (error) {
-                console.error('Error al cargar seccionales para chatbot:', error);
-            } finally {
-                setCargandoSeccionales(false);
-            }
-        };
-
-        cargarSeccionales();
-    }, [user?.id]);
 
     // Cargar agentes y datos persistidos desde el backend
     useEffect(() => {
@@ -265,14 +215,16 @@ export function useAsistentesVirtuales() {
         };
 
         cargarAgentes();
-    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol. cargarChatIdsDesdeStorage y cargarMensajesDesdeStorage son estables (solo usan localStorage)
 
     // Guardar mensajes en localStorage cada vez que cambien
     useEffect(() => {
         if (Object.keys(mensajes).length > 0) {
             guardarMensajesEnStorage(mensajes);
         }
-    }, [mensajes]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mensajes]); // guardarMensajesEnStorage es estable (solo usa localStorage)
 
     // Rotación de preguntas sugeridas
     useEffect(() => {
@@ -429,28 +381,10 @@ export function useAsistentesVirtuales() {
 
             // Usar endpoint público o autenticado según el usuario
             if (!user?.id) {
-                if (!seccionalPublica) {
-                    const mensajeErrorSeccional: Mensaje = {
-                        id: `error-${Date.now()}`,
-                        tipo: 'bot',
-                        texto: 'Selecciona una seccional para continuar con el chat público.',
-                        timestamp: new Date(),
-                        leido: true
-                    };
-
-                    setMensajes(prev => ({
-                        ...prev,
-                        [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeErrorSeccional]
-                    }));
-                    setIsTyping(false);
-                    return;
-                }
-
                 // Usuario público - No se guarda historial
                 const response = await chatbotAPI.enviarPreguntaPublico({
                     agente_id: Number(asistenteActivo.id),
-                    pregunta: preguntaEnviada,
-                    seccional: seccionalPublica
+                    pregunta: preguntaEnviada
                 });
 
                 // Guardar el chat_id temporal para la sesión actual
@@ -592,6 +526,10 @@ export function useAsistentesVirtuales() {
         }
     };
 
+    const [mostrarHistorial, setMostrarHistorial] = useState(false);
+    const [conversacionesHistorial, setConversacionesHistorial] = useState<Conversacion[]>([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
     const cargarHistorialConversaciones = async () => {
         if (!asistenteActivo || !user?.id) return;
         
@@ -691,11 +629,6 @@ export function useAsistentesVirtuales() {
     );
 
     return {
-        esPublico: !user?.id,
-        seccionalesPublico,
-        seccionalPublica,
-        setSeccionalPublica: guardarSeccionalPublica,
-        cargandoSeccionales,
         asistenteActivo,
         setAsistenteActivo,
         mensajes,

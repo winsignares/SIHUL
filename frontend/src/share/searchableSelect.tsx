@@ -31,6 +31,7 @@ export interface SearchableSelectProps<T> {
   items: T[];
   
   /** Valor seleccionado actualmente (puede ser el ID o el objeto completo) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
   
   /** Callback cuando se selecciona un item */

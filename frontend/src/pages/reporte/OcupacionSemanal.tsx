@@ -24,7 +24,6 @@ export default function OcupacionSemanal() {
     exportarReporte,
     getColorPorOcupacion,
     getBarColor,
-    semanaInfo,
     validacionPeriodo
   } = useOcupacionSemanal();
 

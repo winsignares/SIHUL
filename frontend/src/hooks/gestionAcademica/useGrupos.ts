@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { grupoService } from '../../services/grupos/gruposAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
-import type { Grupo } from '../../services/grupos/gruposAPI';
 import {
   getPageNumbers,
   getPageSlice,

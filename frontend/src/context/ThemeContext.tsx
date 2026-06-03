@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ interface Notification {
 
 interface NotificationOptions {
   duration?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon?: any;
   description?: string;
 }

@@ -7,6 +7,18 @@ import type { OcupacionView } from './types';
 
 type HorarioEstado = 'aprobado' | 'pendiente' | 'rechazado';
 
+type PeriodoConMetricas = PeriodoAcademico & {
+  horarios_registrados?: number;
+  programas_activos?: number;
+};
+
+function horaANumero(hora: string): number {
+  const partes = hora.split(':');
+  const horas = parseInt(partes[0], 10);
+  const minutos = parseInt(partes[1], 10) || 0;
+  return horas + minutos / 60;
+}
+
 function normalizarDia(dia: string): string {
   const diaLower = dia.toLowerCase().trim();
   const mapeo: Record<string, string> = {
@@ -15,12 +27,14 @@ function normalizarDia(dia: string): string {
     martes: 'Martes',
     tuesday: 'Martes',
     'miércoles': 'Miércoles',
+    'miercoles': 'Miércoles',  // Backend envía sin tilde
     wednesday: 'Miércoles',
     jueves: 'Jueves',
     thursday: 'Jueves',
     viernes: 'Viernes',
     friday: 'Viernes',
     'sábado': 'Sábado',
+    'sabado': 'Sábado',  // Backend envía sin tilde
     saturday: 'Sábado',
     domingo: 'Domingo',
     sunday: 'Domingo'
@@ -29,18 +43,44 @@ function normalizarDia(dia: string): string {
 }
 
 function mapearHorariosAOcupacion(horarios: HorarioExtendido[]): OcupacionView[] {
-  return horarios.map((h) => ({
-    id: h.id,
-    espacioId: h.espacio_id.toString(),
-    dia: normalizarDia(h.dia_semana),
-    horaInicio: parseInt(h.hora_inicio.split(':')[0], 10),
-    horaFin: parseInt(h.hora_fin.split(':')[0], 10),
-    materia: h.asignatura_nombre,
-    docente: h.docente_nombre,
-    grupo: h.grupo_nombre,
-    estado: h.estado === 'pendiente' ? 'pendiente' : 'ocupado',
-    tipo: 'horario'
-  }));
+  return horarios
+    .filter((h) => h.espacio_id != null)
+    .map((h) => ({
+      id: h.id,
+      espacioId: String(h.espacio_id),
+      dia: normalizarDia(h.dia_semana),
+      horaInicio: horaANumero(h.hora_inicio),
+      horaFin: horaANumero(h.hora_fin),
+      materia: h.asignatura_nombre,
+      docente: h.docente_nombre,
+      grupo: h.grupo_nombre,
+      estado: h.estado === 'pendiente' ? 'pendiente' : 'ocupado',
+      tipo: 'horario'
+    }));
+}
+
+function ordenarPeriodosPorRelevancia(periodos: PeriodoConMetricas[]): PeriodoConMetricas[] {
+  return [...periodos].sort((a, b) => {
+    const horariosA = Number(a.horarios_registrados ?? 0);
+    const horariosB = Number(b.horarios_registrados ?? 0);
+    if (horariosB !== horariosA) return horariosB - horariosA;
+
+    const programasA = Number(a.programas_activos ?? 0);
+    const programasB = Number(b.programas_activos ?? 0);
+    if (programasB !== programasA) return programasB - programasA;
+
+    const activoA = a.activo ? 1 : 0;
+    const activoB = b.activo ? 1 : 0;
+    if (activoB !== activoA) return activoB - activoA;
+
+    const inicio = b.fecha_inicio.localeCompare(a.fecha_inicio);
+    if (inicio !== 0) return inicio;
+
+    const fin = b.fecha_fin.localeCompare(a.fecha_fin);
+    if (fin !== 0) return fin;
+
+    return Number(b.id ?? 0) - Number(a.id ?? 0);
+  });
 }
 
 export function useConsultaEspaciosPeriodos() {
@@ -69,6 +109,7 @@ export function useConsultaEspaciosPeriodos() {
       const result = await horarioService.horariosPorPeriodo(periodoId, estado);
       const ocupacion = mapearHorariosAOcupacion(result.horarios);
       setHorariosPeriodo(ocupacion);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const status = error?.status;
       if (status !== 404) {
@@ -95,11 +136,21 @@ export function useConsultaEspaciosPeriodos() {
           return null;
         }
 
-        const periodo = result.periodos[0];
+        const periodosOrdenados = ordenarPeriodosPorRelevancia(result.periodos as PeriodoConMetricas[]);
+        const periodo = periodosOrdenados[0];
 
-        await cargarHorariosPorPeriodo(periodo.id || 0, ['aprobado', 'pendiente']);
+        if (!periodo?.id) {
+          setErrorBusquedaPeriodo(
+            `La fecha digitada no se encuentra dentro de un periodo existente en el sistema, digite otra.`
+          );
+          setHorariosPeriodo([]);
+          return null;
+        }
+
+        await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente']);
 
         return periodo;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const status = error?.status;
         if (status !== 404) {

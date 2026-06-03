@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
@@ -7,10 +7,11 @@ import { asignaturaService, asignaturaProgramaService, type Asignatura, type Asi
 import { userService, type Usuario } from '../../services/users/authService';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
-import { solicitudEspacioService, type SolicitudEspacio } from '../../services/horarios/solicitudEspacioAPI';
+import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { useValidacionHorarios } from './useValidacionHorarios';
+import type { HorarioValidable } from './useValidacionHorarios';
 
 const CREAR_HORARIOS_CACHE_KEY = 'gestion-academica-crear-horarios';
 
@@ -58,12 +59,19 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [asignaturasPrograma, setAsignaturasPrograma] = useState<AsignaturaPrograma[]>([]);
     const [docentes, setDocentes] = useState<Usuario[]>([]);
     const [todosLosHorarios, setTodosLosHorarios] = useState<HorarioExtendido[]>([]);
+    const loadedRef = useRef(false);
 
     // Filtros
-    const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
-    const [filtroPrograma, setFiltroPrograma] = useState<number | string>('all');
-    const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
-    const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
+    const [filtroFacultad, setFiltroFacultadState] = useState<string>('all');
+    const [filtroPrograma, setFiltroProgramaState] = useState<number | string>('all');
+    const [filtroSemestre, setFiltroSemestreState] = useState<string>('all');
+    const [filtroGrupo, setFiltroGrupoState] = useState<string>('all');
+
+    // Stable setters wrapped in useCallback
+    const setFiltroFacultad = useCallback((v: string) => setFiltroFacultadState(v), []);
+    const setFiltroPrograma = useCallback((v: number | string) => setFiltroProgramaState(v), []);
+    const setFiltroSemestre = useCallback((v: string) => setFiltroSemestreState(v), []);
+    const setFiltroGrupo = useCallback((v: string) => setFiltroGrupoState(v), []);
 
     // Estados de la UI
     const [vistaActual, setVistaActual] = useState<'lista' | 'asignar'>('lista');
@@ -79,40 +87,55 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
     const [horasPorDia, setHorasPorDia] = useState<{ [key: string]: { inicio: string; fin: string } }>({});
 
+    const horariosValidables: HorarioValidable[] = todosLosHorarios
+        .filter((h): h is HorarioExtendido & { espacio_id: number } => h.espacio_id != null)
+        .map((h) => ({
+            id: h.id,
+            grupo_id: h.grupo_id,
+            grupo_nombre: h.grupo_nombre,
+            asignatura_id: h.asignatura_id,
+            asignatura_nombre: h.asignatura_nombre,
+            docente_id: h.docente_id,
+            docente_nombre: h.docente_nombre,
+            espacio_id: h.espacio_id,
+            espacio_nombre: h.espacio_nombre,
+            dia_semana: h.dia_semana,
+            hora_inicio: h.hora_inicio,
+            hora_fin: h.hora_fin,
+            cantidad_estudiantes: h.cantidad_estudiantes,
+        }));
+
     const { validarConflictosHorario } = useValidacionHorarios({
-        horarios: todosLosHorarios,
+        horarios: horariosValidables,
         grupos,
         espacios,
     });
 
-    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const semestres = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const diasSemana = useMemo(() => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'], []);
+    const semestres = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], []);
 
-    useEffect(() => {
-        loadData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
-        try {
-            const activeToken = localStorage.getItem('auth_token');
-            const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
-            const cacheKey = `${CREAR_HORARIOS_CACHE_KEY}-${userScope}`;
-            const cachedData = force
-                ? null
-                : getSessionCacheData<{
-                    facultades: Facultad[];
-                    programas: Programa[];
-                    grupos: GrupoConInfo[];
-                    espacios: EspacioFisico[];
-                    asignaturas: Asignatura[];
-                    asignaturasPrograma: AsignaturaPrograma[];
-                    docentes: Usuario[];
-                    todosLosHorarios: HorarioExtendido[];
-                    filtroFacultad?: string;
-                }>(cacheKey, activeToken);
+    // Carga progresiva: primero datos pequeños, luego grupos masivos
+    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+        const activeToken = localStorage.getItem('auth_token');
+        const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
+        const cacheKey = `${CREAR_HORARIOS_CACHE_KEY}-${userScope}`;
+        
+        // 1. Verificar caché primero
+        if (!force) {
+            const cachedData = getSessionCacheData<{
+                facultades: Facultad[];
+                programas: Programa[];
+                grupos: GrupoConInfo[];
+                espacios: EspacioFisico[];
+                asignaturas: Asignatura[];
+                asignaturasPrograma: AsignaturaPrograma[];
+                docentes: Usuario[];
+                todosLosHorarios: HorarioExtendido[];
+                filtroFacultad?: string;
+            }>(cacheKey, activeToken);
 
             if (cachedData) {
+                // Aplicar caché inmediatamente
                 setFacultades(cachedData.facultades);
                 setProgramas(cachedData.programas);
                 setGrupos(cachedData.grupos);
@@ -124,78 +147,54 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 if (cachedData.filtroFacultad) {
                     setFiltroFacultad(cachedData.filtroFacultad);
                 }
+                setLoading(false);
                 return { todosHorarios: cachedData.todosLosHorarios };
             }
+        }
 
-            setLoading(true);
-            
-            // Cargar horarios extendidos
-            const horariosResponse = await horarioService.listExtendidos({ includePending: true });
-            console.log('📋 Horarios cargados:', horariosResponse.horarios.slice(0, 2)); // Mostrar primeros 2
-            
-            // Si es planeacion_facultad, también cargar sus solicitudes pendientes
-            let todosHorarios = horariosResponse.horarios;
-            if (role?.nombre === 'planeacion_facultad' && user?.id) {
-                try {
-                    const solicitudesResponse = await solicitudEspacioService.list('pendiente');
-                    // Filtrar solo las solicitudes del usuario actual
-                    const misSolicitudes = solicitudesResponse.solicitudes.filter(
-                        s => s.planificador_id === user.id
-                    );
-                    
-                    // Convertir solicitudes a formato HorarioExtendido para mostrarlas en la cuadrícula
-                    const solicitudesComoHorarios: HorarioExtendido[] = misSolicitudes.map(s => ({
-                        id: s.id,
-                        grupo_id: s.grupo_id,
-                        grupo_nombre: s.grupo_nombre,
-                        programa_id: 0, // No disponible en SolicitudEspacio
-                        programa_nombre: '',
-                        semestre: 0,
-                        asignatura_id: s.asignatura_id,
-                        asignatura_nombre: s.asignatura_nombre,
-                        docente_id: s.docente_id,
-                        docente_nombre: s.docente_nombre || 'Sin asignar',
-                        espacio_id: s.espacio_solicitado_id,
-                        espacio_nombre: s.espacio_solicitado_nombre,
-                        dia_semana: s.dia_semana,
-                        hora_inicio: s.hora_inicio,
-                        hora_fin: s.hora_fin,
-                        cantidad_estudiantes: s.cantidad_estudiantes,
-                        estado: 'pendiente',
-                        es_solicitud: true
-                    }));
-                    
-                    // Combinar horarios aprobados con solicitudes pendientes
-                    todosHorarios = [...horariosResponse.horarios, ...solicitudesComoHorarios];
-                    console.log('📋 Solicitudes pendientes cargadas:', solicitudesComoHorarios.length);
-                } catch (error) {
-                    console.warn('Error al cargar solicitudes pendientes:', error);
-                    // Continuar sin solicitudes si hay error
-                }
-            }
-            
-            setTodosLosHorarios(todosHorarios);
+        // 2. Iniciar carga progresiva
+        setLoading(true);
 
-            // Cargar facultades
-            const facultadesResponse = await facultadService.list();
+        try {
+            // FASE 1: Cargar datos pequeños en paralelo (rápidos)
+            const [
+                facultadesResponse,
+                programasResponse,
+                espaciosResponse,
+                asignaturasResponse,
+                asignaturasProgramaResponse,
+                usuariosResponse
+            ] = await Promise.all([
+                facultadService.list(),
+                programaService.listarProgramas(),
+                espacioService.list(),
+                asignaturaService.list(),
+                asignaturaProgramaService.list(),
+                userService.listarDocentes()
+            ]);
+
+            // Aplicar datos pequeños inmediatamente para mostrar filtros
             let allFacultades = facultadesResponse.facultades;
-            
-            // Filtrar por facultad si el usuario tiene rol de planeacion_facultad
             if (role?.nombre === 'planeacion_facultad' && user?.facultad) {
                 const userFacultadId = user.facultad.id.toString();
                 allFacultades = allFacultades.filter(f => f.id?.toString() === userFacultadId);
                 setFiltroFacultad(userFacultadId);
             }
+
             setFacultades(allFacultades);
-
-            // Cargar programas
-            const programasResponse = await programaService.listarProgramas();
             setProgramas(programasResponse.programas);
+            setEspacios(espaciosResponse.espacios);
+            setAsignaturas(asignaturasResponse.asignaturas);
+            setAsignaturasPrograma(asignaturasProgramaResponse.asignaturas_programa);
+            setDocentes(usuariosResponse.usuarios);
 
-            // Cargar grupos
+            // 3. FASE 2: Cargar grupos (datos masivos) - esto puede tardar
             const gruposResponse = await grupoService.list();
+            
+            // Procesar grupos de forma más eficiente
+            const programasMap = new Map(programasResponse.programas.map(p => [p.id, p]));
             const gruposConInfo = gruposResponse.grupos.map(grupo => {
-                const programa = programasResponse.programas.find(p => p.id === grupo.programa_id);
+                const programa = programasMap.get(grupo.programa_id);
                 return {
                     ...grupo,
                     programa_nombre: programa?.nombre,
@@ -204,74 +203,138 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             });
             setGrupos(gruposConInfo);
 
-            // Cargar espacios
-            const espaciosResponse = await espacioService.list();
-            setEspacios(espaciosResponse.espacios);
-
-            // Cargar asignaturas
-            const asignaturasResponse = await asignaturaService.list();
-            setAsignaturas(asignaturasResponse.asignaturas);
-
-            // Cargar relaciones asignatura-programa
-            const asignaturasProgramaResponse = await asignaturaProgramaService.list();
-            setAsignaturasPrograma(asignaturasProgramaResponse.asignaturas_programa);
-
-            // Cargar docentes (usuarios con rol de docente)
-            const usuariosResponse = await userService.listarDocentes();
-            setDocentes(usuariosResponse.usuarios);
-
-            setSessionCacheData(cacheKey, activeToken, {
-                facultades: allFacultades,
-                programas: programasResponse.programas,
-                grupos: gruposConInfo,
-                espacios: espaciosResponse.espacios,
-                asignaturas: asignaturasResponse.asignaturas,
-                asignaturasPrograma: asignaturasProgramaResponse.asignaturas_programa,
-                docentes: usuariosResponse.usuarios,
-                todosLosHorarios: todosHorarios,
-                filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
-                    ? user.facultad.id.toString()
-                    : undefined
-            });
-
-            return { todosHorarios };
+            // 4. FASE 3: Cargar horarios (los más pesados, en segundo plano)
+            // Primero desactivamos loading para mostrar la tabla
+            setLoading(false);
             
+            // Luego cargamos horarios silenciosamente
+            try {
+                const horariosResponse = await horarioService.listExtendidos({ includePending: true });
+                let todosHorarios = horariosResponse.horarios;
+                
+                // Cargar solicitudes pendientes si aplica
+                if (role?.nombre === 'planeacion_facultad' && user?.id) {
+                    try {
+                        const solicitudesResponse = await solicitudEspacioService.list('pendiente');
+                        const misSolicitudes = solicitudesResponse.solicitudes.filter(
+                            s => s.planificador_id === user.id
+                        );
+                        
+                        const solicitudesComoHorarios: HorarioExtendido[] = misSolicitudes.map(s => ({
+                            id: s.id,
+                            grupo_id: s.grupo_id,
+                            grupo_nombre: s.grupo_nombre,
+                            programa_id: 0,
+                            programa_nombre: '',
+                            semestre: 0,
+                            asignatura_id: s.asignatura_id,
+                            asignatura_nombre: s.asignatura_nombre,
+                            docente_id: s.docente_id,
+                            docente_nombre: s.docente_nombre || 'Sin asignar',
+                            espacio_id: s.espacio_solicitado_id,
+                            espacio_nombre: s.espacio_solicitado_nombre,
+                            dia_semana: s.dia_semana,
+                            hora_inicio: s.hora_inicio,
+                            hora_fin: s.hora_fin,
+                            cantidad_estudiantes: s.cantidad_estudiantes,
+                            estado: 'pendiente',
+                            es_solicitud: true
+                        }));
+                        
+                        todosHorarios = [...horariosResponse.horarios, ...solicitudesComoHorarios];
+                    } catch (error) {
+                        console.warn('Error al cargar solicitudes pendientes:', error);
+                    }
+                }
+                
+                setTodosLosHorarios(todosHorarios);
+
+                // Guardar en caché
+                setSessionCacheData(cacheKey, activeToken, {
+                    facultades: allFacultades,
+                    programas: programasResponse.programas,
+                    grupos: gruposConInfo,
+                    espacios: espaciosResponse.espacios,
+                    asignaturas: asignaturasResponse.asignaturas,
+                    asignaturasPrograma: asignaturasProgramaResponse.asignaturas_programa,
+                    docentes: usuariosResponse.usuarios,
+                    todosLosHorarios: todosHorarios,
+                    filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
+                        ? user.facultad.id.toString()
+                        : undefined
+                });
+
+                return { todosHorarios };
+            } catch (error) {
+                console.warn('Error al cargar horarios:', error);
+                return { todosHorarios: [] as HorarioExtendido[] };
+            }
         } catch (error) {
             showNotification(
                 `Error al cargar datos: ${getErrorMessage(error)}`,
                 'error'
             );
-            return { todosHorarios: [] as HorarioExtendido[] };
-        } finally {
             setLoading(false);
+            return { todosHorarios: [] as HorarioExtendido[] };
         }
-    };
+    }, [role?.nombre, user?.id, user?.facultad, showNotification, setFiltroFacultad]);
 
-    // Obtener grupos sin horario (o con horarios incompletos)
-    const obtenerGrupos = (): GrupoConInfo[] => {
-        return grupos;
-    };
+    // Load data once when user/role available - guarded by loadedRef
+    useEffect(() => {
+        if (user && role && !loadedRef.current) {
+            loadedRef.current = true;
+            loadData();
+        }
+    }, [user, role, loadData]);
 
     // Filtrar grupos
-    const gruposSinHorarioFiltrados = obtenerGrupos().filter(grupo => {
+    const gruposSinHorarioFiltrados = useMemo(() => grupos.filter(grupo => {
         const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
         const matchPrograma = filtroPrograma === 'all' || grupo.programa_id?.toString() === filtroPrograma.toString();
         const matchSemestre = filtroSemestre === 'all' || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
         const matchGrupo = filtroGrupo === 'all' || (grupo.nombre && grupo.nombre.toLowerCase().includes(filtroGrupo.toLowerCase()));
 
         return matchFacultad && matchPrograma && matchSemestre && matchGrupo;
-    });
+    }), [grupos, filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo]);
 
-    const programasFiltrados = programas.filter(p =>
-        filtroFacultad === 'all' || p.facultad_id?.toString() === filtroFacultad
+    // Paginación para grupos sin horario
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 20;
+
+    const totalPages = Math.ceil(gruposSinHorarioFiltrados.length / pageSize);
+    const paginatedGrupos = gruposSinHorarioFiltrados.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const goToPage = useCallback((page: number) => setCurrentPage(page), []);
+    const goToNextPage = useCallback(() => setCurrentPage(p => Math.min(p + 1, totalPages)), [totalPages]);
+    const goToPrevPage = useCallback(() => setCurrentPage(p => Math.max(p - 1, 1)), []);
+
+    // Resetear a página 1 cuando cambian los filtros
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo]);
+
+    const programasFiltrados = useMemo(() =>
+        programas.filter(p => filtroFacultad === 'all' || p.facultad_id?.toString() === filtroFacultad),
+        [programas, filtroFacultad]
     );
 
-    const limpiarFiltros = () => {
-        setFiltroFacultad('all');
-        setFiltroPrograma('all');
-        setFiltroSemestre('all');
-        setFiltroGrupo('all');
-    };
+    // Resetear programa seleccionado si ya no está en la lista filtrada
+    useEffect(() => {
+        if (filtroPrograma !== 'all') {
+            const programIdStr = filtroPrograma.toString();
+            const stillValid = programasFiltrados.some(p => p.id?.toString() === programIdStr);
+            if (!stillValid) {
+                setFiltroProgramaState('all');
+            }
+        }
+    }, [programasFiltrados, filtroPrograma]);
+
+    const limpiarFiltros = useCallback(() => {
+        setFiltroFacultadState('all');
+        setFiltroProgramaState('all');
+        setFiltroSemestreState('all');
+        setFiltroGrupoState('all');
+    }, []);
 
     // Obtener asignaturas de un programa específico y semestre
     const getAsignaturasByProgramaYSemestre = (programaId: number, semestre: number): Asignatura[] => {
@@ -497,6 +560,10 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 showNotification('Horario no encontrado', 'error');
                 return;
             }
+            if (horarioAMover.espacio_id == null) {
+                showNotification('El horario no tiene espacio asignado', 'error');
+                return;
+            }
 
             // Calcular la hora de fin basada en la duración original
             const horaInicioOriginal = parseInt(horarioAMover.hora_inicio.split(':')[0]);
@@ -610,7 +677,15 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         limpiarFiltros,
         loadData,
         gruposSinHorarioFiltrados,
+        paginatedGrupos,
         programasFiltrados,
+        // Paginación
+        currentPage,
+        totalPages,
+        pageSize,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
         getAsignaturasByProgramaYSemestre,
         getEspaciosDisponibles,
         diasSemana,

@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../share/notificationBanner';
 import { horarioService, horarioFusionadoService } from '../../services/horarios/horariosAPI';
+import { useConsultaEspaciosPaginacion } from '../espacios/useConsultaEspaciosPaginacion';
 import { facultadService, type Facultad } from '../../services/facultades/facultadesAPI';
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { userService } from '../../services/users/authService';
 import { useValidacionHorarios } from './useValidacionHorarios';
+import type { HorarioValidable } from './useValidacionHorarios';
 
 const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios';
 
@@ -29,7 +32,7 @@ export interface HorarioExtendido {
     asignatura_nombre: string;
     docente_id: number | null;
     docente_nombre: string;
-    espacio_id: number;
+    espacio_id: number | null;
     espacio_nombre: string;
     dia_semana: string;
     hora_inicio: string;
@@ -65,13 +68,17 @@ export interface HorarioFusionadoExtendido {
     comentario: string | null;
 }
 
+type TabMode = 'consulta' | 'crear' | 'modificacion' | 'fusionados';
+
 export function useCentroHorarios() {
     const { user, role } = useAuth();
     const { notification, showNotification } = useNotification();
     const [searchParams] = useSearchParams();
     const modeParam = searchParams.get('mode');
-    const initialMode = modeParam === 'consulta' ? 'consulta' : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
-    const [activeTab, setActiveTab] = useState<'consulta' | 'crear' | 'modificacion' | 'fusionados'>(initialMode as any);
+    const initialMode: TabMode = modeParam === 'consulta'
+        ? 'consulta'
+        : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
+    const [activeTab, setActiveTab] = useState<TabMode>(initialMode);
     const [loading, setLoading] = useState(false);
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
     const [horariosFusionados, setHorariosFusionados] = useState<HorarioFusionadoExtendido[]>([]);
@@ -114,29 +121,43 @@ export function useCentroHorarios() {
     const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
     const [progresoEliminacion, setProgresoEliminacion] = useState(0);
 
+    const horariosValidables: HorarioValidable[] = horarios
+        .filter((h): h is HorarioExtendido & { espacio_id: number } => h.espacio_id != null)
+        .map((h) => ({
+            id: h.id,
+            grupo_id: h.grupo_id,
+            grupo_nombre: h.grupo_nombre,
+            asignatura_id: h.asignatura_id,
+            asignatura_nombre: h.asignatura_nombre,
+            docente_id: h.docente_id,
+            docente_nombre: h.docente_nombre,
+            espacio_id: h.espacio_id,
+            espacio_nombre: h.espacio_nombre,
+            dia_semana: h.dia_semana,
+            hora_inicio: h.hora_inicio,
+            hora_fin: h.hora_fin,
+            cantidad_estudiantes: h.cantidad_estudiantes,
+        }));
+
     const { validarConflictosHorario } = useValidacionHorarios({
-        horarios,
+        horarios: horariosValidables,
         grupos,
         espacios,
     });
 
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-    useEffect(() => {
-        loadData();
-    }, [user, role]);
-
     // Si cambian los query params, sincronizar la pestaña activa
     useEffect(() => {
         const mode = searchParams.get('mode');
         if (mode === 'crear' || mode === 'modificacion' || mode === 'consulta') {
-            setActiveTab(mode as any);
+            setActiveTab(mode);
         } else {
             setActiveTab('crear');
         }
     }, [searchParams]);
 
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
@@ -174,46 +195,59 @@ export function useCentroHorarios() {
             const horariosResponse = await horarioService.listExtendidos();
             setHorarios(horariosResponse.horarios);
 
-            // Cargar horarios fusionados
+            // Cargar horarios fusionados - procesamiento por lotes para evitar saturación
             const fusionadosResponse = await horarioFusionadoService.list();
-            const fusionadosConInfo: HorarioFusionadoExtendido[] = await Promise.all(
-                fusionadosResponse.horarios_fusionados.map(async (hf): Promise<HorarioFusionadoExtendido> => {
-                    if (!hf.grupo1_id || !hf.grupo2_id) {
-                        throw new Error(`Horario fusionado inválido (id=${hf.id ?? 'sin-id'}): grupo1_id/grupo2_id requeridos`);
-                    }
+            const fusionadosConInfo: HorarioFusionadoExtendido[] = [];
+            const BATCH_SIZE = 5; // Procesar máximo 5 horarios fusionados en paralelo
 
-                    // Obtener información de los grupos
-                    const [grupo1, grupo2, grupo3] = await Promise.all([
-                        grupoService.get(hf.grupo1_id),
-                        grupoService.get(hf.grupo2_id),
-                        hf.grupo3_id ? grupoService.get(hf.grupo3_id) : Promise.resolve(null)
-                    ]);
+            for (let i = 0; i < fusionadosResponse.horarios_fusionados.length; i += BATCH_SIZE) {
+                const batch = fusionadosResponse.horarios_fusionados.slice(i, i + BATCH_SIZE);
+                const batchResults = await Promise.all(
+                    batch.map(async (hf): Promise<HorarioFusionadoExtendido | null> => {
+                        if (!hf.grupo1_id || !hf.grupo2_id) {
+                            console.warn(`Horario fusionado inválido (id=${hf.id ?? 'sin-id'}): grupo1_id/grupo2_id requeridos`);
+                            return null;
+                        }
 
-                    // Buscar información adicional de horarios
-                    const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
-                    
-                    return {
-                        id: hf.id as number,
-                        grupo1_id: hf.grupo1_id,
-                        grupo2_id: hf.grupo2_id,
-                        grupo3_id: hf.grupo3_id ?? null,
-                        grupo1_nombre: grupo1.nombre,
-                        grupo2_nombre: grupo2.nombre,
-                        grupo3_nombre: grupo3?.nombre || null,
-                        asignatura_id: hf.asignatura_id,
-                        asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
-                        docente_id: horario1?.docente_id ?? null,
-                        docente_nombre: horario1?.docente_nombre || 'N/A',
-                        espacio_id: horario1?.espacio_id ?? hf.espacio_id,
-                        espacio_nombre: horario1?.espacio_nombre || 'N/A',
-                        dia_semana: hf.dia_semana,
-                        hora_inicio: hf.hora_inicio,
-                        hora_fin: hf.hora_fin,
-                        cantidad_estudiantes: hf.cantidad_estudiantes ?? null,
-                        comentario: hf.comentario ?? null
-                    };
-                })
-            );
+                        try {
+                            // Obtener información de los grupos
+                            const [grupo1, grupo2, grupo3] = await Promise.all([
+                                grupoService.get(hf.grupo1_id),
+                                grupoService.get(hf.grupo2_id),
+                                hf.grupo3_id ? grupoService.get(hf.grupo3_id) : Promise.resolve(null)
+                            ]);
+
+                            // Buscar información adicional de horarios
+                            const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
+                            
+                            return {
+                                id: hf.id as number,
+                                grupo1_id: hf.grupo1_id,
+                                grupo2_id: hf.grupo2_id,
+                                grupo3_id: hf.grupo3_id ?? null,
+                                grupo1_nombre: grupo1.nombre,
+                                grupo2_nombre: grupo2.nombre,
+                                grupo3_nombre: grupo3?.nombre || null,
+                                asignatura_id: hf.asignatura_id,
+                                asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
+                                docente_id: horario1?.docente_id ?? null,
+                                docente_nombre: horario1?.docente_nombre || 'N/A',
+                                espacio_id: horario1?.espacio_id ?? hf.espacio_id,
+                                espacio_nombre: horario1?.espacio_nombre || 'N/A',
+                                dia_semana: hf.dia_semana,
+                                hora_inicio: hf.hora_inicio,
+                                hora_fin: hf.hora_fin,
+                                cantidad_estudiantes: hf.cantidad_estudiantes ?? null,
+                                comentario: hf.comentario ?? null
+                            };
+                        } catch (error) {
+                            console.warn(`Error cargando horario fusionado ${hf.id}:`, error);
+                            return null;
+                        }
+                    })
+                );
+                fusionadosConInfo.push(...batchResults.filter((item): item is HorarioFusionadoExtendido => item !== null));
+            }
             setHorariosFusionados(fusionadosConInfo);
 
             // Cargar grupos
@@ -227,7 +261,7 @@ export function useCentroHorarios() {
             // Filtrar facultades si es planeacion_facultad
             if (role?.nombre === 'planeacion_facultad' && user?.facultad) {
                 const userFacultadId = user.facultad.id.toString();
-                allFacultades = allFacultades.filter(f => f.id.toString() === userFacultadId);
+                allFacultades = allFacultades.filter((f) => String(f.id ?? '') === userFacultadId);
                 setFiltroFacultad(userFacultadId);
             }
             setFacultades(allFacultades);
@@ -240,31 +274,29 @@ export function useCentroHorarios() {
             const espaciosResponse = await espacioService.list();
             setEspacios(espaciosResponse.espacios);
 
-            // Cargar docentes (usuarios)
-            const apiUrl = import.meta.env.VITE_API_URL;
-            const docentesResponse = await fetch(`${apiUrl}/usuarios/list/`);
-            if (docentesResponse.ok) {
-                const docentesData = await docentesResponse.json();
-                const docentesList: Docente[] = docentesData.usuarios.map((u: any) => ({
+            // Cargar docentes (usuarios) usando el servicio de autenticación
+            const docentesResponse = await userService.listarDocentes();
+            const docentesList: Docente[] = docentesResponse.usuarios
+                .filter((u): u is typeof u & { id: number } => u.id !== undefined)
+                .map((u) => ({
                     id: u.id,
                     nombre: u.nombre,
                     correo: u.correo
                 }));
-                setDocentes(docentesList);
+            setDocentes(docentesList);
 
-                setSessionCacheData(cacheKey, activeToken, {
-                    horarios: horariosResponse.horarios,
-                    horariosFusionados: fusionadosConInfo,
-                    grupos: gruposResponse.grupos,
-                    facultades: allFacultades,
-                    programas: programasResponse.programas,
-                    espacios: espaciosResponse.espacios,
-                    docentes: docentesList,
-                    filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
-                        ? user.facultad.id.toString()
-                        : undefined
-                });
-            }
+            setSessionCacheData(cacheKey, activeToken, {
+                horarios: horariosResponse.horarios,
+                horariosFusionados: fusionadosConInfo,
+                grupos: gruposResponse.grupos,
+                facultades: allFacultades,
+                programas: programasResponse.programas,
+                espacios: espaciosResponse.espacios,
+                docentes: docentesList,
+                filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
+                    ? user.facultad.id.toString()
+                    : undefined
+            });
             
         } catch (error) {
             showNotification(
@@ -274,7 +306,16 @@ export function useCentroHorarios() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [role?.nombre, showNotification, user?.facultad, user?.id]);
+
+    const loadedRef = useRef(false);
+
+    useEffect(() => {
+        if (!loadedRef.current) {
+            loadedRef.current = true;
+            loadData();
+        }
+    }, [loadData]);
 
     // Generar horas para el grid semanal
     const generarHoras = () => {
@@ -337,6 +378,9 @@ export function useCentroHorarios() {
     // Obtener grupos agrupados después de filtrar
     const gruposAgrupados = agruparHorarios(horariosFiltrados);
 
+    // Aplicar paginación a los grupos (10 por página)
+    const paginacion = useConsultaEspaciosPaginacion(gruposAgrupados);
+
     // Obtener listas únicas para filtros
     const gruposUnicos = [...new Set(horarios.map(h => h.grupo_nombre).filter(Boolean))].sort();
     const semestresUnicos = [...new Set(horarios.map(h => h.semestre).filter(Boolean))].sort((a, b) => a - b);
@@ -373,6 +417,9 @@ export function useCentroHorarios() {
 
     // Validar conflictos de horario al editar
     const validarConflictosEdicion = (horarioEditado: HorarioExtendido): { valido: boolean; mensaje: string } => {
+        if (horarioEditado.espacio_id == null) {
+            return { valido: false, mensaje: 'El horario no tiene un espacio asignado' };
+        }
         return validarConflictosHorario({
             horarioId: horarioEditado.id,
             grupoId: horarioEditado.grupo_id,
@@ -390,6 +437,10 @@ export function useCentroHorarios() {
 
     const handleGuardarEdicion = async () => {
         if (!horarioEditar) return;
+        if (horarioEditar.espacio_id == null) {
+            showNotification('No se puede guardar un horario sin espacio asignado', 'error');
+            return;
+        }
 
         // Validar conflictos antes de guardar
         const validacion = validarConflictosEdicion(horarioEditar);
@@ -552,7 +603,7 @@ export function useCentroHorarios() {
                 } else {
                     showNotification('Error al eliminar los horarios', 'error');
                 }
-            } catch (error) {
+            } catch {
                 showNotification('Error al eliminar los horarios', 'error');
             } finally {
                 setLoading(false);
@@ -565,7 +616,8 @@ export function useCentroHorarios() {
         return programa?.nombre || 'N/A';
     };
 
-    const getNombreEspacio = (espacioId: number) => {
+    const getNombreEspacio = (espacioId: number | null) => {
+        if (espacioId == null) return 'Sin espacio';
         const espacio = espacios.find(e => e.id === espacioId);
         return espacio?.nombre || 'N/A';
     };
@@ -681,7 +733,20 @@ export function useCentroHorarios() {
         obtenerClaseEnHora,
         agruparHorarios,
         horariosFiltrados,
-        gruposAgrupados,
+        gruposAgrupados: paginacion.paginatedEspacios,
+        gruposAgrupadosTotal: gruposAgrupados.length,
+        // Paginación
+        currentPage: paginacion.currentPage,
+        totalPages: paginacion.totalPages,
+        pageNumbers: paginacion.pageNumbers,
+        pageSize: paginacion.pageSize,
+        goToPage: paginacion.goToPage,
+        goToNextPage: paginacion.goToNextPage,
+        goToPrevPage: paginacion.goToPrevPage,
+        hasPrevPageWindow: paginacion.hasPrevPageWindow,
+        hasNextPageWindow: paginacion.hasNextPageWindow,
+        goToPrevPageWindow: paginacion.goToPrevPageWindow,
+        goToNextPageWindow: paginacion.goToNextPageWindow,
         gruposUnicos,
         semestresUnicos,
         programasFiltrados,

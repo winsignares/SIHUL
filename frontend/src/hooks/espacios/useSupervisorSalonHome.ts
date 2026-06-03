@@ -326,6 +326,7 @@ export function useSupervisorSalonHome() {
                 estadoOriginal: recurso.estado
             })));
             setModalRecursosAbierto(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             toast.error(error?.message || 'No se pudieron cargar recursos del salon');
             setRecursosPendientes([]);
@@ -363,6 +364,7 @@ export function useSupervisorSalonHome() {
             setSalonParaCerrar(null);
             toast.success('Revision de recursos completada');
             return { ok: true as const };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             const message = error?.message || 'No se pudieron guardar los cambios de recursos';
             toast.error(message);
@@ -415,6 +417,7 @@ export function useSupervisorSalonHome() {
             setModalCierreAbierto(false);
             await cargarDatos({ force: true });
             await cargarRecursosDeSalon(salonParaCerrar.id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             if (error?.status === 400) {
                 toast.error(error?.message || 'No fue posible cerrar el salon');

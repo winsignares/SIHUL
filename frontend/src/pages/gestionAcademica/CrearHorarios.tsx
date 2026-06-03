@@ -4,7 +4,6 @@ import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Input } from '../../share/input';
 import { Label } from '../../share/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { SearchableSelect } from '../../share/searchableSelect';
 import {
   Clock,
@@ -19,27 +18,25 @@ import {
   CheckCircle2,
   BookOpen,
   X,
-  GripVertical
+  GripVertical,
+  Loader2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCrearHorarios } from '../../hooks/gestionAcademica/useCrearHorarios';
-import { useIsMobile } from '../../hooks/useIsMobile';
-
 interface CrearHorariosProps {
   onHorarioCreado?: () => void;
 }
 
 export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = {}) {
-  const isMobile = useIsMobile();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [draggedHorario, setDraggedHorario] = useState<any>(null);
   const [dragSource, setDragSource] = useState<{ dia: string; hora: string } | null>(null);
 
   const {
+    loading,
     facultades,
-    espacios,
-    asignaturas,
     docentes,
     filtroFacultad, setFiltroFacultad,
     filtroPrograma, setFiltroPrograma,
@@ -66,7 +63,14 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     limpiarFiltros,
     loadData,
     gruposSinHorarioFiltrados,
+    paginatedGrupos,
     programasFiltrados,
+    // Paginación
+    currentPage,
+    totalPages,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
     getAsignaturasByProgramaYSemestre,
     getEspaciosDisponibles,
     diasSemana,
@@ -74,7 +78,6 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     horas,
     obtenerClaseEnHora,
     notification,
-    user,
     role
   } = useCrearHorarios({ onHorarioCreado });
 
@@ -85,6 +88,9 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
 
   // Obtener espacios disponibles según la cantidad de estudiantes
   const espaciosDisponibles = getEspaciosDisponibles(cantidadEstudiantes as number);
+
+  // Valor string para el select de programa
+  const filtroProgramaValue = String(filtroPrograma);
 
   // VISTA LISTA DE GRUPOS SIN HORARIO
   if (vistaActual === 'lista') {
@@ -118,53 +124,68 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>Facultad</Label>
-                  <Select value={filtroFacultad} onValueChange={setFiltroFacultad}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las facultades</SelectItem>
-                      {facultades.map(f => (
-                        <SelectItem key={f.id} value={f.id?.toString() || ''}>{f.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todas las facultades' },
+                      ...facultades.map(f => ({
+                        id: f.id?.toString() || '',
+                        nombre: f.nombre
+                      }))
+                    ]}
+                    value={filtroFacultad}
+                    onSelect={(item) => setFiltroFacultad(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar facultad..."
+                    searchPlaceholder="Buscar facultad..."
+                    emptyMessage="No se encontró ninguna facultad"
+                  />
                 </div>
 
                 <div>
                   <Label>Programa</Label>
-                  <Select value={filtroPrograma.toString()} onValueChange={setFiltroPrograma}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los programas</SelectItem>
-                      {programasFiltrados.map(p => (
-                        <SelectItem key={p.id} value={p.id?.toString() || ''}>{p.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los programas' },
+                      ...programasFiltrados.map(p => ({
+                        id: p.id?.toString() || '',
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroProgramaValue}
+                    onSelect={(item) => setFiltroPrograma(item.id === 'all' ? 'all' : Number(item.id))}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar programa..."
+                    searchPlaceholder="Buscar programa..."
+                    emptyMessage="No se encontró ningún programa"
+                  />
                 </div>
 
                 <div>
                   <Label>Semestre</Label>
-                  <Select value={filtroSemestre} onValueChange={setFiltroSemestre}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los semestres</SelectItem>
-                      {semestres.map(s => (
-                        <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los semestres' },
+                      ...semestres.map(s => ({
+                        id: s.toString(),
+                        nombre: `Semestre ${s}`
+                      }))
+                    ]}
+                    value={filtroSemestre}
+                    onSelect={(item) => setFiltroSemestre(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar semestre..."
+                    searchPlaceholder="Buscar semestre..."
+                    emptyMessage="No se encontró ningún semestre"
+                  />
                 </div>
 
                 <div>
                   <Label>Grupo</Label>
                   <Input
-                    placeholder="Buscar grupo..."
+                    placeholder="Filtrar grupo por nombre..."
                     value={filtroGrupo === 'all' ? '' : filtroGrupo}
                     onChange={(e) => setFiltroGrupo(e.target.value || 'all')}
                   />
@@ -208,55 +229,116 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="text-left px-6 py-4 text-slate-700">Programa</th>
-                      <th className="text-left px-6 py-4 text-slate-700">Grupo</th>
-                      <th className="text-left px-6 py-4 text-slate-700">Semestre</th>
-                      <th className="text-center px-6 py-4 text-slate-700">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {gruposSinHorarioFiltrados.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="text-center py-12 text-slate-500">
-                          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-400" />
-                          <p>No hay grupos sin horarios con los filtros seleccionados</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      gruposSinHorarioFiltrados.map((grupo, index) => (
-                        <motion.tr
-                          key={grupo.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                        >
-                          <td className="px-6 py-4 text-slate-900">{grupo.programa_nombre || 'N/A'}</td>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {grupo.nombre}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 text-slate-600">Semestre {grupo.semestre}</td>
-                          <td className="px-6 py-4 text-center">
-                            <Button
-                              onClick={() => handleAsignarHorario(grupo)}
-                              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+              {/* Loading Spinner */}
+              {loading && (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="w-12 h-12 text-red-600 animate-spin mb-4" />
+                  <p className="text-slate-600">Cargando grupos...</p>
+                </div>
+              )}
+
+              {/* Tabla con scroll */}
+              {!loading && (
+                <>
+                  <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                        <tr>
+                          <th className="text-left px-6 py-4 text-slate-700">Programa</th>
+                          <th className="text-left px-6 py-4 text-slate-700">Grupo</th>
+                          <th className="text-left px-6 py-4 text-slate-700">Semestre</th>
+                          <th className="text-center px-6 py-4 text-slate-700">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedGrupos.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="text-center py-12 text-slate-500">
+                              <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-400" />
+                              <p>No hay grupos sin horarios con los filtros seleccionados</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedGrupos.map((grupo, index) => (
+                            <motion.tr
+                              key={grupo.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.03 }}
+                              className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                             >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Asignar Horario
-                            </Button>
-                          </td>
-                        </motion.tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                              <td className="px-6 py-4 text-slate-900">{grupo.programa_nombre || 'N/A'}</td>
+                              <td className="px-6 py-4">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  {grupo.nombre}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 text-slate-600">Semestre {grupo.semestre}</td>
+                              <td className="px-6 py-4 text-center">
+                                <Button
+                                  onClick={() => handleAsignarHorario(grupo)}
+                                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Asignar Horario
+                                </Button>
+                              </td>
+                            </motion.tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <div className="border-t border-slate-200 p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <p className="text-sm text-slate-600">
+                          Mostrando {((currentPage - 1) * 20) + 1}-{Math.min(currentPage * 20, gruposSinHorarioFiltrados.length)} de {gruposSinHorarioFiltrados.length} grupos
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToPrevPage}
+                            disabled={currentPage === 1}
+                          >
+                            Anterior
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              const pageNum = i + 1;
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => goToPage(pageNum)}
+                                  className={currentPage === pageNum ? 'bg-red-600 hover:bg-red-700' : ''}
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                            {totalPages > 5 && (
+                              <span className="text-slate-500 px-2">...</span>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToNextPage}
+                            disabled={currentPage === totalPages}
+                          >
+                            Siguiente
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -609,8 +691,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <SearchableSelect
                   items={docentes}
                   value={docenteSeleccionado}
-                  onSelect={(docente) => setDocenteSeleccionado(docente.id)}
-                  getItemId={(docente) => docente.id}
+                  onSelect={(docente) => setDocenteSeleccionado(docente.id ?? '')}
+                  getItemId={(docente) => docente.id ?? ''}
                   getItemLabel={(docente) => docente.nombre}
                   getItemSecondary={(docente) => docente.correo}
                   placeholder="Seleccionar docente..."
@@ -628,8 +710,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                 <SearchableSelect
                   items={espaciosDisponibles}
                   value={espacioSeleccionado}
-                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id)}
-                  getItemId={(espacio) => espacio.id}
+                  onSelect={(espacio) => setEspacioSeleccionado(espacio.id ?? '')}
+                  getItemId={(espacio) => espacio.id ?? ''}
                   getItemLabel={(espacio) => espacio.nombre}
                   getItemSecondary={(espacio) => `Capacidad: ${espacio.capacidad} personas`}
                   placeholder="Seleccionar espacio..."

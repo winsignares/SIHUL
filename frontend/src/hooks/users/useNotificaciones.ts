@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { NotificacionUsuario, NotificacionBackend, FiltroTiempo, CategoriaNotificacion } from '../../models/users/notification.model';
-import { 
-    NOTIFICACIONES_IMPORTANTES
-} from '../../models/users/notification.model';
 import { useAuth } from '../../context/AuthContext';
 import { useNotificacionesContext } from '../../context/NotificacionesContext';
 import {
@@ -149,7 +146,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             });
 
             // El backend ya hace el filtrado correcto, solo mapeamos
-            let notifsMapeadas = response.notificaciones.map(mapearNotificacion);
+            const notifsMapeadas = response.notificaciones.map(mapearNotificacion);
 
             setNotificaciones(notifsMapeadas);
             
@@ -158,6 +155,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
                 setTotalNotificaciones(response.total);
                 setTotalPaginas(Math.ceil(response.total / limite));
             }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al cargar notificaciones:', error);
             toast.error('Error al cargar las notificaciones');
@@ -188,6 +186,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
 
             // Actualizar el contexto global
             actualizarContador();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al cargar estadísticas:', error);
         }
@@ -210,6 +209,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
      */
     useEffect(() => {
         cargarNotificaciones(paginaActual);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [busquedaActiva, paginaActual, filterTab, filtroTiempo, filtroPrioridad]);
 
     /**
@@ -276,6 +276,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             await cargarNotificaciones(paginaActual);
             
             toast.success('Notificación marcada como leída');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al marcar como leída:', error);
             toast.error('Error al marcar la notificación como leída');
@@ -299,6 +300,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             await cargarNotificaciones(paginaActual);
             
             toast.success(`${result.cantidad} notificación(es) marcada(s) como leída(s)`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al marcar todas como leídas:', error);
             toast.error('Error al marcar las notificaciones como leídas');
@@ -320,6 +322,7 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
             await cargarNotificaciones(paginaActual);
             
             toast.success('Notificación eliminada');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al eliminar notificación:', error);
             toast.error('Error al eliminar la notificación');

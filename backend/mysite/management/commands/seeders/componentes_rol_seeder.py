@@ -15,12 +15,14 @@ def create_componentes_rol(stdout, style):
         ('admin', 'Gestión de Usuarios', 'EDITAR'),
         ('admin', 'Gestión de Roles', 'EDITAR'),
         ('admin', 'Gestión de Componentes', 'EDITAR'),
+        ('admin', 'Asignación de espacios por seccional', 'EDITAR'),
 
         # Administrador de planeacion - tiene acceso a todos los componentes de administración
         ('admin_planeacion', 'Dashboard', 'EDITAR'),
         ('admin_planeacion', 'Centro Institucional', 'EDITAR'),
         ('admin_planeacion', 'Centro de Horarios', 'EDITAR'),
         ('admin_planeacion', 'Asignación Automática', 'EDITAR'),
+        ('admin_planeacion', 'Asignación de espacios por seccional', 'EDITAR'),
         ('admin_planeacion', 'Préstamos de Espacios', 'EDITAR'),
         ('admin_planeacion', 'Periodos Académicos', 'EDITAR'),
         ('admin_planeacion', 'Asistentes Virtuales', 'EDITAR'),

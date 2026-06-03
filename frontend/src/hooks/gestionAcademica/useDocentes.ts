@@ -91,25 +91,6 @@ export function useDocentes() {
         });
     };
 
-    const loadFacultades = () => {
-        setFacultades(db.getFacultades());
-    };
-
-    const loadAsignaturas = () => {
-        setAsignaturas(db.getAsignaturas());
-    };
-
-    const loadDocentes = () => {
-        const docentesData = db.getDocentes();
-        // Mapear los docentes de la DB a DocenteExtendido si es necesario,
-        // o asumir que db.getDocentes() ya devuelve la estructura correcta.
-        // Por ahora asumimos que db.getDocentes() devuelve algo compatible o lo adaptamos.
-        // Si db.getDocentes() devuelve Docente[], y DocenteExtendido tiene campos extra,
-        // aquí deberíamos asegurarnos de que coincidan.
-        // Dado el código original, parece que db.getDocentes() devuelve lo que se espera.
-        setDocentes(docentesData as unknown as DocenteExtendido[]);
-    };
-
     // Obtener nombre de entidades
     const getFacultadNombre = (facultadId: string) => {
         const facultad = facultades.find(f => f.id === facultadId);

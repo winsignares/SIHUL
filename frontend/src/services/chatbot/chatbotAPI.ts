@@ -53,6 +53,7 @@ export interface MensajeAPI {
     texto: string;
     timestamp: string;
     leido: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metadata?: any;
 }
 
@@ -257,9 +258,7 @@ export const chatbotAPI = {
     enviarPreguntaPublico: async (data: {
         agente_id: number;
         pregunta: string;
-        seccional: string;
         pregunta_sugerida_id?: number;
-        nombre_usuario?: string;
     }): Promise<{ chat_id: string; respuesta: string; timestamp: string }> => {
         return apiClient.post('/chatbot/public/pregunta/', data);
     }

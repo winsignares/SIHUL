@@ -162,7 +162,9 @@ export default function HorariosAcademicos() {
                                     <span className="text-xs">👤</span>
                                     {(() => {
                                       // Si existe docenteId, buscar el nombre
+                                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                       if ((asignatura as any).docenteId) {
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                         const docente = docentes.find(d => d.id === (asignatura as any).docenteId);
                                         return docente?.nombre || asignatura.docente;
                                       }
