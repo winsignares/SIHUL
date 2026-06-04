@@ -1,10 +1,72 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Agente, PreguntaSugerida, Conversacion
-import json
-import requests
-import uuid
+from django.conf import settings
 from django.utils import timezone
+from .models import Agente, PreguntaSugerida, Conversacion
+from usuarios.models import Usuario
+import json
+import re
+import requests
+import unicodedata
+import uuid
+
+FASTAPI_SEDES = {
+    'nacional',
+    'virtual',
+    'el_socorro',
+    'cali',
+    'barranquilla',
+    'bogota',
+    'cucuta',
+    'cartagena',
+    'pereira',
+}
+
+
+def _normalize_sede_value(raw_value):
+    if not raw_value:
+        return None
+
+    normalized = unicodedata.normalize('NFKD', str(raw_value))
+    normalized = normalized.encode('ascii', 'ignore').decode('ascii')
+    normalized = normalized.strip().lower().replace(' ', '_')
+    normalized = re.sub(r'[^a-z0-9_]+', '', normalized)
+    normalized = re.sub(r'_+', '_', normalized)
+    if normalized in FASTAPI_SEDES:
+        return normalized
+    return None
+
+
+def _resolve_user_sede_value(usuario):
+    seccional = getattr(usuario, 'seccional', None)
+    if seccional and getattr(seccional, 'ciudad', None):
+        return _normalize_sede_value(seccional.ciudad)
+
+    sede = getattr(usuario, 'sede', None)
+    if sede and getattr(sede, 'seccional', None) and getattr(sede.seccional, 'ciudad', None):
+        return _normalize_sede_value(sede.seccional.ciudad)
+
+    return None
+
+
+def _fastapi_chat_url():
+    base_url = getattr(settings, 'CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1')
+    return f"{base_url.rstrip('/')}/chat/ask"
+
+
+def _enviar_pregunta_fastapi(nombre, sede, pregunta):
+    response = requests.post(
+        _fastapi_chat_url(),
+        json={
+            'nombre': nombre,
+            'sede': sede,
+            'question': pregunta,
+        },
+        headers={'Content-Type': 'application/json'},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response
 
 def list_agentes(request):
     """Lista todos los agentes activos"""
@@ -55,6 +117,15 @@ def enviar_pregunta(request):
         
         if not nombre_usuario:
             return JsonResponse({'error': 'nombre_usuario es requerido'}, status=400)
+
+        try:
+            usuario = Usuario.objects.select_related('sede', 'seccional', 'sede__seccional').get(id=id_usuario)
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+        sede_value = _resolve_user_sede_value(usuario)
+        if not sede_value:
+            return JsonResponse({'error': 'El usuario no tiene seccional configurada'}, status=400)
         
         # Obtener agente
         try:
@@ -75,39 +146,36 @@ def enviar_pregunta(request):
             except PreguntaSugerida.DoesNotExist:
                 pass
         
-        # 1. Enviar pregunta al endpoint RAG
+        # 1. Enviar pregunta al endpoint RAG (FastAPI)
         respuesta_texto = ''
         error_ia = None
         
         try:
-            response = requests.post(
-                agente.endpoint_url,
-                json={'pregunta': pregunta},
-                headers={'Content-Type': 'application/json',
-                         'x-header': '3f28b8db8d3951ad6d3a1p'},
-                timeout=30
-            )
-            response.raise_for_status()
+            response = _enviar_pregunta_fastapi(nombre_usuario, sede_value, pregunta)
             
             # Verificar que la respuesta tenga contenido
             if not response.text or response.text.strip() == '':
-                raise ValueError('El webhook devolvió una respuesta vacía')
+                raise ValueError('El servidor devolvió una respuesta vacía')
             
             # Intentar parsear JSON
             try:
                 respuesta_data = response.json()
-                respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+                respuesta_texto = (
+                    respuesta_data.get('answer')
+                    or respuesta_data.get('respuesta')
+                    or 'No se recibió respuesta'
+                )
             except json.JSONDecodeError as je:
                 # Si no es JSON válido, mostrar lo que devolvió
-                error_ia = f'Respuesta inválida del webhook: {response.text[:200]}'
-                respuesta_texto = f'Lo siento, el servidor devolvió una respuesta inválida. Por favor verifica la configuración del webhook.'
+                error_ia = f'Respuesta inválida del servidor: {response.text[:200]}'
+                respuesta_texto = 'Lo siento, el servidor devolvió una respuesta inválida.'
             
         except requests.exceptions.RequestException as e:
             error_ia = str(e)
             respuesta_texto = f'Lo siento, hubo un error al procesar tu pregunta: {str(e)}'
         except ValueError as ve:
             error_ia = str(ve)
-            respuesta_texto = f'Lo siento, el webhook no respondió correctamente: {str(ve)}'
+            respuesta_texto = f'Lo siento, el servidor no respondió correctamente: {str(ve)}'
         
         # 2. Guardar conversación completa (pregunta + respuesta en un solo registro)
         conversacion = Conversacion.objects.create(
@@ -291,10 +359,16 @@ def enviar_pregunta_publico(request):
         agente_id = data.get('agente_id')
         pregunta = data.get('pregunta')
         pregunta_sugerida_id = data.get('pregunta_sugerida_id')
+        seccional_raw = data.get('seccional') or data.get('sede')
+        nombre_usuario = data.get('nombre_usuario') or 'Invitado'
         
         # Validaciones mínimas
         if not agente_id or not pregunta:
             return JsonResponse({'error': 'agente_id y pregunta son requeridos'}, status=400)
+
+        sede_value = _normalize_sede_value(seccional_raw)
+        if not sede_value:
+            return JsonResponse({'error': 'seccional es requerida para usuarios públicos'}, status=400)
         
         # Obtener agente
         try:
@@ -314,39 +388,36 @@ def enviar_pregunta_publico(request):
             except PreguntaSugerida.DoesNotExist:
                 pass
         
-        # Enviar pregunta al endpoint RAG
+        # Enviar pregunta al endpoint RAG (FastAPI)
         respuesta_texto = ''
         error_ia = None
         
         try:
-            response = requests.post(
-                agente.endpoint_url,
-                json={'pregunta': pregunta},
-                headers={'Content-Type': 'application/json',
-                         'x-header': '3f28b8db8d3951ad6d3a1p'},
-                timeout=30
-            )
-            response.raise_for_status()
+            response = _enviar_pregunta_fastapi(nombre_usuario, sede_value, pregunta)
             
             # Verificar que la respuesta tenga contenido
             if not response.text or response.text.strip() == '':
-                raise ValueError('El webhook devolvió una respuesta vacía')
+                raise ValueError('El servidor devolvió una respuesta vacía')
             
             # Intentar parsear JSON
             try:
                 respuesta_data = response.json()
-                respuesta_texto = respuesta_data.get('response', 'No se recibió respuesta')
+                respuesta_texto = (
+                    respuesta_data.get('answer')
+                    or respuesta_data.get('respuesta')
+                    or 'No se recibió respuesta'
+                )
             except json.JSONDecodeError as je:
                 # Si no es JSON válido, mostrar lo que devolvió
-                error_ia = f'Respuesta inválida del webhook: {response.text[:200]}'
-                respuesta_texto = f'Lo siento, el servidor devolvió una respuesta inválida. Por favor verifica la configuración del webhook.'
+                error_ia = f'Respuesta inválida del servidor: {response.text[:200]}'
+                respuesta_texto = 'Lo siento, el servidor devolvió una respuesta inválida.'
             
         except requests.exceptions.RequestException as e:
             error_ia = str(e)
             respuesta_texto = f'Lo siento, hubo un error al procesar tu pregunta: {str(e)}'
         except ValueError as ve:
             error_ia = str(ve)
-            respuesta_texto = f'Lo siento, el webhook no respondió correctamente: {str(ve)}'
+            respuesta_texto = f'Lo siento, el servidor no respondió correctamente: {str(ve)}'
         
         # NO guardamos la conversación para usuarios públicos
         # Retornamos directamente la respuesta

@@ -27,14 +27,19 @@ export function useConsultaEspacios() {
   const filtros = useConsultaEspaciosFiltros();
   const periodos = useConsultaEspaciosPeriodos();
 
-  const datos = useConsultaEspaciosDatos({
-    user: user
+  // Memoizar el objeto user para evitar recreación en cada render
+  const userParams = useMemo(() => {
+    return user
       ? {
           id: user.id,
           rol: typeof user.rol === 'string' ? user.rol : String(user.rol?.nombre ?? ''),
           facultad: user.facultad ? { id: user.facultad.id ?? null } : null
         }
-      : undefined,
+      : undefined;
+  }, [user?.id, user?.rol, user?.facultad?.id]);
+
+  const datos = useConsultaEspaciosDatos({
+    user: userParams,
     filterFechaInicio: filtros.filterFechaInicio
   });
 
