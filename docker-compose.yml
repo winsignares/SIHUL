@@ -53,16 +53,6 @@ services:
       DB_NAME: mypostgresdb
       # Python
       PYTHONUNBUFFERED: "1"
-      # Memoria
-      PYTHONHASHSEED: "random"
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.5'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
     depends_on:
       db:
         condition: service_healthy
