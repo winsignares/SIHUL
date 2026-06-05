@@ -6,6 +6,7 @@ export interface Asistente {
     subtitulo: string;
     descripcion: string;
     icon: LucideIcon;
+    icono: string;
     color: string;
     bgGradient: string;
     ultimoMensaje: string;
