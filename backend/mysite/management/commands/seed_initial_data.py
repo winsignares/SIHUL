@@ -39,6 +39,7 @@ from .seeders import (
     horarios_seeder,
     agentes_seeder,
     preguntas_sugeridas_seeder,
+    financiero_seeder,
 )
 
 
@@ -122,8 +123,11 @@ class Command(BaseCommand):
                 agentes_seeder.create_agentes(out, sty)
 
                 #  16. Preguntas Sugeridas 
-                out.write(sty.SUCCESS('\n[16/16] Preguntas Sugeridas'))
+                out.write(sty.SUCCESS('\n[16/17] Preguntas Sugeridas'))
                 preguntas_sugeridas_seeder.create_preguntas_sugeridas(out, sty)
+
+                #  17. Datos Financieros
+                financiero_seeder.create_financiero_data(out, sty)
 
             out.write(sty.SUCCESS('\n'))
             out.write(sty.SUCCESS(' DATOS CARGADOS EXITOSAMENTE'))

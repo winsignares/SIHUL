@@ -156,8 +156,13 @@ export const obtenerMisNotificacionesPaginadas = async (params: {
  * Obtener estadísticas de notificaciones del usuario
  * GET /notificaciones/estadisticas/?id_usuario={id}
  */
-export const obtenerEstadisticas = async (id_usuario: number): Promise<EstadisticasNotificaciones> => {
-  return await apiClient.get<EstadisticasNotificaciones>(`${API_URL}/estadisticas/?id_usuario=${id_usuario}`);
+export const obtenerEstadisticas = async (
+  id_usuario: number,
+  options?: { suppressErrorLog?: boolean },
+): Promise<EstadisticasNotificaciones> => {
+  return await apiClient.get<EstadisticasNotificaciones>(`${API_URL}/estadisticas/?id_usuario=${id_usuario}`, {
+    suppressErrorLog: options?.suppressErrorLog ?? false,
+  });
 };
 
 /**

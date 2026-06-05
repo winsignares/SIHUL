@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
@@ -53,6 +54,7 @@ urlpatterns = [
     path('api/prestamos/', include('prestamos.api_urls')),
     path('api/chatbot/', include('chatbot.api_urls')),
     path('api/notificaciones/', include('notificaciones.api_urls')),
+    path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
     path('usuarios/', include('usuarios.urls')),
     path('sedes/', include('sedes.urls')),
     path('facultades/', include('facultades.urls')),
@@ -71,3 +73,6 @@ urlpatterns = [
 
 if settings.MICROSOFT_OAUTH_ENABLED:
     urlpatterns.insert(1, path('accounts/', include('allauth.urls')))
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

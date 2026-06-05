@@ -1,0 +1,504 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
+import { Button } from '../../../share/button';
+import { Input } from '../../../share/input';
+import { Label } from '../../../share/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
+import { Badge } from '../../../share/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
+import { Building2, FileSpreadsheet, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-react';
+import { proveedoresService } from '../../../services/financiero';
+import type { Proveedor } from '../../../models/financiero/core.models';
+import { userService } from '../../../services/users/authService';
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+
+type ProveedorUI = Proveedor & { usuario?: number | null };
+type ProveedorFormState = Partial<ProveedorUI> & { nuevaContrasena?: string };
+
+const emptyForm: ProveedorFormState = {
+  razon_social: '',
+  nit: '',
+  tipo_proveedor: 'Servicios',
+  tipo_persona: 'Jurídica',
+  estado: 'Activo',
+  email: '',
+  telefono: '',
+  direccion: '',
+  ciudad: '',
+  banco: '',
+  tipo_cuenta: 'Ahorros',
+  numero_cuenta: '',
+  nuevaContrasena: '',
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+export default function GestionProveedoresReal() {
+  const [proveedores, setProveedores] = useState<ProveedorUI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState('all');
+  const [tipoFilter, setTipoFilter] = useState('all');
+  const [ciudadFilter, setCiudadFilter] = useState('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [accionProveedorId, setAccionProveedorId] = useState<number | null>(null);
+  const [form, setForm] = useState<ProveedorFormState>(emptyForm);
+
+  const extractProveedores = (response: unknown): ProveedorUI[] => {
+    if (Array.isArray(response)) return response as ProveedorUI[];
+    if (response && typeof response === 'object') {
+      const maybePaginated = response as { results?: ProveedorUI[]; proveedores?: ProveedorUI[] };
+      if (Array.isArray(maybePaginated.results)) return maybePaginated.results;
+      if (Array.isArray(maybePaginated.proveedores)) return maybePaginated.proveedores;
+    }
+    return [];
+  };
+
+  const buildProveedorPayload = (source: ProveedorFormState): Partial<Proveedor> => ({
+    razon_social: source.razon_social,
+    nit: source.nit,
+    tipo_proveedor: source.tipo_proveedor,
+    tipo_persona: source.tipo_persona,
+    estado: source.estado,
+    email: source.email,
+    telefono: source.telefono,
+    direccion: source.direccion,
+    ciudad: source.ciudad,
+    banco: source.banco,
+    tipo_cuenta: source.tipo_cuenta,
+    numero_cuenta: source.numero_cuenta,
+  });
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await proveedoresService.getAll({ limit: 200, ordering: '-id' });
+      setProveedores(extractProveedores(response));
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No se pudieron cargar los proveedores.'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
+
+  const ciudadesDisponibles = useMemo(
+    () => Array.from(new Set(proveedores.map((p) => (p.ciudad || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es')),
+    [proveedores]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    const base = proveedores.filter((p) => {
+      if (estadoFilter !== 'all' && p.estado !== estadoFilter) {
+        return false;
+      }
+
+      if (tipoFilter !== 'all' && p.tipo_proveedor !== tipoFilter) {
+        return false;
+      }
+
+      if (ciudadFilter !== 'all' && (p.ciudad || '').trim() !== ciudadFilter) {
+        return false;
+      }
+
+      if (!q) {
+        return true;
+      }
+
+      return [p.razon_social, p.nit, p.email, p.ciudad, p.tipo_proveedor].some((value) =>
+        (value || '').toLowerCase().includes(q)
+      );
+    });
+
+    return [...base].sort((a, b) => (b.id || 0) - (a.id || 0));
+  }, [search, proveedores, estadoFilter, tipoFilter, ciudadFilter]);
+
+  const limpiarFiltros = () => {
+    setSearch('');
+    setEstadoFilter('all');
+    setTipoFilter('all');
+    setCiudadFilter('all');
+  };
+
+  const abrirNuevo = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setDialogOpen(true);
+  };
+
+  const abrirEdicion = (p: Proveedor) => {
+    setEditingId(p.id);
+    setForm({ ...p });
+    setDialogOpen(true);
+  };
+
+  const guardar = async () => {
+    if (!form.razon_social || !form.nit || !form.tipo_proveedor) {
+      toast.error('Razon social, NIT y tipo de proveedor son obligatorios.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editingId) {
+        await proveedoresService.update(editingId, buildProveedorPayload(form));
+
+        const nuevaContrasena = (form.nuevaContrasena || '').trim();
+        if (nuevaContrasena) {
+          if (form.usuario) {
+            await userService.actualizarUsuario({
+              id: form.usuario,
+              contrasena: nuevaContrasena,
+            });
+            toast.success('Proveedor y contraseña actualizados correctamente.');
+          } else {
+            toast.warning('Proveedor actualizado. No se pudo cambiar contraseña porque no tiene usuario vinculado.');
+          }
+        } else {
+          toast.success('Proveedor actualizado correctamente.');
+        }
+      } else {
+        await proveedoresService.create(buildProveedorPayload(form));
+        toast.success('Proveedor creado correctamente.');
+      }
+      setDialogOpen(false);
+      await cargar();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible guardar el proveedor.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleEstado = async (p: Proveedor) => {
+    const next = p.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    setAccionProveedorId(p.id);
+    try {
+      await proveedoresService.update(p.id, { estado: next });
+      toast.success(`Proveedor ${next.toLowerCase()} correctamente.`);
+      await cargar();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible cambiar el estado.'));
+    } finally {
+      setAccionProveedorId(null);
+    }
+  };
+
+  const eliminarProveedor = async (p: Proveedor) => {
+    const confirmar = window.confirm(`¿Seguro que deseas eliminar a ${p.razon_social}? Esta acción no se puede deshacer.`);
+    if (!confirmar) {
+      return;
+    }
+
+    setAccionProveedorId(p.id);
+    try {
+      await proveedoresService.delete(p.id);
+      toast.success('Proveedor eliminado correctamente.');
+      await cargar();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible eliminar el proveedor.'));
+    } finally {
+      setAccionProveedorId(null);
+    }
+  };
+
+  const exportarProveedoresExcel = useCallback(() => {
+    if (filtered.length === 0) {
+      toast.error('No hay proveedores para exportar con los filtros actuales.');
+      return;
+    }
+
+    const rows = filtered.map((proveedor) => ({
+      ID: proveedor.id || '',
+      'Razón Social': proveedor.razon_social || '',
+      NIT: proveedor.nit || '',
+      Tipo: proveedor.tipo_proveedor || '',
+      Estado: proveedor.estado || '',
+      Ciudad: proveedor.ciudad || '',
+      Email: proveedor.email || '',
+      Teléfono: proveedor.telefono || '',
+      Banco: proveedor.banco || '',
+      Cuenta: proveedor.numero_cuenta || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 8 },
+      { wch: 34 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Proveedores');
+    XLSX.writeFile(workbook, `proveedores_financieros_${Date.now()}.xlsx`);
+    toast.success('Excel de proveedores exportado correctamente.');
+  }, [filtered]);
+
+  return (
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+      >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Building2 className="w-8 h-8 text-amber-300" />
+              Gestión de Proveedores
+            </h1>
+            <p className="text-red-100 text-sm">Listado y administración de proveedores del módulo financiero.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={abrirNuevo} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo proveedor
+            </Button>
+            <Button onClick={() => void cargar()} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Actualizar datos
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-slate-900">Proveedores registrados</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={exportarProveedoresExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Excel
+              </Button>
+              <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">
+                {filtered.length} proveedores
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="relative lg:col-span-5">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                placeholder="Buscar por ID, razón social, NIT, correo o ciudad"
+              />
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="Activo">Activo</SelectItem>
+                  <SelectItem value="Inactivo">Inactivo</SelectItem>
+                  <SelectItem value="Bloqueado">Bloqueado</SelectItem>
+                  <SelectItem value="Verificación">Verificación</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
+                  <SelectItem value="Servicios">Servicios</SelectItem>
+                  <SelectItem value="Bienes">Bienes</SelectItem>
+                  <SelectItem value="Construcción">Construcción</SelectItem>
+                  <SelectItem value="Mixto">Mixto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Select value={ciudadFilter} onValueChange={setCiudadFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ciudad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las ciudades</SelectItem>
+                  {ciudadesDisponibles.map((ciudad) => (
+                    <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="lg:col-span-1">
+              <Button variant="outline" className="w-full" onClick={limpiarFiltros}>Limpiar</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-slate-500">Cargando proveedores...</p>
+          ) : (
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>ID</TableHead>
+                    <TableHead>Razón social</TableHead>
+                    <TableHead>NIT</TableHead>
+                    <TableHead>Ciudad</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-slate-500 py-7">
+                        No hay proveedores para mostrar.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((p) => {
+                      const isProcessing = accionProveedorId === p.id;
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell>{p.id || '—'}</TableCell>
+                          <TableCell className="font-medium text-slate-800">{p.razon_social}</TableCell>
+                          <TableCell>{p.nit}</TableCell>
+                          <TableCell>{p.ciudad || '—'}</TableCell>
+                          <TableCell>{p.tipo_proveedor}</TableCell>
+                          <TableCell>
+                            <Badge className={p.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                              {p.estado}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => abrirEdicion(p)}>
+                                <Building2 className="w-3 h-3 mr-1" />
+                                Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isProcessing}
+                                onClick={() => void toggleEstado(p)}
+                              >
+                                {p.estado === 'Activo' ? 'Desactivar' : 'Activar'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isProcessing}
+                                onClick={() => void eliminarProveedor(p)}
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Eliminar
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent className="w-[96vw] sm:!max-w-[92vw] xl:!max-w-[80vw] max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="border-b bg-slate-50 px-6 py-5">
+          <DialogTitle className="text-xl text-slate-900">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</DialogTitle>
+          <p className="text-sm text-slate-600">
+            Gestiona la información base del proveedor y sus datos de acceso cuando exista usuario vinculado.
+          </p>
+        </DialogHeader>
+
+        <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-150px)]">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <div className="xl:col-span-8 rounded-xl border bg-white p-4 shadow-sm">
+              <p className="text-sm font-semibold text-slate-800 mb-3">Datos del proveedor</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Razón social</Label>
+                  <Input value={form.razon_social || ''} onChange={(e) => setForm((prev) => ({ ...prev, razon_social: e.target.value }))} />
+                </div>
+                <div className="space-y-2"><Label>NIT</Label><Input value={form.nit || ''} onChange={(e) => setForm((prev) => ({ ...prev, nit: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Email</Label><Input value={form.email || ''} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Teléfono</Label><Input value={form.telefono || ''} onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Ciudad</Label><Input value={form.ciudad || ''} onChange={(e) => setForm((prev) => ({ ...prev, ciudad: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Tipo proveedor</Label>
+                  <Select value={form.tipo_proveedor || 'Servicios'} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo_proveedor: value as Proveedor['tipo_proveedor'] }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Servicios">Servicios</SelectItem>
+                      <SelectItem value="Bienes">Bienes</SelectItem>
+                      <SelectItem value="Construcción">Construcción</SelectItem>
+                      <SelectItem value="Mixto">Mixto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>Banco</Label><Input value={form.banco || ''} onChange={(e) => setForm((prev) => ({ ...prev, banco: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Número de cuenta</Label><Input value={form.numero_cuenta || ''} onChange={(e) => setForm((prev) => ({ ...prev, numero_cuenta: e.target.value }))} /></div>
+              </div>
+            </div>
+
+            <div className="xl:col-span-4 rounded-xl border bg-slate-50 p-4 space-y-3">
+              <p className="text-sm font-semibold text-slate-800">Acceso del proveedor</p>
+              <p className="text-xs text-slate-600">
+                Si el proveedor tiene usuario vinculado, puedes cambiar su contraseña desde aquí.
+              </p>
+
+              <div className="space-y-2">
+                <Label>Nueva contraseña (opcional)</Label>
+                <Input
+                  type="password"
+                  value={form.nuevaContrasena || ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nuevaContrasena: e.target.value }))}
+                  placeholder="Solo si deseas cambiarla"
+                />
+              </div>
+
+              <div className="rounded-lg border bg-white px-3 py-2 text-xs text-slate-600">
+                {form.usuario
+                  ? 'Usuario vinculado detectado: el cambio de contraseña se aplicará al guardar.'
+                  : 'Este proveedor no tiene usuario vinculado en backend.'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="border-t bg-white px-6 py-4">
+          <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={guardar} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white"><Save className="w-4 h-4 mr-2" />{saving ? 'Guardando...' : 'Guardar'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </div>
+  );
+}

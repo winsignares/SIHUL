@@ -22,3 +22,7 @@ build/
 # Temporary files
 temp_*.py
 *_parsed.txt
+
+# Django media uploads
+backend/media/
+backend/financiero/media/

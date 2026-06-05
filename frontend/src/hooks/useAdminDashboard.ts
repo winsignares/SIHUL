@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent, getIconForComponent } from '../config/componentRoutes';
+import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
 export type MenuOption = 'home' | 'facultades' | 'espacios' | 'asignacion' | 'centrohorarios' | 'periodos' | 'reportes' | 'prestamos' | 'recursos' | 'ocupacion' | 'notificaciones' | 'ajustes' | 'chat' | 'usuarios' | 'asistentes' | 'mihorario';
 
@@ -36,16 +37,22 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
     const userName = user?.nombre || propsUserName || (isPublicAccess ? 'Usuario Público' : 'Usuario');
     const userRole = role?.nombre || propsUserRole || (isPublicAccess ? 'Público' : 'Usuario');
     const userFacultyName = user?.facultad?.nombre || '';
+    const normalizedRole = userRole
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ')
+        .trim();
+    const canonicalFinancialRole = resolveCanonicalFinancialRole({
+        roleName: userRole,
+        userName,
+        components,
+    });
 
     const handleLogout = propsOnLogout || (() => {
         logout();
         navigate('/login');
     });
-
-    // Cuando la ruta cambia, colapsar la sidebar
-    useEffect(() => {
-        setIsSidebarCollapsed(true);
-    }, [location.pathname]);
 
     const cleanLabel = (name: string) => {
         return name
@@ -55,6 +62,10 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             .replace(' Admin', '')
             .trim();
     };
+
+    const isDireccionFinancieraProfile = canonicalFinancialRole === 'direccion_financiera';
+    const isRectoriaProfile = canonicalFinancialRole === 'rectoria';
+    const isAdminFinancieroProfile = canonicalFinancialRole === 'admin_financiero';
 
     /**
      * Agrupa los componentes en secciones para el menú
@@ -128,6 +139,403 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             return publicMenu;
         }
 
+        // Menu especifico para Admin Financiero
+        if (isAdminFinancieroProfile) {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Admin Financiero',
+                        icon: getIconForComponent('Dashboard Admin Financiero'),
+                        label: 'Dashboard',
+                        route: '/financiero/admin-financiero/dashboard',
+                        code: 'Dashboard Admin Financiero'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-admin-financiero',
+                label: 'Administracion Financiera',
+                items: [
+                    {
+                        id: 'Gestion Usuarios Financiero',
+                        icon: getIconForComponent('Gestion Usuarios Financiero'),
+                        label: 'Gestion de Usuarios',
+                        route: '/financiero/admin-financiero/usuarios',
+                        code: 'Gestion Usuarios Financiero'
+                    },
+                    {
+                        id: 'Gestion Proveedores',
+                        icon: getIconForComponent('Gestion Proveedores'),
+                        label: 'Gestion de Proveedores',
+                        route: '/financiero/admin-financiero/proveedores',
+                        code: 'Gestion Proveedores'
+                    },
+                    {
+                        id: 'Parametrizacion SLA',
+                        icon: getIconForComponent('Parametrizacion SLA'),
+                        label: 'Parametrizacion SLA',
+                        route: '/financiero/admin-financiero/sla',
+                        code: 'Parametrizacion SLA'
+                    },
+                    {
+                        id: 'Reportes Consolidados Financiero',
+                        icon: getIconForComponent('Reportes Consolidados Financiero'),
+                        label: 'Reportes Consolidados',
+                        route: '/financiero/admin-financiero/reportes',
+                        code: 'Reportes Consolidados Financiero'
+                    },
+                    {
+                        id: 'Configuracion Sistema Financiero',
+                        icon: getIconForComponent('Configuracion Sistema Financiero'),
+                        label: 'Configuracion Sistema',
+                        route: '/financiero/admin-financiero/configuracion',
+                        code: 'Configuracion Sistema Financiero'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menu especifico para Rectoria
+        if (isRectoriaProfile) {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Rectoria',
+                        icon: getIconForComponent('Dashboard Rectoria'),
+                        label: 'Dashboard',
+                        route: '/financiero/rectoria/dashboard',
+                        code: 'Dashboard Rectoria'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-rectoria',
+                label: 'Rectoria',
+                items: [
+                    {
+                        id: 'Mis Pendientes Rectoria',
+                        icon: getIconForComponent('Mis Pendientes Rectoria'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/rectoria/pendientes',
+                        code: 'Mis Pendientes Rectoria'
+                    },
+                    {
+                        id: 'Autorizar Pagos',
+                        icon: getIconForComponent('Autorizar Pagos'),
+                        label: 'Autorizar Pagos',
+                        route: '/financiero/rectoria/autorizar',
+                        code: 'Autorizar Pagos'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menu especifico para Direccion Financiera / Sindicatura
+        if (isDireccionFinancieraProfile) {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Direccion Financiera',
+                        icon: getIconForComponent('Dashboard Direccion Financiera'),
+                        label: 'Dashboard',
+                        route: '/financiero/direccion-financiera/dashboard',
+                        code: 'Dashboard Direccion Financiera'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-direccion-financiera',
+                label: 'Direccion Financiera',
+                items: [
+                    {
+                        id: 'Mis Pendientes Direccion Financiera',
+                        icon: getIconForComponent('Mis Pendientes Direccion Financiera'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/direccion-financiera/pendientes',
+                        code: 'Mis Pendientes Direccion Financiera'
+                    },
+                    {
+                        id: 'Revisar Pagos Direccion Financiera',
+                        icon: getIconForComponent('Revisar Pagos Direccion Financiera'),
+                        label: 'Cargue y Revision',
+                        route: '/financiero/direccion-financiera/revisar',
+                        code: 'Revisar Pagos Direccion Financiera'
+                    },
+                    {
+                        id: 'Enviar a Rectoria',
+                        icon: getIconForComponent('Enviar a Rectoria'),
+                        label: 'Enviar a Rectoria',
+                        route: '/financiero/direccion-financiera/enviar',
+                        code: 'Enviar a Rectoria'
+                    },
+                    {
+                        id: 'Confirmacion Pagos Direccion Financiera',
+                        icon: getIconForComponent('Control de Pago Bancario Direccion Financiera'),
+                        label: 'Control de Pago Bancario',
+                        route: '/financiero/direccion-financiera/confirmar',
+                        code: 'Confirmacion Pagos Direccion Financiera'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menu especifico para Tesoreria Financiera
+        if (canonicalFinancialRole === 'tesoreria') {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Tesoreria',
+                        icon: getIconForComponent('Dashboard Tesoreria'),
+                        label: 'Dashboard',
+                        route: '/financiero/tesoreria/dashboard',
+                        code: 'Dashboard Tesoreria'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-tesoreria',
+                label: 'Gestion de Tesoreria',
+                items: [
+                    {
+                        id: 'Mis Pendientes Tesoreria',
+                        icon: getIconForComponent('Mis Pendientes Tesoreria'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/tesoreria/pendientes',
+                        code: 'Mis Pendientes Tesoreria'
+                    },
+                    {
+                        id: 'Alistar Pagos',
+                        icon: getIconForComponent('Alistar Pagos'),
+                        label: 'Alistar Pagos',
+                        route: '/financiero/tesoreria/alistar',
+                        code: 'Alistar Pagos'
+                    },
+                    {
+                        id: 'Enviar Direccion Financiera',
+                        icon: getIconForComponent('Enviar Direccion Financiera'),
+                        label: 'Enviar Direccion Financiera',
+                        route: '/financiero/tesoreria/enviar',
+                        code: 'Enviar Direccion Financiera'
+                    },
+                    {
+                        id: 'Registrar Pago Aplicado',
+                        icon: getIconForComponent('Registrar Pago Aplicado'),
+                        label: 'Registrar Pago Aplicado',
+                        route: '/financiero/tesoreria/registrar-pago',
+                        code: 'Registrar Pago Aplicado'
+                    },
+                    {
+                        id: 'Generar Comprobante Egreso',
+                        icon: getIconForComponent('Generar Comprobante Egreso'),
+                        label: 'Comprobante de Egreso',
+                        route: '/financiero/tesoreria/comprobante',
+                        code: 'Generar Comprobante Egreso'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menu especifico para Auditoria Financiera
+        if (canonicalFinancialRole === 'auditoria') {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Auditoria',
+                        icon: getIconForComponent('Dashboard Auditoria'),
+                        label: 'Dashboard',
+                        route: '/financiero/auditoria/dashboard',
+                        code: 'Dashboard Auditoria'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'control-interno',
+                label: 'Control Interno',
+                items: [
+                    {
+                        id: 'Mis Pendientes Auditoria',
+                        icon: getIconForComponent('Mis Pendientes Auditoria'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/auditoria/pendientes',
+                        code: 'Mis Pendientes Auditoria'
+                    },
+                    {
+                        id: 'Control Previo',
+                        icon: getIconForComponent('Control Previo'),
+                        label: 'Control Previo',
+                        route: '/financiero/auditoria/control',
+                        code: 'Control Previo'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menú específico para Funcionario Financiero (siempre consistente)
+        if (canonicalFinancialRole === 'funcionario') {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Financiero',
+                        icon: getIconForComponent('Dashboard Financiero'),
+                        label: 'Dashboard',
+                        route: '/financiero/funcionario/dashboard',
+                        code: 'Dashboard Financiero'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-financiera',
+                label: 'Gestión Financiera',
+                items: [
+                    {
+                        id: 'Mis Pendientes',
+                        icon: getIconForComponent('Mis Pendientes'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/funcionario/pendientes',
+                        code: 'Mis Pendientes'
+                    },
+                    {
+                        id: 'Registrar Factura',
+                        icon: getIconForComponent('Registrar Factura'),
+                        label: 'Registrar Factura',
+                        route: '/financiero/funcionario/registrar',
+                        code: 'Registrar Factura'
+                    },
+                    {
+                        id: 'Consultar Facturas',
+                        icon: getIconForComponent('Consultar Facturas'),
+                        label: 'Consultar Facturas',
+                        route: '/financiero/funcionario/consultar',
+                        code: 'Consultar Facturas'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menú específico para Proveedor
+        if (canonicalFinancialRole === 'proveedor') {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Proveedor',
+                        icon: getIconForComponent('Dashboard Proveedor'),
+                        label: 'Dashboard',
+                        route: '/financiero/proveedor/dashboard',
+                        code: 'Dashboard Proveedor'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-proveedor',
+                label: 'Mis Facturas',
+                items: [
+                    {
+                        id: 'Enviar Factura Proveedor',
+                        icon: getIconForComponent('Enviar Factura Proveedor'),
+                        label: 'Enviar Factura',
+                        route: '/financiero/proveedor/enviar',
+                        code: 'Enviar Factura Proveedor'
+                    },
+                    {
+                        id: 'Mis Facturas Proveedor',
+                        icon: getIconForComponent('Mis Facturas Proveedor'),
+                        label: 'Mis Facturas',
+                        route: '/financiero/proveedor/mis-facturas',
+                        code: 'Mis Facturas Proveedor'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
+        // Menú específico para Contabilidad Financiera (siempre consistente)
+        if (canonicalFinancialRole === 'contabilidad') {
+            sections.push({
+                id: 'principal',
+                label: 'Principal',
+                items: [
+                    {
+                        id: 'Dashboard Contabilidad',
+                        icon: getIconForComponent('Contabilidad'),
+                        label: 'Dashboard',
+                        route: '/financiero/contabilidad/dashboard',
+                        code: 'Dashboard Contabilidad'
+                    }
+                ]
+            });
+
+            sections.push({
+                id: 'gestion-contable',
+                label: 'Gestión Contable',
+                items: [
+                    {
+                        id: 'Mis Pendientes Contabilidad',
+                        icon: getIconForComponent('Mis Pendientes'),
+                        label: 'Mis Pendientes',
+                        route: '/financiero/contabilidad/pendientes',
+                        code: 'Mis Pendientes Contabilidad'
+                    },
+                    {
+                        id: 'Centro Contable',
+                        icon: getIconForComponent('Centro Contable'),
+                        label: 'Cuentas contables',
+                        route: '/financiero/contabilidad/centro-contable',
+                        code: 'Centro Contable'
+                    },
+                    {
+                        id: 'Radicar Facturas',
+                        icon: getIconForComponent('Radicar Facturas'),
+                        label: 'Radicar Facturas',
+                        route: '/financiero/contabilidad/radicar',
+                        code: 'Radicar Facturas'
+                    },
+                    {
+                        id: 'Causar Facturas',
+                        icon: getIconForComponent('Causar Facturas'),
+                        label: 'Causar Facturas',
+                        route: '/financiero/contabilidad/causar',
+                        code: 'Causar Facturas'
+                    }
+                ]
+            });
+
+            return sections;
+        }
+
         // Sección Principal (Dashboards)
         const dashboardComponents = components.filter(c => c.nombre.toLowerCase().includes('dashboard'));
         if (dashboardComponents.length > 0) {
@@ -152,7 +560,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
         ];
 
         // Si es admin, quitamos Estado de Recursos del sidebar porque ya está en Centro Institucional
-        if (userRole.toLowerCase().includes('admin')) {
+        if (normalizedRole.includes('admin')) {
             espaciosNames = espaciosNames.filter(n => n !== 'Estado de Recursos');
         }
 
@@ -168,7 +576,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 items: espaciosComponents.map(c => {
                     let route = getRouteForComponent(c.nombre);
                     // Fix para Supervisor General y Estado de Recursos
-                    if (userRole.toLowerCase().includes('supervisor') && c.nombre === 'Estado de Recursos') {
+                    if (normalizedRole.includes('supervisor') && c.nombre === 'Estado de Recursos') {
                         route = '/supervisor/recursos';
                     }
                     return {

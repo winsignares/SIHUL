@@ -5,6 +5,8 @@ from .api_views import (
     ComponenteListCreateAPIView,
     ComponenteRolDetailAPIView,
     ComponenteRolListCreateAPIView,
+    ComponenteUsuarioDetailAPIView,
+    ComponenteUsuarioListCreateAPIView,
 )
 
 urlpatterns = [
@@ -12,4 +14,6 @@ urlpatterns = [
     path('<int:pk>/', ComponenteDetailAPIView.as_view(), name='api-componente-detail'),
     path('roles/', ComponenteRolListCreateAPIView.as_view(), name='api-componente-rol-list-create'),
     path('roles/<int:pk>/', ComponenteRolDetailAPIView.as_view(), name='api-componente-rol-detail'),
+    path('usuarios/', ComponenteUsuarioListCreateAPIView.as_view(), name='api-componente-usuario-list-create'),
+    path('usuarios/<int:pk>/', ComponenteUsuarioDetailAPIView.as_view(), name='api-componente-usuario-detail'),
 ]

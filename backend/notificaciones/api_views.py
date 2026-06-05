@@ -12,6 +12,71 @@ from .models import Notificacion
 from .serializers import NotificacionSerializer
 
 
+TIPOS_IRRELEVANTES_NO_ADMIN = [
+    'usuario_creado',
+    'usuario_actualizado',
+    'usuario_eliminado',
+    'rol_creado',
+    'rol_actualizado',
+    'rol_eliminado',
+    'facultad_creada',
+    'facultad_actualizada',
+    'facultad_eliminada',
+    'componente_creado',
+    'componente_actualizado',
+    'componente_eliminado',
+    'componente_rol_asignado',
+    'componente_rol_actualizado',
+    'componente_rol_eliminado',
+]
+
+
+def _resolve_target_user_id(user, requested_user_id):
+    if not user or not getattr(user, 'is_authenticated', False):
+        return requested_user_id
+
+    if is_admin_global(user):
+        return requested_user_id or user.id
+
+    return user.id
+
+
+def _filter_relevantes_por_rol(queryset, user):
+    if not user or not getattr(user, 'is_authenticated', False):
+        return queryset
+
+    if is_admin_global(user):
+        return queryset
+
+    rol_nombre = (getattr(getattr(user, 'rol', None), 'nombre', '') or '').strip().lower()
+
+    if rol_nombre == 'proveedor':
+        tipos_permitidos_proveedor = [
+            'factura_etapa_actualizada',
+            'factura_devuelta',
+            'cuenta_creada',
+            'cambio_contrasena',
+            'cambio_nombre',
+            'alerta',
+            'advertencia',
+            'error',
+            'sistema',
+        ]
+        filtro_proveedor = Q()
+        for tipo in tipos_permitidos_proveedor:
+            filtro_proveedor |= Q(tipo_notificacion__iexact=tipo)
+        return queryset.filter(filtro_proveedor)
+
+    if rol_nombre in {'admin', 'admin financiero'}:
+        return queryset
+
+    filtros_admin = Q()
+    for tipo in TIPOS_IRRELEVANTES_NO_ADMIN:
+        filtros_admin |= Q(tipo_notificacion__iexact=tipo)
+
+    return queryset.exclude(filtros_admin)
+
+
 class NotificacionListCreateAPIView(generics.ListCreateAPIView):
     queryset = Notificacion.objects.all().order_by('-fecha_creacion')
     serializer_class = NotificacionSerializer
@@ -27,7 +92,8 @@ class NotificacionListCreateAPIView(generics.ListCreateAPIView):
         if not user or not getattr(user, 'is_authenticated', False):
             return queryset.none()
 
-        return queryset.filter(id_usuario=user.id)
+        queryset = queryset.filter(id_usuario=user.id)
+        return _filter_relevantes_por_rol(queryset, user)
 
     def perform_create(self, serializer):
         user = getattr(self.request, 'user', None)
@@ -59,17 +125,22 @@ class NotificacionEstadisticasAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        user = getattr(request, 'user', None)
         id_usuario = request.query_params.get('id_usuario')
+        id_usuario = _resolve_target_user_id(user, id_usuario)
 
         if not id_usuario:
             return Response({'error': 'id_usuario es requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
-        total = Notificacion.objects.filter(id_usuario=id_usuario).count()
-        no_leidas = Notificacion.objects.filter(id_usuario=id_usuario, es_leida=False).count()
+        queryset = Notificacion.objects.filter(id_usuario=id_usuario)
+        queryset = _filter_relevantes_por_rol(queryset, user)
+
+        total = queryset.count()
+        no_leidas = queryset.filter(es_leida=False).count()
         leidas = total - no_leidas
 
         por_prioridad = {
-            prioridad: Notificacion.objects.filter(id_usuario=id_usuario, prioridad=prioridad).count()
+            prioridad: queryset.filter(prioridad=prioridad).count()
             for prioridad in ['alta', 'media', 'baja']
         }
 
@@ -95,10 +166,13 @@ class NotificacionListAPIView(APIView):
                 queryset = queryset.filter(id_usuario=user.id)
 
         id_usuario = request.query_params.get('id_usuario')
+        id_usuario = _resolve_target_user_id(user, id_usuario)
         no_leidas = request.query_params.get('no_leidas', 'false').lower() == 'true'
 
         if id_usuario:
             queryset = queryset.filter(id_usuario=id_usuario)
+
+        queryset = _filter_relevantes_por_rol(queryset, user)
 
         if no_leidas:
             queryset = queryset.filter(es_leida=False)
@@ -122,7 +196,9 @@ class NotificacionMisNotificacionesAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        user = getattr(request, 'user', None)
         id_usuario = request.query_params.get('id_usuario')
+        id_usuario = _resolve_target_user_id(user, id_usuario)
         no_leidas = request.query_params.get('no_leidas', 'false').lower() == 'true'
         pagina = max(int(request.query_params.get('pagina', 1)), 1)
         limite = min(max(int(request.query_params.get('limite', 10)), 1), 100)
@@ -136,6 +212,7 @@ class NotificacionMisNotificacionesAPIView(APIView):
             return Response({'error': 'id_usuario es requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
         queryset = Notificacion.objects.filter(id_usuario=id_usuario)
+        queryset = _filter_relevantes_por_rol(queryset, user)
 
         if no_leidas:
             queryset = queryset.filter(es_leida=False)
@@ -207,6 +284,7 @@ class NotificacionMarcarLeidaAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, id=None):
+        user = getattr(request, 'user', None)
         if id is None:
             return Response({'error': 'El ID es requerido en la URL'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -214,6 +292,9 @@ class NotificacionMarcarLeidaAPIView(APIView):
             notif = Notificacion.objects.get(id=id)
         except Notificacion.DoesNotExist:
             return Response({'error': 'Notificación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user and not is_admin_global(user) and notif.id_usuario != user.id:
+            return Response({'error': 'No autorizado para actualizar esta notificación'}, status=status.HTTP_403_FORBIDDEN)
 
         notif.es_leida = True
         notif.save(update_fields=['es_leida'])
@@ -224,7 +305,9 @@ class NotificacionMarcarTodasLeidasAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        user = getattr(request, 'user', None)
         id_usuario = request.data.get('id_usuario')
+        id_usuario = _resolve_target_user_id(user, id_usuario)
 
         if not id_usuario:
             return Response({'error': 'id_usuario es requerido'}, status=status.HTTP_400_BAD_REQUEST)

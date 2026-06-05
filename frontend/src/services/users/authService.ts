@@ -285,9 +285,10 @@ export const authService = {
   /**
    * Obtiene el usuario autenticado desde la sesión backend (OAuth o login clásico).
    */
-  getAuthenticatedUser: async (): Promise<SessionUserResponse> => {
+  getAuthenticatedUser: async (options?: { suppressErrorLog?: boolean }): Promise<SessionUserResponse> => {
     const response = await apiClient.get<SessionUserResponse>('/auth/user/', {
       requiresAuth: false,
+      suppressErrorLog: options?.suppressErrorLog ?? false,
     });
 
     if (response?.sede && !response.sede.ciudad && response.sede.seccional_ciudad) {
@@ -323,9 +324,11 @@ export const authService = {
    * Sincroniza rol y componentes de la sesión actual.
    * Si se envía la firma previa y no hay cambios, backend responde payload mínimo.
    */
-  getSessionAuthState: async (since?: string): Promise<SessionAuthStateResponse> => {
+  getSessionAuthState: async (since?: string, options?: { suppressErrorLog?: boolean }): Promise<SessionAuthStateResponse> => {
     const query = since ? `?since=${encodeURIComponent(since)}` : '';
-    return apiClient.get<SessionAuthStateResponse>(`/usuarios/session-auth-state/${query}`);
+    return apiClient.get<SessionAuthStateResponse>(`/usuarios/session-auth-state/${query}`, {
+      suppressErrorLog: options?.suppressErrorLog ?? false,
+    });
   }
 };
 
@@ -392,7 +395,7 @@ export const userService = {
       throw new Error('Se requiere el ID del usuario para actualizar');
     }
 
-    const actualizado = await apiClient.put<Usuario>(`/usuarios/${usuario.id}/`, {
+    const actualizado = await apiClient.patch<Usuario>(`/usuarios/${usuario.id}/`, {
       nombre: usuario.nombre,
       correo: usuario.correo,
       contrasena: usuario.contrasena,

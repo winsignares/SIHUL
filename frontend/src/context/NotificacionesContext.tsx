@@ -14,30 +14,40 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
     const auth = useAuthOptional();
     const user = auth?.user;
     const isAuthenticated = auth?.isAuthenticated ?? false;
+    const isAuthLoading = auth?.isLoading ?? false;
     const [contadorNoLeidas, setContadorNoLeidas] = useState(0);
 
     /**
      * Actualiza el contador de notificaciones no leídas
      */
     const actualizarContador = useCallback(async () => {
-        if (!user?.id || !isAuthenticated) {
+        if (!user?.id || !isAuthenticated || isAuthLoading) {
             setContadorNoLeidas(0);
             return;
         }
 
         try {
-            const stats = await obtenerEstadisticas(user.id);
+            const stats = await obtenerEstadisticas(user.id, { suppressErrorLog: true });
             setContadorNoLeidas(stats.no_leidas);
-        } catch (error) {
+        } catch (error: unknown) {
+            const status = typeof error === 'object' && error !== null && 'status' in error
+                ? (error as { status?: unknown }).status
+                : undefined;
+
+            if (status === 401 || status === 403) {
+                setContadorNoLeidas(0);
+                return;
+            }
+
             console.error('Error al actualizar contador de notificaciones:', error);
         }
-    }, [user?.id, isAuthenticated]);
+    }, [user?.id, isAuthenticated, isAuthLoading]);
 
     /**
      * Polling automático cada 30 segundos
      */
     useEffect(() => {
-        if (!isAuthenticated || !user?.id) {
+        if (!isAuthenticated || !user?.id || isAuthLoading) {
             setContadorNoLeidas(0);
             return;
         }
@@ -49,7 +59,7 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
         const interval = setInterval(actualizarContador, 30000);
 
         return () => clearInterval(interval);
-    }, [actualizarContador, isAuthenticated, user?.id]);
+    }, [actualizarContador, isAuthenticated, user?.id, isAuthLoading]);
 
     return (
         <NotificacionesContext.Provider value={{ contadorNoLeidas, actualizarContador }}>

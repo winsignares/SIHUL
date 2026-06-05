@@ -16,6 +16,8 @@ import { Button } from '../share/button';
 
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
+import { useAuth } from '../context/AuthContext';
 
 interface AdminDashboardProps {
   userName?: string;
@@ -27,7 +29,9 @@ interface AdminDashboardProps {
 export default function AdminDashboard(props: AdminDashboardProps) {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const [componentsGraceExpired, setComponentsGraceExpired] = useState(false);
+  const { isAuthenticated, isLoading, components } = useAuth();
+
   const {
     userRole,
     userName,
@@ -47,6 +51,53 @@ export default function AdminDashboard(props: AdminDashboardProps) {
       setMobileMenuOpen(false);
     }
   }, [location.pathname, isMobile]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated || isPublicAccess || components.length > 0) {
+      setComponentsGraceExpired(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setComponentsGraceExpired(true);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated, isPublicAccess, components.length]);
+
+  const showRoleLoader =
+    !isPublicAccess &&
+    isAuthenticated &&
+    (isLoading || (components.length === 0 && !componentsGraceExpired));
+
+  const getRoleLabel = () => {
+    if (isPublicAccess) return 'Acceso Público';
+    const canonicalFinancialRole = resolveCanonicalFinancialRole({
+      roleName: userRole,
+      userName,
+    });
+    const normalizedRole = (userRole || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+
+    if (userRole === 'supervisor_general') return 'Supervisor General';
+    if (userRole === 'planeacion_facultad') return `Planeación (${userFacultyName})`;
+    if (userRole === 'docente') return 'Docente';
+    if (userRole === 'estudiante') return 'Estudiante';
+    if (canonicalFinancialRole === 'funcionario') return 'Funcionario';
+    if (canonicalFinancialRole === 'proveedor') return 'Proveedor';
+    if (canonicalFinancialRole === 'contabilidad') return 'Contabilidad';
+    if (canonicalFinancialRole === 'tesoreria') return 'Tesorería';
+    if (canonicalFinancialRole === 'auditoria') return 'Auditoría';
+    if (canonicalFinancialRole === 'direccion_financiera') return 'Dirección Financiera';
+    if (canonicalFinancialRole === 'rectoria') return 'Rectoría';
+    if (canonicalFinancialRole === 'admin_financiero') return 'Admin Financiero';
+    if (normalizedRole.includes('direccion financiera') || normalizedRole.includes('dir financiera')) return 'Dirección Financiera';
+    return 'Administrador';
+  };
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900 overflow-hidden">
@@ -79,7 +130,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                       transition={{ duration: 0.3 }}
                     >
                       <h1 className="text-white whitespace-nowrap">SIHUL</h1>
-                      <p className="text-red-300 whitespace-nowrap text-xs">{isPublicAccess ? 'Acceso Público' : userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
+                      <p className="text-red-300 whitespace-nowrap text-xs">{getRoleLabel()}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -250,7 +301,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                                   className="flex-1 min-w-0"
                                 >
                                   <p className={`text-sm truncate ${isActive ? 'text-red-900 font-semibold' : 'text-white'}`}>{userName}</p>
-                                  <p className={`text-xs truncate font-medium ${isActive ? 'text-red-900' : 'text-yellow-300'}`}>{userRole === 'supervisor_general' ? 'Supervisor General' : userRole === 'planeacion_facultad' ? `Planeación (${userFacultyName})` : userRole === 'docente' ? 'Docente' : userRole === 'estudiante' ? 'Estudiante' : 'Administrador'}</p>
+                                  <p className={`text-xs truncate font-medium ${isActive ? 'text-red-900' : 'text-yellow-300'}`}>{getRoleLabel()}</p>
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -266,7 +317,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     variant="outline"
                     className={`w-full border-red-600 text-red-100 hover:bg-red-700/60 hover:text-white hover:border-red-500 bg-red-700/30 transition-all text-sm h-auto flex items-center gap-2 rounded-xl ${shouldShowExpanded ? 'px-4 py-3' : 'justify-center px-3 py-3'}`}
                   >
-                    <LogOut className="w-4 h-4 flex-shrink-0" />
+                    <LogOut className="w-4 h-4" />
                     <AnimatePresence>
                       {shouldShowExpanded && (
                         <motion.span
@@ -290,7 +341,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 rounded-xl px-4 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-red-900 shadow-lg hover:shadow-xl transition-all border-0 hover:from-yellow-500 hover:to-yellow-600"
                 >
-                  <LogOut className="w-5 h-5 flex-shrink-0 rotate-180" />
+                  <LogOut className="w-5 h-5 rotate-180" />
                   <AnimatePresence>
                     {shouldShowExpanded && (
                       <motion.span
@@ -451,7 +502,16 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {props.children || <div className="p-4 md:p-8 text-center text-gray-500 text-sm md:text-base">Cargando...</div>}
+            {showRoleLoader ? (
+              <div className="flex h-full min-h-[50vh] items-center justify-center">
+                <div className="text-center">
+                  <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-red-600" />
+                  <p className="mt-4 text-sm font-medium text-slate-600 md:text-base">Cargando componentes de tu rol...</p>
+                </div>
+              </div>
+            ) : (
+              props.children || <div className="p-4 md:p-8 text-center text-gray-500 text-sm md:text-base">Cargando...</div>
+            )}
           </motion.div>
         </div>
       </div>

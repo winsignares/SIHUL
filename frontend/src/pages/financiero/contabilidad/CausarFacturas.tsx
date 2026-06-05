@@ -1,0 +1,317 @@
+﻿import { motion } from 'framer-motion';
+import { Card, CardContent } from '../../../share/card';
+import { Button } from '../../../share/button';
+import { Textarea } from '../../../share/textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../share/table';
+import {
+  Calculator,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  Send,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../share/dialog';
+import { Badge } from '../../../share/badge';
+import TableFilters from '../../../share/table-filters';
+import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { useContabilidadCausarFacturas } from '../../../hooks/financiero/contabilidad';
+import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+
+export default function CausarFacturas() {
+  const {
+    facturas,
+    cuentasContables,
+    centrosCosto,
+    docsMap,
+    cargando,
+    error,
+    facturaSeleccionada,
+    accion,
+    cuentaId,
+    centroId,
+    observaciones,
+    procesando,
+    toast,
+    modalFactura,
+    filtros,
+    facturasFiltradas,
+    setCuentaId,
+    setCentroId,
+    setObservaciones,
+    setModalFactura,
+    setFiltros,
+    cargarDatos,
+    iniciarAccion,
+    cancelar,
+    confirmarCausacion,
+    confirmarDevolucion,
+    openDetalle,
+    getDiasColor,
+  } = useContabilidadCausarFacturas();
+
+  return (
+    <div className="space-y-6">
+      {/* Toast */}
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-xl text-white font-semibold ${toast.tipo === 'ok' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
+          {toast.tipo === 'ok' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          {toast.msg}
+        </motion.div>
+      )}
+
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-6 text-white shadow-xl"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+              <Calculator className="w-7 h-7 text-yellow-400" />
+            </div>
+            <div>
+              <h1 className="text-white mb-1 text-2xl font-bold">Causar Facturas</h1>
+              <p className="text-red-100 text-sm">Registrar el reconocimiento contable de las obligaciones</p>
+            </div>
+          </div>
+          <Button
+            onClick={cargarDatos}
+            variant="outline"
+            className="border-yellow-300 text-slate-900 bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-400 shadow-lg shadow-yellow-500/30 hover:from-yellow-400 hover:via-yellow-500 hover:to-amber-500 hover:text-slate-900 disabled:opacity-60"
+            disabled={cargando}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Dialog: Causar */}
+      <Dialog open={!!facturaSeleccionada && accion === 'causar'} onOpenChange={(o) => { if (!o) cancelar(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-800">
+              <CheckCircle2 className="w-5 h-5" /> Causar Factura
+            </DialogTitle>
+            <DialogDescription>
+              Asigne la cuenta contable y el centro de costo. Se registrara la causacion contable.
+            </DialogDescription>
+          </DialogHeader>
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-2 gap-3 text-sm">
+                <div><p className="text-slate-500">Factura</p><p className="font-bold">{facturaSeleccionada.numero_factura}</p></div>
+                <div><p className="text-slate-500">Radicado</p><p className="font-bold text-blue-600">{displayRadicado(facturaSeleccionada.numero_radicado)}</p></div>
+                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{displayText(facturaSeleccionada.proveedor?.razon_social)}</p></div>
+                <div><p className="text-slate-500">Monto</p><p className="font-bold text-green-700">${Number(facturaSeleccionada.valor_total).toLocaleString('es-CO')}</p></div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">* Cuenta Contable (Requerida)</label>
+                <select
+                  value={cuentaId}
+                  onChange={(e) => setCuentaId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Seleccionar cuenta contable...</option>
+                  {cuentasContables.length === 0 && <option value="" disabled>Sin cuentas disponibles</option>}
+                  {cuentasContables.map((c) => (
+                    <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Centro de Costo (Opcional)</label>
+                <select
+                  value={centroId}
+                  onChange={(e) => setCentroId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Seleccionar centro de costo...</option>
+                  {centrosCosto.length === 0 && <option value="" disabled>Sin centros disponibles</option>}
+                  {centrosCosto.map((c) => (
+                    <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Observaciones (Opcional)</label>
+                <Textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Observaciones sobre la causacion..."
+                  className="min-h-20 border-slate-300"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button onClick={cancelar} variant="outline" className="flex-1" disabled={procesando}>Cancelar</Button>
+                <Button onClick={confirmarCausacion} disabled={procesando} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                  {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : <><Send className="w-4 h-4 mr-2" />Causar</>}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Devolver */}
+      <Dialog open={!!facturaSeleccionada && accion === 'devolver'} onOpenChange={(o) => { if (!o) cancelar(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-800">
+              <AlertTriangle className="w-5 h-5" /> Devolver Factura
+            </DialogTitle>
+            <DialogDescription>Indique el motivo de devolucion. El funcionario recibira la observacion.</DialogDescription>
+          </DialogHeader>
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4 grid grid-cols-2 gap-3 text-sm">
+                <div><p className="text-slate-500">Factura</p><p className="font-bold">{facturaSeleccionada.numero_factura}</p></div>
+                <div><p className="text-slate-500">Proveedor</p><p className="font-bold">{facturaSeleccionada.proveedor?.razon_social}</p></div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-red-700">* Motivo de Devolucion (Requerido)</label>
+                <Textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Especifique claramente que debe corregirse..."
+                  className="min-h-28 border-red-300 focus:border-red-600"
+                />
+                <p className="text-xs text-slate-500">Minimo 10 caracteres.</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button onClick={cancelar} variant="outline" className="flex-1" disabled={procesando}>Cancelar</Button>
+                <Button onClick={confirmarDevolucion} disabled={procesando} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
+                  {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : <><Send className="w-4 h-4 mr-2" />Devolver</>}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal detalle */}
+      <FacturaDetailModal factura={modalFactura} isOpen={!!modalFactura} onClose={() => setModalFactura(null)} />
+
+      {/* Filtros */}
+      <Card className="border-0 shadow-lg">
+        <CardContent className="pt-6">
+          <TableFilters
+            filters={filtros}
+            onFilterChange={setFiltros}
+            estados={[]}
+            proveedores={Array.from(new Set(facturas.map((f) => f.proveedor?.razon_social ?? '').filter(Boolean)))}
+            areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
+            showMontoFilter={true}
+            showFechaFilter={true}
+            showAreaFilter={true}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Tabla */}
+      <Card className="border-0 shadow-lg">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">Facturas Radicadas Pendientes de Causacion</h2>
+              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Radicada</em></p>
+            </div>
+          </div>
+
+          {cargando ? (
+            <div className="flex items-center justify-center py-16 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin mr-3" /> Cargando facturas...
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-16 text-red-500 gap-2">
+              <AlertCircle className="w-5 h-5" /> {error}
+            </div>
+          ) : facturasFiltradas.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">
+              <Calculator className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No hay facturas pendientes de causacion</p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="font-semibold text-slate-700">N° Factura</TableHead>
+                    <TableHead className="font-semibold text-slate-700">N° Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Monto</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Area</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Fecha Radicacion</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {facturasFiltradas.map((factura) => {
+                    const dias = factura.dias_transcurridos ?? 0;
+                    const diasColor = getDiasColor(dias);
+                    return (
+                      <TableRow key={factura.id} className="hover:bg-slate-50">
+                        <TableCell className="font-medium text-slate-800">{factura.numero_factura}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-700 border border-blue-200">{displayRadicado(factura.numero_radicado)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium text-slate-800">{displayText(factura.proveedor?.razon_social)}</p>
+                          <p className="text-xs text-slate-500 font-mono">{displayText(factura.proveedor?.nit)}</p>
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-800">${Number(factura.valor_total).toLocaleString('es-CO')}</TableCell>
+                        <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
+                        <TableCell className="text-slate-600">{displayDate(factura.fecha_radicacion)}</TableCell>
+                        <TableCell><span className={diasColor}>{dias}d</span></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700">
+                              <Eye className="w-3 h-3 mr-1" /> Detalle
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50">
+                              <XCircle className="w-3 h-3 mr-1" /> Devolver
+                            </Button>
+                            <Button size="sm" onClick={() => iniciarAccion(factura, 'causar')} className="bg-green-600 hover:bg-green-700 text-white">
+                              <CheckCircle2 className="w-3 h-3 mr-1" /> Causar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

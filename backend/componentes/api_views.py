@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions
 
-from .models import Componente, ComponenteRol
-from .serializers import ComponenteRolSerializer, ComponenteSerializer
+from .models import Componente, ComponenteRol, ComponenteUsuario
+from .serializers import ComponenteRolSerializer, ComponenteSerializer, ComponenteUsuarioSerializer
 
 
 class ComponenteListCreateAPIView(generics.ListCreateAPIView):
@@ -25,4 +25,22 @@ class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
 class ComponenteRolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ComponenteRol.objects.select_related('componente', 'rol').all()
     serializer_class = ComponenteRolSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class ComponenteUsuarioListCreateAPIView(generics.ListCreateAPIView):
+    serializer_class = ComponenteUsuarioSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = ComponenteUsuario.objects.select_related('componente', 'usuario').all()
+        usuario_id = self.request.query_params.get('usuario')
+        if usuario_id:
+            queryset = queryset.filter(usuario_id=usuario_id)
+        return queryset
+
+
+class ComponenteUsuarioDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ComponenteUsuario.objects.select_related('componente', 'usuario').all()
+    serializer_class = ComponenteUsuarioSerializer
     permission_classes = [permissions.IsAuthenticated]

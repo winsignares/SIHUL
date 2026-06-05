@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react';
 
 // Configuración extendida para desarrollo local y dentro de Docker con HMR estable
 export default defineConfig(() => {
+  // Leer URL del API desde variables de entorno
+  const apiUrl = process.env.VITE_API_URL || 'http://localhost:8000';
+  
+  // Remover trailing slash si existe
+  const apiUrlClean = apiUrl.replace(/\/+$/, '');
+  
   return {
     plugins: [react()],
     server: {
@@ -15,7 +21,12 @@ export default defineConfig(() => {
       open: false,
       proxy: {
         '/api': {
-          target: 'http://localhost:8000',
+          target: apiUrlClean,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/media': {
+          target: apiUrlClean,
           changeOrigin: true,
           secure: false,
         },

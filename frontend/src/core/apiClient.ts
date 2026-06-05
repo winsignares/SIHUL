@@ -128,16 +128,6 @@ class ApiClient {
     });
   }
 
-  async getBlob(
-    endpoint: string,
-    config?: RequestConfig
-  ): Promise<Blob> {
-    return this.requestBlob(endpoint, {
-      ...config,
-      method: 'GET',
-    });
-  }
-
   async postBlob(
     endpoint: string,
     data?: unknown,
@@ -147,6 +137,14 @@ class ApiClient {
       ...config,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async getBlob(endpoint: string, config?: RequestConfig): Promise<Blob> {
+    return this.requestBlob(endpoint, {
+      ...config,
+      cache: config?.cache ?? 'no-store',
+      method: 'GET',
     });
   }
 

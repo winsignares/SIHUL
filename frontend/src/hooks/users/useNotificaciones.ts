@@ -69,6 +69,8 @@ const obtenerTituloDefault = (tipo: string): string => {
         'periodo_academico': 'Período Académico',
         'profesor_sin_asignar': 'Profesor Sin Asignar',
         'grupo_sin_espacio': 'Grupo Sin Espacio',
+        'factura_devuelta': 'Factura Devuelta',
+        'factura_etapa_actualizada': 'Actualización de Factura',
     };
     return titulos[tipo] || 'Notificación';
 };

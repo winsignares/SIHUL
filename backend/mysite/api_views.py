@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import secrets
+import unicodedata
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
@@ -508,8 +509,22 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        user = self.get_current_user()
+
+        if user:
+            role_name_raw = (getattr(getattr(user, 'rol', None), 'nombre', '') or '').strip().lower()
+            role_name_normalized = unicodedata.normalize('NFD', role_name_raw)
+            role_name_normalized = ''.join(ch for ch in role_name_normalized if unicodedata.category(ch) != 'Mn')
+            role_name_normalized = role_name_normalized.replace('_', ' ')
+            role_name_normalized = ' '.join(role_name_normalized.split())
+
+            if role_name_normalized == 'admin financiero':
+                base_queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
+                if self.action == 'list_docentes':
+                    return base_queryset.filter(activo=True, rol__nombre__iexact='docente')
+                return base_queryset
+
         if self.action == 'list_docentes':
-            user = self.get_current_user()
             if not user:
                 return Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional').filter(
                     activo=True,
@@ -522,18 +537,42 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if not usuario.rol:
             return []
 
-        from componentes.models import ComponenteRol
+        from componentes.models import ComponenteRol, ComponenteUsuario
 
         componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
-        return [
-            {
-                'id': cr.componente.id,
-                'nombre': cr.componente.nombre,
-                'descripcion': cr.componente.descripcion,
-                'permiso': cr.permiso,
-            }
-            for cr in componentes_rol
-        ]
+        componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
+        overrides = {item.componente_id: item for item in componentes_usuario}
+
+        componentes = []
+        for cr in componentes_rol:
+            override = overrides.get(cr.componente_id)
+            if override and not override.activo:
+                continue
+
+            permiso = override.permiso if override else cr.permiso
+            componentes.append(
+                {
+                    'id': cr.componente.id,
+                    'nombre': cr.componente.nombre,
+                    'descripcion': cr.componente.descripcion,
+                    'permiso': permiso,
+                }
+            )
+
+        componentes_por_id = {item['id']: item for item in componentes}
+        for override in componentes_usuario:
+            if not override.activo:
+                continue
+
+            if override.componente_id not in componentes_por_id:
+                componentes_por_id[override.componente_id] = {
+                    'id': override.componente.id,
+                    'nombre': override.componente.nombre,
+                    'descripcion': override.componente.descripcion,
+                    'permiso': override.permiso,
+                }
+
+        return list(componentes_por_id.values())
 
     def _build_espacios_permitidos(self, usuario):
         from espacios.models import EspacioPermitido

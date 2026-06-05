@@ -44,8 +44,10 @@ INSTALLED_APPS = [
     'prestamos',
     'chatbot',
     'notificaciones',
+    'financiero',  # App nueva para gestión financiera
     'rest_framework',
     'corsheaders',
+    'django_filters',  # Para filtrados en API
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -147,6 +149,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files (user-uploaded content)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'financiero' / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
