@@ -12,6 +12,11 @@ import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
+type CachedAsistente = Omit<Asistente, 'icon' | 'icono'> & {
+    icon?: unknown;
+    icono?: string;
+};
+
 const SECCIONALES_PUBLICAS_CHATBOT = [
     'Barranquilla',
     'Bogota',
@@ -32,6 +37,23 @@ const iconMap: Record<string, any> = {
     'Trophy': Trophy,
     'Headphones': Headphones,
     'Bot': Bot
+};
+
+const obtenerIcono = (icono?: string) => iconMap[icono || 'Bot'] || Bot;
+
+const rehidratarAsistente = (asistente: CachedAsistente): Asistente => {
+    const icono = asistente.icono || (typeof asistente.icon === 'string' ? asistente.icon : 'Bot');
+
+    return {
+        ...asistente,
+        icono,
+        icon: obtenerIcono(icono)
+    };
+};
+
+const serializarAsistente = (asistente: Asistente): CachedAsistente => {
+    const { icon: _icon, ...serializable } = asistente;
+    return serializable;
 };
 
 const normalizarAgentes = (response: unknown): AgenteAPI[] => {
@@ -66,7 +88,8 @@ const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
         nombre: agenteAPI.nombre,
         subtitulo: agenteAPI.subtitulo || '',
         descripcion: agenteAPI.descripcion,
-        icon: iconMap[agenteAPI.icono || 'Bot'] || Bot,
+        icono: agenteAPI.icono || 'Bot',
+        icon: obtenerIcono(agenteAPI.icono),
         color: agenteAPI.color || 'blue',
         bgGradient: agenteAPI.bgGradient || 'from-blue-500 via-blue-600 to-indigo-600',
         ultimoMensaje: '¿En qué puedo ayudarte?',
@@ -205,15 +228,16 @@ export function useAsistentesVirtuales() {
                 const userScope = `${user?.id || 'guest'}-${user?.rol || 'public'}`;
                 const cacheKey = `${ASISTENTES_VIRTUALES_CACHE_KEY}-${userScope}`;
                 const cachedData = getSessionCacheData<{
-                    asistentes: Asistente[];
+                    asistentes: CachedAsistente[];
                     asistenteActivoId?: string;
                 }>(cacheKey, activeToken);
 
                 if (cachedData?.asistentes?.length) {
-                    setAsistentes(cachedData.asistentes);
+                    const asistentesRehidratados = cachedData.asistentes.map(rehidratarAsistente);
+                    setAsistentes(asistentesRehidratados);
                     const cachedActive = cachedData.asistenteActivoId
-                        ? cachedData.asistentes.find((a) => a.id === cachedData.asistenteActivoId)
-                        : cachedData.asistentes[0];
+                        ? asistentesRehidratados.find((a) => a.id === cachedData.asistenteActivoId)
+                        : asistentesRehidratados[0];
                     if (cachedActive) {
                         setAsistenteActivo(cachedActive);
                     }
@@ -253,7 +277,7 @@ export function useAsistentesVirtuales() {
                 }
 
                 setSessionCacheData(cacheKey, activeToken, {
-                    asistentes: agentesUI,
+                    asistentes: agentesUI.map(serializarAsistente),
                     asistenteActivoId: agentesUI[0]?.id
                 });
             } catch (error) {

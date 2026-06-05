@@ -21,8 +21,13 @@ import {
   Clock,
   X
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAsistentesVirtuales } from '../../hooks/chatbot/useAsistentesVirtuales';
+
+const getSafeIcon = (icon: unknown): LucideIcon => {
+  return typeof icon === 'function' ? (icon as LucideIcon) : Bot;
+};
 
 export default function AsistentesVirtuales() {
   const {
@@ -54,6 +59,7 @@ export default function AsistentesVirtuales() {
     cargarHistorialConversaciones,
     cargarConversacionAnterior
   } = useAsistentesVirtuales();
+  const ActiveIcon = asistenteActivo ? getSafeIcon(asistenteActivo.icon) : Bot;
 
   return (
     <div className="flex-1 min-h-0 flex">
@@ -144,7 +150,7 @@ export default function AsistentesVirtuales() {
         {/* Lista de Agentes */}
         <div className="flex-1 overflow-y-auto relative z-10 p-3 scrollbar-hidden">
           {filteredAsistentes.map((asistente, index) => {
-            const Icon = asistente.icon;
+            const Icon = getSafeIcon(asistente.icon);
             const isActive = asistenteActivo?.id === asistente.id;
 
             return (
@@ -330,7 +336,7 @@ export default function AsistentesVirtuales() {
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ type: 'spring', stiffness: 300 }}
                     >
-                      <asistenteActivo.icon className="w-6 h-6 text-white relative z-10" />
+                      <ActiveIcon className="w-6 h-6 text-white relative z-10" />
                       <motion.div
                         className="absolute inset-0 bg-white/30"
                         animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
@@ -554,7 +560,7 @@ export default function AsistentesVirtuales() {
                         whileHover={{ scale: 1.2, rotate: 10 }}
                         transition={{ type: 'spring', stiffness: 400 }}
                       >
-                        <asistenteActivo.icon className="w-4 h-4 text-white relative z-10" />
+                        <ActiveIcon className="w-4 h-4 text-white relative z-10" />
                         <motion.div
                           className="absolute inset-0 bg-white/20"
                           animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
@@ -627,7 +633,7 @@ export default function AsistentesVirtuales() {
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1, repeat: Infinity }}
                   >
-                    <asistenteActivo.icon className="w-4 h-4 text-white" />
+                    <ActiveIcon className="w-4 h-4 text-white" />
                   </motion.div>
                   <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl rounded-tl-md px-4 py-3 shadow-lg">
                     <div className="flex gap-1">
