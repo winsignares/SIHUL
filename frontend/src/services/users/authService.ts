@@ -3,7 +3,7 @@ import { apiClient } from '../../core/apiClient';
 const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 const BACKEND_BASE_URL = rawApiUrl
   ? rawApiUrl.replace(/\/api$/, '')
-  : 'http://localhost:8000';
+  : window.location.origin;
 
 // Interfaces
 export interface Rol {
