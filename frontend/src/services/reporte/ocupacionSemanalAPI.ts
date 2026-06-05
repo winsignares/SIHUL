@@ -1,5 +1,8 @@
 import { apiClient } from '../../core/apiClient';
+import { resolveApiBaseUrl } from '../../core/backendUrl';
 import type { EspacioOcupacion } from '../../models/index';
+
+const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 export interface OcupacionSemanalResponse {
   semana_inicio: string;
@@ -62,7 +65,7 @@ class OcupacionSemanalService {
         semana_offset: semanaOffset
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/espacios/ocupacion/pdf/`, {
+      const response = await fetch(`${API_BASE_URL}/espacios/ocupacion/pdf/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

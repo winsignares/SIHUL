@@ -1,9 +1,7 @@
 import { apiClient } from '../../core/apiClient';
+import { resolveBackendBaseUrl } from '../../core/backendUrl';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
-const BACKEND_BASE_URL = rawApiUrl
-  ? rawApiUrl.replace(/\/api$/, '')
-  : window.location.origin;
+const BACKEND_BASE_URL = resolveBackendBaseUrl(import.meta.env.VITE_API_URL);
 
 // Interfaces
 export interface Rol {

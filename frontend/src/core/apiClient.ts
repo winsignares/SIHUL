@@ -1,9 +1,7 @@
 import { handleApiError } from './errorHandler.ts';
+import { resolveApiBaseUrl } from './backendUrl.ts';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
-const API_BASE_URL = rawApiUrl
-  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`)
-  : '/api';
+const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 interface RequestConfig extends RequestInit {
   requiresAuth?: boolean;
