@@ -12,17 +12,57 @@ import {
   Upload,
   X,
   Search,
+  Trash2,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { apiClient } from '../../../core/apiClient';
 import { departamentosService, documentosService, facturasService, proveedoresService } from '../../../services/financiero';
+import { API_BASE } from '../../../services/financiero/core/shared';
 import type { Departamento, Factura, Proveedor } from '../../../models/financiero/core.models';
 import type { EnviarFacturaProps, UploadedDoc } from '../../../models/financiero/proveedor';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Button } from '../../../share/button';
 
+type BancoOption = {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  codigo_bancario?: string | null;
+};
+
+type TipoCuentaOption = {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+};
+
+type FormState = {
+  tipoDocumento: string;
+  descripcion: string;
+  observaciones: string;
+  departamentoId: number;
+  valorSubtotal: number;
+  ivaPorcentaje: number;
+  valorIva: number;
+  valorTotal: number;
+  fechaFactura: string;
+  fechaRecepcion: string;
+  banco: string;
+  bancoId: number | null;
+  tipoCuenta: string;
+  numeroCuenta: string;
+  cuentaBancaria: string;
+};
+
 const formatMoney = (val: unknown) => {
   const num = Number(val) || 0;
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+};
+
+const formatNumberInput = (value: string) => {
+  const num = value.replace(/[^0-9]/g, '');
+  if (!num) return '';
+  return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
 const TIPO_DOCUMENTO_OPTS = [
@@ -33,9 +73,8 @@ const TIPO_DOCUMENTO_OPTS = [
   'Otro',
 ];
 const DOC_TYPES = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
-const ALLOWED_DOC_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
-const ALLOWED_DOC_MIME_TYPES = new Set(['application/pdf', 'application/xml', 'text/xml', 'image/png', 'image/jpeg']);
-const IVA_PERCENTAGES = [0, 5, 19];
+const ALLOWED_DOC_EXTENSIONS = new Set(['pdf']);
+const ALLOWED_DOC_MIME_TYPES = new Set(['application/pdf']);
 const BANCOS_COLOMBIA = [
   'Bancolombia',
   'Banco de Bogotá',
@@ -49,6 +88,18 @@ const BANCOS_COLOMBIA = [
   'Otro',
 ];
 const TIPO_CUENTA_OPTS = ['Ahorros', 'Corriente'];
+
+type ApiListResponse<T> = {
+  results?: T[];
+};
+
+const extractResults = <T,>(payload: unknown): T[] => {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && Array.isArray((payload as ApiListResponse<T>).results)) {
+    return (payload as ApiListResponse<T>).results as T[];
+  }
+  return [];
+};
 
 const getToday = () => new Date().toISOString().split('T')[0];
 
@@ -112,9 +163,11 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<UploadedDoc | null>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
+  const [bancos, setBancos] = useState<BancoOption[]>([]);
+  const [tiposCuenta, setTiposCuenta] = useState<TipoCuentaOption[]>([]);
 
-  const [form, setForm] = useState({
-    tipoDocumento: 'Factura' as string,
+  const [form, setForm] = useState<FormState>({
+    tipoDocumento: 'Factura',
     descripcion: '',
     observaciones: '',
     departamentoId: 0,
@@ -125,6 +178,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     fechaFactura: getToday(),
     fechaRecepcion: getToday(),
     banco: '',
+    bancoId: null,
     tipoCuenta: '',
     numeroCuenta: '',
     cuentaBancaria: '',
@@ -177,20 +231,46 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     return Array.from(new Set([...DOC_TYPES, ...existingTypes]));
   }, [docs]);
 
+  const fetchCatalog = useMemo(() => async <T,>(endpoint: string): Promise<T[]> => {
+    const payload = await apiClient.get<T[] | ApiListResponse<T>>(endpoint, { requiresAuth: false });
+    return extractResults<T>(payload);
+  }, []);
+
   useEffect(() => {
     const loadCatalogos = async () => {
       setCatalogLoading(true);
       try {
-        const depts = await departamentosService.getAreasSolicitantes();
-        setDepartamentos(Array.isArray(depts) ? depts : []);
-      } catch {
-        setDepartamentos([]);
+        const [deptsResult, bancosResult, tiposResult] = await Promise.allSettled([
+          departamentosService.getAreasSolicitantes(),
+          fetchCatalog<BancoOption>(`${API_BASE}/bancos/?limit=500`),
+          fetchCatalog<TipoCuentaOption>(`${API_BASE}/tipos-cuenta/?limit=500`),
+        ]);
+
+        if (deptsResult.status === 'fulfilled') {
+          setDepartamentos(Array.isArray(deptsResult.value) ? deptsResult.value : []);
+        } else {
+          console.error('[EnviarFactura] Error cargando areas solicitantes', deptsResult.reason);
+        }
+
+        if (bancosResult.status === 'fulfilled') {
+          setBancos(bancosResult.value);
+        } else {
+          console.error('[EnviarFactura] Error cargando bancos', bancosResult.reason);
+        }
+
+        if (tiposResult.status === 'fulfilled') {
+          setTiposCuenta(tiposResult.value);
+        } else {
+          console.error('[EnviarFactura] Error cargando tipos de cuenta', tiposResult.reason);
+        }
+      } catch (err) {
+        console.error('[EnviarFactura] Error inesperado cargando catalogos financieros', err);
       } finally {
         setCatalogLoading(false);
       }
     };
     void loadCatalogos();
-  }, []);
+  }, [fetchCatalog]);
 
   useEffect(() => {
     if (isCorreccion) return;
@@ -219,17 +299,31 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
 
   useEffect(() => {
     if (!proveedorSeleccionado) return;
-    setForm(prev => ({
-      ...prev,
-      banco: prev.banco || proveedorSeleccionado.banco || '',
-      tipoCuenta: prev.tipoCuenta || proveedorSeleccionado.tipo_cuenta || '',
-      numeroCuenta: prev.numeroCuenta || proveedorSeleccionado.numero_cuenta || '',
-      cuentaBancaria:
-        prev.cuentaBancaria ||
-        proveedorSeleccionado.cuenta_bancaria_completa ||
-        [proveedorSeleccionado.banco, proveedorSeleccionado.tipo_cuenta, proveedorSeleccionado.numero_cuenta].filter(Boolean).join(' - '),
-    }));
-  }, [proveedorSeleccionado]);
+    setForm(prev => {
+      const shouldUpdateBanco = !prev.banco && !!proveedorSeleccionado.banco;
+      const shouldUpdateTipo = !prev.tipoCuenta && !!proveedorSeleccionado.tipo_cuenta;
+      const shouldUpdateNumero = !prev.numeroCuenta && !!proveedorSeleccionado.numero_cuenta;
+      const shouldUpdateCuenta = !prev.cuentaBancaria && !!proveedorSeleccionado.cuenta_bancaria_completa;
+      if (!shouldUpdateBanco && !shouldUpdateTipo && !shouldUpdateNumero && !shouldUpdateCuenta) {
+        return prev;
+      }
+      const nextBancoNombre = shouldUpdateBanco ? (proveedorSeleccionado.banco || '') : prev.banco;
+      const matchedBanco = bancos.find(b => b.nombre.toLowerCase() === nextBancoNombre.toLowerCase());
+      const nextTipo = shouldUpdateTipo ? (proveedorSeleccionado.tipo_cuenta || '') : prev.tipoCuenta;
+      const nextNumero = shouldUpdateNumero ? (proveedorSeleccionado.numero_cuenta || '') : prev.numeroCuenta;
+      const cuentaTexto =
+        (shouldUpdateCuenta ? proveedorSeleccionado.cuenta_bancaria_completa : prev.cuentaBancaria)
+        || [nextBancoNombre, nextTipo, nextNumero].filter(Boolean).join(' - ');
+      return {
+        ...prev,
+        banco: nextBancoNombre,
+        bancoId: matchedBanco?.id ?? prev.bancoId,
+        tipoCuenta: nextTipo,
+        numeroCuenta: nextNumero,
+        cuentaBancaria: cuentaTexto,
+      };
+    });
+  }, [proveedorSeleccionado, bancos]);
 
   const handleBuscarProveedor = async () => {
     if (!nitBusqueda.trim()) return;
@@ -246,9 +340,16 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     }
   };
 
-  const handleFieldChange = (field: string, value: unknown) => {
+  const handleFieldChange = <K extends keyof FormState>(
+    field: K,
+    value: FormState[K],
+    transform?: (draft: FormState) => FormState,
+  ) => {
     setForm(prev => {
-      const updated = { ...prev, [field]: value };
+      let updated: FormState = { ...prev, [field]: value };
+      if (transform) {
+        updated = transform(updated);
+      }
       if (field === 'valorSubtotal' || field === 'ivaPorcentaje') {
         const subtotal = Number(updated.valorSubtotal) || 0;
         const porcentaje = Number(updated.ivaPorcentaje) || 0;
@@ -256,14 +357,21 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         updated.valorTotal = Number((subtotal + updated.valorIva).toFixed(2));
       }
 
-      if (field === 'banco' || field === 'tipoCuenta' || field === 'numeroCuenta') {
-        updated.cuentaBancaria = [updated.banco, updated.tipoCuenta, updated.numeroCuenta]
-          .filter(Boolean)
-          .join(' - ');
-      }
+      updated.cuentaBancaria = [updated.banco, updated.tipoCuenta, updated.numeroCuenta]
+        .filter(Boolean)
+        .join(' - ');
 
       return updated;
     });
+  };
+
+  const handleBancoChange = (nombre: string) => {
+    const match = bancos.find((b) => b.nombre === nombre) || null;
+    handleFieldChange('banco', nombre, (draft) => ({
+      ...draft,
+      bancoId: match?.id ?? null,
+      tipoCuenta: '',
+    }));
   };
 
   const handleAddDoc = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
@@ -314,16 +422,34 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     }
   };
 
+  const bancosOptions = useMemo(() => (bancos.length
+    ? bancos
+    : BANCOS_COLOMBIA.map((nombre, idx) => ({ id: 1000 + idx, nombre }))), [bancos]);
+
+  const tiposCuentaOptions = useMemo(() => (tiposCuenta.length
+    ? Array.from(new Map(tiposCuenta.map(tipo => [tipo.nombre, tipo])).values())
+    : TIPO_CUENTA_OPTS.map((nombre, idx) => ({ id: 1000 + idx, nombre }))), [tiposCuenta]);
+
+  const documentosPendientes = useMemo(
+    () => documentTypes.filter(type => !docs.some(doc => doc.type === type)),
+    [documentTypes, docs],
+  );
+
+  const allDocumentsUploaded = documentosPendientes.length === 0;
+
   const canGoNext = () => {
     if (step === 1) return !!proveedorSeleccionado;
     if (step === 2) {
       return (
         form.tipoDocumento &&
-        form.descripcion.trim().length > 5 &&
+        form.descripcion.trim().length > 3 &&
         form.departamentoId > 0 &&
         form.fechaFactura &&
-        Number(form.valorTotal) > 0
+        Number(form.valorSubtotal) > 0
       );
+    }
+    if (step === 3) {
+      return allDocumentsUploaded;
     }
     return true;
   };
@@ -410,6 +536,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
           fechaFactura: getToday(),
           fechaRecepcion: getToday(),
           banco: '',
+          bancoId: null,
           tipoCuenta: '',
           numeroCuenta: '',
           cuentaBancaria: '',
@@ -466,13 +593,13 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl p-6 text-white shadow-lg"
+        className="bg-gradient-to-r from-red-800 to-red-900 rounded-xl p-6 text-white shadow-lg"
       >
         <div className="flex items-start gap-4">
           <Send size={24} className="flex-shrink-0 mt-1" />
           <div>
             <h3 className="font-bold text-lg mb-1">{isCorreccion ? 'Corregir Factura' : 'Enviar Factura'}</h3>
-            <p className="text-orange-100 text-sm">
+            <p className="text-red-100 text-sm">
               {isCorreccion
                 ? 'Actualiza los campos solicitados y reenvía la factura al proceso.'
                 : 'Completa los pasos para enviar tu factura al área financiera'}
@@ -482,17 +609,17 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       </motion.div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2 py-4">
         {steps.map((s, i) => (
-          <div key={s.num} className="flex items-center gap-2 flex-1">
-            <div className={`flex items-center gap-2 flex-1 ${i < steps.length - 1 ? '' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all ${step > s.num ? 'bg-green-500 text-white' : step === s.num ? 'bg-orange-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                {step > s.num ? <CheckCircle2 size={16} /> : s.num}
+          <div key={s.num} className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 ${i < steps.length - 1 ? '' : ''}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all ${step > s.num ? 'bg-red-700 text-white shadow-md' : step === s.num ? 'bg-red-900 text-white shadow-lg scale-110' : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300'}`}>
+                {step > s.num ? <CheckCircle2 size={18} /> : s.num}
               </div>
-              <span className={`text-xs font-medium hidden sm:block ${step === s.num ? 'text-orange-600' : 'text-slate-500 dark:text-slate-400'}`}>{s.label}</span>
+              <span className={`text-xs font-semibold hidden sm:block transition-all ${step === s.num ? 'text-red-900 dark:text-red-600' : step > s.num ? 'text-red-700 dark:text-red-600' : 'text-slate-500 dark:text-slate-400'}`}>{s.label}</span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1 ${step > s.num ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+              <div className={`w-12 h-1 mx-2 rounded-full transition-all ${step > s.num ? 'bg-red-700' : step >= s.num + 1 ? 'bg-red-700' : 'bg-slate-300 dark:bg-slate-600'}`} />
             )}
           </div>
         ))}
@@ -568,12 +695,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                       value={nitBusqueda}
                       onChange={e => setNitBusqueda(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleBuscarProveedor()}
-                      className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+                      className="flex-1 px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium"
                     />
                     <button
                       onClick={handleBuscarProveedor}
                       disabled={buscandoProveedor || !nitBusqueda.trim()}
-                      className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+                      className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 disabled:opacity-50 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:shadow-none"
                     >
                       <Search size={16} />
                       {buscandoProveedor ? 'Buscando...' : 'Buscar'}
@@ -605,7 +732,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                   <select
                     value={form.tipoDocumento}
                     onChange={e => handleFieldChange('tipoDocumento', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium cursor-pointer"
                   >
                     {TIPO_DOCUMENTO_OPTS.map(t => (
                       <option key={t} value={t}>{t}</option>
@@ -642,7 +769,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     value={form.fechaFactura}
                     max={new Date().toISOString().split('T')[0]}
                     onChange={e => handleFieldChange('fechaFactura', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium"
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Se autocompleta con hoy. Cámbiala solo si la factura física tiene otra fecha.</p>
                 </div>
@@ -669,9 +796,9 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     value={form.departamentoId}
                     onChange={e => handleFieldChange('departamentoId', Number(e.target.value))}
                     disabled={catalogLoading || !!proveedorSeleccionado}
-                    className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none ${proveedorSeleccionado
-                      ? 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'
-                      : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500'
+                    className={`w-full px-4 py-3 border-2 rounded-lg text-sm outline-none font-medium cursor-pointer ${proveedorSeleccionado
+                      ? 'border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'
+                      : 'border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600'
                       }`}
                   >
                     <option value={0}>-- Seleccionar área --</option>
@@ -695,7 +822,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     placeholder="Describe el servicio o bien facturado..."
                     value={form.descripcion}
                     onChange={e => handleFieldChange('descripcion', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none resize-none font-medium"
                   />
                 </div>
               </div>
@@ -708,54 +835,52 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 </h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subtotal <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">Subtotal <span className="text-red-600">*</span></label>
                     <input
-                      type="number"
-                      min={0}
-                      value={form.valorSubtotal || ''}
-                      onChange={e => handleFieldChange('valorSubtotal', Number(e.target.value))}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumberInput(String(form.valorSubtotal || ''))}
+                      onChange={e => handleFieldChange('valorSubtotal', Number(e.target.value.replace(/[^0-9]/g, '')))}
                       placeholder="0"
-                      className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
                     />
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Valor antes de impuestos.</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Valor antes de impuestos.</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (%)</label>
-                    <select
-                      value={form.ivaPorcentaje}
-                      onChange={e => handleFieldChange('ivaPorcentaje', Number(e.target.value))}
-                      className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
-                    >
-                      {IVA_PERCENTAGES.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">El valor de IVA se calcula automáticamente.</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IVA (valor)</label>
+                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">IVA (%)</label>
                     <input
                       type="number"
                       min={0}
-                      value={form.valorIva || ''}
+                      max={100}
+                      value={form.ivaPorcentaje || ''}
+                      onChange={e => handleFieldChange('ivaPorcentaje', Number(e.target.value))}
+                      placeholder="19"
+                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
+                    />
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Ingresa el porcentaje (0, 5, 19, etc). Se calcula automáticamente.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">IVA (valor)</label>
+                    <input
+                      type="text"
+                      value={formatNumberInput(String(form.valorIva || ''))}
                       readOnly
                       placeholder="0"
-                      className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 outline-none"
+                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-semibold"
                     />
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Total <span className="text-red-500">*</span>
+                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                      Total <span className="text-red-600">*</span>
                     </label>
                     <input
-                      type="number"
-                      min={0}
-                      value={form.valorTotal || ''}
+                      type="text"
+                      value={formatNumberInput(String(form.valorTotal || ''))}
                       readOnly
                       placeholder="0"
-                      className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 outline-none font-semibold"
+                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-bold text-lg"
                     />
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total = Subtotal + IVA.</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 font-semibold">Total = Subtotal + IVA.</p>
                   </div>
                 </div>
               </div>
@@ -768,23 +893,23 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <select
                     value={form.banco}
-                    onChange={e => handleFieldChange('banco', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    onChange={e => handleBancoChange(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium cursor-pointer"
                   >
                     <option value="">Seleccionar banco</option>
-                    {BANCOS_COLOMBIA.map(banco => (
-                      <option key={banco} value={banco}>{banco}</option>
+                    {bancosOptions.map((banco) => (
+                      <option key={banco.id} value={banco.nombre}>{banco.nombre}</option>
                     ))}
                   </select>
 
                   <select
                     value={form.tipoCuenta}
                     onChange={e => handleFieldChange('tipoCuenta', e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium cursor-pointer"
                   >
                     <option value="">Tipo de cuenta</option>
-                    {TIPO_CUENTA_OPTS.map(tipo => (
-                      <option key={tipo} value={tipo}>{tipo}</option>
+                    {tiposCuentaOptions.map((tipo) => (
+                      <option key={tipo.id} value={tipo.nombre}>{tipo.nombre}</option>
                     ))}
                   </select>
 
@@ -794,7 +919,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     placeholder="Número de cuenta"
                     value={form.numeroCuenta}
                     onChange={e => handleFieldChange('numeroCuenta', e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium"
                   />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Completa estos datos para agilizar validación y pago en tesorería.</p>
@@ -809,7 +934,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                   placeholder="Observaciones adicionales..."
                   value={form.observaciones}
                   onChange={e => handleFieldChange('observaciones', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none resize-none font-medium"
                 />
               </div>
             </div>
@@ -820,11 +945,16 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
             <div className="space-y-6">
               <h4 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
                 <Upload size={20} className="text-orange-600" />
-                Adjuntar Documentos <span className="text-slate-400 text-sm font-normal">(opcional)</span>
+                Adjuntar Documentos
               </h4>
               <p className="text-slate-600 dark:text-slate-300 text-sm">
-                Adjunta los soportes de tu factura. Puedes continuar sin documentos.
+                Adjunta todos los soportes requeridos para continuar con la confirmación.
               </p>
+              {!allDocumentsUploaded && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+                  Faltan documentos por adjuntar: {documentosPendientes.join(', ')}.
+                </div>
+              )}
 
               <div className="space-y-3">
                 {documentTypes.map(type => {
@@ -835,9 +965,12 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                         <p className="text-sm font-medium text-slate-800 dark:text-white">{type}</p>
                         {uploaded && (
                           <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs space-y-1">
-                            <p className="truncate">
-                              {uploaded.file?.name || uploaded.existingName || 'Documento cargado'}
-                            </p>
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <CheckCircle2 size={16} className="flex-shrink-0 text-green-600 dark:text-green-400" />
+                              <p className="truncate">
+                                {uploaded.file?.name || uploaded.existingName || 'Documento cargado'}
+                              </p>
+                            </div>
                             {uploaded.existingUrl && (
                               <a
                                 href={uploaded.existingUrl}
@@ -852,20 +985,21 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                         )}
                       </div>
                       {uploaded ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 size={16} className="text-green-500" />
+                        <div className="flex items-center gap-3">
                           <button
                             onClick={() => requestRemoveDoc(uploaded)}
-                            className="p-1 hover:bg-red-50 rounded text-red-500"
+                            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 transition-colors hover:border-red-300 hover:bg-red-100 hover:text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/50"
+                            title="Eliminar documento"
+                            aria-label={`Eliminar ${type}`}
                           >
-                            <X size={14} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       ) : (
                         <label className="cursor-pointer px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors">
                           <Upload size={12} className="inline mr-1" />
                           Adjuntar
-                          <input type="file" className="hidden" accept=".pdf,.xml,.jpg,.jpeg,.png" onChange={e => { void handleAddDoc(e, type); }} />
+                          <input type="file" className="hidden" accept=".pdf" onChange={e => { void handleAddDoc(e, type); }} />
                         </label>
                       )}
                     </div>
@@ -933,23 +1067,25 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       </AnimatePresence>
 
       {/* Navigation */}
-      <div className="flex justify-between">
-        <button
-          onClick={() => {
-            if (isCorreccion && step === 2) return;
-            setStep(s => Math.max(1, s - 1));
-          }}
-          disabled={step === 1 || (isCorreccion && step === 2)}
-          className="flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronLeft size={16} /> Anterior
-        </button>
+      <div className={step === 1 ? 'flex justify-end' : 'flex justify-between'}>
+        {step > 1 && (
+          <button
+            onClick={() => {
+              if (isCorreccion && step === 2) return;
+              setStep(s => Math.max(1, s - 1));
+            }}
+            disabled={isCorreccion && step === 2}
+            className="flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft size={16} /> Anterior
+          </button>
+        )}
 
         {step < 4 ? (
           <button
             onClick={() => setStep(s => s + 1)}
             disabled={!canGoNext()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg disabled:shadow-none"
           >
             Siguiente <ChevronRight size={16} />
           </button>
@@ -957,7 +1093,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950 disabled:opacity-50 text-white rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg disabled:shadow-none"
           >
             <Send size={16} />
             {loading ? 'Enviando...' : isCorreccion ? 'Enviar corrección' : 'Enviar Factura'}

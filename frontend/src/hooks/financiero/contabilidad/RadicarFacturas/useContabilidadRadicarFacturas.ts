@@ -62,6 +62,8 @@ export function useContabilidadRadicarFacturas() {
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
 
   const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
@@ -78,19 +80,11 @@ export function useContabilidadRadicarFacturas() {
     setCargando(true);
     setError(null);
     try {
-      const [recibidas, registradas, radicadas] = await Promise.all([
-        facturasService.getByEstado('Recibida'),
+      const [registradas] = await Promise.all([
         facturasService.getByEstado('Registrada'),
-        facturasService.getByEstado('Radicada'),
       ]);
 
-      const mergedMap = new Map<number, Factura>();
-      [...recibidas, ...registradas, ...radicadas].forEach((f) => {
-        mergedMap.set(f.id, f);
-      });
-      const lista = Array.from(mergedMap.values()).filter(
-        (f) => f.estado !== 'Radicada' || f.etapa_actual === 'Corrección Radicación'
-      );
+      const lista = registradas.filter((f) => f.estado === 'Registrada' && f.etapa_actual !== 'Corrección Radicación');
 
       setFacturas(lista);
       const docsResults = await Promise.all(
@@ -138,6 +132,19 @@ export function useContabilidadRadicarFacturas() {
       }),
     [facturas, filtros]
   );
+
+  // Paginación
+  const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);
+  const facturasPaginadas = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return facturasFiltradas.slice(startIndex, endIndex);
+  }, [facturasFiltradas, currentPage, itemsPerPage]);
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtros.numeroFactura, filtros.proveedor, filtros.estado, filtros.areaSolicitante, filtros.fechaInicio, filtros.fechaFin]);
 
   const abrirDetalle = (factura: Factura) => {
     const docs = docsMap[factura.id] ?? [];
@@ -217,6 +224,11 @@ export function useContabilidadRadicarFacturas() {
     modalFactura,
     filtros,
     facturasFiltradas,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     setObservaciones,
     setFiltros,
     setModalFactura,

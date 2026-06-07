@@ -13,10 +13,11 @@ export const documentosService = {
 
   upload: async (facturaId: number, file: File, tipoDocumento: string): Promise<DocumentoAdjunto> => {
     const formData = new FormData();
+    const truncatedFileName = file.name.length > 100 ? file.name.substring(0, 100) : file.name;
     formData.append('factura', facturaId.toString());
-    formData.append('nombre_archivo', file.name);
+    formData.append('nombre_archivo', truncatedFileName);
     formData.append('tipo_documento', tipoDocumento);
-    formData.append('url_storage', file.name);
+    formData.append('url_storage', truncatedFileName);
     formData.append('tamano_bytes', file.size.toString());
     if (file.type) formData.append('tipo_mime', file.type);
     formData.append('archivo', file);

@@ -10,26 +10,26 @@ interface UseContabilidadHomeParams {
 }
 
 export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCausar }: UseContabilidadHomeParams) {
-  const [recibidas, setRecibidas] = useState<number | null>(null);
+  const [registradas, setRegistradas] = useState<number | null>(null);
   const [radicadas, setRadicadas] = useState<number | null>(null);
   const [causadas, setCausadas] = useState<number | null>(null);
   const [historial, setHistorial] = useState<HistorialFactura[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
   useEffect(() => {
     Promise.all([
-      facturasService.getByEstado('Recibida'),
       facturasService.getByEstado('Registrada'),
       facturasService.getByEstado('Radicada'),
       facturasService.getByEstado('Causada'),
     ])
-      .then(([rec, reg, rad, caus]) => {
-        setRecibidas(rec.length + reg.length);
+      .then(([reg, rad, caus]) => {
+        setRegistradas(reg.length);
         setRadicadas(rad.length);
         setCausadas(caus.length);
-        if (rad.length > 0) {
-          historialService.getByFactura(rad[0].id).then(setHistorial).catch(() => {});
-        }
+        // Obtener historial de actividades recientes de contabilidad
+        historialService.getAll().then(setHistorial).catch(() => {});
       })
       .catch(() => {})
       .finally(() => setLoadingStats(false));
@@ -38,11 +38,11 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
   const stats = [
     {
       title: 'Facturas para Radicar',
-      value: loadingStats ? '...' : String(recibidas ?? 0),
+      value: loadingStats ? '...' : String(registradas ?? 0),
       icon: FileCheck,
       color: 'from-blue-600 to-blue-700',
       iconColor: 'text-blue-100',
-      trend: 'Estado: Recibidas',
+      trend: 'Estado: Registradas',
     },
     {
       title: 'Pendientes de Causación',
@@ -87,7 +87,9 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
     },
   ];
 
-  const recentActivity = historial.slice(0, 5);
+  // Paginación de actividades recientes
+  const totalPages = Math.ceil(historial.length / itemsPerPage);
+  const recentActivity = historial.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -107,6 +109,10 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
     stats,
     quickActions,
     recentActivity,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     getEstadoBadge,
     onGoToPendientes,
   };

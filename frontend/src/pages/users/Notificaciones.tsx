@@ -339,19 +339,31 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
     if (!['factura_etapa_actualizada', 'factura_devuelta'].includes(tipo)) return null;
 
     const raw = `${notif.titulo || ''} ${notif.descripcion || ''}`;
-    const match = raw.match(/\/financiero\/[^\s]+/i);
-    let route = match?.[0] || null;
+    
+    // Intentar extraer el número de factura del mensaje (formato: FAC-YYYY-NNNN)
+    let facturaId = null;
+    const facturaMatch = raw.match(/FAC-\d{4}-\d{4}/);
+    const numeroFactura = facturaMatch?.[0];
+    
+    // Si no encuentra el número, intentar buscar un ID numérico
+    if (!numeroFactura) {
+      const idMatch = raw.match(/factura\s+(\d+)|id[:\s]+(\d+)/i);
+      facturaId = idMatch?.[1] || idMatch?.[2];
+    }
 
     const rolNombre = (user?.rol?.nombre || '').trim().toLowerCase();
-    if (rolNombre === 'proveedor') {
-      const facturaMatch = raw.match(/factura=(\d+)/i);
-      const facturaId = facturaMatch?.[1];
+    if (rolNombre === 'proveedor' && (numeroFactura || facturaId)) {
+      // Si tenemos el número de factura, buscar su ID en la base de datos
+      // Por ahora, usamos el ID si lo encontramos, o navegamos a mis-facturas
       if (facturaId) {
-        route = `/financiero/proveedor/mis-facturas/${facturaId}`;
+        return `/financiero/proveedor/mis-facturas/${facturaId}`;
+      } else if (numeroFactura) {
+        // Si solo tenemos el número, navegamos a mis-facturas para que el usuario lo busque
+        return `/financiero/proveedor/mis-facturas`;
       }
     }
 
-    return route;
+    return null;
   };
 
   const getPrioridadBadge = (prioridad: string) => {

@@ -42,6 +42,8 @@ export function useContabilidadCausarFacturas() {
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
 
   const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
@@ -107,6 +109,19 @@ export function useContabilidadCausarFacturas() {
       }),
     [facturas, filtros]
   );
+
+  // Paginación
+  const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);
+  const facturasPaginadas = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return facturasFiltradas.slice(startIndex, endIndex);
+  }, [facturasFiltradas, currentPage, itemsPerPage]);
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtros.numeroFactura, filtros.proveedor, filtros.estado, filtros.areaSolicitante, filtros.fechaInicio, filtros.fechaFin]);
 
   const iniciarAccion = (factura: Factura, acc: 'causar' | 'devolver') => {
     setFacturaSeleccionada(factura);
@@ -189,6 +204,11 @@ export function useContabilidadCausarFacturas() {
     modalFactura,
     filtros,
     facturasFiltradas,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     setCuentaId,
     setCentroId,
     setObservaciones,

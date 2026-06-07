@@ -1,6 +1,6 @@
 import { Input } from './input';
 import { Label } from './label';
-import { Search, Calendar, DollarSign, X, Filter } from 'lucide-react';
+import { Search, Calendar, X, Filter } from 'lucide-react';
 import { Button } from './button';
 
 interface TableFiltersProps {
@@ -18,7 +18,6 @@ interface TableFiltersProps {
   estados?: string[];
   proveedores?: string[];
   areas?: string[];
-  showMontoFilter?: boolean;
   showFechaFilter?: boolean;
   showAreaFilter?: boolean;
 }
@@ -29,7 +28,6 @@ export default function TableFilters({
   estados = [],
   proveedores = [],
   areas = [],
-  showMontoFilter = false,
   showFechaFilter = false,
   showAreaFilter = false,
 }: TableFiltersProps) {
@@ -53,7 +51,7 @@ export default function TableFilters({
   const filtrosActivos = Object.values(filters || {}).filter((v) => v !== '').length;
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm space-y-6">
+    <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
       <div className="flex items-center justify-between pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
@@ -81,8 +79,8 @@ export default function TableFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="space-y-2">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
           <Label htmlFor="filter-numero" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
             <Search className="w-3 h-3 text-red-600" />
             Numero de Factura
@@ -106,7 +104,7 @@ export default function TableFilters({
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
           <Label htmlFor="filter-proveedor" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
             <Search className="w-3 h-3 text-red-600" />
             Proveedor
@@ -126,7 +124,7 @@ export default function TableFilters({
           </select>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
           <Label htmlFor="filter-estado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
             <Search className="w-3 h-3 text-red-600" />
             Estado
@@ -147,7 +145,7 @@ export default function TableFilters({
         </div>
 
         {showAreaFilter && (
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
             <Label htmlFor="filter-area" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               Area Solicitante
@@ -167,85 +165,39 @@ export default function TableFilters({
             </select>
           </div>
         )}
-      </div>
 
-      {showFechaFilter && (
-        <div className="pt-4 border-t border-slate-200">
-          <h4 className="text-xs font-bold text-slate-600 mb-3 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-blue-600" />
-            RANGO DE FECHAS
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="filter-fecha-inicio" className="text-slate-700 text-xs font-semibold">
-                Fecha Inicio
-              </Label>
+        {showFechaFilter && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor="filter-fecha-inicio" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-blue-600" />
+              Desde
+            </Label>
               <Input
                 id="filter-fecha-inicio"
                 type="date"
                 value={filters.fechaInicio || ''}
-                onChange={(e) => handleInputChange('fechaInicio', e.target.value)}
+                onChange={(e: any) => handleInputChange('fechaInicio', e.target.value)}
                 className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="filter-fecha-fin" className="text-slate-700 text-xs font-semibold">
-                Fecha Fin
-              </Label>
-              <Input
-                id="filter-fecha-fin"
-                type="date"
-                value={filters.fechaFin || ''}
-                onChange={(e) => handleInputChange('fechaFin', e.target.value)}
-                className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+        )}
 
-      {showMontoFilter && (
-        <div className="pt-4 border-t border-slate-200">
-          <h4 className="text-xs font-bold text-slate-600 mb-3 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-green-600" />
-            RANGO DE MONTOS
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="filter-monto-min" className="text-slate-700 text-xs font-semibold">
-                Monto Minimo
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">$</span>
-                <Input
-                  id="filter-monto-min"
-                  type="number"
-                  placeholder="0"
-                  value={filters.montoMin || ''}
-                  onChange={(e) => handleInputChange('montoMin', e.target.value)}
-                  className="pl-8 border-slate-300 focus:border-green-600 focus:ring-green-600"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="filter-monto-max" className="text-slate-700 text-xs font-semibold">
-                Monto Maximo
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">$</span>
-                <Input
-                  id="filter-monto-max"
-                  type="number"
-                  placeholder="999999999"
-                  value={filters.montoMax || ''}
-                  onChange={(e) => handleInputChange('montoMax', e.target.value)}
-                  className="pl-8 border-slate-300 focus:border-green-600 focus:ring-green-600"
-                />
-              </div>
-            </div>
+        {showFechaFilter && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor="filter-fecha-fin" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-blue-600" />
+              Hasta
+            </Label>
+            <Input
+              id="filter-fecha-fin"
+              type="date"
+              value={filters.fechaFin || ''}
+              onChange={(e: any) => handleInputChange('fechaFin', e.target.value)}
+              className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
+            />
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Download, Eye, Search, Filter, DollarSign, FileSearch, Bell } from 'lucide-react';
+import { Calendar, Download, Eye, Search, Filter, FileSearch, Bell } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero/core.models';
@@ -127,11 +127,10 @@ export default function ConsultarFacturas() {
   const [numeroFactura, setNumeroFactura] = useState('');
   const [proveedor, setProveedor] = useState('');
   const [estado, setEstado] = useState('');
-  const [area, setArea] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  const [montoMin, setMontoMin] = useState('0');
-  const [montoMax, setMontoMax] = useState('999999999');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const loadRows = async () => {
     const response = await facturasService.getAll({ limit: 500 });
@@ -201,28 +200,42 @@ export default function ConsultarFacturas() {
 
   const proveedores = useMemo(() => Array.from(new Set(rows.map(r => r.proveedor))), [rows]);
   const estados = useMemo(() => Array.from(new Set(rows.map(r => r.estado))), [rows]);
-  const areas = useMemo(() => Array.from(new Set(rows.map(r => r.area))), [rows]);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (numeroFactura && !r.idTramite.toLowerCase().includes(numeroFactura.toLowerCase())) return false;
+      if (numeroFactura) {
+        const query = numeroFactura.toLowerCase();
+        const matches = [r.idTramite, r.proveedor, r.nit, r.estado]
+          .some((value) => String(value || '').toLowerCase().includes(query));
+        if (!matches) return false;
+      }
       if (proveedor && r.proveedor !== proveedor) return false;
       if (estado && r.estado !== estado) return false;
-      if (area && r.area !== area) return false;
       if (fechaInicio && r.fechaRecepcion && r.fechaRecepcion < fechaInicio) return false;
       if (fechaFin && r.fechaRecepcion && r.fechaRecepcion > fechaFin) return false;
-      if (montoMin && r.monto < Number(montoMin)) return false;
-      if (montoMax && r.monto > Number(montoMax)) return false;
       return true;
     });
-  }, [rows, numeroFactura, proveedor, estado, area, fechaInicio, fechaFin, montoMin, montoMax]);
+  }, [rows, numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
 
   const filteredFacturas = useMemo(() => {
     const allowedIds = new Set(filtered.map((row) => row.facturaId));
     return facturasData.filter((factura) => allowedIds.has(Number(factura.id)));
   }, [facturasData, filtered]);
 
+  // Paginación
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedFiltered = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
   const selectedRow = filtered.find((r) => r.id === selectedId) || rows.find((r) => r.id === selectedId) || null;
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
 
   useEffect(() => {
     const facturaParam = searchParams.get('factura');
@@ -451,11 +464,8 @@ export default function ConsultarFacturas() {
     setNumeroFactura('');
     setProveedor('');
     setEstado('');
-    setArea('');
     setFechaInicio('');
     setFechaFin('');
-    setMontoMin('0');
-    setMontoMax('999999999');
   };
 
   return (
@@ -515,8 +525,8 @@ export default function ConsultarFacturas() {
           </motion.button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 pb-3 border-b border-slate-200">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <div className="flex flex-wrap items-end gap-3 mb-4 pb-4 border-b border-slate-200">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="min-w-0 flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Número de factura</label>
             <div className="relative">
               <Search className="w-4 h-4 text-red-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -529,7 +539,7 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="min-w-0 flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Proveedor</label>
             <select 
               value={proveedor} 
@@ -541,7 +551,7 @@ export default function ConsultarFacturas() {
             </select>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="min-w-0 flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Estado</label>
             <select 
               value={estado} 
@@ -553,28 +563,8 @@ export default function ConsultarFacturas() {
             </select>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Área solicitante</label>
-            <select 
-              value={area} 
-              onChange={e => setArea(e.target.value)} 
-              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
-            >
-              <option value="">Todas</option>
-              {areas.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 pb-3 border-b border-slate-200">
-          <div className="md:col-span-3">
-            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1">
-              <Calendar className="w-4 h-4 text-slate-500" /> Rango de fechas
-            </label>
-          </div>
-          
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">desde</label>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="min-w-0 flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Desde</label>
             <div className="relative">
               <input 
                 type="date" 
@@ -586,8 +576,8 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">hasta</label>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="min-w-0 flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Hasta</label>
             <div className="relative">
               <input 
                 type="date" 
@@ -599,54 +589,7 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">días</label>
-            <div className="w-full h-11 rounded-lg border-2 border-slate-300 flex items-center justify-center bg-slate-50 text-sm font-semibold text-slate-700">
-              {fechaInicio && fechaFin ? Math.round((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24)) + ' días' : '—'}
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-3">
-            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1">
-              <DollarSign className="w-4 h-4 text-slate-500" /> Rango de montos
-            </label>
           </div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">mínimo</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
-              <input 
-                type="number" 
-                value={montoMin} 
-                onChange={e => setMontoMin(e.target.value)} 
-                className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
-              />
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">máximo</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
-              <input 
-                type="number" 
-                value={montoMax} 
-                onChange={e => setMontoMax(e.target.value)} 
-                className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
-              />
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">rango</label>
-            <div className="w-full h-11 rounded-lg border-2 border-slate-300 flex items-center justify-center bg-slate-50 text-sm font-semibold text-slate-700">
-              ${Number(montoMin || 0).toLocaleString('es-CO')} - ${Number(montoMax || 0).toLocaleString('es-CO')}
-            </div>
-          </motion.div>
-        </div>
       </div>
 
       {/* Tabla de Resultados */}
@@ -659,7 +602,7 @@ export default function ConsultarFacturas() {
         <div className="flex items-center justify-between mb-5 pb-4 border-b-2 border-slate-200">
           <div>
             <h3 className="text-xl font-bold text-slate-900">Resultados de la búsqueda</h3>
-            <p className="text-sm text-slate-500 mt-1">{filtered.length} factura(s) encontrada(s)</p>
+            <p className="text-sm text-slate-500 mt-1">{filtered.length} factura(s) encontrada(s) - Página {currentPage} de {totalPages || 1}</p>
           </div>
           <motion.button 
             whileHover={{ scale: 1.05 }} 
@@ -694,7 +637,7 @@ export default function ConsultarFacturas() {
                 <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>Cargando facturas...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>No hay resultados con los filtros actuales.</td></tr>
-              ) : filtered.map((row, idx) => (
+              ) : paginatedFiltered.map((row: FuncionarioConsultaRow, idx: number) => (
                 <motion.tr 
                   key={row.id}
                   initial={{ opacity: 0, y: 8 }}
@@ -749,6 +692,67 @@ export default function ConsultarFacturas() {
             </tbody>
           </table>
         </div>
+
+        {/* Controles de Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+            <div className="text-sm text-slate-600">
+              Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, filtered.length)} de {filtered.length} resultados
+            </div>
+            <div className="flex items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
+              >
+                ← Anterior
+              </motion.button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <motion.button
+                      key={pageNum}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                        currentPage === pageNum
+                          ? 'bg-slate-900 text-white'
+                          : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
+              >
+                Siguiente →
+              </motion.button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       <FacturaDetailModal

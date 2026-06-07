@@ -20,6 +20,8 @@ import {
   RefreshCw,
   Loader2,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Dialog,
@@ -52,6 +54,11 @@ export default function CausarFacturas() {
     modalFactura,
     filtros,
     facturasFiltradas,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     setCuentaId,
     setCentroId,
     setObservaciones,
@@ -186,7 +193,7 @@ export default function CausarFacturas() {
             <DialogTitle className="flex items-center gap-2 text-red-800">
               <AlertTriangle className="w-5 h-5" /> Devolver Factura
             </DialogTitle>
-            <DialogDescription>Indique el motivo de devolucion. El funcionario recibira la observacion.</DialogDescription>
+            <DialogDescription>La factura volverá al funcionario con su observación. Este campo es obligatorio.</DialogDescription>
           </DialogHeader>
           {facturaSeleccionada && (
             <div className="space-y-4">
@@ -227,7 +234,6 @@ export default function CausarFacturas() {
             estados={[]}
             proveedores={Array.from(new Set(facturas.map((f) => f.proveedor?.razon_social ?? '').filter(Boolean)))}
             areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
-            showMontoFilter={true}
             showFechaFilter={true}
             showAreaFilter={true}
           />
@@ -240,7 +246,7 @@ export default function CausarFacturas() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-800">Facturas Radicadas Pendientes de Causacion</h2>
-              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Radicada</em></p>
+              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Radicada</em> - Página {currentPage} de {totalPages || 1}</p>
             </div>
           </div>
 
@@ -273,7 +279,7 @@ export default function CausarFacturas() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasFiltradas.map((factura) => {
+                  {facturasPaginadas.map((factura) => {
                     const dias = factura.dias_transcurridos ?? 0;
                     const diasColor = getDiasColor(dias);
                     return (
@@ -291,15 +297,15 @@ export default function CausarFacturas() {
                         <TableCell className="text-slate-600">{displayDate(factura.fecha_radicacion)}</TableCell>
                         <TableCell><span className={diasColor}>{dias}d</span></TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700">
-                              <Eye className="w-3 h-3 mr-1" /> Detalle
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700 p-2" title="Detalle">
+                              <Eye className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50">
-                              <XCircle className="w-3 h-3 mr-1" /> Devolver
+                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50 p-2" title="Devolver">
+                              <XCircle className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" onClick={() => iniciarAccion(factura, 'causar')} className="bg-green-600 hover:bg-green-700 text-white">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Causar
+                            <Button size="sm" onClick={() => iniciarAccion(factura, 'causar')} className="bg-green-600 hover:bg-green-700 text-white p-2" title="Causar">
+                              <CheckCircle2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -308,6 +314,63 @@ export default function CausarFacturas() {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Controles de Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+              <div className="text-sm text-slate-600">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, facturasFiltradas.length)} de {facturasFiltradas.length} resultados
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        size="sm"
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={currentPage === pageNum ? "bg-slate-900 text-white hover:bg-slate-800" : "border-slate-300 text-slate-700 hover:bg-slate-50"}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

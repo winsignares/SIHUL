@@ -115,7 +115,6 @@ const COMPONENT_TERMS_BY_ROLE: Record<CanonicalFinancialRole, string[]> = {
   funcionario: [
     'dashboard financiero',
     'mis pendientes',
-    'registrar factura',
     'consultar facturas',
     'gestion de facturas'
   ],

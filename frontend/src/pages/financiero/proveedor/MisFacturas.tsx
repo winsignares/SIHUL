@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -44,10 +44,12 @@ const ESTADO_CONFIG: Record<string, { color: string; icon: React.ElementType; la
   'Autorizada': { color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300', icon: CheckCircle2, label: 'Autorizada' },
   'Pago Aplicado': { color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300', icon: CheckCircle2, label: 'Pago Aplicado' },
   'Pagada': { color: 'bg-green-200 text-green-900 dark:bg-green-800/40 dark:text-green-200', icon: CheckCircle2, label: 'Pagada' },
-  'Devuelta': { color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', icon: AlertCircle, label: 'Devuelta' },
+  'Devuelta': { color: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', icon: AlertCircle, label: 'Requiere corrección' },
   'Rechazada': { color: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', icon: XCircle, label: 'Rechazada' },
   'Anulada': { color: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300', icon: XCircle, label: 'Anulada' },
 };
+
+const REJECTED_STATES = ['Rechazada', 'Devuelta', 'Rechazada Auditoría', 'Rechazada por Rectoría'];
 
 export default function MisFacturas({ miProveedor }: MisFacturasProps) {
   const navigate = useNavigate();
@@ -75,17 +77,23 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     void loadFacturas();
   }, [loadFacturas]);
 
-  const filteredFacturas = facturas.filter(f => {
+  const filteredFacturas = useMemo(() => facturas.filter(f => {
     const matchSearch =
       !search ||
       f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
       (f.numero_radicado || '').toLowerCase().includes(search.toLowerCase()) ||
       f.descripcion.toLowerCase().includes(search.toLowerCase());
-    const matchEstado = !estadoFiltro || f.estado === estadoFiltro;
+    const matchEstado = !estadoFiltro || (estadoFiltro === '__rechazadas' ? REJECTED_STATES.includes(f.estado) : f.estado === estadoFiltro);
     return matchSearch && matchEstado;
-  });
+  }), [estadoFiltro, facturas, search]);
 
-  const estados = [...new Set(facturas.map(f => f.estado))];
+  const estados = useMemo(() => {
+    const base = ['Recibida', '__rechazadas'];
+    const dynamic = facturas
+      .map(f => f.estado)
+      .filter((estado) => estado && !REJECTED_STATES.includes(estado) && estado !== 'Recibida');
+    return [...base, ...Array.from(new Set(dynamic))];
+  }, [facturas]);
 
   if (!miProveedor) {
     return (
@@ -98,7 +106,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     );
   }
 
-  const tableColumns = 'minmax(220px,1.2fr) minmax(240px,1.6fr) minmax(180px,1.1fr) minmax(150px,1fr) minmax(140px,0.9fr) minmax(120px,0.7fr)';
+  const tableColumns = '220px minmax(280px,1fr) 180px 170px 140px 130px';
 
   return (
     <div className="space-y-6">
@@ -161,9 +169,9 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
           onChange={e => setEstadoFiltro(e.target.value)}
           className="px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
         >
-          <option value="">Todos los estados</option>
+          <option value="">Todos</option>
           {estados.map(e => (
-            <option key={e} value={e}>{e}</option>
+            <option key={e} value={e}>{e === '__rechazadas' ? 'Rechazadas' : e}</option>
           ))}
         </select>
       </div>

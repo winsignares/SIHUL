@@ -4,9 +4,11 @@ import { facturasService } from '../../../../services/financiero';
 import type { Factura } from '../../../../models/financiero/core.models';
 import type { FuncionarioStatsApi } from '../../../../models/financiero/funcionario';
 
-const toList = <T,>(data: any): T[] => {
+const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
-  if (Array.isArray(data?.results)) return data.results as T[];
+  if (typeof data === 'object' && data !== null && Array.isArray((data as { results?: unknown }).results)) {
+    return (data as { results: T[] }).results;
+  }
   return [];
 };
 
@@ -102,7 +104,10 @@ export function useFuncionarioHome() {
 
   const recentActivity = useMemo(
     () =>
-      facturas.slice(0, 8).map((f) => ({
+      [...facturas]
+        .sort((a, b) => new Date(b.fecha_modificacion || b.fecha_recepcion || b.fecha_creacion || 0).getTime() - new Date(a.fecha_modificacion || a.fecha_recepcion || a.fecha_creacion || 0).getTime())
+        .slice(0, 3)
+        .map((f) => ({
         id: f.id,
         factura: f.numero_factura,
         proveedor: f.proveedor?.razon_social || 'Proveedor sin nombre',

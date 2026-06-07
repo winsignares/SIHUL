@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters, parsers, status
+from rest_framework import viewsets, filters, parsers, status, permissions
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -653,18 +653,19 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
             tipo_notificacion = 'FACTURA_ETAPA_ACTUALIZADA'
             mensaje = (
-                f'Factura actualizada: {numero} cambió de etapa '
-                f'{estado_anterior or "Sin estado"} -> {estado_nuevo}. '
-                f'Enlace: {enlace}'
+                f'La factura {numero} ha avanzado en su proceso de revisión. '
+                f'Estado anterior: {estado_anterior or "Sin estado"}. '
+                f'Estado actual: {estado_nuevo}. '
+                f'Puedes revisar los detalles en tu panel de facturas.'
             )
             prioridad = 'alta' if estado_nuevo in ['Recibida', 'Devuelta', 'Rechazada', 'Rechazada por Rectoría'] else 'media'
 
             if es_devolucion and user_id == creador_id:
                 tipo_notificacion = 'FACTURA_DEVUELTA'
                 mensaje = (
-                    f'La factura {numero} fue devuelta para corrección por el área financiera. '
-                    f'Motivo: {motivo_devolucion or "Revisar observaciones del historial"}. '
-                    f'Enlace: {enlace}'
+                    f'La factura {numero} ha sido devuelta para corrección. '
+                    f'Motivo: {motivo_devolucion or "Revisar observaciones en el historial de cambios"}. '
+                    f'Por favor, realiza los ajustes necesarios y vuelve a enviarla.'
                 )
                 prioridad = 'alta'
 
@@ -1964,3 +1965,27 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ============================================================
+# VIEWSETS PARA BANCO Y TIPO DE CUENTA
+# ============================================================
+
+class BancoViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = models.Banco.objects.filter(activo=True).order_by('nombre')
+    serializer_class = serializers.BancoSerializer
+    permission_classes = [permissions.AllowAny]
+    filterset_fields = ['activo']
+    search_fields = ['nombre', 'descripcion']
+    ordering_fields = ['nombre', 'fecha_creacion']
+    ordering = ['nombre']
+
+
+class TipoCuentaViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = models.TipoCuenta.objects.filter(activo=True).order_by('nombre')
+    serializer_class = serializers.TipoCuentaSerializer
+    permission_classes = [permissions.AllowAny]
+    filterset_fields = ['activo']
+    search_fields = ['nombre', 'descripcion']
+    ordering_fields = ['nombre', 'fecha_creacion']
+    ordering = ['nombre']

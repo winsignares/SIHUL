@@ -291,3 +291,21 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
                 validated_data['numero_factura'] = ''
 
         raise serializers.ValidationError("No fue posible generar un numero de factura unico")
+
+
+# ============================================================
+# SERIALIZERS PARA BANCO Y TIPO DE CUENTA
+# ============================================================
+
+class BancoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Banco
+        fields = ['id', 'nombre', 'descripcion', 'codigo_bancario', 'activo', 'fecha_creacion', 'fecha_modificacion']
+        read_only_fields = ['fecha_creacion', 'fecha_modificacion']
+
+
+class TipoCuentaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoCuenta
+        fields = ['id', 'nombre', 'descripcion', 'activo', 'fecha_creacion', 'fecha_modificacion']
+        read_only_fields = ['fecha_creacion', 'fecha_modificacion']

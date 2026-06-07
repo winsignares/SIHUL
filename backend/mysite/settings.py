@@ -73,7 +73,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mysite.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
 ]
 
@@ -227,6 +226,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # ETL configurations
 ETL_PERIODO = os.getenv('ETL_PERIODO', '20261')

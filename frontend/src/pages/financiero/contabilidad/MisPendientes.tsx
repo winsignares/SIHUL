@@ -43,7 +43,7 @@ export default function MisPendientes() {
               <div>
                 <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
                 <p className="text-red-100 text-sm">
-                  Facturas asignadas a contabilidad (Recibidas + Radicadas) — SLA: {SLA_DIAS} días
+                  Facturas Registradas pendientes de radicación — SLA: {SLA_DIAS} días
                 </p>
               </div>
             </div>
@@ -114,9 +114,9 @@ export default function MisPendientes() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-slate-800">Facturas Pendientes de Procesamiento</CardTitle>
+              <CardTitle className="text-slate-800">Facturas Pendientes de Radicación</CardTitle>
               <CardDescription>
-                Recibidas (pendientes de radicar) y Radicadas (pendientes de causar)
+                Solo se muestran facturas en estado <em>Registrada</em> con N° Radicado <em>Sin Asignar</em>
               </CardDescription>
             </CardHeader>
             <CardContent>

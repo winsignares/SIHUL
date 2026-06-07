@@ -25,7 +25,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
     const { user, role, components, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed] = useState(false);
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
     const [notificacionesSinLeer] = useState(3);
 
@@ -421,13 +421,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         label: 'Mis Pendientes',
                         route: '/financiero/funcionario/pendientes',
                         code: 'Mis Pendientes'
-                    },
-                    {
-                        id: 'Registrar Factura',
-                        icon: getIconForComponent('Registrar Factura'),
-                        label: 'Registrar Factura',
-                        route: '/financiero/funcionario/registrar',
-                        code: 'Registrar Factura'
                     },
                     {
                         id: 'Consultar Facturas',

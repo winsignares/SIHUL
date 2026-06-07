@@ -1,5 +1,4 @@
 export interface FuncionarioDashboardHomeProps {
-  onGoToRegistrar: () => void;
   onGoToConsultar: () => void;
 }
 

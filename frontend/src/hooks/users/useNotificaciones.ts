@@ -16,25 +16,38 @@ import {
  */
 const mapearNotificacion = (notif: NotificacionBackend): NotificacionUsuario => {
     // Extraer título y descripción del mensaje
-    let titulo = '';
+    let titulo = obtenerTituloDefault(notif.tipo_notificacion);
     let descripcion = notif.mensaje;
 
+    // Para notificaciones de factura, usar el mensaje completo como descripción
+    if (notif.tipo_notificacion === 'FACTURA_ETAPA_ACTUALIZADA' || 
+        notif.tipo_notificacion === 'factura_etapa_actualizada') {
+        descripcion = notif.mensaje;
+    } 
+    // Para notificaciones de factura devuelta, usar el mensaje completo como descripción
+    else if (notif.tipo_notificacion === 'FACTURA_DEVUELTA' || 
+             notif.tipo_notificacion === 'factura_devuelta') {
+        descripcion = notif.mensaje;
+    }
     // Para notificaciones de rechazo, extraer la primera línea como título
-    if (notif.tipo_notificacion === 'solicitud_rechazada') {
+    else if (notif.tipo_notificacion === 'solicitud_rechazada') {
         const lineas = notif.mensaje.split('\n');
         titulo = lineas[0].trim();
         // Mantener solo el contenido después del título (sin la primera línea)
         descripcion = lineas.slice(1).join('\n').trim();
-    } else {
-        // Para otras notificaciones, intentar dividir por ':'
+    } 
+    // Para otras notificaciones, intentar dividir por ':'
+    else {
         const partes = notif.mensaje.split(':');
-        titulo = partes.length > 1 ? partes[0].trim() : obtenerTituloDefault(notif.tipo_notificacion);
-        descripcion = partes.length > 1 ? partes.slice(1).join(':').trim() : notif.mensaje;
+        if (partes.length > 1) {
+            titulo = partes[0].trim();
+            descripcion = partes.slice(1).join(':').trim();
+        }
     }
 
     return {
         id: notif.id,
-        tipo: notif.tipo_notificacion,
+        tipo: notif.tipo_notificacion.toLowerCase(),
         titulo,
         descripcion,
         fecha: formatearFecha(notif.fecha_creacion),
@@ -69,8 +82,8 @@ const obtenerTituloDefault = (tipo: string): string => {
         'periodo_academico': 'Período Académico',
         'profesor_sin_asignar': 'Profesor Sin Asignar',
         'grupo_sin_espacio': 'Grupo Sin Espacio',
-        'factura_devuelta': 'Factura Devuelta',
-        'factura_etapa_actualizada': 'Actualización de Factura',
+        'factura_devuelta': '⚠️ Factura Devuelta para Corrección',
+        'factura_etapa_actualizada': '📋 Actualización de Estado de Factura',
     };
     return titulos[tipo] || 'Notificación';
 };
