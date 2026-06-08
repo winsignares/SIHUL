@@ -17,7 +17,7 @@ function accionRequerida(factura: Factura): string {
   if (factura.estado === 'Registrada') return 'Radicar factura y verificar documentos';
   if (factura.estado === 'Radicada') {
     if (factura.dias_transcurridos > SLA_DIAS_CONTABILIDAD) return 'URGENTE: Causar factura VENCIDA';
-    return 'Causar factura y asignar cuenta contable';
+    return 'Causar factura y cargar soporte Seven';
   }
   return 'Revisar factura';
 }
@@ -59,6 +59,7 @@ export function useContabilidadMisPendientes() {
           f.etapa_actual !== 'Corrección Funcionario'
       );
 
+      pendientes.sort((a, b) => (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || ''));
       setFacturas(pendientes);
       const docsResults = await Promise.all(
         pendientes.map((f) =>

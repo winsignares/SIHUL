@@ -189,9 +189,9 @@ class FacturaListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'numero_factura', 'numero_radicado', 'proveedor', 'departamento', 'departamento_id', 'valor_total',
             'cuenta_contable', 'centro_costo', 'numero_proceso_pago', 'numero_confirmacion', 'numero_transaccion', 'numero_comprobante',
-            'archivo_plano_generado',
+            'numero_operacion_contable', 'consecutivo_operacion', 'archivo_plano_generado',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual', 'fecha_inicio_etapa',
-            'tipo_documento', 'descripcion', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
+            'tipo_documento', 'descripcion', 'observaciones', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
             'fecha_alistamiento', 'fecha_aprobacion_auditoria', 'fecha_revision_direccion', 'fecha_autorizacion',
             'fecha_pago_aplicado', 'fecha_comprobante',
             'dias_transcurridos', 'indicador_riesgo',

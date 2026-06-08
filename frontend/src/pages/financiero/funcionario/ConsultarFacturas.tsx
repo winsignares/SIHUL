@@ -8,6 +8,7 @@ import type { FuncionarioConsultaRow, FuncionarioEstadoChange, FuncionarioSeguim
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import type { TimelineEtapa } from '../../../share/factura-timeline';
 import { displayDate, displayRadicado } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
   { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
@@ -30,15 +31,8 @@ const toList = <T,>(data: unknown): T[] => {
   return [];
 };
 
-const MIN_ESTADO_CONSULTA = 'Registrada';
-const ESTADO_INDEX = new Map(TIMELINE_BLUEPRINT.map((item, index) => [item.estadoRef, index]));
-const MIN_ESTADO_INDEX = ESTADO_INDEX.get(MIN_ESTADO_CONSULTA) ?? 0;
-
-const isEstadoVisible = (estado: string): boolean => {
-  const index = ESTADO_INDEX.get(estado);
-  if (typeof index === 'number') return index >= MIN_ESTADO_INDEX;
-  return estado !== 'Recibida';
-};
+const ESTADO_OBJETIVO = 'Registrada';
+const esEstadoRegistrado = (estado?: string | null) => (estado || '').toLowerCase() === ESTADO_OBJETIVO.toLowerCase();
 
 function mapFactura(f: Factura): FuncionarioConsultaRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -133,11 +127,11 @@ export default function ConsultarFacturas() {
   const itemsPerPage = 10;
 
   const loadRows = async () => {
-    const response = await facturasService.getAll({ limit: 500 });
-    const list = toList<Factura>(response);
+    const response = await facturasService.getAll({ estado: ESTADO_OBJETIVO, limit: 500 });
+    const list = toList<Factura>(response).filter((factura) => esEstadoRegistrado(factura.estado));
     return {
       list,
-      rows: list.filter((factura) => isEstadoVisible(factura.estado || '')).map(mapFactura),
+      rows: list.map(mapFactura),
     };
   };
 
@@ -370,7 +364,7 @@ export default function ConsultarFacturas() {
         'Centro Costo ID': factura.centro_costo_id || '',
         'Centro Costo': factura.centro_costo?.nombre || '',
         'Valor Subtotal': factura.valor_subtotal,
-        'Valor IVA': factura.valor_iva,
+        'Valor Tasa': factura.valor_iva,
         'Valor Retencion Renta': factura.valor_retencion_renta,
         'Valor Retencion IVA': factura.valor_retencion_iva,
         'Valor Retencion ICA': factura.valor_retencion_ica,
@@ -675,17 +669,27 @@ export default function ConsultarFacturas() {
                     </div>
                   </td>
                   <td className="p-4 text-center">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        setSelectedId(row.id);
-                        setOpenDetail(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-100 font-semibold transition-all"
-                    >
-                      <Eye className="w-4 h-4" /> Ver
-                    </motion.button>
+                    <div className="flex items-center justify-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => void downloadDocumentosConsolidados(row.facturaId, row.idTramite, 'funcionario')}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100 font-semibold transition-all"
+                      >
+                        <Download className="w-4 h-4" /> Docs
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setSelectedId(row.id);
+                          setOpenDetail(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-100 font-semibold transition-all"
+                      >
+                        <Eye className="w-4 h-4" /> Ver
+                      </motion.button>
+                    </div>
                   </td>
                 </motion.tr>
               ))}

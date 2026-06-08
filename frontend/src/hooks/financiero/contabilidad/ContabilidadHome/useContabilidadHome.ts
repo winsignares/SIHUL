@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, FileCheck, Calculator, TrendingUp } from 'lucide-react';
 import { facturasService, historialService } from '../../../../services/financiero';
 import type { HistorialFactura } from '../../../../models/financiero/core.models';
@@ -34,6 +34,30 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
       .catch(() => {})
       .finally(() => setLoadingStats(false));
   }, []);
+
+  const historialContabilidad = useMemo(
+    () =>
+      historial
+        .filter((item) => {
+          const rol = (item.usuario_rol || '').trim().toLowerCase();
+          const accion = (item.accion || '').trim().toLowerCase();
+          const estado = (item.estado_nuevo || '').trim().toLowerCase();
+
+          return (
+            rol === 'contabilidad' ||
+            accion.includes('radic') ||
+            accion.includes('caus') ||
+            estado === 'radicada' ||
+            estado === 'causada'
+          );
+        })
+        .sort((a, b) => new Date(b.fecha_accion || 0).getTime() - new Date(a.fecha_accion || 0).getTime()),
+    [historial]
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [historialContabilidad.length]);
 
   const stats = [
     {
@@ -88,8 +112,8 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
   ];
 
   // Paginación de actividades recientes
-  const totalPages = Math.ceil(historial.length / itemsPerPage);
-  const recentActivity = historial.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(historialContabilidad.length / itemsPerPage);
+  const recentActivity = historialContabilidad.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {

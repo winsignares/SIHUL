@@ -72,8 +72,13 @@ export function useProveedorHome(miProveedorId?: number) {
   const recentFacturas = useMemo(
     () =>
       [...facturas]
-        .sort((a, b) => new Date(b.fecha_modificacion || b.fecha_recepcion || b.fecha_creacion || 0).getTime() - new Date(a.fecha_modificacion || a.fecha_recepcion || a.fecha_creacion || 0).getTime())
-        .slice(0, 3),
+        .sort((a, b) => {
+          const fechaA = new Date(a.fecha_modificacion || a.fecha_recepcion || a.fecha_creacion || a.fecha_factura || 0).getTime();
+          const fechaB = new Date(b.fecha_modificacion || b.fecha_recepcion || b.fecha_creacion || b.fecha_factura || 0).getTime();
+          if (fechaB !== fechaA) return fechaB - fechaA;
+          return (b.id || 0) - (a.id || 0);
+        })
+        .slice(0, 4),
     [facturas],
   );
 

@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import {
   FileText,
-  Search,
   AlertCircle,
 } from 'lucide-react';
 import RegistrarFactura from './RegistrarFactura.tsx';
@@ -81,39 +80,23 @@ function DashboardHome({ onGoToConsultar }: FuncionarioDashboardHomeProps) {
           );
         })}
       </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
-        >
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <Search className="text-blue-600" size={20} />
-            Consultar Facturas
-          </h3>
-          <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-            Ver el estado y hacer seguimiento de las facturas registradas
-          </p>
-          <button
-            onClick={onGoToConsultar}
-            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-          >
-            Consultar Todas
-          </button>
-        </motion.div>
-      </div>
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
+        transition={{ delay: 0.4 }}
         className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
       >
-        <div className="flex items-center gap-2 mb-6">
-          <AlertCircle className="text-red-600" size={20} />
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white">Actividad Reciente</h3>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="text-red-600" size={20} />
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Actividad Reciente</h3>
+          </div>
+          <button
+            onClick={onGoToConsultar}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            Consultar todas
+          </button>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Ultimas facturas registradas en el sistema</p>
 

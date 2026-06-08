@@ -10,6 +10,7 @@ import {
   Building2,
   DollarSign,
   Upload,
+  Plus,
   X,
   Search,
   Trash2,
@@ -54,6 +55,14 @@ type FormState = {
   cuentaBancaria: string;
 };
 
+type ServiceItem = {
+  id: string;
+  cantidad: number;
+  servicio: string;
+  valorUnitario: number;
+  ivaPorcentaje: number;
+};
+
 const formatMoney = (val: unknown) => {
   const num = Number(val) || 0;
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
@@ -64,6 +73,43 @@ const formatNumberInput = (value: string) => {
   if (!num) return '';
   return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
+
+const createEmptyServiceItem = (): ServiceItem => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  cantidad: 1,
+  servicio: '',
+  valorUnitario: 0,
+  ivaPorcentaje: 19,
+});
+
+const calculateServiceItem = (item: ServiceItem) => {
+  const cantidad = Number(item.cantidad) || 0;
+  const valorUnitario = Number(item.valorUnitario) || 0;
+  const ivaPorcentaje = Number(item.ivaPorcentaje) || 0;
+  const subtotal = Number((cantidad * valorUnitario).toFixed(2));
+  const valorIva = Number(((subtotal * ivaPorcentaje) / 100).toFixed(2));
+  const total = Number((subtotal + valorIva).toFixed(2));
+
+  return {
+    ...item,
+    cantidad,
+    valorUnitario,
+    ivaPorcentaje,
+    subtotal,
+    valorIva,
+    total,
+  };
+};
+
+const buildInvoiceDescription = (
+  items: Array<ServiceItem & { subtotal: number; valorIva: number; total: number }>,
+) => items
+  .filter(item => item.servicio.trim() && item.cantidad > 0 && item.valorUnitario > 0)
+  .map((item, index) =>
+    `${index + 1}. ${item.cantidad} x ${item.servicio.trim()} | Unitario: ${formatMoney(item.valorUnitario)} | `
+    + `Subtotal: ${formatMoney(item.subtotal)} | IVA ${item.ivaPorcentaje}%: ${formatMoney(item.valorIva)} | `
+    + `Total: ${formatMoney(item.total)}`)
+  .join('\n');
 
 const TIPO_DOCUMENTO_OPTS = [
   'Factura Electrónica',
@@ -165,6 +211,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   const [deletingDoc, setDeletingDoc] = useState(false);
   const [bancos, setBancos] = useState<BancoOption[]>([]);
   const [tiposCuenta, setTiposCuenta] = useState<TipoCuentaOption[]>([]);
+  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([createEmptyServiceItem()]);
 
   const [form, setForm] = useState<FormState>({
     tipoDocumento: 'Factura',
@@ -210,21 +257,63 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     setForm(prev => ({
       ...prev,
       tipoDocumento: correccionFactura.tipo_documento || prev.tipoDocumento,
-      descripcion: correccionFactura.descripcion || prev.descripcion,
       observaciones: correccionFactura.observaciones || prev.observaciones,
       departamentoId: correccionFactura.departamento?.id || prev.departamentoId,
-      valorSubtotal: Number(correccionFactura.valor_subtotal || 0),
-      valorIva: Number(correccionFactura.valor_iva || 0),
-      valorTotal: Number(correccionFactura.valor_total || 0),
-      ivaPorcentaje,
       fechaFactura: correccionFactura.fecha_factura || prev.fechaFactura,
       fechaRecepcion: getToday(),
       cuentaBancaria: correccionFactura.cuenta_bancaria_proveedor || prev.cuentaBancaria,
     }));
+    setServiceItems([{
+      id: `correccion-${correccionFactura.id}`,
+      cantidad: 1,
+      servicio: correccionFactura.descripcion || '',
+      valorUnitario: Number(correccionFactura.valor_subtotal || 0),
+      ivaPorcentaje,
+    }]);
     setDocs(existingDocs);
     setStep(2);
     setNumeroFacturaSugerido(correccionFactura.numero_factura || 'Corrección en curso');
   }, [correccionFactura, miProveedor]);
+
+  const serviceItemsCalculated = useMemo(
+    () => serviceItems.map(item => calculateServiceItem(item)),
+    [serviceItems],
+  );
+
+  const invoiceTotals = useMemo(() => serviceItemsCalculated.reduce(
+    (acc, item) => ({
+      subtotal: Number((acc.subtotal + item.subtotal).toFixed(2)),
+      iva: Number((acc.iva + item.valorIva).toFixed(2)),
+      total: Number((acc.total + item.total).toFixed(2)),
+    }),
+    { subtotal: 0, iva: 0, total: 0 },
+  ), [serviceItemsCalculated]);
+
+  const generatedDescription = useMemo(
+    () => buildInvoiceDescription(serviceItemsCalculated),
+    [serviceItemsCalculated],
+  );
+
+  useEffect(() => {
+    setForm(prev => {
+      if (
+        prev.descripcion === generatedDescription &&
+        prev.valorSubtotal === invoiceTotals.subtotal &&
+        prev.valorIva === invoiceTotals.iva &&
+        prev.valorTotal === invoiceTotals.total
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        descripcion: generatedDescription,
+        valorSubtotal: invoiceTotals.subtotal,
+        valorIva: invoiceTotals.iva,
+        valorTotal: invoiceTotals.total,
+      };
+    });
+  }, [generatedDescription, invoiceTotals]);
 
   const documentTypes = useMemo(() => {
     const existingTypes = docs.map((doc) => doc.type).filter(Boolean);
@@ -350,18 +439,49 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       if (transform) {
         updated = transform(updated);
       }
-      if (field === 'valorSubtotal' || field === 'ivaPorcentaje') {
-        const subtotal = Number(updated.valorSubtotal) || 0;
-        const porcentaje = Number(updated.ivaPorcentaje) || 0;
-        updated.valorIva = Number(((subtotal * porcentaje) / 100).toFixed(2));
-        updated.valorTotal = Number((subtotal + updated.valorIva).toFixed(2));
-      }
 
       updated.cuentaBancaria = [updated.banco, updated.tipoCuenta, updated.numeroCuenta]
         .filter(Boolean)
         .join(' - ');
 
       return updated;
+    });
+  };
+
+  const handleServiceItemChange = (
+    id: string,
+    field: keyof Omit<ServiceItem, 'id'>,
+    value: string | number,
+  ) => {
+    setServiceItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+
+      if (field === 'servicio') {
+        return { ...item, servicio: String(value) };
+      }
+
+      if (field === 'ivaPorcentaje') {
+        return { ...item, ivaPorcentaje: Math.max(0, Number(value) || 0) };
+      }
+
+      if (field === 'cantidad') {
+        return { ...item, cantidad: Math.max(1, Number(value) || 1) };
+      }
+
+      return { ...item, valorUnitario: Math.max(0, Number(value) || 0) };
+    }));
+  };
+
+  const handleAddServiceItem = () => {
+    setServiceItems(prev => [...prev, createEmptyServiceItem()]);
+  };
+
+  const handleRemoveServiceItem = (id: string) => {
+    setServiceItems(prev => {
+      if (prev.length === 1) {
+        return [{ ...prev[0], servicio: '', cantidad: 1, valorUnitario: 0, ivaPorcentaje: prev[0].ivaPorcentaje || 19 }];
+      }
+      return prev.filter(item => item.id !== id);
     });
   };
 
@@ -436,16 +556,24 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   );
 
   const allDocumentsUploaded = documentosPendientes.length === 0;
+  const hasInvalidServiceItems = serviceItemsCalculated.some(
+    item => !item.servicio.trim() || item.cantidad <= 0 || item.valorUnitario <= 0,
+  );
+  const hasValidServiceItems = serviceItemsCalculated.some(
+    item => item.servicio.trim() && item.cantidad > 0 && item.valorUnitario > 0,
+  );
 
   const canGoNext = () => {
     if (step === 1) return !!proveedorSeleccionado;
     if (step === 2) {
       return (
         form.tipoDocumento &&
-        form.descripcion.trim().length > 3 &&
         form.departamentoId > 0 &&
         form.fechaFactura &&
-        Number(form.valorSubtotal) > 0
+        form.observaciones.trim().length > 2 &&
+        hasValidServiceItems &&
+        !hasInvalidServiceItems &&
+        invoiceTotals.subtotal > 0
       );
     }
     if (step === 3) {
@@ -459,9 +587,10 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     setLoading(true);
     setError(null);
     try {
-      const subtotal = Number(form.valorSubtotal) || 0;
-      const iva = Number(form.valorIva) || 0;
-      const total = Number(form.valorTotal);
+      const subtotal = invoiceTotals.subtotal;
+      const iva = invoiceTotals.iva;
+      const total = invoiceTotals.total;
+      const descripcion = buildInvoiceDescription(serviceItemsCalculated);
       const cuentaBancariaCompleta = [form.banco, form.tipoCuenta, form.numeroCuenta].filter(Boolean).join(' - ') || form.cuentaBancaria;
 
       const proveedorUpdates: Partial<Proveedor> = {};
@@ -482,7 +611,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         proveedor_id: proveedorSeleccionado.id,
         departamento_id: form.departamentoId,
         tipo_documento: form.tipoDocumento as 'Factura' | 'Factura Electrónica' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro',
-        descripcion: form.descripcion,
+        descripcion,
         observaciones: form.observaciones || undefined,
         valor_subtotal: subtotal,
         valor_iva: iva,
@@ -541,6 +670,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
           numeroCuenta: '',
           cuentaBancaria: '',
         });
+        setServiceItems([createEmptyServiceItem()]);
         setDocs([]);
         onSuccess?.();
         if (isCorreccion) {
@@ -813,75 +943,172 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                   </p>
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Descripción del Servicio / Bien <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Describe el servicio o bien facturado..."
-                    value={form.descripcion}
-                    onChange={e => handleFieldChange('descripcion', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none resize-none font-medium"
-                  />
-                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/30 p-4">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Identificacion Factura <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ejemplo: Computadores y Envio"
+                  value={form.observaciones}
+                  onChange={e => handleFieldChange('observaciones', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Usa este campo para identificar rapidamente la factura, por ejemplo: Computadores y Envio.
+                </p>
               </div>
 
               {/* Valores */}
               <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                 <h5 className="font-semibold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                   <DollarSign size={18} className="text-orange-600" />
-                  Valores
+                  Servicios Facturados
                 </h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">Subtotal <span className="text-red-600">*</span></label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formatNumberInput(String(form.valorSubtotal || ''))}
-                      onChange={e => handleFieldChange('valorSubtotal', Number(e.target.value.replace(/[^0-9]/g, '')))}
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
-                    />
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Valor antes de impuestos.</p>
+                <div className="space-y-4">
+                  <div className="hidden xl:grid xl:grid-cols-[96px_minmax(220px,1.6fr)_minmax(150px,1fr)_110px_minmax(150px,1fr)_minmax(150px,1fr)_48px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <span>Items</span>
+                    <span>Servicio</span>
+                    <span>Valor unitario</span>
+                    <span>IVA %</span>
+                    <span>Subtotal</span>
+                    <span>Total</span>
+                    <span />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">IVA (%)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={form.ivaPorcentaje || ''}
-                      onChange={e => handleFieldChange('ivaPorcentaje', Number(e.target.value))}
-                      placeholder="19"
-                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
-                    />
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Ingresa el porcentaje (0, 5, 19, etc). Se calcula automáticamente.</p>
+
+                  {serviceItemsCalculated.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/30 p-4"
+                    >
+                      <div className="grid grid-cols-1 xl:grid-cols-[96px_minmax(220px,1.6fr)_minmax(150px,1fr)_110px_minmax(150px,1fr)_minmax(150px,1fr)_48px] gap-3 items-start">
+                        <div>
+                          <label className="block xl:hidden text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Cantidad</label>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={item.cantidad}
+                            onChange={e => handleServiceItemChange(item.id, 'cantidad', e.target.value)}
+                            className="w-full px-3 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block xl:hidden text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Servicio</label>
+                          <input
+                            type="text"
+                            placeholder="Nombre del servicio o bien"
+                            value={item.servicio}
+                            onChange={e => handleServiceItemChange(item.id, 'servicio', e.target.value)}
+                            className="w-full px-3 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block xl:hidden text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Valor unitario</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={formatNumberInput(String(item.valorUnitario || ''))}
+                            onChange={e => handleServiceItemChange(item.id, 'valorUnitario', e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-full px-3 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block xl:hidden text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">IVA %</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            placeholder="19"
+                            value={item.ivaPorcentaje}
+                            onChange={e => handleServiceItemChange(item.id, 'ivaPorcentaje', e.target.value)}
+                            className="w-full px-3 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-semibold"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 xl:block">
+                          <div>
+                            <label className="block xl:hidden text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Subtotal</label>
+                            <input
+                              type="text"
+                              readOnly
+                              value={formatNumberInput(String(item.subtotal || ''))}
+                              className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-semibold"
+                            />
+                          </div>
+                          <div className="xl:hidden">
+                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">IVA valor</label>
+                            <input
+                              type="text"
+                              readOnly
+                              value={formatNumberInput(String(item.valorIva || ''))}
+                              className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-semibold"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block xl:hidden text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Total</label>
+                          <input
+                            type="text"
+                            readOnly
+                            value={formatNumberInput(String(item.total || ''))}
+                            className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-bold"
+                          />
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            IVA: {formatMoney(item.valorIva)}
+                          </p>
+                        </div>
+
+                        <div className="flex xl:justify-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveServiceItem(item.id)}
+                            className="h-11 w-11 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100 transition-colors flex items-center justify-center"
+                            title={serviceItemsCalculated.length === 1 ? 'Limpiar fila' : 'Eliminar fila'}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleAddServiceItem}
+                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100"
+                    >
+                      <Plus size={16} />
+                      Agregar servicio
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">IVA (valor)</label>
-                    <input
-                      type="text"
-                      value={formatNumberInput(String(form.valorIva || ''))}
-                      readOnly
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-semibold"
-                    />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Subtotal factura</p>
+                      <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{formatMoney(invoiceTotals.subtotal)}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">IVA total</p>
+                      <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{formatMoney(invoiceTotals.iva)}</p>
+                    </div>
+                    <div className="rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Total factura</p>
+                      <p className="mt-1 text-xl font-bold text-orange-700 dark:text-orange-300">{formatMoney(invoiceTotals.total)}</p>
+                    </div>
                   </div>
-                  <div className="md:col-span-3">
-                    <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">
-                      Total <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formatNumberInput(String(form.valorTotal || ''))}
-                      readOnly
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-slate-400 dark:border-slate-400 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-bold text-lg"
-                    />
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 font-semibold">Total = Subtotal + IVA.</p>
-                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    El proveedor solo digita cantidad, servicio, valor unitario e IVA. El subtotal, el valor del IVA y el total de cada fila se calculan automáticamente.
+                  </p>
                 </div>
               </div>
 
@@ -925,18 +1152,6 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Completa estos datos para agilizar validación y pago en tesorería.</p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Observaciones
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Observaciones adicionales..."
-                  value={form.observaciones}
-                  onChange={e => handleFieldChange('observaciones', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none resize-none font-medium"
-                />
-              </div>
             </div>
           )}
 
@@ -1036,20 +1251,49 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                   </div>
                 </div>
 
+                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl space-y-2">
+                  <h5 className="font-semibold text-slate-800 dark:text-white text-sm">Identificacion Factura</h5>
+                  <p className="text-sm text-slate-700 dark:text-slate-200">{form.observaciones}</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl space-y-3">
+                  <h5 className="font-semibold text-slate-800 dark:text-white text-sm">Detalle de servicios</h5>
+                  <div className="space-y-2">
+                    {serviceItemsCalculated.map((item, index) => (
+                      <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm">
+                        <div>
+                          <p className="font-medium text-slate-800 dark:text-white">
+                            {index + 1}. {item.servicio.trim() || 'Servicio sin nombre'}
+                          </p>
+                          <p className="text-slate-500 dark:text-slate-400">
+                            {item.cantidad} x {formatMoney(item.valorUnitario)} | IVA {item.ivaPorcentaje}%
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-slate-800 dark:text-white">{formatMoney(item.total)}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Subtotal {formatMoney(item.subtotal)} | IVA {formatMoney(item.valorIva)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
                   <h5 className="font-semibold text-orange-800 dark:text-orange-300 text-sm mb-2">Valores</h5>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
-                      <span className="font-medium text-slate-800 dark:text-white">{formatMoney(form.valorSubtotal)}</span>
+                      <span className="font-medium text-slate-800 dark:text-white">{formatMoney(invoiceTotals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-600 dark:text-slate-400">IVA:</span>
-                      <span className="font-medium text-slate-800 dark:text-white">{formatMoney(form.valorIva)}</span>
+                      <span className="font-medium text-slate-800 dark:text-white">{formatMoney(invoiceTotals.iva)}</span>
                     </div>
                     <div className="flex justify-between border-t border-orange-200 dark:border-orange-700 pt-1 mt-1">
                       <span className="font-bold text-slate-800 dark:text-white">Total:</span>
-                      <span className="font-bold text-orange-700 dark:text-orange-400 text-lg">{formatMoney(form.valorTotal)}</span>
+                      <span className="font-bold text-orange-700 dark:text-orange-400 text-lg">{formatMoney(invoiceTotals.total)}</span>
                     </div>
                   </div>
                 </div>

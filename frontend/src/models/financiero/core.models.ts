@@ -92,6 +92,8 @@ export interface Factura {
   numero_confirmacion?: string;
   numero_transaccion?: string;
   numero_comprobante?: string;
+  numero_operacion_contable?: string;
+  consecutivo_operacion?: string;
   archivo_plano_generado?: string;
 
   proveedor_id: number;

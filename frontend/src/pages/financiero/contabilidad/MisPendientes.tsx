@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Button } from '../../../share/button';
-import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw, Loader2, Download } from 'lucide-react';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadMisPendientes } from '../../../hooks/financiero/contabilidad';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 export default function MisPendientes() {
   const {
@@ -147,7 +148,8 @@ export default function MisPendientes() {
                         <TableHead className="font-semibold text-slate-700">Estado</TableHead>
                         <TableHead className="font-semibold text-slate-700">Días</TableHead>
                         <TableHead className="font-semibold text-slate-700">Acción</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Ver</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Documentos</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Detalle</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -201,6 +203,26 @@ export default function MisPendientes() {
                               <Badge className={`text-xs ${nivel === 'vencido' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-100 text-slate-700 border-slate-300'} border`}>
                                 {accionRequerida(factura)}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
+                                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Eye className="w-4 h-4 mr-1" /> Ver
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                                >
+                                  <Download className="w-4 h-4 mr-1" /> Descargar
+                                </Button>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Button

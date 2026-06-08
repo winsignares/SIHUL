@@ -58,6 +58,9 @@ export function useContabilidadRadicarFacturas() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
   const [accion, setAccion] = useState<'radicar' | 'devolver' | null>(null);
   const [observaciones, setObservaciones] = useState('');
+  const [numeroOperacionContable, setNumeroOperacionContable] = useState('');
+  const [consecutivoOperacion, setConsecutivoOperacion] = useState('');
+  const [soporteOperacion, setSoporteOperacion] = useState<File | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
 
@@ -86,6 +89,7 @@ export function useContabilidadRadicarFacturas() {
 
       const lista = registradas.filter((f) => f.estado === 'Registrada' && f.etapa_actual !== 'Corrección Radicación');
 
+      lista.sort((a, b) => (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || ''));
       setFacturas(lista);
       const docsResults = await Promise.all(
         lista.map((f) =>
@@ -155,16 +159,37 @@ export function useContabilidadRadicarFacturas() {
     setFacturaSeleccionada(factura);
     setAccion(acc);
     setObservaciones('');
+    setNumeroOperacionContable(factura.numero_operacion_contable || '');
+    setConsecutivoOperacion(factura.consecutivo_operacion || '');
+    setSoporteOperacion(null);
   };
 
   const cancelarAccion = () => {
     setFacturaSeleccionada(null);
     setAccion(null);
     setObservaciones('');
+    setNumeroOperacionContable('');
+    setConsecutivoOperacion('');
+    setSoporteOperacion(null);
   };
 
   const confirmarRadicacion = async () => {
     if (!facturaSeleccionada) return;
+
+    if (!numeroOperacionContable.trim()) {
+      showToast('err', 'El número de operación contable es obligatorio para radicar.');
+      return;
+    }
+
+    if (!consecutivoOperacion.trim()) {
+      showToast('err', 'El consecutivo de operación es obligatorio para radicar.');
+      return;
+    }
+
+    if (!soporteOperacion) {
+      showToast('err', 'Debes adjuntar el soporte de operación en PDF.');
+      return;
+    }
 
     const docs = docsMap[facturaSeleccionada.id] ?? [];
     if (!validarDocumentosCompletos(docs)) {
@@ -175,7 +200,12 @@ export function useContabilidadRadicarFacturas() {
 
     setProcesando(true);
     try {
-      await facturasService.radicar(facturaSeleccionada.id, observaciones || undefined);
+      await facturasService.radicar(facturaSeleccionada.id, {
+        observaciones: observaciones || undefined,
+        numero_operacion_contable: numeroOperacionContable.trim(),
+        consecutivo_operacion: consecutivoOperacion.trim(),
+        soporte_operacion: soporteOperacion,
+      });
       showToast('ok', `Factura ${facturaSeleccionada.numero_factura} radicada exitosamente.`);
       cancelarAccion();
       cargarFacturas();
@@ -194,8 +224,8 @@ export function useContabilidadRadicarFacturas() {
     }
     setProcesando(true);
     try {
-      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'funcionario');
-      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta. El funcionario fue notificado.`);
+      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'proveedor');
+      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta al proveedor para correccion.`);
       cancelarAccion();
       cargarFacturas();
     } catch {
@@ -219,6 +249,9 @@ export function useContabilidadRadicarFacturas() {
     facturaSeleccionada,
     accion,
     observaciones,
+    numeroOperacionContable,
+    consecutivoOperacion,
+    soporteOperacion,
     procesando,
     toast,
     modalFactura,
@@ -230,6 +263,9 @@ export function useContabilidadRadicarFacturas() {
     totalPages,
     itemsPerPage,
     setObservaciones,
+    setNumeroOperacionContable,
+    setConsecutivoOperacion,
+    setSoporteOperacion,
     setFiltros,
     setModalFactura,
     cargarFacturas,

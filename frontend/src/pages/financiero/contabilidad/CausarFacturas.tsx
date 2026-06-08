@@ -17,9 +17,11 @@ import {
   Eye,
   Send,
   AlertCircle,
+  FileText,
   RefreshCw,
   Loader2,
   AlertTriangle,
+  Download,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -35,20 +37,17 @@ import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadCausarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 export default function CausarFacturas() {
   const {
     facturas,
-    cuentasContables,
-    centrosCosto,
-    docsMap,
     cargando,
     error,
     facturaSeleccionada,
     accion,
-    cuentaId,
-    centroId,
     observaciones,
+    soporteCausacion,
     procesando,
     toast,
     modalFactura,
@@ -59,9 +58,8 @@ export default function CausarFacturas() {
     setCurrentPage,
     totalPages,
     itemsPerPage,
-    setCuentaId,
-    setCentroId,
     setObservaciones,
+    setSoporteCausacion,
     setModalFactura,
     setFiltros,
     cargarDatos,
@@ -123,7 +121,7 @@ export default function CausarFacturas() {
               <CheckCircle2 className="w-5 h-5" /> Causar Factura
             </DialogTitle>
             <DialogDescription>
-              Asigne la cuenta contable y el centro de costo. Se registrara la causacion contable.
+              Adjunte el soporte PDF de causacion en Seven para continuar con el proceso contable.
             </DialogDescription>
           </DialogHeader>
           {facturaSeleccionada && (
@@ -136,33 +134,14 @@ export default function CausarFacturas() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">* Cuenta Contable (Requerida)</label>
-                <select
-                  value={cuentaId}
-                  onChange={(e) => setCuentaId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Seleccionar cuenta contable...</option>
-                  {cuentasContables.length === 0 && <option value="" disabled>Sin cuentas disponibles</option>}
-                  {cuentasContables.map((c) => (
-                    <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Centro de Costo (Opcional)</label>
-                <select
-                  value={centroId}
-                  onChange={(e) => setCentroId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Seleccionar centro de costo...</option>
-                  {centrosCosto.length === 0 && <option value="" disabled>Sin centros disponibles</option>}
-                  {centrosCosto.map((c) => (
-                    <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
-                  ))}
-                </select>
+                <label className="text-sm font-semibold text-slate-700">* Soporte de causacion en Seven (PDF)</label>
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => setSoporteCausacion(e.target.files?.[0] || null)}
+                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+                />
+                {soporteCausacion && <p className="text-xs text-slate-500">Archivo seleccionado: {soporteCausacion.name}</p>}
               </div>
 
               <div className="space-y-2">
@@ -236,6 +215,7 @@ export default function CausarFacturas() {
             areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
             showFechaFilter={true}
             showAreaFilter={true}
+            showEstadoFilter={false}
           />
         </CardContent>
       </Card>
@@ -300,6 +280,24 @@ export default function CausarFacturas() {
                           <div className="flex items-center gap-1">
                             <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700 p-2" title="Detalle">
                               <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-50 p-2"
+                              title="Ver documentos"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                              className="border-slate-300 text-slate-700 hover:bg-slate-50 p-2"
+                              title="Descargar documentos"
+                            >
+                              <Download className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50 p-2" title="Devolver">
                               <XCircle className="w-4 h-4" />

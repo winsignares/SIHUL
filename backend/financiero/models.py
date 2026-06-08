@@ -287,6 +287,8 @@ class Factura(models.Model):
     numero_confirmacion = models.CharField(max_length=50, unique=True, blank=True, null=True)
     numero_transaccion = models.CharField(max_length=50, unique=True, blank=True, null=True)
     numero_comprobante = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    numero_operacion_contable = models.CharField(max_length=100, blank=True, null=True)
+    consecutivo_operacion = models.CharField(max_length=100, blank=True, null=True)
 
     # Relaciones
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='facturas')
@@ -389,6 +391,8 @@ class DocumentoAdjunto(models.Model):
         ('Certificación Bancaria', 'Certificación Bancaria'),
         ('Informe Técnico', 'Informe Técnico'),
         ('Soporte Adicional', 'Soporte Adicional'),
+        ('Soporte Operacion', 'Soporte Operacion'),
+        ('Soporte Causacion Seven', 'Soporte Causacion Seven'),
         ('Archivo Plano Bancario', 'Archivo Plano Bancario'),
         ('Comprobante de Pago', 'Comprobante de Pago'),
     ]

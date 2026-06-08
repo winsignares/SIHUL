@@ -14,6 +14,7 @@ import type {
 } from '../../../models/financiero/core.models';
 import type { FuncionarioDocumentType, FuncionarioUploadedDoc, PrefillFromPendiente } from '../../../models/financiero/funcionario';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
+import { parseFacturaDescripcion } from '../../../share/factura-description';
 import { Label } from '../../../share/label';
 import { Textarea } from '../../../share/textarea';
 
@@ -59,6 +60,82 @@ const formatMoney = (val: unknown): string => {
   const num = safeNumber(val, 0);
   return `$${num.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
 };
+
+function ReadonlyServiciosFactura({ descripcion }: { descripcion: string }) {
+  const parsed = parseFacturaDescripcion(descripcion);
+  const hasItems = parsed.items.length > 0;
+  const hasText = Boolean(parsed.remainingText);
+
+  if (!hasItems && !hasText) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+        Sin descripcion del servicio cargada por el proveedor.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {hasItems && (
+        <div className="space-y-3">
+          {parsed.items.map((item, index) => (
+            <div
+              key={`${item.rawLine}-${index}`}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-start gap-3 lg:flex-nowrap">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-sm font-semibold text-white">
+                  {item.index ?? index + 1}
+                </div>
+                <div className="min-w-[220px] flex-1 lg:max-w-[38%]">
+                  <p className="font-semibold text-slate-900">{item.servicio || 'Servicio sin nombre'}</p>
+                  {(item.cantidad || item.unitario) && (
+                    <p className="text-sm text-slate-500">
+                      {item.cantidad ? `${item.cantidad} x ` : ''}
+                      {item.unitario || 'Valor no especificado'}
+                    </p>
+                  )}
+                </div>
+                <div className="grid w-full gap-2 sm:grid-cols-3 lg:ml-auto lg:w-[430px] lg:flex-none">
+                  {item.subtotal && (
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">Subtotal</p>
+                      <p className="font-semibold text-slate-800">{item.subtotal}</p>
+                    </div>
+                  )}
+                  {item.ivaValor && (
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                        Tasa {item.ivaPorcentaje ? `${item.ivaPorcentaje}%` : ''}
+                      </p>
+                      <p className="font-semibold text-slate-800">{item.ivaValor}</p>
+                    </div>
+                  )}
+                  {item.total && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-red-600">Total</p>
+                      <p className="font-semibold text-red-700">{item.total}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {item.extraInfo && item.extraInfo.length > 0 && (
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-500">{item.extraInfo.join('\n')}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {hasText && (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Descripcion adicional</p>
+          <p className="whitespace-pre-line text-sm text-slate-700">{parsed.remainingText}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const getFileExtension = (filename: string): string => {
   const parts = filename.split('.');
@@ -444,6 +521,7 @@ export default function RegistrarFactura() {
     () => existingDocs.filter((doc) => selectedExistingDocIds.has(getExistingDocKey(doc))),
     [existingDocs, selectedExistingDocIds]
   );
+  const hasSelectedDocsForReject = selectedExistingDocIds.size > 0;
 
   const openRejectDialog = () => {
     if (!prefillFromPendiente?.facturaId) {
@@ -507,6 +585,9 @@ export default function RegistrarFactura() {
   };
 
   const validateStep2 = () => {
+    if (hasSelectedDocsForReject) {
+      return 'Hay documentos marcados para rechazo. Debes rechazar la factura o desmarcarlos antes de continuar.';
+    }
     const required = DOCUMENT_TYPES;
     const docTypes = new Set<FuncionarioDocumentType>([...existingDocTypes, ...uploadedDocTypes]);
     const missing = required.filter((t) => !docTypes.has(t));
@@ -1045,7 +1126,7 @@ export default function RegistrarFactura() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">IVA</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">Tasa</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
                   <input
@@ -1142,7 +1223,26 @@ export default function RegistrarFactura() {
               )}
             </div>
 
-            <div>
+            {isReviewMode && (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Identificacion Factura</label>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Dato enviado por el proveedor</p>
+                    <p className="mt-1 whitespace-pre-line text-sm font-medium text-amber-900">
+                      {safeString(form.observaciones, 'Sin identificacion cargada')}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Descripcion del Servicio / Bien</label>
+                  <ReadonlyServiciosFactura descripcion={form.descripcion} />
+                </div>
+              </>
+            )}
+
+            <div className={isReviewMode ? 'hidden' : ''}>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Descripción del Servicio/Producto *</label>
               <textarea 
                 className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 min-h-28 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
@@ -1153,7 +1253,7 @@ export default function RegistrarFactura() {
               />
             </div>
 
-            <div>
+            <div className={isReviewMode ? 'hidden' : ''}>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Observaciones Adicionales</label>
               <textarea 
                 className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 min-h-20 focus:ring-2 focus:ring-slate-400 focus:border-slate-400 transition-all"
@@ -1455,6 +1555,12 @@ export default function RegistrarFactura() {
                   ))}
                 </div>
               )}
+
+              {hasSelectedDocsForReject && (
+                <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Tienes documentos marcados para rechazo. Si vas a devolver esta factura, usa el boton Rechazar factura. Para continuar al siguiente paso, primero desmarca esos documentos.
+                </div>
+              )}
             </motion.div>
 
             {/* Sección de Documentos Adicionales */}
@@ -1560,7 +1666,8 @@ export default function RegistrarFactura() {
                 whileTap={{ scale: 0.98 }} 
                 onClick={nextStep} 
                 type="button" 
-                className="px-8 py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-300 hover:shadow-lg hover:shadow-red-400 transition-all"
+                disabled={hasSelectedDocsForReject}
+                className="px-8 py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-300 hover:shadow-lg hover:shadow-red-400 transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
               >
                 Siguiente →
               </motion.button>
@@ -1624,7 +1731,7 @@ export default function RegistrarFactura() {
                   <p className="text-xl font-bold text-slate-800">{formatMoney(form.valorSubtotal)}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-slate-200">
-                  <p className="text-sm text-slate-600 font-semibold mb-1">IVA</p>
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Tasa</p>
                   <p className="text-xl font-bold text-slate-800">{formatMoney(form.valorIva)}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-slate-200">

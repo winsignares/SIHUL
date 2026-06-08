@@ -28,6 +28,7 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
+  Download,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadRadicarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 export default function RadicarFacturas() {
   const {
@@ -45,6 +47,9 @@ export default function RadicarFacturas() {
     facturaSeleccionada,
     accion,
     observaciones,
+    numeroOperacionContable,
+    consecutivoOperacion,
+    soporteOperacion,
     procesando,
     toast,
     modalFactura,
@@ -56,6 +61,9 @@ export default function RadicarFacturas() {
     totalPages,
     itemsPerPage,
     setObservaciones,
+    setNumeroOperacionContable,
+    setConsecutivoOperacion,
+    setSoporteOperacion,
     setFiltros,
     setModalFactura,
     cargarFacturas,
@@ -134,6 +142,34 @@ export default function RadicarFacturas() {
                 <div><p className="text-slate-500">Área</p><p className="font-bold">{displayText(facturaSeleccionada.departamento?.nombre)}</p></div>
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Numero de operacion (Opcional)</label>
+                <input
+                  value={numeroOperacionContable}
+                  onChange={(e) => setNumeroOperacionContable(e.target.value)}
+                  placeholder="Ej: OP-2026-A1"
+                  className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Consecutivo (Opcional)</label>
+                <input
+                  value={consecutivoOperacion}
+                  onChange={(e) => setConsecutivoOperacion(e.target.value)}
+                  placeholder="Ej: CONS-00451"
+                  className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Soporte de operacion (PDF opcional)</label>
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => setSoporteOperacion(e.target.files?.[0] || null)}
+                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+                />
+                {soporteOperacion && <p className="text-xs text-slate-500">Archivo seleccionado: {soporteOperacion.name}</p>}
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Observaciones (Opcional)</label>
                 <Textarea
                   value={observaciones}
@@ -160,7 +196,7 @@ export default function RadicarFacturas() {
               <AlertTriangle className="w-5 h-5" /> Devolver Factura
             </DialogTitle>
             <DialogDescription>
-              La factura volverá al funcionario con su observación. Este campo es <strong>obligatorio</strong>.
+              La factura volverá al proveedor para corrección. Este campo es <strong>obligatorio</strong>.
             </DialogDescription>
           </DialogHeader>
           {facturaSeleccionada && (
@@ -202,8 +238,9 @@ export default function RadicarFacturas() {
             estados={[]}
             proveedores={Array.from(new Set(facturas.map((f) => f.proveedor?.razon_social ?? '').filter(Boolean)))}
             areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
-                        showFechaFilter={true}
+            showFechaFilter={true}
             showAreaFilter={true}
+            showEstadoFilter={false}
           />
         </CardContent>
       </Card>
@@ -296,6 +333,24 @@ export default function RadicarFacturas() {
                           <div className="flex items-center gap-1">
                             <Button size="sm" variant="outline" onClick={() => abrirDetalle(factura)} className="border-slate-300 text-slate-700 p-2" title="Detalle">
                               <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-50 p-2"
+                              title="Ver documentos"
+                            >
+                              <FileCheck className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                              className="border-slate-300 text-slate-700 hover:bg-slate-50 p-2"
+                              title="Descargar documentos"
+                            >
+                              <Download className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50 p-2" title="Devolver">
                               <XCircle className="w-4 h-4" />

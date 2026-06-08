@@ -1,17 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  centrosCostoService,
-  cuentasContablesService,
-  documentosService,
-  facturasService,
-} from '../../../../services/financiero';
-import type { CentroCosto, CuentaContable, DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
+import { documentosService, facturasService } from '../../../../services/financiero';
+import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
 import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 
-const facturaToDetail = (
-  factura: Factura,
-  docs: DocumentoAdjunto[]
-): SharedFacturaDetail => {
+const facturaToDetail = (factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail => {
   const base = buildSharedFacturaDetail(factura);
   return {
     ...base,
@@ -27,17 +19,14 @@ const facturaToDetail = (
 
 export function useContabilidadCausarFacturas() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [cuentasContables, setCuentasContables] = useState<CuentaContable[]>([]);
-  const [centrosCosto, setCentrosCosto] = useState<CentroCosto[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
   const [accion, setAccion] = useState<'causar' | 'devolver' | null>(null);
-  const [cuentaId, setCuentaId] = useState<string>('');
-  const [centroId, setCentroId] = useState<string>('');
   const [observaciones, setObservaciones] = useState('');
+  const [soporteCausacion, setSoporteCausacion] = useState<File | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
 
@@ -60,18 +49,22 @@ export function useContabilidadCausarFacturas() {
     setCargando(true);
     setError(null);
     try {
-      const [lista, cuentas, centros] = await Promise.all([
-        facturasService.getByEstado('Radicada'),
-        cuentasContablesService.getAll(),
-        centrosCostoService.getAll(),
-      ]);
-      const filtradas = lista.filter((f) => f.etapa_actual !== 'Corrección Radicación');
+      const [lista] = await Promise.all([facturasService.getByEstado('Radicada')]);
+      const filtradas = lista
+        .filter((f) => f.etapa_actual !== 'Corrección Radicación')
+        .sort((a, b) => (a.fecha_radicacion || '').localeCompare(b.fecha_radicacion || ''));
+
       setFacturas(filtradas);
-      setCuentasContables(Array.isArray(cuentas) ? cuentas : (cuentas as { results?: CuentaContable[] }).results ?? []);
-      setCentrosCosto(Array.isArray(centros) ? centros : (centros as { results?: CentroCosto[] }).results ?? []);
+
       const docsResults = await Promise.all(
-        filtradas.map((f) => documentosService.getByFactura(f.id).then((d) => ({ id: f.id, docs: d })))
+        filtradas.map((f) =>
+          documentosService
+            .getByFactura(f.id)
+            .then((d) => ({ id: f.id, docs: d }))
+            .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
+        )
       );
+
       const map: Record<number, DocumentoAdjunto[]> = {};
       docsResults.forEach(({ id, docs }) => {
         map[id] = docs;
@@ -98,7 +91,13 @@ export function useContabilidadCausarFacturas() {
       facturas.filter((f) => {
         const proveedor = f.proveedor?.razon_social ?? '';
         const area = f.departamento?.nombre ?? '';
-        if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase()) && !(f.numero_radicado ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+        if (
+          filtros.numeroFactura &&
+          !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase()) &&
+          !(f.numero_radicado ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())
+        ) {
+          return false;
+        }
         if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
         if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
         if (filtros.fechaInicio && f.fecha_radicacion && f.fecha_radicacion < filtros.fechaInicio) return false;
@@ -110,7 +109,6 @@ export function useContabilidadCausarFacturas() {
     [facturas, filtros]
   );
 
-  // Paginación
   const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);
   const facturasPaginadas = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -118,7 +116,6 @@ export function useContabilidadCausarFacturas() {
     return facturasFiltradas.slice(startIndex, endIndex);
   }, [facturasFiltradas, currentPage, itemsPerPage]);
 
-  // Resetear página cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
   }, [filtros.numeroFactura, filtros.proveedor, filtros.estado, filtros.areaSolicitante, filtros.fechaInicio, filtros.fechaFin]);
@@ -126,31 +123,34 @@ export function useContabilidadCausarFacturas() {
   const iniciarAccion = (factura: Factura, acc: 'causar' | 'devolver') => {
     setFacturaSeleccionada(factura);
     setAccion(acc);
-    setCuentaId('');
-    setCentroId('');
     setObservaciones('');
+    setSoporteCausacion(null);
   };
 
   const cancelar = () => {
     setFacturaSeleccionada(null);
     setAccion(null);
-    setCuentaId('');
-    setCentroId('');
     setObservaciones('');
+    setSoporteCausacion(null);
   };
 
   const confirmarCausacion = async () => {
     if (!facturaSeleccionada) return;
-    if (!cuentaId) {
-      showToast('err', 'Debe seleccionar una cuenta contable.');
+    if (!soporteCausacion) {
+      showToast('err', 'Debe adjuntar el soporte PDF de causacion en Seven.');
       return;
     }
+
+    if (!observaciones.trim() || observaciones.trim().length < 5) {
+      showToast('err', 'Describe brevemente la causación (mínimo 5 caracteres).');
+      return;
+    }
+
     setProcesando(true);
     try {
       await facturasService.causar(facturaSeleccionada.id, {
-        cuenta_contable_id: Number(cuentaId),
-        centro_costo_id: centroId ? Number(centroId) : undefined,
-        observaciones: observaciones || undefined,
+        observaciones: observaciones.trim(),
+        soporte_causacion: soporteCausacion,
       });
       showToast('ok', `Factura ${facturaSeleccionada.numero_factura} causada exitosamente.`);
       cancelar();
@@ -168,10 +168,11 @@ export function useContabilidadCausarFacturas() {
       showToast('err', 'El motivo de devolucion es requerido (minimo 10 caracteres).');
       return;
     }
+
     setProcesando(true);
     try {
       await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'radicacion');
-      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta a radicación.`);
+      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta a radicacion.`);
       cancelar();
       cargarDatos();
     } catch {
@@ -185,20 +186,18 @@ export function useContabilidadCausarFacturas() {
     setModalFactura(facturaToDetail(factura, docsMap[factura.id] ?? []));
   };
 
-  const getDiasColor = (dias: number) => (dias >= 17 ? 'text-red-600 font-bold' : dias >= 10 ? 'text-orange-600 font-semibold' : 'text-green-700');
+  const getDiasColor = (dias: number) =>
+    dias >= 17 ? 'text-red-600 font-bold' : dias >= 10 ? 'text-orange-600 font-semibold' : 'text-green-700';
 
   return {
     facturas,
-    cuentasContables,
-    centrosCosto,
     docsMap,
     cargando,
     error,
     facturaSeleccionada,
     accion,
-    cuentaId,
-    centroId,
     observaciones,
+    soporteCausacion,
     procesando,
     toast,
     modalFactura,
@@ -209,9 +208,8 @@ export function useContabilidadCausarFacturas() {
     setCurrentPage,
     totalPages,
     itemsPerPage,
-    setCuentaId,
-    setCentroId,
     setObservaciones,
+    setSoporteCausacion,
     setModalFactura,
     setFiltros,
     cargarDatos,

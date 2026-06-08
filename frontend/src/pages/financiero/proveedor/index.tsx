@@ -124,7 +124,7 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -145,27 +145,6 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
             Enviar Factura
           </button>
         </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.42 }}
-          className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6 shadow-md border-2 border-slate-300 dark:border-slate-600"
-        >
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <FileText className="text-blue-700" size={20} />
-            Consultar Mis Facturas
-          </h3>
-          <p className="text-slate-700 dark:text-slate-200 text-sm mb-4 font-medium">
-            Ve el estado actualizado de todas tus facturas enviadas y su avance en el proceso de pago.
-          </p>
-          <button
-            onClick={onGoToMisFacturas}
-            className="w-full px-4 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold text-sm transition-colors shadow-md"
-          >
-            Ver Mis Facturas
-          </button>
-        </motion.div>
       </div>
 
       {/* Recent activity */}
@@ -175,9 +154,17 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
         transition={{ delay: 0.5 }}
         className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6 shadow-md border-2 border-slate-300 dark:border-slate-600"
       >
-        <div className="flex items-center gap-2 mb-4">
-          <AlertCircle className="text-red-700" size={20} />
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white">Actividad Reciente</h3>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="text-red-700" size={20} />
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Actividad Reciente</h3>
+          </div>
+          <button
+            onClick={onGoToMisFacturas}
+            className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
+          >
+            Consultar todas
+          </button>
         </div>
         <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 font-medium">Últimas facturas enviadas</p>
 
@@ -203,7 +190,9 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 dark:text-white text-sm">{f.numero_factura}</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 truncate font-medium">{f.descripcion}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 truncate font-medium">
+                        {f.observaciones || f.descripcion || 'Sin identificacion cargada'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
@@ -219,14 +208,6 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
             })
           )}
         </div>
-        {hasMoreRecent && (
-          <button
-            onClick={onGoToMisFacturas}
-            className="mt-4 w-full rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
-          >
-            Ver más actividad
-          </button>
-        )}
       </motion.div>
     </div>
   );

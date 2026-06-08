@@ -8,13 +8,18 @@ import {
   CheckCircle2,
   XCircle,
   ChevronRight,
+  ChevronLeft,
   RefreshCw,
+  Eye,
+  Paperclip,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { proveedoresService } from '../../../services/financiero';
-import type { Factura } from '../../../models/financiero/core.models';
+import { useAuth } from '../../../context/AuthContext';
+import { documentosService, proveedoresService } from '../../../services/financiero';
+import type { DocumentoAdjunto, Factura } from '../../../models/financiero/core.models';
 import type { MisFacturasProps } from '../../../models/financiero/proveedor';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../share/dialog';
 
 const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -28,6 +33,19 @@ const toList = <T,>(data: unknown): T[] => {
 const formatMoney = (val: number | string | null | undefined) => {
   const num = Number(val) || 0;
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
+type FacturaDocumentoAdjunto = DocumentoAdjunto & {
+  cargado_por?: { id?: number | null } | number | null;
+};
+
+const resolveDocumentUrl = (doc: FacturaDocumentoAdjunto) => {
+  const rawUrl = (doc.archivo_url || doc.url_storage || '').trim();
+  if (!rawUrl) return null;
+  if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
+  if (rawUrl.startsWith('/')) return rawUrl;
+  if (rawUrl.startsWith('media/') || rawUrl.startsWith('uploads/')) return `/${rawUrl}`;
+  return rawUrl;
 };
 
 const ESTADO_CONFIG: Record<string, { color: string; icon: React.ElementType; label: string }> = {
@@ -53,11 +71,19 @@ const REJECTED_STATES = ['Rechazada', 'Devuelta', 'Rechazada Auditoría', 'Recha
 
 export default function MisFacturas({ miProveedor }: MisFacturasProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [documentosOpen, setDocumentosOpen] = useState(false);
+  const [documentosLoading, setDocumentosLoading] = useState(false);
+  const [documentosError, setDocumentosError] = useState<string | null>(null);
+  const [selectedFacturaNumero, setSelectedFacturaNumero] = useState('');
+  const [documentosProveedor, setDocumentosProveedor] = useState<FacturaDocumentoAdjunto[]>([]);
+  const ITEMS_PER_PAGE = 5;
 
   const loadFacturas = useCallback(async () => {
     if (!miProveedor) return;
@@ -77,15 +103,71 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     void loadFacturas();
   }, [loadFacturas]);
 
-  const filteredFacturas = useMemo(() => facturas.filter(f => {
-    const matchSearch =
-      !search ||
-      f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
-      (f.numero_radicado || '').toLowerCase().includes(search.toLowerCase()) ||
-      f.descripcion.toLowerCase().includes(search.toLowerCase());
-    const matchEstado = !estadoFiltro || (estadoFiltro === '__rechazadas' ? REJECTED_STATES.includes(f.estado) : f.estado === estadoFiltro);
-    return matchSearch && matchEstado;
-  }), [estadoFiltro, facturas, search]);
+  // Sort by most recent date (recepcion or factura) and filter
+  const sortedFilteredFacturas = useMemo(() => {
+    const filtered = facturas.filter(f => {
+      const matchSearch =
+        !search ||
+        f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
+        (f.numero_radicado || '').toLowerCase().includes(search.toLowerCase()) ||
+        (f.observaciones || '').toLowerCase().includes(search.toLowerCase()) ||
+        f.descripcion.toLowerCase().includes(search.toLowerCase());
+      const matchEstado = !estadoFiltro || (estadoFiltro === '__rechazadas' ? REJECTED_STATES.includes(f.estado) : f.estado === estadoFiltro);
+      return matchSearch && matchEstado;
+    });
+    // Sort by fecha_recepcion (most recent first), fallback to fecha_factura
+    return filtered.sort((a: Factura, b: Factura) => {
+      const dateA = new Date(a.fecha_recepcion || a.fecha_factura || 0).getTime();
+      const dateB = new Date(b.fecha_recepcion || b.fecha_factura || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [estadoFiltro, facturas, search]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedFilteredFacturas.length / ITEMS_PER_PAGE);
+  const paginatedFacturas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedFilteredFacturas.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedFilteredFacturas, currentPage]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, estadoFiltro]);
+
+  const openProviderDocuments = useCallback(
+    async (factura: Factura) => {
+      setDocumentosOpen(true);
+      setSelectedFacturaNumero(factura.numero_factura || `FAC-${factura.id}`);
+      setDocumentosLoading(true);
+      setDocumentosError(null);
+      setDocumentosProveedor([]);
+
+      try {
+        const response = await documentosService.getByFactura(factura.id);
+        const documentos = response as FacturaDocumentoAdjunto[];
+        const documentosDelProveedor = documentos.filter((doc) => {
+          const uploaderId =
+            typeof doc.cargado_por === 'number'
+              ? doc.cargado_por
+              : (doc.cargado_por?.id ?? null);
+
+          if (user?.id && uploaderId) {
+            return uploaderId === user.id;
+          }
+
+          return uploaderId === null || uploaderId === undefined;
+        });
+
+        setDocumentosProveedor(documentosDelProveedor);
+      } catch {
+        setDocumentosError('No fue posible cargar los documentos del proveedor para esta factura.');
+      } finally {
+        setDocumentosLoading(false);
+      }
+    },
+    [user?.id]
+  );
 
   const estados = useMemo(() => {
     const base = ['Recibida', '__rechazadas'];
@@ -106,7 +188,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     );
   }
 
-  const tableColumns = '220px minmax(280px,1fr) 180px 170px 140px 130px';
+  const tableColumns = '220px minmax(280px,1fr) 180px 170px 140px 180px';
 
   return (
     <div className="space-y-6">
@@ -158,7 +240,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por numero, radicado o descripcion..."
+            placeholder="Buscar por numero, radicado o identificacion..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
@@ -183,13 +265,22 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         </div>
       )}
 
+      {/* Pagination Info */}
+      {!loading && sortedFilteredFacturas.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+          <p>
+            Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, sortedFilteredFacturas.length)} de {sortedFilteredFacturas.length} facturas
+          </p>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
             <span className="ml-3 text-slate-500 dark:text-slate-400 text-sm">Cargando facturas..</span>
           </div>
-        ) : filteredFacturas.length === 0 ? (
+        ) : sortedFilteredFacturas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 space-y-3">
             <FileText className="text-slate-300 dark:text-slate-600" size={48} />
             <p className="text-slate-500 dark:text-slate-400 text-sm">
@@ -204,7 +295,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                 style={{ gridTemplateColumns: tableColumns }}
               >
                 <span>Factura</span>
-                <span>Descripcion</span>
+                <span>Identificacion</span>
                 <span>Fechas</span>
                 <span>Estado</span>
                 <span className="text-right">Total</span>
@@ -212,7 +303,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
               </div>
 
               <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                {filteredFacturas.map((factura, i) => {
+                {paginatedFacturas.map((factura, i) => {
                   const cfg = ESTADO_CONFIG[factura.estado] || { color: 'bg-slate-100 text-slate-600', icon: FileText, label: factura.estado };
                   const Icon = cfg.icon;
                   return (
@@ -236,7 +327,9 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{displayText(factura.descripcion)}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-200 truncate">
+                          {displayText(factura.observaciones || factura.descripcion)}
+                        </p>
                       </div>
 
                       <div>
@@ -260,10 +353,21 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                       </div>
 
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-md px-2 py-1">
-                          Ver detalle
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void openProviderDocuments(factura);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          <Eye size={13} />
+                          Ver
+                        </button>
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-md px-2 py-1">
+                          Detalle
+                          <ChevronRight size={14} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors flex-shrink-0" />
                         </span>
-                        <ChevronRight size={16} className="text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors flex-shrink-0" />
                       </div>
                     </motion.div>
                   );
@@ -273,6 +377,102 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            <ChevronLeft size={16} /> Anterior
+          </button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  page === currentPage
+                    ? 'bg-red-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            Siguiente <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
+      <Dialog open={documentosOpen} onOpenChange={setDocumentosOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip size={18} className="text-blue-600" />
+              Documentacion del proveedor
+            </DialogTitle>
+            <DialogDescription>
+              Soportes cargados por el proveedor para {selectedFacturaNumero}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {documentosLoading ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                Cargando documentos del proveedor...
+              </div>
+            ) : documentosError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
+                {documentosError}
+              </div>
+            ) : documentosProveedor.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                No hay documentos cargados por el proveedor para esta factura.
+              </div>
+            ) : (
+              documentosProveedor.map((doc) => {
+                const url = resolveDocumentUrl(doc);
+                return (
+                  <div key={doc.id} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-800">{doc.tipo_documento}</p>
+                        <p className="truncate text-sm text-slate-500">{doc.nombre_archivo}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {displayDate(doc.fecha_carga)}
+                        </p>
+                      </div>
+                      {url ? (
+                        <button
+                          type="button"
+                          onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                          className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                        >
+                          <Eye size={13} />
+                          Ver documento
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400">Sin enlace disponible</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

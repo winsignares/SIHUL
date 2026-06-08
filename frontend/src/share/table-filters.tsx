@@ -20,6 +20,7 @@ interface TableFiltersProps {
   areas?: string[];
   showFechaFilter?: boolean;
   showAreaFilter?: boolean;
+  showEstadoFilter?: boolean;
 }
 
 export default function TableFilters({
@@ -30,6 +31,7 @@ export default function TableFilters({
   areas = [],
   showFechaFilter = false,
   showAreaFilter = false,
+  showEstadoFilter = true,
 }: TableFiltersProps) {
   const handleReset = () => {
     onFilterChange({
@@ -124,25 +126,27 @@ export default function TableFilters({
           </select>
         </div>
 
-        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
-          <Label htmlFor="filter-estado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
-            <Search className="w-3 h-3 text-red-600" />
-            Estado
-          </Label>
-          <select
-            id="filter-estado"
-            value={filters.estado || ''}
-            onChange={(e) => handleInputChange('estado', e.target.value)}
-            className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
-          >
-            <option value="">Todos los estados</option>
-            {estados.map((estado, idx) => (
-              <option key={idx} value={estado}>
-                {estado}
-              </option>
-            ))}
-          </select>
-        </div>
+        {showEstadoFilter && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor="filter-estado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Search className="w-3 h-3 text-red-600" />
+              Estado
+            </Label>
+            <select
+              id="filter-estado"
+              value={filters.estado || ''}
+              onChange={(e) => handleInputChange('estado', e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
+            >
+              <option value="">Todos los estados</option>
+              {estados.map((estado, idx) => (
+                <option key={idx} value={estado}>
+                  {estado}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {showAreaFilter && (
           <div className="space-y-2 min-w-0 flex-1 max-w-xs">

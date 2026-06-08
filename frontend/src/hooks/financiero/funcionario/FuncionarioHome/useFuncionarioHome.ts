@@ -106,7 +106,7 @@ export function useFuncionarioHome() {
     () =>
       [...facturas]
         .sort((a, b) => new Date(b.fecha_modificacion || b.fecha_recepcion || b.fecha_creacion || 0).getTime() - new Date(a.fecha_modificacion || a.fecha_recepcion || a.fecha_creacion || 0).getTime())
-        .slice(0, 3)
+        .slice(0, 5)
         .map((f) => ({
         id: f.id,
         factura: f.numero_factura,
