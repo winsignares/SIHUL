@@ -1,145 +1,240 @@
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent } from '../../../share/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
+import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
-import { Crown, CheckSquare, Clock, CheckCircle2, AlertTriangle, RefreshCw, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  Eye,
+  FileCheck,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
+import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useRectoriaHome } from '../../../hooks/financiero/rectoria';
 
 interface RectoriaHomeProps {
-  onGoToPendientes: () => void;
   onGoToAutorizar: () => void;
 }
 
-export default function RectoriaHome({ onGoToPendientes, onGoToAutorizar }: RectoriaHomeProps) {
-  const { stats: rectoriaStats, cargando, error, recargar, formatUltimaActualizacion } = useRectoriaHome();
+const ACTIVITIES_PER_PAGE = 3;
 
-  const stats = [
+export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
+  const [activityPage, setActivityPage] = useState(1);
+  const {
+    cargando,
+    error,
+    stats,
+    actividadesRecientes,
+    selectedFactura,
+    showDetailModal,
+    setShowDetailModal,
+    setSelectedFactura,
+    handleClickActividad,
+    getEstadoBadge,
+    recargarDatos,
+  } = useRectoriaHome();
+
+  const quickActions = [
     {
-      title: 'Pagos por Autorizar',
-      value: String(rectoriaStats.pagosPorAutorizar),
-      icon: CheckSquare,
-      color: 'from-indigo-600 to-indigo-700',
-      iconColor: 'text-indigo-100',
-      trend: 'Cargados por Direccion Financiera',
-    },
-    {
-      title: 'Autorizados Este Mes',
-      value: String(rectoriaStats.autorizadosEsteMes),
-      icon: CheckCircle2,
-      color: 'from-green-600 to-green-700',
-      iconColor: 'text-green-100',
-      trend: 'Con decision final de Rectoria',
-    },
-    {
-      title: 'Pendientes Criticos',
-      value: String(rectoriaStats.pendientesCriticos),
-      icon: AlertTriangle,
-      color: 'from-orange-600 to-orange-700',
-      iconColor: 'text-orange-100',
-      trend: 'Vencen hoy por SLA',
+      title: 'Autorizar Pagos',
+      description: 'Revisar y decidir pagos enviados por Direccion Financiera',
+      icon: FileCheck,
+      action: onGoToAutorizar,
+      className: 'bg-white text-slate-900 border border-white/20 hover:bg-red-50',
+      descriptionClass: 'text-slate-500',
     },
   ];
 
+  const totalActivityPages = Math.max(1, Math.ceil(actividadesRecientes.length / ACTIVITIES_PER_PAGE));
+
+  const pagedActivities = useMemo(() => {
+    const start = (activityPage - 1) * ACTIVITIES_PER_PAGE;
+    return actividadesRecientes.slice(start, start + ACTIVITIES_PER_PAGE);
+  }, [actividadesRecientes, activityPage]);
+
+  useEffect(() => {
+    setActivityPage(1);
+  }, [actividadesRecientes.length]);
+
+  useEffect(() => {
+    setActivityPage((prev) => Math.min(prev, totalActivityPages));
+  }, [totalActivityPages]);
+
   return (
-    <div className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-8 text-white shadow-xl"
-      >
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-            <Crown className="w-8 h-8 text-yellow-400" />
-          </div>
-          <div>
-            <h1 className="text-white mb-1 text-3xl font-bold">Panel de Rectoria</h1>
-            <p className="text-red-100">Autorizacion final institucional de pagos (RF09)</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-red-100">
-          <Clock className="w-4 h-4" />
-          <span>Ultima actualizacion: {formatUltimaActualizacion()}</span>
-          <Button variant="ghost" size="sm" onClick={recargar} disabled={cargando} className="text-white hover:bg-white/20 ml-2">
-            <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </motion.div>
+    <>
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[28px] bg-gradient-to-r from-red-700 via-red-600 to-red-800 p-6 text-white shadow-xl"
+        >
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10">
+                  <Crown className="h-7 w-7 text-amber-300" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Rectoria</h1>
+                  <p className="mt-2 text-sm leading-6 text-red-50/90">
+                    Supervisa la autorizacion institucional y el cierre del flujo con una vista resumida, clara y accionable.
+                  </p>
+                </div>
+              </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-        </div>
-      )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge className="border border-white/15 bg-white/10 text-white">Por autorizar: {cargando ? '--' : stats.pagosPorAutorizar}</Badge>
+                <Badge className="border border-white/15 bg-white/10 text-white">Casos criticos: {cargando ? '--' : stats.pendientesCriticos}</Badge>
+              </div>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                      <Icon className={`w-6 h-6 ${stat.iconColor}`} />
+            <div className="grid gap-3 xl:min-w-[340px]">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.title}
+                    onClick={action.action}
+                    className={`rounded-2xl px-4 py-4 text-left transition-all ${action.className}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <Icon className="h-5 w-5" />
+                      <ArrowRight className="h-4 w-4 opacity-70" />
                     </div>
-                  </div>
+                    <p className="mt-4 text-sm font-bold">{action.title}</p>
+                    <p className={`mt-1 text-xs ${action.descriptionClass}`}>{action.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+
+        {error && (
+          <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+            <AlertCircle className="h-5 w-5" />
+            {error}
+          </div>
+        )}
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-slate-900">Actividad reciente de Rectoría</CardTitle>
+                  <CardDescription>Consulta los ultimos pagos revisados en este rol para seguir decisiones, rechazos y cierres sin salir del dashboard.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button onClick={recargarDatos} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+                    <RefreshCw className={`mr-2 h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />
+                    Actualizar
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</p>
-                    <p className="text-sm text-slate-600 mb-2">{stat.title}</p>
-                    <p className="text-xs text-slate-500">{stat.trend}</p>
+                    <h3 className="text-base font-semibold text-slate-900">Movimientos recientes del rol</h3>
+                    <p className="text-sm text-slate-500">Muestra los pagos con movimiento mas reciente para seguir el cierre de cada caso desde Rectoría.</p>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
+                  {actividadesRecientes.length > ACTIVITIES_PER_PAGE && (
+                    <Badge variant="outline">
+                      Pagina {activityPage} de {totalActivityPages}
+                    </Badge>
+                  )}
+                </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.35 }}
-          onClick={onGoToPendientes}
-          className="text-left"
-        >
-          <Card className="w-full border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group bg-white overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Clock className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-slate-800 mb-2 group-hover:text-red-600 transition-colors">Mis Pendientes</h3>
-                  <p className="text-sm text-slate-600">Cola priorizada de pagos cargados para autorizacion institucional</p>
-                </div>
+                {cargando ? (
+                  <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 py-10 text-slate-400">
+                    <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                    Cargando actividad...
+                  </div>
+                ) : actividadesRecientes.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center text-slate-400">
+                    <Eye className="mx-auto mb-3 h-8 w-8 opacity-30" />
+                    No hay actividad reciente.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pagedActivities.map((item, index) => (
+                      <motion.button
+                        key={`${item.numeroFactura}-${index}`}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.24 + index * 0.05 }}
+                        onClick={() => handleClickActividad(item)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left transition-colors hover:bg-slate-50"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate font-semibold text-slate-900">{item.numeroFactura}</p>
+                              <Eye className="h-4 w-4 shrink-0 text-red-600" />
+                            </div>
+                            <p className="mt-1 truncate text-sm text-slate-600">{item.proveedor}</p>
+                          </div>
+                          <p className="shrink-0 text-sm font-bold text-slate-900">${item.valorTotal.toLocaleString('es-CO')}</p>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge className={`${getEstadoBadge(item.estado)} border`}>{item.estado}</Badge>
+                          <Badge variant="outline">{item.areaSolicitante || 'Sin area'}</Badge>
+                        </div>
+                      </motion.button>
+                    ))}
+
+                    {totalActivityPages > 1 && (
+                      <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                        <p className="text-sm text-slate-500">
+                          Mostrando {(activityPage - 1) * ACTIVITIES_PER_PAGE + 1} a {Math.min(activityPage * ACTIVITIES_PER_PAGE, actividadesRecientes.length)} de {actividadesRecientes.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setActivityPage((prev) => Math.max(1, prev - 1))}
+                            disabled={activityPage === 1}
+                            className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            <ChevronLeft className="mr-1 h-4 w-4" />
+                            Anterior
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setActivityPage((prev) => Math.min(totalActivityPages, prev + 1))}
+                            disabled={activityPage === totalActivityPages}
+                            className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Siguiente
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-        </motion.button>
-
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          onClick={onGoToAutorizar}
-          className="text-left"
-        >
-          <Card className="w-full border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group bg-white overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <CheckSquare className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-slate-800 mb-2 group-hover:text-red-600 transition-colors">Autorizar Pagos (RF09)</h3>
-                  <p className="text-sm text-slate-600">Aprobar o rechazar pagos antes de su aplicacion final</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.button>
+        </motion.div>
       </div>
-    </div>
+
+      <FacturaDetailModal
+        factura={selectedFactura}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedFactura(null);
+        }}
+      />
+    </>
   );
 }

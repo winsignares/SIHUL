@@ -32,7 +32,7 @@ export function useContabilidadCausarFacturas() {
 
   const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',

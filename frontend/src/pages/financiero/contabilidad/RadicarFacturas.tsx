@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { SlaIndicator } from '../../../share/sla-indicator';
 import { useContabilidadRadicarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayText } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
@@ -49,7 +50,6 @@ export default function RadicarFacturas() {
     observaciones,
     numeroOperacionContable,
     consecutivoOperacion,
-    soporteOperacion,
     procesando,
     toast,
     modalFactura,
@@ -63,7 +63,6 @@ export default function RadicarFacturas() {
     setObservaciones,
     setNumeroOperacionContable,
     setConsecutivoOperacion,
-    setSoporteOperacion,
     setFiltros,
     setModalFactura,
     cargarFacturas,
@@ -142,7 +141,7 @@ export default function RadicarFacturas() {
                 <div><p className="text-slate-500">Área</p><p className="font-bold">{displayText(facturaSeleccionada.departamento?.nombre)}</p></div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Numero de operacion (Opcional)</label>
+                <label className="text-sm font-semibold text-slate-700">Numero de operacion *</label>
                 <input
                   value={numeroOperacionContable}
                   onChange={(e) => setNumeroOperacionContable(e.target.value)}
@@ -151,23 +150,13 @@ export default function RadicarFacturas() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Consecutivo (Opcional)</label>
+                <label className="text-sm font-semibold text-slate-700">Consecutivo *</label>
                 <input
                   value={consecutivoOperacion}
                   onChange={(e) => setConsecutivoOperacion(e.target.value)}
                   placeholder="Ej: CONS-00451"
                   className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Soporte de operacion (PDF opcional)</label>
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={(e) => setSoporteOperacion(e.target.files?.[0] || null)}
-                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
-                />
-                {soporteOperacion && <p className="text-xs text-slate-500">Archivo seleccionado: {soporteOperacion.name}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Observaciones (Opcional)</label>
@@ -310,9 +299,9 @@ export default function RadicarFacturas() {
                         </TableCell>
                         <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
                         <TableCell className="text-slate-600">{displayDate(factura.fecha_recepcion)}</TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${diasColor(nivel)}`}>{dias}d</span>
-                        </TableCell>
+                          <TableCell>
+                            <SlaIndicator dias={dias} objetivo={factura.sla_objetivo_dias} className={diasColor(nivel)} compact />
+                          </TableCell>
                         <TableCell>
                           {docsOk ? (
                             <Badge className="bg-green-100 text-green-700 border border-green-200">

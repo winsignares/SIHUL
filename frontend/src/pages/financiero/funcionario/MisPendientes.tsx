@@ -11,6 +11,9 @@ import { displayDate, displayText } from '../../../share/field-placeholders';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Label } from '../../../share/label';
 import { Textarea } from '../../../share/textarea';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -61,6 +64,7 @@ export default function MisPendientes() {
   const [rechazarLoading, setRechazarLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [orderBy, setOrderBy] = useState<'oldest' | 'newest'>('oldest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -104,6 +108,21 @@ export default function MisPendientes() {
         return orderBy === 'oldest' ? aTime - bTime : bTime - aTime;
       });
   }, [orderBy, rows, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
+
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredRows.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredRows]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, orderBy]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const riskDotClass = (risk: FuncionarioPendingRow['nivelRiesgo']) => {
     if (risk === 'vencido') return 'bg-red-600';
@@ -336,7 +355,7 @@ export default function MisPendientes() {
               <tr>
                 <td className="p-4 text-slate-500" colSpan={9}>No hay pendientes que coincidan con la búsqueda.</td>
               </tr>
-            ) : filteredRows.map((row) => (
+            ) : paginatedRows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-3">
                   <div className="flex items-center gap-2">
@@ -419,6 +438,18 @@ export default function MisPendientes() {
             ))}
           </tbody>
         </table>
+
+        {!loading && filteredRows.length > 0 && (
+          <div className="mt-5">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={filteredRows.length}
+            />
+          </div>
+        )}
       </div>
 
       <FacturaDetailModal

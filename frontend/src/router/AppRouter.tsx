@@ -177,6 +177,7 @@ export default function AppRouter() {
       normalized.includes('alistar pago') ||
       normalized.includes('registrar pago') ||
       normalized.includes('pago aplicado') ||
+      normalized.includes('factura pagada') ||
       normalized.includes('comprobante egreso')
     );
   });

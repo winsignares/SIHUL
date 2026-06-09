@@ -1,8 +1,31 @@
+import re
+import unicodedata
+
 from django.db import models
 from django.db.models import Index
 from usuarios.models import Usuario
 from facultades.models import Facultad
 from django.utils import timezone
+
+
+def _safe_path_segment(value, fallback='sin-dato'):
+    text = unicodedata.normalize('NFKD', str(value or fallback))
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    text = re.sub(r'[^A-Za-z0-9._-]+', '-', text).strip('.-')
+    return text[:80] or fallback
+
+
+def documento_financiero_upload_to(instance, filename):
+    today = timezone.localdate()
+    factura = getattr(instance, 'factura', None)
+    factura_label = _safe_path_segment(
+        getattr(factura, 'numero_factura', None) or (f'factura-{getattr(factura, "id", "")}' if factura else 'sin-factura')
+    )
+    safe_filename = _safe_path_segment(filename, fallback='documento')
+    return (
+        f'{today:%Y}/{today:%m}/semana-{today.isocalendar().week:02d}/'
+        f'{factura_label}/especificos/{safe_filename}'
+    )
 
 # ============================================================
 # 1. PROVEEDOR
@@ -404,7 +427,7 @@ class DocumentoAdjunto(models.Model):
     tipo_mime = models.CharField(max_length=100, blank=True, null=True)
     tamano_bytes = models.BigIntegerField(blank=True, null=True)
     url_storage = models.CharField(max_length=500, blank=True)
-    archivo = models.FileField(upload_to='documentos_financiero/%Y/%m/%d/', blank=True, null=True)
+    archivo = models.FileField(upload_to=documento_financiero_upload_to, blank=True, null=True)
     hash_archivo = models.CharField(max_length=255, blank=True, null=True)
     obligatorio = models.BooleanField(default=False)
     verificado = models.BooleanField(default=False)

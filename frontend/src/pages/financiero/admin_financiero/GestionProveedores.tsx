@@ -124,6 +124,17 @@ export default function GestionProveedoresReal() {
     return [...base].sort((a, b) => (b.id || 0) - (a.id || 0));
   }, [search, proveedores, estadoFilter, tipoFilter, ciudadFilter]);
 
+  const resumenProveedores = useMemo(() => {
+    const activos = proveedores.filter((proveedor) => proveedor.estado === 'Activo').length;
+    return {
+      total: proveedores.length,
+      activos,
+      inactivos: proveedores.length - activos,
+      ciudades: ciudadesDisponibles.length,
+      filtrados: filtered.length,
+    };
+  }, [ciudadesDisponibles.length, filtered.length, proveedores]);
+
   const limpiarFiltros = () => {
     setSearch('');
     setEstadoFilter('all');
@@ -257,15 +268,22 @@ export default function GestionProveedoresReal() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl"
       >
+        <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Building2 className="w-8 h-8 text-amber-300" />
               Gestión de Proveedores
             </h1>
-            <p className="text-red-100 text-sm">Listado y administración de proveedores del módulo financiero.</p>
+            <p className="max-w-2xl text-sm text-red-100">Consolida terceros, estados de operación y datos bancarios en una bandeja más clara y fácil de revisar.</p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Badge className="border border-white/20 bg-white/10 text-white">Activos: {resumenProveedores.activos}</Badge>
+              <Badge className="border border-white/20 bg-white/10 text-white">Ciudades: {resumenProveedores.ciudades}</Badge>
+              <Badge className="border border-white/20 bg-white/10 text-white">En vista: {resumenProveedores.filtrados}</Badge>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={abrirNuevo} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
@@ -280,8 +298,39 @@ export default function GestionProveedoresReal() {
         </div>
       </motion.div>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Card className="border-red-100 bg-gradient-to-br from-white to-red-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Proveedores</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{resumenProveedores.total}</p>
+            <p className="text-sm text-slate-600">Maestro total registrado</p>
+          </CardContent>
+        </Card>
+        <Card className="border-emerald-100 bg-gradient-to-br from-white to-emerald-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Activos</p>
+            <p className="mt-2 text-3xl font-bold text-emerald-700">{resumenProveedores.activos}</p>
+            <p className="text-sm text-slate-600">Disponibles para operar</p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-100 bg-gradient-to-br from-white to-amber-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">No activos</p>
+            <p className="mt-2 text-3xl font-bold text-amber-700">{resumenProveedores.inactivos}</p>
+            <p className="text-sm text-slate-600">Bloqueados o en revisión</p>
+          </CardContent>
+        </Card>
+        <Card className="border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Cobertura</p>
+            <p className="mt-2 text-3xl font-bold text-indigo-700">{resumenProveedores.ciudades}</p>
+            <p className="text-sm text-slate-600">Ciudades registradas</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="border-0 shadow-lg">
-        <CardHeader className="space-y-3">
+        <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-slate-900">Proveedores registrados</CardTitle>
             <div className="flex items-center gap-2">

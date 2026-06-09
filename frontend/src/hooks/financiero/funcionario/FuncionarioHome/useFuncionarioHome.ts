@@ -42,7 +42,7 @@ export function useFuncionarioHome() {
           facturasService.getPendientes(),
         ]);
 
-        setFacturas(toList<Factura>(listResp));
+        setFacturas(toList<Factura>(listResp).filter((factura) => ['Recibida', 'Registrada'].includes(factura.estado)));
         setStatsApi(isFuncionarioStatsApi(statsResp) ? statsResp : null);
         setPendingCount(Array.isArray(pendingResp) ? pendingResp.length : 0);
       } catch {
@@ -63,8 +63,8 @@ export function useFuncionarioHome() {
     const porEstado = statsApi?.por_estado ?? {};
     const recibidas = porEstado['Recibida'] ?? 0;
     const pendientes = pendingCount;
-    const procesadas = (porEstado['Pagada'] ?? 0) + (porEstado['Pago Aplicado'] ?? 0) + (porEstado['Autorizada'] ?? 0);
-    const enRadicacion = porEstado['Radicada'] ?? 0;
+    const registradas = porEstado['Registrada'] ?? 0;
+    const enRevision = recibidas + registradas;
 
     return [
       {
@@ -73,7 +73,7 @@ export function useFuncionarioHome() {
         icon: Receipt,
         color: 'from-blue-600 to-blue-700',
         iconColor: 'text-blue-100',
-        trend: `Total sistema: ${total}`,
+        trend: `Total visible: ${total}`,
       },
       {
         title: 'Facturas Pendientes',
@@ -84,16 +84,16 @@ export function useFuncionarioHome() {
         trend: 'Requieren atención',
       },
       {
-        title: 'Procesadas',
-        value: String(procesadas),
+        title: 'Registradas',
+        value: String(registradas),
         icon: CheckCircle2,
         color: 'from-green-600 to-green-700',
         iconColor: 'text-green-100',
-        trend: `Vencidas: ${statsApi?.vencidas ?? 0}`,
+        trend: 'Listas para contabilidad',
       },
       {
-        title: 'En Radicación',
-        value: String(enRadicacion),
+        title: 'En revision',
+        value: String(enRevision),
         icon: TrendingUp,
         color: 'from-red-600 to-red-700',
         iconColor: 'text-red-100',
@@ -105,6 +105,7 @@ export function useFuncionarioHome() {
   const recentActivity = useMemo(
     () =>
       [...facturas]
+        .filter((factura) => ['Recibida', 'Registrada'].includes(factura.estado))
         .sort((a, b) => new Date(b.fecha_modificacion || b.fecha_recepcion || b.fecha_creacion || 0).getTime() - new Date(a.fecha_modificacion || a.fecha_recepcion || a.fecha_creacion || 0).getTime())
         .slice(0, 5)
         .map((f) => ({

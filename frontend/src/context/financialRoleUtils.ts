@@ -98,6 +98,7 @@ const COMPONENT_TERMS_BY_ROLE: Record<CanonicalFinancialRole, string[]> = {
     'mis pendientes tesoreria',
     'alistar pagos',
     'registrar pago aplicado',
+    'factura pagada',
     'generar comprobante egreso',
     'comprobante egreso'
   ],

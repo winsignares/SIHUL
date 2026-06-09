@@ -27,18 +27,8 @@ export const facturasService = {
       observaciones?: string;
       numero_operacion_contable?: string;
       consecutivo_operacion?: string;
-      soporte_operacion?: File | null;
     }
   ): Promise<Factura> => {
-    if (opts?.soporte_operacion) {
-      const formData = new FormData();
-      if (opts.observaciones) formData.append('observaciones', opts.observaciones);
-      if (opts.numero_operacion_contable) formData.append('numero_operacion_contable', opts.numero_operacion_contable);
-      if (opts.consecutivo_operacion) formData.append('consecutivo_operacion', opts.consecutivo_operacion);
-      formData.append('soporte_operacion', opts.soporte_operacion);
-      return apiClient.postFormData<Factura>(`${API_BASE}/facturas/${id}/radicar/`, formData);
-    }
-
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/radicar/`, opts || {});
   },
 
@@ -153,6 +143,14 @@ export const facturasService = {
       descargar: opts?.descargar ? 1 : undefined,
     });
     return apiClient.getBlob(`${API_BASE}/facturas/${id}/documentos_consolidados/${query ? `?${query}` : ''}`);
+  },
+
+  getDocumentosHistorialZip: async (
+    id: number,
+    opts?: { scope?: string }
+  ): Promise<Blob> => {
+    const query = buildQueryString({ scope: opts?.scope });
+    return apiClient.getBlob(`${API_BASE}/facturas/${id}/documentos_historial_zip/${query ? `?${query}` : ''}`);
   },
 
   getPendientes: async (): Promise<Factura[]> => {

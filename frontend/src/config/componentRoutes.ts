@@ -102,6 +102,7 @@ export const COMPONENT_ROUTES: Record<string, string> = {
     'Enviar Direccion Financiera': '/financiero/tesoreria/enviar',
     'Registrar Pago Aplicado': '/financiero/tesoreria/registrar-pago',
     'Generar Comprobante Egreso': '/financiero/tesoreria/comprobante',
+    'Factura Pagada': '/financiero/tesoreria/comprobante',
     'Dashboard Auditoria': '/financiero/auditoria/dashboard',
     'Mis Pendientes Auditoria': '/financiero/auditoria/pendientes',
     'Control Previo': '/financiero/auditoria/control',
@@ -202,6 +203,7 @@ export const COMPONENT_ICONS: Record<string, LucideIcon> = {
     'Enviar Direccion Financiera': Send,
     'Registrar Pago Aplicado': CircleCheckBig,
     'Generar Comprobante Egreso': FileText,
+    'Factura Pagada': FileText,
     'Dashboard Auditoria': LayoutDashboard,
     'Mis Pendientes Auditoria': Clock3,
     'Control Previo': ShieldCheck,
@@ -278,6 +280,7 @@ function isTesoreriaLikeComponent(name: string): boolean {
         normalized.includes('proceso pago') ||
         normalized.includes('registrar pago') ||
         normalized.includes('pago aplicado') ||
+        normalized.includes('factura pagada') ||
         normalized.includes('comprobante egreso')
     );
 }

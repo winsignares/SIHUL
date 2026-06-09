@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
 import { Badge } from '../../../share/badge';
@@ -6,6 +7,9 @@ import { AlertCircle, Clock3, Eye, Search, Loader2, RefreshCw } from 'lucide-rea
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { Input } from '../../../share/input';
 import { useMisPendientesRectoria } from '../../../hooks/financiero/rectoria';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function MisPendientes() {
   const {
@@ -24,6 +28,21 @@ export default function MisPendientes() {
     abrirDetalle,
     recargar,
   } = useMisPendientesRectoria();
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(pendientes.length / ITEMS_PER_PAGE));
+  const paginatedPendientes = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return pendientes.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, pendientes]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, pendientes.length]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   return (
     <div className="space-y-6">
@@ -100,7 +119,7 @@ export default function MisPendientes() {
             </div>
           ) : (
             <div className="space-y-3">
-              {pendientes.map((item) => (
+              {paginatedPendientes.map((item) => (
               <motion.div
                 key={item.numeroFactura}
                 initial={{ opacity: 0, y: 8 }}
@@ -140,6 +159,16 @@ export default function MisPendientes() {
               </motion.div>
               ))}
             </div>
+          )}
+
+          {!cargando && pendientes.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={pendientes.length}
+            />
           )}
         </CardContent>
       </Card>

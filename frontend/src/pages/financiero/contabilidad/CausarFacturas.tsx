@@ -35,6 +35,7 @@ import {
 import { Badge } from '../../../share/badge';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { SlaIndicator } from '../../../share/sla-indicator';
 import { useContabilidadCausarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
@@ -275,7 +276,7 @@ export default function CausarFacturas() {
                         <TableCell className="font-semibold text-slate-800">${Number(factura.valor_total).toLocaleString('es-CO')}</TableCell>
                         <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
                         <TableCell className="text-slate-600">{displayDate(factura.fecha_radicacion)}</TableCell>
-                        <TableCell><span className={diasColor}>{dias}d</span></TableCell>
+                        <TableCell><SlaIndicator dias={dias} objetivo={factura.sla_objetivo_dias} className={diasColor} compact /></TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700 p-2" title="Detalle">

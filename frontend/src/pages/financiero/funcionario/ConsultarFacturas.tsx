@@ -21,8 +21,7 @@ const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string;
   { id: '7', nombre: 'Revisión Dirección Financiera', estadoRef: 'Revisada Dir. Financiera', responsable: 'Dirección Financiera', diasMaximos: 2 },
   { id: '8', nombre: 'Envío a Rectoría', estadoRef: 'Enviada Rectoría', responsable: 'Dirección Financiera', diasMaximos: 1 },
   { id: '9', nombre: 'Autorización de Pago', estadoRef: 'Autorizada', responsable: 'Rectoría', diasMaximos: 3 },
-  { id: '10', nombre: 'Aplicación de Pago', estadoRef: 'Pago Aplicado', responsable: 'Tesorería', diasMaximos: 1 },
-  { id: '11', nombre: 'Pago Finalizado', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
+  { id: '10', nombre: 'Factura Pagada', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
 ];
 
 const toList = <T,>(data: unknown): T[] => {
@@ -109,7 +108,6 @@ function buildTimelineFromSeguimiento(seguimiento: FuncionarioSeguimientoRespons
 export default function ConsultarFacturas() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<FuncionarioConsultaRow[]>([]);
-  const [facturasData, setFacturasData] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -124,15 +122,12 @@ export default function ConsultarFacturas() {
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   const loadRows = async () => {
     const response = await facturasService.getAll({ estado: ESTADO_OBJETIVO, limit: 500 });
     const list = toList<Factura>(response).filter((factura) => esEstadoRegistrado(factura.estado));
-    return {
-      list,
-      rows: list.map(mapFactura),
-    };
+    return list.map(mapFactura);
   };
 
   useEffect(() => {
@@ -140,12 +135,10 @@ export default function ConsultarFacturas() {
       setLoading(true);
       setLoadError(null);
       try {
-        const { list, rows: nextRows } = await loadRows();
-        setFacturasData(list);
+        const nextRows = await loadRows();
         setRows(nextRows);
       } catch {
         setRows([]);
-        setFacturasData([]);
         setLoadError('No fue posible consultar facturas. Intente nuevamente.');
       } finally {
         setLoading(false);
@@ -159,8 +152,7 @@ export default function ConsultarFacturas() {
     const interval = window.setInterval(() => {
       void (async () => {
         try {
-          const { list, rows: latest } = await loadRows();
-          setFacturasData(list);
+          const latest = await loadRows();
           setRows((prev) => {
             const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
             const changes: FuncionarioEstadoChange[] = [];
@@ -210,11 +202,6 @@ export default function ConsultarFacturas() {
       return true;
     });
   }, [rows, numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
-
-  const filteredFacturas = useMemo(() => {
-    const allowedIds = new Set(filtered.map((row) => row.facturaId));
-    return facturasData.filter((factura) => allowedIds.has(Number(factura.id)));
-  }, [facturasData, filtered]);
 
   // Paginación
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -328,130 +315,6 @@ export default function ConsultarFacturas() {
     if (dias >= 5) return 'bg-orange-100 text-orange-700 border-orange-200';
     if (dias >= 2) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
     return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-  };
-
-  const handleExport = async () => {
-    if (filteredFacturas.length === 0) return;
-
-    const XLSX = await import('xlsx');
-
-    const rows = filteredFacturas.map((factura) => {
-      const documentos = (factura.documentos || [])
-        .map((doc) => `${doc.tipo_documento || 'Documento'}: ${doc.nombre_archivo || 'Sin nombre'}`)
-        .join(' | ');
-
-      return {
-        ID: factura.id,
-        'Numero Factura': factura.numero_factura,
-        'Numero Radicado': factura.numero_radicado || '',
-        'Numero Proceso Pago': factura.numero_proceso_pago || '',
-        'Numero Confirmacion': factura.numero_confirmacion || '',
-        'Numero Transaccion': factura.numero_transaccion || '',
-        'Numero Comprobante': factura.numero_comprobante || '',
-        'Proveedor ID': factura.proveedor_id,
-        Proveedor: factura.proveedor?.razon_social || '',
-        NIT: factura.proveedor?.nit || '',
-        'Tipo Proveedor': factura.proveedor?.tipo_proveedor || '',
-        'Email Proveedor': factura.proveedor?.email || '',
-        'Telefono Proveedor': factura.proveedor?.telefono || '',
-        'Banco Proveedor': factura.proveedor?.banco || '',
-        'Tipo Cuenta Proveedor': factura.proveedor?.tipo_cuenta || '',
-        'Numero Cuenta Proveedor': factura.proveedor?.numero_cuenta || '',
-        'Departamento ID': factura.departamento_id,
-        'Area Solicitante': factura.departamento?.nombre || '',
-        'Cuenta Contable ID': factura.cuenta_contable_id || '',
-        'Cuenta Contable': factura.cuenta_contable?.nombre || '',
-        'Centro Costo ID': factura.centro_costo_id || '',
-        'Centro Costo': factura.centro_costo?.nombre || '',
-        'Valor Subtotal': factura.valor_subtotal,
-        'Valor Tasa': factura.valor_iva,
-        'Valor Retencion Renta': factura.valor_retencion_renta,
-        'Valor Retencion IVA': factura.valor_retencion_iva,
-        'Valor Retencion ICA': factura.valor_retencion_ica,
-        'Valor Total': factura.valor_total,
-        'Valor Neto Pagar': factura.valor_neto_pagar,
-        'Tipo Documento': factura.tipo_documento,
-        Descripcion: factura.descripcion,
-        Observaciones: factura.observaciones || '',
-        'Cuenta Bancaria Proveedor': factura.cuenta_bancaria_proveedor || '',
-        'Fecha Factura': factura.fecha_factura,
-        'Fecha Recepcion': factura.fecha_recepcion,
-        'Fecha Radicacion': factura.fecha_radicacion || '',
-        'Fecha Causacion': factura.fecha_causacion || '',
-        'Fecha Alistamiento': factura.fecha_alistamiento || '',
-        'Fecha Aprobacion Auditoria': factura.fecha_aprobacion_auditoria || '',
-        'Fecha Cargue': factura.fecha_cargue || '',
-        'Fecha Autorizacion': factura.fecha_autorizacion || '',
-        'Fecha Pago Aplicado': factura.fecha_pago_aplicado || '',
-        'Fecha Comprobante': factura.fecha_comprobante || '',
-        Estado: factura.estado,
-        Etapa: factura.etapa_actual || '',
-        'Indicador Riesgo': factura.indicador_riesgo,
-        'SLA Cumplido': factura.sla_cumplido ? 'Si' : 'No',
-        'Dias Transcurridos': factura.dias_transcurridos,
-        'Responsable ID': factura.usuario_responsable_id || '',
-        Responsable: factura.usuario_responsable?.nombre || '',
-        Urgente: factura.urgente ? 'Si' : 'No',
-        'Requiere Autorizacion Especial': factura.requiere_autorizacion_especial ? 'Si' : 'No',
-        'Fecha Creacion': factura.fecha_creacion,
-        'Fecha Modificacion': factura.fecha_modificacion,
-        Documentos: documentos,
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 8 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 12 },
-      { wch: 32 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 26 },
-      { wch: 18 },
-      { wch: 16 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 14 },
-      { wch: 26 },
-      { wch: 14 },
-      { wch: 26 },
-      { wch: 14 },
-      { wch: 26 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 24 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 16 },
-      { wch: 12 },
-      { wch: 24 },
-      { wch: 24 },
-      { wch: 40 },
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Facturas');
-    XLSX.writeFile(workbook, `facturas-funcionario-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const clearFilters = () => {
@@ -598,15 +461,6 @@ export default function ConsultarFacturas() {
             <h3 className="text-xl font-bold text-slate-900">Resultados de la búsqueda</h3>
             <p className="text-sm text-slate-500 mt-1">{filtered.length} factura(s) encontrada(s) - Página {currentPage} de {totalPages || 1}</p>
           </div>
-          <motion.button 
-            whileHover={{ scale: 1.05 }} 
-            whileTap={{ scale: 0.95 }}
-            onClick={() => void handleExport()}
-            disabled={filteredFacturas.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-green-500 text-green-600 hover:bg-green-50 font-semibold transition-all"
-          >
-            <Download className="w-4 h-4" /> Exportar
-          </motion.button>
         </div>
 
         <div className="min-w-[1300px]">

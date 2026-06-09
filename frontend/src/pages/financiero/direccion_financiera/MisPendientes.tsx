@@ -26,7 +26,6 @@ export default function MisPendientes() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div>
@@ -40,7 +39,6 @@ export default function MisPendientes() {
         </div>
       </motion.div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-0 shadow-lg">
           <CardContent className="p-5">
@@ -62,7 +60,6 @@ export default function MisPendientes() {
         </Card>
       </div>
 
-      {/* Cola de Prioridades */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -77,18 +74,16 @@ export default function MisPendientes() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input 
-              className="pl-9" 
-              placeholder="Buscar por factura, proveedor o radicado" 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
+            <Input
+              className="pl-9"
+              placeholder="Buscar por factura, proveedor o radicado"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          {/* Loading state */}
           {cargando ? (
             <div className="flex items-center justify-center py-12 text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin mr-3" /> Cargando facturas...
@@ -104,7 +99,6 @@ export default function MisPendientes() {
               <p className="text-sm mt-1">Las facturas remitidas por Tesoreria apareceran aqui</p>
             </div>
           ) : (
-            /* Lista de pendientes */
             <div className="space-y-3">
               {pendientes.map((item) => (
                 <motion.div
@@ -150,7 +144,6 @@ export default function MisPendientes() {
         </CardContent>
       </Card>
 
-      {/* Modal Detalle */}
       <FacturaDetailModal
         factura={selected}
         isOpen={detailOpen}

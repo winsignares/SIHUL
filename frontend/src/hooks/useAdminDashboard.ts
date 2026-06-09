@@ -179,20 +179,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         label: 'Parametrizacion SLA',
                         route: '/financiero/admin-financiero/sla',
                         code: 'Parametrizacion SLA'
-                    },
-                    {
-                        id: 'Reportes Consolidados Financiero',
-                        icon: getIconForComponent('Reportes Consolidados Financiero'),
-                        label: 'Reportes Consolidados',
-                        route: '/financiero/admin-financiero/reportes',
-                        code: 'Reportes Consolidados Financiero'
-                    },
-                    {
-                        id: 'Configuracion Sistema Financiero',
-                        icon: getIconForComponent('Configuracion Sistema Financiero'),
-                        label: 'Configuracion Sistema',
-                        route: '/financiero/admin-financiero/configuracion',
-                        code: 'Configuracion Sistema Financiero'
                     }
                 ]
             });
@@ -220,13 +206,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 id: 'gestion-rectoria',
                 label: 'Rectoria',
                 items: [
-                    {
-                        id: 'Mis Pendientes Rectoria',
-                        icon: getIconForComponent('Mis Pendientes Rectoria'),
-                        label: 'Mis Pendientes',
-                        route: '/financiero/rectoria/pendientes',
-                        code: 'Mis Pendientes Rectoria'
-                    },
                     {
                         id: 'Autorizar Pagos',
                         icon: getIconForComponent('Autorizar Pagos'),
@@ -261,25 +240,11 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 label: 'Direccion Financiera',
                 items: [
                     {
-                        id: 'Mis Pendientes Direccion Financiera',
-                        icon: getIconForComponent('Mis Pendientes Direccion Financiera'),
-                        label: 'Mis Pendientes',
-                        route: '/financiero/direccion-financiera/pendientes',
-                        code: 'Mis Pendientes Direccion Financiera'
-                    },
-                    {
                         id: 'Revisar Pagos Direccion Financiera',
                         icon: getIconForComponent('Revisar Pagos Direccion Financiera'),
                         label: 'Cargue y Revision',
                         route: '/financiero/direccion-financiera/revisar',
                         code: 'Revisar Pagos Direccion Financiera'
-                    },
-                    {
-                        id: 'Enviar a Rectoria',
-                        icon: getIconForComponent('Enviar a Rectoria'),
-                        label: 'Enviar a Rectoria',
-                        route: '/financiero/direccion-financiera/enviar',
-                        code: 'Enviar a Rectoria'
                     },
                     {
                         id: 'Confirmacion Pagos Direccion Financiera',
@@ -315,13 +280,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 label: 'Gestion de Tesoreria',
                 items: [
                     {
-                        id: 'Mis Pendientes Tesoreria',
-                        icon: getIconForComponent('Mis Pendientes Tesoreria'),
-                        label: 'Mis Pendientes',
-                        route: '/financiero/tesoreria/pendientes',
-                        code: 'Mis Pendientes Tesoreria'
-                    },
-                    {
                         id: 'Alistar Pagos',
                         icon: getIconForComponent('Alistar Pagos'),
                         label: 'Alistar Pagos',
@@ -343,11 +301,11 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         code: 'Registrar Pago Aplicado'
                     },
                     {
-                        id: 'Generar Comprobante Egreso',
-                        icon: getIconForComponent('Generar Comprobante Egreso'),
-                        label: 'Comprobante de Egreso',
+                        id: 'Factura Pagada',
+                        icon: getIconForComponent('Factura Pagada'),
+                        label: 'Factura Pagada',
                         route: '/financiero/tesoreria/comprobante',
-                        code: 'Generar Comprobante Egreso'
+                        code: 'Factura Pagada'
                     }
                 ]
             });
@@ -375,13 +333,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 id: 'control-interno',
                 label: 'Control Interno',
                 items: [
-                    {
-                        id: 'Mis Pendientes Auditoria',
-                        icon: getIconForComponent('Mis Pendientes Auditoria'),
-                        label: 'Mis Pendientes',
-                        route: '/financiero/auditoria/pendientes',
-                        code: 'Mis Pendientes Auditoria'
-                    },
                     {
                         id: 'Control Previo',
                         icon: getIconForComponent('Control Previo'),

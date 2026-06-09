@@ -168,7 +168,9 @@ export default function ContabilidadHome({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold text-slate-800 text-base">Factura #{item.factura_id}</p>
+                            <p className="font-semibold text-slate-800 text-base">
+                              {item.accion || 'Movimiento contable'} - {item.numero_factura || `Factura ${item.factura_id}`}
+                            </p>
                             <span className={`text-xs px-2 py-1 rounded-full border whitespace-nowrap ${getEstadoBadge(item.estado_nuevo ?? '')} `}>
                               {item.estado_nuevo ?? item.accion}
                             </span>

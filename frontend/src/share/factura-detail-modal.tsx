@@ -30,6 +30,7 @@ export interface SharedFacturaDetail {
   areaSolicitante?: string;
   estado: string;
   diasTranscurridos?: number;
+  slaObjetivoDias?: number | null;
   numeroRadicado?: string;
   numeroProcesoPago?: string;
   numeroOperacionContable?: string;
@@ -139,7 +140,6 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'Devuelta',
     'Autorizada',
     'Pago Aplicado',
-    'Pagada',
   ];
 
   const normalize = (value: string) =>
@@ -173,7 +173,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     detenida: 'Devuelta',
     anulada: 'Devuelta',
     'pago aplicado': 'Pago Aplicado',
-    pagada: 'Pagada',
+    pagada: 'Pago Aplicado',
   };
 
   const current = mapEstado[normalize(factura.estado)] || factura.estado;
@@ -192,8 +192,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Rechazada por Rectoría', 'Rectoría', 'Rectoría rechaza el tramite y solicita recertificacion previa', 2, undefined],
     ['Devuelta', 'Direccion Financiera / Tesoreria', 'Tramite devuelto para ajustes operativos y documentales', 2, undefined],
     ['Autorizada', 'Rectoria', 'Autorizacion final de pago', 3, factura.fechaAutorizacion],
-    ['Pago Aplicado', 'Tesoreria', 'Aplicacion del pago en portal bancario', 1, factura.fechaPagoAplicado],
-    ['Pagada', 'Tesoreria', 'Comprobante emitido y tramite cerrado', 1, factura.fechaComprobante],
+    ['Pago Aplicado', 'Tesoreria', 'Pago aplicado y factura pagada', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
   ] as const;
 
   return blueprint.map(([nombre, responsable, observaciones, sla, fecha], i) => {
@@ -659,6 +658,7 @@ export function buildSharedFacturaDetail(f: APIFactura): SharedFacturaDetail {
     areaSolicitante: f.departamento?.nombre,
     estado: f.estado,
     diasTranscurridos: Math.max(0, f.dias_transcurridos || 0),
+    slaObjetivoDias: f.sla_objetivo_dias ?? undefined,
     numeroRadicado: f.numero_radicado,
     numeroProcesoPago: f.numero_proceso_pago,
     numeroOperacionContable: f.numero_operacion_contable,

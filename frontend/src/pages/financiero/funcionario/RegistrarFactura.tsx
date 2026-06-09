@@ -18,7 +18,7 @@ import { parseFacturaDescripcion } from '../../../share/factura-description';
 import { Label } from '../../../share/label';
 import { Textarea } from '../../../share/textarea';
 
-const DOCUMENT_TYPES: FuncionarioDocumentType[] = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const DOCUMENT_TYPES: FuncionarioDocumentType[] = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega'];
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
 const BLOCKED_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'ps1', 'js', 'vbs', 'scr', 'msi', 'com', 'jar', 'sh']);
@@ -423,6 +423,7 @@ export default function RegistrarFactura() {
   };
 
   const addDoc = (type: FuncionarioDocumentType, file?: File) => {
+    if (isReviewMode) return;
     if (!file) return;
     const validationError = validateUploadFile(file);
     if (validationError) {
@@ -698,7 +699,7 @@ export default function RegistrarFactura() {
       }
 
       // Subir documentos si existen
-      if (docs && docs.length > 0) {
+      if (!isReviewMode && docs && docs.length > 0) {
         await Promise.all(docs.map((doc) => documentosService.upload(factura.id, doc.file, doc.type)));
       }
       
@@ -1564,6 +1565,7 @@ export default function RegistrarFactura() {
             </motion.div>
 
             {/* Sección de Documentos Adicionales */}
+            {!isReviewMode && (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1632,6 +1634,7 @@ export default function RegistrarFactura() {
                 )}
               </div>
             </motion.div>
+            )}
 
             {/* Botones de navegación */}
             <motion.div 

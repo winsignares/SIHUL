@@ -1,4 +1,5 @@
-﻿import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
@@ -8,6 +9,9 @@ import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadMisPendientes } from '../../../hooks/financiero/contabilidad';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function MisPendientes() {
   const {
@@ -26,6 +30,20 @@ export default function MisPendientes() {
     proximasVencerCount,
     enTiempoCount,
   } = useContabilidadMisPendientes();
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(facturas.length / ITEMS_PER_PAGE));
+  const facturasPaginadas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return facturas.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, facturas]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [facturas.length]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   return (
     <>
@@ -153,7 +171,7 @@ export default function MisPendientes() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {facturas.map((factura) => {
+                      {facturasPaginadas.map((factura) => {
                         const nivel = nivelRiesgo(factura.dias_transcurridos);
                         const colorDot =
                           nivel === 'vencido' ? 'bg-purple-700' :
@@ -239,6 +257,17 @@ export default function MisPendientes() {
                       })}
                     </TableBody>
                   </Table>
+                </div>
+              )}
+              {!cargando && facturas.length > 0 && (
+                <div className="mt-5">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={facturas.length}
+                  />
                 </div>
               )}
             </CardContent>

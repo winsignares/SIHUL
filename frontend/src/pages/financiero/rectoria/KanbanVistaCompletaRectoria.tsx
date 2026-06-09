@@ -1,45 +1,40 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { ArrowUpDown, Calendar, ChevronLeft, ChevronRight, Eye, FileText, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
-import { FileText, Eye, Calendar, ChevronLeft, ChevronRight, ArrowUpDown, RefreshCw } from 'lucide-react';
-import { motion } from 'framer-motion';
 import type { SharedFacturaDetail } from '../../../share/factura-detail-modal';
-import type { KanbanEstadoDireccionFinanciera } from '../../../hooks/financiero/direccion_financiera/home/useDireccionFinancieraHome';
+import type { KanbanEstadoRectoria } from '../../../hooks/financiero/rectoria/home/useRectoriaHome';
 import { displayDate, displayText } from '../../../share/field-placeholders';
 import { SlaIndicator } from '../../../share/sla-indicator';
 
-interface KanbanVistaCompletaProps {
+interface KanbanVistaCompletaRectoriaProps {
   isOpen: boolean;
-  kanbanEstados: KanbanEstadoDireccionFinanciera[];
+  kanbanEstados: KanbanEstadoRectoria[];
   onClose: () => void;
   onSelectFactura: (factura: SharedFacturaDetail) => void;
 }
 
 const ITEMS_POR_COLUMNA = 2;
-const COLUMNAS_POR_VISTA = 5;
+const COLUMNAS_POR_VISTA = 4;
 
 const estadoColor: Record<string, string> = {
-  'Recibida (Funcionario)': 'from-slate-500 to-slate-600',
-  Registrada: 'from-blue-500 to-blue-600',
-  Radicada: 'from-cyan-500 to-cyan-600',
-  Causada: 'from-indigo-500 to-indigo-600',
-  Alistada: 'from-amber-500 to-amber-600',
-  'Aprobada AuditorÃ­a': 'from-teal-500 to-teal-600',
-  'Rechazada AuditorÃ­a': 'from-rose-500 to-rose-600',
-  'Revisada Dir. Financiera': 'from-orange-500 to-orange-600',
-  'Cargada para autorizaciÃ³n': 'from-purple-500 to-purple-600',
-  'Enviada RectorÃ­a': 'from-cyan-500 to-cyan-600',
-  'Autorizada para pago': 'from-green-500 to-green-600',
-  'Rechazada por RectorÃ­a': 'from-red-600 to-red-700',
-  'Devuelta para ajustes': 'from-red-500 to-red-600',
-  'Pago Aplicado': 'from-emerald-500 to-emerald-600',
-  Pagada: 'from-emerald-700 to-emerald-800',
+  'Pendiente de autorizacion': 'from-amber-500 to-amber-600',
+  'Autorizada por Rectoria': 'from-green-500 to-green-600',
+  'Rechazada por Rectoria': 'from-red-500 to-red-600',
+  'Pago aplicado': 'from-emerald-500 to-emerald-600',
+  Pagada: 'from-teal-600 to-teal-700',
 };
 
 const parseFecha = (value?: string) => (value ? new Date(value).getTime() : Number.MAX_SAFE_INTEGER);
 
-export default function KanbanVistaCompleta({ isOpen, kanbanEstados, onClose, onSelectFactura }: KanbanVistaCompletaProps) {
+export default function KanbanVistaCompletaRectoria({
+  isOpen,
+  kanbanEstados,
+  onClose,
+  onSelectFactura,
+}: KanbanVistaCompletaRectoriaProps) {
   const [paginasPorEstado, setPaginasPorEstado] = useState<Record<string, number>>({});
   const [paginaTablero, setPaginaTablero] = useState(1);
   const [ordenPorEstado, setOrdenPorEstado] = useState<Record<string, 'antiguos' | 'recientes'>>({});
@@ -82,15 +77,15 @@ export default function KanbanVistaCompleta({ isOpen, kanbanEstados, onClose, on
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="h-[92vh] w-[96vw] max-w-[1800px] overflow-visible rounded-2xl border p-0 sm:max-w-[96vw]">
+      <DialogContent className="h-[92vh] w-[96vw] max-w-[1680px] overflow-visible rounded-2xl border p-0 sm:max-w-[96vw]">
         <DialogHeader className="border-b border-slate-200 bg-white px-6 py-4">
           <div>
             <DialogTitle className="flex items-center gap-2 pr-10 text-2xl text-slate-800">
               <FileText className="h-6 w-6 text-red-600" />
-              Vista completa del tablero Kanban
+              Vista completa del tablero de autorizaciones
             </DialogTitle>
             <DialogDescription>
-              Flujo integral de cuentas por pagar por estado, con facturas antiguas primero y paginacion por columna para revisar mas casos sin saturar la vista.
+              Revisa pagos por etapa con prioridad a los mas antiguos y paginacion por columna para evitar saturar la vista.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -178,20 +173,22 @@ export default function KanbanVistaCompleta({ isOpen, kanbanEstados, onClose, on
                               [estado]: ordenActual === 'antiguos' ? 'recientes' : 'antiguos',
                             }))
                           }
-                          title={`Ordenar por ${ordenActual === 'antiguos' ? 'más recientes' : 'más antiguos'}`}
+                          title={`Ordenar por ${ordenActual === 'antiguos' ? 'mas recientes' : 'mas antiguos'}`}
                         >
                           <ArrowUpDown className="h-4 w-4" />
                           <span className="sr-only">Cambiar orden</span>
                         </Button>
                       </div>
                     </div>
-                    <p className="text-[11px] uppercase tracking-wide text-white/70">Mostrando {ordenActual === 'antiguos' ? 'más antiguos primero' : 'más recientes primero'}</p>
+                    <p className="text-[11px] uppercase tracking-wide text-white/70">
+                      Mostrando {ordenActual === 'antiguos' ? 'mas antiguos primero' : 'mas recientes primero'}
+                    </p>
                   </div>
 
                   <div className="flex flex-1 flex-col p-3">
                     {facturas.length === 0 ? (
                       <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500">
-                        No hay facturas en esta etapa.
+                        No hay pagos en esta etapa.
                       </div>
                     ) : (
                       <>

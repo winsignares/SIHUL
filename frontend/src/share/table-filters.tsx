@@ -13,6 +13,7 @@ interface TableFiltersProps {
     fechaFin?: string;
     montoMin?: string;
     montoMax?: string;
+    orden?: string;
   };
   onFilterChange: (filters: any) => void;
   estados?: string[];
@@ -21,6 +22,10 @@ interface TableFiltersProps {
   showFechaFilter?: boolean;
   showAreaFilter?: boolean;
   showEstadoFilter?: boolean;
+  showMontoFilter?: boolean;
+  orderKey?: string;
+  orderLabel?: string;
+  orderOptions?: { label: string; value: string }[];
 }
 
 export default function TableFilters({
@@ -32,6 +37,10 @@ export default function TableFilters({
   showFechaFilter = false,
   showAreaFilter = false,
   showEstadoFilter = true,
+  showMontoFilter = false,
+  orderKey,
+  orderLabel = 'Ordenar por',
+  orderOptions = [],
 }: TableFiltersProps) {
   const handleReset = () => {
     onFilterChange({
@@ -43,6 +52,7 @@ export default function TableFilters({
       fechaFin: '',
       montoMin: '',
       montoMax: '',
+      orden: '',
     });
   };
 
@@ -148,6 +158,27 @@ export default function TableFilters({
           </div>
         )}
 
+        {orderKey && orderOptions.length > 0 && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor={`filter-${orderKey}`} className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Search className="w-3 h-3 text-red-600" />
+              {orderLabel}
+            </Label>
+            <select
+              id={`filter-${orderKey}`}
+              value={(filters as Record<string, string | undefined>)[orderKey] || ''}
+              onChange={(e) => handleInputChange(orderKey, e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
+            >
+              {orderOptions.map((option: { label: string; value: string }) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {showAreaFilter && (
           <div className="space-y-2 min-w-0 flex-1 max-w-xs">
             <Label htmlFor="filter-area" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
@@ -198,6 +229,42 @@ export default function TableFilters({
               value={filters.fechaFin || ''}
               onChange={(e: any) => handleInputChange('fechaFin', e.target.value)}
               className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
+            />
+          </div>
+        )}
+
+        {showMontoFilter && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor="filter-monto-min" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Filter className="w-3 h-3 text-emerald-600" />
+              Monto Minimo
+            </Label>
+            <Input
+              id="filter-monto-min"
+              type="number"
+              min="0"
+              placeholder="Desde"
+              value={filters.montoMin || ''}
+              onChange={(e) => handleInputChange('montoMin', e.target.value)}
+              className="border-slate-300 focus:border-emerald-600 focus:ring-emerald-600"
+            />
+          </div>
+        )}
+
+        {showMontoFilter && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor="filter-monto-max" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Filter className="w-3 h-3 text-emerald-600" />
+              Monto Maximo
+            </Label>
+            <Input
+              id="filter-monto-max"
+              type="number"
+              min="0"
+              placeholder="Hasta"
+              value={filters.montoMax || ''}
+              onChange={(e) => handleInputChange('montoMax', e.target.value)}
+              className="border-slate-300 focus:border-emerald-600 focus:ring-emerald-600"
             />
           </div>
         )}

@@ -8,12 +8,16 @@ from django.db.models import Q, Sum, Count
 from django.http import HttpResponse
 from django.conf import settings
 import json
+import logging
 import os
+import zipfile
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+import unicodedata
 from openpyxl import Workbook
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -22,6 +26,8 @@ from . import models, serializers
 from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
 from usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_CUENTAS_CONTABLES = [
@@ -68,6 +74,33 @@ DEFAULT_CENTROS_COSTO = [
     {'codigo': 'CC-ACA-001', 'nombre': 'GestiÃ³n AcadÃ©mica', 'tipo': 'AcadÃ©mico', 'estado': 'Activo'},
     {'codigo': 'CC-OPE-001', 'nombre': 'OperaciÃ³n Institucional', 'tipo': 'Operativo', 'estado': 'Activo'},
 ]
+
+ESTADO_ENVIADA_RECTORIA = 'Enviada Rector\u00eda'
+ESTADO_AUTORIZADA = 'Autorizada'
+ESTADO_RECHAZADA_POR_RECTORIA = 'Rechazada por Rector\u00eda'
+ESTADO_REVISADA_DIRECCION_FINANCIERA = 'Revisada Dir. Financiera'
+ESTADO_DEVUELTA = 'Devuelta'
+ESTADO_CARGADA = 'Cargada'
+
+
+def _normalize_text(value):
+    return unicodedata.normalize('NFD', value or '').encode('ascii', 'ignore').decode('ascii').lower().strip()
+
+
+def _estado_matches(actual, expected):
+    return _normalize_text(actual) == _normalize_text(expected)
+
+
+def _factura_document_base_path(factura):
+    today = timezone.localdate()
+    factura_label = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
+    return (
+        Path(settings.MEDIA_ROOT)
+        / f'{today:%Y}'
+        / f'{today:%m}'
+        / f'semana-{today.isocalendar().week:02d}'
+        / factura_label
+    )
 
 
 # ============================================================
@@ -992,6 +1025,17 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 return None
         return None
 
+    def _guardar_pdf_unificado(self, factura, content, scope):
+        try:
+            output_dir = _factura_document_base_path(factura) / 'unificados'
+            output_dir.mkdir(parents=True, exist_ok=True)
+            safe_scope = models._safe_path_segment(scope or 'all')
+            safe_factura = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
+            output_path = output_dir / f'Documentos_{safe_factura}_{safe_scope}.pdf'
+            output_path.write_bytes(content)
+        except Exception:
+            logger.exception('No fue posible guardar PDF unificado factura_id=%s', factura.id)
+
     def _pdf_consolidado_documentos(self, factura, documentos, scope):
         try:
             from pypdf import PdfWriter
@@ -1014,7 +1058,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
         if not documentos:
             buffer = BytesIO()
             writer.write(buffer)
-            return buffer.getvalue()
+            content = buffer.getvalue()
+            self._guardar_pdf_unificado(factura, content, scope)
+            return content
 
         for documento in documentos:
             raw_bytes = self._documento_bytes(documento)
@@ -1044,7 +1090,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         buffer = BytesIO()
         writer.write(buffer)
-        return buffer.getvalue()
+        content = buffer.getvalue()
+        self._guardar_pdf_unificado(factura, content, scope)
+        return content
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -1137,40 +1185,28 @@ class FacturaViewSet(viewsets.ModelViewSet):
         observaciones = (request.data.get('observaciones') or '').strip()
         numero_operacion = (request.data.get('numero_operacion_contable') or '').strip()
         consecutivo_operacion = (request.data.get('consecutivo_operacion') or '').strip()
-        soporte_operacion = request.FILES.get('soporte_operacion')
 
-        if soporte_operacion:
-            nombre_archivo = getattr(soporte_operacion, 'name', 'soporte_operacion.pdf') or 'soporte_operacion.pdf'
-            if not nombre_archivo.lower().endswith('.pdf'):
-                return Response(
-                    {'error': 'El soporte de operacion debe estar en formato PDF.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        if not numero_operacion:
+            return Response(
+                {'error': 'El numero de operacion contable es obligatorio para radicar.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not consecutivo_operacion:
+            return Response(
+                {'error': 'El consecutivo de operacion es obligatorio para radicar.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         factura.estado = 'Radicada'
         factura.fecha_radicacion = timezone.now().date()
         factura.numero_radicado = f"RAD-{factura.id:06d}"
-        factura.numero_operacion_contable = numero_operacion or None
-        factura.consecutivo_operacion = consecutivo_operacion or None
+        factura.numero_operacion_contable = numero_operacion
+        factura.consecutivo_operacion = consecutivo_operacion
         factura.etapa_actual = 'Radicación'
         factura.fecha_inicio_etapa = factura.fecha_radicacion
         factura.usuario_responsable = request.user
         factura.save()
-
-        if soporte_operacion:
-            nombre_archivo = getattr(soporte_operacion, 'name', 'soporte_operacion.pdf') or 'soporte_operacion.pdf'
-            documento = models.DocumentoAdjunto.objects.create(
-                factura=factura,
-                nombre_archivo=nombre_archivo[:255],
-                tipo_documento='Soporte Operacion',
-                archivo=soporte_operacion,
-                tipo_mime=getattr(soporte_operacion, 'content_type', '') or 'application/pdf',
-                tamano_bytes=getattr(soporte_operacion, 'size', None),
-                cargado_por=request.user,
-            )
-            if documento.archivo and hasattr(documento.archivo, 'url'):
-                documento.url_storage = documento.archivo.url
-                documento.save(update_fields=['url_storage'])
 
         actualizar_sla_factura(factura)
 
@@ -1206,21 +1242,67 @@ class FacturaViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'{"attachment" if descargar else "inline"}; filename="{filename}"'
         return response
 
+    @action(detail=True, methods=['get'], url_path='documentos_historial_zip')
+    def documentos_historial_zip(self, request, pk=None):
+        """Descarga el expediente completo: archivos originales y PDF unificado."""
+        factura = self.get_object()
+        scope = request.query_params.get('scope') or self._scope_documental_por_rol(request)
+        documentos = self._documentos_filtrados_por_scope(factura, scope)
+        consolidado = self._pdf_consolidado_documentos(factura, documentos, scope)
+
+        output = BytesIO()
+        used_names = set()
+        with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr('unificados/expediente_unificado.pdf', consolidado)
+
+            for index, documento in enumerate(documentos, 1):
+                raw_bytes = self._documento_bytes(documento)
+                base_name = models._safe_path_segment(documento.nombre_archivo or f'documento-{index}')
+                folder = models._safe_path_segment(documento.tipo_documento or 'documento')
+                zip_name = f'especificos/{folder}/{index:02d}-{base_name}'
+
+                if zip_name in used_names:
+                    zip_name = f'especificos/{folder}/{index:02d}-{documento.id}-{base_name}'
+                used_names.add(zip_name)
+
+                if raw_bytes:
+                    zip_file.writestr(zip_name, raw_bytes)
+                else:
+                    zip_file.writestr(
+                        f'{zip_name}.txt',
+                        'No fue posible leer este archivo desde el almacenamiento, pero existe el registro documental en SIHUL.',
+                    )
+
+        content = output.getvalue()
+        output.close()
+
+        filename = f'Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.zip'
+        response = HttpResponse(content, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
     @action(detail=True, methods=['post'], url_path='cargar_direccion_financiera')
     def cargar_direccion_financiera(self, request, pk=None):
         """Registrar el cargue formal en DirecciÃ³n Financiera antes de rectorÃ­a."""
         factura = self.get_object()
 
-        if factura.estado not in ['Revisada Dir. Financiera', 'Devuelta', 'Rechazada por RectorÃ­a']:
+        if not any(
+            _estado_matches(factura.estado, estado_valido)
+            for estado_valido in [
+                ESTADO_REVISADA_DIRECCION_FINANCIERA,
+                ESTADO_DEVUELTA,
+                ESTADO_RECHAZADA_POR_RECTORIA,
+            ]
+        ):
             return Response(
-                {'error': 'La factura debe estar revisada o devuelta para ser cargada en DirecciÃ³n Financiera'},
+                {'error': 'La factura debe estar revisada o devuelta para ser cargada en Dirección Financiera'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         observaciones = (request.data.get('observaciones') or '').strip()
         estado_anterior = factura.estado
 
-        factura.estado = 'Cargada'
+        factura.estado = ESTADO_CARGADA
         factura.fecha_cargue = timezone.now().date()
         factura.etapa_actual = 'Cargue Formal'
         factura.fecha_inicio_etapa = factura.fecha_cargue
@@ -1237,14 +1319,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura=factura,
             accion='Factura cargada en direcciÃ³n financiera',
             estado_anterior=estado_anterior,
-            estado_nuevo='Cargada',
+            estado_nuevo=ESTADO_CARGADA,
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Cargada')
+        self._notificar_transicion(factura, estado_anterior, ESTADO_CARGADA)
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -1256,16 +1338,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Enviar una factura cargada a RectorÃ­a para autorizaciÃ³n final."""
         factura = self.get_object()
 
-        if factura.estado != 'Cargada':
+        if not _estado_matches(factura.estado, ESTADO_CARGADA):
             return Response(
-                {'error': 'La factura debe estar cargada para enviarla a RectorÃ­a'},
+                {'error': 'La factura debe estar cargada para enviarla a Rectoría'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         observaciones = (request.data.get('observaciones') or '').strip()
         estado_anterior = factura.estado
 
-        factura.estado = 'Enviada RectorÃ­a'
+        factura.estado = ESTADO_ENVIADA_RECTORIA
         factura.fecha_envio_rectoria = timezone.now().date()
         factura.etapa_actual = 'AutorizaciÃ³n RectorÃ­a'
         factura.fecha_inicio_etapa = factura.fecha_envio_rectoria
@@ -1282,14 +1364,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura=factura,
             accion='Factura enviada a rectorÃ­a',
             estado_anterior=estado_anterior,
-            estado_nuevo='Enviada RectorÃ­a',
+            estado_nuevo=ESTADO_ENVIADA_RECTORIA,
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Enviada RectorÃ­a')
+        self._notificar_transicion(factura, estado_anterior, ESTADO_ENVIADA_RECTORIA)
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -1301,16 +1383,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Autorizar una factura desde RectorÃ­a para continuar con tesorerÃ­a."""
         factura = self.get_object()
 
-        if factura.estado != 'Enviada RectorÃ­a':
+        if not _estado_matches(factura.estado, ESTADO_ENVIADA_RECTORIA):
             return Response(
-                {'error': 'La factura debe estar enviada a RectorÃ­a para autorizarla'},
+                {'error': 'La factura debe estar enviada a Rectoría para autorizarla'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         observaciones = (request.data.get('observaciones') or '').strip()
         estado_anterior = factura.estado
 
-        factura.estado = 'Autorizada'
+        factura.estado = ESTADO_AUTORIZADA
         factura.fecha_autorizacion = timezone.now().date()
         factura.etapa_actual = 'AutorizaciÃ³n RectorÃ­a'
         factura.fecha_inicio_etapa = factura.fecha_autorizacion
@@ -1327,14 +1409,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura=factura,
             accion='Factura autorizada por rectorÃ­a',
             estado_anterior=estado_anterior,
-            estado_nuevo='Autorizada',
+            estado_nuevo=ESTADO_AUTORIZADA,
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Autorizada')
+        self._notificar_transicion(factura, estado_anterior, ESTADO_AUTORIZADA)
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -1346,9 +1428,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Rechazar una factura desde RectorÃ­a y devolverla a DirecciÃ³n Financiera."""
         factura = self.get_object()
 
-        if factura.estado != 'Enviada RectorÃ­a':
+        if not _estado_matches(factura.estado, ESTADO_ENVIADA_RECTORIA):
             return Response(
-                {'error': 'La factura debe estar enviada a RectorÃ­a para rechazarla'},
+                {'error': 'La factura debe estar enviada a Rectoría para rechazarla'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -1360,7 +1442,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         estado_anterior = factura.estado
-        factura.estado = 'Rechazada por RectorÃ­a'
+        factura.estado = ESTADO_RECHAZADA_POR_RECTORIA
         factura.etapa_actual = 'CorrecciÃ³n DirecciÃ³n Financiera'
         factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = None
@@ -1382,14 +1464,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura=factura,
             accion='Factura rechazada por rectorÃ­a',
             estado_anterior=estado_anterior,
-            estado_nuevo='Rechazada por RectorÃ­a',
+            estado_nuevo=ESTADO_RECHAZADA_POR_RECTORIA,
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=motivo,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Rechazada por RectorÃ­a')
+        self._notificar_transicion(factura, estado_anterior, ESTADO_RECHAZADA_POR_RECTORIA)
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -1789,7 +1871,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             with transaction.atomic():
                 factura.numero_transaccion = numero_transaccion
                 factura.fecha_pago_aplicado = fecha_pago_parsed or timezone.now().date()
-                factura.estado = 'Pago Aplicado'
+                factura.fecha_comprobante = factura.fecha_pago_aplicado
+                factura.estado = 'Pagada'
                 factura.etapa_actual = 'Pago Aplicado'
                 factura.fecha_inicio_etapa = factura.fecha_pago_aplicado
                 factura.usuario_responsable = request.user
@@ -1819,16 +1902,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
                 models.HistorialFactura.objects.create(
                     factura=factura,
-                    accion='Pago aplicado registrado',
+                    accion='Pago aplicado y factura pagada',
                     estado_anterior=estado_anterior,
-                    estado_nuevo='Pago Aplicado',
+                    estado_nuevo='Pagada',
                     usuario=request.user,
                     usuario_nombre=request.user.nombre,
                     usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
                     observacion=observaciones or None,
                 )
 
-                self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
+                self._notificar_transicion(factura, estado_anterior, 'Pagada')
         except IntegrityError:
             return Response(
                 {'error': 'El nÃºmero de transacciÃ³n bancaria ya estÃ¡ registrado en otra factura.'},
@@ -1859,30 +1942,25 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='generar_comprobante')
     def generar_comprobante(self, request, pk=None):
-        """Generar comprobante de egreso y cerrar la factura."""
+        """Compatibilidad: cerrar facturas antiguas en Pago Aplicado como Pagada."""
         factura = self.get_object()
 
-        if factura.estado != 'Pago Aplicado':
+        if factura.estado not in ['Pago Aplicado', 'Pagada']:
             return Response(
-                {'error': 'La factura debe estar con pago aplicado'},
+                {'error': 'La factura debe estar con pago aplicado o pagada'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         numero_comprobante = (request.data.get('numero_comprobante') or '').strip()
         observaciones = (request.data.get('observaciones') or '').strip()
 
-        if not numero_comprobante:
-            return Response(
-                {'error': 'Debe registrar el nÃºmero de comprobante de egreso'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         estado_anterior = factura.estado
 
-        factura.numero_comprobante = numero_comprobante
-        factura.fecha_comprobante = timezone.now().date()
+        if numero_comprobante:
+            factura.numero_comprobante = numero_comprobante
+        factura.fecha_comprobante = factura.fecha_comprobante or factura.fecha_pago_aplicado or timezone.now().date()
         factura.estado = 'Pagada'
-        factura.etapa_actual = 'Comprobante de Egreso'
+        factura.etapa_actual = 'Pago Aplicado'
         factura.fecha_inicio_etapa = factura.fecha_comprobante
         factura.usuario_responsable = request.user
 
@@ -1895,7 +1973,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         models.HistorialFactura.objects.create(
             factura=factura,
-            accion='Comprobante de egreso generado',
+            accion='Factura marcada como pagada',
             estado_anterior=estado_anterior,
             estado_nuevo='Pagada',
             usuario=request.user,
@@ -1913,20 +1991,22 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='comprobante_pdf')
     def comprobante_pdf(self, request, pk=None):
-        """Generar PDF del comprobante de egreso con la informacion de la factura."""
+        """Compatibilidad: entregar el expediente unificado de la factura pagada."""
         factura = self.get_object()
 
         if factura.estado not in ['Pago Aplicado', 'Pagada']:
             return Response(
-                {'error': 'La factura debe estar en pago aplicado o pagada para descargar el comprobante.'},
+                {'error': 'La factura debe estar en pago aplicado o pagada para descargar el expediente.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if not factura.numero_comprobante:
-            return Response(
-                {'error': 'Debe generar el comprobante antes de descargarlo.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        scope = request.query_params.get('scope') or 'tesoreria'
+        documentos = self._documentos_filtrados_por_scope(factura, scope)
+        content = self._pdf_consolidado_documentos(factura, documentos, scope)
+        filename = f"Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.pdf"
+        response = HttpResponse(content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
         proveedor = factura.proveedor
         departamento = factura.departamento
@@ -2238,17 +2318,22 @@ class FacturaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
         """Obtener estadÃ­sticas de facturas"""
-        total = models.Factura.objects.count()
+        queryset = models.Factura.objects.all()
+        rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
+        if rol_nombre == 'Funcionario':
+            queryset = queryset.filter(estado__in=['Recibida', 'Registrada'])
+
+        total = queryset.count()
         por_estado = {}
         estados = [choice[0] for choice in models.Factura.ESTADO_CHOICES]
         
         for estado in estados:
-            count = models.Factura.objects.filter(estado=estado).count()
+            count = queryset.filter(estado=estado).count()
             if count > 0:
                 por_estado[estado] = count
 
-        vencidas = models.Factura.objects.filter(indicador_riesgo='vencida').count()
-        atrasadas = models.Factura.objects.filter(indicador_riesgo='atrasada').count()
+        vencidas = queryset.filter(indicador_riesgo='vencida').count()
+        atrasadas = queryset.filter(indicador_riesgo='atrasada').count()
 
         return Response({
             'total_facturas': total,

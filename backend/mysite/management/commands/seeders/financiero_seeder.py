@@ -8,6 +8,7 @@ import re
 from django.utils import timezone
 from usuarios.models import Rol, Usuario
 from componentes.models import Componente, ComponenteRol
+from .financiero_facturas_stress_seeder import create_facturas_stress_data
 from financiero.models import (
     Departamento,
     ParametroSLA,
@@ -35,6 +36,7 @@ def create_financiero_data(out, sty):
     _seed_sla(out, sty)
     _seed_parametros(out, sty)
     _seed_usuarios_prueba(roles, out, sty)
+    create_facturas_stress_data(out, sty)
 
     out.write(sty.SUCCESS('[Financiero] Datos financieros cargados exitosamente.'))
 
@@ -88,7 +90,7 @@ def _seed_componentes(out, sty):
         ("Alistar Pagos", "Alistamiento de pagos"),
         ("Enviar Direccion Financiera", "Envio a direccion financiera"),
         ("Registrar Pago Aplicado", "Registro de pago aplicado"),
-        ("Generar Comprobante Egreso", "Generacion de comprobante de egreso"),
+        ("Factura Pagada", "Consulta y descarga de expediente de facturas pagadas"),
 
         # Auditoria
         ("Dashboard Auditoria", "Dashboard del rol Auditoria"),
@@ -158,7 +160,7 @@ def _seed_permisos(roles, componentes, out, sty):
             "Alistar Pagos",
             "Enviar Direccion Financiera",
             "Registrar Pago Aplicado",
-            "Generar Comprobante Egreso",
+            "Factura Pagada",
             "Consultar Facturas",
             "Gestión de Facturas",
         ],
@@ -405,8 +407,7 @@ def _seed_sla(out, sty):
         ('Control Previo', 'Auditoría', 4, 'Control previo de auditoría'),
         ('Cargue Formal', 'Dirección Financiera', 2, 'Cargue para autorización'),
         ('Autorización de Pago', 'Rectoría', 3, 'Autorización por Rectoría'),
-        ('Aplicación de Pago', 'Tesorería', 1, 'Ejecución de pago'),
-        ('Generación Comprobante', 'Tesorería', 1, 'Comprobante de egreso'),
+        ('Aplicación de Pago', 'Tesorería', 1, 'Ejecución de pago y cierre de factura pagada'),
     ]
 
     out.write(sty.NOTICE('\n  Parámetros SLA:'))

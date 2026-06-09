@@ -8,7 +8,41 @@ export interface FacturaRevision extends SharedFacturaDetail {
   nit: string;
   fechaEnvio: string;
   cuentaContable: string;
+  puedeCargarYEnviar: boolean;
+  yaEnviadaRectoria: boolean;
 }
+
+const ESTADOS_VISIBLES_DIRECCION_FINANCIERA = new Set([
+  'Revisada Dir. Financiera',
+  'Rechazada por Rectoría',
+  'Rechazada por RectorÃ­a',
+  'Devuelta',
+  'Cargada',
+  'Enviada Rectoría',
+  'Enviada RectorÃ­a',
+  'Enviada Rectoria',
+  'Enviada RectorÃƒÂ­a',
+]);
+
+const ESTADOS_GESTIONABLES = new Set([
+  'Revisada Dir. Financiera',
+  'Rechazada por Rectoría',
+  'Rechazada por RectorÃ­a',
+  'Devuelta',
+]);
+
+const ESTADOS_ENVIADA_RECTORIA = new Set([
+  'Enviada Rectoría',
+  'Enviada RectorÃ­a',
+  'Enviada Rectoria',
+  'Enviada RectorÃƒÂ­a',
+]);
+
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
 
 export function useRevisarPagos() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
@@ -32,6 +66,7 @@ export function useRevisarPagos() {
     fechaFin: '',
     montoMin: '',
     montoMax: '',
+    orden: 'recientes',
   });
 
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
@@ -47,8 +82,10 @@ export function useRevisarPagos() {
       ...base,
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
-      fechaEnvio: factura.fecha_aprobacion_auditoria ?? factura.fecha_recepcion ?? '',
+      fechaEnvio: factura.fecha_aprobacion_auditoria ?? factura.fecha_recepcion ?? factura.fecha_modificacion ?? '',
       cuentaContable: factura.cuenta_contable ? `${factura.cuenta_contable.codigo} - ${factura.cuenta_contable.nombre}` : '',
+      puedeCargarYEnviar: ESTADOS_GESTIONABLES.has(factura.estado),
+      yaEnviadaRectoria: ESTADOS_ENVIADA_RECTORIA.has(factura.estado),
       documentos: docs.map((d) => ({
         id: String(d.id),
         nombre: d.nombre_archivo,
@@ -63,18 +100,11 @@ export function useRevisarPagos() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas recibidas en Direccion Financiera, devueltas y rechazadas por Rectoria
-      const [recibidasDF, devueltas, rechazadasRectoria] = await Promise.all([
-        facturasService.getByEstado('Revisada Dir. Financiera'),
-        facturasService.getByEstado('Devuelta'),
-        facturasService.getByEstado('Rechazada por Rectoría'),
-      ]);
-      const lista = [...recibidasDF, ...devueltas, ...rechazadasRectoria].filter(
-        (factura, index, arr) => arr.findIndex((f) => f.id === factura.id) === index
-      );
-      
+      const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
+      const lista = toList<Factura>(response).filter((factura) => ESTADOS_VISIBLES_DIRECCION_FINANCIERA.has(factura.estado));
+
       setFacturas(lista);
-      
+
       const docsResults = await Promise.all(
         lista.map((f) =>
           documentosService
@@ -89,30 +119,43 @@ export function useRevisarPagos() {
       });
       setDocsMap(map);
     } catch {
-      setError('No se pudo cargar las facturas. Verifique la conexión.');
+      setError('No se pudo cargar las facturas. Verifique la conexion.');
     } finally {
       setCargando(false);
     }
   }, []);
 
   useEffect(() => {
-    cargarFacturas();
+    void cargarFacturas();
   }, [cargarFacturas]);
 
+  const facturasRevision = useMemo(() => {
+    return facturas.map((f) => facturaToRevision(f, docsMap[f.id] ?? []));
+  }, [facturas, docsMap]);
+
+  const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
+
   const facturasFiltradas = useMemo(() => {
-    return facturas
-      .map((f) => facturaToRevision(f, docsMap[f.id] ?? []))
-      .filter((factura) => {
-        if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-        if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-        if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-        if (filtros.fechaInicio && factura.fechaEnvio < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && factura.fechaEnvio > filtros.fechaFin) return false;
-        if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-        if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
-        return true;
-      });
-  }, [facturas, docsMap, filtros]);
+    const filtradas = facturasRevision.filter((factura) => {
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
+      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && factura.fechaEnvio < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && factura.fechaEnvio > filtros.fechaFin) return false;
+      if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
+      if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+      return true;
+    });
+
+    switch (filtros.orden) {
+      case 'antiguos':
+        return filtradas.sort((a, b) => parseFecha(a.fechaEnvio) - parseFecha(b.fechaEnvio));
+      case 'sla':
+        return filtradas.sort((a, b) => (b.diasTranscurridos || 0) - (a.diasTranscurridos || 0));
+      default:
+        return filtradas.sort((a, b) => parseFecha(b.fechaEnvio) - parseFecha(a.fechaEnvio));
+    }
+  }, [facturasRevision, filtros]);
 
   const abrirDetalle = (factura: FacturaRevision) => {
     setFacturaSeleccionada(factura);
@@ -134,19 +177,21 @@ export function useRevisarPagos() {
 
   const aprobarFactura = async () => {
     if (!facturaSeleccionada?.facturaId) return;
-    
+
+    if (!facturaSeleccionada.puedeCargarYEnviar) {
+      showToast('err', 'Esta factura ya fue enviada a Rectoria y no puede cargarse nuevamente.');
+      return;
+    }
+
     setProcesando(true);
     try {
-      // Cambiar estado a "Cargada" (lista para autorizacion en Rectoria)
-      await facturasService.cargarDireccionFinanciera(
-        facturaSeleccionada.facturaId,
-        observaciones || undefined
-      );
-      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} cargada para autorizacion en Rectoria.`);
+      await facturasService.cargarDireccionFinanciera(facturaSeleccionada.facturaId, observaciones || undefined);
+      await facturasService.enviarRectoria(facturaSeleccionada.facturaId, observaciones || undefined);
+      showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} cargada y enviada a Rectoria.`);
       cerrarDecision();
-      cargarFacturas();
+      void cargarFacturas();
     } catch {
-      showToast('err', 'Error al aprobar la factura. Intente de nuevo.');
+      showToast('err', 'Error al cargar y enviar la factura. Intente de nuevo.');
     } finally {
       setProcesando(false);
     }
@@ -154,24 +199,23 @@ export function useRevisarPagos() {
 
   const devolverFactura = async () => {
     if (!facturaSeleccionada?.facturaId) return;
-    
+
     if (!observaciones.trim() || observaciones.trim().length < 10) {
-      showToast('err', 'El motivo de devolución es requerido (mínimo 10 caracteres).');
+      showToast('err', 'El motivo de rechazo es requerido (minimo 10 caracteres).');
       return;
     }
 
     setProcesando(true);
     try {
-      // Devolver a tesorería
       await facturasService.update(facturaSeleccionada.facturaId, {
         estado: 'Devuelta',
         observaciones: observaciones.trim(),
       });
       showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} devuelta a Tesoreria.`);
       cerrarDecision();
-      cargarFacturas();
+      void cargarFacturas();
     } catch {
-      showToast('err', 'Error al devolver la factura. Intente de nuevo.');
+      showToast('err', 'Error al rechazar la factura. Intente de nuevo.');
     } finally {
       setProcesando(false);
     }
@@ -179,6 +223,7 @@ export function useRevisarPagos() {
 
   return {
     facturas,
+    facturasRevision,
     facturasFiltradas,
     docsMap,
     cargando,

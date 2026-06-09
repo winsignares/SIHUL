@@ -121,20 +121,24 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl"
       >
         <div className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full bg-red-500/50 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-amber-400/20 blur-2xl" />
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Panel de Administración Financiera</h1>
-            <p className="text-red-100 text-sm mt-1">Monitoreo operativo, alertas y control integral del flujo financiero.</p>
+            <p className="text-red-100 text-sm mt-1">Monitoreo operativo, alertas y control integral del flujo financiero desde una vista ejecutiva más corta y accionable.</p>
             <p className="text-red-200/90 text-xs mt-2">
               {lastUpdated ? `Última actualización: ${lastUpdated.toLocaleString('es-CO')}` : 'Sincronizando información...'}
             </p>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
-              Salud operativa: {saludOperativa.toFixed(0)}%
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+                Salud operativa: {saludOperativa.toFixed(0)}%
+              </span>
+              <span className="rounded-full bg-white/10 px-3 py-1">En proceso: {resumen?.facturas_en_proceso ?? 0}</span>
+              <span className="rounded-full bg-white/10 px-3 py-1">Riesgo: {resumen?.facturas_riesgo ?? 0}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

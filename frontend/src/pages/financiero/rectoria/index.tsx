@@ -4,7 +4,7 @@ import AutorizarPagos from './AutorizarPagos';
 import { useRectoriaDashboard } from '../../../hooks/financiero/rectoria';
 
 export default function RectoriaDashboard() {
-  const { activeView, goToPendientes, goToAutorizar } = useRectoriaDashboard();
+  const { activeView, goToAutorizar } = useRectoriaDashboard();
 
   const renderContent = () => {
     switch (activeView) {
@@ -15,7 +15,6 @@ export default function RectoriaDashboard() {
       default:
         return (
           <RectoriaHome
-            onGoToPendientes={goToPendientes}
             onGoToAutorizar={goToAutorizar}
           />
         );
