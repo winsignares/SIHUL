@@ -17,9 +17,13 @@ import {
   Eye,
   Send,
   AlertCircle,
+  FileText,
   RefreshCw,
   Loader2,
   AlertTriangle,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Dialog,
@@ -31,30 +35,32 @@ import {
 import { Badge } from '../../../share/badge';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { SlaIndicator } from '../../../share/sla-indicator';
 import { useContabilidadCausarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 export default function CausarFacturas() {
   const {
     facturas,
-    cuentasContables,
-    centrosCosto,
-    docsMap,
     cargando,
     error,
     facturaSeleccionada,
     accion,
-    cuentaId,
-    centroId,
     observaciones,
+    soporteCausacion,
     procesando,
     toast,
     modalFactura,
     filtros,
     facturasFiltradas,
-    setCuentaId,
-    setCentroId,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     setObservaciones,
+    setSoporteCausacion,
     setModalFactura,
     setFiltros,
     cargarDatos,
@@ -116,7 +122,7 @@ export default function CausarFacturas() {
               <CheckCircle2 className="w-5 h-5" /> Causar Factura
             </DialogTitle>
             <DialogDescription>
-              Asigne la cuenta contable y el centro de costo. Se registrara la causacion contable.
+              Adjunte el soporte PDF de causacion en Seven para continuar con el proceso contable.
             </DialogDescription>
           </DialogHeader>
           {facturaSeleccionada && (
@@ -129,37 +135,14 @@ export default function CausarFacturas() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="cuenta-contable" className="text-sm font-semibold text-slate-700">* Cuenta Contable (Requerida)</label>
-                <select
-                  id="cuenta-contable"
-                  aria-label="Seleccionar cuenta contable"
-                  value={cuentaId}
-                  onChange={(e) => setCuentaId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Seleccionar cuenta contable...</option>
-                  {cuentasContables.length === 0 && <option value="" disabled>Sin cuentas disponibles</option>}
-                  {cuentasContables.map((c) => (
-                    <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="centro-costo" className="text-sm font-semibold text-slate-700">Centro de Costo (Opcional)</label>
-                <select
-                  id="centro-costo"
-                  aria-label="Seleccionar centro de costo"
-                  value={centroId}
-                  onChange={(e) => setCentroId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-800 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Seleccionar centro de costo...</option>
-                  {centrosCosto.length === 0 && <option value="" disabled>Sin centros disponibles</option>}
-                  {centrosCosto.map((c) => (
-                    <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
-                  ))}
-                </select>
+                <label className="text-sm font-semibold text-slate-700">* Soporte de causacion en Seven (PDF)</label>
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => setSoporteCausacion(e.target.files?.[0] || null)}
+                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+                />
+                {soporteCausacion && <p className="text-xs text-slate-500">Archivo seleccionado: {soporteCausacion.name}</p>}
               </div>
 
               <div className="space-y-2">
@@ -190,7 +173,7 @@ export default function CausarFacturas() {
             <DialogTitle className="flex items-center gap-2 text-red-800">
               <AlertTriangle className="w-5 h-5" /> Devolver Factura
             </DialogTitle>
-            <DialogDescription>Indique el motivo de devolucion. El funcionario recibira la observacion.</DialogDescription>
+            <DialogDescription>La factura volverá al funcionario con su observación. Este campo es obligatorio.</DialogDescription>
           </DialogHeader>
           {facturaSeleccionada && (
             <div className="space-y-4">
@@ -231,9 +214,9 @@ export default function CausarFacturas() {
             estados={[]}
             proveedores={Array.from(new Set(facturas.map((f) => f.proveedor?.razon_social ?? '').filter(Boolean)))}
             areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
-            showMontoFilter={true}
             showFechaFilter={true}
             showAreaFilter={true}
+            showEstadoFilter={false}
           />
         </CardContent>
       </Card>
@@ -244,7 +227,7 @@ export default function CausarFacturas() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-800">Facturas Radicadas Pendientes de Causacion</h2>
-              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Radicada</em></p>
+              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Radicada</em> - Página {currentPage} de {totalPages || 1}</p>
             </div>
           </div>
 
@@ -277,7 +260,7 @@ export default function CausarFacturas() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasFiltradas.map((factura) => {
+                  {facturasPaginadas.map((factura) => {
                     const dias = factura.dias_transcurridos ?? 0;
                     const diasColor = getDiasColor(dias);
                     return (
@@ -293,17 +276,35 @@ export default function CausarFacturas() {
                         <TableCell className="font-semibold text-slate-800">${Number(factura.valor_total).toLocaleString('es-CO')}</TableCell>
                         <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
                         <TableCell className="text-slate-600">{displayDate(factura.fecha_radicacion)}</TableCell>
-                        <TableCell><span className={diasColor}>{dias}d</span></TableCell>
+                        <TableCell><SlaIndicator dias={dias} objetivo={factura.sla_objetivo_dias} className={diasColor} compact /></TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700">
-                              <Eye className="w-3 h-3 mr-1" /> Detalle
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="outline" onClick={() => openDetalle(factura)} className="border-slate-300 text-slate-700 p-2" title="Detalle">
+                              <Eye className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50">
-                              <XCircle className="w-3 h-3 mr-1" /> Devolver
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-50 p-2"
+                              title="Ver documentos"
+                            >
+                              <FileText className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" onClick={() => iniciarAccion(factura, 'causar')} className="bg-green-600 hover:bg-green-700 text-white">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Causar
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                              className="border-slate-300 text-slate-700 hover:bg-slate-50 p-2"
+                              title="Descargar documentos"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50 p-2" title="Devolver">
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" onClick={() => iniciarAccion(factura, 'causar')} className="bg-green-600 hover:bg-green-700 text-white p-2" title="Causar">
+                              <CheckCircle2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -312,6 +313,63 @@ export default function CausarFacturas() {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Controles de Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+              <div className="text-sm text-slate-600">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, facturasFiltradas.length)} de {facturasFiltradas.length} resultados
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        size="sm"
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={currentPage === pageNum ? "bg-slate-900 text-white hover:bg-slate-800" : "border-slate-300 text-slate-700 hover:bg-slate-50"}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

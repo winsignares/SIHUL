@@ -9,11 +9,13 @@ import { espacioService, type EspacioFisico } from '../../services/espacios/espa
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { resolveApiBaseUrl } from '../../core/backendUrl';
 import { userService } from '../../services/users/authService';
 import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
 
 const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios';
+const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 export interface Docente {
     id: number;
@@ -638,7 +640,6 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const apiUrl = import.meta.env.VITE_API_URL;
             const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
                 method: 'POST',
                 headers: {
@@ -675,7 +676,6 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const apiUrl = import.meta.env.VITE_API_URL;
             const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
                 method: 'POST',
                 headers: {

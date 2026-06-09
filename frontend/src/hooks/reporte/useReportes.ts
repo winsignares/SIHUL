@@ -22,6 +22,7 @@ import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { userService } from '../../services/users/authService';
+import { resolveApiBaseUrl } from '../../core/backendUrl';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const REPORTES_PERIODO_CACHE_KEY = 'reporte-reportes-periodo';
@@ -31,6 +32,7 @@ const REPORTES_DISPONIBILIDAD_CACHE_KEY = 'reporte-reportes-disponibilidad';
 const REPORTES_CAPACIDAD_CACHE_KEY = 'reporte-reportes-capacidad';
 
 const PERIODO_DEFAULT = '2025-1';
+const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 // Datos por defecto mientras se cargan los datos reales
 const datosOcupacionDefault: DatoOcupacionJornada[] = [
@@ -373,7 +375,6 @@ export function useReportes() {
         try {
             // Reporte de ocupación (jornadas + espacios más usados) con diseño del backend
             if (tipoReporte === 'ocupacion') {
-                const apiUrl = import.meta.env.VITE_API_URL;
 
                 const response = await fetch(`${apiUrl}/espacios/reporte/ocupacion/pdf/`, {
                     method: 'POST',
@@ -404,7 +405,6 @@ export function useReportes() {
 
             // Reporte de disponibilidad (estilo backend)
             if (tipoReporte === 'disponibilidad') {
-                const apiUrl = import.meta.env.VITE_API_URL;
 
                 const response = await fetch(`${apiUrl}/espacios/reporte/disponibilidad/pdf/`, {
                     method: 'POST',
@@ -435,7 +435,6 @@ export function useReportes() {
 
             // Reporte de capacidad (estilo backend)
             if (tipoReporte === 'capacidad') {
-                const apiUrl = import.meta.env.VITE_API_URL;
 
                 const response = await fetch(`${apiUrl}/espacios/reporte/capacidad/pdf/`, {
                     method: 'POST',
@@ -466,7 +465,6 @@ export function useReportes() {
 
             // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
             if (tipoReporte === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 // Cargar todos los horarios extendidos del backend
                 const horariosResponse = await horarioService.listExtendidos();
@@ -506,7 +504,6 @@ export function useReportes() {
 
             // Si es horarios-docente, usar el endpoint del backend para docentes
             if (tipoReporte === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 // Cargar todos los horarios extendidos del backend
                 const horariosResponse = await horarioService.listExtendidos();
@@ -644,7 +641,6 @@ export function useReportes() {
         try {
             // Si es horarios-programa, usar el endpoint del backend como en Centro de Horarios
             if (tipoReporte === 'horarios-programa') {
-                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 // Cargar todos los horarios extendidos del backend
                 const horariosResponse = await horarioService.listExtendidos();
@@ -684,7 +680,6 @@ export function useReportes() {
 
             // Si es horarios-docente, usar el endpoint del backend para docentes
             if (tipoReporte === 'horarios-docente') {
-                const apiUrl = import.meta.env.VITE_API_URL;
                 
                 try {
                     // Cargar todos los horarios extendidos del backend

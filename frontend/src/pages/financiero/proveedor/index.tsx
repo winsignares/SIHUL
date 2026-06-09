@@ -3,12 +3,8 @@ import { useEffect, useState } from 'react';
 import {
   FileText,
   Send,
-  Clock,
-  CheckCircle2,
   AlertCircle,
   Building2,
-  TrendingUp,
-  Receipt,
 } from 'lucide-react';
 import EnviarFactura from './EnviarFactura';
 import MisFacturas from './MisFacturas';
@@ -65,7 +61,7 @@ export default function ProveedorDashboard() {
 }
 
 function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisFacturas }: ProveedorDashboardHomeProps) {
-  const { loading, stats, recentFacturas } = useProveedorHome(miProveedor?.id);
+  const { loading, stats, recentFacturas, hasMoreRecent } = useProveedorHome(miProveedor?.id);
 
   return (
     <div className="space-y-6">
@@ -110,64 +106,43 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.08 }}
-              className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
+              className="bg-slate-50 dark:bg-slate-800 rounded-xl p-5 shadow-md border-2 border-slate-300 dark:border-slate-600 hover:shadow-lg transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className={`p-2.5 rounded-lg bg-gradient-to-br ${stat.color}`}>
                   <Icon className={stat.iconColor} size={20} />
                 </div>
               </div>
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{stat.title}</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">{stat.title}</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
                 {loading ? '—' : stat.value}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{stat.trend}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">{stat.trend}</p>
             </motion.div>
           );
         })}
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
+          className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6 shadow-md border-2 border-slate-300 dark:border-slate-600"
         >
           <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <Send className="text-orange-600" size={20} />
+            <Send className="text-red-700" size={20} />
             Enviar Nueva Factura
           </h3>
-          <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
+          <p className="text-slate-700 dark:text-slate-200 text-sm mb-4 font-medium">
             Completa el formulario para enviar una factura al área de cuentas por pagar de la universidad.
           </p>
           <button
             onClick={onGoToEnviar}
-            className="w-full px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium text-sm transition-colors"
+            className="w-full px-4 py-3 bg-red-700 hover:bg-red-800 text-white rounded-lg font-semibold text-sm transition-colors shadow-md"
           >
             Enviar Factura
-          </button>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.42 }}
-          className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
-        >
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <FileText className="text-blue-600" size={20} />
-            Consultar Mis Facturas
-          </h3>
-          <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-            Ve el estado actualizado de todas tus facturas enviadas y su avance en el proceso de pago.
-          </p>
-          <button
-            onClick={onGoToMisFacturas}
-            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
-          >
-            Ver Mis Facturas
           </button>
         </motion.div>
       </div>
@@ -177,13 +152,21 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
+        className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6 shadow-md border-2 border-slate-300 dark:border-slate-600"
       >
-        <div className="flex items-center gap-2 mb-4">
-          <AlertCircle className="text-red-600" size={20} />
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white">Actividad Reciente</h3>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="text-red-700" size={20} />
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Actividad Reciente</h3>
+          </div>
+          <button
+            onClick={onGoToMisFacturas}
+            className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
+          >
+            Consultar todas
+          </button>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Últimas facturas enviadas</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 font-medium">Últimas facturas enviadas</p>
 
         <div className="space-y-3">
           {loading ? (
@@ -199,7 +182,7 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
               return (
                 <div
                   key={f.id}
-                  className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  className="flex items-center justify-between p-4 bg-slate-100 dark:bg-slate-700/70 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-300 dark:border-slate-600"
                 >
                   <div className="flex items-start gap-3 flex-1">
                     <div className="w-9 h-9 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -207,11 +190,13 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 dark:text-white text-sm">{f.numero_factura}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{f.descripcion}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 truncate font-medium">
+                        {f.observaciones || f.descripcion || 'Sin identificacion cargada'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
-                    <p className="font-semibold text-slate-900 dark:text-white text-sm">
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">
                       ${Number(f.valor_total || 0).toLocaleString()}
                     </p>
                     <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${isOk ? 'bg-green-100 text-green-700' : isWarn ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>

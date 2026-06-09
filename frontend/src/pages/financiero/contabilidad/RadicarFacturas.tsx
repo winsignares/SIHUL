@@ -28,11 +28,16 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { SlaIndicator } from '../../../share/sla-indicator';
 import { useContabilidadRadicarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 export default function RadicarFacturas() {
   const {
@@ -43,12 +48,21 @@ export default function RadicarFacturas() {
     facturaSeleccionada,
     accion,
     observaciones,
+    numeroOperacionContable,
+    consecutivoOperacion,
     procesando,
     toast,
     modalFactura,
     filtros,
     facturasFiltradas,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     setObservaciones,
+    setNumeroOperacionContable,
+    setConsecutivoOperacion,
     setFiltros,
     setModalFactura,
     cargarFacturas,
@@ -127,6 +141,24 @@ export default function RadicarFacturas() {
                 <div><p className="text-slate-500">Área</p><p className="font-bold">{displayText(facturaSeleccionada.departamento?.nombre)}</p></div>
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Numero de operacion *</label>
+                <input
+                  value={numeroOperacionContable}
+                  onChange={(e) => setNumeroOperacionContable(e.target.value)}
+                  placeholder="Ej: OP-2026-A1"
+                  className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Consecutivo *</label>
+                <input
+                  value={consecutivoOperacion}
+                  onChange={(e) => setConsecutivoOperacion(e.target.value)}
+                  placeholder="Ej: CONS-00451"
+                  className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Observaciones (Opcional)</label>
                 <Textarea
                   value={observaciones}
@@ -153,7 +185,7 @@ export default function RadicarFacturas() {
               <AlertTriangle className="w-5 h-5" /> Devolver Factura
             </DialogTitle>
             <DialogDescription>
-              La factura volverá al funcionario con su observación. Este campo es <strong>obligatorio</strong>.
+              La factura volverá al proveedor para corrección. Este campo es <strong>obligatorio</strong>.
             </DialogDescription>
           </DialogHeader>
           {facturaSeleccionada && (
@@ -195,9 +227,9 @@ export default function RadicarFacturas() {
             estados={[]}
             proveedores={Array.from(new Set(facturas.map((f) => f.proveedor?.razon_social ?? '').filter(Boolean)))}
             areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
-            showMontoFilter={true}
             showFechaFilter={true}
             showAreaFilter={true}
+            showEstadoFilter={false}
           />
         </CardContent>
       </Card>
@@ -208,7 +240,7 @@ export default function RadicarFacturas() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-800">Facturas Pendientes de Radicación</h2>
-              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Recibida / Registrada</em></p>
+              <p className="text-sm text-slate-500">{facturasFiltradas.length} factura(s) en estado <em>Registrada</em> - Página {currentPage} de {totalPages || 1}</p>
             </div>
           </div>
 
@@ -242,7 +274,7 @@ export default function RadicarFacturas() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturasFiltradas.map((factura) => {
+                  {facturasPaginadas.map((factura) => {
                     const docs = docsMap[factura.id] ?? [];
                     const dias = factura.dias_transcurridos ?? 0;
                     const nivel = getSlaLevel(dias);
@@ -267,9 +299,9 @@ export default function RadicarFacturas() {
                         </TableCell>
                         <TableCell className="text-slate-600">{displayText(factura.departamento?.nombre)}</TableCell>
                         <TableCell className="text-slate-600">{displayDate(factura.fecha_recepcion)}</TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${diasColor(nivel)}`}>{dias}d</span>
-                        </TableCell>
+                          <TableCell>
+                            <SlaIndicator dias={dias} objetivo={factura.sla_objetivo_dias} className={diasColor(nivel)} compact />
+                          </TableCell>
                         <TableCell>
                           {docsOk ? (
                             <Badge className="bg-green-100 text-green-700 border border-green-200">
@@ -287,22 +319,39 @@ export default function RadicarFacturas() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Button size="sm" variant="outline" onClick={() => abrirDetalle(factura)} className="border-slate-300 text-slate-700">
-                              <Eye className="w-3 h-3 mr-1" /> Detalle
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="outline" onClick={() => abrirDetalle(factura)} className="border-slate-300 text-slate-700 p-2" title="Detalle">
+                              <Eye className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50">
-                              <XCircle className="w-3 h-3 mr-1" /> Devolver
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-50 p-2"
+                              title="Ver documentos"
+                            >
+                              <FileCheck className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                              className="border-slate-300 text-slate-700 hover:bg-slate-50 p-2"
+                              title="Descargar documentos"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => iniciarAccion(factura, 'devolver')} className="border-red-300 text-red-700 hover:bg-red-50 p-2" title="Devolver">
+                              <XCircle className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
                               onClick={() => iniciarAccion(factura, 'radicar')}
-                              className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:text-slate-500"
-                              title={!docsOk ? `Faltan: ${faltantes.join(', ')}` : ''}
+                              className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:text-slate-500 p-2"
+                              title={!docsOk ? `Faltan: ${faltantes.join(', ')}` : 'Radicar'}
                               disabled={!docsOk}
                             >
-                              <FileCheck className="w-3 h-3 mr-1" />
-                              Radicar
+                              <FileCheck className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -311,6 +360,63 @@ export default function RadicarFacturas() {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Controles de Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+              <div className="text-sm text-slate-600">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, facturasFiltradas.length)} de {facturasFiltradas.length} resultados
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        size="sm"
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={currentPage === pageNum ? "bg-slate-900 text-white hover:bg-slate-800" : "border-slate-300 text-slate-700 hover:bg-slate-50"}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

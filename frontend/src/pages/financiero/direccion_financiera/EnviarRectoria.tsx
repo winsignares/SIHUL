@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '../../../share/textarea';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
+import { SlaIndicator } from '../../../share/sla-indicator';
 import { useEnviarRectoria } from '../../../hooks/financiero/direccion_financiera';
 
 export default function EnviarRectoria() {
@@ -145,7 +146,7 @@ export default function EnviarRectoria() {
                     <TableCell><Calendar className="w-3 h-3 inline mr-1" />{factura.fechaRevision}</TableCell>
                     <TableCell>
                       <Badge className={factura.diasTranscurridos && factura.diasTranscurridos >= 2 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}>
-                        {factura.diasTranscurridos || 0}d
+                        <SlaIndicator dias={factura.diasTranscurridos || 0} objetivo={factura.slaObjetivoDias ?? null} compact />
                       </Badge>
                     </TableCell>
                     <TableCell>

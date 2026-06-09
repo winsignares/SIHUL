@@ -76,7 +76,6 @@ MIDDLEWARE = [
     'mysite.csrf_protection.JSONCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mysite.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
 ]
 
@@ -169,7 +168,15 @@ STATIC_URL = 'static/'
 
 # Media files (user-uploaded content)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'financiero' / 'media'
+MEDIA_ROOT = Path(
+    os.getenv(
+        'FINANCIERO_DOCUMENT_ROOT',
+        r'C:\Users\Harlem Hernandez\Documents\Trabajo - UL\Projects\Financiero Facturas',
+    )
+)
+FINANCIERO_DOCUMENT_NETWORK_ROOT = os.getenv('FINANCIERO_DOCUMENT_NETWORK_ROOT', '')
+FINANCIERO_DOCUMENT_NETWORK_USER = os.getenv('FINANCIERO_DOCUMENT_NETWORK_USER', '')
+FINANCIERO_DOCUMENT_NETWORK_PASSWORD = os.getenv('FINANCIERO_DOCUMENT_NETWORK_PASSWORD', '')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -220,6 +227,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8081",
     "http://127.0.0.1:8081",
+    "https://sihul.unilibre.edu.co",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -231,6 +239,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8081",
     "http://127.0.0.1:8081",
+    "https://sihul.unilibre.edu.co",
 ]
 
 SESSION_COOKIE_HTTPONLY = True
@@ -261,6 +270,8 @@ REST_FRAMEWORK = {
         'anon': API_THROTTLE_ANON,
     },
 }
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # ETL configurations
 ETL_PERIODO = os.getenv('ETL_PERIODO', '20261')

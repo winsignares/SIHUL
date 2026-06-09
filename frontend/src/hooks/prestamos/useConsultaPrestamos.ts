@@ -4,6 +4,18 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
+
+const DEFAULT_TIPOS_EVENTO = [
+    'Conferencia',
+    'Taller',
+    'Reunión',
+    'Simposio',
+    'Evento Cultural',
+    'Evento Deportivo',
+    'Examen Especial',
+    'Otro'
+];
 
 export function useConsultaPrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,17 +40,8 @@ export function useConsultaPrestamos() {
 
     const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number; nombre: string }>>([]);
-
-    const tiposEvento = [
-        'Conferencia',
-        'Taller',
-        'Reunión',
-        'Simposio',
-        'Evento Cultural',
-        'Evento Deportivo',
-        'Examen Especial',
-        'Otro'
-    ];
+    const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
+    const tiposEvento = tiposActividad.length > 0 ? tiposActividad.map(tipo => tipo.nombre) : DEFAULT_TIPOS_EVENTO;
 
     const recursosDisponibles = [
         'Proyector',
@@ -55,10 +58,11 @@ export function useConsultaPrestamos() {
         try {
             setLoading(true);
             
-            // Cargar préstamos y espacios en paralelo
-            const [prestamosResponse, espaciosResponse] = await Promise.all([
+            // Cargar préstamos, espacios y tipos de actividad en paralelo
+            const [prestamosResponse, espaciosResponse, tiposActividadResponse] = await Promise.all([
                 prestamoService.listarPrestamos(),
-                espacioService.list()
+                espacioService.list(),
+                tipoActividadService.listarTiposActividad()
             ]);
 
             // Transformar préstamos al formato UI
@@ -90,6 +94,7 @@ export function useConsultaPrestamos() {
                     .filter(e => e.estado === 'Disponible')
                     .map(e => ({ id: e.id!, nombre: e.nombre }))
             );
+            setTiposActividad(tiposActividadResponse.tipos_actividad);
         } catch (error) {
             showNotification({
                 message: `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -100,14 +105,13 @@ export function useConsultaPrestamos() {
         }
     }, [user]);
 
-    // Cargar datos iniciales
     useEffect(() => {
         loadData();
     }, [loadData]);
 
     const crearSolicitud = async () => {
         if (!nuevaSolicitud.espacio || !nuevaSolicitud.fecha || 
-            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo) {
+            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo || !nuevaSolicitud.tipoEvento) {
             showNotification({
                 message: 'Por favor complete todos los campos obligatorios',
                 type: 'error'
@@ -129,11 +133,21 @@ export function useConsultaPrestamos() {
                 return;
             }
 
+            const tipoActividadSeleccionada = tiposActividad.find(tipo => tipo.nombre === nuevaSolicitud.tipoEvento);
+
+            if (!tipoActividadSeleccionada) {
+                showNotification({
+                    message: 'Tipo de actividad no disponible. Intente nuevamente.',
+                    type: 'error'
+                });
+                return;
+            }
+
             await prestamoService.crearPrestamo({
                 espacio_id: espacioSeleccionado.id,
                 usuario_id: user?.id || null,
                 administrador_id: null,
-                tipo_actividad_id: 1,
+                tipo_actividad_id: tipoActividadSeleccionada.id,
                 fecha: nuevaSolicitud.fecha,
                 hora_inicio: nuevaSolicitud.horaInicio + ':00',
                 hora_fin: nuevaSolicitud.horaFin + ':00',

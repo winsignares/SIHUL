@@ -1,12 +1,17 @@
-﻿import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Button } from '../../../share/button';
-import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw, Loader2, Download } from 'lucide-react';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadMisPendientes } from '../../../hooks/financiero/contabilidad';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function MisPendientes() {
   const {
@@ -25,6 +30,20 @@ export default function MisPendientes() {
     proximasVencerCount,
     enTiempoCount,
   } = useContabilidadMisPendientes();
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(facturas.length / ITEMS_PER_PAGE));
+  const facturasPaginadas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return facturas.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, facturas]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [facturas.length]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   return (
     <>
@@ -43,7 +62,7 @@ export default function MisPendientes() {
               <div>
                 <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
                 <p className="text-red-100 text-sm">
-                  Facturas asignadas a contabilidad (Recibidas + Radicadas) — SLA: {SLA_DIAS} días
+                  Facturas Registradas pendientes de radicación — SLA: {SLA_DIAS} días
                 </p>
               </div>
             </div>
@@ -114,9 +133,9 @@ export default function MisPendientes() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-slate-800">Facturas Pendientes de Procesamiento</CardTitle>
+              <CardTitle className="text-slate-800">Facturas Pendientes de Radicación</CardTitle>
               <CardDescription>
-                Recibidas (pendientes de radicar) y Radicadas (pendientes de causar)
+                Solo se muestran facturas en estado <em>Registrada</em> con N° Radicado <em>Sin Asignar</em>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -147,11 +166,12 @@ export default function MisPendientes() {
                         <TableHead className="font-semibold text-slate-700">Estado</TableHead>
                         <TableHead className="font-semibold text-slate-700">Días</TableHead>
                         <TableHead className="font-semibold text-slate-700">Acción</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Ver</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Documentos</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Detalle</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {facturas.map((factura) => {
+                      {facturasPaginadas.map((factura) => {
                         const nivel = nivelRiesgo(factura.dias_transcurridos);
                         const colorDot =
                           nivel === 'vencido' ? 'bg-purple-700' :
@@ -203,6 +223,26 @@ export default function MisPendientes() {
                               </Badge>
                             </TableCell>
                             <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
+                                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Eye className="w-4 h-4 mr-1" /> Ver
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                                >
+                                  <Download className="w-4 h-4 mr-1" /> Descargar
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -217,6 +257,17 @@ export default function MisPendientes() {
                       })}
                     </TableBody>
                   </Table>
+                </div>
+              )}
+              {!cargando && facturas.length > 0 && (
+                <div className="mt-5">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={facturas.length}
+                  />
                 </div>
               )}
             </CardContent>

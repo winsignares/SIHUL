@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
@@ -149,7 +149,7 @@ export default function CentroContable() {
     return centro.departamento?.id ?? centro.departamento_id ?? null;
   };
 
-  const resolveDepartamentoNombre = (centro: CentroCosto) => {
+  const resolveDepartamentoNombre = useCallback((centro: CentroCosto) => {
     const departamentoValue = centro.departamento as unknown;
     if (typeof departamentoValue === 'string') return departamentoValue;
     if (departamentoValue && typeof departamentoValue === 'object' && 'nombre' in departamentoValue) {
@@ -157,7 +157,7 @@ export default function CentroContable() {
     }
     const departamentoId = resolveDepartamentoId(centro);
     return departamentoId ? departamentosById.get(departamentoId)?.nombre : undefined;
-  };
+  }, [departamentosById]);
 
   const fetchCuentas = async () => {
     setLoadingCuentas(true);
@@ -230,7 +230,7 @@ export default function CentroContable() {
         .filter(Boolean)
         .some((value) => normalizeText(String(value)).includes(query));
     });
-  }, [centros, centroSearch, centroTipoFilter, centroEstadoFilter, departamentosById]);
+  }, [centros, centroSearch, centroTipoFilter, centroEstadoFilter, resolveDepartamentoNombre]);
 
   const openNuevaCuenta = () => {
     setCuentaForm(initialCuentaForm);

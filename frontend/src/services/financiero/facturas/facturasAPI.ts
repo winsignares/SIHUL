@@ -21,15 +21,28 @@ export const facturasService = {
     return apiClient.patch<Factura>(`${API_BASE}/facturas/${id}/`, data);
   },
 
-  radicar: async (id: number, observaciones?: string): Promise<Factura> => {
-    const body = observaciones ? { observaciones } : undefined;
-    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/radicar/`, body);
+  radicar: async (
+    id: number,
+    opts?: {
+      observaciones?: string;
+      numero_operacion_contable?: string;
+      consecutivo_operacion?: string;
+    }
+  ): Promise<Factura> => {
+    return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/radicar/`, opts || {});
   },
 
   causar: async (
     id: number,
-    opts?: { cuenta_contable_id?: number; centro_costo_id?: number; observaciones?: string }
+    opts?: { observaciones?: string; soporte_causacion?: File | null }
   ): Promise<Factura> => {
+    if (opts?.soporte_causacion) {
+      const formData = new FormData();
+      if (opts.observaciones) formData.append('observaciones', opts.observaciones);
+      formData.append('soporte_causacion', opts.soporte_causacion);
+      return apiClient.postFormData<Factura>(`${API_BASE}/facturas/${id}/causar/`, formData);
+    }
+
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/causar/`, opts || {});
   },
 
@@ -117,8 +130,27 @@ export const facturasService = {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar_auditoria/`, { motivo });
   },
 
-  rechazar: async (id: number, motivo: string, destino?: 'funcionario' | 'radicacion'): Promise<Factura> => {
+  rechazar: async (id: number, motivo: string, destino?: 'funcionario' | 'radicacion' | 'proveedor'): Promise<Factura> => {
     return apiClient.post<Factura>(`${API_BASE}/facturas/${id}/rechazar/`, { motivo, destino });
+  },
+
+  getDocumentosConsolidados: async (
+    id: number,
+    opts?: { scope?: string; descargar?: boolean }
+  ): Promise<Blob> => {
+    const query = buildQueryString({
+      scope: opts?.scope,
+      descargar: opts?.descargar ? 1 : undefined,
+    });
+    return apiClient.getBlob(`${API_BASE}/facturas/${id}/documentos_consolidados/${query ? `?${query}` : ''}`);
+  },
+
+  getDocumentosHistorialZip: async (
+    id: number,
+    opts?: { scope?: string }
+  ): Promise<Blob> => {
+    const query = buildQueryString({ scope: opts?.scope });
+    return apiClient.getBlob(`${API_BASE}/facturas/${id}/documentos_historial_zip/${query ? `?${query}` : ''}`);
   },
 
   getPendientes: async (): Promise<Factura[]> => {

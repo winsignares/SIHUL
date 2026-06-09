@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../services/users/authService';
 import type { AuthState } from '../models/auth/auth.model';
-import { useMemo } from 'react';
+
+type AuthComponent = AuthState['components'][number];
 
 interface AuthContextType extends AuthState {
     login: (payload: LoginPayload) => Promise<LoginResponse>;
@@ -14,7 +15,6 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const authSignatureRef = useRef<string>(localStorage.getItem('auth_signature') || '');
-    const [isSessionHydrated, setIsSessionHydrated] = useState(false);
     const [state, setState] = useState<AuthState>({
         token: localStorage.getItem('auth_token'),
         user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
@@ -108,14 +108,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    const persistSessionUserState = (response: SessionUserResponse) => {
+    const persistSessionUserState = (response: SessionUserResponse): boolean => {
+        if (!response || response.authenticated === false) {
+            return false;
+        }
+
         const user = {
             id: response.id,
             nombre: response.nombre,
             correo: response.correo,
             rol: response.rol,
             facultad: response.facultad,
-            sede: response.sede
+            sede: response.sede,
         };
 
         localStorage.setItem('auth_token', response.token);
@@ -144,6 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.signature) {
             localStorage.setItem('auth_signature', response.signature);
             authSignatureRef.current = response.signature;
+        } else if (authSignatureRef.current) {
+            localStorage.removeItem('auth_signature');
+            authSignatureRef.current = '';
         }
 
         setState({
@@ -156,6 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: true,
             isLoading: false,
         });
+
+        return true;
     };
 
     const login = async (payload: LoginPayload): Promise<LoginResponse> => {
@@ -173,7 +182,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             persistAuthState(response);
 
             return response;
-        } catch (error: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
             setState(prev => ({ ...prev, isLoading: false }));
             throw error;
         }
@@ -187,19 +197,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.clear();
 
         // Limpiar estado
-        clearAuthState();
+        authSignatureRef.current = '';
+        setState({
+            token: null,
+            user: null,
+            role: null,
+            components: [],
+            faculties: undefined,
+            areas: undefined,
+            isAuthenticated: false,
+            isLoading: false,
+        });
     };
 
     useEffect(() => {
         const tryHydrateFromSession = async () => {
-            if (state.isLoading) {
+            if (state.isAuthenticated || state.isLoading) {
                 return;
             }
 
             setState(prev => ({ ...prev, isLoading: true }));
             try {
                 const response = await authService.getAuthenticatedUser({ suppressErrorLog: true });
-                persistSessionUserState(response);
+                const persisted = persistSessionUserState(response);
+                if (!persisted) {
+                    clearAuthState();
+                }
             } catch (error: unknown) {
                 const status = getErrorStatus(error);
                 if (status === 401 || status === 403) {
@@ -223,8 +246,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 // Si no existe estado local utilizable, limpiar autenticación.
                 clearAuthState();
-            } finally {
-                setIsSessionHydrated(true);
             }
         };
 
@@ -233,26 +254,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const { components } = state;
+
     // Uso de useMemo para evitar recalcular permisos en cada render y disminuir complejidad de hasPermission y hasEditPermission
     // Mapa de componentes por nombre para acceso rápido
     const componentsByName = useMemo(() => {
-        const map = new Map<string, (typeof state.components)[number]>();
-        for (const c of state.components) {
+        const map = new Map<string, AuthComponent>();
+        for (const c of components) {
             map.set(c.nombre, c);
         }
         return map;
-    }, [state.components]);
+    }, [components]);
 
     // Set de componentes editables para acceso rápido en hasEditPermission
     const editableComponents = useMemo(() => {
         const set = new Set<string>();
-        for (const c of state.components) {
+        for (const c of components) {
             if (c.permiso?.toUpperCase() === 'EDITAR') {
                 set.add(c.nombre);
             }
         }
         return set;
-    }, [state.components]);
+    }, [components]);
 
     const hasPermission = (componentName: string): boolean => {
         return componentsByName.has(componentName);
@@ -263,7 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        if (!isSessionHydrated || !state.isAuthenticated) {
+        if (!state.isAuthenticated) {
             return;
         }
 
@@ -271,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const syncSessionAuthState = async () => {
             try {
-                const response = await authService.getSessionAuthState(authSignatureRef.current || undefined, { suppressErrorLog: true });
+                const response = await authService.getSessionAuthState(authSignatureRef.current || undefined);
                 if (isCancelled) {
                     return;
                 }
@@ -330,7 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.removeEventListener('focus', syncIfVisible);
             document.removeEventListener('visibilitychange', syncIfVisible);
         };
-    }, [isSessionHydrated, state.isAuthenticated]);
+    }, [state.isAuthenticated]);
 
     return (
         <AuthContext.Provider value={{ ...state, login, logout, hasPermission, hasEditPermission }}>

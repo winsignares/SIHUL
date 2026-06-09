@@ -19,9 +19,7 @@ const ETAPAS_ORDEN: Array<{ index: number; terms: string[] }> = [
   { index: 6, terms: ['direccion financiera', 'envio a direccion financiera'] },
   { index: 7, terms: ['cargue formal'] },
   { index: 8, terms: ['autorizacion de pago'] },
-  { index: 9, terms: ['aplicacion de pago'] },
-  { index: 10, terms: ['comprobante de egreso'] },
-  { index: 11, terms: ['generacion comprobante'] },
+  { index: 9, terms: ['aplicacion de pago', 'pago aplicado', 'factura pagada', 'comprobante de egreso', 'generacion comprobante'] },
 ];
 
 const normalizeText = (value: string) =>
@@ -41,6 +39,15 @@ const getCanonicalEtapaKey = (etapa: string) => {
   const etapaNormalizada = normalizeText(etapa);
   if (etapaNormalizada.includes('registro y recepcion') || etapaNormalizada.includes('recepcion y registro')) {
     return 'registro-recepcion';
+  }
+  if (
+    etapaNormalizada.includes('aplicacion de pago') ||
+    etapaNormalizada.includes('pago aplicado') ||
+    etapaNormalizada.includes('factura pagada') ||
+    etapaNormalizada.includes('comprobante de egreso') ||
+    etapaNormalizada.includes('generacion comprobante')
+  ) {
+    return 'aplicacion-pago';
   }
   return etapaNormalizada;
 };
@@ -215,9 +222,16 @@ export default function ParametrizacionSLAReal() {
 
   return (
     <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-red-700 rounded-2xl p-6 text-white shadow-xl">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
         <h1 className="text-3xl font-bold">Parametrización SLA</h1>
-        <p className="text-red-100 text-sm mt-1">Configura tiempos de gestión por etapa con avisos simples y entendibles.</p>
+        <p className="mt-1 max-w-2xl text-sm text-red-100">Configura tiempos objetivo por etapa y define desde qué día una factura entra en alerta preventiva o crítica.</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Etapas activas: {etapasActivas}</span>
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Flujo total: {totalDias} días</span>
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Promedio: {promedioDias} días</span>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

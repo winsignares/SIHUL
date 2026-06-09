@@ -5,7 +5,7 @@ import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../
 
 export interface FacturaPendiente extends SharedFacturaDetail {
   id: string;
-  nit: string;
+  totalPendiente?: number;
 }
 
 export function useMisPendientes() {
@@ -17,38 +17,13 @@ export function useMisPendientes() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<FacturaPendiente | null>(null);
 
-  const facturaToPendiente = (factura: Factura, docs: DocumentoAdjunto[]): FacturaPendiente => {
-    const base = buildSharedFacturaDetail(factura);
-    return {
-      ...base,
-      id: String(factura.id),
-      nit: factura.proveedor?.nit ?? '',
-      documentos: docs.map((d) => ({
-        id: String(d.id),
-        nombre: d.nombre_archivo,
-        tipo: d.tipo_documento,
-        verificado: d.verificado,
-        url: d.archivo_url ?? d.url_storage ?? undefined,
-      })),
-    };
-  };
-
-  const cargarFacturas = useCallback(async () => {
+  const cargar = useCallback(async () => {
     setCargando(true);
     setError(null);
     try {
-      // Facturas remitidas por Tesoreria, devueltas y rechazadas por Rectoria
-      const [recibidasDF, devueltas, rechazadasRectoria] = await Promise.all([
-        facturasService.getByEstado('Revisada Dir. Financiera'),
-        facturasService.getByEstado('Devuelta'),
-        facturasService.getByEstado('Rechazada por Rectoría'),
-      ]);
-      const lista = [...recibidasDF, ...devueltas, ...rechazadasRectoria].filter(
-        (factura, index, arr) => arr.findIndex((f) => f.id === factura.id) === index
-      );
-      
+      const lista = await facturasService.getByEstado('Revisada Dir. Financiera');
       setFacturas(lista);
-      
+
       const docsResults = await Promise.all(
         lista.map((f) =>
           documentosService
@@ -63,45 +38,60 @@ export function useMisPendientes() {
       });
       setDocsMap(map);
     } catch {
-      setError('No se pudo cargar las facturas. Verifique la conexión.');
+      setError('No se pudo cargar las facturas pendientes. Verifique la conexion.');
     } finally {
       setCargando(false);
     }
   }, []);
 
   useEffect(() => {
-    cargarFacturas();
-  }, [cargarFacturas]);
+    cargar();
+  }, [cargar]);
 
   const pendientes = useMemo(() => {
-    const mapped = facturas.map((f) => facturaToPendiente(f, docsMap[f.id] ?? []));
-    const q = search.trim().toLowerCase();
-    if (!q) return mapped;
-    return mapped.filter(
-      (f) =>
-        f.numeroFactura.toLowerCase().includes(q) ||
-        f.proveedor.toLowerCase().includes(q) ||
-        (f.numeroRadicado || '').toLowerCase().includes(q)
+    const mapped = facturas.map((factura) => {
+      const docs = docsMap[factura.id] ?? [];
+      return {
+        ...buildSharedFacturaDetail(factura),
+        id: String(factura.id),
+        documentos: docs.map((d) => ({
+          id: String(d.id),
+          nombre: d.nombre_archivo,
+          tipo: d.tipo_documento,
+          verificado: d.verificado,
+          url: d.archivo_url ?? d.url_storage ?? undefined,
+        })),
+      };
+    });
+
+    if (!search.trim()) return mapped;
+
+    const term = search.toLowerCase();
+    return mapped.filter((item) =>
+      item.numeroFactura.toLowerCase().includes(term) ||
+      item.proveedor.toLowerCase().includes(term) ||
+      (item.numeroRadicado || '').toLowerCase().includes(term)
     );
   }, [facturas, docsMap, search]);
 
-  const totalPendiente = useMemo(() => 
-    pendientes.reduce((sum, item) => sum + item.valorTotal, 0),
+  const totalPendiente = useMemo(
+    () => pendientes.reduce((acc, item) => acc + item.valorTotal, 0),
     [pendientes]
   );
 
-  const criticos = useMemo(() => 
-    pendientes.filter((p) => (p.diasTranscurridos || 0) > 3).length,
+  const criticos = useMemo(
+    () => pendientes.filter((item) => (item.diasTranscurridos || 0) > 3).length,
     [pendientes]
   );
 
-  const promedioEspera = useMemo(() => 
-    Math.round(pendientes.reduce((s, p) => s + (p.diasTranscurridos || 0), 0) / Math.max(1, pendientes.length)),
-    [pendientes]
-  );
+  const promedioEspera = useMemo(() => {
+    if (pendientes.length === 0) return 0;
+    const totalDias = pendientes.reduce((acc, item) => acc + (item.diasTranscurridos || 0), 0);
+    return Math.round(totalDias / pendientes.length);
+  }, [pendientes]);
 
-  const abrirDetalle = (item: FacturaPendiente) => {
-    setSelected(item);
+  const abrirDetalle = (factura: FacturaPendiente) => {
+    setSelected(factura);
     setDetailOpen(true);
   };
 
@@ -117,8 +107,7 @@ export function useMisPendientes() {
     promedioEspera,
     setSearch,
     setDetailOpen,
-    setSelected,
     abrirDetalle,
-    recargar: cargarFacturas,
+    recargar: cargar,
   };
 }

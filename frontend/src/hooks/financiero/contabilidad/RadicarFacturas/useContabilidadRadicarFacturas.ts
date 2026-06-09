@@ -58,10 +58,14 @@ export function useContabilidadRadicarFacturas() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
   const [accion, setAccion] = useState<'radicar' | 'devolver' | null>(null);
   const [observaciones, setObservaciones] = useState('');
+  const [numeroOperacionContable, setNumeroOperacionContable] = useState('');
+  const [consecutivoOperacion, setConsecutivoOperacion] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
 
   const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
@@ -78,20 +82,13 @@ export function useContabilidadRadicarFacturas() {
     setCargando(true);
     setError(null);
     try {
-      const [recibidas, registradas, radicadas] = await Promise.all([
-        facturasService.getByEstado('Recibida'),
+      const [registradas] = await Promise.all([
         facturasService.getByEstado('Registrada'),
-        facturasService.getByEstado('Radicada'),
       ]);
 
-      const mergedMap = new Map<number, Factura>();
-      [...recibidas, ...registradas, ...radicadas].forEach((f) => {
-        mergedMap.set(f.id, f);
-      });
-      const lista = Array.from(mergedMap.values()).filter(
-        (f) => f.estado !== 'Radicada' || f.etapa_actual === 'Corrección Radicación'
-      );
+      const lista = registradas.filter((f) => f.estado === 'Registrada' && f.etapa_actual !== 'Corrección Radicación');
 
+      lista.sort((a, b) => (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || ''));
       setFacturas(lista);
       const docsResults = await Promise.all(
         lista.map((f) =>
@@ -139,6 +136,19 @@ export function useContabilidadRadicarFacturas() {
     [facturas, filtros]
   );
 
+  // Paginación
+  const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);
+  const facturasPaginadas = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return facturasFiltradas.slice(startIndex, endIndex);
+  }, [facturasFiltradas, currentPage, itemsPerPage]);
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtros.numeroFactura, filtros.proveedor, filtros.estado, filtros.areaSolicitante, filtros.fechaInicio, filtros.fechaFin]);
+
   const abrirDetalle = (factura: Factura) => {
     const docs = docsMap[factura.id] ?? [];
     setModalFactura(facturaToSharedDetail(factura, docs));
@@ -148,16 +158,30 @@ export function useContabilidadRadicarFacturas() {
     setFacturaSeleccionada(factura);
     setAccion(acc);
     setObservaciones('');
+    setNumeroOperacionContable(factura.numero_operacion_contable || '');
+    setConsecutivoOperacion(factura.consecutivo_operacion || '');
   };
 
   const cancelarAccion = () => {
     setFacturaSeleccionada(null);
     setAccion(null);
     setObservaciones('');
+    setNumeroOperacionContable('');
+    setConsecutivoOperacion('');
   };
 
   const confirmarRadicacion = async () => {
     if (!facturaSeleccionada) return;
+
+    if (!numeroOperacionContable.trim()) {
+      showToast('err', 'El número de operación contable es obligatorio para radicar.');
+      return;
+    }
+
+    if (!consecutivoOperacion.trim()) {
+      showToast('err', 'El consecutivo de operación es obligatorio para radicar.');
+      return;
+    }
 
     const docs = docsMap[facturaSeleccionada.id] ?? [];
     if (!validarDocumentosCompletos(docs)) {
@@ -168,7 +192,11 @@ export function useContabilidadRadicarFacturas() {
 
     setProcesando(true);
     try {
-      await facturasService.radicar(facturaSeleccionada.id, observaciones || undefined);
+      await facturasService.radicar(facturaSeleccionada.id, {
+        observaciones: observaciones || undefined,
+        numero_operacion_contable: numeroOperacionContable.trim(),
+        consecutivo_operacion: consecutivoOperacion.trim(),
+      });
       showToast('ok', `Factura ${facturaSeleccionada.numero_factura} radicada exitosamente.`);
       cancelarAccion();
       cargarFacturas();
@@ -187,8 +215,8 @@ export function useContabilidadRadicarFacturas() {
     }
     setProcesando(true);
     try {
-      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'funcionario');
-      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta. El funcionario fue notificado.`);
+      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'proveedor');
+      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta al proveedor para correccion.`);
       cancelarAccion();
       cargarFacturas();
     } catch {
@@ -212,12 +240,21 @@ export function useContabilidadRadicarFacturas() {
     facturaSeleccionada,
     accion,
     observaciones,
+    numeroOperacionContable,
+    consecutivoOperacion,
     procesando,
     toast,
     modalFactura,
     filtros,
     facturasFiltradas,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
     setObservaciones,
+    setNumeroOperacionContable,
+    setConsecutivoOperacion,
     setFiltros,
     setModalFactura,
     cargarFacturas,

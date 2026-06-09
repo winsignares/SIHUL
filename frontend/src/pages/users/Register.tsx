@@ -1,4 +1,3 @@
-/* eslint-disable no-inline-styles */
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';

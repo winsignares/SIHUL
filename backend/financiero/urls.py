@@ -16,6 +16,8 @@ router.register(r'historial', views.HistorialFacturaViewSet, basename='historial
 router.register(r'comentarios', views.ComentarioFacturaViewSet, basename='comentario')
 router.register(r'rechazos', views.RechazoDevolacionViewSet, basename='rechazo')
 router.register(r'facturas', views.FacturaViewSet, basename='factura')
+router.register(r'bancos', views.BancoViewSet, basename='banco')
+router.register(r'tipos-cuenta', views.TipoCuentaViewSet, basename='tipo-cuenta')
 
 app_name = 'financiero'
 

@@ -36,7 +36,7 @@ const defaultTimeline: TimelineStep[] = [
   { id: 7, name: 'Cargue en Dirección Financiera', description: 'Actualización del proceso de pago y cargue formal', owner: 'Dirección Financiera', sla: 'SLA: 2 días', status: 'pending' },
   { id: 8, name: 'Autorización en Rectoría', description: 'Revisión y autorización final del pago', owner: 'Rectoría', sla: 'SLA: 2 días', status: 'pending' },
   { id: 9, name: 'Aplicación del Pago', description: 'Validación en portal bancario y aplicación del pago', owner: 'Dirección Financiera / Rectoría', sla: 'SLA: 1 día', status: 'pending' },
-  { id: 10, name: 'Generación del Comprobante', description: 'Finalización y generación del comprobante de egreso', owner: 'Tesorería', sla: 'SLA: 1 día', status: 'pending' },
+  { id: 10, name: 'Factura Pagada', description: 'Pago aplicado y expediente documental disponible', owner: 'Tesorería', sla: 'SLA: 1 día', status: 'pending' },
 ];
 
 export default function FacturaDetailModal({ open, onClose, factura }: Props) {

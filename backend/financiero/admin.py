@@ -26,6 +26,18 @@ class CentroCostoAdmin(admin.ModelAdmin):
     list_filter = ['tipo', 'estado']
     search_fields = ['codigo', 'nombre']
 
+@admin.register(models.Banco)
+class BancoAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'codigo_bancario', 'activo', 'fecha_creacion']
+    list_filter = ['activo']
+    search_fields = ['nombre', 'codigo_bancario']
+
+@admin.register(models.TipoCuenta)
+class TipoCuentaAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'activo', 'fecha_creacion']
+    list_filter = ['activo']
+    search_fields = ['nombre']
+
 @admin.register(models.Factura)
 class FacturaAdmin(admin.ModelAdmin):
     list_display = ['numero_factura', 'proveedor', 'valor_total', 'estado', 'fecha_recepcion']

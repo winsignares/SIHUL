@@ -1,30 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
-import { Input } from '../../../share/input';
-import { Label } from '../../../share/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { SlaIndicator } from '../../../share/sla-indicator';
+import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 import {
-  Eye,
-  CheckCircle2,
+  Building,
   Calendar,
-  FileText,
+  ChevronLeft,
+  ChevronRight,
   Download,
-  Building2,
-  DollarSign,
-  ArrowLeft,
-  Printer,
+  Eye,
   FileOutput,
+  FolderOpen,
+  Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
-interface Factura {
+interface FacturaComprobanteRow {
   id: string;
   facturaId: number;
   numeroFactura: string;
@@ -32,13 +33,24 @@ interface Factura {
   numeroProcesoPago: string;
   numeroTransaccion: string;
   proveedor: string;
+  nit: string;
   areaSolicitante: string;
   valorTotal: number;
   fechaPagoAplicado: string;
   fechaComprobante: string;
-  numeroComprobante: string;
+  soportePago: string;
   estado: string;
+  diasTranscurridos: number;
+  slaObjetivoDias?: number | null;
+  raw: APIFactura;
 }
+
+const ITEMS_POR_PAGINA = 5;
+const ORDER_OPTIONS = [
+  { label: 'Mas antiguos primero', value: 'antiguos' },
+  { label: 'Mas recientes primero', value: 'recientes' },
+  { label: 'SLA critico primero', value: 'sla' },
+] as const;
 
 const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -46,30 +58,46 @@ const toList = <T,>(data: unknown): T[] => {
   return [];
 };
 
-const mapFactura = (f: APIFactura): Factura => ({
-  id: String(f.id),
-  facturaId: Number(f.id),
-  numeroFactura: f.numero_factura || `FAC-${f.id}`,
-  numeroRadicado: f.numero_radicado || 'Sin radicado',
-  numeroProcesoPago: f.numero_proceso_pago || 'Sin proceso',
-  numeroTransaccion: f.numero_transaccion || 'Sin transaccion',
-  proveedor: f.proveedor?.razon_social || 'Sin Asignar',
-  areaSolicitante: f.departamento?.nombre || 'Sin area',
-  valorTotal: Number(f.valor_total || 0),
-  fechaPagoAplicado: f.fecha_pago_aplicado || 'Sin fecha',
-  fechaComprobante: f.fecha_comprobante || 'Sin fecha',
-  numeroComprobante: f.numero_comprobante || 'Sin comprobante',
-  estado: f.estado,
+const normalizeEstado = (value?: string) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const isComprobanteFlow = (estado?: string) => {
+  const normalized = normalizeEstado(estado);
+  return normalized === 'pagada' || normalized === 'pago aplicado';
+};
+
+const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
+
+const mapFactura = (factura: APIFactura): FacturaComprobanteRow => ({
+  id: String(factura.id),
+  facturaId: Number(factura.id),
+  numeroFactura: factura.numero_factura || `FAC-${factura.id}`,
+  numeroRadicado: factura.numero_radicado || '',
+  numeroProcesoPago: factura.numero_proceso_pago || '',
+  numeroTransaccion: factura.numero_transaccion || 'Sin transaccion',
+  proveedor: factura.proveedor?.razon_social || 'Sin Asignar',
+  nit: factura.proveedor?.nit || 'Sin NIT',
+  areaSolicitante: factura.departamento?.nombre || 'Sin area',
+  valorTotal: Number(factura.valor_total || 0),
+  fechaPagoAplicado: factura.fecha_pago_aplicado || factura.fecha_modificacion || '',
+  fechaComprobante: factura.fecha_comprobante || '',
+  soportePago: factura.numero_transaccion || factura.numero_confirmacion || 'Sin soporte',
+  estado: factura.estado,
+  diasTranscurridos: Math.max(0, Number(factura.dias_transcurridos || 0)),
+  slaObjetivoDias: factura.sla_objetivo_dias ?? null,
+  raw: factura,
 });
 
 export default function GenerarComprobanteEgreso() {
-  const [facturasData, setFacturasData] = useState<APIFactura[]>([]);
+  const [facturasRaw, setFacturasRaw] = useState<APIFactura[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [paginaActual, setPaginaActual] = useState(1);
 
-  const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
-  const [numeroComprobante, setNumeroComprobante] = useState('');
-  const [procesando, setProcesando] = useState(false);
   const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail | null>(null);
 
   const [filtros, setFiltros] = useState({
@@ -81,334 +109,353 @@ export default function GenerarComprobanteEgreso() {
     fechaFin: '',
     montoMin: '',
     montoMax: '',
+    orden: 'antiguos',
   });
 
-  const loadFacturas = async () => {
-    const [pagosAplicados, pagadas] = await Promise.all([
-      facturasService.getAll({ estado: 'Pago Aplicado', limit: 200 }),
-      facturasService.getAll({ estado: 'Pagada', limit: 200 }),
-    ]);
-
-    const map = new Map<number, APIFactura>();
-    toList<APIFactura>(pagosAplicados).forEach((f) => map.set(f.id, f));
-    toList<APIFactura>(pagadas).forEach((f) => map.set(f.id, f));
-
-    return Array.from(map.values());
-  };
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const rows = await loadFacturas();
-        setFacturasData(rows);
-      } catch {
-        setFacturasData([]);
-        setLoadError('No fue posible cargar pagos aplicados.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+  const cargarFacturas = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
+      const rows = toList<APIFactura>(response).filter((factura) => isComprobanteFlow(factura.estado));
+      setFacturasRaw(rows);
+    } catch {
+      setFacturasRaw([]);
+      setLoadError('No fue posible cargar facturas pagadas.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const facturasPagadas = useMemo(() => facturasData.map(mapFactura), [facturasData]);
+  useEffect(() => {
+    void cargarFacturas();
+  }, [cargarFacturas]);
 
-  const facturasFiltradas = useMemo(() => facturasPagadas.filter((factura) => {
-    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-    if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-    if (filtros.estado && factura.estado !== filtros.estado) return false;
-    if (filtros.areaSolicitante && !factura.areaSolicitante.toLowerCase().includes(filtros.areaSolicitante.toLowerCase())) return false;
-    if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-    if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
-    if (filtros.fechaInicio && factura.fechaPagoAplicado < filtros.fechaInicio) return false;
-    if (filtros.fechaFin && factura.fechaPagoAplicado > filtros.fechaFin) return false;
-    return true;
-  }), [facturasPagadas, filtros]);
+  const facturasComprobante = useMemo(() => facturasRaw.map(mapFactura), [facturasRaw]);
 
-  const verDetalle = (factura: Factura) => {
-    setFacturaSeleccionada(factura);
-    setNumeroComprobante(
-      factura.numeroComprobante !== 'Sin comprobante'
-        ? factura.numeroComprobante
-        : `CE-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`
-    );
-  };
+  const facturasFiltradas = useMemo(() => {
+    const filtradas = facturasComprobante.filter((factura) => {
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
+      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && factura.fechaPagoAplicado < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && factura.fechaPagoAplicado > filtros.fechaFin) return false;
+      return true;
+    });
 
-  const abrirDetalles = (facturaId: number) => {
-    const factura = facturasData.find((f) => f.id === facturaId);
-    if (!factura) return;
-    setDetalleFactura(buildSharedFacturaDetail(factura));
-  };
-
-  const generarComprobante = () => {
-    if (!facturaSeleccionada || !numeroComprobante.trim()) {
-      toast.error('Debe definir un numero de comprobante de egreso');
-      return;
+    switch (filtros.orden) {
+      case 'recientes':
+        return filtradas.sort((a, b) => parseFecha(b.fechaPagoAplicado) - parseFecha(a.fechaPagoAplicado));
+      case 'sla':
+        return filtradas.sort((a, b) => (b.diasTranscurridos || 0) - (a.diasTranscurridos || 0));
+      default:
+        return filtradas.sort((a, b) => parseFecha(a.fechaPagoAplicado) - parseFecha(b.fechaPagoAplicado));
     }
+  }, [facturasComprobante, filtros]);
 
-    setProcesando(true);
-    void (async () => {
-      try {
-        const actualizada = await facturasService.generarComprobante(facturaSeleccionada.facturaId, {
-          numero_comprobante: numeroComprobante.trim(),
-        });
-        const latest = await loadFacturas();
-        setFacturasData(latest);
-        toast.success(`Comprobante generado: ${numeroComprobante}`);
-        setFacturaSeleccionada((prev) => (prev ? {
-          ...prev,
-          estado: actualizada.estado || 'Pagada',
-          numeroComprobante: actualizada.numero_comprobante || numeroComprobante.trim(),
-          fechaComprobante: actualizada.fecha_comprobante || prev.fechaComprobante,
-        } : prev));
+  const totalPaginas = Math.max(1, Math.ceil(facturasFiltradas.length / ITEMS_POR_PAGINA));
 
-        try {
-          const blob = await facturasService.descargarComprobantePdf(facturaSeleccionada.facturaId);
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `Comprobante_Egreso_${actualizada.numero_comprobante || numeroComprobante.trim()}.pdf`;
-          link.click();
-          URL.revokeObjectURL(url);
-        } catch (err: any) {
-          toast.error(err?.message || 'No fue posible descargar el PDF del comprobante.');
-        }
-      } catch (error: any) {
-        toast.error(error?.message || 'No fue posible generar el comprobante.');
-      } finally {
-        setProcesando(false);
-      }
-    })();
+  const facturasPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    return facturasFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
+  }, [facturasFiltradas, paginaActual]);
+
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtros]);
+
+  useEffect(() => {
+    setPaginaActual((prev) => Math.min(prev, totalPaginas));
+  }, [totalPaginas]);
+
+  const proveedores = Array.from(new Set(facturasComprobante.map((factura) => factura.proveedor))).sort();
+  const areas = Array.from(new Set(facturasComprobante.map((factura) => factura.areaSolicitante).filter(Boolean))).sort();
+
+  const handleVerDetalle = (factura: FacturaComprobanteRow) => {
+    setDetalleFactura(buildSharedFacturaDetail(factura.raw));
   };
 
-  const descargarComprobante = () => {
-    if (!facturaSeleccionada) return;
+  const descargarExpediente = (factura: FacturaComprobanteRow) => {
     void (async () => {
       try {
-        const blob = await facturasService.descargarComprobantePdf(facturaSeleccionada.facturaId);
+        const blob = await facturasService.getDocumentosHistorialZip(factura.facturaId, { scope: 'tesoreria' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `Comprobante_Egreso_${facturaSeleccionada.numeroComprobante}.pdf`;
+        link.download = `Expediente_${factura.numeroFactura}.zip`;
         link.click();
         URL.revokeObjectURL(url);
       } catch (err: any) {
-        toast.error(err?.message || 'No fue posible descargar el PDF del comprobante.');
+        toast.error(err?.message || 'No fue posible descargar el expediente documental.');
       }
     })();
   };
 
   return (
-    <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl p-6 text-white shadow-xl"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-            <FileOutput className="w-7 h-7 text-yellow-400" />
+    <>
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.16),_transparent_36%),linear-gradient(135deg,_#991b1b_0%,_#dc2626_42%,_#7f1d1d_100%)] p-7 text-white shadow-[0_24px_60px_-24px_rgba(127,29,29,0.7)]"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/12">
+              <FileOutput className="h-8 w-8 text-amber-300" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tight">Factura Pagada</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-red-50/90">
+                Consulta facturas pagadas y descarga el expediente completo con todos los documentos cargados en el proceso.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-white mb-1 text-3xl font-bold">Generar Comprobante de Egreso</h1>
-            <p className="text-red-100 text-sm">Paso final del proceso despues del pago aplicado</p>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {!facturaSeleccionada && (
         <Card className="border-0 shadow-lg">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <CardTitle className="text-slate-800">Filtros y orden de facturas pagadas</CardTitle>
+            <CardDescription>Consulta pagos aplicados y expedientes pagados con la trazabilidad documental del flujo.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TableFilters
+              filters={filtros}
+              onFilterChange={setFiltros}
+              proveedores={proveedores}
+              areas={areas}
+              showFechaFilter
+              showAreaFilter
+              showEstadoFilter={false}
+              orderKey="orden"
+              orderLabel="Ordenar lista"
+              orderOptions={[...ORDER_OPTIONS]}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <CardTitle className="text-slate-800">Pagos Aplicados y Pagadas</CardTitle>
-                <CardDescription>{facturasFiltradas.length} pago(s) aplicado(s)</CardDescription>
+                <CardTitle className="text-slate-800">Facturas pagadas</CardTitle>
+                <CardDescription>
+                  Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} facturas con cierre documental
+                </CardDescription>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Pago Aplicado / Pagada</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
+                  Expediente disponible para descarga
+                </Badge>
+                <Button onClick={() => void cargarFacturas()} variant="outline" disabled={loading} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <Loader2 className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             {loadError && (
-              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
-            )}
-            <TableFilters
-              filters={filtros}
-              onFilterChange={setFiltros}
-              estados={['Pago Aplicado', 'Pagada']}
-              proveedores={Array.from(new Set(facturasPagadas.map((f) => f.proveedor)))}
-              areas={Array.from(new Set(facturasPagadas.map((f) => f.areaSolicitante)))}
-              showMontoFilter
-              showFechaFilter
-              showAreaFilter
-            />
-            <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex gap-3">
-                <FileText className="w-5 h-5 text-yellow-600" />
-                <p className="text-sm text-yellow-700">El comprobante de egreso se genera solo despues de registrar pago aplicado.</p>
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <ShieldCheck className="h-4 w-4" />
+                {loadError}
               </div>
-            </div>
+            )}
 
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">N Factura</TableHead>
-                    <TableHead className="font-semibold text-slate-700">N Radicado</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Proceso</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Transaccion</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Proveedor</TableHead>
+                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Area</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Monto Pagado</TableHead>
-                    <TableHead className="font-semibold text-slate-700">F. Pago</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Estado</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Comprobante</TableHead>
-                    <TableHead className="font-semibold text-slate-700">F. CE</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Accion</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Monto</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Fecha pago</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Soporte de pago</TableHead>
+                    <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center text-slate-500 py-6">Cargando pagos aplicados...</TableCell>
-                    </TableRow>
-                  ) : facturasFiltradas.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={12} className="text-center text-slate-500 py-6">No hay pagos aplicados para mostrar.</TableCell>
-                    </TableRow>
-                  ) : facturasFiltradas.map((factura) => (
-                    <TableRow key={factura.id} className="hover:bg-slate-50">
-                      <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
-                      <TableCell className="text-slate-600">{factura.numeroRadicado}</TableCell>
-                      <TableCell className="text-indigo-600 font-medium">{factura.numeroProcesoPago}</TableCell>
-                      <TableCell className="text-emerald-600 font-medium text-sm">{factura.numeroTransaccion}</TableCell>
-                      <TableCell className="text-slate-600">{factura.proveedor}</TableCell>
-                      <TableCell className="text-slate-600">{factura.areaSolicitante}</TableCell>
-                      <TableCell className="font-semibold text-green-600">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                      <TableCell className="text-slate-600">{factura.fechaPagoAplicado}</TableCell>
-                      <TableCell>
-                        <Badge className={factura.estado === 'Pagada' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}>
-                          {factura.estado}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600">{factura.numeroComprobante}</TableCell>
-                      <TableCell className="text-slate-600">{factura.fechaComprobante}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" onClick={() => abrirDetalles(factura.facturaId)} variant="outline">
-                            <Eye className="w-4 h-4 mr-1" />Ver detalles
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => verDetalle(factura)}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                            disabled={factura.estado !== 'Pago Aplicado'}
-                          >
-                            <FileOutput className="w-4 h-4 mr-1" />Generar CE
-                          </Button>
+                      <TableCell colSpan={8} className="py-8 text-center text-slate-500">
+                        <div className="inline-flex items-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Cargando facturas pagadas...
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : facturasFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-10 text-center text-slate-500">
+                        No hay facturas pagadas para los filtros actuales.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    facturasPaginadas.map((factura, index) => {
+                      const dias = factura.diasTranscurridos || 0;
+                      const colorRiesgo = dias >= 3 ? 'bg-amber-500' : 'bg-emerald-500';
+
+                      return (
+                        <motion.tr
+                          key={factura.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.04 }}
+                          className="hover:bg-slate-50"
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
+                              <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} compact />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-800">{displayText(factura.numeroFactura)}</span>
+                              <Badge className="mt-1 w-fit border border-blue-200 bg-blue-50 font-mono text-[10px] text-blue-700">
+                                {displayRadicado(factura.numeroRadicado)}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-start gap-2">
+                              <Building className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                              <div>
+                                <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
+                                  {displayText(factura.proveedor)}
+                                </p>
+                                <p className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
+                          <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              {displayDate(factura.fechaPagoAplicado)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Badge className={factura.estado === 'Pagada' ? 'border border-blue-200 bg-blue-50 text-blue-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}>
+                                {displayText(factura.soportePago)}
+                              </Badge>
+                              <p className="text-xs text-slate-500">{factura.fechaComprobante ? displayDate(factura.fechaComprobante) : 'Cierre por pago aplicado'}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleVerDetalle(factura)}
+                                className="h-9 w-9 rounded-full border-amber-300 p-0 text-amber-700 hover:bg-amber-50"
+                                title="Ver detalle"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">Ver detalle</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void openDocumentosConsolidados(factura.facturaId, 'tesoreria')}
+                                className="h-9 w-9 rounded-full border-blue-200 p-0 text-blue-700 hover:bg-blue-50"
+                                title="Ver documentacion consolidada"
+                              >
+                                <FolderOpen className="h-4 w-4" />
+                                <span className="sr-only">Ver documentacion consolidada</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'tesoreria')}
+                                className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50"
+                                title="Descargar documentacion"
+                              >
+                                <Download className="h-4 w-4" />
+                                <span className="sr-only">Descargar documentacion</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => descargarExpediente(factura)}
+                                className="h-9 w-9 rounded-full border-emerald-200 p-0 text-emerald-700 hover:bg-emerald-50"
+                                title="Descargar expediente completo"
+                              >
+                                <Download className="h-4 w-4" />
+                                <span className="sr-only">Descargar expediente completo</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
+
+            {totalPaginas > 1 && (
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                <p className="text-sm text-slate-600">
+                  Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} resultados
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPaginaActual((prev) => Math.max(1, prev - 1))}
+                    disabled={paginaActual === 1}
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                      let pageNum;
+                      if (totalPaginas <= 5) pageNum = i + 1;
+                      else if (paginaActual <= 3) pageNum = i + 1;
+                      else if (paginaActual >= totalPaginas - 2) pageNum = totalPaginas - 4 + i;
+                      else pageNum = paginaActual - 2 + i;
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          size="sm"
+                          variant={paginaActual === pageNum ? 'default' : 'outline'}
+                          onClick={() => setPaginaActual(pageNum)}
+                          className={paginaActual === pageNum ? 'bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPaginaActual((prev) => Math.min(totalPaginas, prev + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Siguiente
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
-
-      {facturaSeleccionada && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Button onClick={() => setFacturaSeleccionada(null)} variant="ghost" className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />Volver
-          </Button>
-
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-slate-800">Comprobante de Egreso - {facturaSeleccionada.numeroFactura}</CardTitle>
-              <CardDescription>Generacion del comprobante final</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-slate-50 rounded-lg p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Proveedor</p>
-                  <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-slate-400" /><p className="font-semibold text-slate-800">{facturaSeleccionada.proveedor}</p></div>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Monto Pagado</p>
-                  <div className="flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-600" /><p className="font-semibold text-green-600 text-xl">${facturaSeleccionada.valorTotal.toLocaleString('es-CO')}</p></div>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Proceso de Pago</p>
-                  <p className="font-semibold text-indigo-600">{facturaSeleccionada.numeroProcesoPago}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Transaccion Bancaria</p>
-                  <p className="font-semibold text-emerald-600">{facturaSeleccionada.numeroTransaccion}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Fecha de Pago Aplicado</p>
-                  <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-emerald-600" /><p className="font-semibold text-emerald-600">{facturaSeleccionada.fechaPagoAplicado}</p></div>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Estado</p>
-                  <Badge className={facturaSeleccionada.estado === 'Pagada' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}>
-                    {facturaSeleccionada.estado}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-700">Al generar el comprobante, la factura pasara al estado final: PAGADA.</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="numeroComprobante" className="text-slate-700 font-medium">Numero de Comprobante de Egreso</Label>
-                <Input id="numeroComprobante" value={numeroComprobante} onChange={(e) => setNumeroComprobante(e.target.value)} className="font-semibold text-lg" />
-                <p className="text-xs text-slate-500">Fecha de generacion: {new Date().toISOString().split('T')[0]}</p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button onClick={() => setFacturaSeleccionada(null)} variant="outline" className="flex-1">Cancelar</Button>
-                <Button onClick={generarComprobante} disabled={procesando || facturaSeleccionada.estado !== 'Pago Aplicado'} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
-                  {procesando ? (
-                    <>
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                      Generando...
-                    </>
-                  ) : (
-                    <>
-                      <Printer className="w-4 h-4 mr-2" />Generar Comprobante
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="border-t border-slate-200 pt-4">
-                <Button
-                  variant="outline"
-                  className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
-                  onClick={descargarComprobante}
-                  disabled={facturaSeleccionada.numeroComprobante === 'Sin comprobante'}
-                >
-                  <Download className="w-4 h-4 mr-2" />Descargar Comprobante de Egreso (PDF)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+      </div>
 
       <FacturaDetailModal
         factura={detalleFactura}
         isOpen={!!detalleFactura}
         onClose={() => setDetalleFactura(null)}
       />
-    </div>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
@@ -8,6 +8,9 @@ import { AlertCircle, Eye, ShieldCheck, FileSearch, CheckCircle2 } from 'lucide-
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 interface FacturaPendiente {
   id: string;
@@ -72,6 +75,7 @@ export default function MisPendientes() {
   const [facturasPendientes, setFacturasPendientes] = useState<FacturaPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -138,6 +142,19 @@ export default function MisPendientes() {
   };
 
   const totalPendientes = facturasPendientes.length;
+  const totalPages = Math.max(1, Math.ceil(facturasPendientes.length / ITEMS_PER_PAGE));
+  const facturasPaginadas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return facturasPendientes.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, facturasPendientes]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [facturasPendientes.length]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
   const enTiempoCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'verde').length;
   const proximasVencerCount = facturasPendientes.filter((f) => f.nivelRiesgo === 'amarillo' || f.nivelRiesgo === 'rojo').length;
 
@@ -262,7 +279,7 @@ export default function MisPendientes() {
                       <TableRow>
                         <TableCell colSpan={11} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoría.</TableCell>
                       </TableRow>
-                    ) : facturasPendientes.map((factura, index) => {
+                    ) : facturasPaginadas.map((factura, index) => {
                       const colorRiesgo =
                         factura.nivelRiesgo === 'vencido'
                           ? 'bg-purple-700'
@@ -297,6 +314,17 @@ export default function MisPendientes() {
                   </TableBody>
                 </Table>
               </div>
+              {!loading && facturasPendientes.length > 0 && (
+                <div className="mt-5">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={facturasPendientes.length}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

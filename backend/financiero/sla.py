@@ -2,14 +2,24 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from typing import Dict, Iterable, Optional
+import unicodedata
 
 from .models import Factura, ParametroSLA
 
 
 _ALIAS_MAP = {
+    'recepcion y registro': ['registro y recepcion', 'recepcion funcionario', 'registro funcionario'],
+    'registro funcionario': ['recepcion y registro', 'registro y recepcion'],
+    'radicacion': ['radicacion contable'],
+    'radicacion contable': ['radicacion'],
+    'causacion': ['causacion contable'],
+    'causacion contable': ['causacion'],
     'autorizacion rectoria': ['autorizacion de pago'],
-    'pago aplicado': ['aplicacion de pago'],
-    'comprobante de egreso': ['comprobante de egreso', 'generacion comprobante'],
+    'pago aplicado': ['aplicacion de pago', 'registrar pago aplicado', 'factura pagada', 'comprobante de egreso', 'generacion comprobante'],
+    'registrar pago aplicado': ['aplicacion de pago', 'pago aplicado'],
+    'factura pagada': ['aplicacion de pago', 'pago aplicado'],
+    'comprobante de egreso': ['aplicacion de pago', 'pago aplicado'],
+    'generacion comprobante': ['aplicacion de pago', 'pago aplicado'],
     'envio a direccion financiera': ['envio a direccion financiera', 'direccion financiera', 'cargue formal'],
     'direccion financiera': ['direccion financiera', 'cargue formal', 'envio a direccion financiera'],
     'control de pago bancario': ['aplicacion de pago', 'autorizacion de pago'],
@@ -21,8 +31,10 @@ _ALIAS_MAP = {
 
 
 def normalize_text(value: str) -> str:
+    normalized = unicodedata.normalize('NFD', str(value or ''))
+    normalized = ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
     return (
-        str(value or '')
+        normalized
         .lower()
         .strip()
         .replace('á', 'a')

@@ -21,11 +21,7 @@ import {
   FileDown, 
   FileSpreadsheet,
   Pencil,
-  ArrowLeftRight,
   AlertCircle,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   X,
@@ -36,7 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
@@ -220,7 +216,6 @@ export default function ConsultaEspacios() {
     dialogSolicitudOpen,
     setDialogSolicitudOpen,
     nuevaSolicitudData,
-    setNuevaSolicitudData,
     // Período académico
     periodos,
     periodosLoading,
@@ -248,7 +243,7 @@ export default function ConsultaEspacios() {
   const [inicializacionAplicada, setInicializacionAplicada] = useState(false);
   const puedeEditarDisponibilidad = hasEditPermission('Disponibilidad de Espacios');
 
-  const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
+  const encontrarInicioValidoPeriodo = useCallback((periodo: typeof periodos[0]) => {
     const hoy = getHoyColombia();
     const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
     finPeriodo.setHours(0, 0, 0, 0);
@@ -261,27 +256,30 @@ export default function ConsultaEspacios() {
     }
 
     return null;
-  };
+  }, []);
 
-  const aplicarPeriodoConIntervaloValido = (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
-    const intervalo = encontrarInicioValidoPeriodo(periodo);
-    if (!intervalo) {
-      setMensajeAutoPeriodo('No se encontró una fecha de inicio válida dentro del período seleccionado.');
-      return;
-    }
+  const aplicarPeriodoConIntervaloValido = useCallback(
+    (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
+      const intervalo = encontrarInicioValidoPeriodo(periodo);
+      if (!intervalo) {
+        setMensajeAutoPeriodo('No se encontró una fecha de inicio válida dentro del período seleccionado.');
+        return;
+      }
 
-    setPeriodoSeleccionado(periodo);
-    setFilterPeriodo(periodo.id ?? null);
-    handleFechaInicioChange(intervalo.inicio);
+      setPeriodoSeleccionado(periodo);
+      setFilterPeriodo(periodo.id ?? null);
+      handleFechaInicioChange(intervalo.inicio);
 
-    if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
-      setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
-    } else {
-      setMensajeAutoPeriodo(null);
-    }
-  };
+      if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
+        setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
+      } else {
+        setMensajeAutoPeriodo(null);
+      }
+    },
+    [encontrarInicioValidoPeriodo, handleFechaInicioChange, setFilterPeriodo]
+  );
 
-  const resolverPeriodoVigente = () => {
+  const resolverPeriodoVigente = useCallback(() => {
     const hoy = getHoyColombia();
     const hoyISO = formatFechaLocalYYYYMMDD(hoy);
 
@@ -293,7 +291,7 @@ export default function ConsultaEspacios() {
 
     const futuros = [...periodos].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
     return futuros[0] ?? null;
-  };
+  }, [periodos]);
 
   useEffect(() => {
     if (inicializacionAplicada || periodosLoading || periodos.length === 0) return;
@@ -303,7 +301,7 @@ export default function ConsultaEspacios() {
 
     aplicarPeriodoConIntervaloValido(vigente, true);
     setInicializacionAplicada(true);
-  }, [inicializacionAplicada, periodosLoading, periodos]);
+  }, [inicializacionAplicada, periodosLoading, periodos, resolverPeriodoVigente, aplicarPeriodoConIntervaloValido]);
 
   // Integrar búsqueda de período cuando se cambian las fechas
   useEffect(() => {
@@ -557,7 +555,7 @@ export default function ConsultaEspacios() {
   };
 
   // Función para generar las fechas de repetición según la configuración
-  const generateRecurrenceDates = (): Date[] => {
+  const generateRecurrenceDates = useCallback((): Date[] => {
     if (!nuevaSolicitudData?.fecha) return [];
 
     const startDate = new Date(`${nuevaSolicitudData.fecha}T12:00:00`);
@@ -675,7 +673,7 @@ export default function ConsultaEspacios() {
     }
 
     return dates;
-  };
+  }, [customPeriod, formData.dias_semana, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, formData.fin_repeticion_tipo, formData.intervalo, repeatOption, nuevaSolicitudData?.fecha, nuevaSolicitudData?.diaSemana]);
 
   useEffect(() => {
     if (!dialogSolicitudOpen) {
@@ -709,7 +707,7 @@ export default function ConsultaEspacios() {
       const dates = generateRecurrenceDates();
       setRecurrencePreviewDates(dates);
     }
-  }, [repeatOption, customPeriod, formData.intervalo, formData.dias_semana, formData.fin_repeticion_tipo, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, nuevaSolicitudData?.fecha]);
+  }, [generateRecurrenceDates, nuevaSolicitudData?.fecha]);
 
   // Cargar datos para el formulario
   useEffect(() => {
@@ -754,7 +752,7 @@ export default function ConsultaEspacios() {
         setEspaciosDisponibles(response.espacios || []);
         setFormData(prev => ({ 
           ...prev, 
-          sede_id: sede.id,
+          sede_id: sede.id ?? prev.sede_id,
           espacio_id: nuevaSolicitudData.espacio_id
         }));
       } catch (err) {

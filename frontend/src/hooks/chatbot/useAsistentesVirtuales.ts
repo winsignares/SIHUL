@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import {
     BookOpen,
     DoorOpen,
@@ -8,19 +7,53 @@ import {
     Bot
 } from 'lucide-react';
 import type { Asistente, Mensaje } from '../../models/index';
-import { chatbotAPI, type AgenteAPI, type Conversacion } from '../../services/chatbot/chatbotAPI';
+import { chatbotAPI, type AgenteAPI } from '../../services/chatbot/chatbotAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
+type CachedAsistente = Omit<Asistente, 'icon' | 'icono'> & {
+    icon?: unknown;
+    icono?: string;
+};
+
+const SECCIONALES_PUBLICAS_CHATBOT = [
+    'Barranquilla',
+    'Bogota',
+    'Cali',
+    'Cartagena',
+    'Cucuta',
+    'Pereira',
+    'El Socorro',
+    'Nacional',
+    'Virtual',
+];
 
 // Mapeo de nombres de iconos a componentes de icono
-const iconMap: Record<string, LucideIcon> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const iconMap: Record<string, any> = {
     'BookOpen': BookOpen,
     'DoorOpen': DoorOpen,
     'Trophy': Trophy,
     'Headphones': Headphones,
     'Bot': Bot
+};
+
+const obtenerIcono = (icono?: string) => iconMap[icono || 'Bot'] || Bot;
+
+const rehidratarAsistente = (asistente: CachedAsistente): Asistente => {
+    const icono = asistente.icono || (typeof asistente.icon === 'string' ? asistente.icon : 'Bot');
+
+    return {
+        ...asistente,
+        icono,
+        icon: obtenerIcono(icono)
+    };
+};
+
+const serializarAsistente = (asistente: Asistente): CachedAsistente => {
+    const { icon: _icon, ...serializable } = asistente;
+    return serializable;
 };
 
 const normalizarAgentes = (response: unknown): AgenteAPI[] => {
@@ -55,7 +88,8 @@ const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
         nombre: agenteAPI.nombre,
         subtitulo: agenteAPI.subtitulo || '',
         descripcion: agenteAPI.descripcion,
-        icon: iconMap[agenteAPI.icono || 'Bot'] || Bot,
+        icono: agenteAPI.icono || 'Bot',
+        icon: obtenerIcono(agenteAPI.icono),
         color: agenteAPI.color || 'blue',
         bgGradient: agenteAPI.bgGradient || 'from-blue-500 via-blue-600 to-indigo-600',
         ultimoMensaje: '¿En qué puedo ayudarte?',
@@ -78,6 +112,13 @@ export function useAsistentesVirtuales() {
     const [loading, setLoading] = useState(true);
     const [preguntasRotadas, setPreguntasRotadas] = useState<string[]>([]);
     const [chatIds, setChatIds] = useState<{ [key: string]: string }>({}); // Mapeo agente_id -> chat_id
+    const [seccionalesPublico, setSeccionalesPublico] = useState<string[]>([]);
+    const [seccionalPublica, setSeccionalPublica] = useState('');
+    const [cargandoSeccionales, setCargandoSeccionales] = useState(false);
+    const [mostrarHistorial, setMostrarHistorial] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [conversacionesHistorial, setConversacionesHistorial] = useState<any[]>([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Funciones para persistir chat_ids y mensajes en localStorage POR USUARIO
@@ -119,7 +160,8 @@ export function useAsistentesVirtuales() {
             // Convertir las fechas de string a Date
             const mensajesConvertidos: { [key: string]: Mensaje[] } = {};
             for (const [key, mensajes] of Object.entries(parsed)) {
-                mensajesConvertidos[key] = (mensajes as Mensaje[]).map(msg => ({
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                mensajesConvertidos[key] = (mensajes as any[]).map(msg => ({
                     ...msg,
                     timestamp: new Date(msg.timestamp)
                 }));
@@ -140,6 +182,36 @@ export function useAsistentesVirtuales() {
         }
     };
 
+    const guardarSeccionalPublica = (valor: string) => {
+        setSeccionalPublica(valor);
+        if (valor) {
+            localStorage.setItem('sihul_chatbot_public_seccional', valor);
+        } else {
+            localStorage.removeItem('sihul_chatbot_public_seccional');
+        }
+    };
+
+    useEffect(() => {
+        if (user?.id) {
+            return;
+        }
+
+        const stored = localStorage.getItem('sihul_chatbot_public_seccional');
+        if (stored) {
+            setSeccionalPublica(stored);
+        }
+
+        // En acceso público no depende de /sedes/ (protegido) para evitar 401 -> redirect a login.
+        setCargandoSeccionales(true);
+        const unique = [...SECCIONALES_PUBLICAS_CHATBOT];
+        setSeccionalesPublico(unique);
+        if (!seccionalPublica && unique.length > 0) {
+            guardarSeccionalPublica(unique[0]);
+        }
+        setCargandoSeccionales(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id]);
+
     // Cargar agentes y datos persistidos desde el backend
     useEffect(() => {
         const cargarAgentes = async () => {
@@ -156,15 +228,16 @@ export function useAsistentesVirtuales() {
                 const userScope = `${user?.id || 'guest'}-${user?.rol || 'public'}`;
                 const cacheKey = `${ASISTENTES_VIRTUALES_CACHE_KEY}-${userScope}`;
                 const cachedData = getSessionCacheData<{
-                    asistentes: Asistente[];
+                    asistentes: CachedAsistente[];
                     asistenteActivoId?: string;
                 }>(cacheKey, activeToken);
 
                 if (cachedData?.asistentes?.length) {
-                    setAsistentes(cachedData.asistentes);
+                    const asistentesRehidratados = cachedData.asistentes.map(rehidratarAsistente);
+                    setAsistentes(asistentesRehidratados);
                     const cachedActive = cachedData.asistenteActivoId
-                        ? cachedData.asistentes.find((a) => a.id === cachedData.asistenteActivoId)
-                        : cachedData.asistentes[0];
+                        ? asistentesRehidratados.find((a) => a.id === cachedData.asistenteActivoId)
+                        : asistentesRehidratados[0];
                     if (cachedActive) {
                         setAsistenteActivo(cachedActive);
                     }
@@ -204,7 +277,7 @@ export function useAsistentesVirtuales() {
                 }
 
                 setSessionCacheData(cacheKey, activeToken, {
-                    asistentes: agentesUI,
+                    asistentes: agentesUI.map(serializarAsistente),
                     asistenteActivoId: agentesUI[0]?.id
                 });
             } catch (error) {
@@ -216,7 +289,7 @@ export function useAsistentesVirtuales() {
 
         cargarAgentes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol. cargarChatIdsDesdeStorage y cargarMensajesDesdeStorage son estables (solo usan localStorage)
+    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol
 
     // Guardar mensajes en localStorage cada vez que cambien
     useEffect(() => {
@@ -224,7 +297,7 @@ export function useAsistentesVirtuales() {
             guardarMensajesEnStorage(mensajes);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mensajes]); // guardarMensajesEnStorage es estable (solo usa localStorage)
+    }, [mensajes]);
 
     // Rotación de preguntas sugeridas
     useEffect(() => {
@@ -381,10 +454,28 @@ export function useAsistentesVirtuales() {
 
             // Usar endpoint público o autenticado según el usuario
             if (!user?.id) {
+                if (!seccionalPublica) {
+                    const mensajeErrorSeccional: Mensaje = {
+                        id: `error-${Date.now()}`,
+                        tipo: 'bot',
+                        texto: 'Selecciona una seccional para continuar con el chat público.',
+                        timestamp: new Date(),
+                        leido: true
+                    };
+
+                    setMensajes(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeErrorSeccional]
+                    }));
+                    setIsTyping(false);
+                    return;
+                }
+
                 // Usuario público - No se guarda historial
                 const response = await chatbotAPI.enviarPreguntaPublico({
                     agente_id: Number(asistenteActivo.id),
-                    pregunta: preguntaEnviada
+                    pregunta: preguntaEnviada,
+                    seccional: seccionalPublica
                 });
 
                 // Guardar el chat_id temporal para la sesión actual
@@ -526,10 +617,6 @@ export function useAsistentesVirtuales() {
         }
     };
 
-    const [mostrarHistorial, setMostrarHistorial] = useState(false);
-    const [conversacionesHistorial, setConversacionesHistorial] = useState<Conversacion[]>([]);
-    const [cargandoHistorial, setCargandoHistorial] = useState(false);
-
     const cargarHistorialConversaciones = async () => {
         if (!asistenteActivo || !user?.id) return;
         
@@ -629,6 +716,11 @@ export function useAsistentesVirtuales() {
     );
 
     return {
+        esPublico: !user?.id,
+        seccionalesPublico,
+        seccionalPublica,
+        setSeccionalPublica: guardarSeccionalPublica,
+        cargandoSeccionales,
         asistenteActivo,
         setAsistenteActivo,
         mensajes,
