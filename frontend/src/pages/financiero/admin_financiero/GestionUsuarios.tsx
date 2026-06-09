@@ -246,6 +246,17 @@ export default function GestionUsuariosReal() {
     });
   }, [search, usuariosFinancieros, rolesById, rolFilter, estadoFilter, sedeFilter]);
 
+  const resumenUsuarios = useMemo(() => {
+    const activos = usuariosFinancieros.filter((usuario) => usuario.activo).length;
+    return {
+      total: usuariosFinancieros.length,
+      activos,
+      inactivos: usuariosFinancieros.length - activos,
+      roles: rolesGestionables.length,
+      sedes: sedesDisponibles.length,
+    };
+  }, [rolesGestionables.length, sedesDisponibles.length, usuariosFinancieros]);
+
   const crearUsuario = async () => {
     const nombre = nuevoUsuario.nombre.trim();
     const correo = nuevoUsuario.correo.trim();
@@ -505,15 +516,22 @@ export default function GestionUsuariosReal() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-red-700 rounded-2xl p-6 text-white shadow-xl"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl"
       >
+        <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Users className="w-8 h-8 text-amber-300" />
               Gestión de Usuarios Financieros
             </h1>
-            <p className="text-red-100 text-sm">Listado y administración de cuentas del módulo financiero.</p>
+            <p className="max-w-2xl text-sm text-red-100">Centraliza altas, edición y permisos del equipo financiero en una vista corta, clara y alineada con el resto del aplicativo.</p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Badge className="border border-white/20 bg-white/10 text-white">Activos: {resumenUsuarios.activos}</Badge>
+              <Badge className="border border-white/20 bg-white/10 text-white">Roles: {resumenUsuarios.roles}</Badge>
+              <Badge className="border border-white/20 bg-white/10 text-white">Sedes: {resumenUsuarios.sedes}</Badge>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => setDialogOpen(true)} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
@@ -528,8 +546,39 @@ export default function GestionUsuariosReal() {
         </div>
       </motion.div>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Card className="border-red-100 bg-gradient-to-br from-white to-red-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Usuarios</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{resumenUsuarios.total}</p>
+            <p className="text-sm text-slate-600">Base total administrable</p>
+          </CardContent>
+        </Card>
+        <Card className="border-emerald-100 bg-gradient-to-br from-white to-emerald-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Activos</p>
+            <p className="mt-2 text-3xl font-bold text-emerald-700">{resumenUsuarios.activos}</p>
+            <p className="text-sm text-slate-600">Con acceso operativo</p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-100 bg-gradient-to-br from-white to-amber-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Inactivos</p>
+            <p className="mt-2 text-3xl font-bold text-amber-700">{resumenUsuarios.inactivos}</p>
+            <p className="text-sm text-slate-600">Sin operación actual</p>
+          </CardContent>
+        </Card>
+        <Card className="border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">En vista</p>
+            <p className="mt-2 text-3xl font-bold text-indigo-700">{usuariosFiltrados.length}</p>
+            <p className="text-sm text-slate-600">Resultados filtrados</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="border-0 shadow-lg">
-        <CardHeader className="space-y-3">
+        <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-slate-900">Usuarios registrados</CardTitle>
             <div className="flex items-center gap-2">

@@ -92,6 +92,8 @@ export interface Factura {
   numero_confirmacion?: string;
   numero_transaccion?: string;
   numero_comprobante?: string;
+  numero_operacion_contable?: string;
+  consecutivo_operacion?: string;
   archivo_plano_generado?: string;
 
   proveedor_id: number;
@@ -134,6 +136,7 @@ export interface Factura {
   indicador_riesgo: IndicadorRiesgo;
   sla_cumplido: boolean;
   dias_transcurridos: number;
+  sla_objetivo_dias?: number | null;
 
   usuario_responsable_id?: number;
   usuario_responsable?: { id: number; nombre: string };
@@ -166,6 +169,7 @@ export interface DocumentoAdjunto {
 export interface HistorialFactura {
   id: number;
   factura_id: number;
+  numero_factura?: string;
   fecha_accion: string;
   accion: string;
   estado_anterior?: string;

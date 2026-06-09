@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Clock, Eye, FileText, TrendingUp, XCircle } from 'lucide-react';
+import { AlertCircle, Clock, Eye, FileText, Search, TrendingUp, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { facturasService } from '../../../services/financiero';
@@ -11,6 +11,9 @@ import { displayDate, displayText } from '../../../share/field-placeholders';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Label } from '../../../share/label';
 import { Textarea } from '../../../share/textarea';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -26,6 +29,7 @@ function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
     contacto: contacto || 'Sin datos de contacto',
     tipoDocumento: f.tipo_documento || 'Factura',
     descripcion: f.descripcion || 'Sin descripcion',
+    observaciones: f.observaciones || '',
     valorTotal: Number(f.valor_total || 0),
     fechaFactura: f.fecha_factura || '',
     fechaRecepcion: f.fecha_recepcion || '',
@@ -58,6 +62,9 @@ export default function MisPendientes() {
   const [rechazarMotivo, setRechazarMotivo] = useState('');
   const [rechazarError, setRechazarError] = useState<string | null>(null);
   const [rechazarLoading, setRechazarLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [orderBy, setOrderBy] = useState<'oldest' | 'newest'>('oldest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -80,6 +87,42 @@ export default function MisPendientes() {
 
   const vencidas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'vencido').length, [rows]);
   const proximas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'amarillo').length, [rows]);
+  const filteredRows = useMemo(() => {
+    const normalized = searchTerm.trim().toLowerCase();
+    return rows
+      .filter((row) => {
+        if (!normalized) return true;
+        return [
+          row.numeroFactura,
+          row.proveedor,
+          row.nit,
+          row.tipoDocumento,
+          row.observaciones,
+          row.descripcion,
+          row.areaSolicitante,
+        ].some((value) => String(value || '').toLowerCase().includes(normalized));
+      })
+      .sort((a, b) => {
+        const aTime = new Date(a.fechaRecepcion || a.fechaFactura || 0).getTime();
+        const bTime = new Date(b.fechaRecepcion || b.fechaFactura || 0).getTime();
+        return orderBy === 'oldest' ? aTime - bTime : bTime - aTime;
+      });
+  }, [orderBy, rows, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
+
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredRows.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredRows]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, orderBy]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const riskDotClass = (risk: FuncionarioPendingRow['nivelRiesgo']) => {
     if (risk === 'vencido') return 'bg-red-600';
@@ -220,11 +263,12 @@ export default function MisPendientes() {
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total Pendientes</p>
-              <p className="text-4xl font-bold text-slate-800 mt-1">{rows.length}</p>
+              <p className="text-sm font-semibold text-slate-600">Por registrar</p>
+              <p className="text-3xl font-bold text-slate-900 mt-1">{rows.length}</p>
+              <p className="text-xs text-slate-500 mt-1">Facturas recibidas pendientes de gestión</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
               <FileText className="w-6 h-6 text-blue-600" />
@@ -232,26 +276,28 @@ export default function MisPendientes() {
           </div>
         </div>
 
-        <div className="bg-purple-50 rounded-xl border border-purple-200 shadow-sm p-6">
+        <div className="bg-red-50 rounded-xl border border-red-200 shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-purple-700 font-semibold">Facturas VENCIDAS</p>
-              <p className="text-4xl font-bold text-purple-800 mt-1">{vencidas}</p>
+              <p className="text-sm text-red-700 font-semibold">Fuera de SLA</p>
+              <p className="text-3xl font-bold text-red-800 mt-1">{vencidas}</p>
+              <p className="text-xs text-red-700/80 mt-1">Requieren registro prioritario</p>
             </div>
-            <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-purple-700" />
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-red-700" />
             </div>
           </div>
         </div>
 
-        <div className="bg-yellow-50 rounded-xl border border-yellow-200 shadow-sm p-6">
+        <div className="bg-amber-50 rounded-xl border border-amber-200 shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-yellow-700 font-semibold">Proximas a Vencer</p>
-              <p className="text-4xl font-bold text-yellow-800 mt-1">{proximas}</p>
+              <p className="text-sm text-amber-700 font-semibold">Por vencer</p>
+              <p className="text-3xl font-bold text-amber-800 mt-1">{proximas}</p>
+              <p className="text-xs text-amber-700/80 mt-1">Conviene atenderlas pronto</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-200 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-yellow-700" />
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-amber-700" />
             </div>
           </div>
         </div>
@@ -264,7 +310,27 @@ export default function MisPendientes() {
           </div>
         )}
         <h3 className="text-xl font-semibold text-slate-800 mb-1">Facturas Pendientes de Registro</h3>
-        <p className="text-slate-500 mb-5">Vista resumida con campos esenciales. El detalle completo está en “Ver”.</p>
+        <p className="text-slate-500 mb-5">Ordenadas de la factura más antigua a la más reciente para priorizar el registro.</p>
+
+        <div className="mb-5 flex flex-col gap-3 md:flex-row">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar por proveedor, NIT, factura o descripción"
+              className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+          <select
+            value={orderBy}
+            onChange={(event) => setOrderBy(event.target.value as 'oldest' | 'newest')}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+          >
+            <option value="oldest">Más antigua primero</option>
+            <option value="newest">Más reciente primero</option>
+          </select>
+        </div>
 
         <table className="w-full min-w-[920px] text-sm">
           <thead>
@@ -283,13 +349,13 @@ export default function MisPendientes() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="p-4 text-slate-500" colSpan={8}>Cargando pendientes...</td>
+                <td className="p-4 text-slate-500" colSpan={9}>Cargando pendientes...</td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : filteredRows.length === 0 ? (
               <tr>
-                <td className="p-4 text-slate-500" colSpan={8}>No hay pendientes para mostrar.</td>
+                <td className="p-4 text-slate-500" colSpan={9}>No hay pendientes que coincidan con la búsqueda.</td>
               </tr>
-            ) : rows.map((row) => (
+            ) : paginatedRows.map((row) => (
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-3">
                   <div className="flex items-center gap-2">
@@ -335,30 +401,36 @@ export default function MisPendientes() {
                                 departamentoId: row.departamentoId,
                                 departamentoNombre: row.departamentoNombre,
                                 descripcion: row.descripcion,
-                                observaciones: '',
+                                observaciones: row.observaciones,
                               },
                             },
                           },
                         });
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      title="Registrar factura"
+                      aria-label="Registrar factura"
                     >
-                      Registrar
+                      <FileText className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => abrirRechazo(row)}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 text-red-700"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                      title="Rechazar factura"
+                      aria-label="Rechazar factura"
                     >
-                      <XCircle className="w-4 h-4" /> Rechazar
+                      <XCircle className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
                         setSelectedId(row.id);
                         setOpenDetail(true);
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
                     >
-                      <Eye className="w-4 h-4" /> Ver
+                      <Eye className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -366,6 +438,18 @@ export default function MisPendientes() {
             ))}
           </tbody>
         </table>
+
+        {!loading && filteredRows.length > 0 && (
+          <div className="mt-5">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={filteredRows.length}
+            />
+          </div>
+        )}
       </div>
 
       <FacturaDetailModal

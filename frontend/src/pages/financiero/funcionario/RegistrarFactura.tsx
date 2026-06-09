@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Calendar, CheckCircle2, Download, ExternalLink, FileText, RefreshCw, Upload, X } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { AlertCircle, Calendar, Check, CheckCircle2, Download, ExternalLink, FileText, Upload, X, XCircle } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
 import type {
@@ -12,8 +13,12 @@ import type {
   Proveedor,
 } from '../../../models/financiero/core.models';
 import type { FuncionarioDocumentType, FuncionarioUploadedDoc, PrefillFromPendiente } from '../../../models/financiero/funcionario';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
+import { parseFacturaDescripcion } from '../../../share/factura-description';
+import { Label } from '../../../share/label';
+import { Textarea } from '../../../share/textarea';
 
-const DOCUMENT_TYPES: FuncionarioDocumentType[] = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const DOCUMENT_TYPES: FuncionarioDocumentType[] = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega'];
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
 const BLOCKED_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'ps1', 'js', 'vbs', 'scr', 'msi', 'com', 'jar', 'sh']);
@@ -55,6 +60,82 @@ const formatMoney = (val: unknown): string => {
   const num = safeNumber(val, 0);
   return `$${num.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
 };
+
+function ReadonlyServiciosFactura({ descripcion }: { descripcion: string }) {
+  const parsed = parseFacturaDescripcion(descripcion);
+  const hasItems = parsed.items.length > 0;
+  const hasText = Boolean(parsed.remainingText);
+
+  if (!hasItems && !hasText) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+        Sin descripcion del servicio cargada por el proveedor.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {hasItems && (
+        <div className="space-y-3">
+          {parsed.items.map((item, index) => (
+            <div
+              key={`${item.rawLine}-${index}`}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-start gap-3 lg:flex-nowrap">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-sm font-semibold text-white">
+                  {item.index ?? index + 1}
+                </div>
+                <div className="min-w-[220px] flex-1 lg:max-w-[38%]">
+                  <p className="font-semibold text-slate-900">{item.servicio || 'Servicio sin nombre'}</p>
+                  {(item.cantidad || item.unitario) && (
+                    <p className="text-sm text-slate-500">
+                      {item.cantidad ? `${item.cantidad} x ` : ''}
+                      {item.unitario || 'Valor no especificado'}
+                    </p>
+                  )}
+                </div>
+                <div className="grid w-full gap-2 sm:grid-cols-3 lg:ml-auto lg:w-[430px] lg:flex-none">
+                  {item.subtotal && (
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">Subtotal</p>
+                      <p className="font-semibold text-slate-800">{item.subtotal}</p>
+                    </div>
+                  )}
+                  {item.ivaValor && (
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                        Tasa {item.ivaPorcentaje ? `${item.ivaPorcentaje}%` : ''}
+                      </p>
+                      <p className="font-semibold text-slate-800">{item.ivaValor}</p>
+                    </div>
+                  )}
+                  {item.total && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-red-600">Total</p>
+                      <p className="font-semibold text-red-700">{item.total}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {item.extraInfo && item.extraInfo.length > 0 && (
+                <p className="mt-2 whitespace-pre-line text-sm text-slate-500">{item.extraInfo.join('\n')}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {hasText && (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Descripcion adicional</p>
+          <p className="whitespace-pre-line text-sm text-slate-700">{parsed.remainingText}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const getFileExtension = (filename: string): string => {
   const parts = filename.split('.');
@@ -100,7 +181,10 @@ const validateUploadFile = (file: File): string | null => {
 
 export default function RegistrarFactura() {
   const location = useLocation();
+  const navigate = useNavigate();
   const prefillFromPendiente = (location.state as { prefillFromPendiente?: PrefillFromPendiente } | null)?.prefillFromPendiente;
+  const showLegacyBlocks = Boolean((location.state as { showLegacyBlocks?: boolean } | null)?.showLegacyBlocks);
+  const isReviewMode = Boolean(prefillFromPendiente);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -119,8 +203,13 @@ export default function RegistrarFactura() {
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [docs, setDocs] = useState<FuncionarioUploadedDoc[]>([]);
   const [existingDocs, setExistingDocs] = useState<DocumentoAdjunto[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [diagInfo, setDiagInfo] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; count: number; source: string; rawError: string | null }>({ status: 'idle', count: 0, source: '', rawError: null });
+  const [selectedExistingDocIds, setSelectedExistingDocIds] = useState<Set<string>>(new Set());
+  const [rechazarOpen, setRechazarOpen] = useState(false);
+  const [rechazarMotivo, setRechazarMotivo] = useState('');
+  const [rechazarError, setRechazarError] = useState<string | null>(null);
+  const [rechazarLoading, setRechazarLoading] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<{ url: string; name: string } | null>(null);
 
   const [form, setForm] = useState({
     proveedorId: 0,
@@ -175,6 +264,7 @@ export default function RegistrarFactura() {
     setPrefillApplied(false);
     setPrefillWarning(null);
     setExistingDocs([]);
+    setSelectedExistingDocIds(new Set());
     setDiagInfo({ status: 'idle', count: 0, source: '', rawError: null });
   }, [prefillFromPendiente?.facturaId]);
 
@@ -333,6 +423,7 @@ export default function RegistrarFactura() {
   };
 
   const addDoc = (type: FuncionarioDocumentType, file?: File) => {
+    if (isReviewMode) return;
     if (!file) return;
     const validationError = validateUploadFile(file);
     if (validationError) {
@@ -351,31 +442,6 @@ export default function RegistrarFactura() {
       },
     ]);
 
-    // Simula progreso visual de carga para feedback inmediato UX.
-    setUploadProgress((prev) => ({ ...prev, [id]: 0 }));
-    let current = 0;
-    const interval = window.setInterval(() => {
-      current += Math.floor(Math.random() * 22) + 12;
-      if (current >= 100) {
-        current = 100;
-        window.clearInterval(interval);
-      }
-      setUploadProgress((prev) => ({ ...prev, [id]: current }));
-    }, 120);
-  };
-
-  const reloadExistingDocs = async () => {
-    if (!prefillFromPendiente?.facturaId) return;
-    setDiagInfo({ status: 'loading', count: 0, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId}`, rawError: null });
-    try {
-      const list = await documentosService.getByFactura(prefillFromPendiente.facturaId);
-      const docs = Array.isArray(list) ? list : [];
-      setExistingDocs(docs);
-      setDiagInfo({ status: 'done', count: docs.length, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId} (manual reload)`, rawError: null });
-    } catch (e: unknown) {
-      const msg = (e as { message?: string })?.message || String(e);
-      setDiagInfo({ status: 'error', count: 0, source: `GET /financiero/documentos/?factura_id=${prefillFromPendiente.facturaId}`, rawError: msg });
-    }
   };
 
   const openExistingDocument = (doc: DocumentoAdjunto) => {
@@ -384,21 +450,37 @@ export default function RegistrarFactura() {
       setError('Este documento no tiene una URL válida para vista previa en el navegador.');
       return;
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
+    setPreviewDocument({ url, name: doc.nombre_archivo || doc.tipo_documento || 'Documento' });
   };
 
-  const downloadExistingDocument = (doc: DocumentoAdjunto) => {
+  const downloadExistingDocument = async (doc: DocumentoAdjunto) => {
     const url = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
     if (!url) {
       setError('Este documento no tiene una URL válida para descarga directa.');
       return;
     }
 
+    const fileName = doc.nombre_archivo || 'documento';
+    try {
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error('download_failed');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+      return;
+    } catch {
+      // Fallback para archivos servidos directamente por el backend.
+    }
+
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    anchor.download = doc.nombre_archivo || 'documento';
+    anchor.download = fileName;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -406,8 +488,7 @@ export default function RegistrarFactura() {
 
   const openLocalDocument = (doc: FuncionarioUploadedDoc) => {
     const objectUrl = URL.createObjectURL(doc.file);
-    window.open(objectUrl, '_blank', 'noopener,noreferrer');
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    setPreviewDocument({ url: objectUrl, name: doc.file.name });
   };
 
   const downloadLocalDocument = (doc: FuncionarioUploadedDoc) => {
@@ -423,11 +504,61 @@ export default function RegistrarFactura() {
 
   const removeDoc = (id: string) => {
     setDocs((prev) => prev.filter((d) => d.id !== id));
-    setUploadProgress((prev) => {
-      const clone = { ...prev };
-      delete clone[id];
-      return clone;
+  };
+
+  const getExistingDocKey = (doc: DocumentoAdjunto) => String(doc.id ?? `${doc.tipo_documento}-${doc.nombre_archivo}`);
+
+  const toggleExistingDocSelection = (doc: DocumentoAdjunto) => {
+    const key = getExistingDocKey(doc);
+    setSelectedExistingDocIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
+  };
+
+  const selectedExistingDocs = useMemo(
+    () => existingDocs.filter((doc) => selectedExistingDocIds.has(getExistingDocKey(doc))),
+    [existingDocs, selectedExistingDocIds]
+  );
+  const hasSelectedDocsForReject = selectedExistingDocIds.size > 0;
+
+  const openRejectDialog = () => {
+    if (!prefillFromPendiente?.facturaId) {
+      setError('Solo se puede rechazar una factura que viene desde Mis Pendientes.');
+      return;
+    }
+    setRechazarMotivo('');
+    setRechazarError(null);
+    setRechazarOpen(true);
+  };
+
+  const confirmReject = async () => {
+    if (!prefillFromPendiente?.facturaId) return;
+
+    const motivo = rechazarMotivo.trim();
+    if (motivo.length < 10) {
+      setRechazarError('Describe el motivo del rechazo (mÃ­nimo 10 caracteres).');
+      return;
+    }
+
+    const docsPart = selectedExistingDocs.length
+      ? `Documentos rechazados: ${selectedExistingDocs.map((doc) => `${doc.tipo_documento} - ${doc.nombre_archivo}`).join('; ')}. `
+      : '';
+    const finalMotivo = `${docsPart}Motivo: ${motivo}`;
+
+    setRechazarLoading(true);
+    try {
+      await facturasService.rechazar(prefillFromPendiente.facturaId, finalMotivo);
+      toast.success('Factura rechazada y enviada al proveedor para correcciÃ³n.');
+      setRechazarOpen(false);
+      navigate('/financiero/funcionario/pendientes');
+    } catch {
+      setRechazarError('No fue posible rechazar la factura. Intenta nuevamente.');
+    } finally {
+      setRechazarLoading(false);
+    }
   };
 
   const requiredDocTypes = DOCUMENT_TYPES;
@@ -455,6 +586,9 @@ export default function RegistrarFactura() {
   };
 
   const validateStep2 = () => {
+    if (hasSelectedDocsForReject) {
+      return 'Hay documentos marcados para rechazo. Debes rechazar la factura o desmarcarlos antes de continuar.';
+    }
     const required = DOCUMENT_TYPES;
     const docTypes = new Set<FuncionarioDocumentType>([...existingDocTypes, ...uploadedDocTypes]);
     const missing = required.filter((t) => !docTypes.has(t));
@@ -565,7 +699,7 @@ export default function RegistrarFactura() {
       }
 
       // Subir documentos si existen
-      if (docs && docs.length > 0) {
+      if (!isReviewMode && docs && docs.length > 0) {
         await Promise.all(docs.map((doc) => documentosService.upload(factura.id, doc.file, doc.type)));
       }
       
@@ -581,31 +715,11 @@ export default function RegistrarFactura() {
     if (!success) return;
 
     const timer = setTimeout(() => {
-      setSuccess(false);
-      setStep(1);
-      setError(null);
-      setDocs([]);
-      setExistingDocs([]);
-      setUploadProgress({});
-      setForm({
-        proveedorId: 0,
-        proveedorNombre: '',
-        nit: '',
-        tipoDocumento: 'Factura',
-        valorSubtotal: 0,
-        valorIva: 0,
-        valorTotal: 0,
-        fechaFactura: '',
-        fechaRecepcion: new Date().toISOString().split('T')[0],
-        departamentoId: 0,
-        descripcion: '',
-        observaciones: '',
-      });
-      void facturasService.getNumeroSugerido().then((numero) => setNumeroFacturaSugerido(numero || '')).catch(() => setNumeroFacturaSugerido(''));
-    }, 4000);
+      navigate('/financiero/funcionario/pendientes');
+    }, 1800);
 
     return () => clearTimeout(timer);
-  }, [success]);
+  }, [navigate, success]);
 
   if (success) {
     return (
@@ -710,13 +824,7 @@ export default function RegistrarFactura() {
                 </p>
               </motion.div>
 
-              {/* Detalles animados */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="mt-6 space-y-2 text-sm text-green-600"
-              >
+              <motion.div className="hidden">
                 <div className="flex items-center justify-center gap-2">
                   <span>📋 Datos guardados</span>
                   <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, delay: 0.7 }}>✓</motion.span>
@@ -737,8 +845,14 @@ export default function RegistrarFactura() {
     );
   }
 
+  const stepItems = [
+    { id: 1, title: 'Informacion general', description: 'Proveedor, valor, fechas y area' },
+    { id: 2, title: 'Soportes', description: 'Revision documental y adjuntos' },
+    { id: 3, title: 'Confirmacion', description: 'Resumen antes del registro' },
+  ];
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div>
         <h1 className="text-4xl font-bold text-slate-900">
           {prefillFromPendiente ? 'Verificar y Registrar Factura' : 'Registrar Nueva Factura'}
@@ -750,7 +864,42 @@ export default function RegistrarFactura() {
         </p>
       </div>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {stepItems.map((item) => {
+          const isActive = step === item.id;
+          const isDone = step > item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                if (item.id < step) setStep(item.id);
+              }}
+              className={`text-left rounded-xl border p-4 transition-all ${
+                isActive
+                  ? 'border-slate-900 bg-white shadow-sm'
+                  : isDone
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                  isDone ? 'bg-emerald-600 text-white' : isActive ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {isDone ? <Check className="h-4 w-4" /> : item.id}
+                </span>
+                <div>
+                  <p className="font-semibold text-slate-900">{item.title}</p>
+                  <p className="text-xs text-slate-500">{item.description}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="hidden">
         {/* Barra de progreso moderna */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -829,14 +978,14 @@ export default function RegistrarFactura() {
         </motion.div>
       )}
 
-      {prefillFromPendiente && (
+      {showLegacyBlocks && prefillFromPendiente && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
           Se cargaron automáticamente datos desde Pendientes (registro #{prefillFromPendiente.facturaId}).
           El flujo ahora es de verificación: valida información y soportes, y registra sin re-digitar.
         </motion.div>
       )}
 
-      {prefillWarning && (
+      {showLegacyBlocks && prefillWarning && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
           {prefillWarning}
         </motion.div>
@@ -859,9 +1008,19 @@ export default function RegistrarFactura() {
           transition={{ duration: 0.4, ease: 'easeInOut' }}
           className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8"
         >
-        <div className="mb-8">
+        <div className="relative mb-8 pr-32">
           <h2 className="text-4xl font-bold text-slate-900">Información General</h2>
-          <p className="text-slate-500 mt-2">Complete los datos de la factura recibida del proveedor</p>
+          <p className="max-w-xl text-slate-500 mt-2">Revise los datos enviados por el proveedor.</p>
+          {prefillFromPendiente && (
+            <button
+              type="button"
+              onClick={openRejectDialog}
+              className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+            >
+              <XCircle className="h-4 w-4" />
+              Rechazar
+            </button>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -870,21 +1029,21 @@ export default function RegistrarFactura() {
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200"
+            className="bg-slate-50 rounded-xl p-5 border border-slate-200"
           >
-            <label className="block text-sm font-bold text-blue-900 mb-2">☆ Seleccionar Proveedor *</label>
+            <label className="block text-sm font-bold text-slate-800 mb-2">Seleccionar Proveedor *</label>
             <select
-              className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-slate-900 font-medium"
+              className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all bg-white text-slate-900 font-medium"
               value={form.proveedorId}
               onChange={(e) => setField('proveedorId', Number(e.target.value))}
-              disabled={Boolean(prefillFromPendiente) || catalogLoading || proveedores.length === 0}
+              disabled={isReviewMode || catalogLoading || proveedores.length === 0}
             >
               <option value={0}>-- Seleccione un proveedor --</option>
               {proveedores.map((p) => (
                 <option key={p.id} value={p.id}>{p.razon_social}</option>
               ))}
             </select>
-            <p className="text-xs text-blue-700 mt-2">
+            <p className="text-xs text-slate-600 mt-2">
               {prefillFromPendiente
                 ? 'Proveedor bloqueado: corresponde a la solicitud pendiente seleccionada.'
                 : catalogLoading
@@ -927,14 +1086,14 @@ export default function RegistrarFactura() {
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-5 border-2 border-amber-300"
+            className="bg-slate-50 rounded-xl p-5 border border-slate-200"
           >
-            <p className="text-sm font-bold text-amber-900 mb-4">📄 Datos de la Factura *</p>
+            <p className="text-sm font-bold text-slate-800 mb-4">Datos de la Factura *</p>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Número de Factura</label>
                 <input 
-                  className="w-full border-2 border-amber-200 rounded-lg px-4 py-2.5 bg-amber-50 text-slate-700"
+                  className="w-full border-2 border-slate-200 rounded-lg px-4 py-2.5 bg-white text-slate-700"
                   value={numeroFacturaSugerido || 'Cargando consecutivo...'}
                   readOnly
                 />
@@ -942,9 +1101,10 @@ export default function RegistrarFactura() {
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Tipo de Documento</label>
                 <select 
-                  className="w-full border-2 border-amber-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                  className="w-full border-2 border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                   value={form.tipoDocumento} 
                   onChange={(e) => setField('tipoDocumento', e.target.value)}
+                  disabled={isReviewMode}
                 >
                   <option value="Factura">Factura</option>
                   <option value="Factura Electrónica">Factura Electrónica</option>
@@ -958,22 +1118,24 @@ export default function RegistrarFactura() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
                   <input 
                     type="number" 
-                    className="w-full border-2 border-amber-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full border-2 border-slate-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     value={form.valorSubtotal || ''} 
                     onChange={(e) => setField('valorSubtotal', Number(e.target.value || 0))} 
+                    readOnly={isReviewMode}
                     placeholder="0"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">IVA</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">Tasa</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
                   <input
                     type="number"
-                    className="w-full border-2 border-amber-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full border-2 border-slate-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     value={form.valorIva || ''}
                     onChange={(e) => setField('valorIva', Number(e.target.value || 0))}
+                    readOnly={isReviewMode}
                     placeholder="0"
                   />
                 </div>
@@ -984,9 +1146,10 @@ export default function RegistrarFactura() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
                   <input
                     type="number"
-                    className="w-full border-2 border-amber-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    className="w-full border-2 border-slate-200 rounded-lg pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     value={form.valorTotal || ''}
                     onChange={(e) => setField('valorTotal', Number(e.target.value || 0))}
+                    readOnly={isReviewMode}
                     placeholder="0"
                   />
                 </div>
@@ -999,22 +1162,23 @@ export default function RegistrarFactura() {
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.25 }}
-            className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border-2 border-purple-300"
+            className="bg-slate-50 rounded-xl p-5 border border-slate-200"
           >
-            <p className="text-sm font-bold text-purple-900 mb-4">📅 Fechas Clave *</p>
+            <p className="text-sm font-bold text-slate-800 mb-4">Fechas Clave *</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Fecha de Emisión (Factura)</label>
                 <div className="relative">
-                  <Calendar className="w-4 h-4 text-purple-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Calendar className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input 
                     type="date" 
-                    className="w-full border-2 border-purple-200 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    className="w-full border-2 border-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
                     value={form.fechaFactura} 
                     onChange={(e) => setField('fechaFactura', e.target.value)}
+                    disabled={isReviewMode}
                   />
                 </div>
-                <p className="text-xs text-purple-700 mt-1">Fecha que aparece en la factura</p>
+                <p className="text-xs text-slate-500 mt-1">Fecha que aparece en la factura</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Fecha de Recepción en la Universidad</label>
@@ -1025,7 +1189,7 @@ export default function RegistrarFactura() {
                     className="w-full border-2 border-red-400 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all font-semibold"
                     value={form.fechaRecepcion} 
                     onChange={(e) => setField('fechaRecepcion', e.target.value)}
-                    disabled={Boolean(prefillFromPendiente)}
+                    disabled={isReviewMode}
                   />
                 </div>
                 <p className="text-xs text-red-600 font-semibold mt-1">
@@ -1048,7 +1212,7 @@ export default function RegistrarFactura() {
                 className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                 value={form.departamentoId} 
                 onChange={(e) => setField('departamentoId', Number(e.target.value))}
-                disabled={catalogLoading || departamentos.length === 0}
+                disabled={isReviewMode || catalogLoading || departamentos.length === 0}
               >
                 <option value={0}>Seleccione un área</option>
                 {departamentos.map((d) => (
@@ -1060,17 +1224,37 @@ export default function RegistrarFactura() {
               )}
             </div>
 
-            <div>
+            {isReviewMode && (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Identificacion Factura</label>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Dato enviado por el proveedor</p>
+                    <p className="mt-1 whitespace-pre-line text-sm font-medium text-amber-900">
+                      {safeString(form.observaciones, 'Sin identificacion cargada')}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Descripcion del Servicio / Bien</label>
+                  <ReadonlyServiciosFactura descripcion={form.descripcion} />
+                </div>
+              </>
+            )}
+
+            <div className={isReviewMode ? 'hidden' : ''}>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Descripción del Servicio/Producto *</label>
               <textarea 
                 className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 min-h-28 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                 value={form.descripcion} 
                 onChange={(e) => setField('descripcion', e.target.value)} 
+                readOnly={isReviewMode}
                 placeholder="Descripción detallada: concepto, periodo, alcance del servicio/producto facturado..."
               />
             </div>
 
-            <div>
+            <div className={isReviewMode ? 'hidden' : ''}>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Observaciones Adicionales</label>
               <textarea 
                 className="w-full border-2 border-slate-300 rounded-lg px-4 py-3 min-h-20 focus:ring-2 focus:ring-slate-400 focus:border-slate-400 transition-all"
@@ -1086,8 +1270,20 @@ export default function RegistrarFactura() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="flex justify-end gap-3 pt-4 border-t-2 border-slate-200"
+            className="flex justify-between gap-3 pt-4 border-t-2 border-slate-200"
           >
+            {showLegacyBlocks && prefillFromPendiente ? (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={openRejectDialog}
+                type="button"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-all"
+              >
+                <XCircle className="h-4 w-4" />
+                Rechazar factura
+              </motion.button>
+            ) : <span />}
             <motion.button 
               whileHover={{ scale: 1.02 }} 
               whileTap={{ scale: 0.98 }} 
@@ -1120,17 +1316,16 @@ export default function RegistrarFactura() {
               {prefillFromPendiente && (
                 <button
                   type="button"
-                  onClick={() => { void reloadExistingDocs(); }}
-                  disabled={diagInfo.status === 'loading'}
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-300 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 disabled:opacity-50 transition-all mt-1"
+                  onClick={openRejectDialog}
+                  className="flex-shrink-0 inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
                 >
-                  <RefreshCw className={`w-4 h-4 ${diagInfo.status === 'loading' ? 'animate-spin' : ''}`} />
-                  Recargar documentos
+                  <XCircle className="h-4 w-4" />
+                  Rechazar
                 </button>
               )}
             </div>
 
-            {prefillFromPendiente && prefillApplied && (
+            {showLegacyBlocks && prefillFromPendiente && prefillApplied && (
               <div className={`mb-5 rounded-xl border p-4 text-sm font-mono ${
                 diagInfo.status === 'error' ? 'bg-red-50 border-red-300 text-red-800' :
                 diagInfo.status === 'loading' ? 'bg-slate-50 border-slate-300 text-slate-600' :
@@ -1149,7 +1344,7 @@ export default function RegistrarFactura() {
               </div>
             )}
 
-            {existingDocs.length > 0 && (
+            {showLegacyBlocks && existingDocs.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1173,7 +1368,7 @@ export default function RegistrarFactura() {
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="mb-8 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 p-6 border-2 border-green-300"
+              className="hidden"
             >
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -1200,7 +1395,7 @@ export default function RegistrarFactura() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+              className="hidden"
             >
               {DOCUMENT_TYPES.map((type, idx) => {
                 const hasUpload = uploadedDocTypes.has(type);
@@ -1259,23 +1454,30 @@ export default function RegistrarFactura() {
                 </motion.div>
               ) : (
                 <div className="space-y-3">
-                  {existingDocs.map((d) => (
+                  {existingDocs.map((d) => {
+                    const selected = selectedExistingDocIds.has(getExistingDocKey(d));
+                    return (
                     <div
                       key={`exist-list-${d.id}`}
-                      className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200"
+                      className={`rounded-xl p-4 border transition-all ${selected ? 'bg-green-50 border-green-300' : 'bg-white border-slate-200'}`}
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 flex-1">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg">
-                            <FileText className="w-5 h-5" />
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleExistingDocSelection(d)}
+                            className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all font-bold text-lg ${selected ? 'border-green-500 bg-green-500 text-white shadow-lg shadow-green-300' : 'border-slate-300 bg-white text-slate-400'}`}
+                            title={selected ? 'Quitar de rechazo' : 'Marcar para rechazo'}
+                            aria-label={selected ? 'Quitar documento de rechazo' : 'Marcar documento para rechazo'}
+                          >
+                            {selected ? '✓' : '○'}
+                          </button>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-slate-900 text-sm">{d.tipo_documento}</p>
                             <p className="text-xs text-slate-500 truncate">{d.nombre_archivo}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Proveedor</span>
                           <button
                             type="button"
                             onClick={() => openExistingDocument(d)}
@@ -1285,7 +1487,7 @@ export default function RegistrarFactura() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => downloadExistingDocument(d)}
+                            onClick={() => { void downloadExistingDocument(d); }}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                           >
                             <Download className="w-3.5 h-3.5" /> Descargar
@@ -1293,7 +1495,8 @@ export default function RegistrarFactura() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   {docs.map((d, idx) => (
                     <motion.div
@@ -1304,7 +1507,15 @@ export default function RegistrarFactura() {
                       className="bg-white rounded-xl p-4 border-2 border-slate-200 hover:border-green-400 transition-all"
                     >
                       <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => removeDoc(d.id)}
+                            className="p-2 rounded-lg hover:bg-red-100 text-red-600 hover:text-red-700 transition-all hover:scale-110 active:scale-95"
+                            title="Eliminar documento"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg">
                             <FileText className="w-5 h-5" />
                           </div>
@@ -1315,6 +1526,15 @@ export default function RegistrarFactura() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <label className="inline-flex cursor-pointer items-center gap-1 px-2 py-1 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">
+                            <Upload className="w-3.5 h-3.5" /> Cambiar
+                            <input
+                              type="file"
+                              accept=".pdf,.xml,.png,.jpg,.jpeg,application/pdf,application/xml,text/xml,image/png,image/jpeg"
+                              className="hidden"
+                              onChange={(event: React.ChangeEvent<HTMLInputElement>) => addDoc(d.type, event.target.files?.[0])}
+                            />
+                          </label>
                           <button
                             type="button"
                             onClick={() => openLocalDocument(d)}
@@ -1329,33 +1549,92 @@ export default function RegistrarFactura() {
                           >
                             <Download className="w-3.5 h-3.5" /> Descargar
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => removeDoc(d.id)}
-                            className="p-2 rounded-lg hover:bg-red-100 text-red-600 hover:text-red-700 transition-all hover:scale-110 active:scale-95"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
                         </div>
                       </div>
 
-                      {/* Barra de progreso por archivo */}
-                      <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <motion.div 
-                          className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${uploadProgress[d.id] || 0}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </div>
-                      {uploadProgress[d.id] !== undefined && uploadProgress[d.id] < 100 && (
-                        <p className="text-xs text-slate-500 mt-1 text-right">{uploadProgress[d.id]}%</p>
-                      )}
                     </motion.div>
                   ))}
                 </div>
               )}
+
+              {hasSelectedDocsForReject && (
+                <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Tienes documentos marcados para rechazo. Si vas a devolver esta factura, usa el boton Rechazar factura. Para continuar al siguiente paso, primero desmarca esos documentos.
+                </div>
+              )}
             </motion.div>
+
+            {/* Sección de Documentos Adicionales */}
+            {!isReviewMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="rounded-2xl border-2 border-slate-200 p-6 bg-slate-50 mt-8"
+            >
+              <div className="mb-4">
+                <p className="font-bold text-slate-800 text-lg">📎 Documentos Adicionales</p>
+                <p className="text-sm text-slate-600 mt-1">Agrega documentos adicionales si el funcionario necesita incluir más soportes (solo PDF)</p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Botón para agregar documentos adicionales */}
+                <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-slate-300 bg-white hover:bg-slate-50 cursor-pointer transition-all hover:border-blue-400">
+                  <Upload className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-slate-700">Agregar documento adicional (PDF)</span>
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      
+                      if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+                        setError('Solo se permiten archivos PDF');
+                        return;
+                      }
+                      
+                      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+                        setError('El archivo supera el tamaño máximo permitido (10 MB)');
+                        return;
+                      }
+                      
+                      addDoc('Soporte Adicional', file);
+                    }}
+                  />
+                </label>
+
+                {/* Listado de documentos adicionales cargados */}
+                {docs.filter((d: FuncionarioUploadedDoc) => d.type === 'Soporte Adicional').length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-semibold text-slate-700">Documentos adicionales cargados:</p>
+                    {docs.filter((d: FuncionarioUploadedDoc) => d.type === 'Soporte Adicional').map((d: FuncionarioUploadedDoc, idx: number) => (
+                      <motion.div
+                        key={d.id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + idx * 0.05 }}
+                        className="bg-white rounded-lg p-3 border border-blue-200 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                          <p className="text-sm text-slate-700 truncate">{d.file.name}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeDoc(d.id)}
+                          className="p-1 rounded hover:bg-red-100 text-red-600 hover:text-red-700 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+            )}
 
             {/* Botones de navegación */}
             <motion.div 
@@ -1373,12 +1652,25 @@ export default function RegistrarFactura() {
               >
                 ← Anterior
               </motion.button>
+              {showLegacyBlocks && prefillFromPendiente && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={openRejectDialog}
+                  type="button"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-all"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Rechazar factura
+                </motion.button>
+              )}
               <motion.button 
                 whileHover={{ scale: 1.02 }} 
                 whileTap={{ scale: 0.98 }} 
                 onClick={nextStep} 
                 type="button" 
-                className="px-8 py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-300 hover:shadow-lg hover:shadow-red-400 transition-all"
+                disabled={hasSelectedDocsForReject}
+                className="px-8 py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-300 hover:shadow-lg hover:shadow-red-400 transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
               >
                 Siguiente →
               </motion.button>
@@ -1396,8 +1688,8 @@ export default function RegistrarFactura() {
             className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8"
           >
             <div className="mb-8">
-              <h2 className="text-4xl font-bold text-slate-900">Confirmación del Registro</h2>
-              <p className="text-slate-500 mt-2">Revise toda la información antes de registrar la factura</p>
+              <h2 className="text-3xl font-bold text-slate-800 border-b-2 border-slate-300 pb-3">Confirmación del Registro</h2>
+              <p className="text-slate-600 mt-3 text-lg font-medium">Por favor, revise toda la información antes de proceder con el registro de la factura</p>
             </div>
 
             {/* Tarjeta de datos principales */}
@@ -1405,16 +1697,16 @@ export default function RegistrarFactura() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 p-6 mb-6"
+              className="rounded-2xl bg-slate-50 border border-slate-200 p-6 mb-6"
             >
-              <p className="font-bold text-amber-900 mb-4 text-lg">🏢 Información del Proveedor</p>
+              <p className="font-bold text-slate-700 mb-4 text-lg border-b border-slate-300 pb-2">Información del Proveedor</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-4 border border-amber-200">
-                  <p className="text-xs text-amber-700 font-semibold mb-1">Proveedor</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Proveedor</p>
                   <p className="text-lg font-bold text-slate-900">{safeString(form.proveedorNombre, 'No seleccionado')}</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-amber-200">
-                  <p className="text-xs text-amber-700 font-semibold mb-1">NIT</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">NIT</p>
                   <p className="text-lg font-bold text-slate-900 font-mono">{safeString(form.nit, 'No disponible')}</p>
                 </div>
               </div>
@@ -1425,29 +1717,29 @@ export default function RegistrarFactura() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
-              className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 p-6 mb-6"
+              className="rounded-2xl bg-slate-50 border border-slate-200 p-6 mb-6"
             >
-              <p className="font-bold text-blue-900 mb-4 text-lg">📄 Datos de la Factura</p>
+              <p className="font-bold text-slate-700 mb-4 text-lg border-b border-slate-300 pb-2">Datos de la Factura</p>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                  <p className="text-xs text-blue-700 font-semibold mb-1">Número</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Número</p>
                   <p className="text-lg font-bold text-slate-900">{safeString(numeroFacturaSugerido, 'Cargando...')}</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                  <p className="text-xs text-blue-700 font-semibold mb-1">Tipo</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Tipo</p>
                   <p className="text-lg font-bold text-slate-900">{safeString(form.tipoDocumento, 'No especificado')}</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                  <p className="text-xs text-blue-700 font-semibold mb-1">Subtotal</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Subtotal</p>
                   <p className="text-xl font-bold text-slate-800">{formatMoney(form.valorSubtotal)}</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                  <p className="text-xs text-blue-700 font-semibold mb-1">IVA</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Tasa</p>
                   <p className="text-xl font-bold text-slate-800">{formatMoney(form.valorIva)}</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                  <p className="text-xs text-blue-700 font-semibold mb-1">Valor Total</p>
-                  <p className="text-2xl font-bold text-green-600">{formatMoney(form.valorTotal)}</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Valor Total</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatMoney(form.valorTotal)}</p>
                 </div>
               </div>
             </motion.div>
@@ -1457,17 +1749,17 @@ export default function RegistrarFactura() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 p-6 mb-6"
+              className="rounded-2xl bg-slate-50 border border-slate-200 p-6 mb-6"
             >
-              <p className="font-bold text-purple-900 mb-4 text-lg">📅 Fechas Importantes</p>
+              <p className="font-bold text-slate-700 mb-4 text-lg border-b border-slate-300 pb-2">Fechas Importantes</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-4 border border-purple-200">
-                  <p className="text-xs text-purple-700 font-semibold mb-1">Emisión de Factura</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Emisión de Factura</p>
                   <p className="text-lg font-bold text-slate-900">{safeString(form.fechaFactura, 'Sin fecha')}</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-red-400">
-                  <p className="text-xs text-red-700 font-semibold mb-1">⚠ Recepción en Universidad (SLA)</p>
-                  <p className="text-lg font-bold text-red-600">{safeString(form.fechaRecepcion, 'Sin fecha')}</p>
+                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Recepción en Universidad (SLA)</p>
+                  <p className="text-lg font-bold text-slate-900">{safeString(form.fechaRecepcion, 'Sin fecha')}</p>
                 </div>
               </div>
             </motion.div>
@@ -1479,24 +1771,24 @@ export default function RegistrarFactura() {
               transition={{ delay: 0.25 }}
               className="rounded-2xl bg-slate-50 border-2 border-slate-300 p-6 mb-6"
             >
-              <p className="font-bold text-slate-900 mb-4 text-lg">📋 Información Adicional</p>
+              <p className="font-bold text-slate-700 mb-4 text-lg border-b border-slate-300 pb-2">Información Adicional</p>
               <div className="space-y-3">
                 <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-xs text-slate-600 font-semibold mb-1">Área Solicitante</p>
-                  <p className="text-slate-900 font-semibold">
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Área Solicitante</p>
+                  <p className="text-slate-800 font-semibold">
                     {departamentos?.length > 0 
                       ? safeString(departamentos.find(d => d?.id === form.departamentoId)?.nombre, 'No seleccionada')
                       : 'No seleccionada'}
                   </p>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-xs text-slate-600 font-semibold mb-1">Descripción</p>
-                  <p className="text-slate-800 text-sm">{safeString(form.descripcion, 'Sin descripción')}</p>
+                  <p className="text-sm text-slate-600 font-semibold mb-1">Descripción</p>
+                  <p className="text-slate-800 text-sm font-medium">{safeString(form.descripcion, 'Sin descripción')}</p>
                 </div>
                 {form.observaciones && safeString(form.observaciones) !== 'Sin observaciones' && (
                   <div className="bg-white rounded-lg p-3 border border-slate-200">
-                    <p className="text-xs text-slate-600 font-semibold mb-1">Observaciones</p>
-                    <p className="text-slate-800 text-sm">{safeString(form.observaciones, 'Sin observaciones')}</p>
+                    <p className="text-sm text-slate-600 font-semibold mb-1">Observaciones</p>
+                    <p className="text-slate-800 text-sm font-medium">{safeString(form.observaciones, 'Sin observaciones')}</p>
                   </div>
                 )}
               </div>
@@ -1507,16 +1799,16 @@ export default function RegistrarFactura() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
-              className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 p-6 mb-6"
+              className="rounded-2xl bg-slate-50 border border-slate-200 p-6 mb-6"
             >
-              <p className="font-bold text-green-900 mb-4 text-lg">✓ Documentos Verificados ({existingDocs.length + docs.length})</p>
+              <p className="font-bold text-slate-700 mb-4 text-lg border-b border-slate-300 pb-2">Documentos Verificados ({existingDocs.length + docs.length})</p>
               <div className="space-y-2">
                 {existingDocs.map((d) => (
                   <div
                     key={`confirm-existing-${d.id}`}
-                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-green-200"
+                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-slate-200"
                   >
-                    <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">P</span>
+                    <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 text-white flex items-center justify-center text-sm font-bold shadow-lg shadow-slate-300">✓</span>
                     <div>
                       <p className="font-semibold text-slate-900 text-sm">{d.tipo_documento}</p>
                       <p className="text-xs text-slate-500 truncate">{d.nombre_archivo}</p>
@@ -1530,9 +1822,9 @@ export default function RegistrarFactura() {
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.35 + idx * 0.05 }}
-                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-green-200"
+                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-slate-200"
                   >
-                    <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">✓</span>
+                    <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 text-white flex items-center justify-center text-sm font-bold shadow-lg shadow-slate-300">✓</span>
                     <div>
                       <p className="font-semibold text-slate-900 text-sm">{d.type}</p>
                       <p className="text-xs text-slate-500 truncate">{d.file.name}</p>
@@ -1572,6 +1864,84 @@ export default function RegistrarFactura() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Dialog
+        open={Boolean(previewDocument)}
+        onOpenChange={(open) => {
+          if (!open && previewDocument?.url.startsWith('blob:')) {
+            URL.revokeObjectURL(previewDocument.url);
+          }
+          if (!open) setPreviewDocument(null);
+        }}
+      >
+        <DialogContent className="max-w-7xl w-[95vw] h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewDocument?.name || 'Documento'}</DialogTitle>
+            <DialogDescription>Vista previa del soporte seleccionado.</DialogDescription>
+          </DialogHeader>
+          {previewDocument && (
+            <div className="h-[calc(90vh-120px)] overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+              <iframe
+                src={previewDocument.url}
+                title={previewDocument.name}
+                className="h-full w-full"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rechazarOpen} onOpenChange={setRechazarOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar factura</DialogTitle>
+            <DialogDescription>
+              La factura volvera al proveedor para correccion. Si marcaste documentos, se incluiran en el motivo del rechazo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {selectedExistingDocs.length > 0 && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                <p className="font-semibold mb-2">✓ Documentos seleccionados para rechazo:</p>
+                <p className="text-green-700 font-medium">{selectedExistingDocs.map((doc: DocumentoAdjunto) => doc.tipo_documento).join(', ')}</p>
+                <p className="text-xs text-green-600 mt-2 italic">Se rechazaron los siguientes documentos: {selectedExistingDocs.map((doc: DocumentoAdjunto) => doc.tipo_documento).join(', ')}, por favor modificar documentos.</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="rechazo-registro-motivo">Motivo del rechazo</Label>
+              <Textarea
+                id="rechazo-registro-motivo"
+                value={rechazarMotivo}
+                onChange={(event) => {
+                  setRechazarMotivo(event.target.value);
+                  setRechazarError(null);
+                }}
+                placeholder="Describe que debe corregir el proveedor..."
+                rows={4}
+              />
+              {rechazarError && <p className="text-sm text-red-600">{rechazarError}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setRechazarOpen(false)}
+              className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              disabled={rechazarLoading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => { void confirmReject(); }}
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              disabled={rechazarLoading}
+            >
+              {rechazarLoading ? 'Rechazando...' : 'Confirmar rechazo'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

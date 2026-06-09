@@ -14,9 +14,10 @@ function nivelRiesgo(dias: number): 'verde' | 'amarillo' | 'naranja' | 'vencido'
 
 function accionRequerida(factura: Factura): string {
   if (factura.estado === 'Recibida') return 'Radicar factura y verificar documentos';
+  if (factura.estado === 'Registrada') return 'Radicar factura y verificar documentos';
   if (factura.estado === 'Radicada') {
     if (factura.dias_transcurridos > SLA_DIAS_CONTABILIDAD) return 'URGENTE: Causar factura VENCIDA';
-    return 'Causar factura y asignar cuenta contable';
+    return 'Causar factura y cargar soporte Seven';
   }
   return 'Revisar factura';
 }
@@ -47,23 +48,21 @@ export function useContabilidadMisPendientes() {
     setCargando(true);
     setError(null);
     try {
-      const [recibidas, registradas, radicadas] = await Promise.all([
-        facturasService.getByEstado('Recibida'),
-        facturasService.getByEstado('Registrada'),
-        facturasService.getByEstado('Radicada'),
-      ]);
+      // Solo traer facturas en estado 'Registrada'
+      const registradas = await facturasService.getByEstado('Registrada');
 
-      const mergedMap = new Map<number, Factura>();
-      [...recibidas, ...registradas, ...radicadas].forEach((f) => {
-        mergedMap.set(f.id, f);
-      });
-      const todas = Array.from(mergedMap.values()).filter(
-        (f) => f.etapa_actual !== 'Corrección Funcionario'
+      // Mostrar únicamente las que no tienen radicado asignado (pendientes de radicar)
+      const pendientes: Factura[] = (registradas as Factura[]).filter(
+        (f: Factura) =>
+          f.estado === 'Registrada' &&
+          (!f.numero_radicado || String(f.numero_radicado).trim() === '') &&
+          f.etapa_actual !== 'Corrección Funcionario'
       );
 
-      setFacturas(todas);
+      pendientes.sort((a, b) => (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || ''));
+      setFacturas(pendientes);
       const docsResults = await Promise.all(
-        todas.map((f) =>
+        pendientes.map((f) =>
           documentosService
             .getByFactura(f.id)
             .then((d) => ({ id: f.id, docs: d }))
@@ -87,12 +86,12 @@ export function useContabilidadMisPendientes() {
   }, [cargarDatos]);
 
   const metrics = useMemo(() => {
-    const vencidasCount = facturas.filter((f) => f.dias_transcurridos > SLA_DIAS_CONTABILIDAD).length;
-    const proximasVencerCount = facturas.filter((f) => {
+    const vencidasCount = facturas.filter((f: Factura) => f.dias_transcurridos > SLA_DIAS_CONTABILIDAD).length;
+    const proximasVencerCount = facturas.filter((f: Factura) => {
       const nivel = nivelRiesgo(f.dias_transcurridos);
       return nivel === 'amarillo' || nivel === 'naranja';
     }).length;
-    const enTiempoCount = facturas.filter((f) => nivelRiesgo(f.dias_transcurridos) === 'verde').length;
+    const enTiempoCount = facturas.filter((f: Factura) => nivelRiesgo(f.dias_transcurridos) === 'verde').length;
 
     return { vencidasCount, proximasVencerCount, enTiempoCount };
   }, [facturas]);

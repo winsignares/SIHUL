@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from . import models
+from .sla import obtener_parametro_por_etapa
 from usuarios.serializers import UsuarioSerializer
 from decimal import Decimal
 from django.db import IntegrityError
@@ -136,6 +137,7 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
 
 class HistorialFacturaSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
+    numero_factura = serializers.CharField(source='factura.numero_factura', read_only=True)
 
     class Meta:
         model = models.HistorialFactura
@@ -183,20 +185,27 @@ class FacturaListSerializer(serializers.ModelSerializer):
     valor_neto_pagar = serializers.ReadOnlyField()
     dias_transcurridos = serializers.ReadOnlyField()
     monto_alto = serializers.ReadOnlyField()
+    sla_objetivo_dias = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Factura
         fields = [
             'id', 'numero_factura', 'numero_radicado', 'proveedor', 'departamento', 'departamento_id', 'valor_total',
             'cuenta_contable', 'centro_costo', 'numero_proceso_pago', 'numero_confirmacion', 'numero_transaccion', 'numero_comprobante',
-            'archivo_plano_generado',
+            'numero_operacion_contable', 'consecutivo_operacion', 'archivo_plano_generado',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual', 'fecha_inicio_etapa',
-            'tipo_documento', 'descripcion', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
+            'tipo_documento', 'descripcion', 'observaciones', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
             'fecha_alistamiento', 'fecha_aprobacion_auditoria', 'fecha_revision_direccion', 'fecha_autorizacion',
             'fecha_pago_aplicado', 'fecha_comprobante',
             'dias_transcurridos', 'indicador_riesgo',
-            'indicador_riesgo_display', 'monto_alto', 'sla_cumplido'
+            'indicador_riesgo_display', 'monto_alto', 'sla_cumplido', 'sla_objetivo_dias'
         ]
+
+    def get_sla_objetivo_dias(self, obj):
+        parametro = obtener_parametro_por_etapa(getattr(obj, 'etapa_actual', None))
+        if not parametro or not parametro.activo:
+            return None
+        return int(parametro.dias_maximos or 0)
 
 
 class FacturaDetailSerializer(serializers.ModelSerializer):
@@ -217,6 +226,7 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     valor_neto_pagar = serializers.ReadOnlyField()
     dias_transcurridos = serializers.ReadOnlyField()
     monto_alto = serializers.ReadOnlyField()
+    sla_objetivo_dias = serializers.SerializerMethodField()
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
     indicador_riesgo_display = serializers.CharField(source='get_indicador_riesgo_display', read_only=True)
 
@@ -224,6 +234,12 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
         model = models.Factura
         fields = '__all__'
         read_only_fields = ['fecha_creacion', 'fecha_modificacion', 'valor_neto_pagar', 'dias_transcurridos']
+
+    def get_sla_objetivo_dias(self, obj):
+        parametro = obtener_parametro_por_etapa(getattr(obj, 'etapa_actual', None))
+        if not parametro or not parametro.activo:
+            return None
+        return int(parametro.dias_maximos or 0)
 
 
 class FacturaCreateSerializer(serializers.ModelSerializer):
@@ -291,3 +307,21 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
                 validated_data['numero_factura'] = ''
 
         raise serializers.ValidationError("No fue posible generar un numero de factura unico")
+
+
+# ============================================================
+# SERIALIZERS PARA BANCO Y TIPO DE CUENTA
+# ============================================================
+
+class BancoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Banco
+        fields = ['id', 'nombre', 'descripcion', 'codigo_bancario', 'activo', 'fecha_creacion', 'fecha_modificacion']
+        read_only_fields = ['fecha_creacion', 'fecha_modificacion']
+
+
+class TipoCuentaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TipoCuenta
+        fields = ['id', 'nombre', 'descripcion', 'activo', 'fecha_creacion', 'fecha_modificacion']
+        read_only_fields = ['fecha_creacion', 'fecha_modificacion']

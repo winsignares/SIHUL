@@ -11,6 +11,26 @@ export interface FacturaAutorizacion extends SharedFacturaDetail {
   centroCosto: string;
 }
 
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
+const normalizeEstado = (value?: string) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const isPendienteRectoria = (estado?: string) => {
+  const normalized = normalizeEstado(estado);
+  return normalized.includes('enviada') && normalized.includes('rector');
+};
+
+const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
+
 export function useAutorizarPagos() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
@@ -27,6 +47,7 @@ export function useAutorizarPagos() {
     fechaFin: '',
     montoMin: '',
     montoMax: '',
+    orden: 'antiguos',
   });
 
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaAutorizacion | null>(null);
@@ -49,7 +70,7 @@ export function useAutorizarPagos() {
       ...base,
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
-      fechaEnvioRectoria: factura.fecha_recepcion ?? factura.fecha_creacion ?? '',
+      fechaEnvioRectoria: factura.fecha_cargue ?? factura.fecha_recepcion ?? factura.fecha_creacion ?? '',
       cuentaContable: factura.cuenta_contable ? `${factura.cuenta_contable.codigo} - ${factura.cuenta_contable.nombre}` : '',
       centroCosto: factura.centro_costo ? `${factura.centro_costo.codigo} - ${factura.centro_costo.nombre}` : '',
       documentos: docs.map((d) => ({
@@ -65,49 +86,74 @@ export function useAutorizarPagos() {
   const cargarFacturas = useCallback(async () => {
     setCargando(true);
     setError(null);
+
     try {
-      const lista = await facturasService.getByEstado('Enviada Rectoría');
+      const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
+      const lista = toList<Factura>(response).filter((factura) => isPendienteRectoria(factura.estado));
       setFacturas(lista);
 
       const docsResults = await Promise.all(
-        lista.map((f) =>
+        lista.map((factura) =>
           documentosService
-            .getByFactura(f.id)
-            .then((d) => ({ id: f.id, docs: d }))
-            .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
+            .getByFactura(factura.id)
+            .then((docs) => ({ id: factura.id, docs }))
+            .catch(() => ({ id: factura.id, docs: [] as DocumentoAdjunto[] }))
         )
       );
 
-      const map: Record<number, DocumentoAdjunto[]> = {};
+      const nextDocsMap: Record<number, DocumentoAdjunto[]> = {};
       docsResults.forEach(({ id, docs }) => {
-        map[id] = docs;
+        nextDocsMap[id] = docs;
       });
-      setDocsMap(map);
+      setDocsMap(nextDocsMap);
     } catch {
-      setError('No se pudieron cargar los pagos pendientes de autorización.');
+      setError('No se pudieron cargar los pagos pendientes de autorizacion.');
     } finally {
       setCargando(false);
     }
   }, []);
 
   useEffect(() => {
-    cargarFacturas();
+    void cargarFacturas();
   }, [cargarFacturas]);
 
+  const facturasAutorizacion = useMemo(() => {
+    return facturas.map((factura) => mapFactura(factura, docsMap[factura.id] ?? []));
+  }, [facturas, docsMap]);
+
   const facturasFiltradas = useMemo(() => {
-    return facturas
-      .map((f) => mapFactura(f, docsMap[f.id] ?? []))
-      .filter((factura) => {
-        if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-        if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-        if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-        if (filtros.fechaInicio && factura.fechaEnvioRectoria < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && factura.fechaEnvioRectoria > filtros.fechaFin) return false;
-        if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-        if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
-        return true;
-      });
-  }, [facturas, docsMap, filtros]);
+    const filtradas = facturasAutorizacion.filter((factura) => {
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
+      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && factura.fechaEnvioRectoria < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && factura.fechaEnvioRectoria > filtros.fechaFin) return false;
+      return true;
+    });
+
+    switch (filtros.orden) {
+      case 'recientes':
+        return filtradas.sort((a, b) => parseFecha(b.fechaEnvioRectoria) - parseFecha(a.fechaEnvioRectoria));
+      case 'sla':
+        return filtradas.sort((a, b) => (b.diasTranscurridos || 0) - (a.diasTranscurridos || 0));
+      default:
+        return filtradas.sort((a, b) => parseFecha(a.fechaEnvioRectoria) - parseFecha(b.fechaEnvioRectoria));
+    }
+  }, [facturasAutorizacion, filtros]);
+
+  const resumen = useMemo(() => {
+    const total = facturasFiltradas.reduce((sum, factura) => sum + factura.valorTotal, 0);
+    const criticos = facturasFiltradas.filter((factura) => (factura.diasTranscurridos || 0) >= 3).length;
+    const promedioDias = Math.round(
+      facturasFiltradas.reduce((sum, factura) => sum + (factura.diasTranscurridos || 0), 0) / Math.max(1, facturasFiltradas.length)
+    );
+
+    return {
+      total,
+      criticos,
+      promedioDias,
+    };
+  }, [facturasFiltradas]);
 
   const abrirDialog = (factura: FacturaAutorizacion, accionSeleccionada: 'aprobar' | 'rechazar') => {
     setFacturaSeleccionada(factura);
@@ -125,18 +171,19 @@ export function useAutorizarPagos() {
     if (!facturaSeleccionada?.facturaId) return;
 
     if (accion === 'rechazar' && (!motivo.trim() || motivo.trim().length < 10)) {
-      showToast('err', 'Debe registrar un motivo de rechazo (mínimo 10 caracteres).');
+      showToast('err', 'Debe registrar un motivo de rechazo con minimo 10 caracteres.');
       return;
     }
 
     setIsProcessing(true);
+
     try {
       if (accion === 'aprobar') {
         await facturasService.autorizarRectoria(facturaSeleccionada.facturaId, motivo.trim() || undefined);
-        showToast('ok', `Pago autorizado por Rectoría: ${facturaSeleccionada.numeroFactura}.`);
+        showToast('ok', `Pago autorizado por Rectoria: ${facturaSeleccionada.numeroFactura}.`);
       } else {
         await facturasService.rechazarRectoria(facturaSeleccionada.facturaId, motivo.trim());
-        showToast('ok', `Pago rechazado y devuelto a Dirección Financiera: ${facturaSeleccionada.numeroFactura}.`);
+        showToast('ok', `Pago rechazado y devuelto a Direccion Financiera: ${facturaSeleccionada.numeroFactura}.`);
       }
 
       setMostrarDialogAccion(false);
@@ -144,7 +191,7 @@ export function useAutorizarPagos() {
       setMotivo('');
       await cargarFacturas();
     } catch {
-      showToast('err', 'No fue posible procesar la decisión en Rectoría.');
+      showToast('err', 'No fue posible procesar la decision en Rectoria.');
     } finally {
       setIsProcessing(false);
     }
@@ -152,7 +199,9 @@ export function useAutorizarPagos() {
 
   return {
     filtros,
+    facturasAutorizacion,
     facturasFiltradas,
+    resumen,
     facturaSeleccionada,
     facturaDetalle,
     mostrarDialogAccion,

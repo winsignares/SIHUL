@@ -1,4 +1,4 @@
-import { useEffect, useState, type ElementType } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { facturasService } from '../../../services/financiero';
 import type { Factura, HistorialFactura } from '../../../models/financiero/core.models';
+import { parseFacturaDescripcion } from '../../../share/factura-description';
 
 const formatMoney = (val: number | string | null | undefined) => {
   const num = Number(val) || 0;
@@ -125,6 +126,13 @@ export default function FacturaDetalle() {
   const isDevuelta = factura.estado === 'Devuelta' || factura.estado === 'Rechazada' || factura.estado === 'Anulada';
   const canCorregir = factura.estado === 'Devuelta' || factura.estado === 'Rechazada';
   const diasTranscurridos = Math.max(Number(factura.dias_transcurridos) || 0, 0);
+  const diasProgress = Math.min(Math.max(diasTranscurridos, 1), 30) / 30 * 100;
+  const parsedDescripcion = parseFacturaDescripcion(factura.descripcion);
+  const serviciosFactura = parsedDescripcion.items;
+  const descripcionAdicional = serviciosFactura.length > 0 ? parsedDescripcion.remainingText : factura.descripcion;
+  const heroDescripcion = serviciosFactura.length === 0 ? factura.descripcion : undefined;
+  const showServiciosSection = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(factura.observaciones);
+  const hasIdentificacionFactura = Boolean(factura.observaciones);
 
   return (
     <div className="min-h-full px-4 md:px-8 py-6 font-['Space_Grotesk']">
@@ -166,9 +174,11 @@ export default function FacturaDetalle() {
                   Radicado: <span className="font-semibold text-slate-900 dark:text-white">{factura.numero_radicado}</span>
                 </p>
               )}
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                {factura.descripcion || 'Factura en proceso con seguimiento activo.'}
-              </p>
+              {heroDescripcion && (
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {heroDescripcion}
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-3">
               <div className="rounded-2xl bg-red-700 text-white p-5 shadow-lg border border-red-600/40">
@@ -178,13 +188,84 @@ export default function FacturaDetalle() {
                   Neto a pagar: <span className="font-semibold text-white">{formatMoney(factura.valor_neto_pagar)}</span>
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <StatCard title="Dias transcurridos" value={`${diasTranscurridos} dias`} icon={Calendar} tone="amber" />
-                <StatCard title="Etapa actual" value={factura.etapa_actual || factura.estado} icon={CheckCircle2} tone="red" />
+              <div className="rounded-3xl border border-red-100/70 dark:border-red-900/40 bg-gradient-to-r from-white via-red-50 to-rose-50 dark:from-slate-900 dark:via-red-950/40 dark:to-red-950/20 p-4 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-900/70 text-red-600 shadow-inner">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-red-600/80 dark:text-red-200 font-semibold">Estado actual</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${ESTADO_COLOR[factura.estado] || 'text-slate-700 bg-white/80 border-white/70'}`}>
+                          {factura.estado}
+                        </span>
+                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">
+                          {factura.etapa_actual || 'Sin etapa definida'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 self-start md:self-auto">
+                    <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-semibold">Días transcurridos</div>
+                    <div className="flex items-center gap-2 text-3xl font-bold text-slate-900 dark:text-white">
+                      <Calendar size={22} className="text-amber-500" />
+                      <span>{diasTranscurridos}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 h-2 rounded-full bg-white/60 dark:bg-slate-800/80 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-red-500 to-rose-600"
+                    style={{ width: `${Math.max(8, Math.min(diasProgress, 100)).toFixed(2)}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </motion.section>
+
+        {showServiciosSection && (
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="bg-white/95 dark:bg-slate-900/70 backdrop-blur rounded-2xl p-6 shadow-md border border-slate-200/70 dark:border-slate-700/60"
+          >
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-4 flex items-center gap-2">
+              <FileText size={18} className="text-red-600" />
+              Identificacion y Servicios Facturados
+            </h3>
+
+            {factura.observaciones && (
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 p-4">
+                <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-200 font-semibold mb-1">
+                  Identificacion Factura
+                </p>
+                <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
+                  {factura.observaciones}
+                </p>
+              </div>
+            )}
+
+            {serviciosFactura.length > 0 && (
+              <div className={`mt-6 ${hasIdentificacionFactura ? 'border-t border-slate-100 dark:border-slate-700/60 pt-6' : ''}`}>
+                <ServiciosFacturaList items={serviciosFactura} />
+              </div>
+            )}
+
+            {descripcionAdicional && (
+              <div className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                  Descripción del proveedor
+                </p>
+                <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line">
+                  {descripcionAdicional}
+                </p>
+              </div>
+            )}
+          </motion.section>
+        )}
 
         {!isDevuelta && (
           <motion.section
@@ -266,8 +347,7 @@ export default function FacturaDetalle() {
             </h3>
             <div className="space-y-2 text-sm">
               <InfoRow label="Tipo" value={factura.tipo_documento} />
-              <InfoRow label="Descripcion" value={factura.descripcion} />
-              {factura.observaciones && <InfoRow label="Observaciones" value={factura.observaciones} />}
+              <InfoRow label="Observacion" value={factura.observaciones || 'Sin identificacion cargada'} />
               <InfoRow label="Etapa actual" value={factura.etapa_actual || factura.estado} />
             </div>
           </motion.section>
@@ -414,24 +494,6 @@ function InfoRow({ label, value }: { label: string; value: string | undefined })
   );
 }
 
-function StatCard({ title, value, icon: Icon, tone = 'red' }: { title: string; value: string; icon: ElementType; tone?: 'red' | 'amber' }) {
-  const baseStyles = 'dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700/60';
-  const toneStyles =
-    tone === 'amber'
-      ? `bg-amber-50 text-amber-900 border-amber-200/70 ${baseStyles}`
-      : `bg-red-50 text-red-900 border-red-200/70 ${baseStyles}`;
-
-  return (
-    <div className={`rounded-2xl border p-4 ${toneStyles} shadow-sm`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs uppercase tracking-wide font-semibold">{title}</p>
-        <Icon size={16} />
-      </div>
-      <p className="mt-2 text-sm font-semibold">{value}</p>
-    </div>
-  );
-}
-
 function ValueRow({ label, value, tone }: { label: string; value: string; tone?: 'danger' }) {
   return (
     <div className="flex justify-between">
@@ -439,6 +501,74 @@ function ValueRow({ label, value, tone }: { label: string; value: string; tone?:
       <span className={`font-medium ${tone === 'danger' ? 'text-red-600' : 'text-slate-900 dark:text-white'}`}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function ServiciosFacturaList({ items }: { items: ReturnType<typeof parseFacturaDescripcion>['items'] }) {
+  return (
+    <div className="space-y-4">
+      {items.map((item, idx) => (
+        <div
+          key={`${item.rawLine}-${idx}`}
+          className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/70 p-4 md:p-5"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center text-lg font-bold">
+                {item.index ?? idx + 1}
+              </div>
+              <div>
+                <p className="text-base font-semibold text-slate-900 dark:text-white">
+                  {item.servicio}
+                </p>
+                {(item.cantidad || item.unitario) && (
+                  <p className="text-sm text-slate-500 dark:text-slate-300">
+                    {item.cantidad ? `${item.cantidad} x ` : ''}
+                    {item.unitario || 'valor sin definir'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+              {[{ key: 'cantidad', label: 'Cantidad', value: item.cantidad || 'Sin dato' },
+                { key: 'unitario', label: 'Valor unitario', value: item.unitario || 'Sin dato' },
+                { key: 'subtotal', label: 'Subtotal', value: item.subtotal },
+                { key: 'iva', label: `IVA ${item.ivaPorcentaje ? `${item.ivaPorcentaje}%` : ''}`.trim(), value: item.ivaValor },
+                { key: 'total', label: 'Total', value: item.total }]
+                .filter((metric) => metric.value)
+                .map((metric) => (
+                  <div
+                    key={metric.key}
+                    className={`rounded-xl border px-3 py-2 text-right ${
+                      metric.key === 'total'
+                        ? 'bg-red-50 border-red-200/70 text-red-700 dark:bg-red-900/40 dark:border-red-800/60 dark:text-red-100'
+                        : metric.key === 'cantidad' || metric.key === 'unitario'
+                          ? 'bg-white/80 border-slate-200/80 text-slate-700 dark:bg-slate-900/50 dark:border-slate-700/70 dark:text-slate-200'
+                          : 'bg-slate-100/80 border-slate-200/80 text-slate-800 dark:bg-slate-800/60 dark:border-slate-700/70 dark:text-slate-100'
+                    }`}
+                  >
+                    <p className={`text-[11px] uppercase tracking-wide ${metric.key === 'total' ? 'text-red-600 dark:text-red-200' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {metric.label}
+                    </p>
+                    <p className={`font-semibold ${metric.key === 'total' ? 'text-xl' : ''}`}>
+                      {metric.value}
+                    </p>
+                  </div>
+                ))}
+              {item.extraInfo && item.extraInfo.length > 0 && (
+                <div className="col-span-2 sm:col-span-3 lg:col-span-5 rounded-xl bg-slate-100/60 dark:bg-slate-800/50 px-3 py-2 text-left">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle adicional</p>
+                  <p className="text-slate-700 dark:text-slate-200 text-sm whitespace-pre-line">
+                    {item.extraInfo.join('\n')}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

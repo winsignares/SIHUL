@@ -10,6 +10,25 @@ export interface FacturaConfirmacion extends SharedFacturaDetail {
   numeroConfirmacion?: string;
 }
 
+const ORDER_OPTIONS = ['recientes', 'antiguos', 'monto'];
+const ESTADOS_CONFIRMACION = new Set([
+  'Autorizada',
+  'Autorizada para pago',
+]);
+
+const normalizeEstado = (value?: string) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (Array.isArray((data as { results?: unknown[] })?.results)) return (data as { results: T[] }).results;
+  return [];
+};
+
 export function useConfirmacionPagos() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
@@ -32,6 +51,7 @@ export function useConfirmacionPagos() {
     fechaFin: '',
     montoMin: '',
     montoMax: '',
+    orden: 'recientes',
   });
 
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
@@ -47,7 +67,7 @@ export function useConfirmacionPagos() {
       ...base,
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
-      fechaAutorizacion: factura.fecha_autorizacion ?? factura.fecha_recepcion ?? '',
+      fechaAutorizacion: factura.fecha_autorizacion ?? factura.fecha_modificacion ?? factura.fecha_recepcion ?? '',
       numeroConfirmacion: factura.numero_confirmacion ?? undefined,
       documentos: docs.map((d) => ({
         id: String(d.id),
@@ -63,11 +83,19 @@ export function useConfirmacionPagos() {
     setCargando(true);
     setError(null);
     try {
-      // Facturas autorizadas por rectoría, pendientes de confirmación de proceso
-      const lista = await facturasService.getByEstado('Autorizada');
-      
+      const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
+      const lista = toList<Factura>(response)
+        .filter((factura) => {
+          const estadoNormalizado = normalizeEstado(factura.estado);
+          return (
+            ESTADOS_CONFIRMACION.has(factura.estado) ||
+            estadoNormalizado === 'autorizada' ||
+            estadoNormalizado === 'autorizada para pago'
+          );
+        })
+        .filter((factura) => !factura.numero_confirmacion && !factura.numero_transaccion);
       setFacturas(lista);
-      
+
       const docsResults = await Promise.all(
         lista.map((f) =>
           documentosService
@@ -82,31 +110,57 @@ export function useConfirmacionPagos() {
       });
       setDocsMap(map);
     } catch {
-      setError('No se pudo cargar las facturas. Verifique la conexión.');
+      setError('No se pudo cargar los pagos aplicados. Verifique la conexion.');
     } finally {
       setCargando(false);
     }
   }, []);
 
   useEffect(() => {
-    cargarFacturas();
+    void cargarFacturas();
   }, [cargarFacturas]);
 
-  const facturasFiltradas = useMemo(() => {
+  const facturasConfirmacion = useMemo(() => {
     return facturas
-      .filter((f) => f.etapa_actual !== 'Control de Pago Bancario')
-      .map((f) => facturaToConfirmacion(f, docsMap[f.id] ?? []))
-      .filter((factura) => {
-        if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-        if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-        if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-        if (filtros.fechaInicio && factura.fechaAutorizacion < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && factura.fechaAutorizacion > filtros.fechaFin) return false;
-        if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-        if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
-        return true;
-      });
-  }, [facturas, docsMap, filtros]);
+      .map((factura) => facturaToConfirmacion(factura, docsMap[factura.id] ?? []));
+  }, [facturas, docsMap]);
+
+  const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
+
+  const facturasFiltradas = useMemo(() => {
+    const filtradas = facturasConfirmacion.filter((factura) => {
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
+      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && factura.fechaAutorizacion < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && factura.fechaAutorizacion > filtros.fechaFin) return false;
+      if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
+      if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+      return true;
+    });
+
+    switch (ORDER_OPTIONS.includes(filtros.orden) ? filtros.orden : 'recientes') {
+      case 'antiguos':
+        return filtradas.sort((a, b) => parseFecha(a.fechaAutorizacion) - parseFecha(b.fechaAutorizacion));
+      case 'monto':
+        return filtradas.sort((a, b) => b.valorTotal - a.valorTotal);
+      default:
+        return filtradas.sort((a, b) => parseFecha(b.fechaAutorizacion) - parseFecha(a.fechaAutorizacion));
+    }
+  }, [facturasConfirmacion, filtros]);
+
+  const resumen = useMemo(() => {
+    const total = facturasFiltradas.length;
+    const valorTotal = facturasFiltradas.reduce((acc, factura) => acc + factura.valorTotal, 0);
+    const urgentes = facturasFiltradas.filter((factura) => (factura.diasTranscurridos || 0) >= 2).length;
+    const conConfirmacion = facturasFiltradas.filter((factura) => Boolean(factura.numeroConfirmacion)).length;
+    return {
+      total,
+      valorTotal,
+      urgentes,
+      conConfirmacion,
+    };
+  }, [facturasFiltradas]);
 
   const abrirDetalle = (factura: FacturaConfirmacion) => {
     setFacturaSeleccionada(factura);
@@ -115,15 +169,16 @@ export function useConfirmacionPagos() {
 
   const abrirConfirmar = (factura: FacturaConfirmacion) => {
     setFacturaSeleccionada(factura);
-    setNumeroConfirmacion('Generando...');
+    setNumeroConfirmacion(factura.numeroConfirmacion || 'Generando...');
     setObservaciones('');
     setConfirmarAbierto(true);
 
-    if (!factura.facturaId) return;
+    const facturaId = factura.facturaId;
+    if (!facturaId || factura.numeroConfirmacion) return;
 
     void (async () => {
       try {
-        const actualizada = await facturasService.generarNumeroConfirmacion(factura.facturaId);
+        const actualizada = await facturasService.generarNumeroConfirmacion(facturaId);
         const numero = actualizada.numero_confirmacion || 'CONF no disponible';
         setNumeroConfirmacion(numero);
         setFacturaSeleccionada((prev) => (prev ? { ...prev, numeroConfirmacion: actualizada.numero_confirmacion || prev.numeroConfirmacion } : prev));
@@ -153,7 +208,7 @@ export function useConfirmacionPagos() {
       setNumeroConfirmacion(facturaActualizada.numero_confirmacion || 'CONF no disponible');
       showToast('ok', `Control de pago confirmado para ${facturaSeleccionada.numeroFactura}.`);
       cerrarConfirmar();
-      cargarFacturas();
+      void cargarFacturas();
     } catch {
       showToast('err', 'Error al confirmar el pago. Intente de nuevo.');
     } finally {
@@ -163,6 +218,7 @@ export function useConfirmacionPagos() {
 
   return {
     facturas,
+    facturasConfirmacion,
     facturasFiltradas,
     docsMap,
     cargando,
@@ -175,6 +231,7 @@ export function useConfirmacionPagos() {
     observaciones,
     filtros,
     toast,
+    resumen,
     setFiltros,
     setNumeroConfirmacion,
     setObservaciones,

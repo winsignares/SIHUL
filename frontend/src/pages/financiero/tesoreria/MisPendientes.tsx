@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
@@ -8,6 +8,9 @@ import { Eye, Clock, FileCheck, Send, FileOutput } from 'lucide-react';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
+import { Pagination } from '../../../components/common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 interface FacturaPendiente {
   id: string;
@@ -25,6 +28,17 @@ interface FacturaPendiente {
   estado: string;
   cuentaContable: string;
   descripcion?: string;
+}
+
+interface TablaPendientesProps {
+  titulo: string;
+  descripcion: string;
+  rows: FacturaPendiente[];
+  icon: React.ReactNode;
+  delay: number;
+  loading: boolean;
+  loadError: string | null;
+  onVerDetalle: (factura: FacturaPendiente) => void;
 }
 
 const toList = <T,>(data: unknown): T[] => {
@@ -61,6 +75,132 @@ const mapFactura = (f: APIFactura, diasMaximos: number, accionRequerida: string)
   };
 };
 
+function TablaPendientes({
+  titulo,
+  descripcion,
+  rows,
+  icon,
+  delay,
+  loading,
+  loadError,
+  onVerDetalle,
+}: TablaPendientesProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / ITEMS_PER_PAGE));
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return rows.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, rows]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rows.length]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-slate-800 flex items-center gap-2">{icon}{titulo}</CardTitle>
+          <CardDescription>{descripcion}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadError && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
+          )}
+          <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="font-semibold text-slate-700">SLA</TableHead>
+                  <TableHead className="font-semibold text-slate-700">N Factura</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Proveedor</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Monto</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Cuenta</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Accion</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando pendientes...</TableCell>
+                  </TableRow>
+                ) : rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay registros con este criterio.</TableCell>
+                  </TableRow>
+                ) : paginatedRows.map((factura, index) => {
+                  const colorRiesgo =
+                    factura.nivelRiesgo === 'vencido'
+                      ? 'bg-red-700'
+                      : factura.nivelRiesgo === 'naranja'
+                        ? 'bg-orange-500'
+                        : factura.nivelRiesgo === 'amarillo'
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500';
+
+                  return (
+                    <motion.tr
+                      key={factura.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <TableCell><div className={`w-3 h-3 rounded-full ${colorRiesgo}`} /></TableCell>
+                      <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
+                      <TableCell className="text-slate-600">{factura.proveedor}</TableCell>
+                      <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-200 border font-mono text-xs">{factura.cuentaContable}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1 font-bold text-sm text-slate-700">{factura.diasTranscurridos}d / {factura.diasMaximos}d</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-300 border text-xs">{factura.accionRequerida}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onVerDetalle(factura)}
+                          className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Ver
+                        </Button>
+                      </TableCell>
+                    </motion.tr>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {!loading && rows.length > 0 && (
+            <div className="mt-5">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={ITEMS_PER_PAGE}
+                totalItems={rows.length}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function MisPendientes() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<SharedFacturaDetail | null>(null);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
@@ -76,7 +216,7 @@ export default function MisPendientes() {
       facturasService.getAll({ estado: 'Causada', limit: 200 }),
       facturasService.getAll({ estado: 'Detenida', limit: 200 }),
       facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
-      facturasService.getAll({ estado: 'Pago Aplicado', limit: 200 }),
+      facturasService.getAll({ estado: 'Pagada', limit: 200 }),
     ]);
 
     const alistar = [...toList<APIFactura>(causadas), ...toList<APIFactura>(detenidas)]
@@ -84,7 +224,7 @@ export default function MisPendientes() {
     const enviar = toList<APIFactura>(aprobadas)
       .map((f) => mapFactura(f, 18, 'Enviar a Direccion Financiera'));
     const comprobantes = toList<APIFactura>(pagos)
-      .map((f) => mapFactura(f, 24, 'Generar comprobante de egreso'));
+      .map((f) => mapFactura(f, 24, 'Descargar expediente de factura pagada'));
 
     return { alistar, enviar, comprobantes };
   };
@@ -141,93 +281,6 @@ export default function MisPendientes() {
   const vencidasCount = todasFacturas.filter((f) => f.nivelRiesgo === 'vencido').length;
   const proximasVencerCount = todasFacturas.filter((f) => f.nivelRiesgo === 'amarillo' || f.nivelRiesgo === 'naranja').length;
 
-  const renderTabla = (titulo: string, descripcion: string, rows: FacturaPendiente[], icon: React.ReactNode, delay: number) => (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-slate-800 flex items-center gap-2">{icon}{titulo}</CardTitle>
-          <CardDescription>{descripcion}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loadError && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
-          )}
-          <div className="rounded-lg border border-slate-200 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                  <TableHead className="font-semibold text-slate-700">N Factura</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Proveedor</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Cuenta</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Dias</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Accion</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando pendientes...</TableCell>
-                  </TableRow>
-                ) : rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay registros con este criterio.</TableCell>
-                  </TableRow>
-                ) : rows.map((factura, index) => {
-                  const colorRiesgo =
-                    factura.nivelRiesgo === 'vencido'
-                      ? 'bg-red-700'
-                      : factura.nivelRiesgo === 'naranja'
-                        ? 'bg-orange-500'
-                        : factura.nivelRiesgo === 'amarillo'
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500';
-
-                  return (
-                    <motion.tr
-                      key={factura.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <TableCell><div className={`w-3 h-3 rounded-full ${colorRiesgo}`} /></TableCell>
-                      <TableCell className="font-medium text-slate-800">{factura.numeroFactura}</TableCell>
-                      <TableCell className="text-slate-600">{factura.proveedor}</TableCell>
-                      <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                      <TableCell>
-                        <Badge className="bg-purple-100 text-purple-700 border-purple-200 border font-mono text-xs">{factura.cuentaContable}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-1 font-bold text-sm text-slate-700">{factura.diasTranscurridos}d / {factura.diasMaximos}d</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-300 border text-xs">{factura.accionRequerida}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleVerDetalle(factura)}
-                          className="border-slate-300 text-slate-700 hover:bg-slate-100"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Ver
-                        </Button>
-                      </TableCell>
-                    </motion.tr>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-
   return (
     <>
       <div className="space-y-6">
@@ -242,7 +295,7 @@ export default function MisPendientes() {
             </div>
             <div>
               <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes - Tesoreria</h1>
-              <p className="text-red-100 text-sm">Alistamiento, envio a Direccion Financiera y cierre por comprobante</p>
+              <p className="text-red-100 text-sm">Alistamiento, envio a Direccion Financiera y expedientes pagados</p>
             </div>
           </div>
         </motion.div>
@@ -262,7 +315,7 @@ export default function MisPendientes() {
           </Card>
           <Card className="border-0 shadow-lg border-green-200 bg-green-50">
             <CardContent className="p-6">
-              <p className="text-green-700 text-sm font-semibold">Comprobantes</p>
+              <p className="text-green-700 text-sm font-semibold">Pagadas</p>
               <p className="text-3xl font-bold text-green-800 mt-1">{pagosPendientesComprobante.length}</p>
             </CardContent>
           </Card>
@@ -280,29 +333,38 @@ export default function MisPendientes() {
           </Card>
         </div>
 
-        {renderTabla(
-          '1. Facturas Pendientes de Alistamiento',
-          'Facturas causadas por Contabilidad para preparar proceso de pago',
-          facturasPendientesAlistar,
-          <FileCheck className="w-5 h-5 text-blue-600" />,
-          0.2
-        )}
+        <TablaPendientes
+          titulo="1. Facturas Pendientes de Alistamiento"
+          descripcion="Facturas causadas por Contabilidad para preparar proceso de pago"
+          rows={facturasPendientesAlistar}
+          icon={<FileCheck className="w-5 h-5 text-blue-600" />}
+          delay={0.2}
+          loading={loading}
+          loadError={loadError}
+          onVerDetalle={handleVerDetalle}
+        />
 
-        {renderTabla(
-          '2. Facturas Aprobadas para Enviar a Direccion Financiera',
-          'Facturas aprobadas por Auditoria pendientes de envio formal RF06',
-          facturasAprobadasAuditoria,
-          <Send className="w-5 h-5 text-purple-600" />,
-          0.25
-        )}
+        <TablaPendientes
+          titulo="2. Facturas Aprobadas para Enviar a Direccion Financiera"
+          descripcion="Facturas aprobadas por Auditoria pendientes de envio formal RF06"
+          rows={facturasAprobadasAuditoria}
+          icon={<Send className="w-5 h-5 text-purple-600" />}
+          delay={0.25}
+          loading={loading}
+          loadError={loadError}
+          onVerDetalle={handleVerDetalle}
+        />
 
-        {renderTabla(
-          '3. Pagos Aplicados Pendientes de Comprobante',
-          'Pagos ya ejecutados en banco para cierre con comprobante de egreso',
-          pagosPendientesComprobante,
-          <FileOutput className="w-5 h-5 text-green-600" />,
-          0.3
-        )}
+        <TablaPendientes
+          titulo="3. Facturas Pagadas"
+          descripcion="Facturas con pago aplicado y expediente documental disponible"
+          rows={pagosPendientesComprobante}
+          icon={<FileOutput className="w-5 h-5 text-green-600" />}
+          delay={0.3}
+          loading={loading}
+          loadError={loadError}
+          onVerDetalle={handleVerDetalle}
+        />
       </div>
 
       <FacturaDetailModal

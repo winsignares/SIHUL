@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Download, Eye, Search, Filter, DollarSign, FileSearch, Bell } from 'lucide-react';
+import { Calendar, Download, Eye, Search, Filter, FileSearch, Bell } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero/core.models';
@@ -8,6 +8,7 @@ import type { FuncionarioConsultaRow, FuncionarioEstadoChange, FuncionarioSeguim
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import type { TimelineEtapa } from '../../../share/factura-timeline';
 import { displayDate, displayRadicado } from '../../../share/field-placeholders';
+import { downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
   { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
@@ -20,8 +21,7 @@ const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string;
   { id: '7', nombre: 'Revisión Dirección Financiera', estadoRef: 'Revisada Dir. Financiera', responsable: 'Dirección Financiera', diasMaximos: 2 },
   { id: '8', nombre: 'Envío a Rectoría', estadoRef: 'Enviada Rectoría', responsable: 'Dirección Financiera', diasMaximos: 1 },
   { id: '9', nombre: 'Autorización de Pago', estadoRef: 'Autorizada', responsable: 'Rectoría', diasMaximos: 3 },
-  { id: '10', nombre: 'Aplicación de Pago', estadoRef: 'Pago Aplicado', responsable: 'Tesorería', diasMaximos: 1 },
-  { id: '11', nombre: 'Pago Finalizado', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
+  { id: '10', nombre: 'Factura Pagada', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
 ];
 
 const toList = <T,>(data: unknown): T[] => {
@@ -30,15 +30,8 @@ const toList = <T,>(data: unknown): T[] => {
   return [];
 };
 
-const MIN_ESTADO_CONSULTA = 'Registrada';
-const ESTADO_INDEX = new Map(TIMELINE_BLUEPRINT.map((item, index) => [item.estadoRef, index]));
-const MIN_ESTADO_INDEX = ESTADO_INDEX.get(MIN_ESTADO_CONSULTA) ?? 0;
-
-const isEstadoVisible = (estado: string): boolean => {
-  const index = ESTADO_INDEX.get(estado);
-  if (typeof index === 'number') return index >= MIN_ESTADO_INDEX;
-  return estado !== 'Recibida';
-};
+const ESTADO_OBJETIVO = 'Registrada';
+const esEstadoRegistrado = (estado?: string | null) => (estado || '').toLowerCase() === ESTADO_OBJETIVO.toLowerCase();
 
 function mapFactura(f: Factura): FuncionarioConsultaRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -115,7 +108,6 @@ function buildTimelineFromSeguimiento(seguimiento: FuncionarioSeguimientoRespons
 export default function ConsultarFacturas() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<FuncionarioConsultaRow[]>([]);
-  const [facturasData, setFacturasData] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -127,19 +119,15 @@ export default function ConsultarFacturas() {
   const [numeroFactura, setNumeroFactura] = useState('');
   const [proveedor, setProveedor] = useState('');
   const [estado, setEstado] = useState('');
-  const [area, setArea] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  const [montoMin, setMontoMin] = useState('0');
-  const [montoMax, setMontoMax] = useState('999999999');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const loadRows = async () => {
-    const response = await facturasService.getAll({ limit: 500 });
-    const list = toList<Factura>(response);
-    return {
-      list,
-      rows: list.filter((factura) => isEstadoVisible(factura.estado || '')).map(mapFactura),
-    };
+    const response = await facturasService.getAll({ estado: ESTADO_OBJETIVO, limit: 500 });
+    const list = toList<Factura>(response).filter((factura) => esEstadoRegistrado(factura.estado));
+    return list.map(mapFactura);
   };
 
   useEffect(() => {
@@ -147,12 +135,10 @@ export default function ConsultarFacturas() {
       setLoading(true);
       setLoadError(null);
       try {
-        const { list, rows: nextRows } = await loadRows();
-        setFacturasData(list);
+        const nextRows = await loadRows();
         setRows(nextRows);
       } catch {
         setRows([]);
-        setFacturasData([]);
         setLoadError('No fue posible consultar facturas. Intente nuevamente.');
       } finally {
         setLoading(false);
@@ -166,8 +152,7 @@ export default function ConsultarFacturas() {
     const interval = window.setInterval(() => {
       void (async () => {
         try {
-          const { list, rows: latest } = await loadRows();
-          setFacturasData(list);
+          const latest = await loadRows();
           setRows((prev) => {
             const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
             const changes: FuncionarioEstadoChange[] = [];
@@ -201,28 +186,37 @@ export default function ConsultarFacturas() {
 
   const proveedores = useMemo(() => Array.from(new Set(rows.map(r => r.proveedor))), [rows]);
   const estados = useMemo(() => Array.from(new Set(rows.map(r => r.estado))), [rows]);
-  const areas = useMemo(() => Array.from(new Set(rows.map(r => r.area))), [rows]);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (numeroFactura && !r.idTramite.toLowerCase().includes(numeroFactura.toLowerCase())) return false;
+      if (numeroFactura) {
+        const query = numeroFactura.toLowerCase();
+        const matches = [r.idTramite, r.proveedor, r.nit, r.estado]
+          .some((value) => String(value || '').toLowerCase().includes(query));
+        if (!matches) return false;
+      }
       if (proveedor && r.proveedor !== proveedor) return false;
       if (estado && r.estado !== estado) return false;
-      if (area && r.area !== area) return false;
       if (fechaInicio && r.fechaRecepcion && r.fechaRecepcion < fechaInicio) return false;
       if (fechaFin && r.fechaRecepcion && r.fechaRecepcion > fechaFin) return false;
-      if (montoMin && r.monto < Number(montoMin)) return false;
-      if (montoMax && r.monto > Number(montoMax)) return false;
       return true;
     });
-  }, [rows, numeroFactura, proveedor, estado, area, fechaInicio, fechaFin, montoMin, montoMax]);
+  }, [rows, numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
 
-  const filteredFacturas = useMemo(() => {
-    const allowedIds = new Set(filtered.map((row) => row.facturaId));
-    return facturasData.filter((factura) => allowedIds.has(Number(factura.id)));
-  }, [facturasData, filtered]);
+  // Paginación
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedFiltered = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
 
   const selectedRow = filtered.find((r) => r.id === selectedId) || rows.find((r) => r.id === selectedId) || null;
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
 
   useEffect(() => {
     const facturaParam = searchParams.get('factura');
@@ -323,139 +317,12 @@ export default function ConsultarFacturas() {
     return 'bg-emerald-100 text-emerald-700 border-emerald-200';
   };
 
-  const handleExport = async () => {
-    if (filteredFacturas.length === 0) return;
-
-    const XLSX = await import('xlsx');
-
-    const rows = filteredFacturas.map((factura) => {
-      const documentos = (factura.documentos || [])
-        .map((doc) => `${doc.tipo_documento || 'Documento'}: ${doc.nombre_archivo || 'Sin nombre'}`)
-        .join(' | ');
-
-      return {
-        ID: factura.id,
-        'Numero Factura': factura.numero_factura,
-        'Numero Radicado': factura.numero_radicado || '',
-        'Numero Proceso Pago': factura.numero_proceso_pago || '',
-        'Numero Confirmacion': factura.numero_confirmacion || '',
-        'Numero Transaccion': factura.numero_transaccion || '',
-        'Numero Comprobante': factura.numero_comprobante || '',
-        'Proveedor ID': factura.proveedor_id,
-        Proveedor: factura.proveedor?.razon_social || '',
-        NIT: factura.proveedor?.nit || '',
-        'Tipo Proveedor': factura.proveedor?.tipo_proveedor || '',
-        'Email Proveedor': factura.proveedor?.email || '',
-        'Telefono Proveedor': factura.proveedor?.telefono || '',
-        'Banco Proveedor': factura.proveedor?.banco || '',
-        'Tipo Cuenta Proveedor': factura.proveedor?.tipo_cuenta || '',
-        'Numero Cuenta Proveedor': factura.proveedor?.numero_cuenta || '',
-        'Departamento ID': factura.departamento_id,
-        'Area Solicitante': factura.departamento?.nombre || '',
-        'Cuenta Contable ID': factura.cuenta_contable_id || '',
-        'Cuenta Contable': factura.cuenta_contable?.nombre || '',
-        'Centro Costo ID': factura.centro_costo_id || '',
-        'Centro Costo': factura.centro_costo?.nombre || '',
-        'Valor Subtotal': factura.valor_subtotal,
-        'Valor IVA': factura.valor_iva,
-        'Valor Retencion Renta': factura.valor_retencion_renta,
-        'Valor Retencion IVA': factura.valor_retencion_iva,
-        'Valor Retencion ICA': factura.valor_retencion_ica,
-        'Valor Total': factura.valor_total,
-        'Valor Neto Pagar': factura.valor_neto_pagar,
-        'Tipo Documento': factura.tipo_documento,
-        Descripcion: factura.descripcion,
-        Observaciones: factura.observaciones || '',
-        'Cuenta Bancaria Proveedor': factura.cuenta_bancaria_proveedor || '',
-        'Fecha Factura': factura.fecha_factura,
-        'Fecha Recepcion': factura.fecha_recepcion,
-        'Fecha Radicacion': factura.fecha_radicacion || '',
-        'Fecha Causacion': factura.fecha_causacion || '',
-        'Fecha Alistamiento': factura.fecha_alistamiento || '',
-        'Fecha Aprobacion Auditoria': factura.fecha_aprobacion_auditoria || '',
-        'Fecha Cargue': factura.fecha_cargue || '',
-        'Fecha Autorizacion': factura.fecha_autorizacion || '',
-        'Fecha Pago Aplicado': factura.fecha_pago_aplicado || '',
-        'Fecha Comprobante': factura.fecha_comprobante || '',
-        Estado: factura.estado,
-        Etapa: factura.etapa_actual || '',
-        'Indicador Riesgo': factura.indicador_riesgo,
-        'SLA Cumplido': factura.sla_cumplido ? 'Si' : 'No',
-        'Dias Transcurridos': factura.dias_transcurridos,
-        'Responsable ID': factura.usuario_responsable_id || '',
-        Responsable: factura.usuario_responsable?.nombre || '',
-        Urgente: factura.urgente ? 'Si' : 'No',
-        'Requiere Autorizacion Especial': factura.requiere_autorizacion_especial ? 'Si' : 'No',
-        'Fecha Creacion': factura.fecha_creacion,
-        'Fecha Modificacion': factura.fecha_modificacion,
-        Documentos: documentos,
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 8 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 12 },
-      { wch: 32 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 26 },
-      { wch: 18 },
-      { wch: 16 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 14 },
-      { wch: 26 },
-      { wch: 14 },
-      { wch: 26 },
-      { wch: 14 },
-      { wch: 26 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 24 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 16 },
-      { wch: 12 },
-      { wch: 24 },
-      { wch: 24 },
-      { wch: 40 },
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Facturas');
-    XLSX.writeFile(workbook, `facturas-funcionario-${new Date().toISOString().slice(0, 10)}.xlsx`);
-  };
-
   const clearFilters = () => {
     setNumeroFactura('');
     setProveedor('');
     setEstado('');
-    setArea('');
     setFechaInicio('');
     setFechaFin('');
-    setMontoMin('0');
-    setMontoMax('999999999');
   };
 
   return (
@@ -515,8 +382,8 @@ export default function ConsultarFacturas() {
           </motion.button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 pb-3 border-b border-slate-200">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <div className="flex flex-wrap items-end gap-3 mb-4 pb-4 border-b border-slate-200">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="min-w-0 flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Número de factura</label>
             <div className="relative">
               <Search className="w-4 h-4 text-red-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -529,7 +396,7 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="min-w-0 flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Proveedor</label>
             <select 
               value={proveedor} 
@@ -541,7 +408,7 @@ export default function ConsultarFacturas() {
             </select>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="min-w-0 flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Estado</label>
             <select 
               value={estado} 
@@ -553,28 +420,8 @@ export default function ConsultarFacturas() {
             </select>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Área solicitante</label>
-            <select 
-              value={area} 
-              onChange={e => setArea(e.target.value)} 
-              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
-            >
-              <option value="">Todas</option>
-              {areas.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 pb-3 border-b border-slate-200">
-          <div className="md:col-span-3">
-            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1">
-              <Calendar className="w-4 h-4 text-slate-500" /> Rango de fechas
-            </label>
-          </div>
-          
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">desde</label>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="min-w-0 flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Desde</label>
             <div className="relative">
               <input 
                 type="date" 
@@ -586,8 +433,8 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">hasta</label>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="min-w-0 flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Hasta</label>
             <div className="relative">
               <input 
                 type="date" 
@@ -599,54 +446,7 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">días</label>
-            <div className="w-full h-11 rounded-lg border-2 border-slate-300 flex items-center justify-center bg-slate-50 text-sm font-semibold text-slate-700">
-              {fechaInicio && fechaFin ? Math.round((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24)) + ' días' : '—'}
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-3">
-            <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1">
-              <DollarSign className="w-4 h-4 text-slate-500" /> Rango de montos
-            </label>
           </div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">mínimo</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
-              <input 
-                type="number" 
-                value={montoMin} 
-                onChange={e => setMontoMin(e.target.value)} 
-                className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
-              />
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">máximo</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold">$</span>
-              <input 
-                type="number" 
-                value={montoMax} 
-                onChange={e => setMontoMax(e.target.value)} 
-                className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
-              />
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            <label className="block text-xs text-slate-600 mb-2 font-semibold">rango</label>
-            <div className="w-full h-11 rounded-lg border-2 border-slate-300 flex items-center justify-center bg-slate-50 text-sm font-semibold text-slate-700">
-              ${Number(montoMin || 0).toLocaleString('es-CO')} - ${Number(montoMax || 0).toLocaleString('es-CO')}
-            </div>
-          </motion.div>
-        </div>
       </div>
 
       {/* Tabla de Resultados */}
@@ -659,17 +459,8 @@ export default function ConsultarFacturas() {
         <div className="flex items-center justify-between mb-5 pb-4 border-b-2 border-slate-200">
           <div>
             <h3 className="text-xl font-bold text-slate-900">Resultados de la búsqueda</h3>
-            <p className="text-sm text-slate-500 mt-1">{filtered.length} factura(s) encontrada(s)</p>
+            <p className="text-sm text-slate-500 mt-1">{filtered.length} factura(s) encontrada(s) - Página {currentPage} de {totalPages || 1}</p>
           </div>
-          <motion.button 
-            whileHover={{ scale: 1.05 }} 
-            whileTap={{ scale: 0.95 }}
-            onClick={() => void handleExport()}
-            disabled={filteredFacturas.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-green-500 text-green-600 hover:bg-green-50 font-semibold transition-all"
-          >
-            <Download className="w-4 h-4" /> Exportar
-          </motion.button>
         </div>
 
         <div className="min-w-[1300px]">
@@ -694,7 +485,7 @@ export default function ConsultarFacturas() {
                 <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>Cargando facturas...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td className="p-4 text-slate-500 text-center" colSpan={11}>No hay resultados con los filtros actuales.</td></tr>
-              ) : filtered.map((row, idx) => (
+              ) : paginatedFiltered.map((row: FuncionarioConsultaRow, idx: number) => (
                 <motion.tr 
                   key={row.id}
                   initial={{ opacity: 0, y: 8 }}
@@ -732,23 +523,94 @@ export default function ConsultarFacturas() {
                     </div>
                   </td>
                   <td className="p-4 text-center">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        setSelectedId(row.id);
-                        setOpenDetail(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-100 font-semibold transition-all"
-                    >
-                      <Eye className="w-4 h-4" /> Ver
-                    </motion.button>
+                    <div className="flex items-center justify-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => void downloadDocumentosConsolidados(row.facturaId, row.idTramite, 'funcionario')}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100 font-semibold transition-all"
+                      >
+                        <Download className="w-4 h-4" /> Docs
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setSelectedId(row.id);
+                          setOpenDetail(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-100 font-semibold transition-all"
+                      >
+                        <Eye className="w-4 h-4" /> Ver
+                      </motion.button>
+                    </div>
                   </td>
                 </motion.tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {/* Controles de Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+            <div className="text-sm text-slate-600">
+              Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, filtered.length)} de {filtered.length} resultados
+            </div>
+            <div className="flex items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
+              >
+                ← Anterior
+              </motion.button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <motion.button
+                      key={pageNum}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                        currentPage === pageNum
+                          ? 'bg-slate-900 text-white'
+                          : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
+              >
+                Siguiente →
+              </motion.button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       <FacturaDetailModal

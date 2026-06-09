@@ -73,7 +73,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mysite.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
 ]
 
@@ -152,7 +151,15 @@ STATIC_URL = 'static/'
 
 # Media files (user-uploaded content)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'financiero' / 'media'
+MEDIA_ROOT = Path(
+    os.getenv(
+        'FINANCIERO_DOCUMENT_ROOT',
+        r'C:\Users\Harlem Hernandez\Documents\Trabajo - UL\Projects\Financiero Facturas',
+    )
+)
+FINANCIERO_DOCUMENT_NETWORK_ROOT = os.getenv('FINANCIERO_DOCUMENT_NETWORK_ROOT', '')
+FINANCIERO_DOCUMENT_NETWORK_USER = os.getenv('FINANCIERO_DOCUMENT_NETWORK_USER', '')
+FINANCIERO_DOCUMENT_NETWORK_PASSWORD = os.getenv('FINANCIERO_DOCUMENT_NETWORK_PASSWORD', '')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -227,6 +234,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # ETL configurations
 ETL_PERIODO = os.getenv('ETL_PERIODO', '20261')
