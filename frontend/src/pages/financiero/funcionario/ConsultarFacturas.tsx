@@ -311,9 +311,21 @@ export default function ConsultarFacturas() {
   };
 
   const diasBadge = (dias: number) => {
-    if (dias >= 10) return 'bg-red-100 text-red-700 border-red-200';
-    if (dias >= 5) return 'bg-orange-100 text-orange-700 border-orange-200';
-    if (dias >= 2) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (dias >= 20) {
+      return 'bg-red-600/95 text-white border-red-600 shadow-[0_3px_10px_rgba(220,38,38,0.35)]';
+    }
+    if (dias >= 15) {
+      return 'bg-red-500/90 text-white border-red-500 shadow-[0_2px_8px_rgba(239,68,68,0.25)]';
+    }
+    if (dias >= 10) {
+      return 'bg-red-100 text-red-700 border-red-200';
+    }
+    if (dias >= 5) {
+      return 'bg-orange-100 text-orange-700 border-orange-200';
+    }
+    if (dias >= 2) {
+      return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    }
     return 'bg-emerald-100 text-emerald-700 border-emerald-200';
   };
 
@@ -476,7 +488,7 @@ export default function ConsultarFacturas() {
                 <th className="py-3 px-4 text-left text-xs font-bold text-slate-700 uppercase">Etapa</th>
                 <th className="py-3 px-4 text-left text-xs font-bold text-slate-700 uppercase">N° Radicado</th>
                 <th className="py-3 px-4 text-left text-xs font-bold text-slate-700 uppercase">Fecha</th>
-                <th className="py-3 px-4 text-left text-xs font-bold text-slate-700 uppercase">Días</th>
+                <th className="py-3 px-4 text-center text-xs font-bold text-slate-700 uppercase">Días</th>
                 <th className="py-3 px-4 text-center text-xs font-bold text-slate-700 uppercase">Acciones</th>
               </tr>
             </thead>
@@ -517,9 +529,12 @@ export default function ConsultarFacturas() {
                     }
                   </td>
                   <td className="p-4 text-slate-700">{displayDate(row.fechaRecepcion)}</td>
-                  <td className="p-4">
-                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs font-bold ${diasBadge(row.dias)}`}>
-                      {row.dias} {row.dias === 1 ? 'día' : 'días'}
+                  <td className="p-4 text-center">
+                    <div className="inline-flex justify-center">
+                      <div className={`w-14 h-14 rounded-full border flex flex-col items-center justify-center text-[11px] font-semibold tracking-tight ${diasBadge(row.dias)}`}>
+                        <span className="text-base leading-none font-black">{row.dias}</span>
+                        <span className="text-[9px] uppercase mt-0.5">{row.dias === 1 ? 'día' : 'días'}</span>
+                      </div>
                     </div>
                   </td>
                   <td className="p-4 text-center">

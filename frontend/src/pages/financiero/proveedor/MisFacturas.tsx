@@ -321,7 +321,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                 <span>Fechas</span>
                 <span>Estado</span>
                 <span className="text-right">Total</span>
-                <span className="text-right">Acciones</span>
+                <span className="text-center">Acciones</span>
               </div>
 
               <div className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -374,7 +374,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                         <p className="font-semibold text-slate-900 dark:text-white text-sm">{formatMoney(factura.valor_total)}</p>
                       </div>
 
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           type="button"
                           onClick={(event) => {

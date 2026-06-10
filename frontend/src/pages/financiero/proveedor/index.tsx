@@ -61,7 +61,7 @@ export default function ProveedorDashboard() {
 }
 
 function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisFacturas }: ProveedorDashboardHomeProps) {
-  const { loading, stats, recentFacturas, hasMoreRecent } = useProveedorHome(miProveedor?.id);
+  const { loading, stats, recentFacturas } = useProveedorHome(miProveedor?.id);
 
   return (
     <div className="space-y-6">

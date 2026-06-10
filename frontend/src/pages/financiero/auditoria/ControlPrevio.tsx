@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Eye, CheckCircle2, XCircle, Calendar, ShieldCheck, AlertCircle, FolderOpen, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
 import { toast } from 'sonner';
-import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail, buildSharedFacturaDetail } from '../../../share/factura-detail-modal';
+import TableFilters, { type TableFilterValues } from '../../../share/table-filters';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
 import { SlaIndicator } from '../../../share/sla-indicator';
@@ -113,6 +114,10 @@ export default function ControlPrevio() {
     auditoriaChecklist.reduce((acc, item) => ({ ...acc, [item.id]: false }), {})
   ));
   const [rechazoSeleccion, setRechazoSeleccion] = useState<string[]>([]);
+
+  const handleFilterChange = useCallback((values: TableFilterValues) => {
+    setFiltros((prev) => ({ ...prev, ...values }));
+  }, []);
 
   const loadFacturas = async () => {
     const response = await facturasService.getAll({ estado: 'Alistada', ordering: '-fecha_alistamiento', limit: 200 });
@@ -301,7 +306,7 @@ export default function ControlPrevio() {
           <CardContent className="pt-6">
             <TableFilters
               filters={filtros}
-              onFilterChange={setFiltros}
+              onFilterChange={handleFilterChange}
               proveedores={Array.from(new Set(facturasAlistadas.map((f) => f.proveedor)))}
               areas={Array.from(new Set(facturasAlistadas.map((f) => f.areaSolicitante)))}
               showFechaFilter

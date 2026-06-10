@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { facturasService, documentosService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
 export interface StatsDireccionFinanciera {
   facturasPorCargar: number;
@@ -105,7 +106,7 @@ export function useDireccionFinancieraHome() {
         map[id] = docs;
       });
       setDocsMap(map);
-    } catch (err) {
+    } catch {
       setError('No se pudo cargar los datos. Verifique la conexión.');
     } finally {
       setCargando(false);

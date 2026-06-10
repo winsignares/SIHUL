@@ -1107,9 +1107,7 @@ export default function RegistrarFactura() {
                   disabled={isReviewMode}
                 >
                   <option value="Factura">Factura</option>
-                  <option value="Factura Electrónica">Factura Electrónica</option>
                   <option value="Cuenta de Cobro">Cuenta de Cobro</option>
-                  <option value="Nota Débito">Nota Débito</option>
                 </select>
               </div>
               <div>

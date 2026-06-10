@@ -1,21 +1,24 @@
+import type { ChangeEvent } from 'react';
 import { Input } from './input';
 import { Label } from './label';
 import { Search, Calendar, X, Filter } from 'lucide-react';
 import { Button } from './button';
 
+export interface TableFilterValues {
+  numeroFactura?: string;
+  proveedor?: string;
+  estado?: string;
+  areaSolicitante?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  montoMin?: string;
+  montoMax?: string;
+  orden?: string;
+}
+
 interface TableFiltersProps {
-  filters: {
-    numeroFactura?: string;
-    proveedor?: string;
-    estado?: string;
-    areaSolicitante?: string;
-    fechaInicio?: string;
-    fechaFin?: string;
-    montoMin?: string;
-    montoMax?: string;
-    orden?: string;
-  };
-  onFilterChange: (filters: any) => void;
+  filters: TableFilterValues;
+  onFilterChange: (filters: TableFilterValues) => void;
   estados?: string[];
   proveedores?: string[];
   areas?: string[];
@@ -23,7 +26,7 @@ interface TableFiltersProps {
   showAreaFilter?: boolean;
   showEstadoFilter?: boolean;
   showMontoFilter?: boolean;
-  orderKey?: string;
+  orderKey?: keyof TableFilterValues;
   orderLabel?: string;
   orderOptions?: { label: string; value: string }[];
 }
@@ -56,7 +59,7 @@ export default function TableFilters({
     });
   };
 
-  const handleInputChange = (key: string, value: string) => {
+  const handleInputChange = <K extends keyof TableFilterValues>(key: K, value: string) => {
     onFilterChange({ ...filters, [key]: value });
   };
 
@@ -166,8 +169,8 @@ export default function TableFilters({
             </Label>
             <select
               id={`filter-${orderKey}`}
-              value={(filters as Record<string, string | undefined>)[orderKey] || ''}
-              onChange={(e) => handleInputChange(orderKey, e.target.value)}
+              value={filters[orderKey] || ''}
+              onChange={(event) => handleInputChange(orderKey, event.target.value)}
               className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
             >
               {orderOptions.map((option: { label: string; value: string }) => (
@@ -207,14 +210,14 @@ export default function TableFilters({
               <Calendar className="w-3 h-3 text-blue-600" />
               Desde
             </Label>
-              <Input
-                id="filter-fecha-inicio"
-                type="date"
-                value={filters.fechaInicio || ''}
-                onChange={(e: any) => handleInputChange('fechaInicio', e.target.value)}
-                className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
-              />
-            </div>
+            <Input
+              id="filter-fecha-inicio"
+              type="date"
+              value={filters.fechaInicio || ''}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange('fechaInicio', event.target.value)}
+              className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
+            />
+          </div>
         )}
 
         {showFechaFilter && (
@@ -227,7 +230,7 @@ export default function TableFilters({
               id="filter-fecha-fin"
               type="date"
               value={filters.fechaFin || ''}
-              onChange={(e: any) => handleInputChange('fechaFin', e.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange('fechaFin', event.target.value)}
               className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
             />
           </div>

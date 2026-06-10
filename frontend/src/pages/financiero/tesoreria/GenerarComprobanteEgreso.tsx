@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import TableFilters, { type TableFilterValues } from '../../../share/table-filters';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
@@ -100,7 +101,7 @@ export default function GenerarComprobanteEgreso() {
 
   const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail | null>(null);
 
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<TableFilterValues>({
     numeroFactura: '',
     proveedor: '',
     estado: '',
@@ -112,12 +113,12 @@ export default function GenerarComprobanteEgreso() {
     orden: 'antiguos',
   });
 
-  const loadFacturas = async () => {
+  const loadFacturas = useCallback(async () => {
     const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
     return toList<APIFactura>(response).filter((factura) => isComprobanteFlow(factura.estado));
-  };
+  }, []);
 
-  const cargarFacturas = async () => {
+  const cargarFacturas = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
@@ -129,11 +130,11 @@ export default function GenerarComprobanteEgreso() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadFacturas]);
 
   useEffect(() => {
     void cargarFacturas();
-  }, []);
+  }, [cargarFacturas]);
 
   const facturasComprobante = useMemo(() => facturasRaw.map(mapFactura), [facturasRaw]);
 
@@ -189,8 +190,9 @@ export default function GenerarComprobanteEgreso() {
         link.download = `Expediente_${factura.numeroFactura}.zip`;
         link.click();
         URL.revokeObjectURL(url);
-      } catch (err: any) {
-        toast.error(err?.message || 'No fue posible descargar el expediente documental.');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'No fue posible descargar el expediente documental.';
+        toast.error(message);
       }
     })();
   };
@@ -224,7 +226,7 @@ export default function GenerarComprobanteEgreso() {
           <CardContent>
             <TableFilters
               filters={filtros}
-              onFilterChange={setFiltros}
+              onFilterChange={(updated) => setFiltros(updated)}
               proveedores={proveedores}
               areas={areas}
               showFechaFilter

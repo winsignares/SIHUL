@@ -112,13 +112,33 @@ const buildInvoiceDescription = (
   .join('\n');
 
 const TIPO_DOCUMENTO_OPTS = [
-  'Factura Electrónica',
   'Factura',
   'Cuenta de Cobro',
-  'Nota Débito',
-  'Otro',
 ];
 const DOC_TYPES = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const DOC_TYPE_DETAILS: Record<string, { label: string; helper?: string; optional?: boolean }> = {
+  Factura: {
+    label: 'Factura / Cuenta de Cobro',
+    helper: 'Carga la factura electrónica o la cuenta de cobro firmada.',
+  },
+  'Orden de Compra': {
+    label: 'Orden de Compra / Servicio / Contrato',
+    helper: 'Incluye la orden de compra, servicio contratado o el contrato firmado.',
+  },
+  'Certificación Bancaria': {
+    label: 'Certificación Bancaria',
+    helper: 'Requerida si tu información bancaria cambió recientemente.',
+  },
+  'Acta de Entrega': {
+    label: 'Acta de Entrega de Recibo a satisfacción',
+    helper: 'Adjunta el acta firmada donde conste la recepción del servicio o bien.',
+  },
+  'Soporte Adicional': {
+    label: 'Soporte Adicional',
+    helper: 'Evidencias o soportes que consideres relevantes.',
+    optional: true,
+  },
+};
 const ALLOWED_DOC_EXTENSIONS = new Set(['pdf']);
 const ALLOWED_DOC_MIME_TYPES = new Set(['application/pdf']);
 const BANCOS_COLOMBIA = [
@@ -550,12 +570,17 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     ? Array.from(new Map(tiposCuenta.map(tipo => [tipo.nombre, tipo])).values())
     : TIPO_CUENTA_OPTS.map((nombre, idx) => ({ id: 1000 + idx, nombre }))), [tiposCuenta]);
 
-  const documentosPendientes = useMemo(
+  const missingDocTypes = useMemo(
     () => documentTypes.filter(type => !docs.some(doc => doc.type === type)),
     [documentTypes, docs],
   );
 
-  const allDocumentsUploaded = documentosPendientes.length === 0;
+  const documentosPendientes = useMemo(
+    () => missingDocTypes.map(type => DOC_TYPE_DETAILS[type]?.label ?? type),
+    [missingDocTypes],
+  );
+
+  const allDocumentsUploaded = missingDocTypes.length === 0;
   const hasInvalidServiceItems = serviceItemsCalculated.some(
     item => !item.servicio.trim() || item.cantidad <= 0 || item.valorUnitario <= 0,
   );
@@ -972,7 +997,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     <span>Items</span>
                     <span>Servicio</span>
                     <span>Valor unitario</span>
-                    <span>IVA %</span>
+                    <span>IVA / INC </span>
                     <span>Subtotal</span>
                     <span>Total</span>
                     <span />
@@ -1062,7 +1087,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                             className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-bold"
                           />
                           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            IVA: {formatMoney(item.valorIva)}
+                            IVA / INC: {formatMoney(item.valorIva)}
                           </p>
                         </div>
 
@@ -1097,7 +1122,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                       <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{formatMoney(invoiceTotals.subtotal)}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">IVA total</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">IVA / INC total</p>
                       <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{formatMoney(invoiceTotals.iva)}</p>
                     </div>
                     <div className="rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
@@ -1105,10 +1130,6 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                       <p className="mt-1 text-xl font-bold text-orange-700 dark:text-orange-300">{formatMoney(invoiceTotals.total)}</p>
                     </div>
                   </div>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
-                    El proveedor solo digita cantidad, servicio, valor unitario e IVA. El subtotal, el valor del IVA y el total de cada fila se calculan automáticamente.
-                  </p>
                 </div>
               </div>
 
@@ -1166,18 +1187,32 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 Adjunta todos los soportes requeridos para continuar con la confirmación.
               </p>
               {!allDocumentsUploaded && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
-                  Faltan documentos por adjuntar: {documentosPendientes.join(', ')}.
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 space-y-2">
+                  <p className="font-semibold text-amber-900 dark:text-amber-200">
+                    Faltan documentos por adjuntar:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-amber-900/90 dark:text-amber-200">
+                    {documentosPendientes.map((doc) => (
+                      <li key={doc}>{doc}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-amber-900/80 dark:text-amber-200/90">
+                    Adjunta estos soportes para habilitar el envío final de tu factura.
+                  </p>
                 </div>
               )}
 
               <div className="space-y-3">
                 {documentTypes.map(type => {
                   const uploaded = docs.find(d => d.type === type);
+                  const docMeta = DOC_TYPE_DETAILS[type];
                   return (
                     <div key={type} className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-800 dark:text-white">{type}</p>
+                        <p className="text-sm font-medium text-slate-800 dark:text-white">{docMeta?.label ?? type}</p>
+                        {docMeta?.helper && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{docMeta.helper}</p>
+                        )}
                         {uploaded && (
                           <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs space-y-1">
                             <div className="flex min-w-0 items-center gap-1.5">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -9,8 +9,9 @@ import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
 import { Send, Eye, Calendar, AlertCircle, TrendingUp, FolderOpen, FileText, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail, buildSharedFacturaDetail } from '../../../share/factura-detail-modal';
+import TableFilters, { type TableFilterValues } from '../../../share/table-filters';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { SlaIndicator } from '../../../share/sla-indicator';
@@ -101,6 +102,10 @@ export default function EnviarDireccionFinanciera() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
+
+  const handleFilterChange = useCallback((values: TableFilterValues) => {
+    setFiltros((prev) => ({ ...prev, ...values }));
+  }, []);
 
   const loadFacturas = async () => {
     const response = await facturasService.getAll({ limit: 200 });
@@ -282,7 +287,7 @@ export default function EnviarDireccionFinanciera() {
           <CardContent>
             <TableFilters
               filters={filtros}
-              onFilterChange={setFiltros}
+              onFilterChange={handleFilterChange}
               proveedores={Array.from(new Set(facturasAprobadas.map((f) => f.proveedor)))}
               areas={Array.from(new Set(facturasAprobadas.map((f) => f.areaSolicitante)))}
               showFechaFilter
