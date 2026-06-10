@@ -76,10 +76,12 @@ export function useAsignaturas() {
             ]);
             setAsignaturas(asignaturasRes.asignaturas);
             setProgramas(programasRes.programas);
-            setSessionCacheData(ASIGNATURAS_CACHE_KEY, activeToken, {
-                asignaturas: asignaturasRes.asignaturas,
-                programas: programasRes.programas
-            });
+            if (asignaturasRes.asignaturas.length > 0) {
+                setSessionCacheData(ASIGNATURAS_CACHE_KEY, activeToken, {
+                    asignaturas: asignaturasRes.asignaturas,
+                    programas: programasRes.programas
+                });
+            }
         } catch (error) {
             toast.error(`Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {

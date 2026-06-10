@@ -153,7 +153,7 @@ export const asignaturaService = {
      */
     list: async (): Promise<ListAsignaturasResponse> => {
         const asignaturas = await apiClient.get<Asignatura[]>('/asignaturas/');
-        return { asignaturas };
+        return { asignaturas: Array.isArray(asignaturas) ? asignaturas : [] };
     }
 };
 

@@ -63,8 +63,7 @@ export function useDashboardHome() {
             const cachedData = force
                 ? null
                 : getSessionCacheData<{
-                    stats: DashboardStat[];
-                    activities: typeof dashboardHomeActivities;
+                    statValues: { label: string; value: string | number }[];
                     occupationStats: typeof dashboardHomeOccupationStats;
                     occupationDetails: typeof dashboardHomeOccupationDetails;
                     topEspaciosOcupados: EspacioOcupacion[];
@@ -72,8 +71,14 @@ export function useDashboardHome() {
                 }>(DASHBOARD_HOME_CACHE_KEY, activeToken);
 
             if (cachedData) {
-                setStats(cachedData.stats);
-                setActivities(cachedData.activities);
+                // Reinyectar íconos desde constantes estáticas (las funciones no se pueden cachear en JSON)
+                const restoredStats: DashboardStat[] = dashboardHomeStats.map((s, i) => ({
+                    ...s,
+                    value: cachedData.statValues[i]?.value ?? s.value,
+                    label: cachedData.statValues[i]?.label ?? s.label,
+                }));
+                setStats(restoredStats);
+                setActivities(dashboardHomeActivities);
                 setOccupationStats(cachedData.occupationStats);
                 setOccupationDetails(cachedData.occupationDetails);
                 setTopEspaciosOcupados(cachedData.topEspaciosOcupados);
@@ -220,10 +225,9 @@ export function useDashboardHome() {
             setActivities(nextActivities as any);
             setIsLoadingActivities(false);
 
+            // Solo cachear datos serializables (sin íconos/funciones)
             setSessionCacheData(DASHBOARD_HOME_CACHE_KEY, activeToken, {
-                stats: updatedStats,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                activities: nextActivities as any,
+                statValues: updatedStats.map(s => ({ label: s.label, value: s.value })),
                 occupationStats: nextOccupationStats,
                 occupationDetails: nextOccupationDetails,
                 topEspaciosOcupados: topEspacios,

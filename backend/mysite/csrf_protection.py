@@ -39,6 +39,10 @@ class JSONCsrfMiddleware(CsrfViewMiddleware):
     }
     
     def process_view(self, request, view_func, view_args, view_kwargs):
+        # Dejar que Django Admin maneje su propio CSRF de forma nativa
+        if request.path.startswith('/admin/'):
+            return None
+
         # Exemtar endpoints públicos
         if request.path in self.CSRF_EXEMPT_PATHS:
             return None
