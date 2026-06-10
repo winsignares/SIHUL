@@ -542,8 +542,8 @@ export function useGestionUsuarios() {
     // Usuarios filtrados (memoizado para evitar recálculos innecesarios)
     const filteredUsuarios = useMemo(() => {
         return usuarios.filter(user => {
-            const matchesSearch = user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.correo.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = (user.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (user.correo ?? '').toLowerCase().includes(searchTerm.toLowerCase());
             const rolNombre = user.rol?.nombre || rolesDisponibles.find(r => r.id === user.rol_id)?.nombre;
             const matchesRol = filterRol === 'todos' || rolNombre === filterRol;
             return matchesSearch && matchesRol;

@@ -274,7 +274,7 @@ export function useGrupos() {
 
     const filteredGrupos = useMemo(() => {
         return grupos.filter(grupo => {
-            const matchesSearch = grupo.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = (grupo.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programa_id.toString() === selectedProgramaFilter;
             const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre.toString() === selectedSemestreFilter;
             return matchesSearch && matchesPrograma && matchesSemestre;

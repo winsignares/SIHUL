@@ -346,9 +346,9 @@ export function useDocentes() {
     // ==================== FILTROS ====================
 
     const docentesFiltrados = docentes.filter(docente => {
-        const matchSearch = docente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            docente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            docente.especialidad?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchSearch = (docente.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (docente.email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (docente.especialidad ?? '').toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchFacultad = selectedFacultad === 'all' ||
             docente.facultades.includes(selectedFacultad);

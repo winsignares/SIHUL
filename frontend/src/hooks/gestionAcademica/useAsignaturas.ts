@@ -249,8 +249,8 @@ export function useAsignaturas() {
         return asignaturas.filter(asignatura => {
             // Búsqueda por texto
             const matchSearch =
-                asignatura.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                asignatura.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+                (asignatura.codigo ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (asignatura.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase());
 
             return matchSearch;
         });

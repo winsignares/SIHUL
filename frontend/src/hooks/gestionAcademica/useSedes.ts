@@ -201,7 +201,7 @@ export function useSedes() {
 
     const filteredSedes = useMemo(() => {
         return sedes.filter(s =>
-            s.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+            (s.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [sedes, searchTerm]);
 

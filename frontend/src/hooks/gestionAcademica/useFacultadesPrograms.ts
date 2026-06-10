@@ -595,13 +595,13 @@ export function useFacultadesPrograms() {
 
     const filteredFacultades = useMemo(() => {
         return facultades.filter(f =>
-            f.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+            (f.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [facultades, searchTerm]);
 
     const filteredProgramas = useMemo(() => {
         return programas.filter(p => {
-            const matchSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchSearch = (p.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchFacultad = selectedFacultadFilter === 'all' || p.facultadId?.toString() === selectedFacultadFilter;
             return matchSearch && matchFacultad;
         });
