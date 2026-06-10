@@ -131,8 +131,8 @@ export default function EnviarDireccionFinanciera() {
     const fechaFin = filtros.fechaFin ? new Date(filtros.fechaFin) : null;
 
     return facturasAprobadas.filter((factura) => {
-      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-      if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
+      if (filtros.numeroFactura && !(factura.numeroFactura ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && !(factura.proveedor ?? '').toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
       if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
       if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
       if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;

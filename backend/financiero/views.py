@@ -961,149 +961,315 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return output.getvalue()
 
     def _build_portada_factura(self, factura, documentos, scope):
-        """Genera una portada profesional e informativa para el PDF consolidado."""
+        """Genera un comprobante profesional de expediente con sello PAGADA y logo institucional."""
         output = BytesIO()
         pdf = canvas.Canvas(output, pagesize=letter)
         width, height = letter
-        
-        # Colores
-        COLOR_HEADER = colors.HexColor('#1e40af')
-        COLOR_ACCENT = colors.HexColor('#0369a1')
-        COLOR_TEXT = colors.HexColor('#1f2937')
-        COLOR_LIGHT = colors.HexColor('#f3f4f6')
-        
-        # Encabezado con fondo
-        pdf.setFillColor(COLOR_HEADER)
-        pdf.rect(0, height - 100, width, 100, fill=1, stroke=0)
-        
-        # Título principal
-        pdf.setFont('Helvetica-Bold', 24)
+
+        # --- Paleta institucional Universidad Libre ---
+        COLOR_VINO        = colors.HexColor('#7B1C2E')
+        COLOR_VINO_DARK   = colors.HexColor('#5A1220')
+        COLOR_VINO_LIGHT  = colors.HexColor('#A83248')
+        COLOR_GOLD        = colors.HexColor('#C9963A')
+        COLOR_GOLD_LIGHT  = colors.HexColor('#F0C46A')
+        COLOR_TEXT        = colors.HexColor('#1C1C1E')
+        COLOR_SUBTEXT     = colors.HexColor('#4B4B4B')
+        COLOR_LINE        = colors.HexColor('#D5D5D5')
+        COLOR_PAGADA_BG   = colors.HexColor('#D4EDDA')
+        COLOR_PAGADA_BORDER = colors.HexColor('#28A745')
+        COLOR_PAGADA_TEXT = colors.HexColor('#155724')
+        COLOR_SECTION_BG  = colors.HexColor('#F8F4F4')
+
+        def fmt_cop(value):
+            try:
+                return f"$ {float(value or 0):,.0f}".replace(',', '.')
+            except Exception:
+                return '$ 0'
+
+        def fmt_fecha(d):
+            if not d:
+                return 'N/A'
+            try:
+                from datetime import date
+                if isinstance(d, str):
+                    d = date.fromisoformat(d)
+                return d.strftime('%d/%m/%Y')
+            except Exception:
+                return str(d)
+
+        def draw_section_header(y_pos, titulo):
+            pdf.setFillColor(COLOR_VINO)
+            pdf.rect(30, y_pos - 4, width - 60, 18, fill=1, stroke=0)
+            pdf.setFont('Helvetica-Bold', 9)
+            pdf.setFillColor(colors.white)
+            pdf.drawString(38, y_pos + 1, titulo.upper())
+            return y_pos - 24
+
+        def draw_row(y_pos, label, value, bold_value=False, col1=38, col2=210, col3=None, label3=None, value3=None):
+            pdf.setFont('Helvetica-Bold', 9)
+            pdf.setFillColor(COLOR_SUBTEXT)
+            pdf.drawString(col1, y_pos, label)
+            if bold_value:
+                pdf.setFont('Helvetica-Bold', 9)
+                pdf.setFillColor(COLOR_TEXT)
+            else:
+                pdf.setFont('Helvetica', 9)
+                pdf.setFillColor(COLOR_TEXT)
+            pdf.drawString(col2, y_pos, str(value)[:55])
+            if col3 and label3 and value3 is not None:
+                pdf.setFont('Helvetica-Bold', 9)
+                pdf.setFillColor(COLOR_SUBTEXT)
+                pdf.drawString(col3, y_pos, label3)
+                pdf.setFont('Helvetica', 9)
+                pdf.setFillColor(COLOR_TEXT)
+                pdf.drawString(col3 + 100, y_pos, str(value3)[:30])
+            return y_pos - 15
+
+        # =====================================================================
+        # BLOQUE SUPERIOR: ENCABEZADO INSTITUCIONAL
+        # =====================================================================
+        pdf.setFillColor(COLOR_VINO)
+        pdf.rect(0, height - 90, width, 90, fill=1, stroke=0)
+
+        # Franja dorada inferior del header
+        pdf.setFillColor(COLOR_GOLD)
+        pdf.rect(0, height - 93, width, 3, fill=1, stroke=0)
+
+        # Logo Universidad Libre
+        logo_path = os.path.join(os.path.dirname(__file__), 'static_assets', 'LogoUniversidadLibre.webp')
+        logo_inserted = False
+        if os.path.exists(logo_path):
+            try:
+                from PIL import Image as PilImage
+                img = PilImage.open(logo_path)
+                img_rgb = img.convert('RGBA') if img.mode in ('P', 'LA') else img
+                logo_buf = BytesIO()
+                img_rgb.save(logo_buf, format='PNG')
+                logo_buf.seek(0)
+                from reportlab.lib.utils import ImageReader
+                logo_reader = ImageReader(logo_buf)
+                pdf.drawImage(logo_reader, 28, height - 82, width=90, height=70, preserveAspectRatio=True, mask='auto')
+                logo_inserted = True
+            except Exception:
+                logo_inserted = False
+
+        # Textos del encabezado
+        text_x = 130 if logo_inserted else 38
+        pdf.setFont('Helvetica-Bold', 7)
+        pdf.setFillColor(COLOR_GOLD_LIGHT)
+        pdf.drawString(text_x, height - 20, 'UNIVERSIDAD LIBRE DE COLOMBIA')
+
+        pdf.setFont('Helvetica-Bold', 14)
         pdf.setFillColor(colors.white)
-        pdf.drawString(40, height - 50, 'DOCUMENTACIÓN CONSOLIDADA')
-        
-        # Número de factura
-        pdf.setFont('Helvetica-Bold', 16)
-        pdf.setFillColor(colors.HexColor('#fbbf24'))
-        pdf.drawString(40, height - 75, f'Factura: {factura.numero_factura}')
-        
-        y = height - 120
-        
-        # Sección 1: Información de la Factura
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '📋 INFORMACIÓN DE LA FACTURA')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        info_factura = [
-            ('Número Factura:', factura.numero_factura),
-            ('Estado Actual:', factura.estado or 'N/A'),
-            ('Etapa:', factura.etapa_actual or 'N/A'),
-            ('Fecha Factura:', str(factura.fecha_factura) if factura.fecha_factura else 'N/A'),
-            ('Fecha Recepción:', str(factura.fecha_recepcion) if factura.fecha_recepcion else 'N/A'),
-        ]
-        
-        for label, valor in info_factura:
-            pdf.drawString(50, y, f'{label}')
-            pdf.drawString(200, y, str(valor)[:60])
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 2: Información del Proveedor
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '👤 INFORMACIÓN DEL PROVEEDOR')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
+        pdf.drawString(text_x, height - 38, 'COMPROBANTE DE EXPEDIENTE')
+
+        pdf.setFont('Helvetica-Bold', 11)
+        pdf.setFillColor(COLOR_GOLD_LIGHT)
+        pdf.drawString(text_x, height - 55, f'Factura: {factura.numero_factura}')
+
+        pdf.setFont('Helvetica', 8)
+        pdf.setFillColor(colors.HexColor('#EECECE'))
+        pdf.drawString(text_x, height - 70, 'Vicerrectoria Administrativa y Financiera  |  Sistema de Gestion Documental')
+
+        # Numero de radicado (derecha)
+        radicado = factura.numero_radicado or 'Sin Radicar'
+        pdf.setFont('Helvetica-Bold', 8)
+        pdf.setFillColor(COLOR_GOLD_LIGHT)
+        pdf.drawRightString(width - 30, height - 22, f'Radicado: {radicado}')
+        pdf.setFont('Helvetica', 7)
+        pdf.setFillColor(colors.HexColor('#EECECE'))
+        pdf.drawRightString(width - 30, height - 35, f'Generado: {timezone.now().strftime("%d/%m/%Y %H:%M")}')
+
+        # =====================================================================
+        # SELLO "PAGADA" (esquina superior derecha, sobre el header)
+        # =====================================================================
+        estado_norm = (factura.estado or '').strip().lower()
+        if estado_norm in ('pagada', 'pago aplicado'):
+            pdf.saveState()
+            pdf.translate(width - 60, height - 58)
+            pdf.rotate(18)
+            pdf.setFillColor(COLOR_PAGADA_BG)
+            pdf.setStrokeColor(COLOR_PAGADA_BORDER)
+            pdf.roundRect(-36, -12, 72, 24, 4, fill=1, stroke=1)
+            pdf.setFont('Helvetica-Bold', 13)
+            pdf.setFillColor(COLOR_PAGADA_TEXT)
+            pdf.drawCentredString(0, -4, 'PAGADA')
+            pdf.restoreState()
+
+        # =====================================================================
+        # CUERPO DEL DOCUMENTO
+        # =====================================================================
+        y = height - 108
+
+        # --- SECCIÓN 1: DATOS DE LA FACTURA ---
+        y = draw_section_header(y, 'Informacion de la Factura')
+
         proveedor = factura.proveedor
-        info_proveedor = [
-            ('Razón Social:', getattr(proveedor, 'razon_social', 'N/A') if proveedor else 'N/A'),
-            ('NIT:', getattr(proveedor, 'nit', 'N/A') if proveedor else 'N/A'),
-            ('Email:', getattr(proveedor, 'email', 'N/A') if proveedor else 'N/A'),
-        ]
-        
-        for label, valor in info_proveedor:
-            pdf.drawString(50, y, f'{label}')
-            pdf.drawString(200, y, str(valor)[:60])
-            y -= 16
-        
+        departamento = factura.departamento
+
+        y = draw_row(y, 'N. Factura:', factura.numero_factura or 'N/A', bold_value=True,
+                     col3=310, label3='Tipo Doc.:', value3=factura.tipo_documento or 'N/A')
+        y = draw_row(y, 'Estado:', factura.estado or 'N/A', bold_value=True,
+                     col3=310, label3='Etapa:', value3=factura.etapa_actual or 'N/A')
+        y = draw_row(y, 'Fecha Factura:', fmt_fecha(factura.fecha_factura),
+                     col3=310, label3='Fecha Recepcion:', value3=fmt_fecha(factura.fecha_recepcion))
+        y = draw_row(y, 'N. Proceso Pago:', factura.numero_proceso_pago or 'N/A',
+                     col3=310, label3='N. Transaccion:', value3=factura.numero_transaccion or 'N/A')
+        if factura.numero_comprobante:
+            y = draw_row(y, 'N. Comprobante:', factura.numero_comprobante,
+                         col3=310, label3='N. Confirmacion:', value3=factura.numero_confirmacion or 'N/A')
+        y -= 4
+
+        # --- SECCIÓN 2: PROVEEDOR ---
+        y = draw_section_header(y, 'Informacion del Proveedor')
+        y = draw_row(y, 'Razon Social:', getattr(proveedor, 'razon_social', 'N/A') if proveedor else 'N/A', bold_value=True)
+        y = draw_row(y, 'NIT:', getattr(proveedor, 'nit', 'N/A') if proveedor else 'N/A',
+                     col3=310, label3='Email:', value3=getattr(proveedor, 'email', 'N/A') if proveedor else 'N/A')
+        y = draw_row(y, 'Telefono:', getattr(proveedor, 'telefono', 'N/A') if proveedor else 'N/A',
+                     col3=310, label3='Cuenta Bancaria:', value3=(factura.cuenta_bancaria_proveedor or 'N/A'))
+        y = draw_row(y, 'Area Solicitante:', getattr(departamento, 'nombre', 'N/A') if departamento else 'N/A')
+        y -= 4
+
+        # --- SECCIÓN 3: DETALLE FINANCIERO ---
+        y = draw_section_header(y, 'Detalle Financiero')
+
+        subtotal   = float(factura.valor_subtotal or 0)
+        iva        = float(factura.valor_iva or 0)
+        ret_renta  = float(factura.valor_retencion_renta or 0)
+        ret_iva    = float(factura.valor_retencion_iva or 0)
+        ret_ica    = float(factura.valor_retencion_ica or 0)
+        total      = float(factura.valor_total or 0)
+        neto_pagar = total - ret_renta - ret_iva - ret_ica
+
+        y = draw_row(y, 'Subtotal:', fmt_cop(subtotal),
+                     col3=310, label3='IVA:', value3=fmt_cop(iva))
+        y = draw_row(y, 'Ret. Renta:', fmt_cop(ret_renta),
+                     col3=310, label3='Ret. IVA:', value3=fmt_cop(ret_iva))
+        y = draw_row(y, 'Ret. ICA:', fmt_cop(ret_ica),
+                     col3=310, label3='Total Bruto:', value3=fmt_cop(total))
+
+        # Línea separadora
+        y -= 4
+        pdf.setStrokeColor(COLOR_GOLD)
+        pdf.setLineWidth(1)
+        pdf.line(30, y, width - 30, y)
         y -= 10
-        
-        # Sección 3: Información Financiera
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '💰 INFORMACIÓN FINANCIERA')
+
+        # Neto a pagar resaltado
+        pdf.setFillColor(COLOR_VINO)
+        pdf.rect(30, y - 6, width - 60, 20, fill=1, stroke=0)
+        pdf.setFont('Helvetica-Bold', 11)
+        pdf.setFillColor(colors.white)
+        pdf.drawString(38, y + 1, 'NETO A PAGAR:')
+        pdf.drawRightString(width - 38, y + 1, fmt_cop(neto_pagar))
         y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        info_financiera = [
-            ('Subtotal:', f'${float(factura.valor_subtotal or 0):,.2f}'),
-            ('IVA:', f'${float(factura.valor_iva or 0):,.2f}'),
-            ('Total:', f'${float(factura.valor_total or 0):,.2f}'),
+
+        # --- SECCIÓN 4: FECHAS DEL PROCESO ---
+        y -= 8
+        if y < 120:
+            pdf.showPage()
+            y = height - 50
+
+        y = draw_section_header(y, 'Trazabilidad de Fechas del Proceso')
+
+        fechas = [
+            ('Recepcion:', fmt_fecha(factura.fecha_recepcion), 'Radicacion:', fmt_fecha(factura.fecha_radicacion)),
+            ('Causacion:', fmt_fecha(factura.fecha_causacion), 'Alistamiento:', fmt_fecha(factura.fecha_alistamiento)),
+            ('Aprobacion Auditoria:', fmt_fecha(factura.fecha_aprobacion_auditoria), 'Cargue DF:', fmt_fecha(factura.fecha_cargue)),
+            ('Envio Rectoria:', fmt_fecha(factura.fecha_envio_rectoria), 'Autorizacion:', fmt_fecha(factura.fecha_autorizacion)),
+            ('Pago Aplicado:', fmt_fecha(factura.fecha_pago_aplicado), 'Comprobante:', fmt_fecha(factura.fecha_comprobante)),
         ]
-        
-        for label, valor in info_financiera:
-            pdf.drawString(50, y, f'{label}')
-            pdf.setFont('Helvetica-Bold', 10)
-            pdf.drawString(200, y, str(valor))
-            pdf.setFont('Helvetica', 10)
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 4: Información Operativa
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '⚙️ INFORMACIÓN OPERATIVA')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        dias_transcurridos = factura.dias_transcurridos or 0
-        info_operativa = [
-            ('Días Transcurridos:', f'{dias_transcurridos} días'),
-            ('Área Solicitante:', getattr(factura.departamento, 'nombre', 'N/A') if factura.departamento else 'N/A'),
-            ('Observaciones:', (factura.observaciones or 'Sin observaciones')[:50]),
-        ]
-        
-        for label, valor in info_operativa:
-            pdf.drawString(50, y, f'{label}')
-            pdf.drawString(200, y, str(valor)[:60])
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 5: Documentos Incluidos
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, f'📎 DOCUMENTOS INCLUIDOS ({len(documentos)})')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 9)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        for idx, doc in enumerate(documentos, 1):
-            doc_text = f'{idx}. {doc.tipo_documento} - {doc.nombre_archivo}'
-            pdf.drawString(50, y, doc_text[:80])
-            y -= 14
-            if y < 60:
+        for l1, v1, l2, v2 in fechas:
+            y = draw_row(y, l1, v1, col3=310, label3=l2, value3=v2)
+        y -= 4
+
+        # --- SECCIÓN 5: DESCRIPCIÓN / OBSERVACIONES ---
+        observaciones = (factura.observaciones or '').strip()
+        descripcion   = (factura.descripcion or '').strip()
+        if observaciones or descripcion:
+            if y < 100:
                 pdf.showPage()
                 y = height - 50
-        
-        # Pie de página
-        pdf.setFont('Helvetica', 8)
-        pdf.setFillColor(colors.HexColor('#9ca3af'))
-        pdf.drawString(40, 30, f'Generado: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")} | Scope: {scope}')
-        
+            y = draw_section_header(y, 'Descripcion y Observaciones')
+            if descripcion:
+                pdf.setFont('Helvetica-Bold', 8)
+                pdf.setFillColor(COLOR_SUBTEXT)
+                pdf.drawString(38, y, 'Descripcion:')
+                y -= 13
+                pdf.setFont('Helvetica', 8)
+                pdf.setFillColor(COLOR_TEXT)
+                for linea in descripcion[:300].split('\n'):
+                    for chunk in [linea[i:i+95] for i in range(0, len(linea), 95)] or ['']:
+                        pdf.drawString(42, y, chunk)
+                        y -= 12
+                        if y < 60:
+                            pdf.showPage()
+                            y = height - 50
+                y -= 4
+            if observaciones:
+                pdf.setFont('Helvetica-Bold', 8)
+                pdf.setFillColor(COLOR_SUBTEXT)
+                pdf.drawString(38, y, 'Observaciones:')
+                y -= 13
+                pdf.setFont('Helvetica', 8)
+                pdf.setFillColor(COLOR_TEXT)
+                for linea in observaciones[:300].split('\n'):
+                    for chunk in [linea[i:i+95] for i in range(0, len(linea), 95)] or ['']:
+                        pdf.drawString(42, y, chunk)
+                        y -= 12
+                        if y < 60:
+                            pdf.showPage()
+                            y = height - 50
+            y -= 4
+
+        # --- SECCIÓN 6: DOCUMENTOS INCLUIDOS ---
+        if y < 120:
+            pdf.showPage()
+            y = height - 50
+
+        y = draw_section_header(y, f'Documentos del Expediente ({len(documentos)} archivos)')
+
+        if documentos:
+            pdf.setFont('Helvetica-Bold', 8)
+            pdf.setFillColor(COLOR_SUBTEXT)
+            pdf.drawString(38, y, '#')
+            pdf.drawString(60, y, 'Tipo Documento')
+            pdf.drawString(220, y, 'Nombre Archivo')
+            pdf.drawString(420, y, 'Fecha Carga')
+            y -= 3
+            pdf.setStrokeColor(COLOR_LINE)
+            pdf.line(30, y, width - 30, y)
+            y -= 10
+            for idx, doc in enumerate(documentos, 1):
+                if y < 60:
+                    pdf.showPage()
+                    y = height - 50
+                pdf.setFont('Helvetica', 8)
+                pdf.setFillColor(COLOR_TEXT)
+                pdf.drawString(38, y, str(idx))
+                pdf.drawString(60, y, str(doc.tipo_documento or '')[:28])
+                pdf.drawString(220, y, str(doc.nombre_archivo or '')[:28])
+                pdf.drawString(420, y, fmt_fecha(doc.fecha_carga) if hasattr(doc, 'fecha_carga') else '')
+                y -= 12
+        else:
+            pdf.setFont('Helvetica', 9)
+            pdf.setFillColor(COLOR_SUBTEXT)
+            pdf.drawString(38, y, 'No hay documentos adjuntos en el expediente.')
+            y -= 15
+
+        # =====================================================================
+        # PIE DE PÁGINA
+        # =====================================================================
+        pdf.setFillColor(COLOR_VINO)
+        pdf.rect(0, 0, width, 28, fill=1, stroke=0)
+        pdf.setFillColor(COLOR_GOLD)
+        pdf.rect(0, 28, width, 2, fill=1, stroke=0)
+
+        pdf.setFont('Helvetica', 7)
+        pdf.setFillColor(colors.white)
+        pdf.drawString(30, 10, 'Universidad Libre de Colombia  |  Vicerrectoria Administrativa y Financiera  |  Sistema SIHUL')
+        pdf.drawRightString(width - 30, 10, f'Expediente generado el {timezone.now().strftime("%d/%m/%Y a las %H:%M:%S")}')
+
         pdf.save()
         return output.getvalue()
 

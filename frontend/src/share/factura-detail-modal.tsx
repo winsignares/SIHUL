@@ -142,8 +142,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'Pago Aplicado',
   ];
 
-  const normalize = (value: string) =>
-    value
+  const normalize = (value: string | undefined | null) =>
+    (value ?? '')
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -416,18 +416,18 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                     {currentFactura.valorSubtotal !== undefined && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">Subtotal</span>
-                        <span className="font-semibold text-slate-800">${currentFactura.valorSubtotal.toLocaleString('es-CO')}</span>
+                        <span className="font-semibold text-slate-800">${(currentFactura.valorSubtotal ?? 0).toLocaleString('es-CO')}</span>
                       </div>
                     )}
                     {currentFactura.valorIva !== undefined && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">Tasa</span>
-                        <span className="font-semibold text-slate-800">${currentFactura.valorIva.toLocaleString('es-CO')}</span>
+                        <span className="font-semibold text-slate-800">${(currentFactura.valorIva ?? 0).toLocaleString('es-CO')}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                       <span className="text-slate-700 font-semibold">Total</span>
-                      <span className="text-xl font-bold text-green-700">${currentFactura.valorTotal.toLocaleString('es-CO')}</span>
+                      <span className="text-xl font-bold text-green-700">${(currentFactura.valorTotal ?? 0).toLocaleString('es-CO')}</span>
                     </div>
                   </div>
                 </div>

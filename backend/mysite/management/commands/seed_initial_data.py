@@ -126,6 +126,10 @@ class Command(BaseCommand):
                 out.write(sty.SUCCESS('\n[16/17] Preguntas Sugeridas'))
                 preguntas_sugeridas_seeder.create_preguntas_sugeridas(out, sty)
 
+                #  17. Módulo Financiero 
+                out.write(sty.SUCCESS('\n[17/17] Módulo Financiero'))
+                financiero_seeder.create_financiero_data(out, sty)
+
 
             out.write(sty.SUCCESS('\n'))
             out.write(sty.SUCCESS(' DATOS CARGADOS EXITOSAMENTE'))

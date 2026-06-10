@@ -89,28 +89,24 @@ export function useDireccionFinancieraHome() {
       const facturasUnicas = Array.from(new Map(todasLasFacturas.map(f => [f.id, f])).values());
       
       setFacturas(facturasUnicas);
+      setDocsMap({});
       setUltimaActualizacion(new Date());
-
-      // Cargar documentos para todas las facturas
-      const docsResults = await Promise.all(
-        facturasUnicas.map((f) =>
-          documentosService
-            .getByFactura(f.id)
-            .then((d) => ({ id: f.id, docs: d }))
-            .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
-        )
-      );
-      const map: Record<number, DocumentoAdjunto[]> = {};
-      docsResults.forEach(({ id, docs }) => {
-        map[id] = docs;
-      });
-      setDocsMap(map);
     } catch (err) {
       setError('No se pudo cargar los datos. Verifique la conexión.');
     } finally {
       setCargando(false);
     }
   }, []);
+
+  const cargarDocumentosFactura = useCallback(async (facturaId: number) => {
+    if (docsMap[facturaId] !== undefined) return;
+    try {
+      const docs = await documentosService.getByFactura(facturaId);
+      setDocsMap(prev => ({ ...prev, [facturaId]: docs }));
+    } catch {
+      setDocsMap(prev => ({ ...prev, [facturaId]: [] as DocumentoAdjunto[] }));
+    }
+  }, [docsMap]);
 
   useEffect(() => {
     cargarDatos();
@@ -246,6 +242,7 @@ export function useDireccionFinancieraHome() {
     setShowKanbanCompleto,
     setSelectedFactura,
     handleClickActividad,
+    cargarDocumentosFactura,
     getEstadoBadge,
     formatUltimaActualizacion,
     recargarDatos: cargarDatos,

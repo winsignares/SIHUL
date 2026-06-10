@@ -16,7 +16,8 @@ ALLOWED_CHARS_PATTERNS = {
     'codigo': r'^[a-zA-Z0-9\-_]+$',
     'email': r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     'url': r'^https?://[a-zA-Z0-9\-._~:/?#\[\]@!$&\'()*+,;=]+$',
-    'descripcion': r'^[a-zA-Z0-9\s\-áéíóúñÁÉÍÓÚÑ\.,;:()]+$',
+    'descripcion': r'^[a-zA-Z0-9\s\-áéíóúñÁÉÍÓÚÑ\.,;:()$%|/\n\r!¿?*#@\']+$',
+    'texto_libre': r'^[\w\W]+$',
     'direccion': r'^[a-zA-Z0-9\s\-áéíóúñÁÉÍÓÚÑ\.,#()]+$',
 }
 
@@ -574,7 +575,7 @@ PROVEEDOR_SCHEMA = {
     },
     'observaciones': {
         'type': 'string',
-        'field_type': 'descripcion',
+        'field_type': 'texto_libre',
         'max_length': 1000,
         'required': False,
     },
@@ -601,7 +602,7 @@ FACTURA_SCHEMA = {
     },
     'observaciones': {
         'type': 'string',
-        'field_type': 'descripcion',
+        'field_type': 'texto_libre',
         'max_length': 1000,
         'required': False,
     },
@@ -647,7 +648,7 @@ FACTURA_SCHEMA = {
     },
     'cuenta_bancaria_proveedor': {
         'type': 'string',
-        'field_type': 'codigo',
+        'field_type': 'nombre',
         'max_length': 255,
         'required': False,
     },

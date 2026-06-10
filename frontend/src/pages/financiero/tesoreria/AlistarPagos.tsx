@@ -122,8 +122,8 @@ export default function AlistarPagos() {
   }, []);
 
   const facturasFiltradas = useMemo(() => facturasTesoreria.filter((factura) => {
-    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-    if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
+    if (filtros.numeroFactura && !(factura.numeroFactura ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+    if (filtros.proveedor && !(factura.proveedor ?? '').toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
     if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
     if (filtros.fechaInicio && factura.fechaCausacion && new Date(factura.fechaCausacion) < new Date(filtros.fechaInicio)) return false;
     if (filtros.fechaFin && factura.fechaCausacion && new Date(factura.fechaCausacion) > new Date(filtros.fechaFin)) return false;

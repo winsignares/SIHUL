@@ -36,9 +36,11 @@ class ProveedorSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         # Sanitizar y validar inputs contra XSS
+        # En PATCH (partial=True) solo validar campos presentes en el payload
         try:
-            sanitized_data = sanitize_dict(data, PROVEEDOR_SCHEMA)
-            # Actualizar data con valores sanitizados
+            is_partial = self.partial
+            schema = {k: v for k, v in PROVEEDOR_SCHEMA.items() if k in data} if is_partial else PROVEEDOR_SCHEMA
+            sanitized_data = sanitize_dict(data, schema)
             data.update(sanitized_data)
         except ValidationError as e:
             raise serializers.ValidationError(f"Validación fallida: {str(e)}")
@@ -55,10 +57,10 @@ class DepartamentoSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_creacion', 'fecha_modificacion']
     
     def validate(self, data):
-        # Sanitizar y validar inputs contra XSS
         try:
-            sanitized_data = sanitize_dict(data, DEPARTAMENTO_SCHEMA)
-            # Actualizar data con valores sanitizados
+            is_partial = self.partial
+            schema = {k: v for k, v in DEPARTAMENTO_SCHEMA.items() if k in data} if is_partial else DEPARTAMENTO_SCHEMA
+            sanitized_data = sanitize_dict(data, schema)
             data.update(sanitized_data)
         except ValidationError as e:
             raise serializers.ValidationError(f"Validación fallida: {str(e)}")
@@ -72,10 +74,10 @@ class CuentaContableSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_creacion']
     
     def validate(self, data):
-        # Sanitizar y validar inputs contra XSS
         try:
-            sanitized_data = sanitize_dict(data, CUENTA_CONTABLE_SCHEMA)
-            # Actualizar data con valores sanitizados
+            is_partial = self.partial
+            schema = {k: v for k, v in CUENTA_CONTABLE_SCHEMA.items() if k in data} if is_partial else CUENTA_CONTABLE_SCHEMA
+            sanitized_data = sanitize_dict(data, schema)
             data.update(sanitized_data)
         except ValidationError as e:
             raise serializers.ValidationError(f"Validación fallida: {str(e)}")
@@ -91,10 +93,10 @@ class CentroCostoSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_creacion', 'fecha_modificacion']
     
     def validate(self, data):
-        # Sanitizar y validar inputs contra XSS
         try:
-            sanitized_data = sanitize_dict(data, CENTRO_COSTO_SCHEMA)
-            # Actualizar data con valores sanitizados
+            is_partial = self.partial
+            schema = {k: v for k, v in CENTRO_COSTO_SCHEMA.items() if k in data} if is_partial else CENTRO_COSTO_SCHEMA
+            sanitized_data = sanitize_dict(data, schema)
             data.update(sanitized_data)
         except ValidationError as e:
             raise serializers.ValidationError(f"Validación fallida: {str(e)}")

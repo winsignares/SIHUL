@@ -7,8 +7,8 @@ import datetime
 
 
 def _require_auth(request):
-    user = getattr(request, 'user', None)
-    if not user or not user.is_authenticated:
+    user = getattr(request, 'user_obj', None)
+    if not user:
         return JsonResponse({"error": "Autenticación requerida"}, status=403)
     return None
 

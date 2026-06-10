@@ -30,27 +30,6 @@ services:
       retries: 5
 
   # ==========================================
-  # PGADMIN - ADMINISTRACIÓN DE POSTGRESQL
-  # ==========================================
-  pgadmin:
-    container_name: sihul-pgadmin
-    image: dpage/pgadmin4:8
-    restart: unless-stopped
-    ports:
-      - "5050:80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change-me}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - sihul_network
-
-  # ==========================================
   # BACKEND DJANGO
   # ==========================================
   backend:
@@ -111,7 +90,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - sihul_network  
+      - sihul_network
 
   # ==========================================
   # FRONTEND REACT + VITE
@@ -141,42 +120,12 @@ services:
       TZ: "America/Bogota"
     depends_on:
       - backend
-
+      - chatbot
     networks:
       - sihul_network
     stdin_open: true
     tty: true
 
-  # ==========================================
-  # NGINX - FRONTEND ESTÁTICO + PROXY API (LOCAL)
-  # ==========================================
-  nginx:
-    container_name: sihul-nginx
-    image: nginx:1.25-alpine
-    restart: unless-stopped
-    ports:
-      - "8081:80"
-    volumes:
-      - ./frontend/dist:/var/www/sihul:ro
-      - ./frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - backend
-    networks:
-      - sihul_network
-
-  # ==========================================
-  # N8N - AUTOMATIZACIÓN DE WORKFLOWS
-  # ==========================================
-  # n8n:
-  #   container_name: sihul-n8n
-  #   image: n8nio/n8n
-  #   restart: always
-  #   ports:
-  #     - "5678:5678"
-  #   volumes:
-  #     - n8n_data:/home/node/.n8n
-  #   networks:
-  #     - sihul_network
 # ==========================================
 # VOLÚMENES PERSISTENTES
 # ==========================================
@@ -184,12 +133,6 @@ volumes:
   postgres_data:
     name: sihul_postgres_data
     driver: local
-  pgadmin_data:
-    name: sihul_pgadmin_data
-    driver: local
-  # n8n_data:
-  #   name: sihul_n8n_data
-  #   driver: local
 
 # ==========================================
 # RED COMPARTIDA

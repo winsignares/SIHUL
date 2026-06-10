@@ -144,7 +144,7 @@ export default function RegistrarPagoAplicado() {
 
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasRegistro.filter((factura) => {
-      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.numeroFactura && !(factura.numeroFactura ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
       if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
       if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
       if (filtros.fechaInicio && factura.fechaAutorizacion < filtros.fechaInicio) return false;
