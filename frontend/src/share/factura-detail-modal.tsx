@@ -164,7 +164,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   const fullBlueprint = [
     ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1, factura.fechaRecepcion || factura.fechaFactura],
     ['Registrada', 'Funcionario', 'Registro y validacion inicial completada', 1, factura.fechaRecepcion],
-    ['Radicada', 'Contabilidad', 'Radicacion y causacion contable ejecutadas', 3, factura.fechaRadicacion],
+    ['Radicada', 'Contabilidad', 'Radicacion contable ejecutada', 3, factura.fechaRadicacion],
     ['Alistada', 'Tesoreria', 'Alistamiento previo a auditoria', 3, factura.fechaAlistamiento],
     ['Aprobada Auditoría', 'Auditoria', 'Control previo de auditoria aprobado', 4, factura.fechaAprobacionAuditoria],
     ['Revisada Dir. Financiera', 'Direccion Financiera', 'Revision financiera y trazabilidad de soportes', 2, factura.fechaAprobacionAuditoria],
@@ -259,19 +259,9 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
 
   const auditoriaItems = [
     {
-      title: 'Causacion contable',
-      ok: Boolean(currentFactura.cuentaContable),
-      note: currentFactura.cuentaContable || 'Pendiente de validar cuenta contable',
-    },
-    {
       title: 'Soportes completos',
       ok: documentos.length > 0,
       note: documentos.length > 0 ? `${documentos.length} soporte(s) cargado(s)` : 'Sin soportes adjuntos',
-    },
-    {
-      title: 'Distribucion en rubro',
-      ok: Boolean(currentFactura.centroCosto),
-      note: currentFactura.centroCosto || 'Centro de costo por validar',
     },
   ];
 
@@ -559,13 +549,13 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div>
                     <p className="font-semibold text-slate-800">Checklist de control previo</p>
                     <p className="text-sm text-slate-600">
-                      Validacion de causacion contable, soportes y distribucion correcta del rubro.
+                      Validacion de soportes adjuntos al tramite.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {auditoriaItems.map((item) => (
                   <div key={item.title} className="rounded-lg border border-slate-200 bg-white p-4">
                     <div className="flex items-center justify-between">

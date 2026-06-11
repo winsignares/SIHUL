@@ -25,7 +25,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
     const { user, role, components, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
-    const [isSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed] = useState(true);
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
     const [notificacionesSinLeer] = useState(3);
 

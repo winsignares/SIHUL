@@ -33,7 +33,6 @@ const FILTROS_INICIALES = {
 const ORDER_OPTIONS = [
   { label: 'Mas recientes primero', value: 'recientes' },
   { label: 'Mas antiguos primero', value: 'antiguos' },
-  { label: 'SLA critico primero', value: 'sla' },
 ];
 
 const ITEMS_POR_PAGINA = 5;
@@ -142,9 +141,14 @@ export default function ControlPrevio() {
   }, []);
 
   const facturasFiltradas = useMemo(() => facturasAlistadas.filter((factura) => {
-    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+    if (filtros.numeroFactura) {
+      const term = filtros.numeroFactura.toLowerCase();
+      const matchFactura = factura.numeroFactura.toLowerCase().includes(term);
+      const matchRadicado = factura.numeroRadicado?.toLowerCase().includes(term) ?? false;
+      const matchProceso = factura.numeroProcesoPago?.toLowerCase().includes(term) ?? false;
+      if (!matchFactura && !matchRadicado && !matchProceso) return false;
+    }
     if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-    if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
     if (filtros.fechaInicio && new Date(factura.fechaAlistamiento) < new Date(filtros.fechaInicio)) return false;
     if (filtros.fechaFin && new Date(factura.fechaAlistamiento) > new Date(filtros.fechaFin)) return false;
     if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
@@ -154,14 +158,10 @@ export default function ControlPrevio() {
 
   const facturasOrdenadas = useMemo(() => {
     const listado = [...facturasFiltradas];
-    switch (filtros.orden) {
-      case 'antiguos':
-        return listado.sort((a, b) => new Date(a.fechaAlistamiento || 0).getTime() - new Date(b.fechaAlistamiento || 0).getTime());
-      case 'sla':
-        return listado.sort((a, b) => b.diasTranscurridos - a.diasTranscurridos);
-      default:
-        return listado.sort((a, b) => new Date(b.fechaAlistamiento || 0).getTime() - new Date(a.fechaAlistamiento || 0).getTime());
+    if (filtros.orden === 'antiguos') {
+      return listado.sort((a, b) => a.facturaId - b.facturaId);
     }
+    return listado.sort((a, b) => b.facturaId - a.facturaId);
   }, [facturasFiltradas, filtros.orden]);
 
   const totalPaginas = Math.max(1, Math.ceil(facturasOrdenadas.length / ITEMS_POR_PAGINA));
@@ -308,13 +308,14 @@ export default function ControlPrevio() {
               filters={filtros}
               onFilterChange={handleFilterChange}
               proveedores={Array.from(new Set(facturasAlistadas.map((f) => f.proveedor)))}
-              areas={Array.from(new Set(facturasAlistadas.map((f) => f.areaSolicitante)))}
               showFechaFilter
-              showAreaFilter
+              showAreaFilter={false}
               showEstadoFilter={false}
               orderKey="orden"
               orderLabel="Ordenar lista"
               orderOptions={ORDER_OPTIONS}
+              searchLabel="Factura / Radicado / Proceso Pago"
+              searchPlaceholder="Buscar por factura, radicado o proceso..."
             />
           </CardContent>
         </Card>
@@ -342,8 +343,8 @@ export default function ControlPrevio() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proceso Pago</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Area</TableHead>
@@ -356,34 +357,26 @@ export default function ControlPrevio() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-slate-500 py-6">Cargando facturas alistadas...</TableCell>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">Cargando facturas alistadas...</TableCell>
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoria.</TableCell>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoria.</TableCell>
                     </TableRow>
                   ) : facturasPaginadas.map((factura, index) => {
-                    const colorRiesgo = factura.diasTranscurridos >= 24 ? 'bg-red-700' : factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';
-
                     return (
                       <motion.tr key={factura.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="hover:bg-slate-50 transition-colors">
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${colorRiesgo}`} />
-                            {factura.diasTranscurridos >= 24 && <AlertCircle className="w-4 h-4 text-red-700" />}
-                          </div>
+                          <span className="font-semibold text-slate-800">{factura.numeroFactura}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col text-slate-800 font-semibold">
-                            {factura.numeroFactura}
-                            <Badge className="mt-1 bg-blue-100 text-blue-700 border-blue-200 border font-mono text-[10px]">
-                              {displayRadicado(factura.numeroRadicado)}
-                            </Badge>
-                          </div>
+                          <Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-mono text-[10px]">
+                            {displayRadicado(factura.numeroRadicado)}
+                          </Badge>
                         </TableCell>
                         <TableCell><Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 border font-mono text-xs">{factura.numeroProcesoPago}</Badge></TableCell>
                         <TableCell>
-                          <p className="font-medium text-slate-800 truncate max-w-[220px]" title={factura.proveedor}>{displayText(factura.proveedor)}</p>
+                          <p className="font-medium text-slate-800 break-words max-w-[200px] leading-tight">{displayText(factura.proveedor)}</p>
                           <p className="text-xs text-slate-500 font-mono">{displayText(factura.nit)}</p>
                         </TableCell>
                         <TableCell className="text-slate-600 text-sm">{displayText(factura.areaSolicitante)}</TableCell>

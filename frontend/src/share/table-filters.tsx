@@ -29,6 +29,8 @@ interface TableFiltersProps {
   orderKey?: keyof TableFilterValues;
   orderLabel?: string;
   orderOptions?: { label: string; value: string }[];
+  searchLabel?: string;
+  searchPlaceholder?: string;
 }
 
 export default function TableFilters({
@@ -44,6 +46,8 @@ export default function TableFilters({
   orderKey,
   orderLabel = 'Ordenar por',
   orderOptions = [],
+  searchLabel = 'Numero de Factura',
+  searchPlaceholder = 'Ej: FAC-2024-001',
 }: TableFiltersProps) {
   const handleReset = () => {
     onFilterChange({
@@ -98,12 +102,12 @@ export default function TableFilters({
         <div className="space-y-2 min-w-0 flex-1 max-w-xs">
           <Label htmlFor="filter-numero" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
             <Search className="w-3 h-3 text-red-600" />
-            Numero de Factura
+            {searchLabel}
           </Label>
           <div className="relative">
             <Input
               id="filter-numero"
-              placeholder="Ej: FAC-2024-001"
+              placeholder={searchPlaceholder}
               value={filters.numeroFactura || ''}
               onChange={(e) => handleInputChange('numeroFactura', e.target.value)}
               className="border-slate-300 focus:border-red-600 focus:ring-red-600"
