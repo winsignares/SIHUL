@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Input } from '../../../share/input';
+import { Label } from '../../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { AlertTriangle, Clock3, Info, Save } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
+import { AlertTriangle, Clock3, Edit3, Info, Save } from 'lucide-react';
 import { parametrosSlaAdminService } from '../../../services/financiero';
 import type { ParametroSLA } from '../../../models/financiero/core.models';
 import { toast } from 'sonner';
@@ -58,6 +60,7 @@ export default function ParametrizacionSLAReal() {
   const [parametros, setParametros] = useState<ParametroSLA[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<ParametroSLA | null>(null);
 
   const getErrorMessage = (error: unknown, fallback: string) => (error instanceof Error ? error.message : fallback);
 
@@ -217,59 +220,86 @@ export default function ParametrizacionSLAReal() {
     }
   };
 
-  const etapasActivas = parametros.filter((p) => p.activo).length;
-  const promedioDias = etapasActivas > 0 ? Math.round(totalDias / etapasActivas) : 0;
+  // Helpers que operan sobre editingItem en lugar de sobre parametros[]
+  const editDiasPreview = editingItem ? getDiasPreview(editingItem.dias_maximos, editingItem.alerta_amarillo_porcentaje) : 0;
+  const editDiasCritico = editingItem ? getDiasPreview(editingItem.dias_maximos, editingItem.alerta_roja_porcentaje) : 0;
+  const editInvalido = editDiasPreview > editDiasCritico;
+
+  const updateEditDiasMaximos = (value: number) => {
+    if (!editingItem) return;
+    const diasMaximos = Math.max(1, value || 1);
+    let avisoDia = clampDia(getDiasPreview(editingItem.dias_maximos, editingItem.alerta_amarillo_porcentaje), diasMaximos);
+    const criticoDia = clampDia(getDiasPreview(editingItem.dias_maximos, editingItem.alerta_roja_porcentaje), diasMaximos);
+    if (avisoDia > criticoDia) avisoDia = criticoDia;
+    setEditingItem({
+      ...editingItem,
+      dias_maximos: diasMaximos,
+      alerta_amarillo_porcentaje: getPercentFromDays(avisoDia, diasMaximos),
+      alerta_roja_porcentaje: getPercentFromDays(criticoDia, diasMaximos),
+    });
+  };
+
+  const updateEditAlertaDia = (tipo: 'preventivo' | 'critico', dayValue: string) => {
+    if (!editingItem) return;
+    const selectedDay = parseInt(dayValue, 10);
+    const diasMaximos = Math.max(1, editingItem.dias_maximos || 1);
+    let avisoDia = getDiasPreview(diasMaximos, editingItem.alerta_amarillo_porcentaje);
+    let criticoDia = getDiasPreview(diasMaximos, editingItem.alerta_roja_porcentaje);
+    if (tipo === 'preventivo') {
+      avisoDia = clampDia(selectedDay, diasMaximos);
+      if (avisoDia > criticoDia) criticoDia = avisoDia;
+    } else {
+      criticoDia = clampDia(selectedDay, diasMaximos);
+      if (criticoDia < avisoDia) avisoDia = criticoDia;
+    }
+    setEditingItem({
+      ...editingItem,
+      alerta_amarillo_porcentaje: getPercentFromDays(avisoDia, diasMaximos),
+      alerta_roja_porcentaje: getPercentFromDays(criticoDia, diasMaximos),
+    });
+  };
+
+  const guardarEdicion = async () => {
+    if (!editingItem) return;
+    if (editInvalido) { toast.error('El aviso preventivo no puede quedar después de la alerta crítica.'); return; }
+    setSavingId(editingItem.id);
+    try {
+      await parametrosSlaAdminService.actualizar(editingItem.id, {
+        dias_maximos: editingItem.dias_maximos,
+        alerta_amarillo_porcentaje: editingItem.alerta_amarillo_porcentaje,
+        alerta_roja_porcentaje: editingItem.alerta_roja_porcentaje,
+        activo: editingItem.activo,
+        descripcion: editingItem.descripcion,
+      });
+      setParametros((prev) => prev.map((p) => (p.id === editingItem.id ? { ...p, ...editingItem } : p)));
+      toast.success(`SLA actualizado correctamente.`);
+      setEditingItem(null);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'No fue posible guardar el parámetro SLA.');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
+    <>
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl">
         <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
         <h1 className="text-3xl font-bold">Parametrización SLA</h1>
         <p className="mt-1 max-w-2xl text-sm text-red-100">Configura tiempos objetivo por etapa y define desde qué día una factura entra en alerta preventiva o crítica.</p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Etapas activas: {etapasActivas}</span>
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Flujo total: {totalDias} días</span>
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Promedio: {promedioDias} días</span>
-        </div>
       </motion.div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardContent className="p-5">
-            <p className="text-xs text-slate-600">Tiempo total del flujo activo</p>
-            <p className="text-3xl font-bold text-slate-900">{totalDias} días</p>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-          <CardContent className="p-5">
-            <p className="text-xs text-slate-600">Etapas activas</p>
-            <p className="text-3xl font-bold text-slate-900">{etapasActivas}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50">
-          <CardContent className="p-5">
-            <p className="text-xs text-slate-600">Promedio por etapa</p>
-            <p className="text-3xl font-bold text-slate-900">{promedioDias} días</p>
-          </CardContent>
-        </Card>
-      </div>
 
       <Card className="border-amber-200 bg-amber-50/60">
         <CardContent className="p-4 md:p-5">
           <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-amber-700 mt-0.5" />
+            <Info className="w-5 h-5 text-amber-700 mt-0.5 shrink-0" />
             <div className="space-y-1 text-sm text-slate-700">
               <p className="font-semibold text-slate-900">¿Cómo funcionan los avisos?</p>
-              <p>
-                - <span className="font-medium">Aviso preventivo (día)</span>: día en el que inicia la alerta temprana.
-              </p>
-              <p>
-                - <span className="font-medium">Alerta crítica (día)</span>: día en el que la etapa pasa a prioridad alta.
-              </p>
-              <p className="text-xs text-slate-600">
-                Los días se eligen en una lista y se ajustan automáticamente según el valor de "Días límite".
-              </p>
+              <p>- <span className="font-medium">Aviso preventivo (día)</span>: día en el que inicia la alerta temprana.</p>
+              <p>- <span className="font-medium">Alerta crítica (día)</span>: día en el que la etapa pasa a prioridad alta.</p>
+              <p className="text-xs text-slate-600">Los días se eligen en una lista y se ajustan automáticamente según el valor de "Días límite".</p>
             </div>
           </div>
         </CardContent>
@@ -278,7 +308,7 @@ export default function ParametrizacionSLAReal() {
       <Card>
         <CardHeader>
           <CardTitle>Reglas SLA por Etapa</CardTitle>
-          <CardDescription>Edita cada etapa en formato tabla y guarda los cambios fila por fila.</CardDescription>
+          <CardDescription>Haz clic en el ícono de editar para modificar los valores de cada etapa.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading && <p className="text-sm text-slate-500">Cargando parámetros...</p>}
@@ -289,104 +319,60 @@ export default function ParametrizacionSLAReal() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>Etapa</TableHead>
-                    <TableHead>Responsable</TableHead>
-                    <TableHead>Días límite</TableHead>
-                    <TableHead>Aviso preventivo (día)</TableHead>
-                    <TableHead>Alerta crítica (día)</TableHead>
-                    <TableHead>Vista previa</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acción</TableHead>
+                    <TableHead className="pl-5 w-[24%]">Etapa</TableHead>
+                    <TableHead className="w-[16%]">Responsable</TableHead>
+                    <TableHead className="w-[10%] text-center">Días límite</TableHead>
+                    <TableHead className="w-[13%] text-center">Aviso preventivo</TableHead>
+                    <TableHead className="w-[13%] text-center">Alerta crítica</TableHead>
+                    <TableHead className="w-[18%]">Vista previa</TableHead>
+                    <TableHead className="w-[6%] text-center">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {parametrosOrdenados.map((p) => {
                     const diasAviso = getDiasPreview(p.dias_maximos, p.alerta_amarillo_porcentaje);
                     const diasCritico = getDiasPreview(p.dias_maximos, p.alerta_roja_porcentaje);
-                    const invalido = diasAviso > diasCritico;
-                    const dayOptions = getDayOptions(p.dias_maximos);
 
                     return (
-                      <TableRow key={p.id} className="align-top">
-                        <TableCell className="min-w-[220px]">
-                          <p className="font-semibold text-slate-800">{p.etapa}</p>
-                          <Input
-                            className="mt-2 h-8 text-xs"
-                            value={p.descripcion || ''}
-                            onChange={(e) => updateField(p.id, 'descripcion', e.target.value)}
-                            placeholder="Descripción de la etapa"
-                          />
+                      <TableRow key={p.id} className="align-middle">
+                        <TableCell className="pl-5 py-4">
+                          <p className="text-sm font-medium text-slate-800">
+                            {p.descripcion || <span className="italic text-slate-400">Sin descripción</span>}
+                          </p>
                         </TableCell>
-                        <TableCell className="min-w-[150px] text-sm text-slate-700">{p.rol_responsable}</TableCell>
-                        <TableCell className="min-w-[110px]">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={p.dias_maximos}
-                            onChange={(e) => updateDiasMaximos(p.id, Math.max(1, parseInt(e.target.value || '0', 10)))}
-                          />
+                        <TableCell className="py-4">
+                          <span className="text-sm text-slate-700">{p.rol_responsable}</span>
                         </TableCell>
-                        <TableCell className="min-w-[140px]">
-                          <Select value={String(diasAviso)} onValueChange={(value) => updateAlertaDia(p.id, 'preventivo', value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona día" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {dayOptions.map((option) => (
-                                <SelectItem key={`aviso-${p.id}-${option.value}`} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <TableCell className="py-4 text-center">
+                          <span className="text-sm font-semibold text-slate-800">{p.dias_maximos}</span>
                         </TableCell>
-                        <TableCell className="min-w-[140px]">
-                          <Select value={String(diasCritico)} onValueChange={(value) => updateAlertaDia(p.id, 'critico', value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona día" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {dayOptions.map((option) => (
-                                <SelectItem key={`critico-${p.id}-${option.value}`} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <TableCell className="py-4 text-center">
+                          <span className="text-sm font-medium text-amber-700">Día {diasAviso}</span>
                         </TableCell>
-                        <TableCell className="min-w-[220px]">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs text-amber-700">
-                              <Clock3 className="w-3 h-3" />
+                        <TableCell className="py-4 text-center">
+                          <span className="text-sm font-medium text-red-700">Día {diasCritico}</span>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5 text-xs text-amber-700">
+                              <Clock3 className="w-3 h-3 shrink-0" />
                               Aviso el día {diasAviso} de {p.dias_maximos}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-red-700">
-                              <AlertTriangle className="w-3 h-3" />
+                            <div className="flex items-center gap-1.5 text-xs text-red-700">
+                              <AlertTriangle className="w-3 h-3 shrink-0" />
                               Crítico el día {diasCritico} de {p.dias_maximos}
                             </div>
-                            {invalido && (
-                              <p className="text-[11px] text-red-700">Revisa los días configurados para mantener el orden de alertas.</p>
-                            )}
                           </div>
                         </TableCell>
-                        <TableCell className="min-w-[120px]">
+                        <TableCell className="py-4 text-center">
                           <Button
-                            type="button"
+                            size="sm"
                             variant="outline"
-                            className={p.activo ? 'text-emerald-700 border-emerald-300' : 'text-slate-700'}
-                            onClick={() => updateField(p.id, 'activo', !p.activo)}
+                            onClick={() => setEditingItem({ ...p })}
+                            className="px-2"
+                            title="Editar"
                           >
-                            {p.activo ? 'Activo' : 'Inactivo'}
-                          </Button>
-                        </TableCell>
-                        <TableCell className="min-w-[140px] text-right">
-                          <Button
-                            onClick={() => void guardar(p.id)}
-                            disabled={savingId === p.id || invalido}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            <Save className="w-3 h-3 mr-1" />
-                            {savingId === p.id ? 'Guardando...' : 'Guardar'}
+                            <Edit3 className="w-4 h-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -399,5 +385,103 @@ export default function ParametrizacionSLAReal() {
         </CardContent>
       </Card>
     </div>
+
+    {/* Dialog de edición */}
+    <Dialog open={!!editingItem} onOpenChange={(open) => { if (!open) setEditingItem(null); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar parámetro SLA</DialogTitle>
+          <p className="text-sm text-slate-500">{editingItem?.descripcion || editingItem?.etapa}</p>
+        </DialogHeader>
+
+        {editingItem && (() => {
+          const dayOptions = getDayOptions(editingItem.dias_maximos);
+          return (
+            <div className="space-y-5 py-2">
+              <div className="space-y-2">
+                <Label>Descripción de la etapa</Label>
+                <Input
+                  value={editingItem.descripcion || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, descripcion: e.target.value })}
+                  placeholder="Nombre visible de la etapa"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Días límite</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editingItem.dias_maximos}
+                  onChange={(e) => updateEditDiasMaximos(Math.max(1, parseInt(e.target.value || '1', 10)))}
+                />
+                <p className="text-xs text-slate-500">Número máximo de días permitidos para esta etapa.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-amber-700">
+                    <Clock3 className="w-3.5 h-3.5" /> Aviso preventivo
+                  </Label>
+                  <Select value={String(editDiasPreview)} onValueChange={(v) => updateEditAlertaDia('preventivo', v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dayOptions.map((opt) => (
+                        <SelectItem key={`edit-aviso-${opt.value}`} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-red-700">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Alerta crítica
+                  </Label>
+                  <Select value={String(editDiasCritico)} onValueChange={(v) => updateEditAlertaDia('critico', v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dayOptions.map((opt) => (
+                        <SelectItem key={`edit-critico-${opt.value}`} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editInvalido && (
+                <p className="text-xs text-red-600 font-medium">El aviso preventivo no puede quedar después de la alerta crítica.</p>
+              )}
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-700">Vista previa</p>
+                <div className="flex items-center gap-1.5 text-xs text-amber-700">
+                  <Clock3 className="w-3 h-3" /> Aviso el día {editDiasPreview} de {editingItem.dias_maximos}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-red-700">
+                  <AlertTriangle className="w-3 h-3" /> Crítico el día {editDiasCritico} de {editingItem.dias_maximos}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setEditingItem(null)}>Cancelar</Button>
+          <Button
+            onClick={() => void guardarEdicion()}
+            disabled={savingId !== null || editInvalido}
+            className="bg-red-700 hover:bg-red-800 text-white"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {savingId !== null ? 'Guardando...' : 'Guardar cambios'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
