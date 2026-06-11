@@ -1780,8 +1780,8 @@ export default function RegistrarFactura() {
                   </p>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-600 font-semibold mb-1">Descripción</p>
-                  <p className="text-slate-800 text-sm font-medium">{safeString(form.descripcion, 'Sin descripción')}</p>
+                  <p className="text-sm text-slate-600 font-semibold mb-3">Descripción del Servicio / Bien</p>
+                  <ReadonlyServiciosFactura descripcion={form.descripcion} />
                 </div>
                 {form.observaciones && safeString(form.observaciones) !== 'Sin observaciones' && (
                   <div className="bg-white rounded-lg p-3 border border-slate-200">

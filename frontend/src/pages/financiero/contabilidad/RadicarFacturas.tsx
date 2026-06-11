@@ -230,6 +230,12 @@ export default function RadicarFacturas() {
             showFechaFilter={true}
             showAreaFilter={true}
             showEstadoFilter={false}
+            orderKey="orden"
+            orderLabel="Ordenar por"
+            orderOptions={[
+              { label: 'Más antiguos primero', value: 'asc' },
+              { label: 'Más recientes primero', value: 'desc' },
+            ]}
           />
         </CardContent>
       </Card>

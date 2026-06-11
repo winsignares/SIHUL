@@ -134,7 +134,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     recibida: 'Recibida',
     registrada: 'Registrada',
     radicada: 'Radicada',
-    causada: 'Causada',
+    causada: 'Radicada',
     alistada: 'Alistada',
     'aprobada auditoria': 'Aprobada Auditoría',
     'rechazada auditoria': 'Devuelta',
@@ -164,8 +164,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   const fullBlueprint = [
     ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1, factura.fechaRecepcion || factura.fechaFactura],
     ['Registrada', 'Funcionario', 'Registro y validacion inicial completada', 1, factura.fechaRecepcion],
-    ['Radicada', 'Contabilidad', 'Radicacion contable ejecutada', 3, factura.fechaRadicacion],
-    ['Causada', 'Contabilidad', 'Causacion contable ejecutada', 2, factura.fechaCausacion],
+    ['Radicada', 'Contabilidad', 'Radicacion y causacion contable ejecutadas', 3, factura.fechaRadicacion],
     ['Alistada', 'Tesoreria', 'Alistamiento previo a auditoria', 3, factura.fechaAlistamiento],
     ['Aprobada Auditoría', 'Auditoria', 'Control previo de auditoria aprobado', 4, factura.fechaAprobacionAuditoria],
     ['Revisada Dir. Financiera', 'Direccion Financiera', 'Revision financiera y trazabilidad de soportes', 2, factura.fechaAprobacionAuditoria],

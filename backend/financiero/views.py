@@ -1200,6 +1200,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = 'Radicada'
         factura.fecha_radicacion = timezone.now().date()
+        factura.fecha_causacion = timezone.now().date()
         factura.numero_radicado = f"RAD-{factura.id:06d}"
         factura.numero_operacion_contable = numero_operacion
         factura.consecutivo_operacion = consecutivo_operacion
@@ -1631,7 +1632,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Alistar una factura"""
         factura = self.get_object()
         
-        if factura.estado not in ['Causada', 'Detenida']:
+        if factura.estado not in ['Radicada', 'Causada', 'Detenida']:
             return Response(
                 {'error': 'La factura debe estar causada o detenida en tesorerÃ­a'},
                 status=status.HTTP_400_BAD_REQUEST

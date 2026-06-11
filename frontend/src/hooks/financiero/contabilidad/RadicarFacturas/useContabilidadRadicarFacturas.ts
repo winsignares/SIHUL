@@ -89,7 +89,6 @@ export function useContabilidadRadicarFacturas() {
 
       const lista = registradas.filter((f) => f.estado === 'Registrada' && f.etapa_actual !== 'Corrección Radicación');
 
-      lista.sort((a, b) => (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || ''));
       setFacturas(lista);
       const docsResults = await Promise.all(
         lista.map((f) =>
@@ -120,22 +119,28 @@ export function useContabilidadRadicarFacturas() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const facturasFiltradas = useMemo(
-    () =>
-      facturas.filter((f) => {
-        const proveedor = f.proveedor?.razon_social ?? '';
-        const area = f.departamento?.nombre ?? '';
-        if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-        if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
-        if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
-        if (filtros.fechaInicio && f.fecha_recepcion < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && f.fecha_recepcion > filtros.fechaFin) return false;
-        if (filtros.montoMin && Number(f.valor_total) < Number(filtros.montoMin)) return false;
-        if (filtros.montoMax && Number(f.valor_total) > Number(filtros.montoMax)) return false;
-        return true;
-      }),
-    [facturas, filtros]
-  );
+  const facturasFiltradas = useMemo(() => {
+    const filtered = facturas.filter((f) => {
+      const proveedor = f.proveedor?.razon_social ?? '';
+      const area = f.departamento?.nombre ?? '';
+      if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
+      if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && f.fecha_recepcion < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && f.fecha_recepcion > filtros.fechaFin) return false;
+      if (filtros.montoMin && Number(f.valor_total) < Number(filtros.montoMin)) return false;
+      if (filtros.montoMax && Number(f.valor_total) > Number(filtros.montoMax)) return false;
+      return true;
+    });
+
+    const desc = filtros.orden === 'desc';
+    filtered.sort((a, b) => {
+      const cmp = (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || '');
+      return desc ? -cmp : cmp;
+    });
+
+    return filtered;
+  }, [facturas, filtros]);
 
   // Paginación
   const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);

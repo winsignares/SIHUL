@@ -100,7 +100,7 @@ export default function AlistarPagos() {
   const loadFacturas = async () => {
     const response = await facturasService.getAll({ limit: 200 });
     return toList<APIFactura>(response)
-      .filter((f) => f.estado === 'Causada' || f.estado === 'Detenida')
+      .filter((f) => f.estado === 'Radicada' || f.estado === 'Causada' || f.estado === 'Detenida')
       .map(mapFactura);
   };
 
@@ -298,7 +298,7 @@ export default function AlistarPagos() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-slate-800">Facturas Causadas Pendientes</CardTitle>
+                <CardTitle className="text-slate-800">Facturas Pendientes de Alistamiento</CardTitle>
                 <CardDescription>
                   Mostrando {facturasOrdenadas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasOrdenadas.length)} de {facturasOrdenadas.length} facturas
                 </CardDescription>
@@ -333,7 +333,7 @@ export default function AlistarPagos() {
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">No hay facturas en Causada o Detenida con los filtros actuales.</TableCell>
+                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">No hay facturas pendientes de alistamiento con los filtros actuales.</TableCell>
                     </TableRow>
                   ) : facturasPaginadas.map((factura) => {
                     const colorRiesgo = factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';

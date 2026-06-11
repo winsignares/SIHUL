@@ -131,7 +131,8 @@ export default function TesoreriaHome({
     const load = async () => {
       setLoading(true);
       try {
-        const [causadas, detenidas, aprobadas, autorizadas, recientes] = await Promise.all([
+        const [radicadas, causadas, detenidas, aprobadas, autorizadas, recientes] = await Promise.all([
+          facturasService.getAll({ estado: 'Radicada', limit: 200 }),
           facturasService.getAll({ estado: 'Causada', limit: 200 }),
           facturasService.getAll({ estado: 'Detenida', limit: 200 }),
           facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
@@ -143,11 +144,11 @@ export default function TesoreriaHome({
           ? (data as { results: APIFactura[] }).results
           : (Array.isArray(data) ? data as APIFactura[] : []);
 
-        const porAlistar = list(causadas).length + list(detenidas).length;
+        const porAlistar = list(radicadas).length + list(causadas).length + list(detenidas).length;
         const aprobadasAuditoria = list(aprobadas).length;
         const porRegistrarPago = list(autorizadas).length;
 
-        const valorPendiente = [...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas)]
+        const valorPendiente = [...list(radicadas), ...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas)]
           .reduce((sum, item) => sum + Number(item.valor_total || 0), 0);
 
         setStatsData({ porAlistar, aprobadasAuditoria, porRegistrarPago, valorPendiente });
