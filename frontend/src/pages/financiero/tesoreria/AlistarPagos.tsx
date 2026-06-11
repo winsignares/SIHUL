@@ -8,12 +8,12 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { Calendar, FileCheck, Eye, AlertCircle, XCircle, TrendingUp, FileText, FolderOpen, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { FileCheck, Eye, XCircle, TrendingUp, FileText, FolderOpen, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
-import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { displayRadicado, displayText } from '../../../share/field-placeholders';
 import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
 import { facturasService, documentosService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
@@ -34,7 +34,6 @@ const ITEMS_POR_PAGINA = 5;
 const ORDER_OPTIONS = [
   { label: 'Mas recientes primero', value: 'recientes' },
   { label: 'Mas antiguos primero', value: 'antiguos' },
-  { label: 'SLA critico primero', value: 'sla' },
 ];
 
 interface Factura {
@@ -122,7 +121,12 @@ export default function AlistarPagos() {
   }, []);
 
   const facturasFiltradas = useMemo(() => facturasTesoreria.filter((factura) => {
-    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+    if (filtros.numeroFactura) {
+      const term = filtros.numeroFactura.toLowerCase();
+      const matchFactura = factura.numeroFactura.toLowerCase().includes(term);
+      const matchRadicado = factura.numeroRadicado?.toLowerCase().includes(term) ?? false;
+      if (!matchFactura && !matchRadicado) return false;
+    }
     if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
     if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
     if (filtros.fechaInicio && factura.fechaCausacion && new Date(factura.fechaCausacion) < new Date(filtros.fechaInicio)) return false;
@@ -132,18 +136,12 @@ export default function AlistarPagos() {
     return true;
   }), [facturasTesoreria, filtros]);
 
-  const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
-
   const facturasOrdenadas = useMemo(() => {
     const listado = [...facturasFiltradas];
-    switch (filtros.orden) {
-      case 'antiguos':
-        return listado.sort((a, b) => parseFecha(a.fechaCausacion) - parseFecha(b.fechaCausacion));
-      case 'sla':
-        return listado.sort((a, b) => b.diasTranscurridos - a.diasTranscurridos);
-      default:
-        return listado.sort((a, b) => parseFecha(b.fechaCausacion) - parseFecha(a.fechaCausacion));
+    if (filtros.orden === 'antiguos') {
+      return listado.sort((a, b) => a.facturaId - b.facturaId);
     }
+    return listado.sort((a, b) => b.facturaId - a.facturaId);
   }, [facturasFiltradas, filtros.orden]);
 
   const totalPaginas = Math.max(1, Math.ceil(facturasOrdenadas.length / ITEMS_POR_PAGINA));
@@ -316,43 +314,34 @@ export default function AlistarPagos() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Area</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Fecha Causacion</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Días transcurridos</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">Cargando facturas de tesoreria...</TableCell>
+                      <TableCell colSpan={7} className="py-6 text-center text-slate-500">Cargando facturas de tesoreria...</TableCell>
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">No hay facturas pendientes de alistamiento con los filtros actuales.</TableCell>
+                      <TableCell colSpan={7} className="py-6 text-center text-slate-500">No hay facturas pendientes de alistamiento con los filtros actuales.</TableCell>
                     </TableRow>
                   ) : facturasPaginadas.map((factura) => {
-                    const colorRiesgo = factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';
-
                     return (
                       <TableRow key={factura.id} className="hover:bg-slate-50">
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
-                            {factura.diasTranscurridos >= 18 && <AlertCircle className="h-4 w-4 text-orange-700" />}
-                          </div>
+                          <span className="font-medium text-slate-800">{factura.numeroFactura}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800">{factura.numeroFactura}</span>
-                            <Badge className="mt-1 w-fit bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-mono">
-                              {displayRadicado(factura.numeroRadicado)}
-                            </Badge>
-                          </div>
+                          <Badge className="w-fit bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-mono">
+                            {displayRadicado(factura.numeroRadicado)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
@@ -362,14 +351,8 @@ export default function AlistarPagos() {
                         </TableCell>
                         <TableCell className="text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
                         <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                        <TableCell className="text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            {displayDate(factura.fechaCausacion)}
-                          </div>
-                        </TableCell>
                         <TableCell>
-                          <SlaIndicator dias={factura.diasTranscurridos} objetivo={factura.slaObjetivoDias} compact className="font-bold" />
+                          <SlaIndicator dias={factura.diasTranscurridos} objetivo={factura.slaObjetivoDias} />
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex flex-wrap items-center justify-center gap-2">
