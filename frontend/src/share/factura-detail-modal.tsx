@@ -8,7 +8,8 @@ import { displayDate, displayRadicado, displayText } from './field-placeholders'
 import { facturasService } from '../services/financiero';
 import { mapFacturaDetail } from './factura-details-helpers';
 import { parseFacturaDescripcion } from './factura-description';
-import { openDocumentosConsolidados } from './documentos-consolidados';
+import { openDocumentosConsolidados, downloadDocumentoIndividual } from './documentos-consolidados';
+import type { ItemFactura } from '../models/financiero/core.models';
 
 type SharedFacturaDocumento = {
   id?: string;
@@ -37,6 +38,8 @@ export interface SharedFacturaDetail {
   consecutivoOperacion?: string;
   descripcion?: string;
   observaciones?: string;
+  identificacionFactura?: string;
+  items?: ItemFactura[];
   tipoDocumento?: string;
   valorSubtotal?: number;
   valorIva?: number;
@@ -58,6 +61,54 @@ export interface SharedFacturaDetail {
   etapasTimeline?: TimelineEtapa[];
   auditoriaView?: boolean;
   auditoriaNotas?: string;
+}
+
+const formatMoney = (val: number) =>
+  `$${Number(val || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+function StructuredItemsList({ items }: { items: ItemFactura[] }) {
+  return (
+    <div className="space-y-3">
+      {items.map((item, idx) => (
+        <div key={item.id ?? idx} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+              {item.orden ?? idx + 1}
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <p className="font-semibold text-slate-800">{item.descripcion}</p>
+              <p className="text-sm text-slate-500">
+                {item.cantidad} x {formatMoney(item.valor_unitario)} | IVA {item.porcentaje_iva}%
+              </p>
+            </div>
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 text-sm min-w-[220px]">
+              {[
+                { key: 'subtotal', label: 'Subtotal', value: formatMoney(item.valor_subtotal) },
+                { key: 'iva', label: `IVA / INC ${item.porcentaje_iva}%`, value: formatMoney(item.valor_iva) },
+                { key: 'total', label: 'Total', value: formatMoney(item.valor_total) },
+              ].map((metric) => (
+                <div
+                  key={metric.key}
+                  className={`rounded-xl border px-3 py-2 text-right ${
+                    metric.key === 'total'
+                      ? 'bg-purple-50 border-purple-200 text-purple-700'
+                      : 'bg-slate-100 border-slate-200 text-slate-800'
+                  }`}
+                >
+                  <p className={`text-[11px] uppercase tracking-wide ${metric.key === 'total' ? 'text-purple-700' : 'text-slate-500'}`}>
+                    {metric.label}
+                  </p>
+                  <p className={`font-semibold ${metric.key === 'total' ? 'text-lg' : ''}`}>
+                    {metric.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function SharedServiciosList({ items }: { items: ReturnType<typeof parseFacturaDescripcion>['items'] }) {
@@ -192,7 +243,11 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
       estado = 'rechazado';
     } else if (nombre === 'Devuelta') {
       estado = 'devuelto';
+    } else if (isRechazada || isDevuelta) {
+      // Estado negativo: pasos anteriores completados, posteriores pendientes (sin "en-proceso")
+      estado = i < idx ? 'completado' : 'pendiente';
     } else {
+      // Estado normal: el paso actual y anteriores = completado, siguiente = en-proceso
       estado = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
     }
 
@@ -265,17 +320,18 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     },
   ];
 
-  const parsedDescripcion = parseFacturaDescripcion(currentFactura.descripcion);
+  // Items del nuevo modelo (estructurado) tienen prioridad; si no existen, parseamos descripcion legacy
+  const hasStructuredItems = (currentFactura.items?.length ?? 0) > 0;
+  const parsedDescripcion = hasStructuredItems ? { items: [], remainingText: '' } : parseFacturaDescripcion(currentFactura.descripcion);
   const serviciosFactura = parsedDescripcion.items;
-  const descripcionAdicional = serviciosFactura.length > 0 ? parsedDescripcion.remainingText : currentFactura.descripcion;
-  const showDescripcionCard = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(currentFactura.observaciones);
-  const hasIdentificacion = Boolean(currentFactura.observaciones);
+  const descripcionAdicional = (hasStructuredItems || serviciosFactura.length > 0) ? parsedDescripcion.remainingText : currentFactura.descripcion;
+  const identificacionFactura = currentFactura.identificacionFactura || currentFactura.observaciones;
+  const showDescripcionCard = hasStructuredItems || serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(identificacionFactura);
+  const hasIdentificacion = Boolean(identificacionFactura);
 
   const openAllDocumentsPreview = () => {
     if (!currentFactura.facturaId) return;
-    void openDocumentosConsolidados(currentFactura.facturaId).catch(() => {
-      window.alert('No fue posible abrir los documentos consolidados.');
-    });
+    openDocumentosConsolidados(currentFactura.facturaId);
   };
 
   return (
@@ -415,22 +471,18 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                       <p className="text-xs text-slate-500">Numero de Factura</p>
                       <p className="font-mono text-slate-800">{displayText(currentFactura.numeroFactura)}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Numero de Radicado</p>
-                      <p className="font-mono text-slate-800">{displayRadicado(currentFactura.numeroRadicado)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Numero de Proceso</p>
-                      <p className="font-mono text-slate-800">{displayText(currentFactura.numeroProcesoPago)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Numero de Operacion</p>
-                      <p className="font-mono text-slate-800">{displayText(currentFactura.numeroOperacionContable)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Consecutivo</p>
-                      <p className="font-mono text-slate-800">{displayText(currentFactura.consecutivoOperacion)}</p>
-                    </div>
+                    {currentFactura.numeroRadicado && (
+                      <div>
+                        <p className="text-xs text-slate-500">Numero de Radicado</p>
+                        <p className="font-mono text-slate-800">{displayRadicado(currentFactura.numeroRadicado)}</p>
+                      </div>
+                    )}
+                    {currentFactura.numeroProcesoPago && (
+                      <div>
+                        <p className="text-xs text-slate-500">Numero de Proceso de Pago</p>
+                        <p className="font-mono text-slate-800">{displayText(currentFactura.numeroProcesoPago)}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -453,15 +505,21 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <h3 className="font-semibold text-slate-800">Detalle del Servicio / Producto</h3>
                 </div>
 
-                {currentFactura.observaciones && (
+                {identificacionFactura && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p className="text-xs uppercase tracking-wide text-amber-600 font-semibold mb-1">Identificación factura</p>
-                    <p className="text-sm text-amber-900 whitespace-pre-line">{currentFactura.observaciones}</p>
+                    <p className="text-sm text-amber-900 whitespace-pre-line">{identificacionFactura}</p>
                   </div>
                 )}
 
-                {serviciosFactura.length > 0 && (
-                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 dark:border-slate-700/60 pt-4' : ''}`}>
+                {hasStructuredItems && currentFactura.items && (
+                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 pt-4' : ''}`}>
+                    <StructuredItemsList items={currentFactura.items} />
+                  </div>
+                )}
+
+                {!hasStructuredItems && serviciosFactura.length > 0 && (
+                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 pt-4' : ''}`}>
                     <SharedServiciosList items={serviciosFactura} />
                   </div>
                 )}
@@ -523,15 +581,13 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                           >
                             <Eye className="w-3.5 h-3.5" /> Ver
                           </button>
-                          <a
-                            href={doc.url}
-                            download={doc.nombre}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => downloadDocumentoIndividual(doc.url!, doc.nombre || 'documento.pdf')}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-medium transition-all"
                           >
                             <Download className="w-3.5 h-3.5" /> Descargar
-                          </a>
+                          </button>
                         </div>
                       )}
                     </div>

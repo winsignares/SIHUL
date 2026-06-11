@@ -179,6 +179,11 @@ export function useContabilidadRadicarFacturas() {
   const confirmarRadicacion = async () => {
     if (!facturaSeleccionada) return;
 
+    if (!observaciones.trim()) {
+      showToast('err', 'Las observaciones son obligatorias para radicar.');
+      return;
+    }
+
     if (!numeroOperacionContable.trim()) {
       showToast('err', 'El número de operación contable es obligatorio para radicar.');
       return;

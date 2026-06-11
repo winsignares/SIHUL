@@ -58,7 +58,6 @@ const ITEMS_POR_PAGINA = 5;
 
 const ESTADOS_APROBADOS_AUDITORIA = new Set([
   'Aprobada Auditoría',
-  'Aprobada AuditorÃ­a',
 ]);
 
 const toList = <T,>(data: unknown): T[] => {

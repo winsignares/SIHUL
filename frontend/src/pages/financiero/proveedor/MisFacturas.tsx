@@ -112,8 +112,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         !search ||
         f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
         (f.numero_radicado || '').toLowerCase().includes(search.toLowerCase()) ||
-        (f.observaciones || '').toLowerCase().includes(search.toLowerCase()) ||
-        f.descripcion.toLowerCase().includes(search.toLowerCase());
+        (f.identificacion_factura || '').toLowerCase().includes(search.toLowerCase());
       const matchEstado = !estadoFiltro || (estadoFiltro === '__rechazadas' ? REJECTED_STATES.includes(f.estado) : f.estado === estadoFiltro);
       return matchSearch && matchEstado;
     });
@@ -350,7 +349,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
 
                       <div className="min-w-0">
                         <p className="text-sm text-slate-700 dark:text-slate-200 truncate">
-                          {displayText(factura.observaciones || factura.descripcion)}
+                          {displayText(factura.identificacion_factura || factura.observaciones || '—')}
                         </p>
                       </div>
 

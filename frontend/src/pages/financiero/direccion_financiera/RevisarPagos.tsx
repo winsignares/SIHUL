@@ -9,7 +9,6 @@ import {
   FileCheck,
   CheckCircle2,
   Eye,
-  Building,
   AlertCircle,
   Upload,
   ClipboardList,
@@ -19,9 +18,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   ListChecks,
-  TriangleAlert,
   XCircle,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
@@ -30,7 +27,7 @@ import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { useRevisarPagos } from '../../../hooks/financiero/direccion_financiera';
-import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
+import { displayRadicado, displayText } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 const ITEMS_POR_PAGINA = 5;
@@ -85,7 +82,7 @@ export default function RevisarPagos() {
 
   const resumen = useMemo(() => {
     const criticas = facturasFiltradas.filter((factura) => (factura.diasTranscurridos || 0) >= 3).length;
-    const devueltas = facturasFiltradas.filter((factura) => factura.estado === 'Devuelta').length;
+    const devueltas = facturasFiltradas.filter((factura) => factura.estado === 'Rechazada por Rectoría').length;
     const valorTotal = facturasFiltradas.reduce((acc, factura) => acc + factura.valorTotal, 0);
     return {
       criticas,
@@ -94,10 +91,6 @@ export default function RevisarPagos() {
     };
   }, [facturasFiltradas]);
 
-  const proveedores = Array.from(new Set(facturasRevision.map((factura) => factura.proveedor))).sort();
-  const areas = Array.from(
-    new Set(facturasRevision.map((factura) => factura.areaSolicitante || '').filter(Boolean))
-  ).sort();
 
   return (
     <div className="space-y-6">
@@ -135,7 +128,7 @@ export default function RevisarPagos() {
               <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.criticas}</p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Devueltas</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Rechazadas Rectoria</p>
               <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.devueltas}</p>
             </div>
           </div>
@@ -156,20 +149,21 @@ export default function RevisarPagos() {
       <Card className="border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="text-slate-800">Filtros y orden de revision</CardTitle>
-          <CardDescription>Consulta unicamente facturas en revision de Direccion Financiera o ya enviadas a Rectoria, priorizadas por antiguedad o criticidad SLA.</CardDescription>
+          <CardDescription>Consulta unicamente facturas en etapa de cargue pendiente de Direccion Financiera, priorizadas por antiguedad o criticidad SLA.</CardDescription>
         </CardHeader>
         <CardContent>
           <TableFilters
             filters={filtros}
             onFilterChange={setFiltros}
-            proveedores={proveedores}
-            areas={areas}
-            showFechaFilter
-            showAreaFilter
+            showProveedorFilter={false}
+            showAreaFilter={false}
+            showFechaFilter={false}
             showEstadoFilter={false}
             orderKey="orden"
             orderLabel="Ordenar lista"
             orderOptions={ORDER_OPTIONS}
+            searchLabel="Numero Factura / Radicado / N° Proceso Pago"
+            searchPlaceholder="Buscar por factura, radicado o N° proceso..."
           />
         </CardContent>
       </Card>
@@ -206,13 +200,13 @@ export default function RevisarPagos() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
+                  <TableHead className="font-semibold text-slate-700">N° Proceso Pago</TableHead>
                   <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                   <TableHead className="font-semibold text-slate-700">Area</TableHead>
                   <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Fecha envio</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Estado</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Dias transcurridos</TableHead>
                   <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -235,11 +229,6 @@ export default function RevisarPagos() {
                 ) : (
                   facturasPaginadas.map((factura, index) => {
                     const dias = factura.diasTranscurridos || 0;
-                    const colorRiesgo = dias >= 5 ? 'bg-red-600' : dias >= 3 ? 'bg-amber-500' : 'bg-emerald-500';
-                    const estadoClase =
-                      factura.estado === 'Enviada Rectoría' || factura.estado === 'Enviada Rectoria' || factura.estado === 'Enviada RectorÃ­a'
-                        ? 'border-cyan-200 bg-cyan-50 text-cyan-700'
-                        : 'border-blue-200 bg-blue-50 text-blue-700';
 
                     return (
                       <motion.tr
@@ -250,41 +239,26 @@ export default function RevisarPagos() {
                         className="hover:bg-slate-50"
                       >
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
-                            {dias >= 5 && <TriangleAlert className="h-4 w-4 text-red-700" />}
-                            <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} compact />
-                          </div>
+                          <span className="font-medium text-slate-800">{displayText(factura.numeroFactura)}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800">{displayText(factura.numeroFactura)}</span>
-                            <Badge className="mt-1 w-fit border border-blue-200 bg-blue-50 font-mono text-[10px] text-blue-700">
-                              {displayRadicado(factura.numeroRadicado)}
-                            </Badge>
-                          </div>
+                          <Badge className="w-fit border border-blue-200 bg-blue-50 font-mono text-[10px] text-blue-700">
+                            {displayRadicado(factura.numeroRadicado)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-start gap-2">
-                            <Building className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                            <div>
-                              <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
-                                {displayText(factura.proveedor)}
-                              </p>
-                              <p className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</p>
-                            </div>
-                          </div>
+                          <span className="font-mono text-sm text-slate-700">{displayText(factura.numeroProcesoPago)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
+                            {displayText(factura.proveedor)}
+                          </p>
+                          <p className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</p>
                         </TableCell>
                         <TableCell className="text-sm text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
                         <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                        <TableCell className="text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            {displayDate(factura.fechaEnvio)}
-                          </div>
-                        </TableCell>
                         <TableCell>
-                          <Badge className={`border ${estadoClase}`}>{factura.estado}</Badge>
+                          <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} />
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -480,18 +454,16 @@ export default function RevisarPagos() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">
-              {decisionTipo === 'devolver' ? '* Motivo de rechazo (Requerido)' : 'Observaciones de cargue (opcional)'}
+              * {decisionTipo === 'devolver' ? 'Motivo de rechazo (Requerido)' : 'Observaciones del cargue (Requerido)'}
             </label>
             <Textarea
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              placeholder={decisionTipo === 'devolver' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre validaciones realizadas o contexto para Rectoria...'}
-              className={decisionTipo === 'devolver' ? 'border-red-300' : ''}
+              placeholder={decisionTipo === 'devolver' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre las validaciones realizadas y el contexto para Rectoria...'}
+              className="border-slate-300"
               rows={4}
             />
-            {decisionTipo === 'devolver' && (
-              <p className="text-xs text-slate-500">Minimo 10 caracteres.</p>
-            )}
+            <p className="text-xs text-slate-500">Minimo 10 caracteres.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={cerrarDecision} disabled={procesando}>Cancelar</Button>

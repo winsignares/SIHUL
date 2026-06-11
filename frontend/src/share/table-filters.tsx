@@ -24,6 +24,7 @@ interface TableFiltersProps {
   areas?: string[];
   showFechaFilter?: boolean;
   showAreaFilter?: boolean;
+  showProveedorFilter?: boolean;
   showEstadoFilter?: boolean;
   showMontoFilter?: boolean;
   orderKey?: keyof TableFilterValues;
@@ -41,6 +42,7 @@ export default function TableFilters({
   areas = [],
   showFechaFilter = false,
   showAreaFilter = false,
+  showProveedorFilter = true,
   showEstadoFilter = true,
   showMontoFilter = false,
   orderKey,
@@ -123,25 +125,27 @@ export default function TableFilters({
           </div>
         </div>
 
-        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
-          <Label htmlFor="filter-proveedor" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
-            <Search className="w-3 h-3 text-red-600" />
-            Proveedor
-          </Label>
-          <select
-            id="filter-proveedor"
-            value={filters.proveedor || ''}
-            onChange={(e) => handleInputChange('proveedor', e.target.value)}
-            className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
-          >
-            <option value="">Todos los proveedores</option>
-            {proveedores.map((prov, idx) => (
-              <option key={idx} value={prov}>
-                {prov}
-              </option>
-            ))}
-          </select>
-        </div>
+        {showProveedorFilter && (
+          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+            <Label htmlFor="filter-proveedor" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Search className="w-3 h-3 text-red-600" />
+              Proveedor
+            </Label>
+            <select
+              id="filter-proveedor"
+              value={filters.proveedor || ''}
+              onChange={(e) => handleInputChange('proveedor', e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
+            >
+              <option value="">Todos los proveedores</option>
+              {proveedores.map((prov, idx) => (
+                <option key={idx} value={prov}>
+                  {prov}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {showEstadoFilter && (
           <div className="space-y-2 min-w-0 flex-1 max-w-xs">

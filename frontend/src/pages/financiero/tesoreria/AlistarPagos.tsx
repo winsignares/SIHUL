@@ -14,7 +14,7 @@ import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
-import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import { facturasService, documentosService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
@@ -138,10 +138,11 @@ export default function AlistarPagos() {
 
   const facturasOrdenadas = useMemo(() => {
     const listado = [...facturasFiltradas];
+    const parseFechaSort = (v?: string) => (v ? new Date(v).getTime() : 0);
     if (filtros.orden === 'antiguos') {
-      return listado.sort((a, b) => a.facturaId - b.facturaId);
+      return listado.sort((a, b) => parseFechaSort(a.fechaCausacion) - parseFechaSort(b.fechaCausacion));
     }
-    return listado.sort((a, b) => b.facturaId - a.facturaId);
+    return listado.sort((a, b) => parseFechaSort(b.fechaCausacion) - parseFechaSort(a.fechaCausacion));
   }, [facturasFiltradas, filtros.orden]);
 
   const totalPaginas = Math.max(1, Math.ceil(facturasOrdenadas.length / ITEMS_POR_PAGINA));
@@ -379,7 +380,7 @@ export default function AlistarPagos() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'tesoreria')}
+                              onClick={() => downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'tesoreria')}
                               className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50"
                               title="Descargar soportes"
                             >

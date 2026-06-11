@@ -16,27 +16,15 @@ export interface FacturaRevision extends SharedFacturaDetail {
 const ESTADOS_VISIBLES_DIRECCION_FINANCIERA = new Set([
   'Revisada Dir. Financiera',
   'Rechazada por Rectoría',
-  'Rechazada por RectorÃ­a',
-  'Devuelta',
-  'Cargada',
-  'Enviada Rectoría',
-  'Enviada RectorÃ­a',
-  'Enviada Rectoria',
-  'Enviada RectorÃƒÂ­a',
 ]);
 
 const ESTADOS_GESTIONABLES = new Set([
   'Revisada Dir. Financiera',
   'Rechazada por Rectoría',
-  'Rechazada por RectorÃ­a',
-  'Devuelta',
 ]);
 
 const ESTADOS_ENVIADA_RECTORIA = new Set([
   'Enviada Rectoría',
-  'Enviada RectorÃ­a',
-  'Enviada Rectoria',
-  'Enviada RectorÃƒÂ­a',
 ]);
 
 const toList = <T,>(data: unknown): T[] => {
@@ -81,6 +69,7 @@ export function useRevisarPagos() {
     const base = buildSharedFacturaDetail(factura);
     return {
       ...base,
+      slaObjetivoDias: base.slaObjetivoDias ?? 2,
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
       fechaEnvio: factura.fecha_aprobacion_auditoria ?? factura.fecha_recepcion ?? factura.fecha_modificacion ?? '',
@@ -138,7 +127,13 @@ export function useRevisarPagos() {
 
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasRevision.filter((factura) => {
-      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.numeroFactura) {
+        const term = filtros.numeroFactura.toLowerCase();
+        const matchFactura = factura.numeroFactura.toLowerCase().includes(term);
+        const matchRadicado = factura.numeroRadicado?.toLowerCase().includes(term) ?? false;
+        const matchProceso = factura.numeroProcesoPago?.toLowerCase().includes(term) ?? false;
+        if (!matchFactura && !matchRadicado && !matchProceso) return false;
+      }
       if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
       if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
       if (filtros.fechaInicio && factura.fechaEnvio < filtros.fechaInicio) return false;
@@ -181,6 +176,11 @@ export function useRevisarPagos() {
 
     if (!facturaSeleccionada.puedeCargarYEnviar) {
       showToast('err', 'Esta factura ya fue enviada a Rectoria y no puede cargarse nuevamente.');
+      return;
+    }
+
+    if (!observaciones.trim() || observaciones.trim().length < 10) {
+      showToast('err', 'Las observaciones del cargue son obligatorias (minimo 10 caracteres).');
       return;
     }
 

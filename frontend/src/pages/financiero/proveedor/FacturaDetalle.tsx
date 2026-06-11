@@ -347,7 +347,7 @@ export default function FacturaDetalle() {
             </h3>
             <div className="space-y-2 text-sm">
               <InfoRow label="Tipo" value={factura.tipo_documento} />
-              <InfoRow label="Observacion" value={factura.observaciones || 'Sin identificacion cargada'} />
+              <InfoRow label="Identificación" value={factura.identificacion_factura || factura.observaciones || '—'} />
               <InfoRow label="Etapa actual" value={factura.etapa_actual || factura.estado} />
             </div>
           </motion.section>

@@ -9,7 +9,7 @@ import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/fac
 import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
-import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import {
   Building,
   Calendar,
@@ -22,7 +22,6 @@ import {
   Loader2,
   ShieldCheck,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
@@ -141,8 +140,6 @@ export default function GenerarComprobanteEgreso() {
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasComprobante.filter((factura) => {
       if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-      if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
-      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
       if (filtros.fechaInicio && factura.fechaPagoAplicado < filtros.fechaInicio) return false;
       if (filtros.fechaFin && factura.fechaPagoAplicado > filtros.fechaFin) return false;
       return true;
@@ -173,29 +170,15 @@ export default function GenerarComprobanteEgreso() {
     setPaginaActual((prev) => Math.min(prev, totalPaginas));
   }, [totalPaginas]);
 
-  const proveedores = Array.from(new Set(facturasComprobante.map((factura) => factura.proveedor))).sort();
-  const areas = Array.from(new Set(facturasComprobante.map((factura) => factura.areaSolicitante).filter(Boolean))).sort();
-
   const handleVerDetalle = (factura: FacturaComprobanteRow) => {
-    setDetalleFactura(buildSharedFacturaDetail(factura.raw));
+    const base = buildSharedFacturaDetail(factura.raw);
+    setDetalleFactura(base);
+    // Cargar detalle completo con documentos en segundo plano
+    void facturasService.getById(factura.facturaId).then((detalle) => {
+      setDetalleFactura(buildSharedFacturaDetail(detalle));
+    }).catch(() => {});
   };
 
-  const descargarExpediente = (factura: FacturaComprobanteRow) => {
-    void (async () => {
-      try {
-        const blob = await facturasService.getDocumentosHistorialZip(factura.facturaId, { scope: 'tesoreria' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Expediente_${factura.numeroFactura}.zip`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'No fue posible descargar el expediente documental.';
-        toast.error(message);
-      }
-    })();
-  };
 
   return (
     <>
@@ -227,10 +210,7 @@ export default function GenerarComprobanteEgreso() {
             <TableFilters
               filters={filtros}
               onFilterChange={(updated) => setFiltros(updated)}
-              proveedores={proveedores}
-              areas={areas}
               showFechaFilter
-              showAreaFilter
               showEstadoFilter={false}
               orderKey="orden"
               orderLabel="Ordenar lista"
@@ -271,13 +251,13 @@ export default function GenerarComprobanteEgreso() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Soporte de Pago</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Area</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Fecha pago</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Soporte de pago</TableHead>
+                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Fecha de Pago</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -310,45 +290,48 @@ export default function GenerarComprobanteEgreso() {
                           transition={{ delay: index * 0.04 }}
                           className="hover:bg-slate-50"
                         >
+                          {/* Factura */}
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
-                              <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} compact />
-                            </div>
+                            <span className="font-semibold text-slate-800">{displayText(factura.numeroFactura)}</span>
                           </TableCell>
+                          {/* Radicado */}
                           <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-slate-800">{displayText(factura.numeroFactura)}</span>
-                              <Badge className="mt-1 w-fit border border-blue-200 bg-blue-50 font-mono text-[10px] text-blue-700">
-                                {displayRadicado(factura.numeroRadicado)}
-                              </Badge>
-                            </div>
+                            <Badge className="border border-blue-200 bg-blue-50 font-mono text-[10px] text-blue-700">
+                              {displayRadicado(factura.numeroRadicado)}
+                            </Badge>
                           </TableCell>
+                          {/* Soporte de Pago */}
+                          <TableCell>
+                            <Badge className={factura.estado === 'Pagada' ? 'border border-blue-200 bg-blue-50 text-blue-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}>
+                              {displayText(factura.soportePago)}
+                            </Badge>
+                          </TableCell>
+                          {/* Proveedor / NIT */}
                           <TableCell>
                             <div className="flex items-start gap-2">
                               <Building className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                               <div>
-                                <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
+                                <p className="max-w-[200px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
                                   {displayText(factura.proveedor)}
                                 </p>
                                 <p className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</p>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
+                          {/* Monto */}
                           <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
+                          {/* SLA */}
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
+                              <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} compact />
+                            </div>
+                          </TableCell>
+                          {/* Fecha de Pago */}
                           <TableCell className="text-sm text-slate-600">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4 text-slate-400" />
                               {displayDate(factura.fechaPagoAplicado)}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <Badge className={factura.estado === 'Pagada' ? 'border border-blue-200 bg-blue-50 text-blue-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}>
-                                {displayText(factura.soportePago)}
-                              </Badge>
-                              <p className="text-xs text-slate-500">{factura.fechaComprobante ? displayDate(factura.fechaComprobante) : 'Cierre por pago aplicado'}</p>
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
@@ -366,32 +349,22 @@ export default function GenerarComprobanteEgreso() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => void openDocumentosConsolidados(factura.facturaId, 'tesoreria')}
+                                onClick={() => openDocumentosConsolidados(factura.facturaId, 'tesoreria')}
                                 className="h-9 w-9 rounded-full border-blue-200 p-0 text-blue-700 hover:bg-blue-50"
-                                title="Ver documentacion consolidada"
+                                title="Ver documentos en nueva pestaña"
                               >
                                 <FolderOpen className="h-4 w-4" />
-                                <span className="sr-only">Ver documentacion consolidada</span>
+                                <span className="sr-only">Ver documentos</span>
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'tesoreria')}
+                                onClick={() => downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'tesoreria')}
                                 className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50"
-                                title="Descargar documentacion"
+                                title="Descargar documentos consolidados PDF"
                               >
                                 <Download className="h-4 w-4" />
-                                <span className="sr-only">Descargar documentacion</span>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => descargarExpediente(factura)}
-                                className="h-9 w-9 rounded-full border-emerald-200 p-0 text-emerald-700 hover:bg-emerald-50"
-                                title="Descargar expediente completo"
-                              >
-                                <Download className="h-4 w-4" />
-                                <span className="sr-only">Descargar expediente completo</span>
+                                <span className="sr-only">Descargar expediente</span>
                               </Button>
                             </div>
                           </TableCell>

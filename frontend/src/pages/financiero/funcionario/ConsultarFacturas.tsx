@@ -30,8 +30,8 @@ const toList = <T,>(data: unknown): T[] => {
   return [];
 };
 
-const ESTADO_OBJETIVO = 'Registrada';
-const esEstadoRegistrado = (estado?: string | null) => (estado || '').toLowerCase() === ESTADO_OBJETIVO.toLowerCase();
+const ESTADOS_FUNCIONARIO = ['Recibida', 'Registrada'];
+const esEstadoFuncionario = (estado?: string | null) => ESTADOS_FUNCIONARIO.includes(estado || '');
 
 function mapFactura(f: Factura): FuncionarioConsultaRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
@@ -117,16 +117,16 @@ export default function ConsultarFacturas() {
   const [estadoChanges, setEstadoChanges] = useState<FuncionarioEstadoChange[]>([]);
 
   const [numeroFactura, setNumeroFactura] = useState('');
-  const [proveedor, setProveedor] = useState('');
   const [estado, setEstado] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
+  const [ordenDias, setOrdenDias] = useState<'recientes' | 'antiguos'>('antiguos');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
   const loadRows = async () => {
-    const response = await facturasService.getAll({ estado: ESTADO_OBJETIVO, limit: 500 });
-    const list = toList<Factura>(response).filter((factura) => esEstadoRegistrado(factura.estado));
+    const response = await facturasService.getAll({ limit: 500 });
+    const list = toList<Factura>(response).filter((factura) => esEstadoFuncionario(factura.estado));
     return list.map(mapFactura);
   };
 
@@ -184,24 +184,23 @@ export default function ConsultarFacturas() {
     return () => window.clearInterval(interval);
   }, []);
 
-  const proveedores = useMemo(() => Array.from(new Set(rows.map(r => r.proveedor))), [rows]);
-  const estados = useMemo(() => Array.from(new Set(rows.map(r => r.estado))), [rows]);
+  const estados = useMemo(() => Array.from(new Set(rows.map((r) => r.estado))), [rows]);
 
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
+    const result = rows.filter((r) => {
       if (numeroFactura) {
         const query = numeroFactura.toLowerCase();
         const matches = [r.idTramite, r.proveedor, r.nit, r.estado]
           .some((value) => String(value || '').toLowerCase().includes(query));
         if (!matches) return false;
       }
-      if (proveedor && r.proveedor !== proveedor) return false;
       if (estado && r.estado !== estado) return false;
       if (fechaInicio && r.fechaRecepcion && r.fechaRecepcion < fechaInicio) return false;
       if (fechaFin && r.fechaRecepcion && r.fechaRecepcion > fechaFin) return false;
       return true;
     });
-  }, [rows, numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
+    return result.sort((a, b) => ordenDias === 'antiguos' ? b.dias - a.dias : a.dias - b.dias);
+  }, [rows, numeroFactura, estado, fechaInicio, fechaFin, ordenDias]);
 
   // Paginación
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -216,7 +215,7 @@ export default function ConsultarFacturas() {
   // Resetear página cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [numeroFactura, proveedor, estado, fechaInicio, fechaFin]);
+  }, [numeroFactura, estado, fechaInicio, fechaFin, ordenDias]);
 
   useEffect(() => {
     const facturaParam = searchParams.get('factura');
@@ -331,10 +330,10 @@ export default function ConsultarFacturas() {
 
   const clearFilters = () => {
     setNumeroFactura('');
-    setProveedor('');
     setEstado('');
     setFechaInicio('');
     setFechaFin('');
+    setOrdenDias('antiguos');
   };
 
   return (
@@ -409,14 +408,14 @@ export default function ConsultarFacturas() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="min-w-0 flex-1 max-w-xs">
-            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Proveedor</label>
-            <select 
-              value={proveedor} 
-              onChange={e => setProveedor(e.target.value)} 
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Ordenar por días</label>
+            <select
+              value={ordenDias}
+              onChange={e => setOrdenDias(e.target.value as 'recientes' | 'antiguos')}
               className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
             >
-              <option value="">Todos</option>
-              {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
+              <option value="antiguos">Más antiguos primero</option>
+              <option value="recientes">Más recientes primero</option>
             </select>
           </motion.div>
 
@@ -542,21 +541,23 @@ export default function ConsultarFacturas() {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        title="Descargar documentos adjuntos"
                         onClick={() => void downloadDocumentosConsolidados(row.facturaId, row.idTramite, 'funcionario')}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100 font-semibold transition-all"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100 transition-all"
                       >
-                        <Download className="w-4 h-4" /> Docs
+                        <Download className="w-4 h-4" />
                       </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        title="Ver detalle"
                         onClick={() => {
                           setSelectedId(row.id);
                           setOpenDetail(true);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-100 font-semibold transition-all"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-100 transition-all"
                       >
-                        <Eye className="w-4 h-4" /> Ver
+                        <Eye className="w-4 h-4" />
                       </motion.button>
                     </div>
                   </td>

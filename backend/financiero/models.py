@@ -331,6 +331,7 @@ class Factura(models.Model):
     tipo_documento = models.CharField(max_length=50, choices=TIPO_DOCUMENTO_CHOICES)
     descripcion = models.TextField()
     observaciones = models.TextField(blank=True, null=True)
+    identificacion_factura = models.CharField(max_length=500, blank=True, null=True)
 
     # Fechas del proceso
     fecha_factura = models.DateField()
@@ -401,7 +402,33 @@ class Factura(models.Model):
 
 
 # ============================================================
-# 6. DOCUMENTO ADJUNTO
+# 6. ITEM DE FACTURA
+# ============================================================
+class ItemFactura(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='items')
+    descripcion = models.CharField(max_length=500)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    valor_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+    porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    valor_subtotal = models.DecimalField(max_digits=18, decimal_places=2)
+    valor_iva = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    valor_total = models.DecimalField(max_digits=18, decimal_places=2)
+    orden = models.IntegerField(default=1)
+
+    class Meta:
+        indexes = [
+            Index(fields=['factura'], name='idx_item_factura'),
+        ]
+        ordering = ['orden']
+        verbose_name = 'Item de Factura'
+        verbose_name_plural = 'Items de Factura'
+
+    def __str__(self):
+        return f"{self.factura.numero_factura} - {self.descripcion}"
+
+
+# ============================================================
+# 7. DOCUMENTO ADJUNTO
 # ============================================================
 class DocumentoAdjunto(models.Model):
     TIPO_DOCUMENTO_CHOICES = [

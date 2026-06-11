@@ -4,12 +4,14 @@ import { AlertCircle, Calendar, Check, CheckCircle2, Download, ExternalLink, Fil
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
+import { downloadDocumentoIndividual } from '../../../share/documentos-consolidados';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
 import type {
   CreateFacturaDTO,
   Departamento,
   DocumentoAdjunto,
   Factura,
+  ItemFactura,
   Proveedor,
 } from '../../../models/financiero/core.models';
 import type { FuncionarioDocumentType, FuncionarioUploadedDoc, PrefillFromPendiente } from '../../../models/financiero/funcionario';
@@ -61,7 +63,48 @@ const formatMoney = (val: unknown): string => {
   return `$${num.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
 };
 
-function ReadonlyServiciosFactura({ descripcion }: { descripcion: string }) {
+function ReadonlyServiciosFactura({ descripcion, items }: { descripcion: string; items?: ItemFactura[] }) {
+  // Si hay items estructurados del nuevo modelo, los mostramos directamente
+  if (items && items.length > 0) {
+    return (
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div
+            key={item.id ?? index}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+          >
+            <div className="flex flex-wrap items-start gap-3 lg:flex-nowrap">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-sm font-semibold text-white">
+                {item.orden ?? index + 1}
+              </div>
+              <div className="min-w-[220px] flex-1 lg:max-w-[38%]">
+                <p className="font-semibold text-slate-900">{item.descripcion || 'Servicio sin nombre'}</p>
+                <p className="text-sm text-slate-500">
+                  {item.cantidad} x {formatMoney(item.valor_unitario)} | IVA {item.porcentaje_iva}%
+                </p>
+              </div>
+              <div className="grid w-full gap-2 sm:grid-cols-3 lg:ml-auto lg:w-[430px] lg:flex-none">
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Subtotal</p>
+                  <p className="font-semibold text-slate-800">{formatMoney(item.valor_subtotal)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">IVA / INC {item.porcentaje_iva}%</p>
+                  <p className="font-semibold text-slate-800">{formatMoney(item.valor_iva)}</p>
+                </div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-red-600">Total</p>
+                  <p className="font-semibold text-red-700">{formatMoney(item.valor_total)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Fallback: parsear descripcion legacy
   const parsed = parseFacturaDescripcion(descripcion);
   const hasItems = parsed.items.length > 0;
   const hasText = Boolean(parsed.remainingText);
@@ -211,6 +254,9 @@ export default function RegistrarFactura() {
   const [rechazarLoading, setRechazarLoading] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<{ url: string; name: string } | null>(null);
 
+  const [facturaItems, setFacturaItems] = useState<ItemFactura[] | undefined>(undefined);
+  const [identificacionFactura, setIdentificacionFactura] = useState<string | undefined>(undefined);
+
   const [form, setForm] = useState({
     proveedorId: 0,
     proveedorNombre: '',
@@ -343,6 +389,16 @@ export default function RegistrarFactura() {
           observaciones: factura.observaciones || prev.observaciones,
         }));
 
+        // Cargar items estructurados e identificacion si existen
+        if (factura.items && factura.items.length > 0) {
+          setFacturaItems(factura.items);
+        }
+        if (factura.identificacion_factura) {
+          setIdentificacionFactura(factura.identificacion_factura);
+        } else if (factura.observaciones && !factura.identificacion_factura) {
+          setIdentificacionFactura(factura.observaciones);
+        }
+
         if (factura.numero_factura) {
           setNumeroFacturaSugerido(factura.numero_factura);
         }
@@ -453,37 +509,13 @@ export default function RegistrarFactura() {
     setPreviewDocument({ url, name: doc.nombre_archivo || doc.tipo_documento || 'Documento' });
   };
 
-  const downloadExistingDocument = async (doc: DocumentoAdjunto) => {
-    const url = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
-    if (!url) {
+  const downloadExistingDocument = (doc: DocumentoAdjunto) => {
+    const relUrl = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+    if (!relUrl) {
       setError('Este documento no tiene una URL válida para descarga directa.');
       return;
     }
-
-    const fileName = doc.nombre_archivo || 'documento';
-    try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error('download_failed');
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = objectUrl;
-      anchor.download = fileName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
-      return;
-    } catch {
-      // Fallback para archivos servidos directamente por el backend.
-    }
-
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
+    downloadDocumentoIndividual(relUrl, doc.nombre_archivo || 'documento');
   };
 
   const openLocalDocument = (doc: FuncionarioUploadedDoc) => {
@@ -539,7 +571,7 @@ export default function RegistrarFactura() {
 
     const motivo = rechazarMotivo.trim();
     if (motivo.length < 10) {
-      setRechazarError('Describe el motivo del rechazo (mÃ­nimo 10 caracteres).');
+      setRechazarError('Describe el motivo del rechazo (mínimo 10 caracteres).');
       return;
     }
 
@@ -551,7 +583,7 @@ export default function RegistrarFactura() {
     setRechazarLoading(true);
     try {
       await facturasService.rechazar(prefillFromPendiente.facturaId, finalMotivo);
-      toast.success('Factura rechazada y enviada al proveedor para correcciÃ³n.');
+      toast.success('Factura rechazada y enviada al proveedor para corrección.');
       setRechazarOpen(false);
       navigate('/financiero/funcionario/pendientes');
     } catch {
@@ -1229,14 +1261,14 @@ export default function RegistrarFactura() {
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Dato enviado por el proveedor</p>
                     <p className="mt-1 whitespace-pre-line text-sm font-medium text-amber-900">
-                      {safeString(form.observaciones, 'Sin identificacion cargada')}
+                      {safeString(identificacionFactura || form.observaciones, 'Sin identificacion cargada')}
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">Descripcion del Servicio / Bien</label>
-                  <ReadonlyServiciosFactura descripcion={form.descripcion} />
+                  <ReadonlyServiciosFactura descripcion={form.descripcion} items={facturaItems} />
                 </div>
               </>
             )}

@@ -84,6 +84,18 @@ export type EstadoFactura =
 
 export type IndicadorRiesgo = 'ok' | 'atencion' | 'atrasada' | 'vencida';
 
+export interface ItemFactura {
+  id?: number;
+  descripcion: string;
+  cantidad: number;
+  valor_unitario: number;
+  porcentaje_iva: number;
+  valor_subtotal: number;
+  valor_iva: number;
+  valor_total: number;
+  orden?: number;
+}
+
 export interface Factura {
   id: number;
   numero_factura: string;
@@ -118,6 +130,8 @@ export interface Factura {
   tipo_documento: 'Factura Electrónica' | 'Factura' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro';
   descripcion: string;
   observaciones?: string;
+  identificacion_factura?: string;
+  items?: ItemFactura[];
   cuenta_bancaria_proveedor?: string;
 
   fecha_factura: string;
@@ -217,6 +231,8 @@ export interface CreateFacturaDTO {
   tipo_documento: string;
   descripcion: string;
   observaciones?: string;
+  identificacion_factura?: string;
+  items?: ItemFactura[];
 
   fecha_factura: string;
   fecha_recepcion: string;
