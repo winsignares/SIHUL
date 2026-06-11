@@ -484,15 +484,27 @@ export default function AlistarPagos() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="archivo-seven" className="text-sm font-semibold text-slate-700">Archivo generado en SEVEN</Label>
+              <div className="space-y-2">
+                <Label htmlFor="proceso" className="text-sm font-semibold text-slate-700">Numero Proceso Pago</Label>
+                <Input
+                  id="proceso"
+                  value={numeroProcesoPago}
+                  onChange={(e) => setNumeroProcesoPago(e.target.value)}
+                  placeholder="Ej: PP-2026-001245"
+                />
+                <p className="text-xs text-slate-500">
+                  Debe coincidir con el consecutivo generado en SEVEN.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                  <Label htmlFor="archivo-seven" className="text-sm font-semibold text-slate-700">Archivo plano generado en SEVEN</Label>
                   <label htmlFor="archivo-seven" className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm hover:border-blue-300">
                     <div className="min-w-0">
                       <p className="truncate font-medium text-slate-800">
                         {archivoSeven ? archivoSeven.name : 'Seleccionar archivo'}
                       </p>
-                      <p className="text-xs text-slate-500">Formatos permitidos: PDF, TXT, CSV, XLS, XLSX</p>
+                      <p className="text-xs text-slate-500">Formato permitido: TXT</p>
                     </div>
                     <div className="ml-4 flex shrink-0 items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-blue-700">
                       <Upload className="h-4 w-4" />
@@ -502,24 +514,10 @@ export default function AlistarPagos() {
                   <input
                     id="archivo-seven"
                     type="file"
-                    accept=".txt,.csv,.pdf,.xls,.xlsx"
+                    accept=".txt"
                     onChange={(e) => setArchivoSeven(e.target.files?.[0] || null)}
                     className="hidden"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="proceso" className="text-sm font-semibold text-slate-700">Numero Proceso Pago</Label>
-                  <Input
-                    id="proceso"
-                    value={numeroProcesoPago}
-                    onChange={(e) => setNumeroProcesoPago(e.target.value)}
-                    placeholder="Ej: PP-2026-001245"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Debe coincidir con el consecutivo generado en SEVEN.
-                  </p>
-                </div>
               </div>
 
               <div className="space-y-2">
