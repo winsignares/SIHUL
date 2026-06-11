@@ -3,7 +3,22 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
-import { AlertTriangle, ArrowRight, BarChart3, Building2, Clock, DollarSign, FileCheck2, FileText, Layers3, RefreshCw, ShieldAlert, TrendingUp, Users } from 'lucide-react';
+import {
+  AlertTriangle,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  DollarSign,
+  Eye,
+  FileCheck2,
+  FileText,
+  FolderKanban,
+  Loader2,
+  RefreshCw,
+  ShieldAlert,
+  Users,
+} from 'lucide-react';
 import { reportesFinancieroService, type AdminDashboardResponse } from '../../../services/financiero';
 
 interface AdminFinancieroHomeProps {
@@ -12,12 +27,16 @@ interface AdminFinancieroHomeProps {
 
 const currency = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
+const ACTIVITIES_PER_PAGE = 4;
+
 export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroHomeProps) {
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [activityPage, setActivityPage] = useState(1);
+  const [kanbanPage, setKanbanPage] = useState(1);
 
   const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : 'No se pudo cargar el dashboard de administración financiera.');
 
@@ -27,7 +46,6 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
     } else {
       setLoading(true);
     }
-
     setError(null);
     try {
       const data = await reportesFinancieroService.getDashboardAdmin();
@@ -46,17 +64,17 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
 
   useEffect(() => {
     void fetchDashboard();
-    const interval = window.setInterval(() => {
-      void fetchDashboard(true);
-    }, 60000);
-
+    const interval = window.setInterval(() => void fetchDashboard(true), 60000);
     return () => window.clearInterval(interval);
   }, [fetchDashboard]);
 
+  const KANBAN_PER_PAGE = 5;
+
   const resumen = dashboard?.resumen;
-  const distribucion = useMemo(() => dashboard?.distribucion_estados?.slice(0, 8) || [], [dashboard]);
+  const distribucion = useMemo(() => dashboard?.distribucion_estados || [], [dashboard]);
   const alertas = useMemo(() => dashboard?.alertas?.slice(0, 8) || [], [dashboard]);
-  const actividades = useMemo(() => dashboard?.actividades?.slice(0, 6) || [], [dashboard]);
+  const actividades = useMemo(() => dashboard?.actividades?.slice(0, 20) || [], [dashboard]);
+
   const totalFacturas = useMemo(
     () => resumen?.total_facturas ?? distribucion.reduce((acc, item) => acc + item.cantidad, 0),
     [resumen?.total_facturas, distribucion]
@@ -65,6 +83,48 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
   const saludOperativa = totalFacturas > 0 ? Math.max(0, Math.min(100, ((totalFacturas - totalRiesgo) / totalFacturas) * 100)) : 100;
   const avanceProceso = totalFacturas > 0 ? Math.max(0, Math.min(100, ((resumen?.facturas_en_proceso ?? 0) / totalFacturas) * 100)) : 0;
   const alertasCriticas = resumen?.facturas_vencidas ?? 0;
+
+  // Merge alertas + actividades en un feed unificado
+  const feedUnificado = useMemo(() => {
+    const alertFeed = alertas.map((a) => ({
+      id: `alert-${a.id}`,
+      tipo: 'alerta' as const,
+      titulo: a.numero_factura,
+      subtitulo: `${a.dias_transcurridos} días transcurridos`,
+      riesgo: a.indicador_riesgo,
+      estado: a.estado,
+      valor: a.valor_total,
+    }));
+    const actFeed = actividades.map((a) => ({
+      id: `act-${a.id}`,
+      tipo: 'actividad' as const,
+      titulo: a.numero_factura || 'Sin factura',
+      subtitulo: `${a.usuario_nombre} · ${a.accion} · ${new Date(a.fecha_accion).toLocaleString('es-CO')}`,
+      riesgo: null as string | null,
+      estado: a.estado_nuevo ?? null,
+      valor: null as number | null,
+    }));
+    return [...alertFeed, ...actFeed];
+  }, [actividades, alertas]);
+
+  const totalActivityPages = Math.max(1, Math.ceil(feedUnificado.length / ACTIVITIES_PER_PAGE));
+
+  const pagedFeed = useMemo(() => {
+    const start = (activityPage - 1) * ACTIVITIES_PER_PAGE;
+    return feedUnificado.slice(start, start + ACTIVITIES_PER_PAGE);
+  }, [feedUnificado, activityPage]);
+
+  const totalKanbanPages = Math.max(1, Math.ceil(distribucion.length / KANBAN_PER_PAGE));
+  const pagedKanban = useMemo(() => {
+    const start = (kanbanPage - 1) * KANBAN_PER_PAGE;
+    return distribucion.slice(start, start + KANBAN_PER_PAGE);
+  }, [distribucion, kanbanPage, KANBAN_PER_PAGE]);
+
+  useEffect(() => { setKanbanPage(1); }, [distribucion.length]);
+  useEffect(() => { setKanbanPage((prev) => Math.min(prev, totalKanbanPages)); }, [totalKanbanPages]);
+
+  useEffect(() => { setActivityPage(1); }, [feedUnificado.length]);
+  useEffect(() => { setActivityPage((prev) => Math.min(prev, totalActivityPages)); }, [totalActivityPages]);
 
   const kpiCards = useMemo(
     () => [
@@ -116,20 +176,31 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
     [alertasCriticas, avanceProceso, onNavigate, resumen, saludOperativa, totalFacturas]
   );
 
+  const quickActions = [
+    { label: 'Usuarios', icon: Users, menu: 'usuarios' },
+    { label: 'Proveedores', icon: Building2, menu: 'proveedores' },
+    { label: 'SLA', icon: Clock, menu: 'sla' },
+  ];
+
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-800 via-red-700 to-red-900 p-6 text-white shadow-xl"
       >
         <div className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full bg-red-500/50 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-amber-400/20 blur-2xl" />
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Panel de Administración Financiera</h1>
-            <p className="text-red-100 text-sm mt-1">Monitoreo operativo, alertas y control integral del flujo financiero desde una vista ejecutiva más corta y accionable.</p>
-            <p className="text-red-200/90 text-xs mt-2">
+
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="max-w-2xl">
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Panel de Administración Financiera</h1>
+            <p className="mt-2 text-sm leading-6 text-red-50/90">
+              Monitoreo operativo, alertas y control integral del flujo financiero desde una vista ejecutiva accionable.
+            </p>
+            <p className="mt-1 text-xs text-red-200/80">
               {lastUpdated ? `Última actualización: ${lastUpdated.toLocaleString('es-CO')}` : 'Sincronizando información...'}
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -141,24 +212,50 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
               <span className="rounded-full bg-white/10 px-3 py-1">Riesgo: {resumen?.facturas_riesgo ?? 0}</span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void fetchDashboard(true)} disabled={refreshing} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Actualizando...' : 'Actualizar'}
-            </Button>
-            <Button onClick={() => onNavigate('reportes')} className="bg-white text-red-700 hover:bg-red-50">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Ver reportes
-            </Button>
+
+          {/* Accesos rápidos en el header */}
+          <div className="flex flex-col gap-3 xl:items-end">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <Button
+                onClick={() => void fetchDashboard(true)}
+                disabled={refreshing}
+                className="bg-white/15 border border-white/30 hover:bg-white/25 text-white"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Actualizando...' : 'Actualizar'}
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-3 2xl:grid-cols-5">
+              {quickActions.map((qa) => {
+                const Icon = qa.icon;
+                return (
+                  <button
+                    key={qa.menu}
+                    onClick={() => onNavigate(qa.menu)}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/10 border border-white/20 px-3 py-3 text-center text-white transition-all hover:bg-white/20"
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="text-xs font-medium">{qa.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {loading && <Card><CardContent className="p-6 text-slate-600">Cargando panel...</CardContent></Card>}
+      {loading && (
+        <Card>
+          <CardContent className="flex items-center gap-3 p-6 text-slate-600">
+            <Loader2 className="h-5 w-5 animate-spin" /> Cargando panel...
+          </CardContent>
+        </Card>
+      )}
       {error && <Card><CardContent className="p-6 text-red-600">{error}</CardContent></Card>}
 
       {!loading && !error && resumen && (
         <>
+          {/* KPI Cards principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {kpiCards.map((card) => {
               const Icon = card.icon;
@@ -173,7 +270,7 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-slate-600">{card.title}</p>
-                          <p className="text-3xl font-bold text-slate-900">{card.value}</p>
+                          <p className="text-3xl font-black text-slate-900">{card.value}</p>
                         </div>
                         <div className="rounded-xl bg-white/70 p-2 shadow-sm">
                           <Icon className={`w-6 h-6 ${card.iconClass}`} />
@@ -197,131 +294,206 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
             })}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <CardContent className="p-4">
-                <p className="text-xs text-slate-600">Usuarios financieros activos</p>
-                <p className="text-xl font-bold text-slate-900">{resumen.usuarios_activos}</p>
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-sm transition-shadow" onClick={() => onNavigate('proveedores')}>
-              <CardContent className="p-4">
-                <p className="text-xs text-slate-600">Proveedores activos</p>
-                <p className="text-xl font-bold text-slate-900">{resumen.proveedores_activos ?? 0}</p>
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer border-violet-100 bg-gradient-to-r from-violet-50 to-purple-50 hover:shadow-sm transition-shadow" onClick={() => onNavigate('reportes')}>
-              <CardContent className="p-4">
-                <p className="text-xs text-slate-600">Facturas registradas</p>
-                <p className="text-xl font-bold text-slate-900">{totalFacturas}</p>
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 hover:shadow-sm transition-shadow" onClick={() => onNavigate('sla')}>
-              <CardContent className="p-4">
-                <p className="text-xs text-slate-600">Tiempo promedio</p>
-                <p className="text-xl font-bold text-slate-900">{resumen.tiempo_promedio_dias} días</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <Card className="border-red-100 shadow-sm">
+          {/* Panel de seguimiento y actividad reciente */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border-0 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-red-600" />Distribución por Estado</CardTitle>
-                <CardDescription>Estado actual del flujo financiero</CardDescription>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-slate-900">Panel de seguimiento y trazabilidad</CardTitle>
+                    <CardDescription>
+                      Consulta el estado general del proceso en el Kanban resumido y revisa al mismo tiempo los movimientos más recientes del módulo.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => void fetchDashboard(true)}
+                    variant="outline"
+                    disabled={refreshing}
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0"
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {distribucion.length === 0 && (
-                  <p className="text-sm text-slate-500">Aún no hay facturas para construir la distribución de estados.</p>
-                )}
-                {distribucion.map((item) => {
-                  const porcentaje = Math.min(100, (item.cantidad / Math.max(1, totalFacturas)) * 100);
-                  return (
-                    <div key={item.estado} className="space-y-1 rounded-lg bg-slate-50/80 p-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium text-slate-700">{item.estado}</span>
-                        <span className="font-semibold">{item.cantidad} ({porcentaje.toFixed(0)}%)</span>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
+                  {/* Panel de seguimiento */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-900">Panel de seguimiento</h3>
+                        <p className="text-sm text-slate-500">Identifica rápidamente en qué etapas se concentra hoy el mayor volumen de facturas.</p>
                       </div>
-                      <div className="h-2 rounded bg-slate-200 overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${porcentaje}%` }}
-                          transition={{ duration: 0.6, ease: 'easeOut' }}
-                          className="h-2 bg-gradient-to-r from-red-500 via-orange-500 to-amber-400"
-                        />
-                      </div>
+                      {distribucion.length > KANBAN_PER_PAGE && (
+                        <Badge variant="outline" className="shrink-0">
+                          {kanbanPage} / {totalKanbanPages}
+                        </Badge>
+                      )}
                     </div>
-                  );
-                })}
+
+                    {loading ? (
+                      <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 py-10 text-slate-400">
+                        <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                        Cargando flujo...
+                      </div>
+                    ) : distribucion.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center text-slate-400">
+                        <FolderKanban className="mx-auto mb-3 h-8 w-8 opacity-30" />
+                        Sin movimiento visible en este momento.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid gap-3">
+                          {pagedKanban.map((item) => (
+                            <div key={item.estado} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-900">{item.estado}</p>
+                                <p className="mt-1 text-sm text-slate-500">{item.cantidad} factura(s)</p>
+                              </div>
+                              <Badge className="bg-red-100 text-red-700 border border-red-200 shrink-0">{item.cantidad}</Badge>
+                            </div>
+                          ))}
+                        </div>
+
+                        {totalKanbanPages > 1 && (
+                          <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                            <p className="text-sm text-slate-500">
+                              {(kanbanPage - 1) * KANBAN_PER_PAGE + 1}–{Math.min(kanbanPage * KANBAN_PER_PAGE, distribucion.length)} de {distribucion.length}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setKanbanPage((p) => Math.max(1, p - 1))}
+                                disabled={kanbanPage === 1}
+                                className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                              >
+                                <ChevronLeft className="mr-1 h-4 w-4" />
+                                Anterior
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setKanbanPage((p) => Math.min(totalKanbanPages, p + 1))}
+                                disabled={kanbanPage === totalKanbanPages}
+                                className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                              >
+                                Siguiente
+                                <ChevronRight className="ml-1 h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actividad reciente + alertas unificadas */}
+                  <div className="space-y-4 border-t border-slate-200 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-900">Actividad reciente</h3>
+                        <p className="text-sm text-slate-500">Sigue los últimos cambios y alertas de riesgo del flujo financiero.</p>
+                      </div>
+                      {feedUnificado.length > ACTIVITIES_PER_PAGE && (
+                        <Badge variant="outline">
+                          Página {activityPage} de {totalActivityPages}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {loading ? (
+                      <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 py-10 text-slate-400">
+                        <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                        Cargando actividad...
+                      </div>
+                    ) : feedUnificado.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center text-slate-400">
+                        <FileText className="mx-auto mb-3 h-8 w-8 opacity-30" />
+                        No hay actividad reciente.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pagedFeed.map((item, index) => (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.24 + index * 0.05 }}
+                            className={`w-full rounded-2xl border p-4 ${
+                              item.tipo === 'alerta'
+                                ? 'border-amber-200 bg-amber-50/40'
+                                : 'border-slate-200 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate font-semibold text-slate-900">{item.titulo}</p>
+                                  {item.tipo === 'alerta' ? (
+                                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                                  ) : (
+                                    <Eye className="h-4 w-4 shrink-0 text-red-600" />
+                                  )}
+                                </div>
+                                <p className="mt-1 truncate text-sm text-slate-600">{item.subtitulo}</p>
+                              </div>
+                              {item.valor != null && (
+                                <p className="shrink-0 text-sm font-bold text-slate-900">
+                                  {currency.format(item.valor)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {item.riesgo && (
+                                <Badge className={`border ${item.riesgo === 'vencida' || item.riesgo === 'atrasada' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
+                                  {item.riesgo}
+                                </Badge>
+                              )}
+                              {item.estado && (
+                                <Badge variant="outline">{item.estado}</Badge>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+
+                        {totalActivityPages > 1 && (
+                          <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                            <p className="text-sm text-slate-500">
+                              Mostrando {(activityPage - 1) * ACTIVITIES_PER_PAGE + 1} a {Math.min(activityPage * ACTIVITIES_PER_PAGE, feedUnificado.length)} de {feedUnificado.length}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                                disabled={activityPage === 1}
+                                className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                              >
+                                <ChevronLeft className="mr-1 h-4 w-4" />
+                                Anterior
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
+                                disabled={activityPage === totalActivityPages}
+                                className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                              >
+                                Siguiente
+                                <ChevronRight className="ml-1 h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
-
-            <Card className="border-amber-100 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-600" />Alertas de Riesgo</CardTitle>
-                <CardDescription>Facturas con atención prioritaria</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {alertas.length === 0 && <p className="text-sm text-slate-500">Sin alertas activas. El flujo está estable en este momento.</p>}
-                {alertas.map((alerta) => (
-                  <motion.div key={alerta.id} whileHover={{ x: 3 }} className="border rounded-lg p-3 flex justify-between gap-2 bg-amber-50/40">
-                    <div>
-                      <p className="font-medium text-sm">{alerta.numero_factura}</p>
-                      <p className="text-xs text-slate-500">{alerta.estado} · {alerta.dias_transcurridos} días</p>
-                    </div>
-                    <Badge className={alerta.indicador_riesgo === 'vencida' || alerta.indicador_riesgo === 'atrasada' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}>
-                      {alerta.indicador_riesgo}
-                    </Badge>
-                  </motion.div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-indigo-100 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Layers3 className="w-5 h-5 text-indigo-600" />Actividad Reciente del Flujo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {actividades.length === 0 && <p className="text-sm text-slate-500">Sin actividad reciente registrada en historial.</p>}
-              {actividades.map((a) => (
-                <motion.div key={a.id} whileHover={{ y: -2 }} className="border rounded-lg p-3 bg-indigo-50/30">
-                  <p className="text-sm font-medium">{a.usuario_nombre} · {a.accion}</p>
-                  <p className="text-xs text-slate-500">{a.numero_factura || 'Sin factura'} · {new Date(a.fecha_accion).toLocaleString('es-CO')}</p>
-                </motion.div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-700 via-red-700 to-red-600 p-4 shadow-lg">
-            <div className="mb-3 flex items-center justify-between text-white">
-              <p className="text-sm font-semibold">Accesos rápidos</p>
-              <p className="text-xs text-red-100">Navega directo a los módulos principales</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Button
-                onClick={() => onNavigate('usuarios')}
-                className="justify-between bg-red-600/70 hover:bg-red-500 text-white border border-white/20"
-              >
-                <span className="flex items-center gap-2"><Users className="w-4 h-4" />Gestión de usuarios</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={() => onNavigate('proveedores')}
-                className="justify-between bg-red-600/70 hover:bg-red-500 text-white border border-white/20"
-              >
-                <span className="flex items-center gap-2"><Building2 className="w-4 h-4" />Gestión de proveedores</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={() => onNavigate('sla')}
-                className="justify-between bg-red-600/70 hover:bg-red-500 text-white border border-white/20"
-              >
-                <span className="flex items-center gap-2"><Clock className="w-4 h-4" />Parametrización SLA</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+          </motion.div>
         </>
       )}
     </div>

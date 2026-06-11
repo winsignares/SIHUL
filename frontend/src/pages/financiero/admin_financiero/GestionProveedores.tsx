@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { Building2, FileSpreadsheet, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-react';
+import { Building2, PauseCircle, PlayCircle, Plus, Save, Search, Trash2 } from 'lucide-react';
 import { proveedoresService } from '../../../services/financiero';
 import type { Proveedor } from '../../../models/financiero/core.models';
 import { userService } from '../../../services/users/authService';
@@ -279,69 +279,18 @@ export default function GestionProveedoresReal() {
               Gestión de Proveedores
             </h1>
             <p className="max-w-2xl text-sm text-red-100">Consolida terceros, estados de operación y datos bancarios en una bandeja más clara y fácil de revisar.</p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Badge className="border border-white/20 bg-white/10 text-white">Activos: {resumenProveedores.activos}</Badge>
-              <Badge className="border border-white/20 bg-white/10 text-white">Ciudades: {resumenProveedores.ciudades}</Badge>
-              <Badge className="border border-white/20 bg-white/10 text-white">En vista: {resumenProveedores.filtrados}</Badge>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={abrirNuevo} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo proveedor
-            </Button>
-            <Button onClick={() => void cargar()} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Actualizar datos
-            </Button>
           </div>
         </div>
       </motion.div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card className="border-red-100 bg-gradient-to-br from-white to-red-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Proveedores</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{resumenProveedores.total}</p>
-            <p className="text-sm text-slate-600">Maestro total registrado</p>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-100 bg-gradient-to-br from-white to-emerald-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Activos</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-700">{resumenProveedores.activos}</p>
-            <p className="text-sm text-slate-600">Disponibles para operar</p>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-100 bg-gradient-to-br from-white to-amber-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">No activos</p>
-            <p className="mt-2 text-3xl font-bold text-amber-700">{resumenProveedores.inactivos}</p>
-            <p className="text-sm text-slate-600">Bloqueados o en revisión</p>
-          </CardContent>
-        </Card>
-        <Card className="border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Cobertura</p>
-            <p className="mt-2 text-3xl font-bold text-indigo-700">{resumenProveedores.ciudades}</p>
-            <p className="text-sm text-slate-600">Ciudades registradas</p>
-          </CardContent>
-        </Card>
-      </div>
 
       <Card className="border-0 shadow-lg">
         <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-slate-900">Proveedores registrados</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={exportarProveedoresExcel}>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-              <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">
-                {filtered.length} proveedores
-              </Badge>
-            </div>
+            <Button size="sm" onClick={abrirNuevo} className="bg-red-700 hover:bg-red-800 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo proveedor
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -412,19 +361,18 @@ export default function GestionProveedoresReal() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>ID</TableHead>
-                    <TableHead>Razón social</TableHead>
-                    <TableHead>NIT</TableHead>
-                    <TableHead>Ciudad</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-center">Razón social</TableHead>
+                    <TableHead className="text-center">NIT</TableHead>
+                    <TableHead className="text-center">Ciudad</TableHead>
+                    <TableHead className="text-center">Tipo</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-slate-500 py-7">
+                      <TableCell colSpan={6} className="text-center text-slate-500 py-7">
                         No hay proveedores para mostrar.
                       </TableCell>
                     </TableRow>
@@ -433,38 +381,40 @@ export default function GestionProveedoresReal() {
                       const isProcessing = accionProveedorId === p.id;
                       return (
                         <TableRow key={p.id}>
-                          <TableCell>{p.id || '—'}</TableCell>
-                          <TableCell className="font-medium text-slate-800">{p.razon_social}</TableCell>
-                          <TableCell>{p.nit}</TableCell>
-                          <TableCell>{p.ciudad || '—'}</TableCell>
-                          <TableCell>{p.tipo_proveedor}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-center font-medium text-slate-800">{p.razon_social}</TableCell>
+                          <TableCell className="text-center">{p.nit}</TableCell>
+                          <TableCell className="text-center">{p.ciudad || '—'}</TableCell>
+                          <TableCell className="text-center">{p.tipo_proveedor}</TableCell>
+                          <TableCell className="text-center">
                             <Badge className={p.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
                               {p.estado}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex justify-end gap-2">
-                              <Button size="sm" variant="outline" onClick={() => abrirEdicion(p)}>
-                                <Building2 className="w-3 h-3 mr-1" />
-                                Editar
+                            <div className="flex justify-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => abrirEdicion(p)} title="Editar">
+                                <Building2 className="w-4 h-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 disabled={isProcessing}
                                 onClick={() => void toggleEstado(p)}
+                                title={p.estado === 'Activo' ? 'Desactivar' : 'Activar'}
+                                className={p.estado === 'Activo' ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'}
                               >
-                                {p.estado === 'Activo' ? 'Desactivar' : 'Activar'}
+                                {p.estado === 'Activo'
+                                  ? <PauseCircle className="w-4 h-4" />
+                                  : <PlayCircle className="w-4 h-4" />}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 disabled={isProcessing}
                                 onClick={() => void eliminarProveedor(p)}
+                                title="Eliminar"
                               >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                Eliminar
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </TableCell>
