@@ -123,22 +123,6 @@ interface FacturaDetailModalProps {
 }
 
 function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
-  const estadosOrdenados = [
-    'Recibida',
-    'Registrada',
-    'Radicada',
-    'Causada',
-    'Alistada',
-    'Aprobada Auditoría',
-    'Revisada Dir. Financiera',
-    'Cargada',
-    'Enviada Rectoría',
-    'Rechazada por Rectoría',
-    'Devuelta',
-    'Autorizada',
-    'Pago Aplicado',
-  ];
-
   const normalize = (value: string) =>
     value
       .toLowerCase()
@@ -174,9 +158,10 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   };
 
   const current = mapEstado[normalize(factura.estado)] || factura.estado;
-  const idx = estadosOrdenados.indexOf(current);
+  const isRechazada = current === 'Rechazada por Rectoría';
+  const isDevuelta = current === 'Devuelta';
 
-  const blueprint = [
+  const fullBlueprint = [
     ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1, factura.fechaRecepcion || factura.fechaFactura],
     ['Registrada', 'Funcionario', 'Registro y validacion inicial completada', 1, factura.fechaRecepcion],
     ['Radicada', 'Contabilidad', 'Radicacion contable ejecutada', 3, factura.fechaRadicacion],
@@ -192,15 +177,24 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Pago Aplicado', 'Tesoreria', 'Pago aplicado y factura pagada', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
   ] as const;
 
-  return blueprint.map(([nombre, responsable, observaciones, sla, fecha], i) => {
-    let estado: TimelineEtapa['estado'] = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
+  // Los pasos negativos solo aparecen cuando la factura está efectivamente en ese estado
+  const blueprint = fullBlueprint.filter(([nombre]) => {
+    if (nombre === 'Rechazada por Rectoría') return isRechazada;
+    if (nombre === 'Devuelta') return isDevuelta;
+    return true;
+  });
 
-    if (nombre === 'Devuelta') {
-      estado = current === 'Devuelta' ? 'devuelto' : 'pendiente';
-    }
+  const idx = blueprint.findIndex(([nombre]) => nombre === current);
+
+  return blueprint.map(([nombre, responsable, observaciones, sla, fecha], i) => {
+    let estado: TimelineEtapa['estado'];
 
     if (nombre === 'Rechazada por Rectoría') {
-      estado = current === 'Rechazada por Rectoría' ? 'rechazado' : 'pendiente';
+      estado = 'rechazado';
+    } else if (nombre === 'Devuelta') {
+      estado = 'devuelto';
+    } else {
+      estado = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
     }
 
     return {
@@ -211,8 +205,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
       usuarioResponsable: responsable,
       observaciones,
       diasMaximos: sla,
-      diasTranscurridos: i === idx || (current === 'Devuelta' && nombre === 'Devuelta') ? factura.diasTranscurridos : undefined,
-      nivelRiesgo: i === idx || (current === 'Devuelta' && nombre === 'Devuelta') ? factura.nivelRiesgo : undefined,
+      diasTranscurridos: i === idx ? factura.diasTranscurridos : undefined,
+      nivelRiesgo: i === idx ? factura.nivelRiesgo : undefined,
     } as TimelineEtapa;
   });
 }
