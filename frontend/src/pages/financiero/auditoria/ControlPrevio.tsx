@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
@@ -6,27 +6,24 @@ import { Badge } from '../../../share/badge';
 import { Textarea } from '../../../share/textarea';
 import { Label } from '../../../share/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { Eye, CheckCircle2, XCircle, Calendar, ShieldCheck, AlertCircle, FolderOpen, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Calendar, ShieldCheck, AlertCircle, FolderOpen, Download, ChevronLeft, ChevronRight, Filter, Search, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
 import { toast } from 'sonner';
-import TableFilters, { type TableFilterValues } from '../../../share/table-filters';
+import { Input } from '../../../share/input';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
-import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
 const FILTROS_INICIALES = {
   numeroFactura: '',
-  proveedor: '',
-  estado: '',
-  areaSolicitante: '',
+  numeroRadicado: '',
+  numeroProcesoPago: '',
   fechaInicio: '',
   fechaFin: '',
-  montoMin: '',
-  montoMax: '',
   orden: 'recientes',
 };
 
@@ -114,9 +111,6 @@ export default function ControlPrevio() {
   ));
   const [rechazoSeleccion, setRechazoSeleccion] = useState<string[]>([]);
 
-  const handleFilterChange = useCallback((values: TableFilterValues) => {
-    setFiltros((prev) => ({ ...prev, ...values }));
-  }, []);
 
   const loadFacturas = async () => {
     const response = await facturasService.getAll({ estado: 'Alistada', ordering: '-fecha_alistamiento', limit: 200 });
@@ -141,18 +135,11 @@ export default function ControlPrevio() {
   }, []);
 
   const facturasFiltradas = useMemo(() => facturasAlistadas.filter((factura) => {
-    if (filtros.numeroFactura) {
-      const term = filtros.numeroFactura.toLowerCase();
-      const matchFactura = factura.numeroFactura.toLowerCase().includes(term);
-      const matchRadicado = factura.numeroRadicado?.toLowerCase().includes(term) ?? false;
-      const matchProceso = factura.numeroProcesoPago?.toLowerCase().includes(term) ?? false;
-      if (!matchFactura && !matchRadicado && !matchProceso) return false;
-    }
-    if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
+    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+    if (filtros.numeroRadicado && !(factura.numeroRadicado?.toLowerCase().includes(filtros.numeroRadicado.toLowerCase()) ?? false)) return false;
+    if (filtros.numeroProcesoPago && !(factura.numeroProcesoPago?.toLowerCase().includes(filtros.numeroProcesoPago.toLowerCase()) ?? false)) return false;
     if (filtros.fechaInicio && new Date(factura.fechaAlistamiento) < new Date(filtros.fechaInicio)) return false;
     if (filtros.fechaFin && new Date(factura.fechaAlistamiento) > new Date(filtros.fechaFin)) return false;
-    if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-    if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
     return true;
   }), [facturasAlistadas, filtros]);
 
@@ -233,11 +220,15 @@ export default function ControlPrevio() {
 
   const confirmarAprobacion = () => {
     if (!facturaSeleccionada) return;
+    if (!observaciones.trim() || observaciones.trim().length < 10) {
+      toast.error('Las observaciones son obligatorias y deben tener minimo 10 caracteres');
+      return;
+    }
 
     setProcesando(true);
     void (async () => {
       try {
-        await facturasService.aprobarAuditoria(facturaSeleccionada.facturaId, observaciones.trim() || undefined);
+        await facturasService.aprobarAuditoria(facturaSeleccionada.facturaId, observaciones.trim());
         setFacturasAlistadas(await loadFacturas());
         toast.success(`Factura aprobada por auditoria: ${facturaSeleccionada.numeroFactura}`);
         setMostrarDialogAprobar(false);
@@ -304,19 +295,90 @@ export default function ControlPrevio() {
 
         <Card className="border-0 shadow-lg">
           <CardContent className="pt-6">
-            <TableFilters
-              filters={filtros}
-              onFilterChange={handleFilterChange}
-              proveedores={Array.from(new Set(facturasAlistadas.map((f) => f.proveedor)))}
-              showFechaFilter
-              showAreaFilter={false}
-              showEstadoFilter={false}
-              orderKey="orden"
-              orderLabel="Ordenar lista"
-              orderOptions={ORDER_OPTIONS}
-              searchLabel="Factura / Radicado / Proceso Pago"
-              searchPlaceholder="Buscar por factura, radicado o proceso..."
-            />
+            <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                    <Filter className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Filtros de Busqueda</h3>
+                    <p className="text-xs text-slate-500">
+                      {[filtros.numeroFactura, filtros.numeroRadicado, filtros.numeroProcesoPago, filtros.fechaInicio, filtros.fechaFin].filter(Boolean).length > 0
+                        ? `${[filtros.numeroFactura, filtros.numeroRadicado, filtros.numeroProcesoPago, filtros.fechaInicio, filtros.fechaFin].filter(Boolean).length} filtro(s) activo(s)`
+                        : 'Sin filtros aplicados'}
+                    </p>
+                  </div>
+                </div>
+                {[filtros.numeroFactura, filtros.numeroRadicado, filtros.numeroProcesoPago, filtros.fechaInicio, filtros.fechaFin].some(Boolean) && (
+                  <button type="button" onClick={() => setFiltros(FILTROS_INICIALES)}
+                    className="inline-flex items-center gap-2 rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50">
+                    <X className="w-4 h-4" />Limpiar
+                  </button>
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <div className="space-y-2 min-w-0 flex-1 basis-40">
+                  <Label htmlFor="cp-factura" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                    <Search className="w-3 h-3 text-red-600" />N° Factura
+                  </Label>
+                  <div className="relative">
+                    <Input id="cp-factura" placeholder="FAC-2026-001" value={filtros.numeroFactura}
+                      onChange={(e) => setFiltros((p) => ({ ...p, numeroFactura: e.target.value }))}
+                      className="border-slate-300 focus:border-red-600 focus:ring-red-600" />
+                    {filtros.numeroFactura && <button onClick={() => setFiltros((p) => ({ ...p, numeroFactura: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+                <div className="space-y-2 min-w-0 flex-1 basis-40">
+                  <Label htmlFor="cp-radicado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                    <Search className="w-3 h-3 text-red-600" />N° Radicado
+                  </Label>
+                  <div className="relative">
+                    <Input id="cp-radicado" placeholder="RAD-2026-001" value={filtros.numeroRadicado}
+                      onChange={(e) => setFiltros((p) => ({ ...p, numeroRadicado: e.target.value }))}
+                      className="border-slate-300 focus:border-red-600 focus:ring-red-600" />
+                    {filtros.numeroRadicado && <button onClick={() => setFiltros((p) => ({ ...p, numeroRadicado: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+                <div className="space-y-2 min-w-0 flex-1 basis-40">
+                  <Label htmlFor="cp-proceso" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                    <Search className="w-3 h-3 text-red-600" />N° Proceso Pago
+                  </Label>
+                  <div className="relative">
+                    <Input id="cp-proceso" placeholder="PP-2026-001" value={filtros.numeroProcesoPago}
+                      onChange={(e) => setFiltros((p) => ({ ...p, numeroProcesoPago: e.target.value }))}
+                      className="border-slate-300 focus:border-red-600 focus:ring-red-600" />
+                    {filtros.numeroProcesoPago && <button onClick={() => setFiltros((p) => ({ ...p, numeroProcesoPago: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+                <div className="space-y-2 min-w-0 flex-1 basis-36">
+                  <Label htmlFor="cp-desde" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-blue-600" />Desde
+                  </Label>
+                  <Input id="cp-desde" type="date" value={filtros.fechaInicio}
+                    onChange={(e) => setFiltros((p) => ({ ...p, fechaInicio: e.target.value }))}
+                    className="border-slate-300 focus:border-blue-600 focus:ring-blue-600" />
+                </div>
+                <div className="space-y-2 min-w-0 flex-1 basis-36">
+                  <Label htmlFor="cp-hasta" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-blue-600" />Hasta
+                  </Label>
+                  <Input id="cp-hasta" type="date" value={filtros.fechaFin}
+                    onChange={(e) => setFiltros((p) => ({ ...p, fechaFin: e.target.value }))}
+                    className="border-slate-300 focus:border-blue-600 focus:ring-blue-600" />
+                </div>
+                <div className="space-y-2 min-w-0 flex-1 basis-36">
+                  <Label htmlFor="cp-orden" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                    <Search className="w-3 h-3 text-red-600" />Ordenar lista
+                  </Label>
+                  <select id="cp-orden" value={filtros.orden}
+                    onChange={(e) => setFiltros((p) => ({ ...p, orden: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-md border border-slate-300 bg-white text-slate-700 text-sm focus:border-red-600 focus:outline-none">
+                    {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -406,7 +468,7 @@ export default function ControlPrevio() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'auditoria')}
+                              onClick={() => downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'auditoria')}
                               className="h-9 w-9 rounded-full border-slate-200 p-0 text-slate-700 hover:bg-slate-50"
                               title="Descargar soportes"
                             >
@@ -508,16 +570,19 @@ export default function ControlPrevio() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-700">Observaciones</Label>
-                <Textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones de auditoria (opcional)" className="mt-2" />
+                <Label className="text-sm font-medium text-slate-700">Observaciones <span className="text-red-600">*</span></Label>
+                <Textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones de auditoria (obligatorio, minimo 10 caracteres)" className="mt-2" />
+                {observaciones.trim().length > 0 && observaciones.trim().length < 10 && (
+                  <p className="text-xs text-red-600 mt-1">Minimo 10 caracteres ({observaciones.trim().length}/10)</p>
+                )}
               </div>
             </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setMostrarDialogAprobar(false)}>Cancelar</Button>
-            <Button onClick={confirmarAprobacion} disabled={procesando || !checklistCompleto} className="bg-green-600 hover:bg-green-700 text-white">
-              {procesando ? 'Aprobando...' : checklistCompleto ? 'Confirmar aprobacion' : 'Complete el checklist'}
+            <Button onClick={confirmarAprobacion} disabled={procesando || !checklistCompleto || observaciones.trim().length < 10} className="bg-green-600 hover:bg-green-700 text-white">
+              {procesando ? 'Aprobando...' : !checklistCompleto ? 'Complete el checklist' : observaciones.trim().length < 10 ? 'Ingrese observaciones' : 'Confirmar aprobacion'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -15,6 +15,7 @@ ALLOWED_DOC_MIME_TYPES = {
     'image/png',
     'image/jpeg',
     'text/plain',
+    'application/octet-stream',  # .txt desde Windows/Chrome
 }
 MAX_DOC_SIZE_BYTES = 10 * 1024 * 1024
 

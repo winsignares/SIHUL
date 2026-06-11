@@ -658,6 +658,10 @@ export default function RegistrarFactura() {
       setError(err);
       return;
     }
+    if (!form.observaciones.trim() || form.observaciones.trim().length < 10) {
+      setError('La observacion del proceso es obligatoria y debe tener minimo 10 caracteres.');
+      return;
+    }
 
     setLoading(true);
 
@@ -1864,31 +1868,59 @@ export default function RegistrarFactura() {
               </div>
             </motion.div>
 
+            {/* Observacion obligatoria del proceso */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.35 }}
+              className="rounded-2xl bg-slate-50 border border-slate-200 p-6 mb-6"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <p className="font-semibold text-slate-900 text-sm">Observacion del Proceso <span className="text-red-600">*</span></p>
+              </div>
+              <p className="font-semibold text-slate-900 text-sm mb-3">Registre una observacion sobre el proceso de verificacion y registro de esta factura. Este campo es obligatorio.</p>
+              <Textarea
+                value={form.observaciones}
+                onChange={(e) => setField('observaciones', e.target.value)}
+                placeholder="Describa las verificaciones realizadas, novedades encontradas o cualquier observacion relevante del proceso (minimo 10 caracteres)..."
+                rows={4}
+                className="bg-white"
+              />
+              {form.observaciones.trim().length > 0 && form.observaciones.trim().length < 10 ? (
+                <p className="text-xs text-red-600 mt-2">Minimo 10 caracteres ({form.observaciones.trim().length}/10)</p>
+              ) : form.observaciones.trim().length === 0 ? (
+                <p className="font-semibold text-slate-900 text-sm mt-2">Campo obligatorio.</p>
+              ) : (
+                <p className="text-xs text-green-700 mt-2">✓ Observacion registrada.</p>
+              )}
+            </motion.div>
+
             {/* Botones de navegación */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="flex justify-between gap-3 pt-6 border-t-2 border-slate-200"
             >
-              <motion.button 
-                whileHover={{ scale: 1.02 }} 
-                whileTap={{ scale: 0.98 }} 
-                onClick={prevStep} 
-                type="button" 
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={prevStep}
+                type="button"
                 className="px-6 py-3 rounded-lg bg-slate-200 text-slate-700 font-semibold hover:bg-slate-300 transition-all"
               >
                 ← Anterior
               </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02 }} 
-                whileTap={{ scale: 0.98 }} 
-                onClick={submit} 
-                type="button" 
-                disabled={loading}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={submit}
+                type="button"
+                disabled={loading || form.observaciones.trim().length < 10}
                 className="px-8 py-3 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold shadow-lg shadow-green-300 hover:shadow-lg hover:shadow-green-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '⏳ Registrando...' : '✓ Registrar Factura'}
+                {loading ? '⏳ Registrando...' : form.observaciones.trim().length < 10 ? 'Ingrese observacion' : '✓ Registrar Factura'}
               </motion.button>
             </motion.div>
           </motion.div>

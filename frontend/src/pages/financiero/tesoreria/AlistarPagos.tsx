@@ -8,25 +8,19 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { FileCheck, Eye, XCircle, TrendingUp, FileText, FolderOpen, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { FileCheck, Eye, XCircle, FileText, FolderOpen, ChevronLeft, ChevronRight, Upload, Search, X, Filter } from 'lucide-react';
 import { toast } from 'sonner';
-import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
 import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import { facturasService, documentosService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 
 const FILTROS_INICIALES = {
   numeroFactura: '',
-  proveedor: '',
-  estado: '',
-  areaSolicitante: '',
-  fechaInicio: '',
-  fechaFin: '',
-  montoMin: '',
-  montoMax: '',
+  numeroRadicado: '',
   orden: 'recientes',
 };
 
@@ -76,8 +70,13 @@ const mapFactura = (f: APIFactura): Factura => ({
   numeroProcesoPago: f.numero_proceso_pago,
 });
 
-const getErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+    return (error as { message: string }).message;
+  }
+  if (error instanceof Error) return error.message;
+  return fallback;
+};
 
 export default function AlistarPagos() {
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
@@ -121,18 +120,8 @@ export default function AlistarPagos() {
   }, []);
 
   const facturasFiltradas = useMemo(() => facturasTesoreria.filter((factura) => {
-    if (filtros.numeroFactura) {
-      const term = filtros.numeroFactura.toLowerCase();
-      const matchFactura = factura.numeroFactura.toLowerCase().includes(term);
-      const matchRadicado = factura.numeroRadicado?.toLowerCase().includes(term) ?? false;
-      if (!matchFactura && !matchRadicado) return false;
-    }
-    if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-    if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-    if (filtros.fechaInicio && factura.fechaCausacion && new Date(factura.fechaCausacion) < new Date(filtros.fechaInicio)) return false;
-    if (filtros.fechaFin && factura.fechaCausacion && new Date(factura.fechaCausacion) > new Date(filtros.fechaFin)) return false;
-    if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-    if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+    if (filtros.numeroRadicado && !(factura.numeroRadicado?.toLowerCase().includes(filtros.numeroRadicado.toLowerCase()) ?? false)) return false;
     return true;
   }), [facturasTesoreria, filtros]);
 
@@ -189,6 +178,9 @@ export default function AlistarPagos() {
       nivelRiesgo: factura.diasTranscurridos > 17 ? 'rojo' : factura.diasTranscurridos > 10 ? 'amarillo' : 'verde',
     });
     setMostrarDialogDetalle(true);
+    void facturasService.getById(factura.facturaId).then((detalle) => {
+      setFacturaDetalle(buildSharedFacturaDetail(detalle));
+    }).catch(() => {});
   };
 
   const alistarPago = () => {
@@ -199,6 +191,10 @@ export default function AlistarPagos() {
     }
     if (!archivoSeven) {
       toast.error('Debe cargar el archivo generado en SEVEN');
+      return;
+    }
+    if (archivoSeven.size === 0) {
+      toast.error('El archivo seleccionado está vacío. Verifique que el archivo TXT tenga contenido antes de cargarlo.');
       return;
     }
     if (observaciones.trim().length < 5) {
@@ -271,25 +267,90 @@ export default function AlistarPagos() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <TrendingUp className="w-5 h-5 text-red-600" />
-              Filtros de Busqueda Independientes
-            </CardTitle>
-            <CardDescription>Filtre por columna especifica usando campos independientes</CardDescription>
+            <div className="flex items-center justify-between pb-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                  <Filter className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-slate-800">Filtros de Busqueda</CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {[filtros.numeroFactura, filtros.numeroRadicado].filter(Boolean).length > 0
+                      ? `${[filtros.numeroFactura, filtros.numeroRadicado].filter(Boolean).length} filtro(s) activo(s)`
+                      : 'Sin filtros aplicados'}
+                  </p>
+                </div>
+              </div>
+              {(filtros.numeroFactura || filtros.numeroRadicado) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setFiltros(FILTROS_INICIALES)}
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Limpiar
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <TableFilters
-              filters={filtros}
-              onFilterChange={setFiltros}
-              proveedores={Array.from(new Set(facturasTesoreria.map((f) => f.proveedor)))}
-              areas={Array.from(new Set(facturasTesoreria.map((f) => f.areaSolicitante)))}
-              showFechaFilter
-              showAreaFilter
-              showEstadoFilter={false}
-              orderKey="orden"
-              orderLabel="Ordenar lista"
-              orderOptions={ORDER_OPTIONS}
-            />
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-2 min-w-0 flex-1 basis-48">
+                <Label htmlFor="filter-factura" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />
+                  N° Factura
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="filter-factura"
+                    placeholder="Ej: FAC-2026-001"
+                    value={filtros.numeroFactura}
+                    onChange={(e) => setFiltros((prev) => ({ ...prev, numeroFactura: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600"
+                  />
+                  {filtros.numeroFactura && (
+                    <button onClick={() => setFiltros((prev) => ({ ...prev, numeroFactura: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 min-w-0 flex-1 basis-48">
+                <Label htmlFor="filter-radicado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />
+                  N° Radicado
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="filter-radicado"
+                    placeholder="Ej: RAD-2026-001"
+                    value={filtros.numeroRadicado}
+                    onChange={(e) => setFiltros((prev) => ({ ...prev, numeroRadicado: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600"
+                  />
+                  {filtros.numeroRadicado && (
+                    <button onClick={() => setFiltros((prev) => ({ ...prev, numeroRadicado: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 min-w-0 flex-1 basis-48">
+                <Label htmlFor="filter-orden" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />
+                  Ordenar lista
+                </Label>
+                <select
+                  id="filter-orden"
+                  value={filtros.orden}
+                  onChange={(e) => setFiltros((prev) => ({ ...prev, orden: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-300 bg-white text-slate-700 text-sm focus:border-red-600 focus:outline-none"
+                >
+                  {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { FileText, Clock, DollarSign, Building, MapPin, Hash, CalendarDays, Paperclip, Eye, Download, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import FacturaTimeline, { type TimelineEtapa } from './factura-timeline';
 import { displayDate, displayRadicado, displayText } from './field-placeholders';
-import { facturasService } from '../services/financiero';
+import { facturasService, documentosService } from '../services/financiero';
 import { mapFacturaDetail } from './factura-details-helpers';
 import { parseFacturaDescripcion } from './factura-description';
 import { openDocumentosConsolidados, downloadDocumentoIndividual } from './documentos-consolidados';
@@ -197,8 +197,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'enviado a rectoria': 'Enviada Rectoría',
     'cargada para autorizacion': 'Cargada',
     cargada: 'Cargada',
-    autorizada: 'Autorizada',
-    'autorizada para pago': 'Autorizada',
+    autorizada: 'Pago Aplicado',
+    'autorizada para pago': 'Pago Aplicado',
     'rechazada por rectoria': 'Rechazada por Rectoría',
     devuelta: 'Devuelta',
     rechazada: 'Devuelta',
@@ -223,8 +223,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Enviada Rectoría', 'Direccion Financiera', 'Remitida para decision final institucional', 1, factura.fechaCargue],
     ['Rechazada por Rectoría', 'Rectoría', 'Rectoría rechaza el tramite y solicita recertificacion previa', 2, undefined],
     ['Devuelta', 'Direccion Financiera / Tesoreria', 'Tramite devuelto para ajustes operativos y documentales', 2, undefined],
-    ['Autorizada', 'Rectoria', 'Autorizacion final de pago', 3, factura.fechaAutorizacion],
-    ['Pago Aplicado', 'Tesoreria', 'Pago aplicado y factura pagada', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
+    ['Pago Aplicado', 'Rectoria', 'Pago autorizado y aplicado por Rectoria', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
   ] as const;
 
   // Los pasos negativos solo aparecen cuando la factura está efectivamente en ese estado
@@ -294,8 +293,27 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     if (!rawId || Number.isNaN(rawId)) return;
 
     void (async () => {
-      const detail = await facturasService.getById(rawId);
+      const [detail, docs] = await Promise.all([
+        facturasService.getById(rawId),
+        documentosService.getByFactura(rawId),
+      ]);
       const mapped = mapFacturaDetail(detail, factura);
+      // Siempre usamos el endpoint dedicado de documentos para garantizar la lista completa
+      if (docs.length > 0) {
+        // Deduplicar por tipo_documento: conservar el más reciente de cada tipo
+        const byTipo = new Map<string, typeof docs[0]>();
+        for (const d of docs) {
+          byTipo.set(d.tipo_documento, d);
+        }
+        mapped.documentos = Array.from(byTipo.values()).map((d) => ({
+          id: d.id ? String(d.id) : undefined,
+          nombre: d.nombre_archivo,
+          tipo: d.tipo_documento,
+          fecha: d.fecha_carga,
+          verificado: d.verificado,
+          url: d.archivo_url ?? d.url_storage ?? null,
+        }));
+      }
       setDetalleFactura(mapped);
     })();
   }, [factura, isOpen]);
@@ -576,7 +594,14 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                       {doc.url && (
                         <div className="flex items-center gap-2 shrink-0">
                           <button
-                            onClick={() => window.open(doc.url!, '_blank', 'noopener,noreferrer')}
+                            onClick={() => {
+                              const isTxt = doc.nombre?.toLowerCase().endsWith('.txt') || doc.url!.toLowerCase().endsWith('.txt');
+                              if (isTxt && currentFactura.facturaId && doc.id) {
+                                openDocumentosConsolidados(currentFactura.facturaId, undefined, doc.id);
+                              } else {
+                                window.open(doc.url!, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 text-xs font-medium transition-all"
                           >
                             <Eye className="w-3.5 h-3.5" /> Ver

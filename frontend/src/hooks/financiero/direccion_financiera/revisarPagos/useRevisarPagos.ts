@@ -48,13 +48,8 @@ export function useRevisarPagos() {
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
-    fechaInicio: '',
-    fechaFin: '',
-    montoMin: '',
-    montoMax: '',
+    numeroRadicado: '',
+    numeroProcesoPago: '',
     orden: 'recientes',
   });
 
@@ -127,19 +122,9 @@ export function useRevisarPagos() {
 
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasRevision.filter((factura) => {
-      if (filtros.numeroFactura) {
-        const term = filtros.numeroFactura.toLowerCase();
-        const matchFactura = factura.numeroFactura.toLowerCase().includes(term);
-        const matchRadicado = factura.numeroRadicado?.toLowerCase().includes(term) ?? false;
-        const matchProceso = factura.numeroProcesoPago?.toLowerCase().includes(term) ?? false;
-        if (!matchFactura && !matchRadicado && !matchProceso) return false;
-      }
-      if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-      if (filtros.fechaInicio && factura.fechaEnvio < filtros.fechaInicio) return false;
-      if (filtros.fechaFin && factura.fechaEnvio > filtros.fechaFin) return false;
-      if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-      if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.numeroRadicado && !(factura.numeroRadicado?.toLowerCase().includes(filtros.numeroRadicado.toLowerCase()) ?? false)) return false;
+      if (filtros.numeroProcesoPago && !(factura.numeroProcesoPago?.toLowerCase().includes(filtros.numeroProcesoPago.toLowerCase()) ?? false)) return false;
       return true;
     });
 

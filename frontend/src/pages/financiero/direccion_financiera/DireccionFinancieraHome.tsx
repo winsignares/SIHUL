@@ -297,11 +297,18 @@ export default function DireccionFinancieraHome({
                               </div>
                               <p className="mt-1 truncate text-sm text-slate-600">{item.proveedor}</p>
                             </div>
-                            <p className="shrink-0 text-sm font-bold text-slate-900">${item.valorTotal.toLocaleString('es-CO')}</p>
+                            <div className="shrink-0 text-right">
+                              <p className="text-sm font-bold text-slate-900">${item.valorTotal.toLocaleString('es-CO')}</p>
+                              {item.fechaRecepcion && (
+                                <p className="mt-0.5 text-xs text-slate-400">{new Date(item.fechaRecepcion).toLocaleDateString('es-CO')}</p>
+                              )}
+                            </div>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
                             <Badge className={`${getEstadoBadge(item.estado)} border`}>{item.estado}</Badge>
-                            <Badge variant="outline">{item.areaSolicitante || 'Sin area'}</Badge>
+                            {item.numeroRadicado && item.numeroRadicado !== 'Sin radicado' && (
+                              <Badge variant="outline" className="font-mono text-[10px]">{item.numeroRadicado}</Badge>
+                            )}
                           </div>
                         </motion.button>
                       ))}

@@ -8,7 +8,7 @@ import type { FuncionarioConsultaRow, FuncionarioEstadoChange, FuncionarioSeguim
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import type { TimelineEtapa } from '../../../share/factura-timeline';
 import { displayDate, displayRadicado } from '../../../share/field-placeholders';
-import { downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 
 const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
   { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
@@ -243,6 +243,7 @@ export default function ConsultarFacturas() {
         const timeline = buildTimelineFromSeguimiento(seguimiento as FuncionarioSeguimientoResponse, estadoActual);
 
         setSelectedDetail({
+          facturaId: selectedRow.facturaId,
           numeroFactura: factura?.numero_factura || selectedRow.idTramite,
           proveedor: factura?.proveedor?.razon_social || selectedRow.proveedor,
           valorSubtotal: Number(factura?.valor_subtotal || 0) || undefined,
@@ -273,6 +274,7 @@ export default function ConsultarFacturas() {
         });
       } catch {
         setSelectedDetail({
+          facturaId: selectedRow.facturaId,
           numeroFactura: selectedRow.idTramite,
           proveedor: selectedRow.proveedor,
           valorTotal: selectedRow.monto,
@@ -394,7 +396,7 @@ export default function ConsultarFacturas() {
         </div>
 
         <div className="flex flex-wrap items-end gap-3 mb-4 pb-4 border-b border-slate-200">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="min-w-0 flex-1 max-w-xs">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="min-w-0 flex-1 basis-0">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Número de factura</label>
             <div className="relative">
               <Search className="w-4 h-4 text-red-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -407,7 +409,7 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="min-w-0 flex-1 max-w-xs">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="min-w-0 flex-1 basis-0">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Ordenar por días</label>
             <select
               value={ordenDias}
@@ -419,7 +421,7 @@ export default function ConsultarFacturas() {
             </select>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="min-w-0 flex-1 max-w-xs">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="min-w-0 flex-1 basis-0">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Estado</label>
             <select 
               value={estado} 
@@ -431,7 +433,7 @@ export default function ConsultarFacturas() {
             </select>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="min-w-0 flex-1 max-w-xs">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="min-w-0 flex-1 basis-0">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Desde</label>
             <div className="relative">
               <input 
@@ -444,7 +446,7 @@ export default function ConsultarFacturas() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="min-w-0 flex-1 max-w-xs">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="min-w-0 flex-1 basis-0">
             <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Hasta</label>
             <div className="relative">
               <input 
@@ -542,7 +544,7 @@ export default function ConsultarFacturas() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         title="Descargar documentos adjuntos"
-                        onClick={() => void downloadDocumentosConsolidados(row.facturaId, row.idTramite, 'funcionario')}
+                        onClick={() => downloadDocumentosConsolidadosPdf(row.facturaId, row.idTramite, 'funcionario')}
                         className="w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100 transition-all"
                       >
                         <Download className="w-4 h-4" />

@@ -178,11 +178,24 @@ export function useDireccionFinancieraHome() {
     });
   }, [facturas, docsMap]);
 
+  const ESTADOS_DF = new Set([
+    'Aprobada Auditoría',
+    'Revisada Dir. Financiera',
+    'Cargada',
+    'Enviada Rectoría',
+    'Autorizada',
+    'Rechazada por Rectoría',
+    'Devuelta',
+    'Pago Aplicado',
+    'Pagada',
+  ]);
+
   const actividadesRecientes = useMemo<SharedFacturaDetail[]>(() => {
-    const recientes = facturas
+    return facturas
+      .filter(f => ESTADOS_DF.has(f.estado))
       .slice()
       .sort((a, b) => new Date(b.fecha_modificacion).getTime() - new Date(a.fecha_modificacion).getTime())
-      .slice(0, 5)
+      .slice(0, 30)
       .map(f => {
         const docs = docsMap[f.id] ?? [];
         return {
@@ -196,7 +209,6 @@ export function useDireccionFinancieraHome() {
           })),
         };
       });
-    return recientes;
   }, [facturas, docsMap]);
 
   const handleClickActividad = (actividad: SharedFacturaDetail) => {

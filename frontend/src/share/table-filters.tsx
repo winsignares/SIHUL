@@ -101,7 +101,7 @@ export default function TableFilters({
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+        <div className="space-y-2 min-w-0 flex-1 basis-0">
           <Label htmlFor="filter-numero" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
             <Search className="w-3 h-3 text-red-600" />
             {searchLabel}
@@ -126,7 +126,7 @@ export default function TableFilters({
         </div>
 
         {showProveedorFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-proveedor" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               Proveedor
@@ -148,7 +148,7 @@ export default function TableFilters({
         )}
 
         {showEstadoFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-estado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               Estado
@@ -170,7 +170,7 @@ export default function TableFilters({
         )}
 
         {orderKey && orderOptions.length > 0 && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor={`filter-${orderKey}`} className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               {orderLabel}
@@ -191,7 +191,7 @@ export default function TableFilters({
         )}
 
         {showAreaFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-area" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               Area Solicitante
@@ -213,7 +213,7 @@ export default function TableFilters({
         )}
 
         {showFechaFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-fecha-inicio" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Calendar className="w-3 h-3 text-blue-600" />
               Desde
@@ -229,7 +229,7 @@ export default function TableFilters({
         )}
 
         {showFechaFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-fecha-fin" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Calendar className="w-3 h-3 text-blue-600" />
               Hasta
@@ -245,7 +245,7 @@ export default function TableFilters({
         )}
 
         {showMontoFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-monto-min" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Filter className="w-3 h-3 text-emerald-600" />
               Monto Minimo
@@ -263,7 +263,7 @@ export default function TableFilters({
         )}
 
         {showMontoFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-monto-max" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Filter className="w-3 h-3 text-emerald-600" />
               Monto Maximo

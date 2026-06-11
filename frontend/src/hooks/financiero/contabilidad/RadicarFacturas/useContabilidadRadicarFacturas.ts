@@ -63,6 +63,7 @@ export function useContabilidadRadicarFacturas() {
   const [consecutivoOperacion, setConsecutivoOperacion] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
+  const [errorConsecutivo, setErrorConsecutivo] = useState<string | null>(null);
 
   const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,6 +175,28 @@ export function useContabilidadRadicarFacturas() {
     setObservaciones('');
     setNumeroOperacionContable('');
     setConsecutivoOperacion('');
+    setErrorConsecutivo(null);
+  };
+
+  const validarConsecutivo = (valor: string) => {
+    setConsecutivoOperacion(valor);
+    if (!valor.trim()) {
+      setErrorConsecutivo(null);
+      return;
+    }
+    const duplicada = facturas.find(
+      (f) =>
+        f.consecutivo_operacion &&
+        f.consecutivo_operacion.trim() === valor.trim() &&
+        f.id !== facturaSeleccionada?.id
+    );
+    if (duplicada) {
+      setErrorConsecutivo(
+        `El consecutivo "${valor}" ya está registrado en la factura ${duplicada.numero_factura} (Radicado: ${duplicada.numero_radicado ?? duplicada.consecutivo_operacion}). El consecutivo debe ser único.`
+      );
+    } else {
+      setErrorConsecutivo(null);
+    }
   };
 
   const confirmarRadicacion = async () => {
@@ -194,6 +217,11 @@ export function useContabilidadRadicarFacturas() {
       return;
     }
 
+    if (errorConsecutivo) {
+      showToast('err', errorConsecutivo);
+      return;
+    }
+
     const docs = docsMap[facturaSeleccionada.id] ?? [];
     if (!validarDocumentosCompletos(docs)) {
       const faltantes = obtenerDocumentosFaltantes(docs);
@@ -211,8 +239,11 @@ export function useContabilidadRadicarFacturas() {
       showToast('ok', `Factura ${facturaSeleccionada.numero_factura} radicada exitosamente.`);
       cancelarAccion();
       cargarFacturas();
-    } catch {
-      showToast('err', 'Error al radicar la factura. Intente de nuevo.');
+    } catch (err: unknown) {
+      const msg =
+        (err as { message?: string })?.message ??
+        'Error al radicar la factura. Intente de nuevo.';
+      showToast('err', msg);
     } finally {
       setProcesando(false);
     }
@@ -266,6 +297,8 @@ export function useContabilidadRadicarFacturas() {
     setObservaciones,
     setNumeroOperacionContable,
     setConsecutivoOperacion,
+    validarConsecutivo,
+    errorConsecutivo,
     setFiltros,
     setModalFactura,
     cargarFacturas,

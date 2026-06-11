@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+/*  */import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../share/card';
 import { Button } from '../../../share/button';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import TableFilters, { type TableFilterValues } from '../../../share/table-filters';
+import { Input } from '../../../share/input';
+import { Label } from '../../../share/label';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { SlaIndicator } from '../../../share/sla-indicator';
@@ -18,9 +19,12 @@ import {
   Download,
   Eye,
   FileOutput,
+  Filter,
   FolderOpen,
   Loader2,
+  Search,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
@@ -67,7 +71,7 @@ const normalizeEstado = (value?: string) =>
 
 const isComprobanteFlow = (estado?: string) => {
   const normalized = normalizeEstado(estado);
-  return normalized === 'pagada' || normalized === 'pago aplicado';
+  return normalized === 'pagada' || normalized === 'pago aplicado' || normalized === 'autorizada';
 };
 
 const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
@@ -100,17 +104,17 @@ export default function GenerarComprobanteEgreso() {
 
   const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail | null>(null);
 
-  const [filtros, setFiltros] = useState<TableFilterValues>({
+  const [filtros, setFiltros] = useState({
     numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
+    numeroRadicado: '',
+    numeroProcesoPago: '',
     fechaInicio: '',
     fechaFin: '',
-    montoMin: '',
-    montoMax: '',
     orden: 'antiguos',
   });
+
+  const filtrosActivos = [filtros.numeroFactura, filtros.numeroRadicado, filtros.numeroProcesoPago, filtros.fechaInicio, filtros.fechaFin].filter(Boolean).length;
+  const FILTROS_INICIALES = { numeroFactura: '', numeroRadicado: '', numeroProcesoPago: '', fechaInicio: '', fechaFin: '', orden: 'antiguos' };
 
   const loadFacturas = useCallback(async () => {
     const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
@@ -140,6 +144,8 @@ export default function GenerarComprobanteEgreso() {
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasComprobante.filter((factura) => {
       if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.numeroRadicado && !factura.numeroRadicado.toLowerCase().includes(filtros.numeroRadicado.toLowerCase())) return false;
+      if (filtros.numeroProcesoPago && !factura.numeroProcesoPago.toLowerCase().includes(filtros.numeroProcesoPago.toLowerCase())) return false;
       if (filtros.fechaInicio && factura.fechaPagoAplicado < filtros.fechaInicio) return false;
       if (filtros.fechaFin && factura.fechaPagoAplicado > filtros.fechaFin) return false;
       return true;
@@ -193,9 +199,9 @@ export default function GenerarComprobanteEgreso() {
               <FileOutput className="h-8 w-8 text-amber-300" />
             </div>
             <div>
-              <h1 className="text-3xl font-black tracking-tight">Factura Pagada</h1>
+              <h1 className="text-3xl font-black tracking-tight">Factura Autorizada / Pagada</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-red-50/90">
-                Consulta facturas pagadas y descarga el expediente completo con todos los documentos cargados en el proceso.
+                Facturas autorizadas por Rectoria y pagadas. Descarga el expediente completo con todos los documentos del proceso.
               </p>
             </div>
           </div>
@@ -203,19 +209,93 @@ export default function GenerarComprobanteEgreso() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-slate-800">Filtros y orden de facturas pagadas</CardTitle>
-            <CardDescription>Consulta pagos aplicados y expedientes pagados con la trazabilidad documental del flujo.</CardDescription>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                  <Filter className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-slate-800">Filtros de Busqueda</CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {filtrosActivos > 0 ? `${filtrosActivos} filtro(s) activo(s)` : 'Sin filtros aplicados'}
+                  </p>
+                </div>
+              </div>
+              {filtrosActivos > 0 && (
+                <Button type="button" variant="outline" onClick={() => setFiltros(FILTROS_INICIALES)} className="border-red-300 text-red-700 hover:bg-red-50">
+                  <X className="w-4 h-4 mr-2" />Limpiar
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <TableFilters
-              filters={filtros}
-              onFilterChange={(updated) => setFiltros(updated)}
-              showFechaFilter
-              showEstadoFilter={false}
-              orderKey="orden"
-              orderLabel="Ordenar lista"
-              orderOptions={[...ORDER_OPTIONS]}
-            />
+            <div className="flex flex-wrap items-end gap-3">
+              {/* N° Factura */}
+              <div className="space-y-2 min-w-0 flex-1 basis-40">
+                <Label htmlFor="f-factura" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />N° Factura
+                </Label>
+                <div className="relative">
+                  <Input id="f-factura" placeholder="FAC-2026-001" value={filtros.numeroFactura}
+                    onChange={(e) => setFiltros((p) => ({ ...p, numeroFactura: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600" />
+                  {filtros.numeroFactura && <button onClick={() => setFiltros((p) => ({ ...p, numeroFactura: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+                </div>
+              </div>
+              {/* N° Radicado */}
+              <div className="space-y-2 min-w-0 flex-1 basis-40">
+                <Label htmlFor="f-radicado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />N° Radicado
+                </Label>
+                <div className="relative">
+                  <Input id="f-radicado" placeholder="RAD-2026-001" value={filtros.numeroRadicado}
+                    onChange={(e) => setFiltros((p) => ({ ...p, numeroRadicado: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600" />
+                  {filtros.numeroRadicado && <button onClick={() => setFiltros((p) => ({ ...p, numeroRadicado: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+                </div>
+              </div>
+              {/* N° Proceso Pago */}
+              <div className="space-y-2 min-w-0 flex-1 basis-40">
+                <Label htmlFor="f-proceso" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />N° Proceso Pago
+                </Label>
+                <div className="relative">
+                  <Input id="f-proceso" placeholder="PP-2026-001" value={filtros.numeroProcesoPago}
+                    onChange={(e) => setFiltros((p) => ({ ...p, numeroProcesoPago: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600" />
+                  {filtros.numeroProcesoPago && <button onClick={() => setFiltros((p) => ({ ...p, numeroProcesoPago: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+                </div>
+              </div>
+              {/* Desde */}
+              <div className="space-y-2 min-w-0 flex-1 basis-36">
+                <Label htmlFor="f-desde" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-blue-600" />Desde
+                </Label>
+                <Input id="f-desde" type="date" value={filtros.fechaInicio}
+                  onChange={(e) => setFiltros((p) => ({ ...p, fechaInicio: e.target.value }))}
+                  className="border-slate-300 focus:border-blue-600 focus:ring-blue-600" />
+              </div>
+              {/* Hasta */}
+              <div className="space-y-2 min-w-0 flex-1 basis-36">
+                <Label htmlFor="f-hasta" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-blue-600" />Hasta
+                </Label>
+                <Input id="f-hasta" type="date" value={filtros.fechaFin}
+                  onChange={(e) => setFiltros((p) => ({ ...p, fechaFin: e.target.value }))}
+                  className="border-slate-300 focus:border-blue-600 focus:ring-blue-600" />
+              </div>
+              {/* Ordenar */}
+              <div className="space-y-2 min-w-0 flex-1 basis-36">
+                <Label htmlFor="f-orden" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />Ordenar lista
+                </Label>
+                <select id="f-orden" value={filtros.orden}
+                  onChange={(e) => setFiltros((p) => ({ ...p, orden: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-300 bg-white text-slate-700 text-sm focus:border-red-600 focus:outline-none">
+                  {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -253,7 +333,7 @@ export default function GenerarComprobanteEgreso() {
                   <TableRow className="bg-slate-50">
                     <TableHead className="font-semibold text-slate-700">Factura</TableHead>
                     <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Soporte de Pago</TableHead>
+                    <TableHead className="font-semibold text-slate-700">N° Proceso Pago</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                     <TableHead className="font-semibold text-slate-700">SLA</TableHead>
@@ -300,11 +380,9 @@ export default function GenerarComprobanteEgreso() {
                               {displayRadicado(factura.numeroRadicado)}
                             </Badge>
                           </TableCell>
-                          {/* Soporte de Pago */}
+                          {/* N° Proceso Pago */}
                           <TableCell>
-                            <Badge className={factura.estado === 'Pagada' ? 'border border-blue-200 bg-blue-50 text-blue-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}>
-                              {displayText(factura.soportePago)}
-                            </Badge>
+                            <span className="font-mono text-sm text-slate-700">{displayText(factura.numeroProcesoPago)}</span>
                           </TableCell>
                           {/* Proveedor / NIT */}
                           <TableCell>

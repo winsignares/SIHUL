@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
 import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Button } from '../../../share/button';
@@ -8,7 +8,7 @@ import { AlertCircle, Eye, Clock, Calculator, FileText, CheckCircle2, RefreshCw,
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useContabilidadMisPendientes } from '../../../hooks/financiero/contabilidad';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
-import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { downloadDocumentosConsolidadosPdf, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 import { Pagination } from '../../../components/common/Pagination';
 
 const ITEMS_PER_PAGE = 5;
@@ -29,6 +29,8 @@ export default function MisPendientes() {
     vencidasCount,
     proximasVencerCount,
     enTiempoCount,
+    orden,
+    setOrden,
   } = useContabilidadMisPendientes();
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(facturas.length / ITEMS_PER_PAGE));
@@ -62,7 +64,7 @@ export default function MisPendientes() {
               <div>
                 <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
                 <p className="text-red-100 text-sm">
-                  Facturas Registradas pendientes de radicación — SLA: {SLA_DIAS} días
+                  Facturas Registradas pendientes de radicar — SLA: {SLA_DIAS} días
                 </p>
               </div>
             </div>
@@ -133,10 +135,17 @@ export default function MisPendientes() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-slate-800">Facturas Pendientes de Radicación</CardTitle>
-              <CardDescription>
-                Solo se muestran facturas en estado <em>Registrada</em> con N° Radicado <em>Sin Asignar</em>
-              </CardDescription>
+              <div className="flex items-center justify-between gap-4">
+                <CardTitle className="text-slate-800">Facturas Pendientes</CardTitle>
+                <select
+                  value={orden}
+                  onChange={(e) => setOrden(e.target.value as 'recientes' | 'antiguos')}
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-slate-900/20 focus:border-slate-500 transition-all"
+                >
+                  <option value="antiguos">Más antiguas primero</option>
+                  <option value="recientes">Más recientes primero</option>
+                </select>
+              </div>
             </CardHeader>
             <CardContent>
               {cargando ? (
@@ -165,9 +174,8 @@ export default function MisPendientes() {
                         <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                         <TableHead className="font-semibold text-slate-700">Estado</TableHead>
                         <TableHead className="font-semibold text-slate-700">Días</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Acción</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Documentos</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Detalle</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Próximo Paso</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -227,30 +235,31 @@ export default function MisPendientes() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  title="Ver documentos"
                                   onClick={() => void openDocumentosConsolidados(factura.id, 'contabilidad')}
                                   className="border-blue-300 text-blue-700 hover:bg-blue-50"
                                 >
-                                  <Eye className="w-4 h-4 mr-1" /> Ver
+                                  <Eye className="w-4 h-4" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                                  title="Descargar documentos adjuntos"
+                                  onClick={() => downloadDocumentosConsolidadosPdf(factura.id, factura.numero_factura, 'contabilidad')}
                                   className="border-slate-300 text-slate-700 hover:bg-slate-100"
                                 >
-                                  <Download className="w-4 h-4 mr-1" /> Descargar
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  title="Ver detalle"
+                                  onClick={() => openDetalle(factura)}
+                                  className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                                >
+                                  <Eye className="w-4 h-4" />
                                 </Button>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openDetalle(factura)}
-                                className="border-slate-300 text-slate-700 hover:bg-slate-100"
-                              >
-                                <Eye className="w-4 h-4 mr-1" /> Ver
-                              </Button>
                             </TableCell>
                           </TableRow>
                         );

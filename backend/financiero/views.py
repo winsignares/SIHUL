@@ -653,7 +653,6 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'Revisada Dir. Financiera': ['Dirección Financiera'],
             'Cargada': ['Rectoría'],
             'Enviada Rectoría': ['Rectoría'],
-            'Autorizada': ['Tesorería'],
             'Rechazada por Rectoría': ['Dirección Financiera'],
             'Devuelta': ['Dirección Financiera'],
             'Pago Aplicado': ['Tesorería'],
@@ -792,15 +791,20 @@ class FacturaViewSet(viewsets.ModelViewSet):
         )
 
         if allowed_roles is None:
-            return list(queryset)
+            documentos = list(queryset)
+        else:
+            documentos = []
+            for documento in queryset:
+                usuario = getattr(documento, 'cargado_por', None)
+                rol = (getattr(getattr(usuario, 'rol', None), 'nombre', '') or '').strip().lower()
+                if not rol or rol in allowed_roles:
+                    documentos.append(documento)
 
-        documentos = []
-        for documento in queryset:
-            usuario = getattr(documento, 'cargado_por', None)
-            rol = (getattr(getattr(usuario, 'rol', None), 'nombre', '') or '').strip().lower()
-            if not rol or rol in allowed_roles:
-                documentos.append(documento)
-        return documentos
+        # Deduplicar por tipo_documento: conservar solo el más reciente de cada tipo
+        seen_tipos = {}
+        for doc in documentos:
+            seen_tipos[doc.tipo_documento] = doc  # sobrescribe con el más reciente (orden ASC por fecha)
+        return list(seen_tipos.values())
 
     def _build_pdf_page(self, titulo, lineas):
         output = BytesIO()
@@ -1073,6 +1077,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     merged = self._append_pdf_bytes(writer, raw_bytes)
                 elif lower_name.endswith(('.png', '.jpg', '.jpeg')) or lower_mime in {'image/png', 'image/jpeg'}:
                     merged = self._append_image_bytes_as_pdf(writer, raw_bytes)
+                elif lower_name.endswith('.txt') or lower_mime in {'text/plain', 'application/octet-stream'}:
+                    try:
+                        texto = raw_bytes.decode('utf-8', errors='replace')
+                        lineas = [f'Archivo: {documento.nombre_archivo}', '']
+                        lineas += texto.splitlines()
+                        resumen = self._build_pdf_page('Archivo Plano SEVEN', lineas)
+                        merged = self._append_pdf_bytes(writer, resumen)
+                    except Exception:
+                        pass
 
             if not merged:
                 resumen = self._build_pdf_page(
@@ -1204,6 +1217,17 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        duplicado = models.Factura.objects.filter(
+            consecutivo_operacion=consecutivo_operacion
+        ).exclude(pk=factura.pk).first()
+        if duplicado:
+            return Response(
+                {
+                    'error': f'El consecutivo "{consecutivo_operacion}" ya está registrado en la factura {duplicado.numero_factura} (Radicado: {duplicado.numero_radicado}). El consecutivo debe ser único en el sistema.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         factura.estado = 'Radicada'
         factura.fecha_radicacion = timezone.now().date()
         factura.fecha_causacion = timezone.now().date()
@@ -1240,8 +1264,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura = self.get_object()
         scope = request.query_params.get('scope') or self._scope_documental_por_rol(request)
         descargar = (request.query_params.get('descargar') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
+        doc_id = request.query_params.get('doc_id')
 
         documentos = self._documentos_filtrados_por_scope(factura, scope)
+        if doc_id:
+            documentos = [d for d in documentos if str(d.id) == str(doc_id)]
         content = self._pdf_consolidado_documentos(factura, documentos, scope)
 
         filename = f'Documentos_{factura.numero_factura}_{scope}.pdf'
@@ -1399,10 +1426,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
         observaciones = (request.data.get('observaciones') or '').strip()
         estado_anterior = factura.estado
 
-        factura.estado = ESTADO_AUTORIZADA
-        factura.fecha_autorizacion = timezone.now().date()
-        factura.etapa_actual = 'Autorización Rectoría'
-        factura.fecha_inicio_etapa = factura.fecha_autorizacion
+        hoy = timezone.now().date()
+
+        factura.estado = 'Pago Aplicado'
+        factura.fecha_autorizacion = hoy
+        factura.fecha_pago_aplicado = hoy
+        factura.fecha_comprobante = hoy
+        factura.etapa_actual = 'Pago Aplicado'
+        factura.fecha_inicio_etapa = hoy
         factura.usuario_responsable = request.user
 
         if observaciones:
@@ -1414,16 +1445,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         models.HistorialFactura.objects.create(
             factura=factura,
-            accion='Factura autorizada por rectoría',
+            accion='Factura autorizada por Rectoría — pago aplicado',
             estado_anterior=estado_anterior,
-            estado_nuevo=ESTADO_AUTORIZADA,
+            estado_nuevo='Pago Aplicado',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, estado_anterior, ESTADO_AUTORIZADA)
+        self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
 
         return Response(
             serializers.FacturaDetailSerializer(factura).data,
@@ -1653,6 +1684,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 {'error': 'Debe registrar el número de proceso de pago o un archivo plano generado'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if numero_proceso_pago:
+            duplicado = models.Factura.objects.filter(
+                numero_proceso_pago=numero_proceso_pago
+            ).exclude(pk=factura.pk).first()
+            if duplicado:
+                return Response(
+                    {'error': f'El número de proceso de pago "{numero_proceso_pago}" ya está registrado en la factura {duplicado.numero_factura}. Cada proceso de pago debe ser único.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         estado_anterior = factura.estado
 

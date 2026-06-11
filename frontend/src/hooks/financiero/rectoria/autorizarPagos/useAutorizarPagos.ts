@@ -41,13 +41,8 @@ export function useAutorizarPagos() {
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
-    fechaInicio: '',
-    fechaFin: '',
-    montoMin: '',
-    montoMax: '',
+    numeroRadicado: '',
+    numeroProcesoPago: '',
     orden: 'antiguos',
   });
 
@@ -125,10 +120,8 @@ export function useAutorizarPagos() {
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasAutorizacion.filter((factura) => {
       if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-      if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
-      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-      if (filtros.fechaInicio && factura.fechaEnvioRectoria < filtros.fechaInicio) return false;
-      if (filtros.fechaFin && factura.fechaEnvioRectoria > filtros.fechaFin) return false;
+      if (filtros.numeroRadicado && !(factura.numeroRadicado?.toLowerCase().includes(filtros.numeroRadicado.toLowerCase()) ?? false)) return false;
+      if (filtros.numeroProcesoPago && !(factura.numeroProcesoPago?.toLowerCase().includes(filtros.numeroProcesoPago.toLowerCase()) ?? false)) return false;
       return true;
     });
 
@@ -171,8 +164,8 @@ export function useAutorizarPagos() {
   const procesarAutorizacion = async () => {
     if (!facturaSeleccionada?.facturaId) return;
 
-    if (accion === 'rechazar' && (!motivo.trim() || motivo.trim().length < 10)) {
-      showToast('err', 'Debe registrar un motivo de rechazo con minimo 10 caracteres.');
+    if (!motivo.trim() || motivo.trim().length < 10) {
+      showToast('err', 'Las observaciones son obligatorias y deben tener minimo 10 caracteres.');
       return;
     }
 
@@ -180,7 +173,7 @@ export function useAutorizarPagos() {
 
     try {
       if (accion === 'aprobar') {
-        await facturasService.autorizarRectoria(facturaSeleccionada.facturaId, motivo.trim() || undefined);
+        await facturasService.autorizarRectoria(facturaSeleccionada.facturaId, motivo.trim());
         showToast('ok', `Pago autorizado por Rectoria: ${facturaSeleccionada.numeroFactura}.`);
       } else {
         await facturasService.rechazarRectoria(facturaSeleccionada.facturaId, motivo.trim());

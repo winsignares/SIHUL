@@ -63,6 +63,8 @@ export default function RadicarFacturas() {
     setObservaciones,
     setNumeroOperacionContable,
     setConsecutivoOperacion,
+    validarConsecutivo,
+    errorConsecutivo,
     setFiltros,
     setModalFactura,
     cargarFacturas,
@@ -152,12 +154,18 @@ export default function RadicarFacturas() {
                   <span className="text-slate-400 font-bold text-lg">-</span>
                   <input
                     value={consecutivoOperacion}
-                    onChange={(e) => setConsecutivoOperacion(e.target.value)}
+                    onChange={(e) => validarConsecutivo(e.target.value)}
                     placeholder="Consecutivo"
-                    className="flex-1 h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
+                    className={`flex-1 h-10 rounded-md border px-3 text-sm text-slate-800 focus:outline-none ${errorConsecutivo ? 'border-red-500 focus:border-red-600 bg-red-50' : 'border-slate-300 focus:border-green-600'}`}
                   />
                 </div>
-                {(numeroOperacionContable || consecutivoOperacion) && (
+                {errorConsecutivo && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-300 rounded-md px-3 py-2 mt-1">
+                    <span className="text-red-600 mt-0.5 shrink-0">⚠</span>
+                    <p className="text-xs text-red-700 font-medium">{errorConsecutivo}</p>
+                  </div>
+                )}
+                {!errorConsecutivo && (numeroOperacionContable || consecutivoOperacion) && (
                   <p className="text-xs text-slate-500">
                     Radicado: <span className="font-mono font-semibold text-slate-700">{numeroOperacionContable || '…'}-{consecutivoOperacion || '…'}</span>
                   </p>

@@ -20,15 +20,19 @@ import {
   ChevronRight,
   ListChecks,
   XCircle,
+  Search,
+  Filter,
+  X,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Textarea } from '../../../share/textarea';
-import TableFilters from '../../../share/table-filters';
+import { Input } from '../../../share/input';
+import { Label } from '../../../share/label';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { useRevisarPagos } from '../../../hooks/financiero/direccion_financiera';
 import { displayRadicado, displayText } from '../../../share/field-placeholders';
-import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { downloadDocumentosConsolidadosPdf, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 const ITEMS_POR_PAGINA = 5;
 const ORDER_OPTIONS = [
@@ -148,23 +152,39 @@ export default function RevisarPagos() {
 
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-slate-800">Filtros y orden de revision</CardTitle>
-          <CardDescription>Consulta unicamente facturas en etapa de cargue pendiente de Direccion Financiera, priorizadas por antiguedad o criticidad SLA.</CardDescription>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-slate-800">Filtros y orden de revision</CardTitle>
+              <CardDescription>Consulta unicamente facturas en etapa de cargue pendiente de Direccion Financiera, priorizadas por antiguedad o criticidad SLA.</CardDescription>
+            </div>
+            {(filtros.numeroFactura || filtros.numeroRadicado || filtros.numeroProcesoPago) && (
+              <Button size="sm" variant="outline" onClick={() => setFiltros({ numeroFactura: '', numeroRadicado: '', numeroProcesoPago: '', orden: filtros.orden })} className="border-red-200 text-red-600 hover:bg-red-50 gap-1">
+                <X className="h-3 w-3" /> Limpiar
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <TableFilters
-            filters={filtros}
-            onFilterChange={setFiltros}
-            showProveedorFilter={false}
-            showAreaFilter={false}
-            showFechaFilter={false}
-            showEstadoFilter={false}
-            orderKey="orden"
-            orderLabel="Ordenar lista"
-            orderOptions={ORDER_OPTIONS}
-            searchLabel="Numero Factura / Radicado / N° Proceso Pago"
-            searchPlaceholder="Buscar por factura, radicado o N° proceso..."
-          />
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Factura</Label>
+              <Input placeholder="Ej: FAC-2026-001" value={filtros.numeroFactura} onChange={(e) => setFiltros((p) => ({ ...p, numeroFactura: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Radicado</Label>
+              <Input placeholder="Ej: RAD-2026-001" value={filtros.numeroRadicado} onChange={(e) => setFiltros((p) => ({ ...p, numeroRadicado: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Proceso Pago</Label>
+              <Input placeholder="Ej: PRC-2026-001" value={filtros.numeroProcesoPago} onChange={(e) => setFiltros((p) => ({ ...p, numeroProcesoPago: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Filter className="h-3 w-3" /> Ordenar lista</Label>
+              <select value={filtros.orden} onChange={(e) => setFiltros((p) => ({ ...p, orden: e.target.value }))} className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700">
+                {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -291,7 +311,7 @@ export default function RevisarPagos() {
                               variant="outline"
                               onClick={() => {
                                 if (!factura.facturaId) return;
-                                void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'direccion_financiera');
+                                downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'direccion_financiera');
                               }}
                               disabled={!factura.facturaId}
                               className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50"

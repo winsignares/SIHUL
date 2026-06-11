@@ -32,9 +32,9 @@ export function openUrlInNewTab(fetchFn: () => Promise<Blob>, fileName?: string)
 }
 
 // Ver todos los documentos consolidados en nueva pestaña
-export function openDocumentosConsolidados(facturaId: number, scope?: string) {
+export function openDocumentosConsolidados(facturaId: number, scope?: string, docId?: string) {
   openUrlInNewTab(() =>
-    facturasService.getDocumentosConsolidados(facturaId, { scope, descargar: false })
+    facturasService.getDocumentosConsolidados(facturaId, { scope, descargar: false, docId })
   );
 }
 
