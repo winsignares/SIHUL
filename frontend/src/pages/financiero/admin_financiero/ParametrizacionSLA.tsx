@@ -87,60 +87,6 @@ export default function ParametrizacionSLAReal() {
       return { value: String(day), label: `Día ${day}` };
     });
 
-  const updateDiasMaximos = (id: number, value: number) => {
-    setParametros((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-
-        const diasMaximos = Math.max(1, value || 1);
-        let avisoDia = clampDia(getDiasPreview(p.dias_maximos, p.alerta_amarillo_porcentaje), diasMaximos);
-        const criticoDia = clampDia(getDiasPreview(p.dias_maximos, p.alerta_roja_porcentaje), diasMaximos);
-
-        if (avisoDia > criticoDia) {
-          avisoDia = criticoDia;
-        }
-
-        return {
-          ...p,
-          dias_maximos: diasMaximos,
-          alerta_amarillo_porcentaje: getPercentFromDays(avisoDia, diasMaximos),
-          alerta_roja_porcentaje: getPercentFromDays(criticoDia, diasMaximos),
-        };
-      }),
-    );
-  };
-
-  const updateAlertaDia = (id: number, tipo: 'preventivo' | 'critico', dayValue: string) => {
-    const selectedDay = parseInt(dayValue, 10);
-    setParametros((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-
-        const diasMaximos = Math.max(1, p.dias_maximos || 1);
-        let avisoDia = getDiasPreview(diasMaximos, p.alerta_amarillo_porcentaje);
-        let criticoDia = getDiasPreview(diasMaximos, p.alerta_roja_porcentaje);
-
-        if (tipo === 'preventivo') {
-          avisoDia = clampDia(selectedDay, diasMaximos);
-          if (avisoDia > criticoDia) {
-            criticoDia = avisoDia;
-          }
-        } else {
-          criticoDia = clampDia(selectedDay, diasMaximos);
-          if (criticoDia < avisoDia) {
-            avisoDia = criticoDia;
-          }
-        }
-
-        return {
-          ...p,
-          alerta_amarillo_porcentaje: getPercentFromDays(avisoDia, diasMaximos),
-          alerta_roja_porcentaje: getPercentFromDays(criticoDia, diasMaximos),
-        };
-      }),
-    );
-  };
-
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
@@ -183,42 +129,6 @@ export default function ParametrizacionSLAReal() {
     },
     [parametros],
   );
-
-  const totalDias = useMemo(
-    () => parametrosOrdenados.filter((p) => p.activo).reduce((acc, p) => acc + (p.dias_maximos || 0), 0),
-    [parametrosOrdenados],
-  );
-
-  const updateField = <K extends keyof ParametroSLA>(id: number, field: K, value: ParametroSLA[K]) => {
-    setParametros((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
-  };
-
-  const guardar = async (id: number) => {
-    const item = parametros.find((p) => p.id === id);
-    if (!item) return;
-    const avisoDia = getDiasPreview(item.dias_maximos, item.alerta_amarillo_porcentaje);
-    const criticoDia = getDiasPreview(item.dias_maximos, item.alerta_roja_porcentaje);
-    if (avisoDia > criticoDia) {
-      toast.error('El aviso preventivo no puede quedar después de la alerta crítica.');
-      return;
-    }
-
-    setSavingId(id);
-    try {
-      await parametrosSlaAdminService.actualizar(id, {
-        dias_maximos: item.dias_maximos,
-        alerta_amarillo_porcentaje: item.alerta_amarillo_porcentaje,
-        alerta_roja_porcentaje: item.alerta_roja_porcentaje,
-        activo: item.activo,
-        descripcion: item.descripcion,
-      });
-      toast.success(`SLA actualizado para ${item.etapa}.`);
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'No fue posible guardar el parámetro SLA.'));
-    } finally {
-      setSavingId(null);
-    }
-  };
 
   // Helpers que operan sobre editingItem en lugar de sobre parametros[]
   const editDiasPreview = editingItem ? getDiasPreview(editingItem.dias_maximos, editingItem.alerta_amarillo_porcentaje) : 0;

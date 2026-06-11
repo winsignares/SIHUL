@@ -13,7 +13,6 @@ import { proveedoresService } from '../../../services/financiero';
 import type { Proveedor } from '../../../models/financiero/core.models';
 import { userService } from '../../../services/users/authService';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
 
 type ProveedorUI = Proveedor & { usuario?: number | null };
 type ProveedorFormState = Partial<ProveedorUI> & { nuevaContrasena?: string };
@@ -124,17 +123,6 @@ export default function GestionProveedoresReal() {
     return [...base].sort((a, b) => (b.id || 0) - (a.id || 0));
   }, [search, proveedores, estadoFilter, tipoFilter, ciudadFilter]);
 
-  const resumenProveedores = useMemo(() => {
-    const activos = proveedores.filter((proveedor) => proveedor.estado === 'Activo').length;
-    return {
-      total: proveedores.length,
-      activos,
-      inactivos: proveedores.length - activos,
-      ciudades: ciudadesDisponibles.length,
-      filtrados: filtered.length,
-    };
-  }, [ciudadesDisponibles.length, filtered.length, proveedores]);
-
   const limpiarFiltros = () => {
     setSearch('');
     setEstadoFilter('all');
@@ -223,45 +211,6 @@ export default function GestionProveedoresReal() {
       setAccionProveedorId(null);
     }
   };
-
-  const exportarProveedoresExcel = useCallback(() => {
-    if (filtered.length === 0) {
-      toast.error('No hay proveedores para exportar con los filtros actuales.');
-      return;
-    }
-
-    const rows = filtered.map((proveedor) => ({
-      ID: proveedor.id || '',
-      'Razón Social': proveedor.razon_social || '',
-      NIT: proveedor.nit || '',
-      Tipo: proveedor.tipo_proveedor || '',
-      Estado: proveedor.estado || '',
-      Ciudad: proveedor.ciudad || '',
-      Email: proveedor.email || '',
-      Teléfono: proveedor.telefono || '',
-      Banco: proveedor.banco || '',
-      Cuenta: proveedor.numero_cuenta || '',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 8 },
-      { wch: 34 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 18 },
-      { wch: 30 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 20 },
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Proveedores');
-    XLSX.writeFile(workbook, `proveedores_financieros_${Date.now()}.xlsx`);
-    toast.success('Excel de proveedores exportado correctamente.');
-  }, [filtered]);
 
   return (
     <div className="space-y-6">

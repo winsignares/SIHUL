@@ -13,7 +13,6 @@ import { Edit3, PauseCircle, PlayCircle, Plus, Search, ShieldCheck, Trash2, User
 import { toast } from 'sonner';
 import { userService, rolService, type Usuario, type Rol } from '../../../services/users/authService';
 import { componenteRolService, componenteService, componenteUsuarioService, type Componente, type ComponenteRol, type ComponenteUsuario } from '../../../services/componentes/componentesAPI';
-import * as XLSX from 'xlsx';
 
 type PermisoTipo = 'VER' | 'EDITAR';
 
@@ -246,17 +245,6 @@ export default function GestionUsuariosReal() {
     });
   }, [search, usuariosFinancieros, rolesById, rolFilter, estadoFilter, sedeFilter]);
 
-  const resumenUsuarios = useMemo(() => {
-    const activos = usuariosFinancieros.filter((usuario) => usuario.activo).length;
-    return {
-      total: usuariosFinancieros.length,
-      activos,
-      inactivos: usuariosFinancieros.length - activos,
-      roles: rolesGestionables.length,
-      sedes: sedesDisponibles.length,
-    };
-  }, [rolesGestionables.length, sedesDisponibles.length, usuariosFinancieros]);
-
   const crearUsuario = async () => {
     const nombre = nuevoUsuario.nombre.trim();
     const correo = nuevoUsuario.correo.trim();
@@ -474,35 +462,6 @@ export default function GestionUsuariosReal() {
   const setPermisoComponenteEditar = (componenteId: number, permiso: PermisoTipo) => {
     setComponentesEditarUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
   };
-
-  const exportarUsuariosExcel = useCallback(() => {
-    if (usuariosFiltrados.length === 0) {
-      toast.error('No hay usuarios para exportar con los filtros actuales.');
-      return;
-    }
-
-    const rows = usuariosFiltrados.map((usuario) => ({
-      ID: usuario.id || '',
-      Usuario: usuario.nombre || '',
-      Correo: usuario.correo || '',
-      Rol: getRolNombre(usuario, rolesById),
-      Estado: usuario.activo ? 'Activo' : 'Inactivo',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 10 },
-      { wch: 34 },
-      { wch: 38 },
-      { wch: 24 },
-      { wch: 14 },
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
-    XLSX.writeFile(workbook, `usuarios_financieros_${Date.now()}.xlsx`);
-    toast.success('Excel de usuarios exportado correctamente.');
-  }, [usuariosFiltrados, rolesById]);
 
   const limpiarFiltros = () => {
     setSearch('');
