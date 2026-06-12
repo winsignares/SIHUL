@@ -72,8 +72,10 @@ export default defineConfig(() => {
       },
       hmr: {
         // En Docker puede necesitar clientPort si se hace port-forward distinto
-        port: Number(process.env.VITE_HMR_PORT) || undefined,
         host: process.env.VITE_HMR_HOST || undefined,
+        clientPort: Number(
+          process.env.VITE_HMR_CLIENT_PORT || process.env.VITE_HMR_PORT
+        ) || undefined,
       },
       watch: {
         // Polling mejora fiabilidad en volúmenes montados (Windows + Docker)
