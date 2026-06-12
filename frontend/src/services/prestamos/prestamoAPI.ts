@@ -1,4 +1,5 @@
 import { apiClient } from '../../core/apiClient';
+import { notifyPrestamosChanged } from './prestamosChanges';
 
 export interface RecursoPrestamo {
   recurso_id: number;
@@ -220,6 +221,7 @@ export const prestamoService = {
       recursos: prestamo.recursos || [],
       ...buildRecurrencePayload(prestamo)
     });
+    notifyPrestamosChanged();
     return { message: 'Préstamo creado', id: created.id ?? 0 };
   },
 
@@ -248,6 +250,7 @@ export const prestamoService = {
       ...(prestamo.recursos !== undefined ? { recursos: prestamo.recursos } : {}),
       ...buildRecurrencePayload(prestamo)
     });
+    notifyPrestamosChanged();
     return { message: 'Préstamo actualizado', id: updated.id ?? prestamo.id };
   },
 
@@ -257,6 +260,7 @@ export const prestamoService = {
    */
   eliminarPrestamo: async (id: number): Promise<{ message: string }> => {
     await apiClient.delete(`/prestamos/espacios/${id}/`);
+    notifyPrestamosChanged();
     return { message: 'Préstamo eliminado' };
   }
 };

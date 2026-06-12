@@ -1,4 +1,5 @@
 import { apiClient } from '../../core/apiClient';
+import { notifyPrestamosChanged } from './prestamosChanges';
 
 export interface SedeAPI {
     id: number;
@@ -303,6 +304,7 @@ export const prestamosPublicAPI = {
             fin_repeticion_fecha: solicitud.fin_repeticion_fecha,
             fin_repeticion_ocurrencias: solicitud.fin_repeticion_ocurrencias,
         });
+        notifyPrestamosChanged();
         return { message: 'Solicitud creada', id: created.id };
     },
 
@@ -364,6 +366,7 @@ export const prestamosPublicAPI = {
             fin_repeticion_fecha: payload.fin_repeticion_fecha,
             fin_repeticion_ocurrencias: payload.fin_repeticion_ocurrencias,
         });
+        notifyPrestamosChanged();
         return { message: 'Solicitud actualizada', id: updated.id };
     },
 
@@ -407,6 +410,7 @@ export const prestamosPublicAPI = {
         id: number
     ): Promise<{ message: string }> => {
         await apiClient.delete(`/prestamos/publicos/${id}/`);
+        notifyPrestamosChanged();
         return { message: 'Solicitud eliminada' };
     }
 };

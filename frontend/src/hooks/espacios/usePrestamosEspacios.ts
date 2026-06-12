@@ -16,8 +16,13 @@ import {
   normalizePage
 } from '../gestionAcademica/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import {
+    PRESTAMOS_CHANGED_EVENT,
+    PRESTAMOS_CHANGED_STORAGE_KEY
+} from '../../services/prestamos/prestamosChanges';
 
 const PRESTAMOS_CACHE_KEY = 'prestamos-espacios-admin';
+const PRESTAMOS_SYNC_INTERVAL_MS = 15_000;
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object' && 'message' in error) {
@@ -70,19 +75,46 @@ export function usePrestamosEspacios() {
 
     // Cargar datos iniciales
     useEffect(() => {
-        loadData();
+        loadData({ force: true });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Recargar cuando la página vuelve a ser visible (e.g., usuario regresa de otra pestaña)
     useEffect(() => {
+        const reloadPrestamos = () => {
+            void loadData({ force: true });
+        };
+
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                loadData({ force: true });
+                reloadPrestamos();
             }
         };
+
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key === PRESTAMOS_CHANGED_STORAGE_KEY) {
+                reloadPrestamos();
+            }
+        };
+
+        const syncInterval = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                reloadPrestamos();
+            }
+        }, PRESTAMOS_SYNC_INTERVAL_MS);
+
+        window.addEventListener(PRESTAMOS_CHANGED_EVENT, reloadPrestamos);
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('focus', reloadPrestamos);
         document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.clearInterval(syncInterval);
+            window.removeEventListener(PRESTAMOS_CHANGED_EVENT, reloadPrestamos);
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', reloadPrestamos);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
