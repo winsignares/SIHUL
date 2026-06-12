@@ -20,6 +20,12 @@ contenedores, la red ni los volúmenes del stack principal `sihul`.
 Los puertos internos siguen siendo `5173`, `8000`, `8001` y `5432`.
 La subred puede cambiarse con `TEST_DOCKER_NETWORK_SUBNET` y
 `TEST_DOCKER_NETWORK_GATEWAY` en `.env.test`.
+En un servidor remoto, `TEST_PUBLIC_HOST` debe contener la IP o dominio que
+usan los navegadores, por ejemplo `10.4.100.146`. No debe configurarse como
+`localhost`, porque Vite usaría el equipo del usuario para el WebSocket HMR.
+Las cookies usan los nombres `sihul_test_sessionid` y
+`sihul_test_csrftoken`, evitando que el entorno de pruebas sobrescriba las
+sesiones del entorno principal aunque ambos compartan host.
 
 ## Preparación
 

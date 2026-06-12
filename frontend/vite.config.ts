@@ -43,7 +43,10 @@ function manualChunks(id: string) {
 // Configuración extendida para desarrollo local y dentro de Docker con HMR estable
 export default defineConfig(() => {
   // Leer URL del API desde variables de entorno
-  const apiUrl = process.env.VITE_API_URL || 'http://localhost:8000';
+  const apiUrl =
+    process.env.VITE_PROXY_TARGET ||
+    process.env.VITE_API_URL ||
+    'http://localhost:8000';
   
   // Remover trailing slash si existe
   const apiUrlClean = apiUrl.replace(/\/+$/, '');
