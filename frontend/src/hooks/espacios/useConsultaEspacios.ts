@@ -36,7 +36,7 @@ export function useConsultaEspacios() {
           facultad: user.facultad ? { id: user.facultad.id ?? null } : null
         }
       : undefined;
-  }, [user?.id, user?.rol, user?.facultad?.id]);
+  }, [user]);
 
   const datos = useConsultaEspaciosDatos({
     user: userParams,

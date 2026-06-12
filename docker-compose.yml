@@ -52,6 +52,10 @@ services:
       DB_NAME: mypostgresdb
       # Python
       PYTHONUNBUFFERED: "1"
+      # Almacenamiento compartido NAS Universidad Libre
+      FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT}
+      FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER}
+      FINANCIERO_DOCUMENT_NETWORK_PASSWORD: ${FINANCIERO_DOCUMENT_NETWORK_PASSWORD}
     depends_on:
       db:
         condition: service_healthy

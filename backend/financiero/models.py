@@ -16,16 +16,13 @@ def _safe_path_segment(value, fallback='sin-dato'):
 
 
 def documento_financiero_upload_to(instance, filename):
-    today = timezone.localdate()
     factura = getattr(instance, 'factura', None)
+    date = getattr(factura, 'fecha_recepcion', None) or timezone.localdate()
     factura_label = _safe_path_segment(
         getattr(factura, 'numero_factura', None) or (f'factura-{getattr(factura, "id", "")}' if factura else 'sin-factura')
     )
     safe_filename = _safe_path_segment(filename, fallback='documento')
-    return (
-        f'{today:%Y}/{today:%m}/semana-{today.isocalendar().week:02d}/'
-        f'{factura_label}/especificos/{safe_filename}'
-    )
+    return f'{date:%Y}/{date:%m}/{factura_label}/especificos/{safe_filename}'
 
 # ============================================================
 # 1. PROVEEDOR
@@ -331,6 +328,7 @@ class Factura(models.Model):
     tipo_documento = models.CharField(max_length=50, choices=TIPO_DOCUMENTO_CHOICES)
     descripcion = models.TextField()
     observaciones = models.TextField(blank=True, null=True)
+    identificacion_factura = models.CharField(max_length=500, blank=True, null=True)
 
     # Fechas del proceso
     fecha_factura = models.DateField()
@@ -401,7 +399,33 @@ class Factura(models.Model):
 
 
 # ============================================================
-# 6. DOCUMENTO ADJUNTO
+# 6. ITEM DE FACTURA
+# ============================================================
+class ItemFactura(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='items')
+    descripcion = models.CharField(max_length=500)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    valor_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+    porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    valor_subtotal = models.DecimalField(max_digits=18, decimal_places=2)
+    valor_iva = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    valor_total = models.DecimalField(max_digits=18, decimal_places=2)
+    orden = models.IntegerField(default=1)
+
+    class Meta:
+        indexes = [
+            Index(fields=['factura'], name='idx_item_factura'),
+        ]
+        ordering = ['orden']
+        verbose_name = 'Item de Factura'
+        verbose_name_plural = 'Items de Factura'
+
+    def __str__(self):
+        return f"{self.factura.numero_factura} - {self.descripcion}"
+
+
+# ============================================================
+# 7. DOCUMENTO ADJUNTO
 # ============================================================
 class DocumentoAdjunto(models.Model):
     TIPO_DOCUMENTO_CHOICES = [
@@ -436,6 +460,20 @@ class DocumentoAdjunto(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     fecha_carga = models.DateTimeField(auto_now_add=True)
     cargado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='documentos_cargados')
+
+    NAS_STATUS_STORED = 'stored'
+    NAS_STATUS_FAILED = 'failed'
+    NAS_STATUS_SKIPPED = 'skipped'
+    NAS_STATUS_DISABLED = 'disabled'
+
+    nas_relative_path = models.CharField(
+        max_length=500, blank=True, null=True,
+        help_text='Ruta relativa dentro del NAS (desde la raíz configurada). Ejemplo: facturas/2026/06/FAC-000123/documentos_especificos/001_rut.pdf',
+    )
+    nas_storage_status = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text='Estado de copia al NAS: stored, failed, skipped, disabled',
+    )
 
     class Meta:
         indexes = [

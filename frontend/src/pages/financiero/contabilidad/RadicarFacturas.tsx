@@ -37,7 +37,7 @@ import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { useContabilidadRadicarFacturas } from '../../../hooks/financiero/contabilidad';
 import { displayDate, displayText } from '../../../share/field-placeholders';
-import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { downloadDocumentosConsolidadosPdf, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
 
 export default function RadicarFacturas() {
   const {
@@ -63,6 +63,8 @@ export default function RadicarFacturas() {
     setObservaciones,
     setNumeroOperacionContable,
     setConsecutivoOperacion,
+    validarConsecutivo,
+    errorConsecutivo,
     setFiltros,
     setModalFactura,
     cargarFacturas,
@@ -141,25 +143,36 @@ export default function RadicarFacturas() {
                 <div><p className="text-slate-500">Área</p><p className="font-bold">{displayText(facturaSeleccionada.departamento?.nombre)}</p></div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Numero de operacion *</label>
-                <input
-                  value={numeroOperacionContable}
-                  onChange={(e) => setNumeroOperacionContable(e.target.value)}
-                  placeholder="Ej: OP-2026-A1"
-                  className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
-                />
+                <label className="text-sm font-semibold text-slate-700">Número de Radicado * <span className="font-normal text-slate-500">(Operación - Consecutivo)</span></label>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={numeroOperacionContable}
+                    onChange={(e) => setNumeroOperacionContable(e.target.value)}
+                    placeholder="Nro. Operación"
+                    className="flex-1 h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
+                  />
+                  <span className="text-slate-400 font-bold text-lg">-</span>
+                  <input
+                    value={consecutivoOperacion}
+                    onChange={(e) => validarConsecutivo(e.target.value)}
+                    placeholder="Consecutivo"
+                    className={`flex-1 h-10 rounded-md border px-3 text-sm text-slate-800 focus:outline-none ${errorConsecutivo ? 'border-red-500 focus:border-red-600 bg-red-50' : 'border-slate-300 focus:border-green-600'}`}
+                  />
+                </div>
+                {errorConsecutivo && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-300 rounded-md px-3 py-2 mt-1">
+                    <span className="text-red-600 mt-0.5 shrink-0">⚠</span>
+                    <p className="text-xs text-red-700 font-medium">{errorConsecutivo}</p>
+                  </div>
+                )}
+                {!errorConsecutivo && (numeroOperacionContable || consecutivoOperacion) && (
+                  <p className="text-xs text-slate-500">
+                    Radicado: <span className="font-mono font-semibold text-slate-700">{numeroOperacionContable || '…'}-{consecutivoOperacion || '…'}</span>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Consecutivo *</label>
-                <input
-                  value={consecutivoOperacion}
-                  onChange={(e) => setConsecutivoOperacion(e.target.value)}
-                  placeholder="Ej: CONS-00451"
-                  className="w-full h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-800 focus:border-green-600 focus:outline-none"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Observaciones (Opcional)</label>
+                <label className="text-sm font-semibold text-slate-700">Observaciones *</label>
                 <Textarea
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
@@ -225,11 +238,16 @@ export default function RadicarFacturas() {
             filters={filtros}
             onFilterChange={setFiltros}
             estados={[]}
-            proveedores={Array.from(new Set(facturas.map((f) => f.proveedor?.razon_social ?? '').filter(Boolean)))}
-            areas={Array.from(new Set(facturas.map((f) => f.departamento?.nombre ?? '').filter(Boolean)))}
             showFechaFilter={true}
-            showAreaFilter={true}
+            showAreaFilter={false}
             showEstadoFilter={false}
+            showProveedorFilter={false}
+            orderKey="orden"
+            orderLabel="Ordenar por"
+            orderOptions={[
+              { label: 'Más antiguos primero', value: 'asc' },
+              { label: 'Más recientes primero', value: 'desc' },
+            ]}
           />
         </CardContent>
       </Card>
@@ -335,7 +353,7 @@ export default function RadicarFacturas() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void downloadDocumentosConsolidados(factura.id, factura.numero_factura, 'contabilidad')}
+                              onClick={() => downloadDocumentosConsolidadosPdf(factura.id, factura.numero_factura, 'contabilidad')}
                               className="border-slate-300 text-slate-700 hover:bg-slate-50 p-2"
                               title="Descargar documentos"
                             >

@@ -150,6 +150,7 @@ export default function MisPendientes() {
 
         setSelectedDetail({
           id: String(factura.id),
+          facturaId: factura.id,
           numeroFactura: factura.numero_factura || `PEND-${factura.id}`,
           proveedor: factura.proveedor?.razon_social || 'Proveedor sin nombre',
           nit: factura.proveedor?.nit || 'Sin NIT',
@@ -187,6 +188,7 @@ export default function MisPendientes() {
         if (selectedRow) {
           setSelectedDetail({
             id: selectedRow.id,
+            facturaId: Number(selectedRow.id),
             numeroFactura: selectedRow.numeroFactura || `PEND-${selectedRow.id}`,
             proveedor: selectedRow.proveedor,
             valorTotal: selectedRow.valorTotal,
