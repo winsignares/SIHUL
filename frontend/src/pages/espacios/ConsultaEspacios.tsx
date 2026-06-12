@@ -117,6 +117,7 @@ export default function ConsultaEspacios() {
     mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
+    aplicarRangoPeriodo,
     vistaActual,
     setVistaActual,
     tiposEspacio,
@@ -199,17 +200,23 @@ export default function ConsultaEspacios() {
 
   const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
     const hoy = getHoyColombia();
+    const inicioPeriodo = new Date(`${periodo.fecha_inicio}T00:00:00`);
     const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
+    inicioPeriodo.setHours(0, 0, 0, 0);
     finPeriodo.setHours(0, 0, 0, 0);
 
-    if (hoy <= finPeriodo) {
-      return {
-        inicio: formatFechaLocalYYYYMMDD(hoy),
-        ajustadoPorDomingo: false
-      };
-    }
+    if (hoy > finPeriodo) return null;
 
-    return null;
+    const inicioValido = hoy < inicioPeriodo ? inicioPeriodo : hoy;
+    const finRango = new Date(inicioValido);
+    finRango.setDate(finRango.getDate() + 7);
+    const finValido = finRango > finPeriodo ? finPeriodo : finRango;
+
+    return {
+      inicio: formatFechaLocalYYYYMMDD(inicioValido),
+      fin: formatFechaLocalYYYYMMDD(finValido),
+      ajustadoPorDomingo: false
+    };
   };
 
   const aplicarPeriodoConIntervaloValido = (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
@@ -221,7 +228,7 @@ export default function ConsultaEspacios() {
 
     setPeriodoSeleccionado(periodo);
     setFilterPeriodo(periodo.id ?? null);
-    handleFechaInicioChange(intervalo.inicio);
+    aplicarRangoPeriodo(intervalo.inicio, intervalo.fin);
 
     if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
       setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
@@ -1493,6 +1500,22 @@ export default function ConsultaEspacios() {
                 <RefreshCw className="w-5 h-5 animate-spin" />
                 <span className="text-sm font-medium">Cargando espacios...</span>
               </div>
+            </div>
+          )}
+
+          {!loading && paginatedEspacios.length === 0 && (
+            <div className="col-span-full rounded-lg border border-slate-200 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-800">
+              <AlertCircle className="mx-auto mb-3 h-10 w-10 text-slate-400" />
+              <p className="font-medium text-slate-700 dark:text-slate-200">
+                {filterOcupacion === 'todos'
+                  ? 'No hay espacios que coincidan con los filtros seleccionados.'
+                  : 'No hay espacios que cumplan el filtro de ocupación seleccionado.'}
+              </p>
+              {periodoSeleccionado && (
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Los horarios y préstamos se están consultando únicamente para el periodo {periodoSeleccionado.nombre}.
+                </p>
+              )}
             </div>
           )}
 
