@@ -550,10 +550,20 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
                     else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
                 )
                 instance.save(update_fields=['nas_relative_path', 'nas_storage_status'])
+
+                # Eliminar copia local — el NAS es el almacenamiento permanente
+                if result.success and local_path.exists():
+                    try:
+                        local_path.unlink()
+                    except Exception:
+                        pass
             except Exception:
                 logger.exception(
                     '[SHARED_STORAGE] Error al copiar documento al NAS. documento_id=%s', instance.id
                 )
+
+        # Regenerar PDF unificado en NAS tras cada subida de documento
+        _regenerar_pdf_unificado_nas(instance.factura)
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -2273,6 +2283,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             etapa_destino = 'Devolución'
             responsable_destino = None
         
+        n_devoluciones = models.RechazoDevolucion.objects.filter(factura=factura).count()
+
         models.RechazoDevolucion.objects.create(
             factura=factura,
             tipo='Rechazo',
@@ -2287,6 +2299,17 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = responsable_destino
         factura.save()
+
+        # Archivar documentos del NAS cuando se devuelve al proveedor
+        if estado_destino == 'Devuelta':
+            from financiero.services.shared_storage_service import shared_storage
+            version_label = f'devolucion_{n_devoluciones + 1:02d}'
+            result = shared_storage.archive_documents_folder(factura, version_label)
+            if not result.success and result.error_code not in ('DISABLED', 'NETWORK_ERROR'):
+                logger.warning(
+                    '[SHARED_STORAGE] No se pudieron archivar documentos al devolver. factura_id=%s error=%s',
+                    factura.id, result.error_code,
+                )
 
         actualizar_sla_factura(factura)
 
@@ -2530,6 +2553,29 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ============================================================
+# HELPERS DE PDF — accesibles desde cualquier ViewSet
+# ============================================================
+
+def _regenerar_pdf_unificado_nas(factura):
+    """
+    Regenera el PDF unificado con todos los documentos actuales de la factura
+    y lo sube al NAS, reemplazando el anterior.
+    Se llama automáticamente cada vez que se agrega un documento.
+    """
+    try:
+        documentos = list(
+            models.DocumentoAdjunto.objects
+            .filter(factura=factura)
+            .select_related('cargado_por__rol')
+            .order_by('fecha_carga', 'id')
+        )
+        _vs = FacturaViewSet()
+        _vs._pdf_consolidado_documentos(factura, documentos, 'all')
+    except Exception:
+        logger.exception('[SHARED_STORAGE] Error regenerando PDF unificado. factura_id=%s', factura.id)
 
 
 # ============================================================

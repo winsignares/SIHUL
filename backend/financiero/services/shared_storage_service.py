@@ -146,6 +146,20 @@ class SharedStorageService:
         except Exception as exc:
             return self._handle_error(exc, 'copiar documento', factura)
 
+    def archive_documents_folder(self, factura, version_label: str) -> StorageResult:
+        """
+        Mueve documentos_especificos/ → documentos_anteriores/{version_label}/ en el NAS.
+        Llamar cuando la factura se devuelve al proveedor para corrección.
+        """
+        if not self.enabled:
+            logger.debug('%s NAS no configurado; omitiendo archivado.', _TAG)
+            return StorageResult(False, error_code='DISABLED', message='NAS no configurado')
+
+        try:
+            return self._do_archive_documents_folder(factura, version_label)
+        except Exception as exc:
+            return self._handle_error(exc, 'archivar documentos', factura)
+
     def copy_unified_pdf(self, content_bytes: bytes, factura, scope: str = 'all') -> StorageResult:
         """
         Guarda el PDF unificado en la raíz de la carpeta de la factura en el NAS.
@@ -215,6 +229,41 @@ class SharedStorageService:
         rel = f'facturas/{year}/{month:02d}/{factura_label}/documentos_especificos/{target_name}'
         logger.info('%s Documento copiado al NAS: %s', _TAG, rel)
         return StorageResult(True, nas_relative_path=rel, message='Documento guardado en NAS')
+
+    def _do_archive_documents_folder(self, factura, version_label: str) -> StorageResult:
+        smbclient, _ = self._get_smb_client()
+        server, share, base = _parse_unc(self.unc_root)
+
+        year, month = _factura_date_parts(factura)
+        factura_label = _factura_nas_label(factura)
+
+        src_smb = _smb_path(
+            server, share,
+            f'{base}/facturas/{year}/{month:02d}/{factura_label}/documentos_especificos',
+        )
+
+        if not smbclient.path.exists(src_smb):
+            logger.info('%s Sin documentos_especificos para archivar. factura_id=%s', _TAG, getattr(factura, 'id', '?'))
+            return StorageResult(True, message='Sin documentos para archivar')
+
+        safe_label = _safe_nas_segment(version_label)
+        dst_rel = f'{base}/facturas/{year}/{month:02d}/{factura_label}/documentos_anteriores/{safe_label}'
+        dst_smb = _smb_path(server, share, dst_rel)
+        smbclient.makedirs(dst_smb, exist_ok=True)
+
+        moved = 0
+        for entry in smbclient.scandir(src_smb):
+            src_file = f'{src_smb}/{entry.name}'
+            dst_file = f'{dst_smb}/{entry.name}'
+            with smbclient.open_file(src_file, mode='rb') as f:
+                data = f.read()
+            with smbclient.open_file(dst_file, mode='wb') as f:
+                f.write(data)
+            smbclient.remove(src_file)
+            moved += 1
+
+        logger.info('%s %d documentos archivados → %s', _TAG, moved, dst_rel)
+        return StorageResult(True, nas_relative_path=dst_rel, message=f'{moved} documentos archivados')
 
     def _do_copy_unified_pdf(self, content_bytes: bytes, factura, scope: str) -> StorageResult:
         smbclient, _ = self._get_smb_client()
