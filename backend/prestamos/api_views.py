@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from mysite.seccional_auth import SeccionalMixin
 from mysite.auth_helpers import get_role_name
@@ -138,3 +139,58 @@ class SupervisorEspaciosPermitidosPrestamosAPIView(SeccionalMixin, generics.List
 
     def get_permissions(self):
         return [permissions.IsAuthenticated()]
+
+
+class PublicAccessRecaptchaVerifyAPIView(APIView):
+    """
+    Verifica el token reCAPTCHA para acceso público.
+    Endpoint: POST /api/prestamos/public/recaptcha/
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from django.conf import settings
+        import requests
+
+        token = request.data.get('recaptcha_token') or request.data.get('token')
+        if not token:
+            return Response(
+                {'success': False, 'error': 'Token reCAPTCHA requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verificar con Google reCAPTCHA
+        secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', None)
+        if not secret_key:
+            return Response(
+                {'success': False, 'error': 'Servicio no configurado'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        try:
+            response = requests.post(
+                'https://www.google.com/recaptcha/api/siteverify',
+                data={'secret': secret_key, 'response': token},
+                timeout=10
+            )
+            result = response.json()
+
+            if result.get('success'):
+                return Response({
+                    'success': True,
+                    'score': result.get('score', 0.0),
+                    'action': result.get('action', ''),
+                    'challenge_ts': result.get('challenge_ts', ''),
+                    'hostname': result.get('hostname', '')
+                })
+            else:
+                return Response(
+                    {'success': False, 'error': 'Verificación fallida', 'codes': result.get('error-codes', [])},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except requests.RequestException as e:
+            return Response(
+                {'success': False, 'error': f'Error de comunicación: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )

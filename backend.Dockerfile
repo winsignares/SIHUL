@@ -36,10 +36,4 @@ COPY backend/ .
 EXPOSE 8000
 
 # Script de inicio con espera de base de datos, migraciones y carga de datos
-CMD until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER}; do \
-      echo "Waiting for database..."; \
-      sleep 2; \
-    done && \
-    echo "Database is ready!" && \
-    python manage.py migrate --fake-initial --noinput && \
-    python manage.py runserver 0.0.0.0:8000
+CMD sh /app/start.sh
