@@ -11,6 +11,7 @@ from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
+from mysite.auth_helpers import is_admin_global, is_admin_sistema
 
 
 @csrf_exempt
@@ -154,7 +155,9 @@ def list_horarios_extendidos(request):
     else:
         qs = qs.filter(estado='aprobado')
 
-    if user_sede and user_sede.seccional_id:
+    user_obj = getattr(request, 'user_obj', None)
+    is_admin = user_obj and (is_admin_global(user_obj) or is_admin_sistema(user_obj))
+    if user_sede and user_sede.seccional_id and not is_admin:
         qs = qs.filter(espacio__sede__seccional_id=user_sede.seccional_id)
 
     lst = []
@@ -244,8 +247,11 @@ def list_horarios_asignacion_espacios(request):
     if dia_semana:
         qs = qs.filter(dia_semana__iexact=dia_semana)
 
+    user_obj = getattr(request, 'user_obj', None)
+    is_admin = user_obj and (is_admin_global(user_obj) or is_admin_sistema(user_obj))
+
     seccional_filter_id = None
-    if user_sede and user_sede.seccional_id:
+    if user_sede and user_sede.seccional_id and not is_admin:
         seccional_filter_id = user_sede.seccional_id
 
     if seccional_filter_id:

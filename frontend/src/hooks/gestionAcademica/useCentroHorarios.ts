@@ -14,7 +14,7 @@ import { userService } from '../../services/users/authService';
 import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
 
-const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios';
+const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios-v2';
 const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 export interface Docente {
@@ -193,8 +193,8 @@ export function useCentroHorarios() {
 
             setLoading(true);
             
-            // Cargar horarios extendidos
-            const horariosResponse = await horarioService.listExtendidos();
+            // Cargar horarios extendidos (incluir pendientes para gestión)
+            const horariosResponse = await horarioService.listExtendidos({ includePending: true });
             setHorarios(horariosResponse.horarios);
 
             // Cargar horarios fusionados - procesamiento por lotes para evitar saturación

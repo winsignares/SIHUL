@@ -10,6 +10,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 from notificaciones.signals import crear_notificacion
+from mysite.auth_helpers import is_admin_global, is_admin_sistema
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -364,8 +365,10 @@ def list_horarios_extendidos(request):
     if request.method == 'GET':
         #obtener sede de usuario autenticado
         user_sede = getattr(request, 'sede', None)
+        user_obj = getattr(request, 'user_obj', None)
+        is_admin = user_obj and (is_admin_global(user_obj) or is_admin_sistema(user_obj))
         #validar que la sede tenga seccional para filtrar por seccional; si no tiene seccional, no se filtra
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_admin:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
         else:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
