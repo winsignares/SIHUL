@@ -16,16 +16,13 @@ def _safe_path_segment(value, fallback='sin-dato'):
 
 
 def documento_financiero_upload_to(instance, filename):
-    today = timezone.localdate()
     factura = getattr(instance, 'factura', None)
+    date = getattr(factura, 'fecha_recepcion', None) or timezone.localdate()
     factura_label = _safe_path_segment(
         getattr(factura, 'numero_factura', None) or (f'factura-{getattr(factura, "id", "")}' if factura else 'sin-factura')
     )
     safe_filename = _safe_path_segment(filename, fallback='documento')
-    return (
-        f'{today:%Y}/{today:%m}/semana-{today.isocalendar().week:02d}/'
-        f'{factura_label}/especificos/{safe_filename}'
-    )
+    return f'{date:%Y}/{date:%m}/{factura_label}/especificos/{safe_filename}'
 
 # ============================================================
 # 1. PROVEEDOR
@@ -463,6 +460,20 @@ class DocumentoAdjunto(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     fecha_carga = models.DateTimeField(auto_now_add=True)
     cargado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='documentos_cargados')
+
+    NAS_STATUS_STORED = 'stored'
+    NAS_STATUS_FAILED = 'failed'
+    NAS_STATUS_SKIPPED = 'skipped'
+    NAS_STATUS_DISABLED = 'disabled'
+
+    nas_relative_path = models.CharField(
+        max_length=500, blank=True, null=True,
+        help_text='Ruta relativa dentro del NAS (desde la raíz configurada). Ejemplo: facturas/2026/06/FAC-000123/documentos_especificos/001_rut.pdf',
+    )
+    nas_storage_status = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text='Estado de copia al NAS: stored, failed, skipped, disabled',
+    )
 
     class Meta:
         indexes = [

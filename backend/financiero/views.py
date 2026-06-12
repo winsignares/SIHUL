@@ -92,15 +92,9 @@ def _estado_matches(actual, expected):
 
 
 def _factura_document_base_path(factura):
-    today = timezone.localdate()
+    date = getattr(factura, 'fecha_recepcion', None) or timezone.localdate()
     factura_label = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
-    return (
-        Path(settings.MEDIA_ROOT)
-        / f'{today:%Y}'
-        / f'{today:%m}'
-        / f'semana-{today.isocalendar().week:02d}'
-        / factura_label
-    )
+    return Path(settings.MEDIA_ROOT) / f'{date:%Y}' / f'{date:%m}' / factura_label
 
 
 # ============================================================
@@ -528,15 +522,38 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
         return models.DocumentoAdjunto.objects.all()
 
     def perform_create(self, serializer):
+        from financiero.services.shared_storage_service import shared_storage
+
         archivo = self.request.FILES.get('archivo')
         url_storage = self.request.data.get('url_storage', '') or ''
         instance = serializer.save(cargado_por=self.request.user, url_storage=url_storage)
+
         if archivo and instance.archivo:
             try:
                 instance.url_storage = instance.archivo.url
                 instance.save(update_fields=['url_storage'])
             except Exception:
                 pass
+
+            try:
+                local_path = Path(instance.archivo.path)
+                index = models.DocumentoAdjunto.objects.filter(factura=instance.factura).count()
+                result = shared_storage.copy_document(
+                    local_path=local_path,
+                    factura=instance.factura,
+                    index=index,
+                    original_filename=instance.nombre_archivo or archivo.name,
+                )
+                instance.nas_relative_path = result.nas_relative_path or ''
+                instance.nas_storage_status = (
+                    models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+                    else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+                )
+                instance.save(update_fields=['nas_relative_path', 'nas_storage_status'])
+            except Exception:
+                logger.exception(
+                    '[SHARED_STORAGE] Error al copiar documento al NAS. documento_id=%s', instance.id
+                )
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -1039,6 +1056,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             output_path.write_bytes(content)
         except Exception:
             logger.exception('No fue posible guardar PDF unificado factura_id=%s', factura.id)
+
+        from financiero.services.shared_storage_service import shared_storage
+        result = shared_storage.copy_unified_pdf(content, factura, scope)
+        if not result.success:
+            logger.warning(
+                '[SHARED_STORAGE] PDF unificado no copiado al NAS. factura_id=%s error_code=%s message=%s',
+                factura.id, result.error_code, result.message,
+            )
 
     def _pdf_consolidado_documentos(self, factura, documentos, scope):
         try:
@@ -1643,6 +1668,26 @@ class FacturaViewSet(viewsets.ModelViewSet):
         if documento.archivo and hasattr(documento.archivo, 'url'):
             documento.url_storage = documento.archivo.url
             documento.save(update_fields=['url_storage'])
+
+        try:
+            from financiero.services.shared_storage_service import shared_storage
+            local_path = Path(documento.archivo.path)
+            index = models.DocumentoAdjunto.objects.filter(factura=factura).count()
+            result = shared_storage.copy_document(
+                local_path=local_path,
+                factura=factura,
+                index=index,
+                original_filename=nombre_archivo,
+            )
+            nas_status = (
+                models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+                else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+            )
+            documento.nas_relative_path = result.nas_relative_path or ''
+            documento.nas_storage_status = nas_status
+            documento.save(update_fields=['nas_relative_path', 'nas_storage_status'])
+        except Exception:
+            logger.exception('[SHARED_STORAGE] Error al copiar soporte causacion al NAS. factura_id=%s', factura.id)
 
         actualizar_sla_factura(factura)
 

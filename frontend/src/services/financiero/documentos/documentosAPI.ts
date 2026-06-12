@@ -22,15 +22,10 @@ export const documentosService = {
     if (file.type) formData.append('tipo_mime', file.type);
     formData.append('archivo', file);
 
-    console.info(
-      `[documentosService.upload] POST /financiero/documentos/ factura=${facturaId} tipo=${tipoDocumento} archivo=${file.name} (${file.size}B)`
-    );
     try {
       const response = await apiClient.postFormData<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
-      console.info(`[documentosService.upload] ✅ Creado DocumentoAdjunto id=${response?.id} para factura ${facturaId}`);
       return response;
     } catch (err: unknown) {
-      console.error(`[documentosService.upload] ❌ Error al subir "${tipoDocumento}" para factura ${facturaId}:`, err);
       throw err;
     }
   },
