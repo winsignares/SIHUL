@@ -35,4 +35,8 @@ export const proveedoresService = {
     const endpoint = `${API_BASE}/facturas/${query ? `?${query}` : ''}`;
     return apiClient.get<PaginatedResponse<Factura>>(endpoint);
   },
+
+  crearConUsuario: async (data: Record<string, unknown>): Promise<{ usuario_id: number; proveedor: Proveedor }> => {
+    return apiClient.post<{ usuario_id: number; proveedor: Proveedor }>(`${API_BASE}/proveedores/crear_con_usuario/`, data);
+  },
 };
