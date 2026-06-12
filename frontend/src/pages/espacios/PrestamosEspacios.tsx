@@ -684,14 +684,14 @@ export default function PrestamosEspacios() {
                             </div>
 
                             {/* Recursos Necesarios */}
-                            {prestamoActual.recursosNecesarios.length > 0 && (
-                              <div className="space-y-3">
-                                <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                  <Package className="w-5 h-5 text-green-600" />
-                                  Recursos Necesarios
-                                </h3>
-                                <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                  {prestamoActual.recursosNecesarios.map((recurso) => (
+                            <div className="space-y-3">
+                              <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                <Package className="w-5 h-5 text-green-600" />
+                                Recursos Necesarios
+                              </h3>
+                              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                                {prestamoActual.recursosNecesarios.length > 0 ? (
+                                  prestamoActual.recursosNecesarios.map((recurso) => (
                                     <Badge
                                       key={recurso}
                                       variant="outline"
@@ -699,10 +699,12 @@ export default function PrestamosEspacios() {
                                     >
                                       {recurso}
                                     </Badge>
-                                  ))}
-                                </div>
+                                  ))
+                                ) : (
+                                  <p className="text-sm text-slate-500 dark:text-slate-400">Sin recursos solicitados</p>
+                                )}
                               </div>
-                            )}
+                            </div>
 
                             {/* Información del Administrador (si existe) */}
                             {prestamoActual.administradorNombre && (prestamoActual.estado === 'aprobado' || prestamoActual.estado === 'rechazado') && (

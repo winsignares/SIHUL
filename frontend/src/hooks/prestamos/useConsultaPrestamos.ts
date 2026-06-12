@@ -5,6 +5,7 @@ import { espacioService } from '../../services/espacios/espaciosAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
+import { clearSessionCache } from '../../core/sessionCache';
 
 export function useConsultaPrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -159,6 +160,9 @@ export function useConsultaPrestamos() {
                 motivo: nuevaSolicitud.motivo,
                 estado: 'Pendiente'
             });
+
+            // Invalidar caché del admin para que recargue el nuevo préstamo
+            clearSessionCache('prestamos-espacios-admin');
 
             await loadData();
             setDialogOpen(false);

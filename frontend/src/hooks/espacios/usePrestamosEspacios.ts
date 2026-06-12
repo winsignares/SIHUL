@@ -74,6 +74,18 @@ export function usePrestamosEspacios() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Recargar cuando la página vuelve a ser visible (e.g., usuario regresa de otra pestaña)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                loadData({ force: true });
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');

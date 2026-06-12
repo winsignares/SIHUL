@@ -35,7 +35,7 @@ class TipoActividadDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyA
 
 
 class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
-    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
@@ -48,12 +48,25 @@ class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
+
+    def perform_create(self, serializer):
+        prestamo = serializer.save()
+        recursos = self.request.data.get('recursos', [])
+        for r in recursos:
+            recurso_id = r.get('recurso_id')
+            cantidad = r.get('cantidad', 1)
+            if recurso_id:
+                PrestamoRecurso.objects.create(
+                    prestamo=prestamo,
+                    recurso_id=recurso_id,
+                    cantidad=cantidad
+                )
 
 
 class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
