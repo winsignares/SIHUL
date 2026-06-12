@@ -50,15 +50,15 @@ const AdminFinancieroDashboard = lazy(() => import('../pages/financiero/admin_fi
 
 // Importar sin lazy (necesarios inmediatamente)
 import AdminDashboard from '../layouts/AdminDashboard';
+import { Loading } from '../components/common/Loading';
 
 // Componente de Loading
 const PageLoader = ({ message = 'Cargando...' }: { message?: string }) => (
-  <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-    <div className="text-center">
-      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-      <p className="mt-4 text-slate-600 font-medium">{message}</p>
-    </div>
-  </div>
+  <Loading
+    fullPage
+    message={message}
+    className="bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100"
+  />
 );
 
 // Componente Layout que usa AdminDashboard como base

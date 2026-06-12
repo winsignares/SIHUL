@@ -212,14 +212,15 @@ export default function MisPendientes() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadPendientes = async () => {
-    const [causadas, detenidas, aprobadas, pagos] = await Promise.all([
+    const [radicadas, causadas, detenidas, aprobadas, pagos] = await Promise.all([
+      facturasService.getAll({ estado: 'Radicada', limit: 200 }),
       facturasService.getAll({ estado: 'Causada', limit: 200 }),
       facturasService.getAll({ estado: 'Detenida', limit: 200 }),
       facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
       facturasService.getAll({ estado: 'Pagada', limit: 200 }),
     ]);
 
-    const alistar = [...toList<APIFactura>(causadas), ...toList<APIFactura>(detenidas)]
+    const alistar = [...toList<APIFactura>(radicadas), ...toList<APIFactura>(causadas), ...toList<APIFactura>(detenidas)]
       .map((f) => mapFactura(f, 18, 'Alistar pago y generar proceso'));
     const enviar = toList<APIFactura>(aprobadas)
       .map((f) => mapFactura(f, 18, 'Enviar a Direccion Financiera'));

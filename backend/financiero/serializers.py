@@ -13,13 +13,15 @@ import uuid
 from urllib.parse import urlparse
 
 
-ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg'}
+ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg', 'txt'}
 ALLOWED_DOC_MIME_TYPES = {
     'application/pdf',
     'application/xml',
     'text/xml',
     'image/png',
     'image/jpeg',
+    'text/plain',
+    'application/octet-stream',  # .txt desde Windows/Chrome
 }
 MAX_DOC_SIZE_BYTES = 10 * 1024 * 1024
 
@@ -268,6 +270,12 @@ class RechazoDevolacionSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_rechazo']
 
 
+class ItemFacturaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.ItemFactura
+        fields = ['id', 'descripcion', 'cantidad', 'valor_unitario', 'porcentaje_iva', 'valor_subtotal', 'valor_iva', 'valor_total', 'orden']
+
+
 # ============================================================
 # SERIALIZER FACTURA (COMPLEJO)
 # ============================================================
@@ -284,6 +292,7 @@ class FacturaListSerializer(serializers.ModelSerializer):
     dias_transcurridos = serializers.ReadOnlyField()
     monto_alto = serializers.ReadOnlyField()
     sla_objetivo_dias = serializers.SerializerMethodField()
+    items = ItemFacturaSerializer(read_only=True, many=True)
 
     class Meta:
         model = models.Factura
@@ -292,11 +301,11 @@ class FacturaListSerializer(serializers.ModelSerializer):
             'cuenta_contable', 'centro_costo', 'numero_proceso_pago', 'numero_confirmacion', 'numero_transaccion', 'numero_comprobante',
             'numero_operacion_contable', 'consecutivo_operacion', 'archivo_plano_generado',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual', 'fecha_inicio_etapa',
-            'tipo_documento', 'descripcion', 'observaciones', 'fecha_factura', 'fecha_recepcion', 'fecha_radicacion', 'fecha_causacion',
-            'fecha_alistamiento', 'fecha_aprobacion_auditoria', 'fecha_revision_direccion', 'fecha_autorizacion',
-            'fecha_pago_aplicado', 'fecha_comprobante',
+            'tipo_documento', 'descripcion', 'observaciones', 'identificacion_factura', 'fecha_factura', 'fecha_recepcion',
+            'fecha_radicacion', 'fecha_causacion', 'fecha_alistamiento', 'fecha_aprobacion_auditoria',
+            'fecha_revision_direccion', 'fecha_autorizacion', 'fecha_pago_aplicado', 'fecha_comprobante',
             'dias_transcurridos', 'indicador_riesgo',
-            'indicador_riesgo_display', 'monto_alto', 'sla_cumplido', 'sla_objetivo_dias'
+            'indicador_riesgo_display', 'monto_alto', 'sla_cumplido', 'sla_objetivo_dias', 'items'
         ]
 
     def get_sla_objetivo_dias(self, obj):
@@ -321,6 +330,7 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     documentos = DocumentoAdjuntoSerializer(read_only=True, many=True)
     historial = HistorialFacturaSerializer(read_only=True, many=True)
     comentarios = ComentarioFacturaSerializer(read_only=True, many=True)
+    items = ItemFacturaSerializer(read_only=True, many=True)
     valor_neto_pagar = serializers.ReadOnlyField()
     dias_transcurridos = serializers.ReadOnlyField()
     monto_alto = serializers.ReadOnlyField()
@@ -347,15 +357,17 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
     cuenta_contable_id = serializers.IntegerField(required=False, allow_null=True)
     centro_costo_id = serializers.IntegerField(required=False, allow_null=True)
     usuario_responsable_id = serializers.IntegerField(required=False, allow_null=True)
+    items = ItemFacturaSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = models.Factura
         fields = [
             'id', 'numero_factura', 'tipo_documento', 'descripcion', 'observaciones',
+            'identificacion_factura',
             'proveedor_id', 'departamento_id', 'cuenta_contable_id', 'centro_costo_id',
             'valor_subtotal', 'valor_iva', 'valor_retencion_renta', 'valor_retencion_iva',
             'valor_retencion_ica', 'valor_total', 'fecha_factura', 'fecha_recepcion',
-            'cuenta_bancaria_proveedor', 'usuario_responsable_id', 'urgente'
+            'cuenta_bancaria_proveedor', 'usuario_responsable_id', 'urgente', 'items'
         ]
 
     def validate(self, data):
@@ -398,21 +410,33 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
         return f"{prefix}{next_seq:04d}"
 
     def create(self, validated_data):
-        validated_data['creado_por_id'] = self.context['request'].user.id
+        items_data = validated_data.pop('items', [])
+        # creado_por puede venir ya seteado por perform_create como objeto; si no, lo asignamos por id
+        if 'creado_por' not in validated_data:
+            validated_data['creado_por_id'] = self.context['request'].user.id
         provided_number = str(validated_data.get('numero_factura') or '').strip()
 
+        factura = None
         for _ in range(5):
             if not provided_number:
                 validated_data['numero_factura'] = self._generate_numero_factura()
 
             try:
-                return super().create(validated_data)
+                factura = super().create(validated_data)
+                break
             except IntegrityError:
                 if provided_number:
                     raise serializers.ValidationError("El numero de factura ya existe")
                 validated_data['numero_factura'] = ''
 
-        raise serializers.ValidationError("No fue posible generar un numero de factura unico")
+        if factura is None:
+            raise serializers.ValidationError("No fue posible generar un numero de factura unico")
+
+        for orden, item_data in enumerate(items_data, start=1):
+            item_data.pop('orden', None)
+            models.ItemFactura.objects.create(factura=factura, orden=orden, **item_data)
+
+        return factura
 
 
 # ============================================================

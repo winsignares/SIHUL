@@ -1,18 +1,9 @@
-import json
-import urllib.parse
-import urllib.request
-import uuid
-
-from django.conf import settings
 from django.db.models import Q
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from mysite.seccional_auth import SeccionalMixin
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name
 from espacios.models import EspacioPermitido
 
 from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
@@ -31,14 +22,9 @@ class TipoActividadListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView)
     seccional_lookup = None
 
     def get_permissions(self):
-        if self.request.method in permissions.SAFE_METHODS:
+        if self.request.method == 'GET':
             return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
-
-    def get_queryset(self):
-        if self.request.method in permissions.SAFE_METHODS:
-            return TipoActividad.objects.all().order_by('nombre')
-        return super().get_queryset()
 
 
 class TipoActividadDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -49,38 +35,27 @@ class TipoActividadDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyA
 
 
 class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
-    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacio.objects.none()
-        role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
-            return super().get_queryset()
-        return super().get_queryset().filter(usuario_id=user.id)
-
+            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+        return super().get_queryset()
 
 class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').all()
+    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
-
-    def get_queryset(self):
-        user = self.get_current_user()
-        if not user:
-            return PrestamoEspacio.objects.none()
-        role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
-            return super().get_queryset()
-        return super().get_queryset().filter(usuario_id=user.id)
 
 
 class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
@@ -90,90 +65,15 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
-        if self.request.method == 'POST':
+        if self.request.method in ['GET', 'POST']:
             return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
-
-    def create(self, request, *args, **kwargs):
-        recaptcha_token = request.data.get('recaptcha_token') or request.data.get('recaptcha')
-        recaptcha_ok, recaptcha_error = _verify_recaptcha(
-            recaptcha_token,
-            request.META.get('REMOTE_ADDR')
-        )
-        if not recaptcha_ok:
-            return Response({"error": recaptcha_error}, status=status.HTTP_403_FORBIDDEN)
-
-        payload = request.data.copy()
-        payload.pop('recaptcha_token', None)
-        payload.pop('recaptcha', None)
-
-        serializer = self.get_serializer(data=payload)
-        serializer.is_valid(raise_exception=True)
-        token_publico = uuid.uuid4().hex
-        serializer.save(token_publico=token_publico)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.none()
-        identificacion = (self.request.query_params.get('identificacion') or '').strip()
-        correo = (self.request.query_params.get('correo') or '').strip()
-        if identificacion and correo:
-            return PrestamoEspacioPublico.objects.filter(
-                identificacion_solicitante=identificacion,
-                correo_solicitante__iexact=correo,
-            )
-        if is_admin_global(user) or is_admin_sistema(user) or get_role_name(user) == 'admin financiero':
-            return super().get_queryset()
-        return PrestamoEspacioPublico.objects.none()
-
-
-def _verify_recaptcha(token, remote_ip=None):
-    if not settings.RECAPTCHA_SECRET_KEY:
-        if settings.DEBUG:
-            return True, ""
-        return False, "reCAPTCHA no está configurado"
-    if not token:
-        return False, "Token reCAPTCHA es requerido"
-
-    payload = {
-        'secret': settings.RECAPTCHA_SECRET_KEY,
-        'response': token,
-    }
-    if remote_ip:
-        payload['remoteip'] = remote_ip
-
-    try:
-        data = urllib.parse.urlencode(payload).encode()
-        req = urllib.request.Request(
-            'https://www.google.com/recaptcha/api/siteverify',
-            data=data,
-            method='POST'
-        )
-        with urllib.request.urlopen(req, timeout=8) as response:
-            parsed = json.loads(response.read().decode('utf-8'))
-        if parsed.get('success'):
-            return True, ""
-        return False, "reCAPTCHA inválido"
-    except Exception:
-        return False, "No se pudo validar reCAPTCHA"
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class PublicAccessRecaptchaVerifyAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request, *args, **kwargs):
-        recaptcha_token = request.data.get('recaptcha_token') or request.data.get('recaptcha')
-        recaptcha_ok, recaptcha_error = _verify_recaptcha(
-            recaptcha_token,
-            request.META.get('REMOTE_ADDR')
-        )
-        if not recaptcha_ok:
-            return Response({"error": recaptcha_error}, status=status.HTTP_403_FORBIDDEN)
-        return Response({"success": True}, status=status.HTTP_200_OK)
+            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+        return super().get_queryset()
 
 
 class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -183,16 +83,13 @@ class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdat
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
-        return [permission() for permission in self.permission_classes]
+        return [permissions.AllowAny()]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.none()
-        role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
-            return super().get_queryset()
-        return PrestamoEspacioPublico.objects.none()
+            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+        return super().get_queryset()
 
 
 class PrestamoRecursoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
@@ -201,30 +98,12 @@ class PrestamoRecursoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'prestamo__espacio__sede__seccional'
 
-    def get_queryset(self):
-        user = self.get_current_user()
-        if not user:
-            return PrestamoRecurso.objects.none()
-        role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
-            return super().get_queryset()
-        return super().get_queryset().filter(prestamo__usuario_id=user.id)
-
 
 class PrestamoRecursoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoRecurso.objects.select_related('prestamo', 'recurso').all()
     serializer_class = PrestamoRecursoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'prestamo__espacio__sede__seccional'
-
-    def get_queryset(self):
-        user = self.get_current_user()
-        if not user:
-            return PrestamoRecurso.objects.none()
-        role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
-            return super().get_queryset()
-        return super().get_queryset().filter(prestamo__usuario_id=user.id)
 
 
 class SupervisorEspaciosPermitidosPrestamosAPIView(SeccionalMixin, generics.ListAPIView):

@@ -2,11 +2,8 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../share/card';
 import { Button } from '../../../share/button';
 import {
-  FileCheck,
   Calculator,
   Clock,
-  CheckCircle2,
-  TrendingUp,
   Loader2,
 } from 'lucide-react';
 import type { ContabilidadHomePropsModel } from '../../../models/financiero/contabilidad';
@@ -25,7 +22,6 @@ export default function ContabilidadHome({
     currentPage, 
     setCurrentPage, 
     totalPages, 
-    itemsPerPage,
     getEstadoBadge 
   } = useContabilidadHome({
     onGoToPendientes,

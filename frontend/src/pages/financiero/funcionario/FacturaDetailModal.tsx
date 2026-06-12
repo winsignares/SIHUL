@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, FileText, User, X, Clock3, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
+import { Calendar, FileText, User, X, Clock3, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 type TimelineStep = {
@@ -50,12 +50,6 @@ export default function FacturaDetailModal({ open, onClose, factura }: Props) {
     if (status === 'done') return 'border-green-300 bg-green-50 text-green-800';
     if (status === 'current') return 'border-blue-300 bg-blue-50 text-blue-800';
     return 'border-slate-200 bg-slate-50 text-slate-700';
-  };
-
-  const dotStyles = (status: TimelineStep['status']) => {
-    if (status === 'done') return 'bg-green-500';
-    if (status === 'current') return 'bg-blue-500';
-    return 'bg-slate-300';
   };
 
   return (
@@ -144,9 +138,6 @@ export default function FacturaDetailModal({ open, onClose, factura }: Props) {
                   
                   <div className="space-y-4 relative z-10">
                     {timeline.map((step, idx) => {
-                      const doneCount = timeline.filter(s => s.status === 'done').length;
-                      const showCheckAnimation = step.status === 'done';
-                      
                       return (
                         <motion.div
                           key={step.id}

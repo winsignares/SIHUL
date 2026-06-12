@@ -1,21 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import type { Prestamo } from '../../models/index';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
-
-const DEFAULT_TIPOS_EVENTO = [
-    'Conferencia',
-    'Taller',
-    'Reunión',
-    'Simposio',
-    'Evento Cultural',
-    'Evento Deportivo',
-    'Examen Especial',
-    'Otro'
-];
+import { clearSessionCache } from '../../core/sessionCache';
 
 export function useConsultaPrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,7 +31,19 @@ export function useConsultaPrestamos() {
     const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number; nombre: string }>>([]);
     const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
-    const tiposEvento = tiposActividad.length > 0 ? tiposActividad.map(tipo => tipo.nombre) : DEFAULT_TIPOS_EVENTO;
+
+    const tiposEvento = tiposActividad.length > 0
+        ? tiposActividad.map(tipo => tipo.nombre)
+        : [
+        'Conferencia',
+        'Taller',
+        'Reunión',
+        'Simposio',
+        'Evento Cultural',
+        'Evento Deportivo',
+        'Examen Especial',
+        'Otro'
+    ];
 
     const recursosDisponibles = [
         'Proyector',
@@ -54,11 +56,17 @@ export function useConsultaPrestamos() {
         'Aire Acondicionado'
     ];
 
-    const loadData = useCallback(async () => {
+    // Cargar datos iniciales
+    useEffect(() => {
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const loadData = async () => {
         try {
             setLoading(true);
             
-            // Cargar préstamos, espacios y tipos de actividad en paralelo
+            // Cargar préstamos y espacios en paralelo
             const [prestamosResponse, espaciosResponse, tiposActividadResponse] = await Promise.all([
                 prestamoService.listarPrestamos(),
                 espacioService.list(),
@@ -94,6 +102,7 @@ export function useConsultaPrestamos() {
                     .filter(e => e.estado === 'Disponible')
                     .map(e => ({ id: e.id!, nombre: e.nombre }))
             );
+
             setTiposActividad(tiposActividadResponse.tipos_actividad);
         } catch (error) {
             showNotification({
@@ -103,15 +112,12 @@ export function useConsultaPrestamos() {
         } finally {
             setLoading(false);
         }
-    }, [user]);
-
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    };
 
     const crearSolicitud = async () => {
         if (!nuevaSolicitud.espacio || !nuevaSolicitud.fecha || 
-            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo || !nuevaSolicitud.tipoEvento) {
+            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin ||
+            !nuevaSolicitud.motivo || !nuevaSolicitud.tipoEvento) {
             showNotification({
                 message: 'Por favor complete todos los campos obligatorios',
                 type: 'error'
@@ -133,11 +139,11 @@ export function useConsultaPrestamos() {
                 return;
             }
 
-            const tipoActividadSeleccionada = tiposActividad.find(tipo => tipo.nombre === nuevaSolicitud.tipoEvento);
+            const tipoActividadSeleccionado = tiposActividad.find(t => t.nombre === nuevaSolicitud.tipoEvento);
 
-            if (!tipoActividadSeleccionada) {
+            if (!tipoActividadSeleccionado) {
                 showNotification({
-                    message: 'Tipo de actividad no disponible. Intente nuevamente.',
+                    message: 'Tipo de actividad no encontrado',
                     type: 'error'
                 });
                 return;
@@ -147,13 +153,16 @@ export function useConsultaPrestamos() {
                 espacio_id: espacioSeleccionado.id,
                 usuario_id: user?.id || null,
                 administrador_id: null,
-                tipo_actividad_id: tipoActividadSeleccionada.id,
+                tipo_actividad_id: tipoActividadSeleccionado.id,
                 fecha: nuevaSolicitud.fecha,
                 hora_inicio: nuevaSolicitud.horaInicio + ':00',
                 hora_fin: nuevaSolicitud.horaFin + ':00',
                 motivo: nuevaSolicitud.motivo,
                 estado: 'Pendiente'
             });
+
+            // Invalidar caché del admin para que recargue el nuevo préstamo
+            clearSessionCache('prestamos-espacios-admin');
 
             await loadData();
             setDialogOpen(false);

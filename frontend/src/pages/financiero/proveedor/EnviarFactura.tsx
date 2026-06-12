@@ -40,7 +40,7 @@ type TipoCuentaOption = {
 type FormState = {
   tipoDocumento: string;
   descripcion: string;
-  observaciones: string;
+  identificacionFactura: string;
   departamentoId: number;
   valorSubtotal: number;
   ivaPorcentaje: number;
@@ -112,13 +112,33 @@ const buildInvoiceDescription = (
   .join('\n');
 
 const TIPO_DOCUMENTO_OPTS = [
-  'Factura Electrónica',
   'Factura',
   'Cuenta de Cobro',
-  'Nota Débito',
-  'Otro',
 ];
 const DOC_TYPES = ['Factura', 'Orden de Compra', 'Certificación Bancaria', 'Acta de Entrega', 'Soporte Adicional'];
+const DOC_TYPE_DETAILS: Record<string, { label: string; helper?: string; optional?: boolean }> = {
+  Factura: {
+    label: 'Factura / Cuenta de Cobro',
+    helper: 'Carga la factura electrónica o la cuenta de cobro firmada.',
+  },
+  'Orden de Compra': {
+    label: 'Orden de Compra / Servicio / Contrato',
+    helper: 'Incluye la orden de compra, servicio contratado o el contrato firmado.',
+  },
+  'Certificación Bancaria': {
+    label: 'Certificación Bancaria',
+    helper: 'Requerida si tu información bancaria cambió recientemente.',
+  },
+  'Acta de Entrega': {
+    label: 'Acta de Entrega de Recibo a satisfacción',
+    helper: 'Adjunta el acta firmada donde conste la recepción del servicio o bien.',
+  },
+  'Soporte Adicional': {
+    label: 'Soporte Adicional',
+    helper: 'Evidencias o soportes que consideres relevantes.',
+    optional: true,
+  },
+};
 const ALLOWED_DOC_EXTENSIONS = new Set(['pdf']);
 const ALLOWED_DOC_MIME_TYPES = new Set(['application/pdf']);
 const BANCOS_COLOMBIA = [
@@ -216,7 +236,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
   const [form, setForm] = useState<FormState>({
     tipoDocumento: 'Factura',
     descripcion: '',
-    observaciones: '',
+    identificacionFactura: '',
     departamentoId: 0,
     valorSubtotal: 0,
     ivaPorcentaje: 19,
@@ -257,19 +277,32 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     setForm(prev => ({
       ...prev,
       tipoDocumento: correccionFactura.tipo_documento || prev.tipoDocumento,
-      observaciones: correccionFactura.observaciones || prev.observaciones,
+      identificacionFactura: correccionFactura.identificacion_factura || correccionFactura.observaciones || prev.identificacionFactura,
       departamentoId: correccionFactura.departamento?.id || prev.departamentoId,
       fechaFactura: correccionFactura.fecha_factura || prev.fechaFactura,
       fechaRecepcion: getToday(),
       cuentaBancaria: correccionFactura.cuenta_bancaria_proveedor || prev.cuentaBancaria,
     }));
-    setServiceItems([{
-      id: `correccion-${correccionFactura.id}`,
-      cantidad: 1,
-      servicio: correccionFactura.descripcion || '',
-      valorUnitario: Number(correccionFactura.valor_subtotal || 0),
-      ivaPorcentaje,
-    }]);
+
+    // Si la factura ya tiene items estructurados, los prellenamos; si no, usamos descripcion como fallback
+    const existingItems = correccionFactura.items;
+    if (existingItems && existingItems.length > 0) {
+      setServiceItems(existingItems.map((item, i) => ({
+        id: `correccion-${correccionFactura.id}-${i}`,
+        cantidad: Number(item.cantidad),
+        servicio: item.descripcion,
+        valorUnitario: Number(item.valor_unitario),
+        ivaPorcentaje: Number(item.porcentaje_iva),
+      })));
+    } else {
+      setServiceItems([{
+        id: `correccion-${correccionFactura.id}`,
+        cantidad: 1,
+        servicio: correccionFactura.descripcion || '',
+        valorUnitario: Number(correccionFactura.valor_subtotal || 0),
+        ivaPorcentaje,
+      }]);
+    }
     setDocs(existingDocs);
     setStep(2);
     setNumeroFacturaSugerido(correccionFactura.numero_factura || 'Corrección en curso');
@@ -550,12 +583,17 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     ? Array.from(new Map(tiposCuenta.map(tipo => [tipo.nombre, tipo])).values())
     : TIPO_CUENTA_OPTS.map((nombre, idx) => ({ id: 1000 + idx, nombre }))), [tiposCuenta]);
 
-  const documentosPendientes = useMemo(
+  const missingDocTypes = useMemo(
     () => documentTypes.filter(type => !docs.some(doc => doc.type === type)),
     [documentTypes, docs],
   );
 
-  const allDocumentsUploaded = documentosPendientes.length === 0;
+  const documentosPendientes = useMemo(
+    () => missingDocTypes.map(type => DOC_TYPE_DETAILS[type]?.label ?? type),
+    [missingDocTypes],
+  );
+
+  const allDocumentsUploaded = missingDocTypes.length === 0;
   const hasInvalidServiceItems = serviceItemsCalculated.some(
     item => !item.servicio.trim() || item.cantidad <= 0 || item.valorUnitario <= 0,
   );
@@ -570,7 +608,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         form.tipoDocumento &&
         form.departamentoId > 0 &&
         form.fechaFactura &&
-        form.observaciones.trim().length > 2 &&
+        form.identificacionFactura.trim().length > 2 &&
         hasValidServiceItems &&
         !hasInvalidServiceItems &&
         invoiceTotals.subtotal > 0
@@ -590,7 +628,6 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       const subtotal = invoiceTotals.subtotal;
       const iva = invoiceTotals.iva;
       const total = invoiceTotals.total;
-      const descripcion = buildInvoiceDescription(serviceItemsCalculated);
       const cuentaBancariaCompleta = [form.banco, form.tipoCuenta, form.numeroCuenta].filter(Boolean).join(' - ') || form.cuentaBancaria;
 
       const proveedorUpdates: Partial<Proveedor> = {};
@@ -607,12 +644,30 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         await proveedoresService.update(proveedorSeleccionado.id, proveedorUpdates);
       }
 
+      // Construir items estructurados para el nuevo modelo
+      const itemsPayload = serviceItemsCalculated
+        .filter(item => item.servicio.trim() && item.cantidad > 0 && item.valorUnitario > 0)
+        .map((item, index) => ({
+          descripcion: item.servicio.trim(),
+          cantidad: item.cantidad,
+          valor_unitario: item.valorUnitario,
+          porcentaje_iva: item.ivaPorcentaje,
+          valor_subtotal: item.subtotal,
+          valor_iva: item.valorIva,
+          valor_total: item.total,
+          orden: index + 1,
+        }));
+
+      // descripcion mantiene el texto legacy para compatibilidad con vistas antiguas
+      const descripcionLegacy = buildInvoiceDescription(serviceItemsCalculated);
+
       const payload = {
         proveedor_id: proveedorSeleccionado.id,
         departamento_id: form.departamentoId,
         tipo_documento: form.tipoDocumento as 'Factura' | 'Factura Electrónica' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro',
-        descripcion,
-        observaciones: form.observaciones || undefined,
+        descripcion: descripcionLegacy,
+        identificacion_factura: form.identificacionFactura || undefined,
+        items: itemsPayload,
         valor_subtotal: subtotal,
         valor_iva: iva,
         valor_total: total,
@@ -624,7 +679,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
       const factura = correccionFactura
         ? await facturasService.corregir(correccionFactura.id, {
           ...payload,
-          observaciones_correccion: form.observaciones || undefined,
+          observaciones_correccion: form.identificacionFactura || undefined,
         })
         : await facturasService.create(payload);
 
@@ -656,7 +711,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
         setForm({
           tipoDocumento: 'Factura',
           descripcion: '',
-          observaciones: '',
+          identificacionFactura: '',
           departamentoId: 0,
           valorSubtotal: 0,
           ivaPorcentaje: 19,
@@ -962,8 +1017,8 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 <input
                   type="text"
                   placeholder="Ejemplo: Computadores y Envio"
-                  value={form.observaciones}
-                  onChange={e => handleFieldChange('observaciones', e.target.value)}
+                  value={form.identificacionFactura}
+                  onChange={e => handleFieldChange('identificacionFactura', e.target.value)}
                   className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-500 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none font-medium"
                 />
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -982,7 +1037,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                     <span>Items</span>
                     <span>Servicio</span>
                     <span>Valor unitario</span>
-                    <span>IVA %</span>
+                    <span>IVA / INC </span>
                     <span>Subtotal</span>
                     <span>Total</span>
                     <span />
@@ -1072,7 +1127,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                             className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none font-bold"
                           />
                           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            IVA: {formatMoney(item.valorIva)}
+                            IVA / INC: {formatMoney(item.valorIva)}
                           </p>
                         </div>
 
@@ -1107,7 +1162,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                       <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{formatMoney(invoiceTotals.subtotal)}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">IVA total</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">IVA / INC total</p>
                       <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{formatMoney(invoiceTotals.iva)}</p>
                     </div>
                     <div className="rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-4">
@@ -1115,10 +1170,6 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                       <p className="mt-1 text-xl font-bold text-orange-700 dark:text-orange-300">{formatMoney(invoiceTotals.total)}</p>
                     </div>
                   </div>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
-                    El proveedor solo digita cantidad, servicio, valor unitario e IVA. El subtotal, el valor del IVA y el total de cada fila se calculan automáticamente.
-                  </p>
                 </div>
               </div>
 
@@ -1180,18 +1231,32 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
                 Adjunta todos los soportes requeridos para continuar con la confirmación.
               </p>
               {!allDocumentsUploaded && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
-                  Faltan documentos por adjuntar: {documentosPendientes.join(', ')}.
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 space-y-2">
+                  <p className="font-semibold text-amber-900 dark:text-amber-200">
+                    Faltan documentos por adjuntar:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-amber-900/90 dark:text-amber-200">
+                    {documentosPendientes.map((doc) => (
+                      <li key={doc}>{doc}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-amber-900/80 dark:text-amber-200/90">
+                    Adjunta estos soportes para habilitar el envío final de tu factura.
+                  </p>
                 </div>
               )}
 
               <div className="space-y-3">
                 {documentTypes.map(type => {
                   const uploaded = docs.find(d => d.type === type);
+                  const docMeta = DOC_TYPE_DETAILS[type];
                   return (
                     <div key={type} className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-800 dark:text-white">{type}</p>
+                        <p className="text-sm font-medium text-slate-800 dark:text-white">{docMeta?.label ?? type}</p>
+                        {docMeta?.helper && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{docMeta.helper}</p>
+                        )}
                         {uploaded && (
                           <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs space-y-1">
                             <div className="flex min-w-0 items-center gap-1.5">
@@ -1267,27 +1332,32 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl space-y-2">
                   <h5 className="font-semibold text-slate-800 dark:text-white text-sm">Identificacion Factura</h5>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">{form.observaciones}</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-200">{form.identificacionFactura}</p>
                 </div>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl space-y-3">
                   <h5 className="font-semibold text-slate-800 dark:text-white text-sm">Detalle de servicios</h5>
-                  <div className="space-y-2">
-                    {serviceItemsCalculated.map((item, index) => (
-                      <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm">
-                        <div>
-                          <p className="font-medium text-slate-800 dark:text-white">
-                            {index + 1}. {item.servicio.trim() || 'Servicio sin nombre'}
-                          </p>
-                          <p className="text-slate-500 dark:text-slate-400">
-                            {item.cantidad} x {formatMoney(item.valorUnitario)} | IVA {item.ivaPorcentaje}%
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-slate-800 dark:text-white">{formatMoney(item.total)}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Subtotal {formatMoney(item.subtotal)} | IVA {formatMoney(item.valorIva)}
-                          </p>
+                  <div className="space-y-3">
+                    {serviceItemsCalculated.map((item) => (
+                      <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex-1 min-w-[200px]">
+                            <p className="font-semibold text-slate-800 dark:text-white">{item.servicio.trim() || 'Servicio sin nombre'}</p>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            <div className="rounded-xl bg-slate-100 dark:bg-slate-700 px-3 py-2 text-center min-w-[90px]">
+                              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Subtotal</p>
+                              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{formatMoney(item.subtotal)}</p>
+                            </div>
+                            <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-center min-w-[90px]">
+                              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">IVA/INC {item.ivaPorcentaje}%</p>
+                              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatMoney(item.valorIva)}</p>
+                            </div>
+                            <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-3 py-2 text-center min-w-[90px]">
+                              <p className="text-xs text-red-700 dark:text-red-400 font-medium">Total</p>
+                              <p className="text-sm font-bold text-red-800 dark:text-red-300">{formatMoney(item.total)}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -8,8 +8,9 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
-import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import TableFilters, { type TableFilterValues } from '../../../share/table-filters';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidados, openDocumentosConsolidados } from '../../../share/documentos-consolidados';
@@ -94,7 +95,7 @@ const mapFactura = (factura: APIFactura): FacturaRegistroRow => ({
 });
 
 export default function RegistrarPagoAplicado() {
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<TableFilterValues>({
     numeroFactura: '',
     proveedor: '',
     estado: '',
@@ -121,12 +122,16 @@ export default function RegistrarPagoAplicado() {
   const [archivoComprobante, setArchivoComprobante] = useState<File | null>(null);
   const [observaciones, setObservaciones] = useState('');
 
+  const loadFacturas = useCallback(async () => {
+    const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
+    return toList<APIFactura>(response).filter(isConfirmadaParaRegistro);
+  }, []);
+
   const cargarFacturas = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
-      const rows = toList<APIFactura>(response).filter(isConfirmadaParaRegistro);
+      const rows = await loadFacturas();
       setFacturasRaw(rows);
     } catch {
       setFacturasRaw([]);
@@ -134,7 +139,7 @@ export default function RegistrarPagoAplicado() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadFacturas]);
 
   useEffect(() => {
     void cargarFacturas();
@@ -144,7 +149,7 @@ export default function RegistrarPagoAplicado() {
 
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasRegistro.filter((factura) => {
-      if (filtros.numeroFactura && !(factura.numeroFactura ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
       if (filtros.proveedor && factura.proveedor !== filtros.proveedor) return false;
       if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
       if (filtros.fechaInicio && factura.fechaAutorizacion < filtros.fechaInicio) return false;
@@ -224,8 +229,9 @@ export default function RegistrarPagoAplicado() {
         setObservaciones('');
         setArchivoComprobante(null);
         await cargarFacturas();
-      } catch (error: any) {
-        toast.error(error?.message || 'No fue posible registrar el pago aplicado.');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'No fue posible registrar el pago aplicado.';
+        toast.error(message);
       } finally {
         setIsProcessing(false);
       }
@@ -289,7 +295,7 @@ export default function RegistrarPagoAplicado() {
           <CardContent>
             <TableFilters
               filters={filtros}
-              onFilterChange={setFiltros}
+              onFilterChange={(updated) => setFiltros(updated)}
               proveedores={proveedores}
               areas={areas}
               showFechaFilter

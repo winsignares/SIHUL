@@ -61,7 +61,7 @@ export default function ProveedorDashboard() {
 }
 
 function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisFacturas }: ProveedorDashboardHomeProps) {
-  const { loading, stats, recentFacturas, hasMoreRecent } = useProveedorHome(miProveedor?.id);
+  const { loading, stats, recentFacturas } = useProveedorHome(miProveedor?.id);
 
   return (
     <div className="space-y-6">
@@ -191,7 +191,7 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 dark:text-white text-sm">{f.numero_factura}</p>
                       <p className="text-xs text-slate-600 dark:text-slate-300 truncate font-medium">
-                        {f.observaciones || f.descripcion || 'Sin identificacion cargada'}
+                        {f.identificacion_factura || f.observaciones || '—'}
                       </p>
                     </div>
                   </div>

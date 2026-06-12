@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Checkbox } from '../../../share/checkbox';
-import { Edit3, FileSpreadsheet, Plus, RefreshCw, Search, ShieldCheck, Trash2, Users } from 'lucide-react';
+import { Building2, Edit3, PauseCircle, PlayCircle, Plus, Search, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService, rolService, type Usuario, type Rol } from '../../../services/users/authService';
 import { componenteRolService, componenteService, componenteUsuarioService, type Componente, type ComponenteRol, type ComponenteUsuario } from '../../../services/componentes/componentesAPI';
-import * as XLSX from 'xlsx';
+import { proveedoresService } from '../../../services/financiero/proveedores/proveedoresAPI';
+import type { Proveedor } from '../../../models/financiero/core.models';
 
 type PermisoTipo = 'VER' | 'EDITAR';
 
@@ -60,6 +61,34 @@ const initialNuevoUsuario = {
   activo: true,
 };
 
+const TIPO_PROVEEDOR_OPTIONS = ['Bienes', 'Servicios', 'Construcción', 'Mixto'] as const;
+const TIPO_PERSONA_OPTIONS = ['Natural', 'Jurídica'] as const;
+const REGIMEN_OPTIONS = ['Responsable IVA', 'No responsable', 'Gran Contribuyente'] as const;
+
+const initialNuevoProveedor = {
+  nombre: '',
+  correo: '',
+  contrasena: '',
+  nit: '',
+  razon_social: '',
+  nombre_comercial: '',
+  tipo_proveedor: '' as string,
+  tipo_persona: 'Jurídica' as string,
+  direccion: '',
+  ciudad: '',
+  departamento: '',
+  pais: 'Colombia',
+  telefono: '',
+  email: '',
+  contacto_principal: '',
+  telefono_contacto: '',
+  banco: '',
+  tipo_cuenta: '' as string,
+  numero_cuenta: '',
+  regimen_tributario: '' as string,
+  observaciones: '',
+};
+
 const initialEditarUsuario = {
   id: null as number | null,
   nombre: '',
@@ -90,6 +119,13 @@ export default function GestionUsuariosReal() {
   const [rolFilter, setRolFilter] = useState('all');
   const [estadoFilter, setEstadoFilter] = useState('all');
   const [sedeFilter, setSedeFilter] = useState('all');
+
+  const [proveedorDialogOpen, setProveedorDialogOpen] = useState(false);
+  const [savingProveedor, setSavingProveedor] = useState(false);
+  const [nuevoProveedor, setNuevoProveedor] = useState(initialNuevoProveedor);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [loadingProveedores, setLoadingProveedores] = useState(false);
+  const [searchProveedor, setSearchProveedor] = useState('');
 
   const buildRoleComponentSelection = useCallback((rolId: number): Record<number, PermisoTipo> => {
     if (!rolId) return {};
@@ -197,6 +233,78 @@ export default function GestionUsuariosReal() {
     void cargarData();
   }, [cargarData]);
 
+  const cargarProveedores = useCallback(async () => {
+    setLoadingProveedores(true);
+    try {
+      const resp = await proveedoresService.getAll();
+      // El backend puede devolver lista directa o paginada
+      const lista = Array.isArray(resp)
+        ? (resp as unknown as Proveedor[])
+        : ((resp as unknown as { results?: Proveedor[] }).results ?? []);
+      setProveedores(lista);
+    } catch {
+      // silencioso — la tabla mostrará vacío
+    } finally {
+      setLoadingProveedores(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargarProveedores();
+  }, [cargarProveedores]);
+
+  const crearProveedor = async () => {
+    const { nombre, correo, contrasena, nit, razon_social, tipo_proveedor } = nuevoProveedor;
+
+    if (!nombre.trim() || !correo.trim() || !contrasena.trim() || !nit.trim() || !razon_social.trim() || !tipo_proveedor) {
+      toast.error('Completa los campos obligatorios: nombre, correo, contraseña, NIT, razón social y tipo de proveedor.');
+      return;
+    }
+
+    setSavingProveedor(true);
+    try {
+      await proveedoresService.crearConUsuario({
+        nombre: nombre.trim(),
+        correo: correo.trim(),
+        contrasena: contrasena.trim(),
+        nit: nit.trim(),
+        razon_social: razon_social.trim(),
+        nombre_comercial: nuevoProveedor.nombre_comercial.trim() || undefined,
+        tipo_proveedor,
+        tipo_persona: nuevoProveedor.tipo_persona || undefined,
+        direccion: nuevoProveedor.direccion.trim() || undefined,
+        ciudad: nuevoProveedor.ciudad.trim() || undefined,
+        departamento: nuevoProveedor.departamento.trim() || undefined,
+        pais: nuevoProveedor.pais.trim() || 'Colombia',
+        telefono: nuevoProveedor.telefono.trim() || undefined,
+        email: nuevoProveedor.email.trim() || undefined,
+        contacto_principal: nuevoProveedor.contacto_principal.trim() || undefined,
+        telefono_contacto: nuevoProveedor.telefono_contacto.trim() || undefined,
+        banco: nuevoProveedor.banco.trim() || undefined,
+        tipo_cuenta: nuevoProveedor.tipo_cuenta || undefined,
+        numero_cuenta: nuevoProveedor.numero_cuenta.trim() || undefined,
+        regimen_tributario: nuevoProveedor.regimen_tributario || undefined,
+        observaciones: nuevoProveedor.observaciones.trim() || undefined,
+      });
+      toast.success('Proveedor y usuario creados correctamente. Ya puede iniciar sesión.');
+      setProveedorDialogOpen(false);
+      setNuevoProveedor(initialNuevoProveedor);
+      await cargarProveedores();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'No fue posible crear el proveedor.'));
+    } finally {
+      setSavingProveedor(false);
+    }
+  };
+
+  const proveedoresFiltrados = useMemo(() => {
+    const query = normalizeText(searchProveedor);
+    if (!query) return proveedores;
+    return proveedores.filter((p) =>
+      [p.nit, p.razon_social, p.email ?? '', p.ciudad ?? ''].some((v) => normalizeText(v).includes(query))
+    );
+  }, [proveedores, searchProveedor]);
+
   const rolesGestionables = useMemo(
     () => roles.filter((rol) => isFinancialRole(rol.nombre) && !isProveedorRole(rol.nombre)),
     [roles]
@@ -245,17 +353,6 @@ export default function GestionUsuariosReal() {
       );
     });
   }, [search, usuariosFinancieros, rolesById, rolFilter, estadoFilter, sedeFilter]);
-
-  const resumenUsuarios = useMemo(() => {
-    const activos = usuariosFinancieros.filter((usuario) => usuario.activo).length;
-    return {
-      total: usuariosFinancieros.length,
-      activos,
-      inactivos: usuariosFinancieros.length - activos,
-      roles: rolesGestionables.length,
-      sedes: sedesDisponibles.length,
-    };
-  }, [rolesGestionables.length, sedesDisponibles.length, usuariosFinancieros]);
 
   const crearUsuario = async () => {
     const nombre = nuevoUsuario.nombre.trim();
@@ -475,35 +572,6 @@ export default function GestionUsuariosReal() {
     setComponentesEditarUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
   };
 
-  const exportarUsuariosExcel = useCallback(() => {
-    if (usuariosFiltrados.length === 0) {
-      toast.error('No hay usuarios para exportar con los filtros actuales.');
-      return;
-    }
-
-    const rows = usuariosFiltrados.map((usuario) => ({
-      ID: usuario.id || '',
-      Usuario: usuario.nombre || '',
-      Correo: usuario.correo || '',
-      Rol: getRolNombre(usuario, rolesById),
-      Estado: usuario.activo ? 'Activo' : 'Inactivo',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 10 },
-      { wch: 34 },
-      { wch: 38 },
-      { wch: 24 },
-      { wch: 14 },
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
-    XLSX.writeFile(workbook, `usuarios_financieros_${Date.now()}.xlsx`);
-    toast.success('Excel de usuarios exportado correctamente.');
-  }, [usuariosFiltrados, rolesById]);
-
   const limpiarFiltros = () => {
     setSearch('');
     setRolFilter('all');
@@ -527,69 +595,18 @@ export default function GestionUsuariosReal() {
               Gestión de Usuarios Financieros
             </h1>
             <p className="max-w-2xl text-sm text-red-100">Centraliza altas, edición y permisos del equipo financiero en una vista corta, clara y alineada con el resto del aplicativo.</p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Badge className="border border-white/20 bg-white/10 text-white">Activos: {resumenUsuarios.activos}</Badge>
-              <Badge className="border border-white/20 bg-white/10 text-white">Roles: {resumenUsuarios.roles}</Badge>
-              <Badge className="border border-white/20 bg-white/10 text-white">Sedes: {resumenUsuarios.sedes}</Badge>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setDialogOpen(true)} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo usuario
-            </Button>
-            <Button onClick={() => void cargarData()} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Actualizar datos
-            </Button>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card className="border-red-100 bg-gradient-to-br from-white to-red-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Usuarios</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{resumenUsuarios.total}</p>
-            <p className="text-sm text-slate-600">Base total administrable</p>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-100 bg-gradient-to-br from-white to-emerald-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Activos</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-700">{resumenUsuarios.activos}</p>
-            <p className="text-sm text-slate-600">Con acceso operativo</p>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-100 bg-gradient-to-br from-white to-amber-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Inactivos</p>
-            <p className="mt-2 text-3xl font-bold text-amber-700">{resumenUsuarios.inactivos}</p>
-            <p className="text-sm text-slate-600">Sin operación actual</p>
-          </CardContent>
-        </Card>
-        <Card className="border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">En vista</p>
-            <p className="mt-2 text-3xl font-bold text-indigo-700">{usuariosFiltrados.length}</p>
-            <p className="text-sm text-slate-600">Resultados filtrados</p>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="border-0 shadow-lg">
         <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-slate-900">Usuarios registrados</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={exportarUsuariosExcel}>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-              <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">
-                {usuariosFiltrados.length} usuarios
-              </Badge>
-            </div>
+            <CardTitle className="text-slate-900">Gestión Usuarios</CardTitle>
+            <Button size="sm" onClick={() => setDialogOpen(true)} className="bg-red-700 hover:bg-red-800 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo usuario
+            </Button>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
             <div className="relative lg:col-span-5">
@@ -658,18 +675,17 @@ export default function GestionUsuariosReal() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>ID</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Correo</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-center">Usuario</TableHead>
+                    <TableHead className="text-center">Correo</TableHead>
+                    <TableHead className="text-center">Rol</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {usuariosFiltrados.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-slate-500 py-7">
+                      <TableCell colSpan={5} className="text-center text-slate-500 py-7">
                         No hay usuarios para mostrar.
                       </TableCell>
                     </TableRow>
@@ -679,42 +695,44 @@ export default function GestionUsuariosReal() {
                       const isProcessing = accionUsuarioId === usuario.id;
                       return (
                         <TableRow key={usuario.id}>
-                          <TableCell>{usuario.id || '—'}</TableCell>
-                          <TableCell className="font-medium text-slate-800">{usuario.nombre}</TableCell>
-                          <TableCell>{usuario.correo}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-center font-medium text-slate-800">{usuario.nombre}</TableCell>
+                          <TableCell className="text-center">{usuario.correo}</TableCell>
+                          <TableCell className="text-center">
                             <Badge variant="outline" className="text-slate-700">
                               <ShieldCheck className="w-3 h-3 mr-1" />
                               {rolNombre}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-center">
                             <Badge className={usuario.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
                               {usuario.activo ? 'Activo' : 'Inactivo'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex justify-end gap-2">
-                              <Button size="sm" variant="outline" onClick={() => iniciarEdicion(usuario)}>
-                                <Edit3 className="w-3 h-3" />
-                                Editar
+                            <div className="flex justify-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => iniciarEdicion(usuario)} title="Editar">
+                                <Edit3 className="w-4 h-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 disabled={isProcessing}
                                 onClick={() => void toggleEstadoUsuario(usuario)}
+                                title={usuario.activo ? 'Desactivar' : 'Activar'}
+                                className={usuario.activo ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'}
                               >
-                                {usuario.activo ? 'Desactivar' : 'Activar'}
+                                {usuario.activo
+                                  ? <PauseCircle className="w-4 h-4" />
+                                  : <PlayCircle className="w-4 h-4" />}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 disabled={isProcessing}
                                 onClick={() => void eliminarUsuario(usuario)}
+                                title="Eliminar"
                               >
-                                <Trash2 className="w-3 h-3" />
-                                Eliminar
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -728,6 +746,241 @@ export default function GestionUsuariosReal() {
           )}
         </CardContent>
       </Card>
+
+      {/* =========================================================
+          SECCIÓN PROVEEDORES
+      ========================================================= */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-red-700" />
+              Proveedores
+            </CardTitle>
+            <Button size="sm" onClick={() => setProveedorDialogOpen(true)} className="bg-red-700 hover:bg-red-800 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo proveedor
+            </Button>
+          </div>
+          <div className="relative max-w-sm">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              value={searchProveedor}
+              onChange={(e) => setSearchProveedor(e.target.value)}
+              className="pl-9"
+              placeholder="Buscar por NIT, razón social, correo o ciudad"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingProveedores ? (
+            <p className="text-sm text-slate-500">Cargando proveedores...</p>
+          ) : (
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="text-center">NIT</TableHead>
+                    <TableHead className="text-center">Razón Social</TableHead>
+                    <TableHead className="text-center">Tipo</TableHead>
+                    <TableHead className="text-center">Ciudad</TableHead>
+                    <TableHead className="text-center">Correo</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {proveedoresFiltrados.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-slate-500 py-7">
+                        No hay proveedores para mostrar.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    proveedoresFiltrados.map((prov) => (
+                      <TableRow key={prov.id}>
+                        <TableCell className="text-center font-mono text-sm">{prov.nit}</TableCell>
+                        <TableCell className="text-center font-medium text-slate-800">{prov.razon_social}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="text-slate-600">{prov.tipo_proveedor}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center text-slate-600">{prov.ciudad ?? '—'}</TableCell>
+                        <TableCell className="text-center text-slate-600">{prov.email ?? '—'}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={
+                            prov.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' :
+                            prov.estado === 'Bloqueado' ? 'bg-red-100 text-red-700' :
+                            'bg-slate-100 text-slate-600'
+                          }>
+                            {prov.estado}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog: Nuevo Proveedor */}
+      <Dialog open={proveedorDialogOpen} onOpenChange={setProveedorDialogOpen}>
+        <DialogContent className="w-[98vw] sm:!max-w-[96vw] xl:!max-w-[80vw] h-[90vh] flex flex-col overflow-hidden p-0">
+          <DialogHeader className="border-b bg-slate-50 px-6 py-5 shrink-0">
+            <DialogTitle className="text-xl text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-red-700" />
+              Crear nuevo proveedor
+            </DialogTitle>
+            <p className="text-sm text-slate-600">
+              Completa los datos del proveedor. Se creará un usuario con rol Proveedor para que pueda iniciar sesión.
+            </p>
+          </DialogHeader>
+
+          <div className="px-6 py-5 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+              {/* Columna 1: Credenciales + Datos básicos */}
+              <div className="space-y-4 rounded-xl border bg-white p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800 border-b pb-2">Acceso al sistema</p>
+                <div className="space-y-1">
+                  <Label>Nombre completo <span className="text-red-600">*</span></Label>
+                  <Input value={nuevoProveedor.nombre} onChange={(e) => setNuevoProveedor((p) => ({ ...p, nombre: e.target.value }))} placeholder="Nombre del representante o empresa" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Correo (usuario de ingreso) <span className="text-red-600">*</span></Label>
+                  <Input type="email" value={nuevoProveedor.correo} onChange={(e) => setNuevoProveedor((p) => ({ ...p, correo: e.target.value }))} placeholder="correo@empresa.com" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Contraseña <span className="text-red-600">*</span></Label>
+                  <Input type="password" value={nuevoProveedor.contrasena} onChange={(e) => setNuevoProveedor((p) => ({ ...p, contrasena: e.target.value }))} placeholder="••••••••" />
+                </div>
+
+                <p className="text-sm font-semibold text-slate-800 border-b pb-2 pt-2">Identificación</p>
+                <div className="space-y-1">
+                  <Label>NIT <span className="text-red-600">*</span></Label>
+                  <Input value={nuevoProveedor.nit} onChange={(e) => setNuevoProveedor((p) => ({ ...p, nit: e.target.value }))} placeholder="900123456-7" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Razón social <span className="text-red-600">*</span></Label>
+                  <Input value={nuevoProveedor.razon_social} onChange={(e) => setNuevoProveedor((p) => ({ ...p, razon_social: e.target.value }))} placeholder="Empresa S.A.S." />
+                </div>
+                <div className="space-y-1">
+                  <Label>Nombre comercial</Label>
+                  <Input value={nuevoProveedor.nombre_comercial} onChange={(e) => setNuevoProveedor((p) => ({ ...p, nombre_comercial: e.target.value }))} placeholder="Nombre comercial (opcional)" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Tipo de persona <span className="text-red-600">*</span></Label>
+                  <Select value={nuevoProveedor.tipo_persona} onValueChange={(v) => setNuevoProveedor((p) => ({ ...p, tipo_persona: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                    <SelectContent>
+                      {TIPO_PERSONA_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Tipo de proveedor <span className="text-red-600">*</span></Label>
+                  <Select value={nuevoProveedor.tipo_proveedor} onValueChange={(v) => setNuevoProveedor((p) => ({ ...p, tipo_proveedor: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                    <SelectContent>
+                      {TIPO_PROVEEDOR_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Columna 2: Contacto */}
+              <div className="space-y-4 rounded-xl border bg-white p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800 border-b pb-2">Información de contacto</p>
+                <div className="space-y-1">
+                  <Label>Dirección</Label>
+                  <Input value={nuevoProveedor.direccion} onChange={(e) => setNuevoProveedor((p) => ({ ...p, direccion: e.target.value }))} placeholder="Calle 123 # 45-67" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Ciudad</Label>
+                  <Input value={nuevoProveedor.ciudad} onChange={(e) => setNuevoProveedor((p) => ({ ...p, ciudad: e.target.value }))} placeholder="Bogotá" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Departamento</Label>
+                  <Input value={nuevoProveedor.departamento} onChange={(e) => setNuevoProveedor((p) => ({ ...p, departamento: e.target.value }))} placeholder="Cundinamarca" />
+                </div>
+                <div className="space-y-1">
+                  <Label>País</Label>
+                  <Input value={nuevoProveedor.pais} onChange={(e) => setNuevoProveedor((p) => ({ ...p, pais: e.target.value }))} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Teléfono</Label>
+                  <Input value={nuevoProveedor.telefono} onChange={(e) => setNuevoProveedor((p) => ({ ...p, telefono: e.target.value }))} placeholder="+57 300 000 0000" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Correo de empresa (facturas)</Label>
+                  <Input type="email" value={nuevoProveedor.email} onChange={(e) => setNuevoProveedor((p) => ({ ...p, email: e.target.value }))} placeholder="facturacion@empresa.com" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Contacto principal</Label>
+                  <Input value={nuevoProveedor.contacto_principal} onChange={(e) => setNuevoProveedor((p) => ({ ...p, contacto_principal: e.target.value }))} placeholder="Nombre del contacto" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Teléfono contacto</Label>
+                  <Input value={nuevoProveedor.telefono_contacto} onChange={(e) => setNuevoProveedor((p) => ({ ...p, telefono_contacto: e.target.value }))} placeholder="+57 300 000 0001" />
+                </div>
+              </div>
+
+              {/* Columna 3: Bancaria + Tributaria */}
+              <div className="space-y-4 rounded-xl border bg-white p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800 border-b pb-2">Información bancaria</p>
+                <div className="space-y-1">
+                  <Label>Banco</Label>
+                  <Input value={nuevoProveedor.banco} onChange={(e) => setNuevoProveedor((p) => ({ ...p, banco: e.target.value }))} placeholder="Bancolombia" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Tipo de cuenta</Label>
+                  <Select value={nuevoProveedor.tipo_cuenta} onValueChange={(v) => setNuevoProveedor((p) => ({ ...p, tipo_cuenta: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ahorros">Ahorros</SelectItem>
+                      <SelectItem value="Corriente">Corriente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Número de cuenta</Label>
+                  <Input value={nuevoProveedor.numero_cuenta} onChange={(e) => setNuevoProveedor((p) => ({ ...p, numero_cuenta: e.target.value }))} placeholder="000-000000-00" />
+                </div>
+
+                <p className="text-sm font-semibold text-slate-800 border-b pb-2 pt-2">Información tributaria</p>
+                <div className="space-y-1">
+                  <Label>Régimen tributario</Label>
+                  <Select value={nuevoProveedor.regimen_tributario} onValueChange={(v) => setNuevoProveedor((p) => ({ ...p, regimen_tributario: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                    <SelectContent>
+                      {REGIMEN_OPTIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <p className="text-sm font-semibold text-slate-800 border-b pb-2 pt-2">Observaciones</p>
+                <div className="space-y-1">
+                  <textarea
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-700/40 resize-none"
+                    rows={3}
+                    value={nuevoProveedor.observaciones}
+                    onChange={(e) => setNuevoProveedor((p) => ({ ...p, observaciones: e.target.value }))}
+                    placeholder="Observaciones adicionales..."
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t bg-white px-6 py-4 shrink-0">
+            <Button variant="outline" onClick={() => { setProveedorDialogOpen(false); setNuevoProveedor(initialNuevoProveedor); }}>Cancelar</Button>
+            <Button onClick={() => void crearProveedor()} disabled={savingProveedor} className="bg-red-700 hover:bg-red-800 text-white">
+              {savingProveedor ? 'Creando...' : 'Crear proveedor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">

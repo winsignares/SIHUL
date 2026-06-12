@@ -38,7 +38,6 @@ services:
       context: .
       dockerfile: backend.Dockerfile
     restart: unless-stopped
-    command: ["sh", "/app/start.sh"]
     ports:
       - "8000:8000"
     volumes:
@@ -59,6 +58,10 @@ services:
       CHATBOT_FASTAPI_URL: ${CHATBOT_FASTAPI_URL:-http://chatbot:8001/api/v1}
       # Python
       PYTHONUNBUFFERED: "1"
+      # Almacenamiento compartido NAS Universidad Libre
+      FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT}
+      FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER}
+      FINANCIERO_DOCUMENT_NETWORK_PASSWORD: ${FINANCIERO_DOCUMENT_NETWORK_PASSWORD}
     depends_on:
       db:
         condition: service_healthy

@@ -81,84 +81,23 @@ function getHoyColombia(): Date {
   return colombia;
 }
 
+// Helper para formatear hora decimal (e.g., 7.5) a formato de tiempo (e.g., "7:30")
+function formatHoraDecimal(hora: number): string {
+  const horas = Math.floor(hora);
+  const minutos = Math.round((hora % 1) * 60);
+  return `${horas}:${String(minutos).padStart(2, '0')}`;
+}
+
+function formatHoraApi(hora: number): string {
+  const horas = Math.floor(hora);
+  const minutos = Math.round((hora % 1) * 60);
+  return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+}
+
+
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
-  const gridColumnClasses = [
-    '',
-    'col-start-1',
-    'col-start-2',
-    'col-start-3',
-    'col-start-4',
-    'col-start-5',
-    'col-start-6',
-    'col-start-7'
-  ];
-  const gridRowClasses = [
-    '',
-    'row-start-1',
-    'row-start-2',
-    'row-start-3',
-    'row-start-4',
-    'row-start-5',
-    'row-start-6',
-    'row-start-7',
-    'row-start-8',
-    'row-start-9',
-    'row-start-10',
-    'row-start-11',
-    'row-start-12',
-    'row-start-13',
-    'row-start-14',
-    'row-start-15',
-    'row-start-16',
-    'row-start-17',
-    'row-start-18',
-    'row-start-19',
-    'row-start-20',
-    'row-start-21',
-    'row-start-22',
-    'row-start-23',
-    'row-start-24'
-  ];
-  const rowSpanClasses = [
-    '',
-    'row-span-1',
-    'row-span-2',
-    'row-span-3',
-    'row-span-4',
-    'row-span-5',
-    'row-span-6',
-    'row-span-7',
-    'row-span-8',
-    'row-span-9',
-    'row-span-10',
-    'row-span-11',
-    'row-span-12',
-    'row-span-13',
-    'row-span-14',
-    'row-span-15',
-    'row-span-16'
-  ];
-  const minHeightClasses = [
-    '',
-    'min-h-[60px]',
-    'min-h-[120px]',
-    'min-h-[180px]',
-    'min-h-[240px]',
-    'min-h-[300px]',
-    'min-h-[360px]',
-    'min-h-[420px]',
-    'min-h-[480px]',
-    'min-h-[540px]',
-    'min-h-[600px]',
-    'min-h-[660px]',
-    'min-h-[720px]',
-    'min-h-[780px]',
-    'min-h-[840px]',
-    'min-h-[900px]',
-    'min-h-[960px]'
-  ];
   
   const {
     searchTerm,
@@ -173,9 +112,12 @@ export default function ConsultaEspacios() {
     setFilterPeriodo,
     filterFechaInicio,
     filterFechaFin,
+    filterOcupacion,
+    setFilterOcupacion,
     mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
+    aplicarRangoPeriodo,
     vistaActual,
     setVistaActual,
     tiposEspacio,
@@ -185,6 +127,8 @@ export default function ConsultaEspacios() {
     horas,
     isDiaBloqueado,
     isCeldaBloqueada,
+    horaToSlotIndex,
+    isHoraExacta,
     filteredEspacios,
     paginatedEspacios,
     totalFilteredEspacios,
@@ -205,6 +149,7 @@ export default function ConsultaEspacios() {
     exportarCronogramaPDF,
     exportarCronogramaExcel,
     getOcupacionPorHora,
+    getConflictoEnRango,
     // Drag-to-select
     isDragging,
     seleccionRango,
@@ -222,6 +167,7 @@ export default function ConsultaEspacios() {
     horariosLoading,
     errorBusquedaPeriodo,
     buscarPeriodoPorRangoFechas,
+    cargarHorariosPorPeriodo,
     // Vista individual
     espacioSeleccionado,
     verCronogramaIndividual,
@@ -233,6 +179,15 @@ export default function ConsultaEspacios() {
     loading
   } = useConsultaEspacios();
 
+  const describirConflicto = (conflicto: typeof horarios[number]) => {
+    const etiqueta =
+      conflicto.tipo === 'prestamo'
+        ? `préstamo${conflicto.prestamo?.estado ? ` ${conflicto.prestamo.estado.toLowerCase()}` : ''}`
+        : conflicto.materia || 'horario existente';
+
+    return `${etiqueta} (${formatHoraDecimal(conflicto.horaInicio)}-${formatHoraDecimal(conflicto.horaFin)})`;
+  };
+
   // Calcular índices de paginación
   const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastItemIndex = Math.min(currentPage * pageSize, totalFilteredEspacios);
@@ -243,43 +198,46 @@ export default function ConsultaEspacios() {
   const [inicializacionAplicada, setInicializacionAplicada] = useState(false);
   const puedeEditarDisponibilidad = hasEditPermission('Disponibilidad de Espacios');
 
-  const encontrarInicioValidoPeriodo = useCallback((periodo: typeof periodos[0]) => {
+  const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
     const hoy = getHoyColombia();
+    const inicioPeriodo = new Date(`${periodo.fecha_inicio}T00:00:00`);
     const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
+    inicioPeriodo.setHours(0, 0, 0, 0);
     finPeriodo.setHours(0, 0, 0, 0);
 
-    if (hoy <= finPeriodo) {
-      return {
-        inicio: formatFechaLocalYYYYMMDD(hoy),
-        ajustadoPorDomingo: false
-      };
+    if (hoy > finPeriodo) return null;
+
+    const inicioValido = hoy < inicioPeriodo ? inicioPeriodo : hoy;
+    const finRango = new Date(inicioValido);
+    finRango.setDate(finRango.getDate() + 7);
+    const finValido = finRango > finPeriodo ? finPeriodo : finRango;
+
+    return {
+      inicio: formatFechaLocalYYYYMMDD(inicioValido),
+      fin: formatFechaLocalYYYYMMDD(finValido),
+      ajustadoPorDomingo: false
+    };
+  };
+
+  const aplicarPeriodoConIntervaloValido = (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
+    const intervalo = encontrarInicioValidoPeriodo(periodo);
+    if (!intervalo) {
+      setMensajeAutoPeriodo('No se encontró una fecha de inicio válida dentro del período seleccionado.');
+      return;
     }
 
-    return null;
-  }, []);
+    setPeriodoSeleccionado(periodo);
+    setFilterPeriodo(periodo.id ?? null);
+    aplicarRangoPeriodo(intervalo.inicio, intervalo.fin);
 
-  const aplicarPeriodoConIntervaloValido = useCallback(
-    (periodo: typeof periodos[0], mostrarMensajeDomingo = false) => {
-      const intervalo = encontrarInicioValidoPeriodo(periodo);
-      if (!intervalo) {
-        setMensajeAutoPeriodo('No se encontró una fecha de inicio válida dentro del período seleccionado.');
-        return;
-      }
+    if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
+      setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
+    } else {
+      setMensajeAutoPeriodo(null);
+    }
+  };
 
-      setPeriodoSeleccionado(periodo);
-      setFilterPeriodo(periodo.id ?? null);
-      handleFechaInicioChange(intervalo.inicio);
-
-      if (mostrarMensajeDomingo && intervalo.ajustadoPorDomingo) {
-        setMensajeAutoPeriodo('La fecha de hoy cae en domingo. El filtro fue ajustado automáticamente al lunes siguiente.');
-      } else {
-        setMensajeAutoPeriodo(null);
-      }
-    },
-    [encontrarInicioValidoPeriodo, handleFechaInicioChange, setFilterPeriodo]
-  );
-
-  const resolverPeriodoVigente = useCallback(() => {
+  const resolverPeriodoVigente = () => {
     const hoy = getHoyColombia();
     const hoyISO = formatFechaLocalYYYYMMDD(hoy);
 
@@ -291,7 +249,7 @@ export default function ConsultaEspacios() {
 
     const futuros = [...periodos].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
     return futuros[0] ?? null;
-  }, [periodos]);
+  };
 
   useEffect(() => {
     if (inicializacionAplicada || periodosLoading || periodos.length === 0) return;
@@ -301,7 +259,8 @@ export default function ConsultaEspacios() {
 
     aplicarPeriodoConIntervaloValido(vigente, true);
     setInicializacionAplicada(true);
-  }, [inicializacionAplicada, periodosLoading, periodos, resolverPeriodoVigente, aplicarPeriodoConIntervaloValido]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inicializacionAplicada, periodosLoading, periodos]);
 
   // Integrar búsqueda de período cuando se cambian las fechas
   useEffect(() => {
@@ -341,6 +300,18 @@ export default function ConsultaEspacios() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [recurrencePreviewDates, setRecurrencePreviewDates] = useState<Date[]>([]);
+
+  // Estado para hora fin editable en el formulario de solicitud
+  const [horaFinEditable, setHoraFinEditable] = useState<number | null>(null);
+  
+  // Estado para conflictos en el formulario (recalculados cuando cambia la hora)
+  type ConflictoForm = {
+    tipo: 'horario' | 'prestamo';
+    materia: string;
+    horaInicio: number;
+    horaFin: number;
+  };
+  const [conflictosFormulario, setConflictosFormulario] = useState<ConflictoForm[]>([]);
 
   // Estados para edición de horarios (drag and drop)
   const [editModeEnabled, setEditModeEnabled] = useState(false);
@@ -555,7 +526,7 @@ export default function ConsultaEspacios() {
   };
 
   // Función para generar las fechas de repetición según la configuración
-  const generateRecurrenceDates = useCallback((): Date[] => {
+  const generateRecurrenceDates = (): Date[] => {
     if (!nuevaSolicitudData?.fecha) return [];
 
     const startDate = new Date(`${nuevaSolicitudData.fecha}T12:00:00`);
@@ -673,13 +644,14 @@ export default function ConsultaEspacios() {
     }
 
     return dates;
-  }, [customPeriod, formData.dias_semana, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, formData.fin_repeticion_tipo, formData.intervalo, repeatOption, nuevaSolicitudData?.fecha, nuevaSolicitudData?.diaSemana]);
+  };
 
   useEffect(() => {
     if (!dialogSolicitudOpen) {
       setFormError(null);
       setSubmitting(false);
       setRecursosSeleccionados([]);
+      setHoraFinEditable(null);
       setFormData({
         sede_id: 0,
         espacio_id: 0,
@@ -698,8 +670,35 @@ export default function ConsultaEspacios() {
       setRepeatOption('none');
       setCustomPeriod('week');
       setRecurrencePreviewDates([]);
+    } else if (nuevaSolicitudData?.horaFin) {
+      // Inicializar hora fin editable cuando se abre el modal
+      const horaFinNum = parseInt(nuevaSolicitudData.horaFin.split(':')[0], 10);
+      setHoraFinEditable(horaFinNum);
     }
-  }, [dialogSolicitudOpen]);
+  }, [dialogSolicitudOpen, nuevaSolicitudData]);
+
+  // Efecto para finalizar selección cuando se suelta el mouse fuera de la cuadrícula
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging && puedeCrearSolicitudes && !editModeEnabled) {
+        finalizarSeleccion();
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mouseup', handleGlobalMouseUp, { once: true });
+      return () => {
+        window.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDragging, puedeCrearSolicitudes, editModeEnabled, finalizarSeleccion]);
+
+  // Efecto para cargar horarios del período seleccionado cuando cambia el filtro de período
+  useEffect(() => {
+    if (filterPeriodo) {
+      cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente']);
+    }
+  }, [filterPeriodo, cargarHorariosPorPeriodo]);
 
   // Actualizar preview de fechas cuando cambian los parámetros de repetición
   useEffect(() => {
@@ -707,7 +706,8 @@ export default function ConsultaEspacios() {
       const dates = generateRecurrenceDates();
       setRecurrencePreviewDates(dates);
     }
-  }, [generateRecurrenceDates, nuevaSolicitudData?.fecha]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repeatOption, customPeriod, formData.intervalo, formData.dias_semana, formData.fin_repeticion_tipo, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, nuevaSolicitudData?.fecha]);
 
   // Cargar datos para el formulario
   useEffect(() => {
@@ -731,39 +731,74 @@ export default function ConsultaEspacios() {
   // Cargar espacios disponibles cuando cambian sede/fecha/hora
   useEffect(() => {
     const loadEspaciosDisponibles = async () => {
-      if (!nuevaSolicitudData?.fecha || !nuevaSolicitudData?.horaInicio || !nuevaSolicitudData?.horaFin) {
+      if (!nuevaSolicitudData?.fecha || !nuevaSolicitudData?.horaInicio) {
         return;
       }
-      
+
+      // Usar hora fin editable si está disponible, sino usar la hora fin original
+      const horaFinParaBusqueda = horaFinEditable
+        ? `${String(horaFinEditable).padStart(2, '0')}:00`
+        : nuevaSolicitudData.horaFin;
+
       try {
         // Buscar el sede_id del espacio seleccionado
         const espacio = filteredEspacios.find(e => e.id === nuevaSolicitudData.espacio_id.toString());
         if (!espacio) return;
-        
+
         const sede = sedesList.find(s => s.nombre === espacio.sede);
         if (!sede) return;
 
         const response = await prestamosPublicAPI.listarEspaciosDisponibles(
           nuevaSolicitudData.fecha,
           `${nuevaSolicitudData.horaInicio}:00`,
-          `${nuevaSolicitudData.horaFin}:00`,
+          `${horaFinParaBusqueda}:00`,
           sede.id
         );
         setEspaciosDisponibles(response.espacios || []);
-        setFormData(prev => ({ 
-          ...prev, 
-          sede_id: sede.id ?? prev.sede_id,
-          espacio_id: nuevaSolicitudData.espacio_id
+        setFormData(prev => ({
+          ...prev,
+          sede_id: sede.id!,
+          espacio_id: nuevaSolicitudData?.espacio_id || 0
         }));
       } catch (err) {
         console.error('Error cargando espacios disponibles:', err);
       }
     };
-    
+
     if (dialogSolicitudOpen) {
       loadEspaciosDisponibles();
     }
-  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList]);
+  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList, horaFinEditable]);
+
+  // Recalcular conflictos cuando cambia la hora final en el formulario
+  useEffect(() => {
+    if (!nuevaSolicitudData || !horaFinEditable) {
+      setConflictosFormulario([]);
+      return;
+    }
+    
+    const horaInicioNum = parseInt(nuevaSolicitudData.horaInicio.split(':')[0], 10);
+    const espacioId = nuevaSolicitudData.espacio_id.toString();
+    const dia = nuevaSolicitudData.diaSemana;
+    
+    // Buscar conflictos en el nuevo rango usando horarios disponibles
+    const conflictos: ConflictoForm[] = [];
+    horarios.forEach((h: typeof horarios[0]) => {
+      const matchEspacio = String(h.espacioId) === espacioId;
+      const matchDia = h.dia === dia;
+      const overlap = horaInicioNum < h.horaFin && horaFinEditable > h.horaInicio;
+      if (matchEspacio && matchDia && overlap) {
+        conflictos.push({
+          tipo: (h.tipo || 'horario') as 'horario' | 'prestamo',
+          materia: h.materia || 'Horario ocupado',
+          horaInicio: h.horaInicio,
+          horaFin: h.horaFin
+        });
+      }
+    });
+    
+    setConflictosFormulario(conflictos);
+  }, [horaFinEditable, nuevaSolicitudData, horarios]);
 
   // Determinar qué espacios mostrar
   const espaciosToShow = espacioSeleccionado 
@@ -781,11 +816,6 @@ export default function ConsultaEspacios() {
   const getDayColumnIndex = (dia: string) => {
     const index = diasSemana.indexOf(dia);
     return index !== -1 ? index + 2 : 1;
-  };
-
-  const getHourRowIndex = (hora: number) => {
-    const row = hora - 5 + 1;
-    return row;
   };
 
   // Funciones del formulario
@@ -814,8 +844,31 @@ export default function ConsultaEspacios() {
       return;
     }
 
-    if (nuevaSolicitudData.horaFin <= nuevaSolicitudData.horaInicio) {
+    if (!horaFinEditable) {
+      setFormError('Por favor seleccione la hora de finalización');
+      return;
+    }
+
+    const horaInicioNum = parseInt(nuevaSolicitudData.horaInicio.split(':')[0], 10);
+    if (horaFinEditable <= horaInicioNum) {
       setFormError('La hora fin debe ser mayor que la hora inicio');
+      return;
+    }
+
+    if (horaFinEditable > 22) {
+      setFormError('La hora fin no puede exceder las 22:00');
+      return;
+    }
+
+    const conflictoSolicitud = getConflictoEnRango(
+      String(formData.espacio_id),
+      nuevaSolicitudData.diaSemana,
+      horaInicioNum,
+      horaFinEditable
+    );
+
+    if (conflictoSolicitud) {
+      setFormError(`Conflicto con ${describirConflicto(conflictoSolicitud)}`);
       return;
     }
 
@@ -867,7 +920,7 @@ export default function ConsultaEspacios() {
         tipo_actividad_id: formData.tipo_actividad_id,
         fecha: nuevaSolicitudData.fecha,
         hora_inicio: `${nuevaSolicitudData.horaInicio}:00`,
-        hora_fin: `${nuevaSolicitudData.horaFin}:00`,
+        hora_fin: `${String(horaFinEditable).padStart(2, '0')}:00`,
         motivo: formData.motivo,
         asistentes: asistentesNum,
         telefono: formData.telefono,
@@ -907,19 +960,21 @@ export default function ConsultaEspacios() {
       setTimeout(() => {
         window.location.reload();
       }, 1000); // Dar tiempo para que se muestre el toast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setFormError(err.message || 'Error al crear la solicitud');
       setSubmitting(false);
     }
   };
 
-  const estaEnRangoSeleccion = (espacioId: string, dia: string, hora: number) => {
+  // Memoizar esta función para evitar recálculos en cada render
+  const estaEnRangoSeleccion = useCallback((espacioId: string, dia: string, hora: number) => {
     if (!seleccionRango) return false;
     return seleccionRango.espacioId === espacioId &&
            seleccionRango.dia === dia &&
            hora >= seleccionRango.horaInicio &&
            hora < seleccionRango.horaFin;
-  };
+  }, [seleccionRango]);
 
   // Función para validar si un movimiento es posible (sin conflictos)
   const validarMovimiento = (
@@ -929,86 +984,26 @@ export default function ConsultaEspacios() {
     targetHoraInicio: number,
     targetHoraFin: number
   ): { valido: boolean; error?: string } => {
-    // Verificar que no exceda el horario permitido (hasta las 22:00)
-    if (targetHoraFin > 22) {
-      return { valido: false, error: 'El horario excede el límite permitido (22:00)' };
+    if (targetHoraFin > 23) {
+      return { valido: false, error: 'El horario excede el límite permitido (23:00)' };
     }
 
-    // Verificar que la hora de inicio sea menor que la de fin
     if (targetHoraInicio >= targetHoraFin) {
       return { valido: false, error: 'La hora de inicio debe ser menor que la hora de fin' };
     }
 
-    // Verificar conflictos con otros horarios en el espacio destino (excluyendo el horario que se está moviendo)
-    const conflictos = horarios.filter(h => {
-      if (h.espacioId !== targetEspacioId) return false;
-      // Ignorar el mismo horario comparando por ID
-      if (horario.id && h.id === horario.id) {
-        console.log('Ignorando horario por ID:', horario.id);
-        return false;
-      }
-      // Como respaldo, también verificar por referencia y valores
-      if (h === horario) return false;
-      // Ignorar si tiene las mismas propiedades clave (mismo día, hora inicio y fin)
-      if (h.dia === horario.dia && h.horaInicio === horario.horaInicio && h.horaFin === horario.horaFin && h.materia === horario.materia) {
-        console.log('Ignorando horario por coincidencia de propiedades:', horario.materia);
-        return false;
-      }
-      if (h.dia !== targetDia) return false; // Solo verificar el mismo día
+    const conflicto = getConflictoEnRango(
+      targetEspacioId,
+      targetDia,
+      targetHoraInicio,
+      targetHoraFin,
+      horario
+    );
 
-      // Verificar solapamiento de horarios
-      const solapamiento = (
-        (targetHoraInicio >= h.horaInicio && targetHoraInicio < h.horaFin) ||
-        (targetHoraFin > h.horaInicio && targetHoraFin <= h.horaFin) ||
-        (targetHoraInicio <= h.horaInicio && targetHoraFin >= h.horaFin)
-      );
-
-      if (solapamiento) {
-        console.log('Conflicto detectado con:', h.materia, h.horaInicio, '-', h.horaFin);
-      }
-
-      return solapamiento;
-    });
-
-    if (conflictos.length > 0) {
-      const conflicto = conflictos[0];
+    if (conflicto) {
       return {
         valido: false,
-        error: `Conflicto con: ${conflicto.materia} (${conflicto.horaInicio}:00-${conflicto.horaFin}:00)`
-      };
-    }
-
-    // Verificar conflictos con préstamos en el espacio destino
-    const conflictosPrestamos = prestamos.filter(p => {
-      if (String(p.espacio_id) !== targetEspacioId) return false;
-      // Convertir fecha del préstamo a día de la semana
-      const prestamoDate = new Date(p.fecha);
-      const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      const prestamoDia = diasSemana[prestamoDate.getDay()];
-      if (prestamoDia !== targetDia) return false;
-      if (p.estado !== 'Aprobado') return false; // Solo préstamos aprobados
-
-      // Convertir horas de string a number
-      const pHoraInicio = parseInt(p.hora_inicio.split(':')[0]);
-      const pHoraFin = parseInt(p.hora_fin.split(':')[0]);
-
-      // Verificar solapamiento
-      const solapamiento = (
-        (targetHoraInicio >= pHoraInicio && targetHoraInicio < pHoraFin) ||
-        (targetHoraFin > pHoraInicio && targetHoraFin <= pHoraFin) ||
-        (targetHoraInicio <= pHoraInicio && targetHoraFin >= pHoraFin)
-      );
-
-      return solapamiento;
-    });
-
-    if (conflictosPrestamos.length > 0) {
-      const conflicto = conflictosPrestamos[0];
-      const pHoraInicio = parseInt(conflicto.hora_inicio.split(':')[0]);
-      const pHoraFin = parseInt(conflicto.hora_fin.split(':')[0]);
-      return {
-        valido: false,
-        error: `Conflicto con préstamo aprobado: ${conflicto.motivo} (${pHoraInicio}:00-${pHoraFin}:00)`
+        error: `Conflicto con ${describirConflicto(conflicto)}`
       };
     }
 
@@ -1031,6 +1026,7 @@ export default function ConsultaEspacios() {
       setConfirmDeleteDialogOpen(false);
       setHorarioToDelete(null);
       recargarDatos();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error al eliminar horario:', error);
       const errorMessage = error?.message || error?.response?.data?.message || 'Error desconocido';
@@ -1069,8 +1065,7 @@ export default function ConsultaEspacios() {
     }
 
     try {
-      // Convertir horas a formato string (HH:00:00)
-      const formatHora = (h: number) => `${String(h).padStart(2, '0')}:00:00`;
+      const formatHora = formatHoraApi;
 
       console.log('Moviendo horario:', {
         id: horario.id,
@@ -1090,9 +1085,11 @@ export default function ConsultaEspacios() {
         await prestamoService.actualizarPrestamo({
           id: horario.id,
           estado: horario.estado || 'Pendiente',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           fecha: (horario as any).fecha || (horario.prestamo?.fecha),
-          hora_inicio: horario.horaInicio ? `${String(horario.horaInicio).padStart(2, '0')}:00:00` : undefined,
-          hora_fin: horario.horaFin ? `${String(horario.horaFin).padStart(2, '0')}:00:00` : undefined
+          hora_inicio: formatHora(targetHoraInicio),
+          hora_fin: formatHora(targetHoraFin)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
       } else {
         // Para horarios académicos, usar horarioService
@@ -1104,10 +1101,11 @@ export default function ConsultaEspacios() {
         });
       }
 
-      toast.success(`Horario movido exitosamente a ${targetDia} ${targetHoraInicio}:00-${targetHoraFin}:00`);
+      toast.success(`Horario movido exitosamente a ${targetDia} ${formatHoraDecimal(targetHoraInicio)}-${formatHoraDecimal(targetHoraFin)}`);
 
       // Recargar los datos
       recargarDatos();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error completo al mover horario:', error);
       const errorMessage = error?.message || error?.response?.data?.message || 'Error desconocido';
@@ -1153,8 +1151,7 @@ export default function ConsultaEspacios() {
     }
 
     try {
-      // Convertir horas a formato string (HH:00:00)
-      const formatHora = (h: number) => `${String(h).padStart(2, '0')}:00:00`;
+      const formatHora = formatHoraApi;
 
       // Validar que haya un ID válido
       if (!selectedClassToMove.id) {
@@ -1169,9 +1166,11 @@ export default function ConsultaEspacios() {
           id: selectedClassToMove.id,
           espacio_id: parseInt(targetEspacioId),
           estado: selectedClassToMove.estado || 'Pendiente',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           fecha: (selectedClassToMove as any).fecha || (selectedClassToMove.prestamo?.fecha),
           hora_inicio: formatHora(targetMoveHoraInicio),
           hora_fin: formatHora(targetHoraFin)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
       } else {
         // Para horarios académicos, usar horarioService
@@ -1184,7 +1183,7 @@ export default function ConsultaEspacios() {
         });
       }
 
-      toast.success(`Clase movida exitosamente a ${targetEspacio.nombre} - ${targetMoveDia} ${targetMoveHoraInicio}:00-${targetHoraFin}:00`);
+      toast.success(`Clase movida exitosamente a ${targetEspacio.nombre} - ${targetMoveDia} ${formatHoraDecimal(targetMoveHoraInicio)}-${formatHoraDecimal(targetHoraFin)}`);
 
       // Cerrar diálogo y recargar
       setMoveClassDialogOpen(false);
@@ -1193,12 +1192,23 @@ export default function ConsultaEspacios() {
       setTargetMoveDia('');
       setTargetMoveHoraInicio(null);
       recargarDatos();
-    } catch (error) {
+    } catch {
       setMoveClassError('Error al mover la clase');
     } finally {
       setMovingClass(false);
     }
   };
+
+  const conflictoMovimientoSeleccionado =
+    selectedClassToMove && targetEspacioId && targetMoveDia && targetMoveHoraInicio !== null
+      ? getConflictoEnRango(
+          targetEspacioId,
+          targetMoveDia,
+          targetMoveHoraInicio,
+          targetMoveHoraInicio + (selectedClassToMove.horaFin - selectedClassToMove.horaInicio),
+          selectedClassToMove
+        )
+      : null;
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
@@ -1273,17 +1283,6 @@ export default function ConsultaEspacios() {
                 <Grid3x3 className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
                 {isMobile ? 'Tarjetas' : 'Vista Tarjetas'}
               </Button>
-              <Button
-                variant={vistaActual === 'cronograma' ? 'default' : 'outline'}
-                onClick={() => setVistaActual('cronograma')}
-                className={`flex-1 sm:flex-none ${vistaActual === 'cronograma'
-                  ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white'
-                  : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950'
-                } ${isMobile ? 'text-sm py-2 h-auto' : ''}`}
-              >
-                <CalendarDays className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} mr-2`} />
-                {isMobile ? 'Cronograma' : 'Vista Cronograma'}
-              </Button>
             </>
           )}
         </div>
@@ -1342,6 +1341,20 @@ export default function ConsultaEspacios() {
                 className={`pl-10 h-9 ${isMobile ? 'text-sm' : ''}`}
               />
             </div>
+            {/* Filtro de ocupación - al lado del buscador */}
+            <Select value={filterOcupacion} onValueChange={setFilterOcupacion}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[220px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
+                <SelectValue placeholder="Ocupación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="solo_horario">Solo con horario</SelectItem>
+                <SelectItem value="solo_prestamo">Solo con préstamos</SelectItem>
+                <SelectItem value="sin_horario_ni_prestamo">Sin horario ni préstamos</SelectItem>
+                <SelectItem value="sin_horario">Sin horario</SelectItem>
+                <SelectItem value="sin_prestamo">Sin préstamo</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filterTipo} onValueChange={setFilterTipo}>
               <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[180px]'} h-9 ${isMobile ? 'text-sm' : ''}`}>
                 <SelectValue placeholder="Tipo" />
@@ -1487,6 +1500,22 @@ export default function ConsultaEspacios() {
                 <RefreshCw className="w-5 h-5 animate-spin" />
                 <span className="text-sm font-medium">Cargando espacios...</span>
               </div>
+            </div>
+          )}
+
+          {!loading && paginatedEspacios.length === 0 && (
+            <div className="col-span-full rounded-lg border border-slate-200 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-800">
+              <AlertCircle className="mx-auto mb-3 h-10 w-10 text-slate-400" />
+              <p className="font-medium text-slate-700 dark:text-slate-200">
+                {filterOcupacion === 'todos'
+                  ? 'No hay espacios que coincidan con los filtros seleccionados.'
+                  : 'No hay espacios que cumplan el filtro de ocupación seleccionado.'}
+              </p>
+              {periodoSeleccionado && (
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Los horarios y préstamos se están consultando únicamente para el periodo {periodoSeleccionado.nombre}.
+                </p>
+              )}
             </div>
           )}
 
@@ -1715,7 +1744,7 @@ export default function ConsultaEspacios() {
                         </div>
                       </div>
                     )}
-                    <div className="min-w-[900px] grid grid-cols-[60px_repeat(6,1fr)] gap-1 auto-rows-[60px]">
+                    <div className="min-w-[1000px] grid grid-cols-[60px_repeat(7,1fr)] gap-1" style={{ gridAutoRows: '32px' }}>
                       <div className="p-2"></div>
                       {encabezadosDiasCronograma.map(({ dia, fecha }) => {
                         const diaBloqueado = isDiaBloqueado(dia);
@@ -1736,9 +1765,13 @@ export default function ConsultaEspacios() {
                       {horas.map((hora, idx) => (
                         <div
                           key={`time-${hora}`}
-                          className={`text-xs text-slate-500 flex items-center justify-end pr-2 col-start-1 ${gridRowClasses[idx + 2]}`}
+                          className={`text-xs text-slate-500 flex items-start justify-end pr-2 ${isHoraExacta(hora) ? 'font-semibold' : 'text-[9px] opacity-60'}`}
+                          style={{
+                            gridColumn: 1,
+                            gridRow: idx + 2
+                          }}
                         >
-                          {hora}:00
+                          {isHoraExacta(hora) ? `${hora}:00` : `${hora % 1 === 0.25 ? '15' : hora % 1 === 0.5 ? '30' : '45'}`}
                         </div>
                       ))}
 
@@ -1760,17 +1793,105 @@ export default function ConsultaEspacios() {
                           
                           // Verificar si esta celda es parte del rango donde se está arrastrando
                           // Para horarios de múltiples horas, resaltar todas las celdas que ocupará
-                          const duracionHoras = draggedHorario ? draggedHorario.horaFin - draggedHorario.horaInicio : 0;
-                          const dropStartIdx = dragOverCell ? dragOverCell.hora - 6 : -1;
-                          const isDragOver = dragOverCell?.dia === dia && 
-                            draggedHorario && 
-                            horaIdx >= dropStartIdx && 
-                            horaIdx < dropStartIdx + duracionHoras;
+                          // Slots de 15 minutos (4 slots por hora) para precisión en horarios
+                          const duracionSlots = draggedHorario ? Math.round((draggedHorario.horaFin - draggedHorario.horaInicio) * 4) : 0;
+                          const dropStartIdx = dragOverCell ? horaToSlotIndex(dragOverCell.hora) : -1;
+                          const isDragOver = dragOverCell?.dia === dia &&
+                            draggedHorario &&
+                            horaIdx >= dropStartIdx &&
+                            horaIdx < dropStartIdx + duracionSlots;
+                          const conflictoDrop = draggedHorario
+                            ? getConflictoEnRango(
+                                espacio.id,
+                                dia,
+                                hora,
+                                hora + (draggedHorario.horaFin - draggedHorario.horaInicio),
+                                draggedHorario
+                              )
+                            : null;
                           
                           // Verificar si hay un horario arrastrado que puede soltarse aquí
                           // Para horarios, no bloquear por fecha pasada (son recurrentes)
-                          const canDrop = draggedHorario && editModeEnabled && draggedHorario.espacioId === espacio.id;
+                          const canDrop =
+                            !!draggedHorario &&
+                            editModeEnabled &&
+                            draggedHorario.espacioId === espacio.id &&
+                            !celdaBloqueada &&
+                            !conflictoDrop;
                           
+                          // Handlers inline sin useCallback (usar useCallback dentro de loop causa error de hooks)
+                          const handleMouseDown = () => {
+                            if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
+                              iniciarSeleccion(espacio.id, dia, hora);
+                            }
+                          };
+                          
+                          const handleMouseEnter = () => {
+                            if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
+                              actualizarSeleccion(espacio.id, dia, hora);
+                            }
+                          };
+                          
+                          const handleMouseUp = () => {
+                            if (puedeCrearSolicitudes && !editModeEnabled) {
+                              finalizarSeleccion();
+                            }
+                          };
+                          
+                          const handleDragOver = (e: React.DragEvent) => {
+                            if (canDrop) {
+                              e.preventDefault();
+                              setDragOverCell({ dia, hora });
+                            } else if (dragOverCell?.dia === dia && dragOverCell?.hora === hora) {
+                              setDragOverCell(null);
+                            }
+                          };
+                          
+                          const handleDragLeave = () => {
+                            if (dragOverCell?.dia === dia && dragOverCell?.hora === hora) {
+                              setDragOverCell(null);
+                            }
+                          };
+                          
+                          const handleDrop = (e: React.DragEvent) => {
+                            e.preventDefault();
+                            setDragOverCell(null);
+                            if (draggedHorario && draggedHorario.espacioId === espacio.id) {
+                              const duracion = draggedHorario.horaFin - draggedHorario.horaInicio;
+                              const nuevaHoraInicio = hora;
+                              const nuevaHoraFin = nuevaHoraInicio + duracion;
+                              
+                              if (nuevaHoraFin <= 23) {
+                                const validacion = validarMovimiento(
+                                  draggedHorario,
+                                  espacio.id,
+                                  dia,
+                                  nuevaHoraInicio,
+                                  nuevaHoraFin
+                                );
+
+                                if (!validacion.valido) {
+                                  toast.error(validacion.error || 'No se puede mover el horario');
+                                  return;
+                                }
+
+                                setIsProcessingMove(false);
+                                setPendingMove({
+                                  horario: draggedHorario,
+                                  targetDia: dia,
+                                  targetHoraInicio: nuevaHoraInicio
+                                });
+                                setConfirmMoveDialogOpen(true);
+                              } else {
+                                toast.error('No se puede mover el horario: las clases solo se permiten hasta las 23:00');
+                              }
+                            }
+                          };
+
+                          // Simplificado: solo verificar si es hora exacta para marcar visualmente
+                          // La selección ahora es por bloques de 1 hora pero visualmente simple
+                          const esHoraExactaSeleccion = estaSeleccionada && hora % 1 === 0;
+
                           return (
                             <div
                               key={`cell-${espacio.id}-${dia}-${hora}`}
@@ -1781,67 +1902,27 @@ export default function ConsultaEspacios() {
                                 celdaBloqueada
                                   ? 'border-slate-300 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-900/60 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.06)] cursor-not-allowed'
                                   :
-                                ocupado 
-                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50' 
+                                ocupado
+                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50'
                                   : puedeCrearSolicitudes
                                     ? estaSeleccionada
-                                      ? 'bg-purple-500 border-purple-700 cursor-grabbing'
+                                      ? esHoraExactaSeleccion
+                                        ? 'bg-purple-500 border-purple-700 cursor-grabbing'
+                                        : 'bg-purple-400 border-purple-600 cursor-grabbing'
                                       : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
                                     : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                              } ${gridColumnClasses[diaIdx + 2]} ${gridRowClasses[horaIdx + 2]} ${isDragOver && canDrop ? 'z-20' : 'z-10'}`}
-                              onMouseDown={() => {
-                                if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
-                                  iniciarSeleccion(espacio.id, dia, hora);
-                                }
+                              }`}
+                              style={{
+                                gridColumn: diaIdx + 2,
+                                gridRow: horaIdx + 2,
+                                zIndex: isDragOver && canDrop ? 20 : 1
                               }}
-                              onMouseEnter={() => {
-                                if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
-                                  actualizarSeleccion(espacio.id, dia, hora);
-                                }
-                              }}
-                              onMouseUp={() => {
-                                if (puedeCrearSolicitudes && !editModeEnabled) {
-                                  finalizarSeleccion();
-                                }
-                              }}
-                              onDragOver={(e) => {
-                                // Para horarios (drag and drop), no bloquear por fecha pasada
-                                // Los horarios son recurrentes semanalmente
-                                if (editModeEnabled && draggedHorario && draggedHorario.espacioId === espacio.id) {
-                                  e.preventDefault();
-                                  setDragOverCell({ dia, hora });
-                                }
-                              }}
-                              onDragLeave={() => {
-                                if (dragOverCell?.dia === dia && dragOverCell?.hora === hora) {
-                                  setDragOverCell(null);
-                                }
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                setDragOverCell(null);
-                                // Para horarios (drag and drop), no bloquear por fecha pasada
-                                // Los horarios son recurrentes semanalmente
-                                if (draggedHorario && draggedHorario.espacioId === espacio.id) {
-                                  // Calcular nueva hora de inicio basada en el drop
-                                  const duracion = draggedHorario.horaFin - draggedHorario.horaInicio;
-                                  const nuevaHoraInicio = hora;
-                                  const nuevaHoraFin = nuevaHoraInicio + duracion;
-                                  
-                                  // Validar que no exceda el horario permitido
-                                  if (nuevaHoraFin <= 22) {
-                                    setIsProcessingMove(false); // Reiniciar estado de procesamiento
-                                    setPendingMove({
-                                      horario: draggedHorario,
-                                      targetDia: dia,
-                                      targetHoraInicio: nuevaHoraInicio
-                                    });
-                                    setConfirmMoveDialogOpen(true);
-                                  } else {
-                                    toast.error('No se puede mover el horario: las clases solo se permiten hasta las 22:00');
-                                  }
-                                }
-                              }}
+                              onMouseDown={handleMouseDown}
+                              onMouseEnter={handleMouseEnter}
+                              onMouseUp={handleMouseUp}
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onDrop={handleDrop}
                             />
                           );
                         })
@@ -1849,13 +1930,17 @@ export default function ConsultaEspacios() {
 
                       {/* Horarios ocupados */}
                       {horarios
-                        .filter(h => h.espacioId === espacio.id)
+                        .filter(h => h.espacioId === espacio.id && encabezadosDiasCronograma.some(d => d.dia === h.dia))
                         .map((ocupacion, idx) => {
                           const colStart = getDayColumnIndex(ocupacion.dia);
-                          const rowStart = getHourRowIndex(ocupacion.horaInicio);
-                          const rowSpan = ocupacion.horaFin - ocupacion.horaInicio;
+                          // Calcular fila usando slots de 15 minutos (precisión para horarios)
+                          const slotStart = Math.round((ocupacion.horaInicio - 6) * 4);
+                          const slotEnd = Math.round((ocupacion.horaFin - 6) * 4);
+                          const rowStart = slotStart + 2;
+                          const rowSpan = Math.max(1, slotEnd - slotStart);
 
-                          if (rowStart < 2 || rowStart > 18) return null;
+                          // Validar rango: tenemos 68 slots (17 horas * 4) + 1 header = 69 filas
+                          if (rowStart < 2 || rowStart > 70) return null;
 
                           // Determinar si es un préstamo o un horario académico
                           const isPrestamo = ocupacion.tipo === 'prestamo';
@@ -1909,7 +1994,13 @@ export default function ConsultaEspacios() {
                                       editModeEnabled && (!isPrestamo || isPrestamoPendiente)
                                         ? 'cursor-move hover:ring-2 hover:ring-purple-400 group' 
                                         : 'cursor-pointer'
-                                    } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative ${gridColumnClasses[colStart]} ${gridRowClasses[rowStart]} ${rowSpanClasses[rowSpan]} ${minHeightClasses[rowSpan]} z-10`}
+                                    } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative`}
+                                    style={{
+                                      gridColumn: `${colStart} / span 1`,
+                                      gridRow: `${rowStart} / span ${rowSpan}`,
+                                      zIndex: 10,
+                                      minHeight: `${rowSpan * 30}px`
+                                    }}
                                   >
                                     {editModeEnabled && (!isPrestamo || isPrestamoPendiente) && (
                                       <>
@@ -1939,7 +2030,10 @@ export default function ConsultaEspacios() {
                                     <p className="font-semibold text-[9px] sm:text-[10px] md:text-[11px] leading-tight break-words w-full line-clamp-2">{ocupacion.materia}</p>
                                     <p className="text-[8px] sm:text-[9px] opacity-90 leading-tight break-words w-full line-clamp-1">{ocupacion.docente}</p>
                                     {rowSpan > 1 && (
-                                      <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">{ocupacion.horaInicio}:00-{ocupacion.horaFin}:00</p>
+                                      <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">
+                                        {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')}-
+                                        {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}
+                                      </p>
                                     )}
                                   </div>
                                 </TooltipTrigger>
@@ -1959,7 +2053,7 @@ export default function ConsultaEspacios() {
                                         {ocupacion.prestamo?.telefono && (
                                           <p className="text-xs">Teléfono: {ocupacion.prestamo.telefono}</p>
                                         )}
-                                        <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                        <p className="text-xs">Horario: {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')} - {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}</p>
                                         <p className="text-xs">Fecha: {ocupacion.prestamo?.fecha}</p>
                                       </>
                                     ) : (
@@ -1967,7 +2061,7 @@ export default function ConsultaEspacios() {
                                         <p className="font-semibold text-sm">{ocupacion.materia}</p>
                                         <p className="text-xs">Docente: {ocupacion.docente || 'No asignado'}</p>
                                         <p className="text-xs">Grupo: {ocupacion.grupo || 'N/A'}</p>
-                                        <p className="text-xs">Horario: {ocupacion.horaInicio}:00 - {ocupacion.horaFin}:00</p>
+                                        <p className="text-xs">Horario: {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')} - {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}</p>
                                         <p className="text-xs capitalize">Estado: {ocupacion.estado}</p>
                                       </>
                                     )}
@@ -2021,9 +2115,60 @@ export default function ConsultaEspacios() {
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Horario:</span>
-                    <p className="font-medium">{nuevaSolicitudData.horaInicio} - {nuevaSolicitudData.horaFin}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-medium">{nuevaSolicitudData.horaInicio}</span>
+                      <span className="text-slate-400">-</span>
+                      <Select
+                        value={horaFinEditable?.toString() || ''}
+                        onValueChange={(v) => setHoraFinEditable(parseInt(v, 10))}
+                      >
+                        <SelectTrigger className="h-8 text-sm w-[100px]">
+                          <SelectValue placeholder="Hora fin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(() => {
+                            const horaInicioNum = parseInt(nuevaSolicitudData.horaInicio.split(':')[0], 10);
+                            // Generar opciones desde hora inicio + 1 hasta 23:00
+                            const opciones = [];
+                            for (let h = horaInicioNum + 1; h <= 23; h++) {
+                              opciones.push(
+                                <SelectItem key={h} value={h.toString()}>
+                                  {String(h).padStart(2, '0')}:00
+                                </SelectItem>
+                              );
+                            }
+                            return opciones;
+                          })()}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Advertencia de Conflictos */}
+            {conflictosFormulario.length > 0 && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Horarios Ocupados en {nuevaSolicitudData?.espacio_nombre}
+                </h3>
+                <div className="space-y-1">
+                  {conflictosFormulario.map((conflicto, idx) => (
+                    <div key={idx} className="text-sm text-red-800 dark:text-red-200 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                      <span className="font-medium">{conflicto.materia}</span>
+                      <span className="text-red-600 dark:text-red-400">
+                        ({formatHoraDecimal(conflicto.horaInicio)} - {formatHoraDecimal(conflicto.horaFin)})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+                  Este espacio tiene {conflictosFormulario.length} horario(s) ocupado(s) en el rango seleccionado. 
+                  Puede seleccionar otro espacio disponible abajo.
+                </p>
               </div>
             )}
 
@@ -2409,7 +2554,7 @@ export default function ConsultaEspacios() {
                 <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Horario Actual:</p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {pendingMove.horario.materia} - {pendingMove.horario.dia} {pendingMove.horario.horaInicio}:00-{pendingMove.horario.horaFin}:00
+                    {pendingMove.horario.materia} - {pendingMove.horario.dia} {formatHoraDecimal(pendingMove.horario.horaInicio)}-{formatHoraDecimal(pendingMove.horario.horaFin)}
                   </p>
                 </div>
                 <div className="flex items-center justify-center">
@@ -2420,7 +2565,7 @@ export default function ConsultaEspacios() {
                 <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                   <p className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Nuevo Horario:</p>
                   <p className="text-sm text-purple-600 dark:text-purple-400">
-                    {pendingMove.targetDia} {pendingMove.targetHoraInicio}:00-{pendingMove.targetHoraInicio + (pendingMove.horario.horaFin - pendingMove.horario.horaInicio)}:00
+                    {pendingMove.targetDia} {formatHoraDecimal(pendingMove.targetHoraInicio)}-{formatHoraDecimal(pendingMove.targetHoraInicio + (pendingMove.horario.horaFin - pendingMove.horario.horaInicio))}
                   </p>
                 </div>
               </div>
@@ -2450,7 +2595,7 @@ export default function ConsultaEspacios() {
 
       {/* Diálogo para Mover Clase a Otro Espacio */}
       <Dialog open={moveClassDialogOpen} onOpenChange={setMoveClassDialogOpen}>
-        <DialogContent className="w-[90vw] h-[85vh] max-w-[50vw] max-h-none overflow-y-auto p-4 sm:p-8 rounded-lg">
+        <DialogContent className="w-[90vw] h-[85vh] max-w-none max-h-none overflow-y-auto p-4 sm:p-8 rounded-lg" style={{ maxWidth: '50vw' }}>
           <DialogHeader>
             <DialogTitle>Mover Clase a Otro Espacio</DialogTitle>
           </DialogHeader>
@@ -2479,7 +2624,7 @@ export default function ConsultaEspacios() {
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Horario Actual:</span>
-                    <p className="font-medium">{selectedClassToMove.dia} {selectedClassToMove.horaInicio}:00-{selectedClassToMove.horaFin}:00</p>
+                    <p className="font-medium">{selectedClassToMove.dia} {formatHoraDecimal(selectedClassToMove.horaInicio)}-{formatHoraDecimal(selectedClassToMove.horaFin)}</p>
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Grupo:</span>
@@ -2490,8 +2635,13 @@ export default function ConsultaEspacios() {
                   <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                     <span className="text-purple-600 dark:text-purple-400 font-medium">Nuevo Horario:</span>
                     <p className="font-medium text-purple-700 dark:text-purple-300">
-                      {targetMoveDia} {targetMoveHoraInicio}:00-{targetMoveHoraInicio + (selectedClassToMove.horaFin - selectedClassToMove.horaInicio)}:00
+                      {targetMoveDia} {formatHoraDecimal(targetMoveHoraInicio)}-{formatHoraDecimal(targetMoveHoraInicio + (selectedClassToMove.horaFin - selectedClassToMove.horaInicio))}
                     </p>
+                    {conflictoMovimientoSeleccionado && (
+                      <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        Conflicto detectado con {describirConflicto(conflictoMovimientoSeleccionado)}.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -2538,7 +2688,7 @@ export default function ConsultaEspacios() {
                 <Card className="border-slate-200 dark:border-slate-700">
                   <CardContent className="p-4">
                     <div className="w-full">
-                      <div className="grid grid-cols-[50px_repeat(6,1fr)] gap-1 auto-rows-[32px]">
+                      <div className="grid grid-cols-[50px_repeat(6,1fr)] gap-1" style={{ gridAutoRows: '32px' }}>
                         {/* Headers */}
                         <div className="p-1"></div>
                         {diasSemana.map((dia) => (
@@ -2554,10 +2704,8 @@ export default function ConsultaEspacios() {
 
                         {/* Time slots */}
                         {horas.map((hora, idx) => (
-                          <div
-                            key={`time-${hora}`}
-                            className={`text-xs text-slate-500 flex items-center justify-end pr-1 col-start-1 ${gridRowClasses[idx + 2]}`}
-                          >
+                          <div key={`time-${hora}`} className="text-xs text-slate-500 flex items-center justify-end pr-1"
+                            style={{ gridColumn: 1, gridRow: idx + 2 }}>
                             {hora}:00
                           </div>
                         ))}
@@ -2565,17 +2713,23 @@ export default function ConsultaEspacios() {
                         {/* Grid cells */}
                         {horas.flatMap((hora, horaIdx) =>
                           diasSemana.map((dia, diaIdx) => {
-                            // Buscar en horarios (ya incluye horarios y prestamos fusionados)
-                            const ocupacionEnCelda = horarios.find(o =>
-                              o.espacioId === targetEspacioId &&
-                              o.dia === dia &&
-                              hora >= o.horaInicio &&
-                              hora < o.horaFin
-                            );
+                            const ocupacionEnCelda = getOcupacionPorHora(targetEspacioId, dia, hora);
 
                             // Separar en horario vs prestamo
                             const horarioEnCelda = ocupacionEnCelda && ocupacionEnCelda.tipo !== 'prestamo' ? ocupacionEnCelda : null;
                             const prestamoEnCelda = ocupacionEnCelda && ocupacionEnCelda.tipo === 'prestamo' ? ocupacionEnCelda : null;
+                            const duracionSeleccionada = selectedClassToMove
+                              ? selectedClassToMove.horaFin - selectedClassToMove.horaInicio
+                              : 0;
+                            const conflictoPropuesto = selectedClassToMove
+                              ? getConflictoEnRango(
+                                  targetEspacioId,
+                                  dia,
+                                  hora,
+                                  hora + duracionSeleccionada,
+                                  selectedClassToMove
+                                )
+                              : null;
 
                             // Verificar si es el horario propuesto seleccionado
                             const isProposedSlot = selectedClassToMove &&
@@ -2583,10 +2737,10 @@ export default function ConsultaEspacios() {
                               targetMoveHoraInicio !== null &&
                               dia === targetMoveDia &&
                               hora >= targetMoveHoraInicio &&
-                              hora < targetMoveHoraInicio + (selectedClassToMove.horaFin - selectedClassToMove.horaInicio);
+                              hora < targetMoveHoraInicio + duracionSeleccionada;
                             
                             // Verificar si esta celda está disponible para selección
-                            const canSelect = !horarioEnCelda && !prestamoEnCelda && selectedClassToMove;
+                            const canSelect = !!selectedClassToMove && !conflictoPropuesto;
 
                             let bgClass = 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700';
                             let hoverClass = canSelect ? 'hover:bg-blue-50 hover:border-blue-300 cursor-pointer' : '';
@@ -2609,14 +2763,17 @@ export default function ConsultaEspacios() {
                               textClass = 'text-red-600';
                             }
                             if (isProposedSlot) {
-                              bgClass = 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 ring-2 ring-purple-500';
+                              bgClass = conflictoMovimientoSeleccionado
+                                ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 ring-2 ring-red-500'
+                                : 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 ring-2 ring-purple-500';
                               hoverClass = '';
                             }
 
                             return (
                               <div
                                 key={`preview-${dia}-${hora}`}
-                                className={`border rounded text-xs flex items-center justify-center ${bgClass} ${hoverClass} transition-colors ${gridColumnClasses[diaIdx + 2]} ${gridRowClasses[horaIdx + 2]}`}
+                                className={`border rounded text-xs flex items-center justify-center ${bgClass} ${hoverClass} transition-colors`}
+                                style={{ gridColumn: diaIdx + 2, gridRow: horaIdx + 2 }}
                                 onClick={() => {
                                   if (canSelect) {
                                     setTargetMoveDia(dia);
@@ -2625,11 +2782,21 @@ export default function ConsultaEspacios() {
                                     if (moveClassError) setMoveClassError(null);
                                   }
                                 }}
-                                title={canSelect ? `Seleccionar ${dia} ${hora}:00` : ''}
+                                title={
+                                  canSelect
+                                    ? `Seleccionar ${dia} ${formatHoraDecimal(hora)}`
+                                    : conflictoPropuesto
+                                      ? `No disponible: ${describirConflicto(conflictoPropuesto)}`
+                                      : ''
+                                }
                               >
                                 {prestamoEnCelda && <span className={`${textClass} font-medium truncate px-1`}>{labelText}</span>}
                                 {!prestamoEnCelda && horarioEnCelda && <span className={`${textClass} font-medium truncate px-1`}>{labelText}</span>}
-                                {isProposedSlot && !horarioEnCelda && !prestamoEnCelda && <span className="text-purple-600 font-medium">Nuevo</span>}
+                                {isProposedSlot && !horarioEnCelda && !prestamoEnCelda && (
+                                  <span className={`${conflictoMovimientoSeleccionado ? 'text-red-600' : 'text-purple-600'} font-medium`}>
+                                    {conflictoMovimientoSeleccionado ? 'Conflicto' : 'Nuevo'}
+                                  </span>
+                                )}
                               </div>
                             );
                           })
@@ -2653,6 +2820,10 @@ export default function ConsultaEspacios() {
                         <div className="w-3 h-3 bg-purple-100 border border-purple-300 rounded ring-1 ring-purple-500"></div>
                         <span>Posición propuesta</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-red-100 border border-red-300 rounded ring-1 ring-red-500"></div>
+                        <span>Posición con conflicto</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -2672,7 +2843,7 @@ export default function ConsultaEspacios() {
             </Button>
             <Button 
               onClick={ejecutarMovimientoOtroEspacio}
-              disabled={!targetEspacioId || movingClass}
+              disabled={!targetEspacioId || movingClass || !!conflictoMovimientoSeleccionado}
               className="bg-gradient-to-r from-purple-600 to-purple-700 text-white"
             >
               {movingClass ? 'Moviendo...' : 'Mover Clase'}
@@ -2693,7 +2864,7 @@ export default function ConsultaEspacios() {
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
                   <p className="text-sm font-medium text-red-700 dark:text-red-300 mb-1">Horario a eliminar:</p>
                   <p className="text-sm text-red-600 dark:text-red-400">
-                    {horarioToDelete.materia} - {horarioToDelete.dia} {horarioToDelete.horaInicio}:00-{horarioToDelete.horaFin}:00
+                    {horarioToDelete.materia} - {horarioToDelete.dia} {formatHoraDecimal(horarioToDelete.horaInicio)}-{formatHoraDecimal(horarioToDelete.horaFin)}
                   </p>
                   {horarioToDelete.docente && (
                     <p className="text-sm text-red-600 dark:text-red-400 mt-1">

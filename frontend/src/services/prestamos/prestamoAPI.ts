@@ -1,4 +1,5 @@
 import { apiClient } from '../../core/apiClient';
+import { notifyPrestamosChanged } from './prestamosChanges';
 
 export interface RecursoPrestamo {
   recurso_id: number;
@@ -64,6 +65,7 @@ interface PrestamoEspacioApi {
   asistentes?: number;
   telefono?: string | null;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+  recursos?: RecursoPrestamo[];
   es_recurrente?: boolean;
   frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
   intervalo?: number;
@@ -95,6 +97,7 @@ const toFrontendPrestamo = (prestamo: PrestamoEspacioApi): PrestamoEspacio => ({
   asistentes: prestamo.asistentes,
   telefono: prestamo.telefono ?? undefined,
   estado: prestamo.estado,
+  recursos: prestamo.recursos,
   es_recurrente: prestamo.es_recurrente,
   frecuencia: prestamo.frecuencia,
   intervalo: prestamo.intervalo,
@@ -218,6 +221,7 @@ export const prestamoService = {
       recursos: prestamo.recursos || [],
       ...buildRecurrencePayload(prestamo)
     });
+    notifyPrestamosChanged();
     return { message: 'Préstamo creado', id: created.id ?? 0 };
   },
 
@@ -243,8 +247,10 @@ export const prestamoService = {
       asistentes: prestamo.asistentes,
       telefono: prestamo.telefono,
       estado: prestamo.estado,
+      ...(prestamo.recursos !== undefined ? { recursos: prestamo.recursos } : {}),
       ...buildRecurrencePayload(prestamo)
     });
+    notifyPrestamosChanged();
     return { message: 'Préstamo actualizado', id: updated.id ?? prestamo.id };
   },
 
@@ -254,6 +260,7 @@ export const prestamoService = {
    */
   eliminarPrestamo: async (id: number): Promise<{ message: string }> => {
     await apiClient.delete(`/prestamos/espacios/${id}/`);
+    notifyPrestamosChanged();
     return { message: 'Préstamo eliminado' };
   }
 };

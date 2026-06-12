@@ -6,6 +6,7 @@ import { NotificacionesProvider } from "./context/NotificacionesContext";
 import { Toaster } from "./share/sonner";
 import AppRouter from "./router/AppRouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { ApiRequestFeedback } from "./components/common/ApiRequestFeedback";
 
 export default function App() {
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function App() {
           <NotificacionesProvider>
             <UserProvider>
               <AppRouter />
+              <ApiRequestFeedback />
               <Toaster position="top-right" richColors expand />
             </UserProvider>
           </NotificacionesProvider>

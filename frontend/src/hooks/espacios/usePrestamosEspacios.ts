@@ -16,8 +16,14 @@ import {
   normalizePage
 } from '../gestionAcademica/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import {
+    PRESTAMOS_CHANGED_EVENT,
+    PRESTAMOS_CHANGED_STORAGE_KEY
+} from '../../services/prestamos/prestamosChanges';
+import { trackedFetch } from '../../core/apiActivity';
 
 const PRESTAMOS_CACHE_KEY = 'prestamos-espacios-admin';
+const PRESTAMOS_SYNC_INTERVAL_MS = 15_000;
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object' && 'message' in error) {
@@ -70,7 +76,46 @@ export function usePrestamosEspacios() {
 
     // Cargar datos iniciales
     useEffect(() => {
-        loadData();
+        loadData({ force: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Recargar cuando la página vuelve a ser visible (e.g., usuario regresa de otra pestaña)
+    useEffect(() => {
+        const reloadPrestamos = () => {
+            void loadData({ force: true });
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                reloadPrestamos();
+            }
+        };
+
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key === PRESTAMOS_CHANGED_STORAGE_KEY) {
+                reloadPrestamos();
+            }
+        };
+
+        const syncInterval = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                reloadPrestamos();
+            }
+        }, PRESTAMOS_SYNC_INTERVAL_MS);
+
+        window.addEventListener(PRESTAMOS_CHANGED_EVENT, reloadPrestamos);
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('focus', reloadPrestamos);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.clearInterval(syncInterval);
+            window.removeEventListener(PRESTAMOS_CHANGED_EVENT, reloadPrestamos);
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', reloadPrestamos);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -127,7 +172,11 @@ export function usePrestamosEspacios() {
                     tipoEvento: p.tipo_actividad_nombre || 'Evento',
                     tipo_actividad_id: p.tipo_actividad_id,
                     asistentes: p.asistentes || 0,
-                    recursosNecesarios: p.recursos?.map(r => r.recurso_nombre || '') || [],
+                    recursosNecesarios: (p.recursos || [])
+                        .filter(r => Boolean(r.recurso_nombre?.trim()))
+                        .map(r => r.cantidad > 1
+                            ? `${r.recurso_nombre} (x${r.cantidad})`
+                            : r.recurso_nombre!.trim()),
                     estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
                     fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
                     comentariosAdmin: '', // No disponible en el backend actual
@@ -180,7 +229,7 @@ export function usePrestamosEspacios() {
             let prestamoCompleto;
             if (tipo === 'publico') {
                 // Usar endpoint de préstamos públicos
-                const response = await fetch(`/api/prestamos/public/${numericId}/`);
+                const response = await trackedFetch(`/api/prestamos/public/${numericId}/`);
                 if (!response.ok) throw new Error('Error al obtener préstamo público');
                 prestamoCompleto = await response.json();
             } else {
@@ -191,7 +240,7 @@ export function usePrestamosEspacios() {
             // Actualizar el estado y registrar el administrador que aprobó
             if (tipo === 'publico') {
                 // Actualizar préstamo público
-                const response = await fetch(`/api/prestamos/public/update/`, {
+                const response = await trackedFetch(`/api/prestamos/public/update/`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -284,7 +333,7 @@ export function usePrestamosEspacios() {
             let prestamoCompleto;
             if (tipo === 'publico') {
                 // Usar endpoint de préstamos públicos
-                const response = await fetch(`/api/prestamos/public/${numericId}/`);
+                const response = await trackedFetch(`/api/prestamos/public/${numericId}/`);
                 if (!response.ok) throw new Error('Error al obtener préstamo público');
                 prestamoCompleto = await response.json();
             } else {
@@ -295,7 +344,7 @@ export function usePrestamosEspacios() {
             // Actualizar el estado y registrar el administrador que rechazó
             if (tipo === 'publico') {
                 // Actualizar préstamo público
-                const response = await fetch(`/api/prestamos/public/update/`, {
+                const response = await trackedFetch(`/api/prestamos/public/update/`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

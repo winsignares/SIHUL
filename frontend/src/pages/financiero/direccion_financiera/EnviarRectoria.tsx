@@ -214,17 +214,20 @@ export default function EnviarRectoria() {
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Observaciones para Rectoria (opcional)</label>
+            <label className="text-sm font-medium text-slate-700">Observaciones para Rectoria <span className="text-red-600">*</span></label>
             <Textarea
               rows={4}
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              placeholder="Contexto de envio, prioridad, riesgos o validaciones relevantes para la autorizacion..."
+              placeholder="Contexto de envio, prioridad, riesgos o validaciones relevantes para la autorizacion (obligatorio, minimo 10 caracteres)..."
             />
+            {observaciones.trim().length > 0 && observaciones.trim().length < 10 && (
+              <p className="text-xs text-red-600">Minimo 10 caracteres ({observaciones.trim().length}/10)</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={cerrarEnvio} disabled={procesando}>Cancelar</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={enviarARectoria} disabled={procesando}>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={enviarARectoria} disabled={procesando || observaciones.trim().length < 10}>
               {procesando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Procesando...</> : <><Landmark className="w-4 h-4 mr-2" />Confirmar remision</>}
             </Button>
           </DialogFooter>

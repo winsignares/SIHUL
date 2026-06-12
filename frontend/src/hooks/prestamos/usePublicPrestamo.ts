@@ -7,6 +7,7 @@ import {
     type PrestamoPublicoItem
 } from '../../services/prestamos/prestamosPublicAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
+import { clearSessionCache } from '../../core/sessionCache';
 
 type RepeatQuickOption =
     | 'none'
@@ -500,7 +501,8 @@ export function usePublicPrestamo() {
             
             setSuccessMessage(response.message);
             setShowSuccess(true);
-            
+            clearSessionCache('prestamos-espacios-admin');
+
             // Limpiar formulario
             setFormData({
                 nombre_completo: '',

@@ -43,17 +43,36 @@ export function useConsultaEspacios() {
     filterFechaInicio: filtros.filterFechaInicio
   });
 
+  const periodoSeleccionado = useMemo(
+    () => periodos.periodos.find((periodo) => periodo.id === filtros.filterPeriodo) ?? null,
+    [filtros.filterPeriodo, periodos.periodos]
+  );
+
+  const prestamosMostrados = useMemo(() => {
+    return datos.horariosConPrestamos.filter((ocupacion) => {
+      if (ocupacion.tipo !== 'prestamo') return false;
+      if (!periodoSeleccionado) return true;
+
+      const fechaPrestamo = ocupacion.prestamo?.fecha;
+      return Boolean(
+        fechaPrestamo &&
+        fechaPrestamo >= periodoSeleccionado.fecha_inicio &&
+        fechaPrestamo <= periodoSeleccionado.fecha_fin
+      );
+    });
+  }, [datos.horariosConPrestamos, periodoSeleccionado]);
+
   const horariosMostrados = useMemo(() => {
-    const rangoCompletoSeleccionado = Boolean(filtros.filterFechaInicio && filtros.filterFechaFin);
-    const baseHorarios = rangoCompletoSeleccionado ? periodos.horariosPeriodo : datos.horarios;
-    const prestamosComoOcupacion = datos.horariosConPrestamos.filter((h) => h.tipo === 'prestamo');
-    return [...baseHorarios, ...prestamosComoOcupacion];
+    const horariosAcademicos = filtros.filterPeriodo
+      ? periodos.horariosPeriodo
+      : datos.horarios;
+
+    return [...horariosAcademicos, ...prestamosMostrados];
   }, [
     datos.horarios,
-    datos.horariosConPrestamos,
-    filtros.filterFechaFin,
-    filtros.filterFechaInicio,
-    periodos.horariosPeriodo
+    filtros.filterPeriodo,
+    periodos.horariosPeriodo,
+    prestamosMostrados
   ]);
 
   const getOcupacionPorHora = useCallback(
@@ -121,14 +140,8 @@ export function useConsultaEspacios() {
     ) => {
       if (horaInicio >= horaFin) return null;
 
-      // Combinar todos los horarios disponibles (base + periodo + prestamos)
-      const todosLosHorarios = [
-        ...datos.horarios,
-        ...horariosMostrados.filter(h => !datos.horarios.some(dh => dh.id === h.id && dh.espacioId === h.espacioId && dh.dia === h.dia && dh.horaInicio === h.horaInicio))
-      ];
-
       let ocupacionIgnoradaConsumida = false;
-      const matches = todosLosHorarios.filter((h) => {
+      const matches = horariosMostrados.filter((h) => {
         if (h.espacioId !== espacioId || h.dia !== dia) return false;
         if (
           ocupacionIgnorada &&
@@ -143,7 +156,7 @@ export function useConsultaEspacios() {
 
       return matches.find((h) => h.tipo === 'prestamo') ?? matches[0] ?? null;
     },
-    [esMismaOcupacion, horariosMostrados, datos.horarios]
+    [esMismaOcupacion, horariosMostrados]
   );
 
   const filteredEspacios = useMemo(() => {
@@ -158,14 +171,7 @@ export function useConsultaEspacios() {
         (filtros.filterApertura === 'cerrado' && !e.estaAbierto);
       const matchesSede = filtros.filterSede === 'todas' || e.sede === filtros.filterSede;
 
-      // Filtrar por ocupación (horarios/préstamos) - USAR HORARIOS DEL PERIODO SELECCIONADO
-      // Si hay un período específico seleccionado, usar solo horarios de ese período
-      // Si no, usar horariosMostrados (que incluye horarios base + préstamos)
-      const horariosParaFiltro = filtros.filterPeriodo 
-        ? periodos.horariosPeriodo 
-        : horariosMostrados;
-      
-      const horariosEspacio = horariosParaFiltro.filter(h => h.espacioId === e.id);
+      const horariosEspacio = horariosMostrados.filter(h => h.espacioId === e.id);
       const tieneHorarios = horariosEspacio.some(h => h.tipo !== 'prestamo');
       const tienePrestamos = horariosEspacio.some(h => h.tipo === 'prestamo');
 
@@ -190,7 +196,13 @@ export function useConsultaEspacios() {
           matchesOcupacion = true; // 'todos'
       }
 
-      return matchesSearch && matchesTipo && matchesApertura && matchesSede && matchesOcupacion;
+      return (
+        matchesSearch &&
+        matchesTipo &&
+        matchesApertura &&
+        matchesSede &&
+        matchesOcupacion
+      );
     });
   }, [
     datos.espacios,
@@ -198,42 +210,23 @@ export function useConsultaEspacios() {
     filtros.filterSede,
     filtros.filterTipo,
     filtros.filterOcupacion,
-    filtros.filterPeriodo,
     filtros.searchTerm,
-    horariosMostrados,
-    periodos.horariosPeriodo
+    horariosMostrados
   ]);
 
   const paginacion = useConsultaEspaciosPaginacion(filteredEspacios);
 
-  // Combinar TODOS los horarios para detección de conflictos
+  // Mantener la detección de conflictos dentro del periodo y rango activos.
   const todosLosHorarios = useMemo(() => {
     const horariosSet = new Map<string, OcupacionView>();
-    
-    // Agregar horarios del período
-    periodos.horariosPeriodo.forEach(h => {
-      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}`;
+
+    horariosMostrados.forEach(h => {
+      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}-${h.tipo}`;
       horariosSet.set(key, h);
     });
-    
-    // Agregar horarios base
-    datos.horarios.forEach(h => {
-      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}`;
-      if (!horariosSet.has(key)) {
-        horariosSet.set(key, h);
-      }
-    });
-    
-    // Agregar préstamos
-    datos.horariosConPrestamos.forEach(h => {
-      const key = `${h.espacioId}-${h.dia}-${h.horaInicio}-${h.horaFin}-${h.tipo}`;
-      if (!horariosSet.has(key)) {
-        horariosSet.set(key, h);
-      }
-    });
-    
+
     return Array.from(horariosSet.values());
-  }, [datos.horarios, datos.horariosConPrestamos, periodos.horariosPeriodo]);
+  }, [horariosMostrados]);
 
   const seleccion = useConsultaEspaciosSeleccion({
     puedeCrearSolicitudes,
@@ -276,6 +269,7 @@ export function useConsultaEspacios() {
     mensajeFiltroFecha: filtros.mensajeFiltroFecha,
     handleFechaInicioChange: filtros.handleFechaInicioChange,
     handleFechaFinChange: filtros.handleFechaFinChange,
+    aplicarRangoPeriodo: filtros.aplicarRangoPeriodo,
     vistaActual,
     setVistaActual,
     tiposEspacio: datos.tiposEspacio,

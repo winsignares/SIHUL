@@ -16,7 +16,7 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { getSessionCacheData, setSessionCacheData, clearSessionCacheByPrefix } from '../../core/sessionCache';
 
 const FACULTADES_CACHE_KEY = 'gestion-academica-facultades';
 const PROGRAMAS_CACHE_KEY = 'gestion-academica-programas';
@@ -282,6 +282,7 @@ export function useFacultadesPrograms() {
                 componente_formativo: asignaturaForm.componente_formativo
             });
 
+            clearSessionCacheByPrefix('gestion-academica-crear-horarios');
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
             setShowAddAsignaturaModal(false);
             setAsignaturaForm({
@@ -309,6 +310,7 @@ export function useFacultadesPrograms() {
             setLoading(true);
             await asignaturaProgramaService.delete({ id: asignaturaPrograma.id });
 
+            clearSessionCacheByPrefix('gestion-academica-crear-horarios');
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
 
             toast.error('Asignatura eliminada del programa correctamente');
@@ -329,6 +331,7 @@ export function useFacultadesPrograms() {
                 ...updates
             });
 
+            clearSessionCacheByPrefix('gestion-academica-crear-horarios');
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
 
             toast.info('Asignatura actualizada correctamente');

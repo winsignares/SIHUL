@@ -48,7 +48,8 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
             accion.includes('radic') ||
             accion.includes('caus') ||
             estado === 'radicada' ||
-            estado === 'causada'
+            estado === 'causada' ||
+            estado === 'registrada'
           );
         })
         .sort((a, b) => new Date(b.fecha_accion || 0).getTime() - new Date(a.fecha_accion || 0).getTime()),
@@ -117,6 +118,8 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
+      case 'Registrada':
+        return 'bg-cyan-100 text-cyan-700 border-cyan-200';
       case 'Radicada':
         return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'Causada':

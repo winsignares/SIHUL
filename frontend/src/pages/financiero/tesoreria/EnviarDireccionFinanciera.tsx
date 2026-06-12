@@ -2,16 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../share/card';
 import { Button } from '../../../share/button';
+import { Input } from '../../../share/input';
 import { Textarea } from '../../../share/textarea';
 import { Label } from '../../../share/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { Send, Eye, Calendar, AlertCircle, TrendingUp, FolderOpen, FileText, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, Eye, Calendar, TrendingUp, FolderOpen, FileText, XCircle, ChevronLeft, ChevronRight, Filter, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
-import TableFilters from '../../../share/table-filters';
-import FacturaDetailModal, { type SharedFacturaDetail, buildSharedFacturaDetail } from '../../../share/factura-detail-modal';
-import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
+import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { SlaIndicator } from '../../../share/sla-indicator';
 import { facturasService } from '../../../services/financiero';
@@ -37,13 +38,10 @@ interface Factura {
 
 const FILTROS_INICIALES = {
   numeroFactura: '',
-  proveedor: '',
-  estado: '',
-  areaSolicitante: '',
+  numeroRadicado: '',
+  numeroProcesoPago: '',
   fechaInicio: '',
   fechaFin: '',
-  montoMin: '',
-  montoMax: '',
   orden: 'recientes',
 };
 
@@ -57,7 +55,6 @@ const ITEMS_POR_PAGINA = 5;
 
 const ESTADOS_APROBADOS_AUDITORIA = new Set([
   'Aprobada Auditoría',
-  'Aprobada AuditorÃ­a',
 ]);
 
 const toList = <T,>(data: unknown): T[] => {
@@ -126,16 +123,16 @@ export default function EnviarDireccionFinanciera() {
     void load();
   }, []);
 
+  const filtrosActivos = [filtros.numeroFactura, filtros.numeroRadicado, filtros.numeroProcesoPago, filtros.fechaInicio, filtros.fechaFin].filter(Boolean).length;
+
   const facturasFiltradas = useMemo(() => {
     const fechaInicio = filtros.fechaInicio ? new Date(filtros.fechaInicio) : null;
     const fechaFin = filtros.fechaFin ? new Date(filtros.fechaFin) : null;
 
     return facturasAprobadas.filter((factura) => {
-      if (filtros.numeroFactura && !(factura.numeroFactura ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-      if (filtros.proveedor && !(factura.proveedor ?? '').toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-      if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-      if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+      if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.numeroRadicado && !factura.numeroRadicado.toLowerCase().includes(filtros.numeroRadicado.toLowerCase())) return false;
+      if (filtros.numeroProcesoPago && !factura.numeroProcesoPago.toLowerCase().includes(filtros.numeroProcesoPago.toLowerCase())) return false;
 
       const fechaFactura = factura.fechaAprobacionAuditoria ? new Date(factura.fechaAprobacionAuditoria) : null;
       if (fechaInicio && fechaFactura && fechaFactura < fechaInicio) return false;
@@ -210,6 +207,10 @@ export default function EnviarDireccionFinanciera() {
 
   const enviarDireccionFinanciera = () => {
     if (!facturaSeleccionada) return;
+    if (observaciones.trim().length < 5) {
+      toast.error('Las observaciones son obligatorias (minimo 5 caracteres).');
+      return;
+    }
 
     setIsProcessing(true);
     void (async () => {
@@ -273,25 +274,53 @@ export default function EnviarDireccionFinanciera() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <TrendingUp className="w-5 h-5 text-red-600" />
-              Filtros de Busqueda Independientes
-            </CardTitle>
-            <CardDescription>Filtre por columna especifica usando los campos independientes</CardDescription>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-slate-800">
+                  <TrendingUp className="w-5 h-5 text-red-600" />
+                  Filtros de Busqueda Independientes
+                </CardTitle>
+                <CardDescription>
+                  Filtre por columna especifica usando los campos independientes
+                  {filtrosActivos > 0 && <span className="ml-2 text-red-600 font-semibold">{filtrosActivos} {filtrosActivos === 1 ? 'filtro activo' : 'filtros activos'}</span>}
+                </CardDescription>
+              </div>
+              {filtrosActivos > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setFiltros(FILTROS_INICIALES)} className="border-red-200 text-red-600 hover:bg-red-50 gap-1">
+                  <X className="h-3 w-3" /> Limpiar Todo
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <TableFilters
-              filters={filtros}
-              onFilterChange={setFiltros}
-              proveedores={Array.from(new Set(facturasAprobadas.map((f) => f.proveedor)))}
-              areas={Array.from(new Set(facturasAprobadas.map((f) => f.areaSolicitante)))}
-              showFechaFilter
-              showAreaFilter
-              showEstadoFilter={false}
-              orderKey="orden"
-              orderLabel="Ordenar lista"
-              orderOptions={ORDER_OPTIONS}
-            />
+            <div className="grid grid-cols-6 gap-3">
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Factura</Label>
+                <Input placeholder="Ej: FAC-2026-001" value={filtros.numeroFactura} onChange={(e) => setFiltros((p) => ({ ...p, numeroFactura: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Radicado</Label>
+                <Input placeholder="Ej: RAD-2026-001" value={filtros.numeroRadicado} onChange={(e) => setFiltros((p) => ({ ...p, numeroRadicado: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Proceso Pago</Label>
+                <Input placeholder="Ej: PRC-2026-001" value={filtros.numeroProcesoPago} onChange={(e) => setFiltros((p) => ({ ...p, numeroProcesoPago: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Filter className="h-3 w-3" /> Desde</Label>
+                <Input type="date" value={filtros.fechaInicio} onChange={(e) => setFiltros((p) => ({ ...p, fechaInicio: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Filter className="h-3 w-3" /> Hasta</Label>
+                <Input type="date" value={filtros.fechaFin} onChange={(e) => setFiltros((p) => ({ ...p, fechaFin: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-slate-600">Ordenar lista</Label>
+                <select value={filtros.orden} onChange={(e) => setFiltros((p) => ({ ...p, orden: e.target.value }))} className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700">
+                  {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -317,11 +346,10 @@ export default function EnviarDireccionFinanciera() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proceso Pago</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Area</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                     <TableHead className="font-semibold text-slate-700">Fecha Aprobacion</TableHead>
                     <TableHead className="font-semibold text-slate-700">Dias</TableHead>
@@ -331,30 +359,22 @@ export default function EnviarDireccionFinanciera() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-6 text-center text-slate-500">Cargando facturas aprobadas...</TableCell>
+                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">Cargando facturas aprobadas...</TableCell>
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-6 text-center text-slate-500">No hay facturas aprobadas para enviar.</TableCell>
+                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">No hay facturas aprobadas para enviar.</TableCell>
                     </TableRow>
                   ) : facturasPaginadas.map((factura) => {
-                    const colorRiesgo = factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';
-
                     return (
                       <TableRow key={factura.id} className="hover:bg-slate-50">
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
-                            {factura.diasTranscurridos >= 18 && <AlertCircle className="h-4 w-4 text-orange-700" />}
-                          </div>
+                          <span className="font-medium text-slate-800">{factura.numeroFactura}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800">{factura.numeroFactura}</span>
-                            <Badge className="mt-1 w-fit border border-blue-200 bg-blue-100 text-[10px] font-mono text-blue-700">
-                              {displayRadicado(factura.numeroRadicado)}
-                            </Badge>
-                          </div>
+                          <Badge className="w-fit border border-blue-200 bg-blue-100 font-mono text-[10px] text-blue-700">
+                            {displayRadicado(factura.numeroRadicado)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge className="w-fit border border-amber-200 bg-amber-50 font-mono text-xs text-amber-700">
@@ -367,7 +387,6 @@ export default function EnviarDireccionFinanciera() {
                           </p>
                           <p className="text-xs font-mono text-slate-500">{displayText(factura.nit)}</p>
                         </TableCell>
-                        <TableCell className="text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
                         <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
                         <TableCell className="text-slate-600">
                           <div className="flex items-center gap-1">
@@ -388,7 +407,7 @@ export default function EnviarDireccionFinanciera() {
                               <FolderOpen className="h-4 w-4" />
                               <span className="sr-only">Ver documentos</span>
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'tesoreria')} className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50" title="Descargar documentos">
+                            <Button size="sm" variant="outline" onClick={() => downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'tesoreria')} className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50" title="Descargar documentos">
                               <FileText className="h-4 w-4" />
                               <span className="sr-only">Descargar documentos</span>
                             </Button>
@@ -468,12 +487,12 @@ export default function EnviarDireccionFinanciera() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="obs-envio" className="text-sm font-semibold text-slate-700">Observaciones de envio</Label>
+                <Label htmlFor="obs-envio" className="text-sm font-semibold text-slate-700">Observaciones de envio <span className="text-red-500">*</span></Label>
                 <Textarea
                   id="obs-envio"
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
-                  placeholder="Observaciones opcionales para Direccion Financiera"
+                  placeholder="Observaciones requeridas para Direccion Financiera"
                 />
               </div>
             </div>

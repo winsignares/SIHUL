@@ -8,7 +8,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from .auth_helpers import is_admin_global
+from .auth_helpers import is_admin_global, is_admin_sistema
 
 
 class SessionUsuarioAuthentication(BaseAuthentication):
@@ -70,7 +70,7 @@ class SeccionalMixin:
         if not user:
             return queryset.none()
 
-        if is_admin_global(user):
+        if is_admin_global(user) or is_admin_sistema(user):
             return queryset
 
         seccional = self.get_user_seccional()

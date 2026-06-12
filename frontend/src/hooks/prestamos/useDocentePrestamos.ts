@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { prestamoService, type PrestamoEspacio, type RecursoPrestamo } from '../../services/prestamos/prestamoAPI';
+import { clearSessionCache } from '../../core/sessionCache';
 import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
@@ -276,6 +277,9 @@ export function useDocentePrestamos() {
                     cantidad: r.cantidad
                 }))
             });
+
+            // Invalidar caché del admin para que recargue el nuevo préstamo
+            clearSessionCache('prestamos-espacios-admin');
 
             // Reset form
             setNuevaSolicitud({

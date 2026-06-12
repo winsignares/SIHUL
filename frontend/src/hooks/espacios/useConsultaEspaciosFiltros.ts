@@ -147,6 +147,15 @@ export function useConsultaEspaciosFiltros() {
     [filterFechaInicio]
   );
 
+  const aplicarRangoPeriodo = useCallback((fechaInicio: string, fechaFin: string) => {
+    setFilterFechaInicio(fechaInicio);
+    setFilterFechaFin(fechaFin);
+    setMensajeFiltroFecha({
+      tipo: 'info',
+      texto: 'Rango ajustado al periodo académico seleccionado.'
+    });
+  }, []);
+
   const formatearFechaEncabezado = useCallback((fecha: Date): string => {
     const partes = new Intl.DateTimeFormat('es-CO', {
       timeZone: 'America/Bogota',
@@ -285,6 +294,7 @@ export function useConsultaEspaciosFiltros() {
     mensajeFiltroFecha,
     handleFechaInicioChange,
     handleFechaFinChange,
+    aplicarRangoPeriodo,
     limpiarFiltros,
     diasSemana,
     encabezadosDiasCronograma,

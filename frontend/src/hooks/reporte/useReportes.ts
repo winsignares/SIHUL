@@ -24,6 +24,7 @@ import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { userService } from '../../services/users/authService';
 import { resolveApiBaseUrl } from '../../core/backendUrl';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { trackedFetch } from '../../core/apiActivity';
 
 const REPORTES_PERIODO_CACHE_KEY = 'reporte-reportes-periodo';
 const REPORTES_HORARIOS_CACHE_KEY = 'reporte-reportes-horarios';
@@ -376,7 +377,7 @@ export function useReportes() {
             // Reporte de ocupación (jornadas + espacios más usados) con diseño del backend
             if (tipoReporte === 'ocupacion') {
 
-                const response = await fetch(`${apiUrl}/espacios/reporte/ocupacion/pdf/`, {
+                const response = await trackedFetch(`${apiUrl}/espacios/reporte/ocupacion/pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -406,7 +407,7 @@ export function useReportes() {
             // Reporte de disponibilidad (estilo backend)
             if (tipoReporte === 'disponibilidad') {
 
-                const response = await fetch(`${apiUrl}/espacios/reporte/disponibilidad/pdf/`, {
+                const response = await trackedFetch(`${apiUrl}/espacios/reporte/disponibilidad/pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -436,7 +437,7 @@ export function useReportes() {
             // Reporte de capacidad (estilo backend)
             if (tipoReporte === 'capacidad') {
 
-                const response = await fetch(`${apiUrl}/espacios/reporte/capacidad/pdf/`, {
+                const response = await trackedFetch(`${apiUrl}/espacios/reporte/capacidad/pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -475,7 +476,7 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
+                const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -514,7 +515,7 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
+                const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -651,7 +652,7 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
+                const response = await trackedFetch(`${apiUrl}/horario/exportar-excel/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -693,7 +694,7 @@ export function useReportes() {
                     
                     console.log('Enviando horarios al endpoint:', horariosAExportar.length);
                     
-                    const response = await fetch(`${apiUrl}/horario/exportar-excel-docente/`, {
+                    const response = await trackedFetch(`${apiUrl}/horario/exportar-excel-docente/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

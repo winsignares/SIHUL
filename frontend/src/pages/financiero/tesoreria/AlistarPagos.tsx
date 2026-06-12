@@ -8,25 +8,19 @@ import { Textarea } from '../../../share/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Badge } from '../../../share/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { Calendar, FileCheck, Eye, AlertCircle, XCircle, TrendingUp, FileText, FolderOpen, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { FileCheck, Eye, XCircle, FileText, FolderOpen, ChevronLeft, ChevronRight, Upload, Search, X, Filter } from 'lucide-react';
 import { toast } from 'sonner';
-import TableFilters from '../../../share/table-filters';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { SlaIndicator } from '../../../share/sla-indicator';
-import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
-import { openDocumentosConsolidados, downloadDocumentosConsolidados } from '../../../share/documentos-consolidados';
+import { displayRadicado, displayText } from '../../../share/field-placeholders';
+import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import { facturasService, documentosService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
+import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
 
 const FILTROS_INICIALES = {
   numeroFactura: '',
-  proveedor: '',
-  estado: '',
-  areaSolicitante: '',
-  fechaInicio: '',
-  fechaFin: '',
-  montoMin: '',
-  montoMax: '',
+  numeroRadicado: '',
   orden: 'recientes',
 };
 
@@ -34,7 +28,6 @@ const ITEMS_POR_PAGINA = 5;
 const ORDER_OPTIONS = [
   { label: 'Mas recientes primero', value: 'recientes' },
   { label: 'Mas antiguos primero', value: 'antiguos' },
-  { label: 'SLA critico primero', value: 'sla' },
 ];
 
 interface Factura {
@@ -77,8 +70,13 @@ const mapFactura = (f: APIFactura): Factura => ({
   numeroProcesoPago: f.numero_proceso_pago,
 });
 
-const getErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+    return (error as { message: string }).message;
+  }
+  if (error instanceof Error) return error.message;
+  return fallback;
+};
 
 export default function AlistarPagos() {
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
@@ -100,7 +98,7 @@ export default function AlistarPagos() {
   const loadFacturas = async () => {
     const response = await facturasService.getAll({ limit: 200 });
     return toList<APIFactura>(response)
-      .filter((f) => f.estado === 'Causada' || f.estado === 'Detenida')
+      .filter((f) => f.estado === 'Radicada' || f.estado === 'Causada' || f.estado === 'Detenida')
       .map(mapFactura);
   };
 
@@ -122,28 +120,18 @@ export default function AlistarPagos() {
   }, []);
 
   const facturasFiltradas = useMemo(() => facturasTesoreria.filter((factura) => {
-    if (filtros.numeroFactura && !(factura.numeroFactura ?? '').toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-    if (filtros.proveedor && !(factura.proveedor ?? '').toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-    if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-    if (filtros.fechaInicio && factura.fechaCausacion && new Date(factura.fechaCausacion) < new Date(filtros.fechaInicio)) return false;
-    if (filtros.fechaFin && factura.fechaCausacion && new Date(factura.fechaCausacion) > new Date(filtros.fechaFin)) return false;
-    if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-    if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+    if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+    if (filtros.numeroRadicado && !(factura.numeroRadicado?.toLowerCase().includes(filtros.numeroRadicado.toLowerCase()) ?? false)) return false;
     return true;
   }), [facturasTesoreria, filtros]);
 
-  const parseFecha = (value?: string) => (value ? new Date(value).getTime() : 0);
-
   const facturasOrdenadas = useMemo(() => {
     const listado = [...facturasFiltradas];
-    switch (filtros.orden) {
-      case 'antiguos':
-        return listado.sort((a, b) => parseFecha(a.fechaCausacion) - parseFecha(b.fechaCausacion));
-      case 'sla':
-        return listado.sort((a, b) => b.diasTranscurridos - a.diasTranscurridos);
-      default:
-        return listado.sort((a, b) => parseFecha(b.fechaCausacion) - parseFecha(a.fechaCausacion));
+    const parseFechaSort = (v?: string) => (v ? new Date(v).getTime() : 0);
+    if (filtros.orden === 'antiguos') {
+      return listado.sort((a, b) => parseFechaSort(a.fechaCausacion) - parseFechaSort(b.fechaCausacion));
     }
+    return listado.sort((a, b) => parseFechaSort(b.fechaCausacion) - parseFechaSort(a.fechaCausacion));
   }, [facturasFiltradas, filtros.orden]);
 
   const totalPaginas = Math.max(1, Math.ceil(facturasOrdenadas.length / ITEMS_POR_PAGINA));
@@ -190,6 +178,9 @@ export default function AlistarPagos() {
       nivelRiesgo: factura.diasTranscurridos > 17 ? 'rojo' : factura.diasTranscurridos > 10 ? 'amarillo' : 'verde',
     });
     setMostrarDialogDetalle(true);
+    void facturasService.getById(factura.facturaId).then((detalle) => {
+      setFacturaDetalle(buildSharedFacturaDetail(detalle));
+    }).catch(() => {});
   };
 
   const alistarPago = () => {
@@ -200,6 +191,10 @@ export default function AlistarPagos() {
     }
     if (!archivoSeven) {
       toast.error('Debe cargar el archivo generado en SEVEN');
+      return;
+    }
+    if (archivoSeven.size === 0) {
+      toast.error('El archivo seleccionado está vacío. Verifique que el archivo TXT tenga contenido antes de cargarlo.');
       return;
     }
     if (observaciones.trim().length < 5) {
@@ -272,25 +267,90 @@ export default function AlistarPagos() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <TrendingUp className="w-5 h-5 text-red-600" />
-              Filtros de Busqueda Independientes
-            </CardTitle>
-            <CardDescription>Filtre por columna especifica usando campos independientes</CardDescription>
+            <div className="flex items-center justify-between pb-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                  <Filter className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-slate-800">Filtros de Busqueda</CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {[filtros.numeroFactura, filtros.numeroRadicado].filter(Boolean).length > 0
+                      ? `${[filtros.numeroFactura, filtros.numeroRadicado].filter(Boolean).length} filtro(s) activo(s)`
+                      : 'Sin filtros aplicados'}
+                  </p>
+                </div>
+              </div>
+              {(filtros.numeroFactura || filtros.numeroRadicado) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setFiltros(FILTROS_INICIALES)}
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Limpiar
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <TableFilters
-              filters={filtros}
-              onFilterChange={setFiltros}
-              proveedores={Array.from(new Set(facturasTesoreria.map((f) => f.proveedor)))}
-              areas={Array.from(new Set(facturasTesoreria.map((f) => f.areaSolicitante)))}
-              showFechaFilter
-              showAreaFilter
-              showEstadoFilter={false}
-              orderKey="orden"
-              orderLabel="Ordenar lista"
-              orderOptions={ORDER_OPTIONS}
-            />
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-2 min-w-0 flex-1 basis-48">
+                <Label htmlFor="filter-factura" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />
+                  N° Factura
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="filter-factura"
+                    placeholder="Ej: FAC-2026-001"
+                    value={filtros.numeroFactura}
+                    onChange={(e) => setFiltros((prev) => ({ ...prev, numeroFactura: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600"
+                  />
+                  {filtros.numeroFactura && (
+                    <button onClick={() => setFiltros((prev) => ({ ...prev, numeroFactura: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 min-w-0 flex-1 basis-48">
+                <Label htmlFor="filter-radicado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />
+                  N° Radicado
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="filter-radicado"
+                    placeholder="Ej: RAD-2026-001"
+                    value={filtros.numeroRadicado}
+                    onChange={(e) => setFiltros((prev) => ({ ...prev, numeroRadicado: e.target.value }))}
+                    className="border-slate-300 focus:border-red-600 focus:ring-red-600"
+                  />
+                  {filtros.numeroRadicado && (
+                    <button onClick={() => setFiltros((prev) => ({ ...prev, numeroRadicado: '' }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 min-w-0 flex-1 basis-48">
+                <Label htmlFor="filter-orden" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+                  <Search className="w-3 h-3 text-red-600" />
+                  Ordenar lista
+                </Label>
+                <select
+                  id="filter-orden"
+                  value={filtros.orden}
+                  onChange={(e) => setFiltros((prev) => ({ ...prev, orden: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-300 bg-white text-slate-700 text-sm focus:border-red-600 focus:outline-none"
+                >
+                  {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -298,7 +358,7 @@ export default function AlistarPagos() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-slate-800">Facturas Causadas Pendientes</CardTitle>
+                <CardTitle className="text-slate-800">Facturas Pendientes de Alistamiento</CardTitle>
                 <CardDescription>
                   Mostrando {facturasOrdenadas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasOrdenadas.length)} de {facturasOrdenadas.length} facturas
                 </CardDescription>
@@ -316,43 +376,34 @@ export default function AlistarPagos() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Area</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Fecha Causacion</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Días transcurridos</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">Cargando facturas de tesoreria...</TableCell>
+                      <TableCell colSpan={7} className="py-6 text-center text-slate-500">Cargando facturas de tesoreria...</TableCell>
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-6 text-center text-slate-500">No hay facturas en Causada o Detenida con los filtros actuales.</TableCell>
+                      <TableCell colSpan={7} className="py-6 text-center text-slate-500">No hay facturas pendientes de alistamiento con los filtros actuales.</TableCell>
                     </TableRow>
                   ) : facturasPaginadas.map((factura) => {
-                    const colorRiesgo = factura.diasTranscurridos >= 18 ? 'bg-orange-500' : factura.diasTranscurridos >= 12 ? 'bg-yellow-500' : 'bg-green-500';
-
                     return (
                       <TableRow key={factura.id} className="hover:bg-slate-50">
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
-                            {factura.diasTranscurridos >= 18 && <AlertCircle className="h-4 w-4 text-orange-700" />}
-                          </div>
+                          <span className="font-medium text-slate-800">{factura.numeroFactura}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800">{factura.numeroFactura}</span>
-                            <Badge className="mt-1 w-fit bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-mono">
-                              {displayRadicado(factura.numeroRadicado)}
-                            </Badge>
-                          </div>
+                          <Badge className="w-fit bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-mono">
+                            {displayRadicado(factura.numeroRadicado)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
@@ -362,14 +413,8 @@ export default function AlistarPagos() {
                         </TableCell>
                         <TableCell className="text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
                         <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                        <TableCell className="text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            {displayDate(factura.fechaCausacion)}
-                          </div>
-                        </TableCell>
                         <TableCell>
-                          <SlaIndicator dias={factura.diasTranscurridos} objetivo={factura.slaObjetivoDias} compact className="font-bold" />
+                          <SlaIndicator dias={factura.diasTranscurridos} objetivo={factura.slaObjetivoDias} />
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -396,7 +441,7 @@ export default function AlistarPagos() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void downloadDocumentosConsolidados(factura.facturaId, factura.numeroFactura, 'tesoreria')}
+                              onClick={() => downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'tesoreria')}
                               className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50"
                               title="Descargar soportes"
                             >
@@ -501,15 +546,27 @@ export default function AlistarPagos() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="archivo-seven" className="text-sm font-semibold text-slate-700">Archivo generado en SEVEN</Label>
+              <div className="space-y-2">
+                <Label htmlFor="proceso" className="text-sm font-semibold text-slate-700">Numero Proceso Pago</Label>
+                <Input
+                  id="proceso"
+                  value={numeroProcesoPago}
+                  onChange={(e) => setNumeroProcesoPago(e.target.value)}
+                  placeholder="Ej: PP-2026-001245"
+                />
+                <p className="text-xs text-slate-500">
+                  Debe coincidir con el consecutivo generado en SEVEN.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                  <Label htmlFor="archivo-seven" className="text-sm font-semibold text-slate-700">Archivo plano generado en SEVEN</Label>
                   <label htmlFor="archivo-seven" className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm hover:border-blue-300">
                     <div className="min-w-0">
                       <p className="truncate font-medium text-slate-800">
                         {archivoSeven ? archivoSeven.name : 'Seleccionar archivo'}
                       </p>
-                      <p className="text-xs text-slate-500">Formatos permitidos: PDF, TXT, CSV, XLS, XLSX</p>
+                      <p className="text-xs text-slate-500">Formato permitido: TXT</p>
                     </div>
                     <div className="ml-4 flex shrink-0 items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-blue-700">
                       <Upload className="h-4 w-4" />
@@ -519,24 +576,10 @@ export default function AlistarPagos() {
                   <input
                     id="archivo-seven"
                     type="file"
-                    accept=".txt,.csv,.pdf,.xls,.xlsx"
+                    accept=".txt"
                     onChange={(e) => setArchivoSeven(e.target.files?.[0] || null)}
                     className="hidden"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="proceso" className="text-sm font-semibold text-slate-700">Numero Proceso Pago</Label>
-                  <Input
-                    id="proceso"
-                    value={numeroProcesoPago}
-                    onChange={(e) => setNumeroProcesoPago(e.target.value)}
-                    placeholder="Ej: PP-2026-001245"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Debe coincidir con el consecutivo generado en SEVEN.
-                  </p>
-                </div>
               </div>
 
               <div className="space-y-2">

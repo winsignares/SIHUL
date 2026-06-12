@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { facturasService, documentosService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
 export interface StatsDireccionFinanciera {
   facturasPorCargar: number;
@@ -89,24 +90,28 @@ export function useDireccionFinancieraHome() {
       const facturasUnicas = Array.from(new Map(todasLasFacturas.map(f => [f.id, f])).values());
       
       setFacturas(facturasUnicas);
-      setDocsMap({});
       setUltimaActualizacion(new Date());
-    } catch (err) {
+
+      // Cargar documentos para todas las facturas
+      const docsResults = await Promise.all(
+        facturasUnicas.map((f) =>
+          documentosService
+            .getByFactura(f.id)
+            .then((d) => ({ id: f.id, docs: d }))
+            .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
+        )
+      );
+      const map: Record<number, DocumentoAdjunto[]> = {};
+      docsResults.forEach(({ id, docs }) => {
+        map[id] = docs;
+      });
+      setDocsMap(map);
+    } catch {
       setError('No se pudo cargar los datos. Verifique la conexión.');
     } finally {
       setCargando(false);
     }
   }, []);
-
-  const cargarDocumentosFactura = useCallback(async (facturaId: number) => {
-    if (docsMap[facturaId] !== undefined) return;
-    try {
-      const docs = await documentosService.getByFactura(facturaId);
-      setDocsMap(prev => ({ ...prev, [facturaId]: docs }));
-    } catch {
-      setDocsMap(prev => ({ ...prev, [facturaId]: [] as DocumentoAdjunto[] }));
-    }
-  }, [docsMap]);
 
   useEffect(() => {
     cargarDatos();
@@ -173,11 +178,24 @@ export function useDireccionFinancieraHome() {
     });
   }, [facturas, docsMap]);
 
+  const ESTADOS_DF = new Set([
+    'Aprobada Auditoría',
+    'Revisada Dir. Financiera',
+    'Cargada',
+    'Enviada Rectoría',
+    'Autorizada',
+    'Rechazada por Rectoría',
+    'Devuelta',
+    'Pago Aplicado',
+    'Pagada',
+  ]);
+
   const actividadesRecientes = useMemo<SharedFacturaDetail[]>(() => {
-    const recientes = facturas
+    return facturas
+      .filter(f => ESTADOS_DF.has(f.estado))
       .slice()
       .sort((a, b) => new Date(b.fecha_modificacion).getTime() - new Date(a.fecha_modificacion).getTime())
-      .slice(0, 5)
+      .slice(0, 30)
       .map(f => {
         const docs = docsMap[f.id] ?? [];
         return {
@@ -191,7 +209,6 @@ export function useDireccionFinancieraHome() {
           })),
         };
       });
-    return recientes;
   }, [facturas, docsMap]);
 
   const handleClickActividad = (actividad: SharedFacturaDetail) => {
@@ -242,7 +259,6 @@ export function useDireccionFinancieraHome() {
     setShowKanbanCompleto,
     setSelectedFactura,
     handleClickActividad,
-    cargarDocumentosFactura,
     getEstadoBadge,
     formatUltimaActualizacion,
     recargarDatos: cargarDatos,

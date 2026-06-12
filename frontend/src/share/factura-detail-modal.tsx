@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { FileText, Clock, DollarSign, Building, MapPin, Hash, CalendarDays, Paperclip, Eye, Download, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import FacturaTimeline, { type TimelineEtapa } from './factura-timeline';
 import { displayDate, displayRadicado, displayText } from './field-placeholders';
-import { facturasService } from '../services/financiero';
-import type { Factura as APIFactura } from '../models/financiero/core.models';
+import { facturasService, documentosService } from '../services/financiero';
+import { mapFacturaDetail } from './factura-details-helpers';
 import { parseFacturaDescripcion } from './factura-description';
-import { openDocumentosConsolidados } from './documentos-consolidados';
+import { openDocumentosConsolidados, downloadDocumentoIndividual } from './documentos-consolidados';
+import type { ItemFactura } from '../models/financiero/core.models';
 
 type SharedFacturaDocumento = {
   id?: string;
@@ -37,6 +38,8 @@ export interface SharedFacturaDetail {
   consecutivoOperacion?: string;
   descripcion?: string;
   observaciones?: string;
+  identificacionFactura?: string;
+  items?: ItemFactura[];
   tipoDocumento?: string;
   valorSubtotal?: number;
   valorIva?: number;
@@ -60,14 +63,59 @@ export interface SharedFacturaDetail {
   auditoriaNotas?: string;
 }
 
+const formatMoney = (val: number) =>
+  `$${Number(val || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+function StructuredItemsList({ items }: { items: ItemFactura[] }) {
+  return (
+    <div className="space-y-3">
+      {items.map((item, idx) => (
+        <div key={item.id ?? idx} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+              {item.orden ?? idx + 1}
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <p className="font-semibold text-slate-800">{item.descripcion}</p>
+              <p className="text-sm text-slate-500">
+                {item.cantidad} x {formatMoney(item.valor_unitario)} | IVA {item.porcentaje_iva}%
+              </p>
+            </div>
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 text-sm min-w-[220px]">
+              {[
+                { key: 'subtotal', label: 'Subtotal', value: formatMoney(item.valor_subtotal) },
+                { key: 'iva', label: `IVA / INC ${item.porcentaje_iva}%`, value: formatMoney(item.valor_iva) },
+                { key: 'total', label: 'Total', value: formatMoney(item.valor_total) },
+              ].map((metric) => (
+                <div
+                  key={metric.key}
+                  className={`rounded-xl border px-3 py-2 text-right ${
+                    metric.key === 'total'
+                      ? 'bg-purple-50 border-purple-200 text-purple-700'
+                      : 'bg-slate-100 border-slate-200 text-slate-800'
+                  }`}
+                >
+                  <p className={`text-[11px] uppercase tracking-wide ${metric.key === 'total' ? 'text-purple-700' : 'text-slate-500'}`}>
+                    {metric.label}
+                  </p>
+                  <p className={`font-semibold ${metric.key === 'total' ? 'text-lg' : ''}`}>
+                    {metric.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SharedServiciosList({ items }: { items: ReturnType<typeof parseFacturaDescripcion>['items'] }) {
   return (
     <div className="space-y-3">
       {items.map((item, idx) => (
-        <div
-          key={`${item.rawLine}-${idx}`}
-          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-        >
+        <div key={`${item.rawLine}-${idx}`} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
               {item.index ?? idx + 1}
@@ -126,24 +174,8 @@ interface FacturaDetailModalProps {
 }
 
 function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
-  const estadosOrdenados = [
-    'Recibida',
-    'Registrada',
-    'Radicada',
-    'Causada',
-    'Alistada',
-    'Aprobada Auditoría',
-    'Revisada Dir. Financiera',
-    'Cargada',
-    'Enviada Rectoría',
-    'Rechazada por Rectoría',
-    'Devuelta',
-    'Autorizada',
-    'Pago Aplicado',
-  ];
-
-  const normalize = (value: string | undefined | null) =>
-    (value ?? '')
+  const normalize = (value: string) =>
+    value
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -153,7 +185,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     recibida: 'Recibida',
     registrada: 'Registrada',
     radicada: 'Radicada',
-    causada: 'Causada',
+    causada: 'Radicada',
     alistada: 'Alistada',
     'aprobada auditoria': 'Aprobada Auditoría',
     'rechazada auditoria': 'Devuelta',
@@ -165,8 +197,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'enviado a rectoria': 'Enviada Rectoría',
     'cargada para autorizacion': 'Cargada',
     cargada: 'Cargada',
-    autorizada: 'Autorizada',
-    'autorizada para pago': 'Autorizada',
+    autorizada: 'Pago Aplicado',
+    'autorizada para pago': 'Pago Aplicado',
     'rechazada por rectoria': 'Rechazada por Rectoría',
     devuelta: 'Devuelta',
     rechazada: 'Devuelta',
@@ -177,13 +209,13 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   };
 
   const current = mapEstado[normalize(factura.estado)] || factura.estado;
-  const idx = estadosOrdenados.indexOf(current);
+  const isRechazada = current === 'Rechazada por Rectoría';
+  const isDevuelta = current === 'Devuelta';
 
-  const blueprint = [
+  const fullBlueprint = [
     ['Recibida', 'Funcionario', 'Factura recibida del proveedor', 1, factura.fechaRecepcion || factura.fechaFactura],
     ['Registrada', 'Funcionario', 'Registro y validacion inicial completada', 1, factura.fechaRecepcion],
     ['Radicada', 'Contabilidad', 'Radicacion contable ejecutada', 3, factura.fechaRadicacion],
-    ['Causada', 'Contabilidad', 'Causacion contable ejecutada', 2, factura.fechaCausacion],
     ['Alistada', 'Tesoreria', 'Alistamiento previo a auditoria', 3, factura.fechaAlistamiento],
     ['Aprobada Auditoría', 'Auditoria', 'Control previo de auditoria aprobado', 4, factura.fechaAprobacionAuditoria],
     ['Revisada Dir. Financiera', 'Direccion Financiera', 'Revision financiera y trazabilidad de soportes', 2, factura.fechaAprobacionAuditoria],
@@ -191,19 +223,31 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Enviada Rectoría', 'Direccion Financiera', 'Remitida para decision final institucional', 1, factura.fechaCargue],
     ['Rechazada por Rectoría', 'Rectoría', 'Rectoría rechaza el tramite y solicita recertificacion previa', 2, undefined],
     ['Devuelta', 'Direccion Financiera / Tesoreria', 'Tramite devuelto para ajustes operativos y documentales', 2, undefined],
-    ['Autorizada', 'Rectoria', 'Autorizacion final de pago', 3, factura.fechaAutorizacion],
-    ['Pago Aplicado', 'Tesoreria', 'Pago aplicado y factura pagada', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
+    ['Pago Aplicado', 'Rectoria', 'Pago autorizado y aplicado por Rectoria', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
   ] as const;
 
-  return blueprint.map(([nombre, responsable, observaciones, sla, fecha], i) => {
-    let estado: TimelineEtapa['estado'] = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
+  // Los pasos negativos solo aparecen cuando la factura está efectivamente en ese estado
+  const blueprint = fullBlueprint.filter(([nombre]) => {
+    if (nombre === 'Rechazada por Rectoría') return isRechazada;
+    if (nombre === 'Devuelta') return isDevuelta;
+    return true;
+  });
 
-    if (nombre === 'Devuelta') {
-      estado = current === 'Devuelta' ? 'devuelto' : 'pendiente';
-    }
+  const idx = blueprint.findIndex(([nombre]) => nombre === current);
+
+  return blueprint.map(([nombre, responsable, observaciones, sla, fecha], i) => {
+    let estado: TimelineEtapa['estado'];
 
     if (nombre === 'Rechazada por Rectoría') {
-      estado = current === 'Rechazada por Rectoría' ? 'rechazado' : 'pendiente';
+      estado = 'rechazado';
+    } else if (nombre === 'Devuelta') {
+      estado = 'devuelto';
+    } else if (isRechazada || isDevuelta) {
+      // Estado negativo: pasos anteriores completados, posteriores pendientes (sin "en-proceso")
+      estado = i < idx ? 'completado' : 'pendiente';
+    } else {
+      // Estado normal: el paso actual y anteriores = completado, siguiente = en-proceso
+      estado = i <= idx ? 'completado' : i === idx + 1 ? 'en-proceso' : 'pendiente';
     }
 
     return {
@@ -214,8 +258,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
       usuarioResponsable: responsable,
       observaciones,
       diasMaximos: sla,
-      diasTranscurridos: i === idx || (current === 'Devuelta' && nombre === 'Devuelta') ? factura.diasTranscurridos : undefined,
-      nivelRiesgo: i === idx || (current === 'Devuelta' && nombre === 'Devuelta') ? factura.nivelRiesgo : undefined,
+      diasTranscurridos: i === idx ? factura.diasTranscurridos : undefined,
+      nivelRiesgo: i === idx ? factura.nivelRiesgo : undefined,
     } as TimelineEtapa;
   });
 }
@@ -237,12 +281,10 @@ function getEstadoBadge(estado: string) {
 }
 
 export default function FacturaDetailModal({ factura, isOpen, onClose }: FacturaDetailModalProps) {
-  const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail>(factura || {} as SharedFacturaDetail);
+  const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail | null>(factura ?? null);
 
   useEffect(() => {
-    if (factura) {
-      setDetalleFactura(factura);
-    }
+    setDetalleFactura(factura ?? null);
   }, [factura]);
 
   useEffect(() => {
@@ -251,19 +293,33 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     if (!rawId || Number.isNaN(rawId)) return;
 
     void (async () => {
-      try {
-        const detail = await facturasService.getById(rawId);
-        const mapped = mapFacturaDetail(detail, factura);
-        setDetalleFactura(mapped);
-      } catch (error) {
-        console.error('Error loading factura detail:', error);
+      const [detail, docs] = await Promise.all([
+        facturasService.getById(rawId),
+        documentosService.getByFactura(rawId),
+      ]);
+      const mapped = mapFacturaDetail(detail, factura);
+      // Siempre usamos el endpoint dedicado de documentos para garantizar la lista completa
+      if (docs.length > 0) {
+        // Deduplicar por tipo_documento: conservar el más reciente de cada tipo
+        const byTipo = new Map<string, typeof docs[0]>();
+        for (const d of docs) {
+          byTipo.set(d.tipo_documento, d);
+        }
+        mapped.documentos = Array.from(byTipo.values()).map((d) => ({
+          id: d.id ? String(d.id) : undefined,
+          nombre: d.nombre_archivo,
+          tipo: d.tipo_documento,
+          fecha: d.fecha_carga,
+          verificado: d.verificado,
+          url: d.archivo_url ?? d.url_storage ?? null,
+        }));
       }
+      setDetalleFactura(mapped);
     })();
   }, [factura, isOpen]);
 
-  if (!factura) return null;
-
-  const currentFactura = detalleFactura;
+  const currentFactura = detalleFactura ?? factura;
+  if (!currentFactura) return null;
 
   const etapasTimeline = currentFactura.etapasTimeline && currentFactura.etapasTimeline.length > 0
     ? currentFactura.etapasTimeline
@@ -276,33 +332,24 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
 
   const auditoriaItems = [
     {
-      title: 'Causacion contable',
-      ok: Boolean(currentFactura.cuentaContable),
-      note: currentFactura.cuentaContable || 'Pendiente de validar cuenta contable',
-    },
-    {
       title: 'Soportes completos',
       ok: documentos.length > 0,
       note: documentos.length > 0 ? `${documentos.length} soporte(s) cargado(s)` : 'Sin soportes adjuntos',
     },
-    {
-      title: 'Distribucion en rubro',
-      ok: Boolean(currentFactura.centroCosto),
-      note: currentFactura.centroCosto || 'Centro de costo por validar',
-    },
   ];
 
-  const parsedDescripcion = parseFacturaDescripcion(currentFactura.descripcion);
+  // Items del nuevo modelo (estructurado) tienen prioridad; si no existen, parseamos descripcion legacy
+  const hasStructuredItems = (currentFactura.items?.length ?? 0) > 0;
+  const parsedDescripcion = hasStructuredItems ? { items: [], remainingText: '' } : parseFacturaDescripcion(currentFactura.descripcion);
   const serviciosFactura = parsedDescripcion.items;
-  const descripcionAdicional = serviciosFactura.length > 0 ? parsedDescripcion.remainingText : currentFactura.descripcion;
-  const showDescripcionCard = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(currentFactura.observaciones);
-  const hasIdentificacion = Boolean(currentFactura.observaciones);
+  const descripcionAdicional = (hasStructuredItems || serviciosFactura.length > 0) ? parsedDescripcion.remainingText : currentFactura.descripcion;
+  const identificacionFactura = currentFactura.identificacionFactura || currentFactura.observaciones;
+  const showDescripcionCard = hasStructuredItems || serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(identificacionFactura);
+  const hasIdentificacion = Boolean(identificacionFactura);
 
   const openAllDocumentsPreview = () => {
     if (!currentFactura.facturaId) return;
-    void openDocumentosConsolidados(currentFactura.facturaId).catch(() => {
-      window.alert('No fue posible abrir los documentos consolidados.');
-    });
+    openDocumentosConsolidados(currentFactura.facturaId);
   };
 
   return (
@@ -416,18 +463,18 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                     {currentFactura.valorSubtotal !== undefined && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">Subtotal</span>
-                        <span className="font-semibold text-slate-800">${(currentFactura.valorSubtotal ?? 0).toLocaleString('es-CO')}</span>
+                        <span className="font-semibold text-slate-800">${currentFactura.valorSubtotal.toLocaleString('es-CO')}</span>
                       </div>
                     )}
                     {currentFactura.valorIva !== undefined && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">Tasa</span>
-                        <span className="font-semibold text-slate-800">${(currentFactura.valorIva ?? 0).toLocaleString('es-CO')}</span>
+                        <span className="font-semibold text-slate-800">${currentFactura.valorIva.toLocaleString('es-CO')}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                       <span className="text-slate-700 font-semibold">Total</span>
-                      <span className="text-xl font-bold text-green-700">${(currentFactura.valorTotal ?? 0).toLocaleString('es-CO')}</span>
+                      <span className="text-xl font-bold text-green-700">${currentFactura.valorTotal.toLocaleString('es-CO')}</span>
                     </div>
                   </div>
                 </div>
@@ -442,22 +489,18 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                       <p className="text-xs text-slate-500">Numero de Factura</p>
                       <p className="font-mono text-slate-800">{displayText(currentFactura.numeroFactura)}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Numero de Radicado</p>
-                      <p className="font-mono text-slate-800">{displayRadicado(currentFactura.numeroRadicado)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Numero de Proceso</p>
-                      <p className="font-mono text-slate-800">{displayText(currentFactura.numeroProcesoPago)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Numero de Operacion</p>
-                      <p className="font-mono text-slate-800">{displayText(currentFactura.numeroOperacionContable)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Consecutivo</p>
-                      <p className="font-mono text-slate-800">{displayText(currentFactura.consecutivoOperacion)}</p>
-                    </div>
+                    {currentFactura.numeroRadicado && (
+                      <div>
+                        <p className="text-xs text-slate-500">Numero de Radicado</p>
+                        <p className="font-mono text-slate-800">{displayRadicado(currentFactura.numeroRadicado)}</p>
+                      </div>
+                    )}
+                    {currentFactura.numeroProcesoPago && (
+                      <div>
+                        <p className="text-xs text-slate-500">Numero de Proceso de Pago</p>
+                        <p className="font-mono text-slate-800">{displayText(currentFactura.numeroProcesoPago)}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -480,15 +523,21 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <h3 className="font-semibold text-slate-800">Detalle del Servicio / Producto</h3>
                 </div>
 
-                {currentFactura.observaciones && (
+                {identificacionFactura && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p className="text-xs uppercase tracking-wide text-amber-600 font-semibold mb-1">Identificación factura</p>
-                    <p className="text-sm text-amber-900 whitespace-pre-line">{currentFactura.observaciones}</p>
+                    <p className="text-sm text-amber-900 whitespace-pre-line">{identificacionFactura}</p>
                   </div>
                 )}
 
-                {serviciosFactura.length > 0 && (
-                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 dark:border-slate-700/60 pt-4' : ''}`}>
+                {hasStructuredItems && currentFactura.items && (
+                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 pt-4' : ''}`}>
+                    <StructuredItemsList items={currentFactura.items} />
+                  </div>
+                )}
+
+                {!hasStructuredItems && serviciosFactura.length > 0 && (
+                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 pt-4' : ''}`}>
                     <SharedServiciosList items={serviciosFactura} />
                   </div>
                 )}
@@ -545,20 +594,25 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                       {doc.url && (
                         <div className="flex items-center gap-2 shrink-0">
                           <button
-                            onClick={() => window.open(doc.url!, '_blank', 'noopener,noreferrer')}
+                            onClick={() => {
+                              const isTxt = doc.nombre?.toLowerCase().endsWith('.txt') || doc.url!.toLowerCase().endsWith('.txt');
+                              if (isTxt && currentFactura.facturaId && doc.id) {
+                                openDocumentosConsolidados(currentFactura.facturaId, undefined, doc.id);
+                              } else {
+                                window.open(doc.url!, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 text-xs font-medium transition-all"
                           >
                             <Eye className="w-3.5 h-3.5" /> Ver
                           </button>
-                          <a
-                            href={doc.url}
-                            download={doc.nombre}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => downloadDocumentoIndividual(doc.url!, doc.nombre || 'documento.pdf')}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-medium transition-all"
                           >
                             <Download className="w-3.5 h-3.5" /> Descargar
-                          </a>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -576,13 +630,13 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div>
                     <p className="font-semibold text-slate-800">Checklist de control previo</p>
                     <p className="text-sm text-slate-600">
-                      Validacion de causacion contable, soportes y distribucion correcta del rubro.
+                      Validacion de soportes adjuntos al tramite.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {auditoriaItems.map((item) => (
                   <div key={item.title} className="rounded-lg border border-slate-200 bg-white p-4">
                     <div className="flex items-center justify-between">
@@ -615,134 +669,3 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
   );
 }
 
-export function buildSharedFacturaDetail(f: APIFactura): SharedFacturaDetail {
-  const documentos = (f.documentos || []).map((doc) => ({
-    id: doc.id ? String(doc.id) : undefined,
-    nombre: doc.nombre_archivo,
-    tipo: doc.tipo_documento,
-    fecha: doc.fecha_carga,
-    verificado: doc.verificado,
-    url: doc.archivo_url || doc.url_storage || null,
-  }));
-
-  const contactoProveedor = [f.proveedor?.email, f.proveedor?.telefono].filter(Boolean).join(' | ') || undefined;
-
-  const cuentaBancariaCompleta = f.cuenta_bancaria_proveedor ||
-    (f.proveedor?.banco && f.proveedor?.tipo_cuenta && f.proveedor?.numero_cuenta
-      ? `${f.proveedor.banco} - ${f.proveedor.tipo_cuenta} ${f.proveedor.numero_cuenta}`
-      : f.proveedor?.cuenta_bancaria_completa);
-
-  const nivelRiesgo: SharedFacturaDetail['nivelRiesgo'] =
-    f.indicador_riesgo === 'vencida' ? 'vencido' :
-    f.indicador_riesgo === 'atrasada' ? 'rojo' :
-    f.indicador_riesgo === 'atencion' ? 'amarillo' : 'verde';
-
-  return {
-    facturaId: f.id,
-    numeroFactura: f.numero_factura || `FAC-${f.id}`,
-    proveedor: f.proveedor?.razon_social || 'Sin proveedor',
-    nit: f.proveedor?.nit,
-    valorTotal: Number(f.valor_total || 0),
-    valorSubtotal: f.valor_subtotal ?? undefined,
-    valorIva: f.valor_iva ?? undefined,
-    fechaFactura: f.fecha_factura,
-    fechaRecepcion: f.fecha_recepcion,
-    fechaRadicacion: f.fecha_radicacion,
-    fechaCausacion: f.fecha_causacion,
-    fechaAlistamiento: f.fecha_alistamiento,
-    fechaAprobacionAuditoria: f.fecha_aprobacion_auditoria,
-    fechaCargue: f.fecha_cargue,
-    fechaAutorizacion: f.fecha_autorizacion,
-    fechaPagoAplicado: f.fecha_pago_aplicado,
-    fechaComprobante: f.fecha_comprobante,
-    areaSolicitante: f.departamento?.nombre,
-    estado: f.estado,
-    diasTranscurridos: Math.max(0, f.dias_transcurridos || 0),
-    slaObjetivoDias: f.sla_objetivo_dias ?? undefined,
-    numeroRadicado: f.numero_radicado,
-    numeroProcesoPago: f.numero_proceso_pago,
-    numeroOperacionContable: f.numero_operacion_contable,
-    consecutivoOperacion: f.consecutivo_operacion,
-    descripcion: f.descripcion,
-    observaciones: f.observaciones,
-    tipoDocumento: f.tipo_documento,
-    cuentaBancariaProveedor: cuentaBancariaCompleta,
-    contactoProveedor,
-    nivelRiesgo,
-    cuentaContable: f.cuenta_contable
-      ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}`
-      : undefined,
-    centroCosto: f.centro_costo
-      ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}`
-      : undefined,
-    documentos,
-    etapasTimeline: undefined,
-  };
-}
-
-function mapFacturaDetail(detail: APIFactura, base: SharedFacturaDetail): SharedFacturaDetail {
-  const contactoProveedor = [detail.proveedor?.email, detail.proveedor?.telefono].filter(Boolean).join(' | ') || base.contactoProveedor;
-
-  const cuentaBancariaCompleta = detail.cuenta_bancaria_proveedor ||
-    (detail.proveedor?.banco && detail.proveedor?.tipo_cuenta && detail.proveedor?.numero_cuenta
-      ? `${detail.proveedor.banco} - ${detail.proveedor.tipo_cuenta} ${detail.proveedor.numero_cuenta}`
-      : detail.proveedor?.cuenta_bancaria_completa) ||
-    base.cuentaBancariaProveedor;
-
-  const nivelRiesgo: SharedFacturaDetail['nivelRiesgo'] =
-    detail.indicador_riesgo === 'vencida' ? 'vencido' :
-    detail.indicador_riesgo === 'atrasada' ? 'rojo' :
-    detail.indicador_riesgo === 'atencion' ? 'amarillo' : 'verde';
-
-  const documentos = (detail.documentos || []).map((doc) => ({
-    id: doc.id ? String(doc.id) : undefined,
-    nombre: doc.nombre_archivo,
-    tipo: doc.tipo_documento,
-    fecha: doc.fecha_carga,
-    verificado: doc.verificado,
-    url: doc.archivo_url || doc.url_storage || null,
-  }));
-
-  return {
-    ...base,
-    facturaId: detail.id,
-    numeroFactura: detail.numero_factura || base.numeroFactura,
-    proveedor: detail.proveedor?.razon_social || base.proveedor,
-    valorTotal: Number(detail.valor_total || base.valorTotal || 0),
-    fechaFactura: detail.fecha_factura || base.fechaFactura,
-    fechaRecepcion: detail.fecha_recepcion || base.fechaRecepcion,
-    fechaRadicacion: detail.fecha_radicacion || base.fechaRadicacion,
-    fechaCausacion: detail.fecha_causacion || base.fechaCausacion,
-    fechaAlistamiento: detail.fecha_alistamiento || base.fechaAlistamiento,
-    fechaAprobacionAuditoria: detail.fecha_aprobacion_auditoria || base.fechaAprobacionAuditoria,
-    fechaCargue: detail.fecha_cargue || base.fechaCargue,
-    fechaAutorizacion: detail.fecha_autorizacion || base.fechaAutorizacion,
-    fechaPagoAplicado: detail.fecha_pago_aplicado || base.fechaPagoAplicado,
-    fechaComprobante: detail.fecha_comprobante || base.fechaComprobante,
-    areaSolicitante: detail.departamento?.nombre || base.areaSolicitante,
-    estado: detail.estado || base.estado,
-    diasTranscurridos: Number(detail.dias_transcurridos || base.diasTranscurridos || 0),
-    numeroRadicado: detail.numero_radicado || base.numeroRadicado,
-    numeroProcesoPago: detail.numero_proceso_pago || base.numeroProcesoPago,
-    numeroOperacionContable: detail.numero_operacion_contable || base.numeroOperacionContable,
-    consecutivoOperacion: detail.consecutivo_operacion || base.consecutivoOperacion,
-    descripcion: detail.descripcion || base.descripcion,
-    observaciones: detail.observaciones || base.observaciones,
-    tipoDocumento: detail.tipo_documento || base.tipoDocumento,
-    valorSubtotal: detail.valor_subtotal ?? base.valorSubtotal,
-    valorIva: detail.valor_iva ?? base.valorIva,
-    cuentaBancariaProveedor: cuentaBancariaCompleta,
-    contactoProveedor,
-    nivelRiesgo,
-    nit: detail.proveedor?.nit || base.nit,
-    cuentaContable: detail.cuenta_contable
-      ? `${detail.cuenta_contable.codigo} - ${detail.cuenta_contable.nombre}`
-      : base.cuentaContable,
-    centroCosto: detail.centro_costo
-      ? `${detail.centro_costo.codigo} - ${detail.centro_costo.nombre}`
-      : base.centroCosto,
-    documentos,
-    auditoriaView: base.auditoriaView,
-    auditoriaNotas: base.auditoriaNotas,
-  };
-}

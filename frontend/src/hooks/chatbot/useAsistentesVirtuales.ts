@@ -52,7 +52,8 @@ const rehidratarAsistente = (asistente: CachedAsistente): Asistente => {
 };
 
 const serializarAsistente = (asistente: Asistente): CachedAsistente => {
-    const { icon: _icon, ...serializable } = asistente;
+    const { icon, ...serializable } = asistente;
+    void icon;
     return serializable;
 };
 

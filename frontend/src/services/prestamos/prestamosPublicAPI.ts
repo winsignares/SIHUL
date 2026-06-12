@@ -1,4 +1,5 @@
 import { apiClient } from '../../core/apiClient';
+import { notifyPrestamosChanged } from './prestamosChanges';
 
 export interface SedeAPI {
     id: number;
@@ -41,7 +42,6 @@ export interface SolicitudPrestamoPublico {
     fin_repeticion_tipo?: 'never' | 'until_date' | 'count';
     fin_repeticion_fecha?: string;
     fin_repeticion_ocurrencias?: number;
-    recaptcha_token?: string;
 }
 
 export interface PrestamoPublicoItem {
@@ -283,7 +283,7 @@ export const prestamosPublicAPI = {
     /**
      * Crea una solicitud de préstamo para usuarios públicos
      */
-    crearSolicitud: async (solicitud: SolicitudPrestamoPublico): Promise<{ message: string; id: number; token_publico?: string }> => {
+    crearSolicitud: async (solicitud: SolicitudPrestamoPublico): Promise<{ message: string; id: number }> => {
         const created = await apiClient.post<PrestamoPublicoApi>('/prestamos/publicos/', {
             espacio: solicitud.espacio_id,
             nombre_solicitante: solicitud.nombre_completo,
@@ -303,9 +303,9 @@ export const prestamosPublicAPI = {
             fin_repeticion_tipo: solicitud.fin_repeticion_tipo,
             fin_repeticion_fecha: solicitud.fin_repeticion_fecha,
             fin_repeticion_ocurrencias: solicitud.fin_repeticion_ocurrencias,
-            recaptcha_token: solicitud.recaptcha_token,
         });
-        return { message: 'Solicitud creada', id: created.id, token_publico: (created as any).token_publico };
+        notifyPrestamosChanged();
+        return { message: 'Solicitud creada', id: created.id };
     },
 
     /**
@@ -325,12 +325,17 @@ export const prestamosPublicAPI = {
         identificacion: string,
         correo: string
     ): Promise<{ prestamos: PrestamoPublicoItem[] }> => {
-        const params = new URLSearchParams({
-            identificacion: identificacion.trim(),
-            correo: correo.trim(),
-        });
-        const prestamos = await apiClient.get<PrestamoPublicoApi[]>(`/prestamos/publicos/?${params}`);
-        return { prestamos: prestamos.map(toPrestamoPublicoItem) };
+        const prestamos = await apiClient.get<PrestamoPublicoApi[]>('/prestamos/publicos/');
+        const correoNormalizado = correo.trim().toLowerCase();
+        const identificacionNormalizada = identificacion.trim();
+        const prestamosNormalizados = prestamos.map(toPrestamoPublicoItem);
+        return {
+            prestamos: prestamosNormalizados.filter((item) => {
+                const correoItem = (item.usuario_correo || '').toLowerCase();
+                const identificacionItem = item.identificacion || '';
+                return correoItem === correoNormalizado && identificacionItem === identificacionNormalizada;
+            }),
+        };
     },
 
     /**
@@ -361,6 +366,7 @@ export const prestamosPublicAPI = {
             fin_repeticion_fecha: payload.fin_repeticion_fecha,
             fin_repeticion_ocurrencias: payload.fin_repeticion_ocurrencias,
         });
+        notifyPrestamosChanged();
         return { message: 'Solicitud actualizada', id: updated.id };
     },
 
@@ -404,6 +410,7 @@ export const prestamosPublicAPI = {
         id: number
     ): Promise<{ message: string }> => {
         await apiClient.delete(`/prestamos/publicos/${id}/`);
+        notifyPrestamosChanged();
         return { message: 'Solicitud eliminada' };
     }
 };

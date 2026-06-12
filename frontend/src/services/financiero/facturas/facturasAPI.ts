@@ -136,11 +136,12 @@ export const facturasService = {
 
   getDocumentosConsolidados: async (
     id: number,
-    opts?: { scope?: string; descargar?: boolean }
+    opts?: { scope?: string; descargar?: boolean; docId?: string }
   ): Promise<Blob> => {
     const query = buildQueryString({
       scope: opts?.scope,
       descargar: opts?.descargar ? 1 : undefined,
+      doc_id: opts?.docId,
     });
     return apiClient.getBlob(`${API_BASE}/facturas/${id}/documentos_consolidados/${query ? `?${query}` : ''}`);
   },
