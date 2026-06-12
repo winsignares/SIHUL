@@ -5,10 +5,8 @@ Carga: roles, componentes, permisos, departamentos, catálogos contables,
 """
 
 import re
-from django.utils import timezone
 from usuarios.models import Rol, Usuario
 from componentes.models import Componente, ComponenteRol
-from .financiero_facturas_stress_seeder import create_facturas_stress_data
 from financiero.models import (
     Departamento,
     ParametroSLA,
@@ -36,7 +34,6 @@ def create_financiero_data(out, sty):
     _seed_sla(out, sty)
     _seed_parametros(out, sty)
     _seed_usuarios_prueba(roles, out, sty)
-    create_facturas_stress_data(out, sty)
 
     out.write(sty.SUCCESS('[Financiero] Datos financieros cargados exitosamente.'))
 
@@ -456,13 +453,13 @@ def _seed_parametros(out, sty):
 def _seed_usuarios_prueba(roles, out, sty):
     """Crea usuarios de prueba para el módulo financiero."""
     usuarios_prueba = [
-        ('funcionario@financiera.edu.co', 'func123', 'Funcionario', 'Funcionario'),
-        ('contabilidad@financiera.edu.co', 'conta123', 'Contabilidad', 'Usuario Contabilidad'),
-        ('tesoreria@financiera.edu.co', 'teso123', 'Tesorería', 'Usuario Tesorería'),
-        ('auditoria@financiera.edu.co', 'audit123', 'Auditoría', 'Usuario Auditoría'),
-        ('direccion-financiera@financiera.edu.co', 'dirfin123', 'Dirección Financiera', 'Dir. Financiera'),
-        ('rectoria@financiera.edu.co', 'recto123', 'Rectoría', 'Rectoría'),
-        ('admin.financiero@financiera.edu.co', 'adminfin123', 'Admin Financiero', 'Admin Financiero'),
+        ('funcionario@financiera.edu.co', 'Func#Ul2025!', 'Funcionario', 'Funcionario'),
+        ('contabilidad@financiera.edu.co', 'Ctb#Ul2025!', 'Contabilidad', 'Usuario Contabilidad'),
+        ('tesoreria@financiera.edu.co', 'Tsr#Ul2025!', 'Tesorería', 'Usuario Tesorería'),
+        ('auditoria@financiera.edu.co', 'Aud#Ul2025!', 'Auditoría', 'Usuario Auditoría'),
+        ('direccion-financiera@financiera.edu.co', 'DFn#Ul2025!', 'Dirección Financiera', 'Dir. Financiera'),
+        ('rectoria@financiera.edu.co', 'Rct#Ul2025!', 'Rectoría', 'Rectoría'),
+        ('admin.financiero@financiera.edu.co', 'Adm#Ul2025!', 'Admin Financiero', 'Admin Financiero'),
     ]
 
     out.write(sty.NOTICE('\n  Usuarios de prueba:'))
