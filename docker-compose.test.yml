@@ -136,3 +136,8 @@ volumes:
 networks:
   sihul_test_network:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${TEST_DOCKER_NETWORK_SUBNET:-10.202.10.0/24}
+          gateway: ${TEST_DOCKER_NETWORK_GATEWAY:-10.202.10.1}

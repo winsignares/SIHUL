@@ -15,8 +15,11 @@ contenedores, la red ni los volúmenes del stack principal `sihul`.
 - Backend: `http://localhost:8100`
 - Chatbot: `http://localhost:8101`
 - PostgreSQL: `localhost:55432`
+- Red Docker: `10.202.10.0/24` (`10.202.10.1` como gateway)
 
 Los puertos internos siguen siendo `5173`, `8000`, `8001` y `5432`.
+La subred puede cambiarse con `TEST_DOCKER_NETWORK_SUBNET` y
+`TEST_DOCKER_NETWORK_GATEWAY` en `.env.test`.
 
 ## Preparación
 
