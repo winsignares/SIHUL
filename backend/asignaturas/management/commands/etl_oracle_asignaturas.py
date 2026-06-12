@@ -142,6 +142,9 @@ class Command(BaseCommand):
         summary = {
             'extracted': 0,
             'valid': 0,
+            'unique_codes': 0,
+            'duplicate_rows': 0,
+            'codes_with_multiple_sedes': 0,
             'invalid': 0,
             'invalid_codigo_too_long': 0,
             'truncated_nombre': 0,
@@ -196,7 +199,8 @@ class Command(BaseCommand):
             codigo_max = Asignatura._meta.get_field('codigo').max_length
             nombre_max = Asignatura._meta.get_field('nombre').max_length
 
-            parsed = []
+            parsed_by_code = {}
+            sedes_by_code = {}
             for row in rows:
                 data = dict(zip(columns, row))
                 codigo = str(self._first_present(data, ['id_asignatura', 'cod_materia']) or '').strip()
@@ -254,16 +258,35 @@ class Command(BaseCommand):
                 if sede_code:
                     sede_code = sede_id_to_cod.get(sede_code, sede_code)
 
-                parsed.append(
-                    {
-                        'codigo': codigo,
-                        'nombre': nombre,
-                        'tipo': tipo,
-                        'creditos': creditos,
-                        'horas': horas,
-                        'estado_activo': estado_activo,
-                        'id_sede_oracle': sede_code,
-                    }
+                item = {
+                    'codigo': codigo,
+                    'nombre': nombre,
+                    'tipo': tipo,
+                    'creditos': creditos,
+                    'horas': horas,
+                    'estado_activo': estado_activo,
+                    'id_sede_oracle': sede_code,
+                }
+                if codigo in parsed_by_code:
+                    summary['duplicate_rows'] += 1
+                parsed_by_code[codigo] = item
+                if sede_code:
+                    sedes_by_code.setdefault(codigo, set()).add(sede_code)
+
+            parsed = list(parsed_by_code.values())
+            summary['unique_codes'] = len(parsed)
+            summary['codes_with_multiple_sedes'] = sum(
+                1 for sede_codes in sedes_by_code.values() if len(sede_codes) > 1
+            )
+            if summary['duplicate_rows']:
+                self.stdout.write(
+                    self.style.WARNING(
+                        'Oracle contiene filas repetidas por codigo: '
+                        f'{summary["duplicate_rows"]} filas adicionales, '
+                        f'{summary["unique_codes"]} codigos unicos, '
+                        f'{summary["codes_with_multiple_sedes"]} codigos asociados a varias sedes. '
+                        'Asignatura.codigo es unico; se procesa un registro por codigo.'
+                    )
                 )
 
             existing_by_code = {
