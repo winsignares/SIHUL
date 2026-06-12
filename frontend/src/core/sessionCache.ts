@@ -89,6 +89,16 @@ export function clearSessionCache(key?: string): void {
     }
 }
 
+export function clearSessionCacheByPrefix(prefix: string): void {
+    const fullPrefix = getStorageKey(prefix);
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k?.startsWith(fullPrefix)) {
+            localStorage.removeItem(k);
+        }
+    }
+}
+
 // Auto-cleanup on module load if storage is near limit
 (function cleanupOldCache() {
     try {
