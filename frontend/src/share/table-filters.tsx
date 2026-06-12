@@ -1,31 +1,37 @@
+import type { ChangeEvent } from 'react';
 import { Input } from './input';
 import { Label } from './label';
 import { Search, Calendar, X, Filter } from 'lucide-react';
 import { Button } from './button';
 
+export interface TableFilterValues {
+  numeroFactura?: string;
+  proveedor?: string;
+  estado?: string;
+  areaSolicitante?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  montoMin?: string;
+  montoMax?: string;
+  orden?: string;
+}
+
 interface TableFiltersProps {
-  filters: {
-    numeroFactura?: string;
-    proveedor?: string;
-    estado?: string;
-    areaSolicitante?: string;
-    fechaInicio?: string;
-    fechaFin?: string;
-    montoMin?: string;
-    montoMax?: string;
-    orden?: string;
-  };
-  onFilterChange: (filters: any) => void;
+  filters: TableFilterValues;
+  onFilterChange: (filters: TableFilterValues) => void;
   estados?: string[];
   proveedores?: string[];
   areas?: string[];
   showFechaFilter?: boolean;
   showAreaFilter?: boolean;
+  showProveedorFilter?: boolean;
   showEstadoFilter?: boolean;
   showMontoFilter?: boolean;
-  orderKey?: string;
+  orderKey?: keyof TableFilterValues;
   orderLabel?: string;
   orderOptions?: { label: string; value: string }[];
+  searchLabel?: string;
+  searchPlaceholder?: string;
 }
 
 export default function TableFilters({
@@ -36,11 +42,14 @@ export default function TableFilters({
   areas = [],
   showFechaFilter = false,
   showAreaFilter = false,
+  showProveedorFilter = true,
   showEstadoFilter = true,
   showMontoFilter = false,
   orderKey,
   orderLabel = 'Ordenar por',
   orderOptions = [],
+  searchLabel = 'Numero de Factura',
+  searchPlaceholder = 'Ej: FAC-2024-001',
 }: TableFiltersProps) {
   const handleReset = () => {
     onFilterChange({
@@ -56,7 +65,7 @@ export default function TableFilters({
     });
   };
 
-  const handleInputChange = (key: string, value: string) => {
+  const handleInputChange = <K extends keyof TableFilterValues>(key: K, value: string) => {
     onFilterChange({ ...filters, [key]: value });
   };
 
@@ -92,15 +101,15 @@ export default function TableFilters({
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+        <div className="space-y-2 min-w-0 flex-1 basis-0">
           <Label htmlFor="filter-numero" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
             <Search className="w-3 h-3 text-red-600" />
-            Numero de Factura
+            {searchLabel}
           </Label>
           <div className="relative">
             <Input
               id="filter-numero"
-              placeholder="Ej: FAC-2024-001"
+              placeholder={searchPlaceholder}
               value={filters.numeroFactura || ''}
               onChange={(e) => handleInputChange('numeroFactura', e.target.value)}
               className="border-slate-300 focus:border-red-600 focus:ring-red-600"
@@ -116,28 +125,30 @@ export default function TableFilters({
           </div>
         </div>
 
-        <div className="space-y-2 min-w-0 flex-1 max-w-xs">
-          <Label htmlFor="filter-proveedor" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
-            <Search className="w-3 h-3 text-red-600" />
-            Proveedor
-          </Label>
-          <select
-            id="filter-proveedor"
-            value={filters.proveedor || ''}
-            onChange={(e) => handleInputChange('proveedor', e.target.value)}
-            className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
-          >
-            <option value="">Todos los proveedores</option>
-            {proveedores.map((prov, idx) => (
-              <option key={idx} value={prov}>
-                {prov}
-              </option>
-            ))}
-          </select>
-        </div>
+        {showProveedorFilter && (
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
+            <Label htmlFor="filter-proveedor" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
+              <Search className="w-3 h-3 text-red-600" />
+              Proveedor
+            </Label>
+            <select
+              id="filter-proveedor"
+              value={filters.proveedor || ''}
+              onChange={(e) => handleInputChange('proveedor', e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
+            >
+              <option value="">Todos los proveedores</option>
+              {proveedores.map((prov, idx) => (
+                <option key={idx} value={prov}>
+                  {prov}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {showEstadoFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-estado" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               Estado
@@ -159,15 +170,15 @@ export default function TableFilters({
         )}
 
         {orderKey && orderOptions.length > 0 && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor={`filter-${orderKey}`} className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               {orderLabel}
             </Label>
             <select
               id={`filter-${orderKey}`}
-              value={(filters as Record<string, string | undefined>)[orderKey] || ''}
-              onChange={(e) => handleInputChange(orderKey, e.target.value)}
+              value={filters[orderKey] || ''}
+              onChange={(event) => handleInputChange(orderKey, event.target.value)}
               className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
             >
               {orderOptions.map((option: { label: string; value: string }) => (
@@ -180,7 +191,7 @@ export default function TableFilters({
         )}
 
         {showAreaFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-area" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
               Area Solicitante
@@ -202,23 +213,23 @@ export default function TableFilters({
         )}
 
         {showFechaFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-fecha-inicio" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Calendar className="w-3 h-3 text-blue-600" />
               Desde
             </Label>
-              <Input
-                id="filter-fecha-inicio"
-                type="date"
-                value={filters.fechaInicio || ''}
-                onChange={(e: any) => handleInputChange('fechaInicio', e.target.value)}
-                className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
-              />
-            </div>
+            <Input
+              id="filter-fecha-inicio"
+              type="date"
+              value={filters.fechaInicio || ''}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange('fechaInicio', event.target.value)}
+              className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
+            />
+          </div>
         )}
 
         {showFechaFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-fecha-fin" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Calendar className="w-3 h-3 text-blue-600" />
               Hasta
@@ -227,14 +238,14 @@ export default function TableFilters({
               id="filter-fecha-fin"
               type="date"
               value={filters.fechaFin || ''}
-              onChange={(e: any) => handleInputChange('fechaFin', e.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange('fechaFin', event.target.value)}
               className="border-slate-300 focus:border-blue-600 focus:ring-blue-600"
             />
           </div>
         )}
 
         {showMontoFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-monto-min" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Filter className="w-3 h-3 text-emerald-600" />
               Monto Minimo
@@ -252,7 +263,7 @@ export default function TableFilters({
         )}
 
         {showMontoFilter && (
-          <div className="space-y-2 min-w-0 flex-1 max-w-xs">
+          <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-monto-max" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Filter className="w-3 h-3 text-emerald-600" />
               Monto Maximo

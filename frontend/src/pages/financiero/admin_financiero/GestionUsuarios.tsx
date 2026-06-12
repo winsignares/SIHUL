@@ -9,11 +9,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
 import { Checkbox } from '../../../share/checkbox';
-import { Edit3, FileSpreadsheet, Plus, RefreshCw, Search, ShieldCheck, Trash2, Users } from 'lucide-react';
+import { Edit3, PauseCircle, PlayCircle, Plus, Search, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService, rolService, type Usuario, type Rol } from '../../../services/users/authService';
 import { componenteRolService, componenteService, componenteUsuarioService, type Componente, type ComponenteRol, type ComponenteUsuario } from '../../../services/componentes/componentesAPI';
-import * as XLSX from 'xlsx';
 
 type PermisoTipo = 'VER' | 'EDITAR';
 
@@ -246,17 +245,6 @@ export default function GestionUsuariosReal() {
     });
   }, [search, usuariosFinancieros, rolesById, rolFilter, estadoFilter, sedeFilter]);
 
-  const resumenUsuarios = useMemo(() => {
-    const activos = usuariosFinancieros.filter((usuario) => usuario.activo).length;
-    return {
-      total: usuariosFinancieros.length,
-      activos,
-      inactivos: usuariosFinancieros.length - activos,
-      roles: rolesGestionables.length,
-      sedes: sedesDisponibles.length,
-    };
-  }, [rolesGestionables.length, sedesDisponibles.length, usuariosFinancieros]);
-
   const crearUsuario = async () => {
     const nombre = nuevoUsuario.nombre.trim();
     const correo = nuevoUsuario.correo.trim();
@@ -475,35 +463,6 @@ export default function GestionUsuariosReal() {
     setComponentesEditarUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
   };
 
-  const exportarUsuariosExcel = useCallback(() => {
-    if (usuariosFiltrados.length === 0) {
-      toast.error('No hay usuarios para exportar con los filtros actuales.');
-      return;
-    }
-
-    const rows = usuariosFiltrados.map((usuario) => ({
-      ID: usuario.id || '',
-      Usuario: usuario.nombre || '',
-      Correo: usuario.correo || '',
-      Rol: getRolNombre(usuario, rolesById),
-      Estado: usuario.activo ? 'Activo' : 'Inactivo',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 10 },
-      { wch: 34 },
-      { wch: 38 },
-      { wch: 24 },
-      { wch: 14 },
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
-    XLSX.writeFile(workbook, `usuarios_financieros_${Date.now()}.xlsx`);
-    toast.success('Excel de usuarios exportado correctamente.');
-  }, [usuariosFiltrados, rolesById]);
-
   const limpiarFiltros = () => {
     setSearch('');
     setRolFilter('all');
@@ -527,69 +486,18 @@ export default function GestionUsuariosReal() {
               Gestión de Usuarios Financieros
             </h1>
             <p className="max-w-2xl text-sm text-red-100">Centraliza altas, edición y permisos del equipo financiero en una vista corta, clara y alineada con el resto del aplicativo.</p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Badge className="border border-white/20 bg-white/10 text-white">Activos: {resumenUsuarios.activos}</Badge>
-              <Badge className="border border-white/20 bg-white/10 text-white">Roles: {resumenUsuarios.roles}</Badge>
-              <Badge className="border border-white/20 bg-white/10 text-white">Sedes: {resumenUsuarios.sedes}</Badge>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setDialogOpen(true)} className="bg-yellow-400 hover:bg-yellow-500 text-red-900">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo usuario
-            </Button>
-            <Button onClick={() => void cargarData()} className="bg-white/15 border border-white/30 hover:bg-white/25 text-white">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Actualizar datos
-            </Button>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card className="border-red-100 bg-gradient-to-br from-white to-red-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Usuarios</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{resumenUsuarios.total}</p>
-            <p className="text-sm text-slate-600">Base total administrable</p>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-100 bg-gradient-to-br from-white to-emerald-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Activos</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-700">{resumenUsuarios.activos}</p>
-            <p className="text-sm text-slate-600">Con acceso operativo</p>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-100 bg-gradient-to-br from-white to-amber-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Inactivos</p>
-            <p className="mt-2 text-3xl font-bold text-amber-700">{resumenUsuarios.inactivos}</p>
-            <p className="text-sm text-slate-600">Sin operación actual</p>
-          </CardContent>
-        </Card>
-        <Card className="border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">En vista</p>
-            <p className="mt-2 text-3xl font-bold text-indigo-700">{usuariosFiltrados.length}</p>
-            <p className="text-sm text-slate-600">Resultados filtrados</p>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="border-0 shadow-lg">
         <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-slate-900">Usuarios registrados</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={exportarUsuariosExcel}>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-              <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">
-                {usuariosFiltrados.length} usuarios
-              </Badge>
-            </div>
+            <CardTitle className="text-slate-900">Gestión Usuarios</CardTitle>
+            <Button size="sm" onClick={() => setDialogOpen(true)} className="bg-red-700 hover:bg-red-800 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo usuario
+            </Button>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
             <div className="relative lg:col-span-5">
@@ -656,18 +564,17 @@ export default function GestionUsuariosReal() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>ID</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Correo</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-center">Usuario</TableHead>
+                    <TableHead className="text-center">Correo</TableHead>
+                    <TableHead className="text-center">Rol</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {usuariosFiltrados.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-slate-500 py-7">
+                      <TableCell colSpan={5} className="text-center text-slate-500 py-7">
                         No hay usuarios para mostrar.
                       </TableCell>
                     </TableRow>
@@ -677,42 +584,44 @@ export default function GestionUsuariosReal() {
                       const isProcessing = accionUsuarioId === usuario.id;
                       return (
                         <TableRow key={usuario.id}>
-                          <TableCell>{usuario.id || '—'}</TableCell>
-                          <TableCell className="font-medium text-slate-800">{usuario.nombre}</TableCell>
-                          <TableCell>{usuario.correo}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-center font-medium text-slate-800">{usuario.nombre}</TableCell>
+                          <TableCell className="text-center">{usuario.correo}</TableCell>
+                          <TableCell className="text-center">
                             <Badge variant="outline" className="text-slate-700">
                               <ShieldCheck className="w-3 h-3 mr-1" />
                               {rolNombre}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-center">
                             <Badge className={usuario.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
                               {usuario.activo ? 'Activo' : 'Inactivo'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex justify-end gap-2">
-                              <Button size="sm" variant="outline" onClick={() => iniciarEdicion(usuario)}>
-                                <Edit3 className="w-3 h-3" />
-                                Editar
+                            <div className="flex justify-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => iniciarEdicion(usuario)} title="Editar">
+                                <Edit3 className="w-4 h-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 disabled={isProcessing}
                                 onClick={() => void toggleEstadoUsuario(usuario)}
+                                title={usuario.activo ? 'Desactivar' : 'Activar'}
+                                className={usuario.activo ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'}
                               >
-                                {usuario.activo ? 'Desactivar' : 'Activar'}
+                                {usuario.activo
+                                  ? <PauseCircle className="w-4 h-4" />
+                                  : <PlayCircle className="w-4 h-4" />}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 disabled={isProcessing}
                                 onClick={() => void eliminarUsuario(usuario)}
+                                title="Eliminar"
                               >
-                                <Trash2 className="w-3 h-3" />
-                                Eliminar
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </TableCell>

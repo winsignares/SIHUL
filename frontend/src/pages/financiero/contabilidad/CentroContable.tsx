@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
@@ -144,12 +144,12 @@ export default function CentroContable() {
     [departamentos],
   );
 
-  const resolveDepartamentoId = (centro: CentroCosto) => {
+  const resolveDepartamentoId = useCallback((centro: CentroCosto) => {
     if (typeof centro.departamento === 'number') return centro.departamento;
     return centro.departamento?.id ?? centro.departamento_id ?? null;
-  };
+  }, []);
 
-  const resolveDepartamentoNombre = (centro: CentroCosto) => {
+  const resolveDepartamentoNombre = useCallback((centro: CentroCosto) => {
     const departamentoValue = centro.departamento as unknown;
     if (typeof departamentoValue === 'string') return departamentoValue;
     if (departamentoValue && typeof departamentoValue === 'object' && 'nombre' in departamentoValue) {
@@ -157,7 +157,7 @@ export default function CentroContable() {
     }
     const departamentoId = resolveDepartamentoId(centro);
     return departamentoId ? departamentosById.get(departamentoId)?.nombre : undefined;
-  };
+  }, [departamentosById, resolveDepartamentoId]);
 
   const fetchCuentas = async () => {
     setLoadingCuentas(true);
@@ -230,7 +230,7 @@ export default function CentroContable() {
         .filter(Boolean)
         .some((value) => normalizeText(String(value)).includes(query));
     });
-  }, [centros, centroSearch, centroTipoFilter, centroEstadoFilter, departamentosById]);
+  }, [centros, centroSearch, centroTipoFilter, centroEstadoFilter, resolveDepartamentoNombre]);
 
   const openNuevaCuenta = () => {
     setCuentaForm(initialCuentaForm);
@@ -479,9 +479,12 @@ export default function CentroContable() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Todos los estados</SelectItem>
-                            {CUENTA_ESTADOS.map((estado) => (
-                              <SelectItem key={estado} value={estado}>{estado}</SelectItem>
-                            ))}
+                            {CUENTA_ESTADOS.map((estado, index) => {
+                              const value = estado ?? `estado-${index}`;
+                              return (
+                                <SelectItem key={value} value={value}>{value}</SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -605,9 +608,12 @@ export default function CentroContable() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Todos los estados</SelectItem>
-                            {CENTRO_ESTADOS.map((estado) => (
-                              <SelectItem key={estado} value={estado}>{estado}</SelectItem>
-                            ))}
+                            {CENTRO_ESTADOS.map((estado, index) => {
+                              const value = estado ?? `estado-centro-${index}`;
+                              return (
+                                <SelectItem key={value} value={value}>{value}</SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -774,9 +780,12 @@ export default function CentroContable() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CUENTA_ESTADOS.map((estado) => (
-                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
-                  ))}
+                  {CUENTA_ESTADOS.map((estado, index) => {
+                    const value = estado ?? `estado-form-${index}`;
+                    return (
+                      <SelectItem key={value} value={value}>{value}</SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -854,9 +863,12 @@ export default function CentroContable() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CENTRO_ESTADOS.map((estado) => (
-                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
-                  ))}
+                  {CENTRO_ESTADOS.map((estado, index) => {
+                    const value = estado ?? `estado-centro-form-${index}`;
+                    return (
+                      <SelectItem key={value} value={value}>{value}</SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

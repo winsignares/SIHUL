@@ -112,8 +112,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
         !search ||
         f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
         (f.numero_radicado || '').toLowerCase().includes(search.toLowerCase()) ||
-        (f.observaciones || '').toLowerCase().includes(search.toLowerCase()) ||
-        f.descripcion.toLowerCase().includes(search.toLowerCase());
+        (f.identificacion_factura || '').toLowerCase().includes(search.toLowerCase());
       const matchEstado = !estadoFiltro || (estadoFiltro === '__rechazadas' ? REJECTED_STATES.includes(f.estado) : f.estado === estadoFiltro);
       return matchSearch && matchEstado;
     });
@@ -321,7 +320,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                 <span>Fechas</span>
                 <span>Estado</span>
                 <span className="text-right">Total</span>
-                <span className="text-right">Acciones</span>
+                <span className="text-center">Acciones</span>
               </div>
 
               <div className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -350,7 +349,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
 
                       <div className="min-w-0">
                         <p className="text-sm text-slate-700 dark:text-slate-200 truncate">
-                          {displayText(factura.observaciones || factura.descripcion)}
+                          {displayText(factura.identificacion_factura || factura.observaciones || '—')}
                         </p>
                       </div>
 
@@ -374,7 +373,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
                         <p className="font-semibold text-slate-900 dark:text-white text-sm">{formatMoney(factura.valor_total)}</p>
                       </div>
 
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           type="button"
                           onClick={(event) => {

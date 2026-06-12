@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { facturasService, documentosService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
 export interface FacturaRevision extends SharedFacturaDetail {
   id: string;
@@ -15,27 +16,15 @@ export interface FacturaRevision extends SharedFacturaDetail {
 const ESTADOS_VISIBLES_DIRECCION_FINANCIERA = new Set([
   'Revisada Dir. Financiera',
   'Rechazada por Rectoría',
-  'Rechazada por RectorÃ­a',
-  'Devuelta',
-  'Cargada',
-  'Enviada Rectoría',
-  'Enviada RectorÃ­a',
-  'Enviada Rectoria',
-  'Enviada RectorÃƒÂ­a',
 ]);
 
 const ESTADOS_GESTIONABLES = new Set([
   'Revisada Dir. Financiera',
   'Rechazada por Rectoría',
-  'Rechazada por RectorÃ­a',
-  'Devuelta',
 ]);
 
 const ESTADOS_ENVIADA_RECTORIA = new Set([
   'Enviada Rectoría',
-  'Enviada RectorÃ­a',
-  'Enviada Rectoria',
-  'Enviada RectorÃƒÂ­a',
 ]);
 
 const toList = <T,>(data: unknown): T[] => {
@@ -59,13 +48,8 @@ export function useRevisarPagos() {
 
   const [filtros, setFiltros] = useState({
     numeroFactura: '',
-    proveedor: '',
-    estado: '',
-    areaSolicitante: '',
-    fechaInicio: '',
-    fechaFin: '',
-    montoMin: '',
-    montoMax: '',
+    numeroRadicado: '',
+    numeroProcesoPago: '',
     orden: 'recientes',
   });
 
@@ -80,6 +64,7 @@ export function useRevisarPagos() {
     const base = buildSharedFacturaDetail(factura);
     return {
       ...base,
+      slaObjetivoDias: base.slaObjetivoDias ?? 2,
       id: String(factura.id),
       nit: factura.proveedor?.nit ?? '',
       fechaEnvio: factura.fecha_aprobacion_auditoria ?? factura.fecha_recepcion ?? factura.fecha_modificacion ?? '',
@@ -138,12 +123,8 @@ export function useRevisarPagos() {
   const facturasFiltradas = useMemo(() => {
     const filtradas = facturasRevision.filter((factura) => {
       if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-      if (filtros.proveedor && !factura.proveedor.toLowerCase().includes(filtros.proveedor.toLowerCase())) return false;
-      if (filtros.areaSolicitante && factura.areaSolicitante !== filtros.areaSolicitante) return false;
-      if (filtros.fechaInicio && factura.fechaEnvio < filtros.fechaInicio) return false;
-      if (filtros.fechaFin && factura.fechaEnvio > filtros.fechaFin) return false;
-      if (filtros.montoMin && factura.valorTotal < parseFloat(filtros.montoMin)) return false;
-      if (filtros.montoMax && factura.valorTotal > parseFloat(filtros.montoMax)) return false;
+      if (filtros.numeroRadicado && !(factura.numeroRadicado?.toLowerCase().includes(filtros.numeroRadicado.toLowerCase()) ?? false)) return false;
+      if (filtros.numeroProcesoPago && !(factura.numeroProcesoPago?.toLowerCase().includes(filtros.numeroProcesoPago.toLowerCase()) ?? false)) return false;
       return true;
     });
 
@@ -180,6 +161,11 @@ export function useRevisarPagos() {
 
     if (!facturaSeleccionada.puedeCargarYEnviar) {
       showToast('err', 'Esta factura ya fue enviada a Rectoria y no puede cargarse nuevamente.');
+      return;
+    }
+
+    if (!observaciones.trim() || observaciones.trim().length < 10) {
+      showToast('err', 'Las observaciones del cargue son obligatorias (minimo 10 caracteres).');
       return;
     }
 

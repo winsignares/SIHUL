@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { documentosService, facturasService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
 const DOCUMENTOS_REQUERIDOS = [
   { tipo: 'Factura', label: 'Factura Original' },
@@ -62,6 +63,7 @@ export function useContabilidadRadicarFacturas() {
   const [consecutivoOperacion, setConsecutivoOperacion] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
+  const [errorConsecutivo, setErrorConsecutivo] = useState<string | null>(null);
 
   const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,7 +90,6 @@ export function useContabilidadRadicarFacturas() {
 
       const lista = registradas.filter((f) => f.estado === 'Registrada' && f.etapa_actual !== 'Corrección Radicación');
 
-      lista.sort((a, b) => (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || ''));
       setFacturas(lista);
       const docsResults = await Promise.all(
         lista.map((f) =>
@@ -119,22 +120,28 @@ export function useContabilidadRadicarFacturas() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const facturasFiltradas = useMemo(
-    () =>
-      facturas.filter((f) => {
-        const proveedor = f.proveedor?.razon_social ?? '';
-        const area = f.departamento?.nombre ?? '';
-        if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
-        if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
-        if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
-        if (filtros.fechaInicio && f.fecha_recepcion < filtros.fechaInicio) return false;
-        if (filtros.fechaFin && f.fecha_recepcion > filtros.fechaFin) return false;
-        if (filtros.montoMin && Number(f.valor_total) < Number(filtros.montoMin)) return false;
-        if (filtros.montoMax && Number(f.valor_total) > Number(filtros.montoMax)) return false;
-        return true;
-      }),
-    [facturas, filtros]
-  );
+  const facturasFiltradas = useMemo(() => {
+    const filtered = facturas.filter((f) => {
+      const proveedor = f.proveedor?.razon_social ?? '';
+      const area = f.departamento?.nombre ?? '';
+      if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
+      if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && f.fecha_recepcion < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && f.fecha_recepcion > filtros.fechaFin) return false;
+      if (filtros.montoMin && Number(f.valor_total) < Number(filtros.montoMin)) return false;
+      if (filtros.montoMax && Number(f.valor_total) > Number(filtros.montoMax)) return false;
+      return true;
+    });
+
+    const desc = filtros.orden === 'desc';
+    filtered.sort((a, b) => {
+      const cmp = (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || '');
+      return desc ? -cmp : cmp;
+    });
+
+    return filtered;
+  }, [facturas, filtros]);
 
   // Paginación
   const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);
@@ -168,10 +175,37 @@ export function useContabilidadRadicarFacturas() {
     setObservaciones('');
     setNumeroOperacionContable('');
     setConsecutivoOperacion('');
+    setErrorConsecutivo(null);
+  };
+
+  const validarConsecutivo = (valor: string) => {
+    setConsecutivoOperacion(valor);
+    if (!valor.trim()) {
+      setErrorConsecutivo(null);
+      return;
+    }
+    const duplicada = facturas.find(
+      (f) =>
+        f.consecutivo_operacion &&
+        f.consecutivo_operacion.trim() === valor.trim() &&
+        f.id !== facturaSeleccionada?.id
+    );
+    if (duplicada) {
+      setErrorConsecutivo(
+        `El consecutivo "${valor}" ya está registrado en la factura ${duplicada.numero_factura} (Radicado: ${duplicada.numero_radicado ?? duplicada.consecutivo_operacion}). El consecutivo debe ser único.`
+      );
+    } else {
+      setErrorConsecutivo(null);
+    }
   };
 
   const confirmarRadicacion = async () => {
     if (!facturaSeleccionada) return;
+
+    if (!observaciones.trim()) {
+      showToast('err', 'Las observaciones son obligatorias para radicar.');
+      return;
+    }
 
     if (!numeroOperacionContable.trim()) {
       showToast('err', 'El número de operación contable es obligatorio para radicar.');
@@ -180,6 +214,11 @@ export function useContabilidadRadicarFacturas() {
 
     if (!consecutivoOperacion.trim()) {
       showToast('err', 'El consecutivo de operación es obligatorio para radicar.');
+      return;
+    }
+
+    if (errorConsecutivo) {
+      showToast('err', errorConsecutivo);
       return;
     }
 
@@ -200,8 +239,11 @@ export function useContabilidadRadicarFacturas() {
       showToast('ok', `Factura ${facturaSeleccionada.numero_factura} radicada exitosamente.`);
       cancelarAccion();
       cargarFacturas();
-    } catch {
-      showToast('err', 'Error al radicar la factura. Intente de nuevo.');
+    } catch (err: unknown) {
+      const msg =
+        (err as { message?: string })?.message ??
+        'Error al radicar la factura. Intente de nuevo.';
+      showToast('err', msg);
     } finally {
       setProcesando(false);
     }
@@ -255,6 +297,8 @@ export function useContabilidadRadicarFacturas() {
     setObservaciones,
     setNumeroOperacionContable,
     setConsecutivoOperacion,
+    validarConsecutivo,
+    errorConsecutivo,
     setFiltros,
     setModalFactura,
     cargarFacturas,

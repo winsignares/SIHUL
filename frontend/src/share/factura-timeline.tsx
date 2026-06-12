@@ -6,7 +6,6 @@ import { Button } from './button';
 import {
   CheckCircle2,
   Clock,
-  AlertCircle,
   XCircle,
   ChevronDown,
   ChevronUp,

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { facturasService, documentosService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
 export interface StatsDireccionFinanciera {
   facturasPorCargar: number;
@@ -105,7 +106,7 @@ export function useDireccionFinancieraHome() {
         map[id] = docs;
       });
       setDocsMap(map);
-    } catch (err) {
+    } catch {
       setError('No se pudo cargar los datos. Verifique la conexión.');
     } finally {
       setCargando(false);
@@ -177,11 +178,24 @@ export function useDireccionFinancieraHome() {
     });
   }, [facturas, docsMap]);
 
+  const ESTADOS_DF = new Set([
+    'Aprobada Auditoría',
+    'Revisada Dir. Financiera',
+    'Cargada',
+    'Enviada Rectoría',
+    'Autorizada',
+    'Rechazada por Rectoría',
+    'Devuelta',
+    'Pago Aplicado',
+    'Pagada',
+  ]);
+
   const actividadesRecientes = useMemo<SharedFacturaDetail[]>(() => {
-    const recientes = facturas
+    return facturas
+      .filter(f => ESTADOS_DF.has(f.estado))
       .slice()
       .sort((a, b) => new Date(b.fecha_modificacion).getTime() - new Date(a.fecha_modificacion).getTime())
-      .slice(0, 5)
+      .slice(0, 30)
       .map(f => {
         const docs = docsMap[f.id] ?? [];
         return {
@@ -195,7 +209,6 @@ export function useDireccionFinancieraHome() {
           })),
         };
       });
-    return recientes;
   }, [facturas, docsMap]);
 
   const handleClickActividad = (actividad: SharedFacturaDetail) => {

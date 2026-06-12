@@ -4,6 +4,7 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { tipoActividadService, type TipoActividad } from '../../services/prestamos/tipoActividadAPI';
 
 export function useConsultaPrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,8 +29,11 @@ export function useConsultaPrestamos() {
 
     const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number; nombre: string }>>([]);
+    const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
 
-    const tiposEvento = [
+    const tiposEvento = tiposActividad.length > 0
+        ? tiposActividad.map(tipo => tipo.nombre)
+        : [
         'Conferencia',
         'Taller',
         'Reunión',
@@ -62,9 +66,10 @@ export function useConsultaPrestamos() {
             setLoading(true);
             
             // Cargar préstamos y espacios en paralelo
-            const [prestamosResponse, espaciosResponse] = await Promise.all([
+            const [prestamosResponse, espaciosResponse, tiposActividadResponse] = await Promise.all([
                 prestamoService.listarPrestamos(),
-                espacioService.list()
+                espacioService.list(),
+                tipoActividadService.listarTiposActividad()
             ]);
 
             // Transformar préstamos al formato UI
@@ -96,6 +101,8 @@ export function useConsultaPrestamos() {
                     .filter(e => e.estado === 'Disponible')
                     .map(e => ({ id: e.id!, nombre: e.nombre }))
             );
+
+            setTiposActividad(tiposActividadResponse.tipos_actividad);
         } catch (error) {
             showNotification({
                 message: `Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -108,7 +115,8 @@ export function useConsultaPrestamos() {
 
     const crearSolicitud = async () => {
         if (!nuevaSolicitud.espacio || !nuevaSolicitud.fecha || 
-            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin || !nuevaSolicitud.motivo) {
+            !nuevaSolicitud.horaInicio || !nuevaSolicitud.horaFin ||
+            !nuevaSolicitud.motivo || !nuevaSolicitud.tipoEvento) {
             showNotification({
                 message: 'Por favor complete todos los campos obligatorios',
                 type: 'error'
@@ -130,10 +138,21 @@ export function useConsultaPrestamos() {
                 return;
             }
 
+            const tipoActividadSeleccionado = tiposActividad.find(t => t.nombre === nuevaSolicitud.tipoEvento);
+
+            if (!tipoActividadSeleccionado) {
+                showNotification({
+                    message: 'Tipo de actividad no encontrado',
+                    type: 'error'
+                });
+                return;
+            }
+
             await prestamoService.crearPrestamo({
                 espacio_id: espacioSeleccionado.id,
                 usuario_id: user?.id || null,
                 administrador_id: null,
+                tipo_actividad_id: tipoActividadSeleccionado.id,
                 fecha: nuevaSolicitud.fecha,
                 hora_inicio: nuevaSolicitud.horaInicio + ':00',
                 hora_fin: nuevaSolicitud.horaFin + ':00',

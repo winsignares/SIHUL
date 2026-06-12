@@ -25,7 +25,7 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
     const { user, role, components, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
-    const [isSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed] = useState(true);
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
     const [notificacionesSinLeer] = useState(3);
 
@@ -212,6 +212,13 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         label: 'Autorizar Pagos',
                         route: '/financiero/rectoria/autorizar',
                         code: 'Autorizar Pagos'
+                    },
+                    {
+                        id: 'Factura Pagada',
+                        icon: getIconForComponent('Factura Pagada'),
+                        label: 'Factura Pagada',
+                        route: '/financiero/tesoreria/comprobante',
+                        code: 'Factura Pagada'
                     }
                 ]
             });
@@ -247,11 +254,11 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         code: 'Revisar Pagos Direccion Financiera'
                     },
                     {
-                        id: 'Confirmacion Pagos Direccion Financiera',
-                        icon: getIconForComponent('Control de Pago Bancario Direccion Financiera'),
-                        label: 'Control de Pago Bancario',
-                        route: '/financiero/direccion-financiera/confirmar',
-                        code: 'Confirmacion Pagos Direccion Financiera'
+                        id: 'Factura Pagada',
+                        icon: getIconForComponent('Factura Pagada'),
+                        label: 'Factura Pagada',
+                        route: '/financiero/tesoreria/comprobante',
+                        code: 'Factura Pagada'
                     }
                 ]
             });
@@ -294,13 +301,6 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         code: 'Enviar Direccion Financiera'
                     },
                     {
-                        id: 'Registrar Pago Aplicado',
-                        icon: getIconForComponent('Registrar Pago Aplicado'),
-                        label: 'Registrar Pago Aplicado',
-                        route: '/financiero/tesoreria/registrar-pago',
-                        code: 'Registrar Pago Aplicado'
-                    },
-                    {
                         id: 'Factura Pagada',
                         icon: getIconForComponent('Factura Pagada'),
                         label: 'Factura Pagada',
@@ -339,6 +339,13 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         label: 'Control Previo',
                         route: '/financiero/auditoria/control',
                         code: 'Control Previo'
+                    },
+                    {
+                        id: 'Factura Pagada',
+                        icon: getIconForComponent('Factura Pagada'),
+                        label: 'Factura Pagada',
+                        route: '/financiero/tesoreria/comprobante',
+                        code: 'Factura Pagada'
                     }
                 ]
             });
@@ -379,6 +386,13 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         label: 'Consultar Facturas',
                         route: '/financiero/funcionario/consultar',
                         code: 'Consultar Facturas'
+                    },
+                    {
+                        id: 'Factura Pagada',
+                        icon: getIconForComponent('Factura Pagada'),
+                        label: 'Factura Pagada',
+                        route: '/financiero/tesoreria/comprobante',
+                        code: 'Factura Pagada'
                     }
                 ]
             });
@@ -460,12 +474,12 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                         route: '/financiero/contabilidad/radicar',
                         code: 'Radicar Facturas'
                     },
-                    {
-                        id: 'Causar Facturas',
-                        icon: getIconForComponent('Causar Facturas'),
-                        label: 'Causar Facturas',
-                        route: '/financiero/contabilidad/causar',
-                        code: 'Causar Facturas'
+                {
+                        id: 'Factura Pagada',
+                        icon: getIconForComponent('Factura Pagada'),
+                        label: 'Factura Pagada',
+                        route: '/financiero/tesoreria/comprobante',
+                        code: 'Factura Pagada'
                     }
                 ]
             });

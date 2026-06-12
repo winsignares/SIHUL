@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { facturasService, documentosService } from '../../../../services/financiero';
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
-import { buildSharedFacturaDetail, type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
 export interface FacturaEnvio extends SharedFacturaDetail {
   id: string;
@@ -123,12 +124,16 @@ export function useEnviarRectoria() {
 
   const enviarARectoria = async () => {
     if (!facturaSeleccionada?.facturaId) return;
-    
+    if (!observaciones.trim() || observaciones.trim().length < 10) {
+      showToast('err', 'Las observaciones son obligatorias y deben tener minimo 10 caracteres.');
+      return;
+    }
+
     setProcesando(true);
     try {
       await facturasService.enviarRectoria(
         facturaSeleccionada.facturaId,
-        observaciones || undefined
+        observaciones.trim()
       );
       showToast('ok', `Factura ${facturaSeleccionada.numeroFactura} enviada a Rectoría exitosamente.`);
       cerrarEnvio();

@@ -154,7 +154,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = Path(
     os.getenv(
         'FINANCIERO_DOCUMENT_ROOT',
-        r'C:\Users\Harlem Hernandez\Documents\Trabajo - UL\Projects\Financiero Facturas',
+        '/tmp/sihul_uploads',
     )
 )
 FINANCIERO_DOCUMENT_NETWORK_ROOT = os.getenv('FINANCIERO_DOCUMENT_NETWORK_ROOT', '')

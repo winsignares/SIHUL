@@ -12,6 +12,8 @@ import {
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 
+const TESORERIA_STATES = ['Causada', 'Alistada', 'Enviada', 'Pago Aplicado', 'Pagada', 'Devuelta'] as const;
+
 interface TesoreriaHomeProps {
   onGoToAlistar: () => void;
   onGoToEnviarDireccion: () => void;
@@ -101,11 +103,9 @@ export default function TesoreriaHome({
     },
   ];
 
-  const tesoreriaStates = ['Causada', 'Alistada', 'Enviada', 'Pago Aplicado', 'Pagada', 'Devuelta'];
-  
   const recentActivity = useMemo(() => {
     const filtered = recentFacturas
-      .filter(factura => tesoreriaStates.includes(factura.estado || ''))
+      .filter((factura) => TESORERIA_STATES.includes((factura.estado || '') as typeof TESORERIA_STATES[number]))
       .map((factura, index) => {
         const fecha = factura.fecha_causacion || factura.fecha_alistamiento || factura.fecha_pago_aplicado || factura.fecha_recepcion || '';
         const accion = factura.numero_transaccion
@@ -131,7 +131,8 @@ export default function TesoreriaHome({
     const load = async () => {
       setLoading(true);
       try {
-        const [causadas, detenidas, aprobadas, autorizadas, recientes] = await Promise.all([
+        const [radicadas, causadas, detenidas, aprobadas, autorizadas, recientes] = await Promise.all([
+          facturasService.getAll({ estado: 'Radicada', limit: 200 }),
           facturasService.getAll({ estado: 'Causada', limit: 200 }),
           facturasService.getAll({ estado: 'Detenida', limit: 200 }),
           facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
@@ -143,11 +144,11 @@ export default function TesoreriaHome({
           ? (data as { results: APIFactura[] }).results
           : (Array.isArray(data) ? data as APIFactura[] : []);
 
-        const porAlistar = list(causadas).length + list(detenidas).length;
+        const porAlistar = list(radicadas).length + list(causadas).length + list(detenidas).length;
         const aprobadasAuditoria = list(aprobadas).length;
         const porRegistrarPago = list(autorizadas).length;
 
-        const valorPendiente = [...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas)]
+        const valorPendiente = [...list(radicadas), ...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas)]
           .reduce((sum, item) => sum + Number(item.valor_total || 0), 0);
 
         setStatsData({ porAlistar, aprobadasAuditoria, porRegistrarPago, valorPendiente });

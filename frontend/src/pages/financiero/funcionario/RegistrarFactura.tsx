@@ -4,12 +4,14 @@ import { AlertCircle, Calendar, Check, CheckCircle2, Download, ExternalLink, Fil
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
+import { downloadDocumentoIndividual } from '../../../share/documentos-consolidados';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
 import type {
   CreateFacturaDTO,
   Departamento,
   DocumentoAdjunto,
   Factura,
+  ItemFactura,
   Proveedor,
 } from '../../../models/financiero/core.models';
 import type { FuncionarioDocumentType, FuncionarioUploadedDoc, PrefillFromPendiente } from '../../../models/financiero/funcionario';
@@ -61,7 +63,48 @@ const formatMoney = (val: unknown): string => {
   return `$${num.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
 };
 
-function ReadonlyServiciosFactura({ descripcion }: { descripcion: string }) {
+function ReadonlyServiciosFactura({ descripcion, items }: { descripcion: string; items?: ItemFactura[] }) {
+  // Si hay items estructurados del nuevo modelo, los mostramos directamente
+  if (items && items.length > 0) {
+    return (
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div
+            key={item.id ?? index}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+          >
+            <div className="flex flex-wrap items-start gap-3 lg:flex-nowrap">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-sm font-semibold text-white">
+                {item.orden ?? index + 1}
+              </div>
+              <div className="min-w-[220px] flex-1 lg:max-w-[38%]">
+                <p className="font-semibold text-slate-900">{item.descripcion || 'Servicio sin nombre'}</p>
+                <p className="text-sm text-slate-500">
+                  {item.cantidad} x {formatMoney(item.valor_unitario)} | IVA {item.porcentaje_iva}%
+                </p>
+              </div>
+              <div className="grid w-full gap-2 sm:grid-cols-3 lg:ml-auto lg:w-[430px] lg:flex-none">
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Subtotal</p>
+                  <p className="font-semibold text-slate-800">{formatMoney(item.valor_subtotal)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">IVA / INC {item.porcentaje_iva}%</p>
+                  <p className="font-semibold text-slate-800">{formatMoney(item.valor_iva)}</p>
+                </div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-right">
+                  <p className="text-[11px] uppercase tracking-wide text-red-600">Total</p>
+                  <p className="font-semibold text-red-700">{formatMoney(item.valor_total)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Fallback: parsear descripcion legacy
   const parsed = parseFacturaDescripcion(descripcion);
   const hasItems = parsed.items.length > 0;
   const hasText = Boolean(parsed.remainingText);
@@ -211,6 +254,9 @@ export default function RegistrarFactura() {
   const [rechazarLoading, setRechazarLoading] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<{ url: string; name: string } | null>(null);
 
+  const [facturaItems, setFacturaItems] = useState<ItemFactura[] | undefined>(undefined);
+  const [identificacionFactura, setIdentificacionFactura] = useState<string | undefined>(undefined);
+
   const [form, setForm] = useState({
     proveedorId: 0,
     proveedorNombre: '',
@@ -343,6 +389,16 @@ export default function RegistrarFactura() {
           observaciones: factura.observaciones || prev.observaciones,
         }));
 
+        // Cargar items estructurados e identificacion si existen
+        if (factura.items && factura.items.length > 0) {
+          setFacturaItems(factura.items);
+        }
+        if (factura.identificacion_factura) {
+          setIdentificacionFactura(factura.identificacion_factura);
+        } else if (factura.observaciones && !factura.identificacion_factura) {
+          setIdentificacionFactura(factura.observaciones);
+        }
+
         if (factura.numero_factura) {
           setNumeroFacturaSugerido(factura.numero_factura);
         }
@@ -453,37 +509,13 @@ export default function RegistrarFactura() {
     setPreviewDocument({ url, name: doc.nombre_archivo || doc.tipo_documento || 'Documento' });
   };
 
-  const downloadExistingDocument = async (doc: DocumentoAdjunto) => {
-    const url = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
-    if (!url) {
+  const downloadExistingDocument = (doc: DocumentoAdjunto) => {
+    const relUrl = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+    if (!relUrl) {
       setError('Este documento no tiene una URL válida para descarga directa.');
       return;
     }
-
-    const fileName = doc.nombre_archivo || 'documento';
-    try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error('download_failed');
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = objectUrl;
-      anchor.download = fileName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
-      return;
-    } catch {
-      // Fallback para archivos servidos directamente por el backend.
-    }
-
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
+    downloadDocumentoIndividual(relUrl, doc.nombre_archivo || 'documento');
   };
 
   const openLocalDocument = (doc: FuncionarioUploadedDoc) => {
@@ -539,7 +571,7 @@ export default function RegistrarFactura() {
 
     const motivo = rechazarMotivo.trim();
     if (motivo.length < 10) {
-      setRechazarError('Describe el motivo del rechazo (mÃ­nimo 10 caracteres).');
+      setRechazarError('Describe el motivo del rechazo (mínimo 10 caracteres).');
       return;
     }
 
@@ -551,7 +583,7 @@ export default function RegistrarFactura() {
     setRechazarLoading(true);
     try {
       await facturasService.rechazar(prefillFromPendiente.facturaId, finalMotivo);
-      toast.success('Factura rechazada y enviada al proveedor para correcciÃ³n.');
+      toast.success('Factura rechazada y enviada al proveedor para corrección.');
       setRechazarOpen(false);
       navigate('/financiero/funcionario/pendientes');
     } catch {
@@ -624,6 +656,10 @@ export default function RegistrarFactura() {
     const err = validateStep2();
     if (err) {
       setError(err);
+      return;
+    }
+    if (!form.observaciones.trim() || form.observaciones.trim().length < 10) {
+      setError('La observacion del proceso es obligatoria y debe tener minimo 10 caracteres.');
       return;
     }
 
@@ -1107,9 +1143,7 @@ export default function RegistrarFactura() {
                   disabled={isReviewMode}
                 >
                   <option value="Factura">Factura</option>
-                  <option value="Factura Electrónica">Factura Electrónica</option>
                   <option value="Cuenta de Cobro">Cuenta de Cobro</option>
-                  <option value="Nota Débito">Nota Débito</option>
                 </select>
               </div>
               <div>
@@ -1231,14 +1265,14 @@ export default function RegistrarFactura() {
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Dato enviado por el proveedor</p>
                     <p className="mt-1 whitespace-pre-line text-sm font-medium text-amber-900">
-                      {safeString(form.observaciones, 'Sin identificacion cargada')}
+                      {safeString(identificacionFactura || form.observaciones, 'Sin identificacion cargada')}
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">Descripcion del Servicio / Bien</label>
-                  <ReadonlyServiciosFactura descripcion={form.descripcion} />
+                  <ReadonlyServiciosFactura descripcion={form.descripcion} items={facturaItems} />
                 </div>
               </>
             )}
@@ -1782,8 +1816,8 @@ export default function RegistrarFactura() {
                   </p>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-600 font-semibold mb-1">Descripción</p>
-                  <p className="text-slate-800 text-sm font-medium">{safeString(form.descripcion, 'Sin descripción')}</p>
+                  <p className="text-sm text-slate-600 font-semibold mb-3">Descripción del Servicio / Bien</p>
+                  <ReadonlyServiciosFactura descripcion={form.descripcion} />
                 </div>
                 {form.observaciones && safeString(form.observaciones) !== 'Sin observaciones' && (
                   <div className="bg-white rounded-lg p-3 border border-slate-200">
@@ -1834,31 +1868,59 @@ export default function RegistrarFactura() {
               </div>
             </motion.div>
 
+            {/* Observacion obligatoria del proceso */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.35 }}
+              className="rounded-2xl bg-slate-50 border border-slate-200 p-6 mb-6"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <p className="font-semibold text-slate-900 text-sm">Observacion del Proceso <span className="text-red-600">*</span></p>
+              </div>
+              <p className="font-semibold text-slate-900 text-sm mb-3">Registre una observacion sobre el proceso de verificacion y registro de esta factura. Este campo es obligatorio.</p>
+              <Textarea
+                value={form.observaciones}
+                onChange={(e) => setField('observaciones', e.target.value)}
+                placeholder="Describa las verificaciones realizadas, novedades encontradas o cualquier observacion relevante del proceso (minimo 10 caracteres)..."
+                rows={4}
+                className="bg-white"
+              />
+              {form.observaciones.trim().length > 0 && form.observaciones.trim().length < 10 ? (
+                <p className="text-xs text-red-600 mt-2">Minimo 10 caracteres ({form.observaciones.trim().length}/10)</p>
+              ) : form.observaciones.trim().length === 0 ? (
+                <p className="font-semibold text-slate-900 text-sm mt-2">Campo obligatorio.</p>
+              ) : (
+                <p className="text-xs text-green-700 mt-2">✓ Observacion registrada.</p>
+              )}
+            </motion.div>
+
             {/* Botones de navegación */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="flex justify-between gap-3 pt-6 border-t-2 border-slate-200"
             >
-              <motion.button 
-                whileHover={{ scale: 1.02 }} 
-                whileTap={{ scale: 0.98 }} 
-                onClick={prevStep} 
-                type="button" 
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={prevStep}
+                type="button"
                 className="px-6 py-3 rounded-lg bg-slate-200 text-slate-700 font-semibold hover:bg-slate-300 transition-all"
               >
                 ← Anterior
               </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02 }} 
-                whileTap={{ scale: 0.98 }} 
-                onClick={submit} 
-                type="button" 
-                disabled={loading}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={submit}
+                type="button"
+                disabled={loading || form.observaciones.trim().length < 10}
                 className="px-8 py-3 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold shadow-lg shadow-green-300 hover:shadow-lg hover:shadow-green-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '⏳ Registrando...' : '✓ Registrar Factura'}
+                {loading ? '⏳ Registrando...' : form.observaciones.trim().length < 10 ? 'Ingrese observacion' : '✓ Registrar Factura'}
               </motion.button>
             </motion.div>
           </motion.div>

@@ -80,8 +80,9 @@ export default function ReportesConsolidadosReal() {
       downloadBlob(blob, `${tipoReporte}_${new Date().toISOString().slice(0, 10)}.${extension}`);
       toast.success(`Reporte ${formato} generado correctamente.`);
       await cargarHistorial();
-    } catch (e: any) {
-      toast.error(e?.message || 'No fue posible generar el reporte.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No fue posible generar el reporte.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
