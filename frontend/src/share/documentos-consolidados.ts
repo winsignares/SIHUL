@@ -1,5 +1,6 @@
 import { facturasService } from '../services/financiero';
 import { resolveBackendBaseUrl } from '../core/backendUrl';
+import { trackedFetch } from '../core/apiActivity';
 
 // Descarga un blob directamente al sistema abriendo el explorador de archivos (sin nueva pestaña)
 export function triggerBlobDownload(blob: Blob, fileName: string) {
@@ -15,7 +16,7 @@ export function triggerBlobDownload(blob: Blob, fileName: string) {
 
 // Abre una URL en nueva pestaña usando window.open sincrónico + asignación posterior
 // DEBE llamarse dentro del handler síncrono del click (no dentro de async/await)
-export function openUrlInNewTab(fetchFn: () => Promise<Blob>, fileName?: string) {
+export function openUrlInNewTab(fetchFn: () => Promise<Blob>) {
   const win = window.open('', '_blank');
   fetchFn()
     .then((blob) => {
@@ -49,7 +50,7 @@ export function downloadExpedienteZip(facturaId: number, numeroFactura: string, 
 export function downloadDocumentoIndividual(url: string, nombre: string) {
   const backendBase = resolveBackendBaseUrl(import.meta.env.VITE_API_URL);
   const absoluteUrl = url.startsWith('http') ? url : `${backendBase}${url}`;
-  fetch(absoluteUrl, { credentials: 'include' })
+  trackedFetch(absoluteUrl, { credentials: 'include' })
     .then((r) => r.blob())
     .then((blob) => triggerBlobDownload(blob, nombre))
     .catch(() => {});

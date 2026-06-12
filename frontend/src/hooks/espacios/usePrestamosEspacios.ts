@@ -20,6 +20,7 @@ import {
     PRESTAMOS_CHANGED_EVENT,
     PRESTAMOS_CHANGED_STORAGE_KEY
 } from '../../services/prestamos/prestamosChanges';
+import { trackedFetch } from '../../core/apiActivity';
 
 const PRESTAMOS_CACHE_KEY = 'prestamos-espacios-admin';
 const PRESTAMOS_SYNC_INTERVAL_MS = 15_000;
@@ -228,7 +229,7 @@ export function usePrestamosEspacios() {
             let prestamoCompleto;
             if (tipo === 'publico') {
                 // Usar endpoint de préstamos públicos
-                const response = await fetch(`/api/prestamos/public/${numericId}/`);
+                const response = await trackedFetch(`/api/prestamos/public/${numericId}/`);
                 if (!response.ok) throw new Error('Error al obtener préstamo público');
                 prestamoCompleto = await response.json();
             } else {
@@ -239,7 +240,7 @@ export function usePrestamosEspacios() {
             // Actualizar el estado y registrar el administrador que aprobó
             if (tipo === 'publico') {
                 // Actualizar préstamo público
-                const response = await fetch(`/api/prestamos/public/update/`, {
+                const response = await trackedFetch(`/api/prestamos/public/update/`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -332,7 +333,7 @@ export function usePrestamosEspacios() {
             let prestamoCompleto;
             if (tipo === 'publico') {
                 // Usar endpoint de préstamos públicos
-                const response = await fetch(`/api/prestamos/public/${numericId}/`);
+                const response = await trackedFetch(`/api/prestamos/public/${numericId}/`);
                 if (!response.ok) throw new Error('Error al obtener préstamo público');
                 prestamoCompleto = await response.json();
             } else {
@@ -343,7 +344,7 @@ export function usePrestamosEspacios() {
             // Actualizar el estado y registrar el administrador que rechazó
             if (tipo === 'publico') {
                 // Actualizar préstamo público
-                const response = await fetch(`/api/prestamos/public/update/`, {
+                const response = await trackedFetch(`/api/prestamos/public/update/`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

@@ -10,6 +10,7 @@ import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { resolveApiBaseUrl } from '../../core/backendUrl';
+import { trackedFetch } from '../../core/apiActivity';
 import { userService } from '../../services/users/authService';
 import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
@@ -640,7 +641,7 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const response = await fetch(`${apiUrl}/horario/exportar-pdf/`, {
+            const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -676,7 +677,7 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const response = await fetch(`${apiUrl}/horario/exportar-excel/`, {
+            const response = await trackedFetch(`${apiUrl}/horario/exportar-excel/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

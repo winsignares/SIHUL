@@ -1,5 +1,6 @@
 import { handleApiError } from './errorHandler.ts';
 import { resolveApiBaseUrl } from './backendUrl.ts';
+import { beginApiRequest, reportApiError } from './apiActivity.ts';
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
@@ -38,6 +39,7 @@ class ApiClient {
     const { requiresAuth = true, suppressErrorLog = false, ...fetchConfig } = config;
 
     const url = `${this.baseURL}${endpoint}`;
+    const endRequest = beginApiRequest();
 
     try {
       const response = await fetch(url, {
@@ -69,7 +71,12 @@ class ApiClient {
       if (!suppressErrorLog && error.status !== 409 && !isExpected401) {
         console.error('API Request Error:', error);
       }
+      if (!suppressErrorLog && error.status !== 409 && !isExpected401) {
+        reportApiError(error);
+      }
       throw error;
+    } finally {
+      endRequest();
     }
   }
 
@@ -80,6 +87,7 @@ class ApiClient {
     const { requiresAuth = true, suppressErrorLog = false, ...fetchConfig } = config;
 
     const url = `${this.baseURL}${endpoint}`;
+    const endRequest = beginApiRequest();
 
     try {
       const response = await fetch(url, {
@@ -102,7 +110,12 @@ class ApiClient {
       if (!suppressErrorLog && error.status !== 409 && !isExpected401) {
         console.error('API Request Error:', error);
       }
+      if (!suppressErrorLog && error.status !== 409 && !isExpected401) {
+        reportApiError(error);
+      }
       throw error;
+    } finally {
+      endRequest();
     }
   }
 

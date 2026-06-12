@@ -12,6 +12,7 @@ import { motion } from 'motion/react';
 import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
+import { Loading } from '../../components/common/Loading';
 
 export default function PrestamosEspacios() {
   const isMobile = useIsMobile();
@@ -50,7 +51,8 @@ export default function PrestamosEspacios() {
     iniciarEdicion,
     cancelarEdicion,
     guardarEdicion,
-    eliminarSolicitud
+    eliminarSolicitud,
+    loading
   } = usePrestamosEspacios();
 
   const FRECUENCIA_LABELS: Record<string, string> = {
@@ -201,7 +203,13 @@ export default function PrestamosEspacios() {
 
       {/* Solicitudes Grid */}
       <div className="grid grid-cols-1 gap-4">
-        {totalFilteredPrestamos === 0 ? (
+        {loading && totalFilteredPrestamos === 0 ? (
+          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <CardContent>
+              <Loading message="Cargando solicitudes de préstamo..." />
+            </CardContent>
+          </Card>
+        ) : totalFilteredPrestamos === 0 ? (
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <CardContent className="p-12 text-center">
               <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
