@@ -43,6 +43,8 @@ services:
     volumes:
       # Código fuente montado para hot-reload
       - ./backend:/app
+      # Archivos subidos por usuarios (media) — volumen persistente
+      - sihul_media:/app/media
     environment:
       # Database (usa los mismos valores que el servicio db)
       DB_HOST: db
@@ -52,6 +54,8 @@ services:
       DB_NAME: mypostgresdb
       # Python
       PYTHONUNBUFFERED: "1"
+      # Directorio local donde Django guarda los archivos subidos
+      FINANCIERO_DOCUMENT_ROOT: /app/media
       # Almacenamiento compartido NAS Universidad Libre
       FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT}
       FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER}
@@ -132,6 +136,9 @@ volumes:
     driver: local
   n8n_data:
     name: sihul_n8n_data
+    driver: local
+  sihul_media:
+    name: sihul_media
     driver: local
 
 # ==========================================
