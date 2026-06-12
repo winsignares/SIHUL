@@ -111,6 +111,86 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     ordering_fields = ['fecha_creacion', 'razon_social']
     ordering = ['-fecha_creacion']
 
+    @action(detail=False, methods=['post'], url_path='crear_con_usuario')
+    def crear_con_usuario(self, request):
+        """Crea un usuario con rol Proveedor y vincula el perfil de proveedor en una transacción atómica."""
+        from django.contrib.auth.hashers import make_password
+        from usuarios.models import Rol
+
+        nombre = (request.data.get('nombre') or '').strip()
+        correo = (request.data.get('correo') or '').strip()
+        contrasena = (request.data.get('contrasena') or '').strip()
+        nit = (request.data.get('nit') or '').strip()
+        razon_social = (request.data.get('razon_social') or '').strip()
+        tipo_proveedor = (request.data.get('tipo_proveedor') or '').strip()
+
+        if not all([nombre, correo, contrasena, nit, razon_social, tipo_proveedor]):
+            return Response(
+                {'error': 'Los campos nombre, correo, contrasena, nit, razon_social y tipo_proveedor son obligatorios.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            rol_proveedor = Rol.objects.get(nombre__iexact='Proveedor')
+        except Rol.DoesNotExist:
+            return Response(
+                {'error': 'El rol "Proveedor" no existe en el sistema. Créalo antes de continuar.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if Usuario.objects.filter(correo__iexact=correo).exists():
+            return Response(
+                {'error': f'Ya existe un usuario con el correo "{correo}".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if models.Proveedor.objects.filter(nit=nit).exists():
+            return Response(
+                {'error': f'Ya existe un proveedor con el NIT "{nit}".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        campos_opcionales = [
+            'nombre_comercial', 'tipo_persona', 'direccion', 'ciudad', 'departamento',
+            'pais', 'telefono', 'email', 'contacto_principal', 'telefono_contacto',
+            'banco', 'tipo_cuenta', 'numero_cuenta', 'cuenta_bancaria_completa',
+            'regimen_tributario', 'retencion_renta', 'retencion_iva', 'retencion_ica',
+            'autoretenedor', 'estado', 'calificacion_riesgo', 'observaciones',
+        ]
+
+        proveedor_data = {'nit': nit, 'razon_social': razon_social, 'tipo_proveedor': tipo_proveedor}
+        for campo in campos_opcionales:
+            if campo in request.data:
+                proveedor_data[campo] = request.data[campo]
+
+        try:
+            with transaction.atomic():
+                hashed = make_password(contrasena)
+                nuevo_usuario = Usuario(
+                    nombre=nombre,
+                    correo=correo,
+                    password=hashed,
+                    contrasena_hash=hashed,
+                    rol=rol_proveedor,
+                    activo=True,
+                )
+                nuevo_usuario.save()
+
+                proveedor_data['usuario'] = nuevo_usuario
+                proveedor_data['creado_por'] = request.user
+                proveedor = models.Proveedor.objects.create(**proveedor_data)
+
+        except IntegrityError as exc:
+            return Response({'error': f'Error de integridad: {exc}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                'usuario_id': nuevo_usuario.id,
+                'proveedor': serializers.ProveedorSerializer(proveedor).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     @action(detail=False, methods=['get'], url_path='mi_perfil')
     def mi_perfil(self, request):
         """Encuentra el proveedor asociado al usuario actual por vínculo directo, email o NIT."""
