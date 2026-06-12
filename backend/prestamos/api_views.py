@@ -51,20 +51,6 @@ class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
             return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
 
-    def perform_create(self, serializer):
-        prestamo = serializer.save()
-        recursos = self.request.data.get('recursos', [])
-        for r in recursos:
-            recurso_id = r.get('recurso_id')
-            cantidad = r.get('cantidad', 1)
-            if recurso_id:
-                PrestamoRecurso.objects.create(
-                    prestamo=prestamo,
-                    recurso_id=recurso_id,
-                    cantidad=cantidad
-                )
-
-
 class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer

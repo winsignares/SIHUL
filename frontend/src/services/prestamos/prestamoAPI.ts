@@ -245,6 +245,7 @@ export const prestamoService = {
       asistentes: prestamo.asistentes,
       telefono: prestamo.telefono,
       estado: prestamo.estado,
+      ...(prestamo.recursos !== undefined ? { recursos: prestamo.recursos } : {}),
       ...buildRecurrencePayload(prestamo)
     });
     return { message: 'Préstamo actualizado', id: updated.id ?? prestamo.id };

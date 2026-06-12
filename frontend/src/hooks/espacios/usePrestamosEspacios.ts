@@ -139,7 +139,11 @@ export function usePrestamosEspacios() {
                     tipoEvento: p.tipo_actividad_nombre || 'Evento',
                     tipo_actividad_id: p.tipo_actividad_id,
                     asistentes: p.asistentes || 0,
-                    recursosNecesarios: p.recursos?.map(r => r.recurso_nombre || '') || [],
+                    recursosNecesarios: (p.recursos || [])
+                        .filter(r => Boolean(r.recurso_nombre?.trim()))
+                        .map(r => r.cantidad > 1
+                            ? `${r.recurso_nombre} (x${r.cantidad})`
+                            : r.recurso_nombre!.trim()),
                     estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
                     fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
                     comentariosAdmin: '', // No disponible en el backend actual
