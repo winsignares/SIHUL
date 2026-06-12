@@ -88,7 +88,18 @@ def user_view(request):
     if not auth_user:
         return JsonResponse({'authenticated': False}, status=200)
 
-    usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(id=auth_user.id)
+    try:
+        usuario = Usuario.objects.select_related(
+            'sede',
+            'sede__seccional',
+            'rol',
+            'facultad',
+        ).get(id=auth_user.id)
+    except Usuario.DoesNotExist:
+        # Cookies are shared by host, not by port. A session from another
+        # environment can therefore reference a user absent from this DB.
+        request.session.flush()
+        return JsonResponse({'authenticated': False}, status=200)
 
     request.session['user_id'] = usuario.id
     request.session['correo'] = usuario.correo
