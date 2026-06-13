@@ -151,6 +151,7 @@ class PublicAccessRecaptchaVerifyAPIView(APIView):
     def post(self, request):
         from django.conf import settings
         import requests
+        import os
 
         token = request.data.get('recaptcha_token') or request.data.get('token')
         if not token:
@@ -159,8 +160,8 @@ class PublicAccessRecaptchaVerifyAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Verificar con Google reCAPTCHA
-        secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', None)
+        # Verificar con Google reCAPTCHA - leer de settings o del environment
+        secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', None) or os.getenv('RECAPTCHA_SECRET_KEY')
         if not secret_key:
             return Response(
                 {'success': False, 'error': 'Servicio no configurado'},
