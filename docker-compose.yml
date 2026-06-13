@@ -16,9 +16,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-mypostgresdb}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: mypostgresdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -43,21 +43,19 @@ services:
     volumes:
       # Código fuente montado para hot-reload
       - ./backend:/app
+      # Archivos subidos por usuarios (media) — volumen persistente
+      - sihul_media:/app/media
     environment:
       # Database (usa los mismos valores que el servicio db)
-      DB_HOST: ${DB_HOST:-db}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-change-me}
-      DB_NAME: ${DB_NAME:-mypostgresdb}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-unsafe-do-not-use-in-prod}
-      # reCAPTCHA (desde .env - NUNCA hardcodear en producción)
-      RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
-      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
-      # ChatBot
-      CHATBOT_FASTAPI_URL: ${CHATBOT_FASTAPI_URL:-http://chatbot:8001/api/v1}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: mysecretpassword
+      DB_NAME: mypostgresdb
       # Python
       PYTHONUNBUFFERED: "1"
+      # Directorio local donde Django guarda los archivos subidos
+      FINANCIERO_DOCUMENT_ROOT: /app/media
       # Almacenamiento compartido NAS Universidad Libre
       FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT}
       FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER}
@@ -84,6 +82,7 @@ services:
     volumes:
       - ./chatbot:/app
     environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
       CHUNK_SIZE: ${CHUNK_SIZE:-500}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
@@ -93,7 +92,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - sihul_network
+      - sihul_network  
 
   # ==========================================
   # FRONTEND REACT + VITE
@@ -117,9 +116,8 @@ services:
       VITE_USE_POLLING: "true"
       VITE_HMR_HOST: "localhost"
       VITE_HMR_PORT: "5173"
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-      VITE_RECAPTCHA_SITE_KEY: ${VITE_RECAPTCHA_SITE_KEY:-}
-      VITE_CHATBOT_URL: ${VITE_CHATBOT_URL:-http://localhost:8001}
+      VITE_API_URL: "http://localhost:8000"
+      VITE_CHATBOT_URL: "http://localhost:8001"
       TZ: "America/Bogota"
     depends_on:
       - backend
@@ -135,6 +133,12 @@ services:
 volumes:
   postgres_data:
     name: sihul_postgres_data
+    driver: local
+  n8n_data:
+    name: sihul_n8n_data
+    driver: local
+  sihul_media:
+    name: sihul_media
     driver: local
 
 # ==========================================

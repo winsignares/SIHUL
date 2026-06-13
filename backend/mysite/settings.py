@@ -1,6 +1,19 @@
 import os
 from pathlib import Path
-from django.core.management.utils import get_random_secret_key
+
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+
+
+def env_list(name, default):
+    value = os.getenv(name)
+    if not value:
+        return list(default)
+    return [item.strip() for item in value.split(',') if item.strip()]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,12 +23,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or get_random_secret_key()
+SECRET_KEY = os.getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-6vspu_xp0x41924(a&3!5kkn35+pew*ckujv96vwyq$m*uzz_l',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', True)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', ['*'])
 
 AUTH_USER_MODEL = 'usuarios.Usuario'
 
@@ -24,8 +40,6 @@ MICROSOFT_CLIENT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET', '')
 MICROSOFT_TENANT = os.getenv('MICROSOFT_TENANT', 'common')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
 MICROSOFT_OAUTH_ENABLED = bool(MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET)
-RECAPTCHA_SITE_KEY = os.getenv('RECAPTCHA_SITE_KEY', '')
-RECAPTCHA_SECRET_KEY = os.getenv('RECAPTCHA_SECRET_KEY', '')
 CHATBOT_FASTAPI_URL = os.getenv('CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1').rstrip('/')
 
 
@@ -73,7 +87,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'mysite.csrf_protection.JSONCsrfMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'mysite.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
@@ -105,28 +119,14 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DB_NAME = os.getenv('DB_NAME', 'mypostgresdb')
-DB_USER = os.getenv('DB_USER', 'postgres')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-DB_HOST = os.getenv('DB_HOST', 'db')
-DB_PORT = os.getenv('DB_PORT', '5432')
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": DB_NAME,
-        "USER": DB_USER,
-        "PASSWORD": DB_PASSWORD,
-        "HOST": DB_HOST,
-        "PORT": DB_PORT,
-    }
-}
-
-# Cache (para bloqueo de intentos de login en entorno local)
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "sihul-auth-lockout",
+        "NAME": os.getenv("DB_NAME", "mypostgresdb"),
+        "USER": os.getenv("DB_USER", "postgres"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "mysecretpassword"),
+        "HOST": os.getenv("DB_HOST", "db"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
@@ -220,40 +220,31 @@ if MICROSOFT_OAUTH_ENABLED:
     ACCOUNT_LOGOUT_REDIRECT_URL = f'{FRONTEND_URL}/login'
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:8081",
-    "http://127.0.0.1:8081",
     "https://sihul.unilibre.edu.co",
-]
+])
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:8081",
-    "http://127.0.0.1:8081",
     "https://sihul.unilibre.edu.co",
-]
+])
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
-
-# DRF Throttling configurable por entorno
-API_THROTTLE_USER = os.getenv('API_THROTTLE_USER', '1000/min')
-API_THROTTLE_ANON = os.getenv('API_THROTTLE_ANON', '100/min')
+SESSION_COOKIE_NAME = os.getenv('SESSION_COOKIE_NAME', 'sessionid')
+CSRF_COOKIE_NAME = os.getenv('CSRF_COOKIE_NAME', 'csrftoken')
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'mysite.seccional_auth.SessionUsuarioAuthentication',
         'rest_framework.authentication.SessionAuthentication',
@@ -261,60 +252,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.UserRateThrottle',
-        'rest_framework.throttling.AnonRateThrottle',
-    ],
-    'DEFAULT_THROTTLE_RATES': {
-        'user': API_THROTTLE_USER,
-        'anon': API_THROTTLE_ANON,
-    },
 }
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # ETL configurations
 ETL_PERIODO = os.getenv('ETL_PERIODO', '20261')
-
-# Endurecimiento de Producción (activado si ENVIRONMENT/DJANGO_ENV=production)
-ENVIRONMENT = (os.getenv('ENVIRONMENT') or os.getenv('DJANGO_ENV') or 'development').lower()
-if ENVIRONMENT == 'production':
-    DEBUG = False
-
-    # ALLOWED_HOSTS desde env o dominio por defecto
-    _env_hosts = os.getenv('ALLOWED_HOSTS', '')
-    if _env_hosts:
-        ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(',') if h.strip()]
-    else:
-        ALLOWED_HOSTS = ['sihul.unilibre.edu.co']
-
-    # Cookies seguras y redirección a HTTPS
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
-
-    # HSTS y headers de seguridad
-    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    X_FRAME_OPTIONS = 'DENY'
-    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-
-    # CORS y CSRF Trusted Origins desde env
-    _env_cors = os.getenv('CORS_ALLOWED_ORIGINS', '')
-    if _env_cors:
-        CORS_ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in _env_cors.split(',') if o.strip()]
-    _env_csrf = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-    if _env_csrf:
-        CSRF_TRUSTED_ORIGINS = [o.strip().rstrip('/') for o in _env_csrf.split(',') if o.strip()]
-    else:
-        # Derivar de ALLOWED_HOSTS si no se provee lista explícita
-        CSRF_TRUSTED_ORIGINS = [
-            (f"https://{h}" if not h.startswith('http') else h).rstrip('/')
-            for h in ALLOWED_HOSTS if h != '*'
-        ]
-
-    # Requerir SECRET_KEY definido por entorno en producción
-    if not os.getenv('DJANGO_SECRET_KEY'):
-        raise RuntimeError('DJANGO_SECRET_KEY debe estar definido en producción')
-

@@ -1,29 +1,12 @@
 .devcontainer/
 
-# ==========================================
-# SECRETOS Y VARIABLES DE ENTORNO
-# ==========================================
-# NUNCA commitear archivos con credenciales reales
+# Environment variables (NUNCA subir archivos .env con credenciales)
 .env
+.env.test
 .env.local
 .env.*.local
-.env.production
-.env.staging
 backend/.env
 backend/.env.local
-
-# Claves privadas y certificados
-*.key
-*.pem
-*.p12
-*.pfx
-*.jks
-
-# Archivos de configuración sensibles
-config/secrets*
-config/private*
-secrets.json
-private.json
 
 # Python
 __pycache__/
@@ -43,22 +26,4 @@ temp_*.py
 
 # Django media uploads
 backend/media/
-backend/financiero/media/# Frontend build and deps
-frontend/node_modules/
-frontend/dist/
-
-# Frontend/Chatbot env files
-frontend/.env
-frontend/.env.local
-chatbot/.env
-chatbot/.env.local
-
-# Any nested env files
-**/.env
-**/.env.local
-
-# Logs
-*.log
-npm-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+backend/financiero/media/

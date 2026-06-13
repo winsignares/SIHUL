@@ -43,7 +43,10 @@ function manualChunks(id: string) {
 // Configuración extendida para desarrollo local y dentro de Docker con HMR estable
 export default defineConfig(() => {
   // Leer URL del API desde variables de entorno
-  const apiUrl = process.env.VITE_API_URL || 'http://localhost:8000';
+  const apiUrl =
+    process.env.VITE_PROXY_TARGET ||
+    process.env.VITE_API_URL ||
+    'http://localhost:8000';
   
   // Remover trailing slash si existe
   const apiUrlClean = apiUrl.replace(/\/+$/, '');
@@ -72,8 +75,10 @@ export default defineConfig(() => {
       },
       hmr: {
         // En Docker puede necesitar clientPort si se hace port-forward distinto
-        port: Number(process.env.VITE_HMR_PORT) || undefined,
         host: process.env.VITE_HMR_HOST || undefined,
+        clientPort: Number(
+          process.env.VITE_HMR_CLIENT_PORT || process.env.VITE_HMR_PORT
+        ) || undefined,
       },
       watch: {
         // Polling mejora fiabilidad en volúmenes montados (Windows + Docker)

@@ -1115,25 +1115,51 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 data = documento.archivo.read()
                 documento.archivo.close()
                 return data
-            except Exception:
-                return None
+            except Exception as exc:
+                logger.warning(
+                    '_documento_bytes: fallo leyendo archivo Django FileField doc_id=%s path=%s error=%s',
+                    documento.id, documento.archivo.name, exc,
+                )
 
         raw_storage = (documento.url_storage or '').strip()
-        if not raw_storage:
-            return None
+        if raw_storage:
+            possible_path = raw_storage
+            if raw_storage.startswith('/media/'):
+                possible_path = os.path.join(settings.MEDIA_ROOT, raw_storage.replace('/media/', '', 1))
+            elif raw_storage.startswith('media/'):
+                possible_path = os.path.join(settings.MEDIA_ROOT, raw_storage.replace('media/', '', 1))
 
-        possible_path = raw_storage
-        if raw_storage.startswith('/media/'):
-            possible_path = os.path.join(settings.MEDIA_ROOT, raw_storage.replace('/media/', '', 1))
-        elif raw_storage.startswith('media/'):
-            possible_path = os.path.join(settings.MEDIA_ROOT, raw_storage.replace('media/', '', 1))
+            if os.path.exists(possible_path):
+                try:
+                    with open(possible_path, 'rb') as file_handle:
+                        return file_handle.read()
+                except Exception as exc:
+                    logger.warning(
+                        '_documento_bytes: fallo leyendo url_storage doc_id=%s path=%s error=%s',
+                        documento.id, possible_path, exc,
+                    )
 
-        if os.path.exists(possible_path):
+        nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
+        if nas_path:
             try:
-                with open(possible_path, 'rb') as file_handle:
-                    return file_handle.read()
-            except Exception:
-                return None
+                from financiero.services.shared_storage_service import shared_storage, _parse_unc, _smb_path
+                if shared_storage.enabled:
+                    smbclient, _ = shared_storage._get_smb_client()
+                    server, share, base = _parse_unc(shared_storage.unc_root)
+                    full_rel = f'{base}/{nas_path}' if base else nas_path
+                    smb_file = _smb_path(server, share, full_rel)
+                    with smbclient.open_file(smb_file, mode='rb') as f:
+                        return f.read()
+            except Exception as exc:
+                logger.warning(
+                    '_documento_bytes: fallo leyendo NAS doc_id=%s nas_path=%s error=%s',
+                    documento.id, nas_path, exc,
+                )
+
+        logger.warning(
+            '_documento_bytes: no se pudo obtener bytes de ninguna fuente doc_id=%s nombre=%s',
+            documento.id, documento.nombre_archivo,
+        )
         return None
 
     def _guardar_pdf_unificado(self, factura, content, scope):
