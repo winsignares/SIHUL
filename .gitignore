@@ -7,6 +7,7 @@
 .env.*.local
 backend/.env
 backend/.env.local
+frontend/.env
 
 # Python
 __pycache__/
