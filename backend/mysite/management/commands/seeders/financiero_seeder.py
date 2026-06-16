@@ -9,12 +9,15 @@ from usuarios.models import Rol, Usuario
 from componentes.models import Componente, ComponenteRol
 from financiero.models import (
     Departamento,
+    DepartamentoGeografico,
     ParametroSLA,
     ParametrosFinanciero,
+    Pais,
     Proveedor,
     CuentaContable,
     CentroCosto,
     Banco,
+    Ciudad,
     TipoCuenta,
 )
 
@@ -29,6 +32,7 @@ def create_financiero_data(out, sty):
     _seed_departamentos(out, sty)
     _seed_catalogos_contables(out, sty)
     _seed_bancos_y_tipos_cuenta(out, sty)
+    _seed_catalogos_geograficos(out, sty)
     _seed_proveedores_demo(out, sty)
     _seed_usuarios_proveedores(roles, out, sty)
     _seed_sla(out, sty)
@@ -328,28 +332,179 @@ def _seed_catalogos_contables(out, sty):
         out.write(f"    - {msg}: Centro {codigo}")
 
 
+def _seed_catalogos_geograficos(out, sty):
+    """Crea países, departamentos y ciudades para formularios de proveedores."""
+    out.write(sty.NOTICE('\n  Catálogos geográficos de proveedores:'))
+
+    catalogo = {
+        'Colombia': {
+            'codigo_iso': 'COL',
+            'departamentos': {
+                'Atlántico': ['Barranquilla', 'Soledad', 'Puerto Colombia'],
+                'Bolívar': ['Cartagena', 'Magangué'],
+                'Cundinamarca': ['Bogotá', 'Chía', 'Soacha'],
+                'Norte de Santander': ['Cúcuta'],
+                'Risaralda': ['Pereira'],
+                'Santander': ['Bucaramanga', 'Socorro'],
+                'Valle del Cauca': ['Cali'],
+            },
+        },
+    }
+
+    for nombre_pais, pais_data in catalogo.items():
+        pais, created_pais = Pais.objects.get_or_create(
+            codigo_iso=pais_data['codigo_iso'],
+            defaults={'nombre': nombre_pais, 'activo': True},
+        )
+        if not created_pais and pais.nombre != nombre_pais:
+            pais.nombre = nombre_pais
+            pais.save(update_fields=['nombre'])
+        out.write(f"    - {'Creado' if created_pais else 'Existente'} país: {nombre_pais}")
+
+        for nombre_departamento, ciudades in pais_data['departamentos'].items():
+            departamento, created_departamento = DepartamentoGeografico.objects.get_or_create(
+                pais=pais,
+                nombre=nombre_departamento,
+                defaults={'activo': True},
+            )
+            out.write(f"      · {'Creado' if created_departamento else 'Existente'} departamento: {nombre_departamento}")
+
+            for nombre_ciudad in ciudades:
+                _, created_ciudad = Ciudad.objects.get_or_create(
+                    departamento=departamento,
+                    nombre=nombre_ciudad,
+                    defaults={'activo': True},
+                )
+                out.write(f"        - {'Creada' if created_ciudad else 'Existente'} ciudad: {nombre_ciudad}")
+
+
 def _seed_proveedores_demo(out, sty):
     """Crea proveedores de demostración."""
     proveedores_demo = [
-        ('900123456-7', 'Tecnologia Global SAS', 'Servicios'),
-        ('900234567-8', 'Editorial Academica Colombia', 'Bienes'),
-        ('900345678-9', 'Mantenimiento y Obras SAS', 'Servicios'),
-        ('900456789-0', 'Distribuidora de Recursos Educativos', 'Bienes'),
-        ('900567890-1', 'Soluciones de Infraestructura Digital', 'Servicios'),
+        {
+            'nit': '900123456-7',
+            'razon_social': 'Tecnologia Global SAS',
+            'tipo_proveedor': 'Servicios',
+            'tipo_persona': 'Jurídica',
+            'nombre_comercial': 'Tech Global',
+            'direccion': 'Cra 48 # 72-120',
+            'ciudad': 'Barranquilla',
+            'departamento': 'Atlántico',
+            'pais': 'Colombia',
+            'telefono': '+57 605 3850001',
+            'email': 'tecnologia.global@proveedor.sihul.edu.co',
+            'contacto_principal': 'Laura Pérez',
+            'telefono_contacto': '+57 300 123 4567',
+            'banco': 'Bancolombia',
+            'tipo_cuenta': 'Corriente',
+            'numero_cuenta': '01000012345',
+            'regimen_tributario': 'Responsable IVA',
+            'estado': 'Activo',
+        },
+        {
+            'nit': '900234567-8',
+            'razon_social': 'Editorial Academica Colombia',
+            'tipo_proveedor': 'Bienes',
+            'tipo_persona': 'Jurídica',
+            'nombre_comercial': 'Editorial Académica',
+            'direccion': 'Calle 72 # 10-34',
+            'ciudad': 'Bogotá',
+            'departamento': 'Cundinamarca',
+            'pais': 'Colombia',
+            'telefono': '+57 601 7421000',
+            'email': 'editorial.academica.colombia@proveedor.sihul.edu.co',
+            'contacto_principal': 'Marta Rojas',
+            'telefono_contacto': '+57 301 555 0101',
+            'banco': 'Davivienda',
+            'tipo_cuenta': 'Ahorros',
+            'numero_cuenta': '20004567001',
+            'regimen_tributario': 'Responsable IVA',
+            'estado': 'Activo',
+        },
+        {
+            'nit': '900345678-9',
+            'razon_social': 'Mantenimiento y Obras SAS',
+            'tipo_proveedor': 'Servicios',
+            'tipo_persona': 'Jurídica',
+            'nombre_comercial': 'MyO SAS',
+            'direccion': 'Av 5N # 23-17',
+            'ciudad': 'Cali',
+            'departamento': 'Valle del Cauca',
+            'pais': 'Colombia',
+            'telefono': '+57 602 4890000',
+            'email': 'mantenimiento.y.obras@proveedor.sihul.edu.co',
+            'contacto_principal': 'Carlos Nieto',
+            'telefono_contacto': '+57 320 777 1000',
+            'banco': 'Banco de Bogotá',
+            'tipo_cuenta': 'Corriente',
+            'numero_cuenta': '9876543210',
+            'regimen_tributario': 'Gran Contribuyente',
+            'estado': 'Activo',
+        },
+        {
+            'nit': '900456789-0',
+            'razon_social': 'Distribuidora de Recursos Educativos',
+            'tipo_proveedor': 'Bienes',
+            'tipo_persona': 'Jurídica',
+            'nombre_comercial': 'DRE',
+            'direccion': 'Calle 33 # 14-25',
+            'ciudad': 'Pereira',
+            'departamento': 'Risaralda',
+            'pais': 'Colombia',
+            'telefono': '+57 606 3257788',
+            'email': 'distribuidora.de.recursos.educativos@proveedor.sihul.edu.co',
+            'contacto_principal': 'Ana Quintero',
+            'telefono_contacto': '+57 310 444 2020',
+            'banco': 'BBVA',
+            'tipo_cuenta': 'Ahorros',
+            'numero_cuenta': '5566778899',
+            'regimen_tributario': 'No responsable',
+            'estado': 'Activo',
+        },
+        {
+            'nit': '900567890-1',
+            'razon_social': 'Soluciones de Infraestructura Digital',
+            'tipo_proveedor': 'Servicios',
+            'tipo_persona': 'Jurídica',
+            'nombre_comercial': 'SID',
+            'direccion': 'Cra 15 # 98-21',
+            'ciudad': 'Bogotá',
+            'departamento': 'Cundinamarca',
+            'pais': 'Colombia',
+            'telefono': '+57 601 6112299',
+            'email': 'soluciones.de.infraestructura.digital@proveedor.sihul.edu.co',
+            'contacto_principal': 'Juan Solano',
+            'telefono_contacto': '+57 315 222 9090',
+            'banco': 'Banco de Occidente',
+            'tipo_cuenta': 'Corriente',
+            'numero_cuenta': '4455667788',
+            'regimen_tributario': 'Responsable IVA',
+            'estado': 'Activo',
+        },
     ]
 
     out.write(sty.NOTICE('\n  Proveedores demo:'))
-    for nit, razon_social, tipo in proveedores_demo:
-        _, created = Proveedor.objects.get_or_create(
-            nit=nit,
-            defaults={
-                'razon_social': razon_social,
-                'tipo_proveedor': tipo,
-                'estado': 'Activo',
-            },
+    for proveedor_data in proveedores_demo:
+        proveedor, created = Proveedor.objects.get_or_create(
+            nit=proveedor_data['nit'],
+            defaults=proveedor_data,
         )
+        if not created:
+            campos_actualizables = [
+                'razon_social', 'tipo_proveedor', 'tipo_persona', 'nombre_comercial', 'direccion',
+                'ciudad', 'departamento', 'pais', 'telefono', 'email', 'contacto_principal',
+                'telefono_contacto', 'banco', 'tipo_cuenta', 'numero_cuenta', 'regimen_tributario', 'estado',
+            ]
+            dirty = False
+            for campo in campos_actualizables:
+                nuevo_valor = proveedor_data.get(campo)
+                if getattr(proveedor, campo) != nuevo_valor:
+                    setattr(proveedor, campo, nuevo_valor)
+                    dirty = True
+            if dirty:
+                proveedor.save(update_fields=campos_actualizables)
         msg = "Creado" if created else "Existente"
-        out.write(f"    - {msg}: {razon_social}")
+        out.write(f"    - {msg}: {proveedor_data['razon_social']}")
 
 
 def _seed_usuarios_proveedores(roles, out, sty):

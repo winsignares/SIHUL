@@ -10,6 +10,8 @@ import { mapFacturaDetail } from './factura-details-helpers';
 import { parseFacturaDescripcion } from './factura-description';
 import { openDocumentosConsolidados, downloadDocumentoIndividual } from './documentos-consolidados';
 import type { ItemFactura } from '../models/financiero/core.models';
+import { useAuth } from '../context/AuthContext';
+import { normalizeFinancialText, resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
 type SharedFacturaDocumento = {
   id?: string;
@@ -173,6 +175,17 @@ interface FacturaDetailModalProps {
   onClose: () => void;
 }
 
+function canViewSensitiveDocuments(roleName?: string, userName?: string, components?: { nombre: string }[]) {
+  const role = resolveCanonicalFinancialRole({ roleName, userName, components });
+  return role === 'auditoria' || role === 'direccion_financiera';
+}
+
+function isSensitiveDocument(doc: SharedFacturaDocumento) {
+  const tipo = normalizeFinancialText(doc.tipo);
+  const nombre = normalizeFinancialText(doc.nombre);
+  return tipo === 'archivo plano bancario' || tipo === 'soporte causacion seven' || nombre.includes('archivo plano');
+}
+
 function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
   const normalize = (value: string) =>
     value
@@ -281,6 +294,7 @@ function getEstadoBadge(estado: string) {
 }
 
 export default function FacturaDetailModal({ factura, isOpen, onClose }: FacturaDetailModalProps) {
+  const { user, components } = useAuth();
   const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail | null>(factura ?? null);
 
   useEffect(() => {
@@ -324,7 +338,12 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
   const etapasTimeline = currentFactura.etapasTimeline && currentFactura.etapasTimeline.length > 0
     ? currentFactura.etapasTimeline
     : buildDefaultTimeline(currentFactura);
-  const documentos = currentFactura.documentos || [];
+  const documentos = (currentFactura.documentos || []).filter((doc) => {
+    if (canViewSensitiveDocuments(user?.rol?.nombre, user?.nombre, components)) {
+      return true;
+    }
+    return !isSensitiveDocument(doc);
+  });
   const hasDocumentos = documentos.length > 0;
   const showAuditoriaTab = Boolean(currentFactura.auditoriaView);
   const tabsCount = 2 + (hasDocumentos ? 1 : 0) + (showAuditoriaTab ? 1 : 0);
@@ -668,4 +687,3 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     </Dialog>
   );
 }
-

@@ -2,6 +2,7 @@
 
 export interface Proveedor {
   id: number;
+  usuario?: number | null;
   nit: string;
   razon_social: string;
   nombre_comercial?: string;
@@ -13,11 +14,55 @@ export interface Proveedor {
   ciudad?: string;
   departamento?: string;
   pais?: string;
+  contacto_principal?: string;
+  telefono_contacto?: string;
   banco?: string;
   tipo_cuenta?: 'Ahorros' | 'Corriente' | string;
   numero_cuenta?: string;
   cuenta_bancaria_completa?: string;
+  regimen_tributario?: string;
+  observaciones?: string;
   estado: 'Activo' | 'Inactivo' | 'Bloqueado' | 'Verificación';
+}
+
+export interface PaisCatalogo {
+  id: number;
+  nombre: string;
+  codigo_iso: string;
+  activo: boolean;
+}
+
+export interface DepartamentoGeograficoCatalogo {
+  id: number;
+  nombre: string;
+  codigo?: string | null;
+  activo: boolean;
+  pais_id: number;
+  pais?: PaisCatalogo;
+}
+
+export interface CiudadCatalogo {
+  id: number;
+  nombre: string;
+  activo: boolean;
+  departamento_id: number;
+  pais_id: number;
+  departamento?: DepartamentoGeograficoCatalogo;
+}
+
+export interface BancoCatalogo {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  codigo_bancario?: string | null;
+  activo: boolean;
+}
+
+export interface TipoCuentaCatalogo {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  activo: boolean;
 }
 
 export interface Departamento {

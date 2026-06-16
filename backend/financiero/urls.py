@@ -5,6 +5,9 @@ from . import views
 # Crear router
 router = DefaultRouter()
 router.register(r'proveedores', views.ProveedorViewSet, basename='proveedor')
+router.register(r'paises', views.PaisViewSet, basename='pais')
+router.register(r'departamentos-geograficos', views.DepartamentoGeograficoViewSet, basename='departamento-geografico')
+router.register(r'ciudades', views.CiudadViewSet, basename='ciudad')
 router.register(r'departamentos', views.DepartamentoViewSet, basename='departamento')
 router.register(r'cuentas-contables', views.CuentaContableViewSet, basename='cuenta-contable')
 router.register(r'centros-costo', views.CentroCostoViewSet, basename='centro-costo')

@@ -33,6 +33,37 @@ from notificaciones.signals import crear_notificacion
 logger = logging.getLogger(__name__)
 
 
+DOCUMENTOS_SENSIBLES_POR_ROL = {
+    'archivo plano bancario',
+    'soporte causacion seven',
+}
+
+ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
+    'auditoria',
+    'direccion financiera',
+}
+
+
+def _normalizar_texto_permiso(value):
+    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
+    without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
+    return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
+
+
+def _rol_usuario_normalizado(user):
+    return _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
+
+
+def _usuario_puede_ver_documentos_sensibles(user):
+    return _rol_usuario_normalizado(user) in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
+
+
+def _documento_es_sensible(documento):
+    tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
+    nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
+    return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
+
+
 def _resolve_documento_local_path(documento):
     archivo = getattr(documento, 'archivo', None)
     if archivo:
@@ -236,6 +267,69 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     ordering_fields = ['fecha_creacion', 'razon_social']
     ordering = ['-fecha_creacion']
 
+    def _coerce_geo_catalog_data(self, payload):
+        data = dict(payload)
+
+        pais_id = data.pop('pais_id', None)
+        departamento_id = data.pop('departamento_geo_id', None)
+        ciudad_id = data.pop('ciudad_id', None)
+        banco_id = data.pop('banco_id', None)
+        tipo_cuenta_id = data.pop('tipo_cuenta_id', None)
+
+        ciudad = None
+        departamento = None
+        pais = None
+
+        if ciudad_id:
+            ciudad = models.Ciudad.objects.filter(id=ciudad_id, activo=True).select_related('departamento__pais').first()
+            if ciudad:
+                departamento = ciudad.departamento
+                pais = departamento.pais
+
+        if departamento is None and departamento_id:
+            departamento = models.DepartamentoGeografico.objects.filter(id=departamento_id, activo=True).select_related('pais').first()
+            if departamento:
+                pais = departamento.pais
+
+        if pais is None and pais_id:
+            pais = models.Pais.objects.filter(id=pais_id, activo=True).first()
+
+        if ciudad:
+            data['ciudad'] = ciudad.nombre
+        if departamento:
+            data['departamento'] = departamento.nombre
+        if pais:
+            data['pais'] = pais.nombre
+
+        if banco_id:
+            banco = models.Banco.objects.filter(id=banco_id, activo=True).first()
+            if banco:
+                data['banco'] = banco.nombre
+
+        if tipo_cuenta_id:
+            tipo_cuenta = models.TipoCuenta.objects.filter(id=tipo_cuenta_id, activo=True).first()
+            if tipo_cuenta:
+                data['tipo_cuenta'] = tipo_cuenta.nombre
+
+        return data
+
+    def create(self, request, *args, **kwargs):
+        data = self._coerce_geo_catalog_data(request.data)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        data = self._coerce_geo_catalog_data(request.data)
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
     @action(detail=False, methods=['post'], url_path='crear_con_usuario')
     def crear_con_usuario(self, request):
         """Crea un usuario con rol Proveedor y vincula el perfil de proveedor en una transacción atómica."""
@@ -287,6 +381,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
         for campo in campos_opcionales:
             if campo in request.data:
                 proveedor_data[campo] = request.data[campo]
+        proveedor_data = self._coerce_geo_catalog_data(proveedor_data)
 
         try:
             with transaction.atomic():
@@ -350,6 +445,62 @@ class ProveedorViewSet(viewsets.ModelViewSet):
             {'detail': 'No se encontró un proveedor asociado a este usuario.'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+class PaisViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = models.Pais.objects.filter(activo=True).order_by('nombre')
+    serializer_class = serializers.PaisSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['activo', 'codigo_iso']
+    search_fields = ['nombre', 'codigo_iso']
+    ordering = ['nombre']
+
+
+class DepartamentoGeograficoViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.DepartamentoGeograficoSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['activo', 'pais']
+    search_fields = ['nombre', 'codigo', 'pais__nombre']
+    ordering = ['nombre']
+
+    def get_queryset(self):
+        queryset = models.DepartamentoGeografico.objects.filter(activo=True).select_related('pais').order_by('nombre')
+        pais_id = self.request.query_params.get('pais_id') or self.request.query_params.get('pais')
+        ciudad_id = self.request.query_params.get('ciudad_id')
+
+        if ciudad_id:
+            ciudad = models.Ciudad.objects.filter(id=ciudad_id, activo=True).select_related('departamento').first()
+            if ciudad:
+                queryset = queryset.filter(id=ciudad.departamento_id)
+
+        if pais_id:
+            queryset = queryset.filter(pais_id=pais_id)
+
+        return queryset
+
+
+class CiudadViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.CiudadSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['activo', 'departamento']
+    search_fields = ['nombre', 'departamento__nombre', 'departamento__pais__nombre']
+    ordering = ['nombre']
+
+    def get_queryset(self):
+        queryset = models.Ciudad.objects.filter(activo=True).select_related('departamento__pais').order_by('nombre')
+        departamento_id = self.request.query_params.get('departamento_id') or self.request.query_params.get('departamento')
+        pais_id = self.request.query_params.get('pais_id') or self.request.query_params.get('pais')
+
+        if departamento_id:
+            queryset = queryset.filter(departamento_id=departamento_id)
+
+        if pais_id:
+            queryset = queryset.filter(departamento__pais_id=pais_id)
+
+        return queryset
 
 
 class DepartamentoViewSet(viewsets.ModelViewSet):
@@ -721,16 +872,26 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
+        puede_ver_sensibles = _usuario_puede_ver_documentos_sensibles(self.request.user)
         factura_id = self.request.query_params.get('factura_id') or self.request.query_params.get('factura')
+        queryset = models.DocumentoAdjunto.objects.all()
+
+        if not puede_ver_sensibles:
+            queryset = queryset.exclude(
+                Q(tipo_documento='Archivo Plano Bancario') |
+                Q(tipo_documento='Soporte Causacion Seven') |
+                Q(nombre_archivo__icontains='archivo plano')
+            )
+
         if factura_id:
-            queryset = models.DocumentoAdjunto.objects.filter(factura_id=factura_id)
+            queryset = queryset.filter(factura_id=factura_id)
             include_historico = (self.request.query_params.get('include_historico') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
             if not include_historico:
                 factura = models.Factura.objects.filter(id=factura_id).only('id', 'ciclo_documental_actual').first()
                 if factura:
                     queryset = queryset.filter(ciclo_documental=_factura_ciclo_documental_actual(factura))
             return queryset.order_by('fecha_carga', 'id')
-        return models.DocumentoAdjunto.objects.all()
+        return queryset
 
     @action(detail=True, methods=['get'], url_path='contenido')
     def contenido(self, request, pk=None):
@@ -1029,6 +1190,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return 'contabilidad'
         return 'all'
 
+    def _resolve_scope_documental(self, request):
+        requested_scope = (request.query_params.get('scope') or '').strip()
+        return requested_scope or self._scope_documental_por_rol(request)
+
+    def _factura_response_data(self, factura):
+        return serializers.FacturaDetailSerializer(
+            factura,
+            context={'request': self.request},
+        ).data
+
     def _roles_hasta_scope(self, scope):
         scope_normalizado = (scope or 'all').strip().lower()
         if scope_normalizado == 'proveedor':
@@ -1060,6 +1231,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
         # Deduplicar por tipo_documento: conservar solo el más reciente de cada tipo
         seen_tipos = {}
         for doc in documentos:
+            if not _usuario_puede_ver_documentos_sensibles(self.request.user) and _documento_es_sensible(doc):
+                continue
             seen_tipos[doc.tipo_documento] = doc  # sobrescribe con el más reciente (orden ASC por fecha)
         return list(seen_tipos.values())
 
@@ -1516,14 +1689,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Radicada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
     @action(detail=True, methods=['get'], url_path='documentos_consolidados')
     def documentos_consolidados(self, request, pk=None):
         factura = self.get_object()
-        scope = request.query_params.get('scope') or self._scope_documental_por_rol(request)
+        scope = self._resolve_scope_documental(request)
         descargar = (request.query_params.get('descargar') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
         doc_id = request.query_params.get('doc_id')
 
@@ -1541,7 +1714,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def documentos_historial_zip(self, request, pk=None):
         """Descarga el expediente completo: archivos originales y PDF unificado."""
         factura = self.get_object()
-        scope = request.query_params.get('scope') or self._scope_documental_por_rol(request)
+        scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
         consolidado = self._pdf_consolidado_documentos(factura, documentos, scope)
 
@@ -1624,7 +1797,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, ESTADO_CARGADA)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1669,7 +1842,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, ESTADO_ENVIADA_RECTORIA)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1718,7 +1891,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1773,7 +1946,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, ESTADO_RECHAZADA_POR_RECTORIA)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1829,7 +2002,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         )
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1860,7 +2033,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 )
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1943,7 +2116,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, 'Radicada', 'Causada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2010,7 +2183,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Alistada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2053,7 +2226,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Aprobada Auditoría')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2099,7 +2272,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Rechazada Auditoría')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2144,7 +2317,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Revisada Dir. Financiera')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2267,7 +2440,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2316,7 +2489,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Pagada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2331,7 +2504,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        scope = request.query_params.get('scope') or 'tesoreria'
+        scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
         content = self._pdf_consolidado_documentos(factura, documentos, scope)
         filename = f"Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.pdf"
@@ -2469,7 +2642,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Detenida')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 

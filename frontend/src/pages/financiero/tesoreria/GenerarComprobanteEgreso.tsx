@@ -8,7 +8,6 @@ import { Input } from '../../../share/input';
 import { Label } from '../../../share/label';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../share/factura-details-helpers';
-import { SlaIndicator } from '../../../share/sla-indicator';
 import { displayDate, displayRadicado, displayText } from '../../../share/field-placeholders';
 import { openDocumentosConsolidados, downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 import {
@@ -44,8 +43,6 @@ interface FacturaComprobanteRow {
   fechaComprobante: string;
   soportePago: string;
   estado: string;
-  diasTranscurridos: number;
-  slaObjetivoDias?: number | null;
   raw: APIFactura;
 }
 
@@ -53,7 +50,6 @@ const ITEMS_POR_PAGINA = 5;
 const ORDER_OPTIONS = [
   { label: 'Mas antiguos primero', value: 'antiguos' },
   { label: 'Mas recientes primero', value: 'recientes' },
-  { label: 'SLA critico primero', value: 'sla' },
 ] as const;
 
 const toList = <T,>(data: unknown): T[] => {
@@ -91,8 +87,6 @@ const mapFactura = (factura: APIFactura): FacturaComprobanteRow => ({
   fechaComprobante: factura.fecha_comprobante || '',
   soportePago: factura.numero_transaccion || factura.numero_confirmacion || 'Sin soporte',
   estado: factura.estado,
-  diasTranscurridos: Math.max(0, Number(factura.dias_transcurridos || 0)),
-  slaObjetivoDias: factura.sla_objetivo_dias ?? null,
   raw: factura,
 });
 
@@ -154,8 +148,6 @@ export default function GenerarComprobanteEgreso() {
     switch (filtros.orden) {
       case 'recientes':
         return filtradas.sort((a, b) => parseFecha(b.fechaPagoAplicado) - parseFecha(a.fechaPagoAplicado));
-      case 'sla':
-        return filtradas.sort((a, b) => (b.diasTranscurridos || 0) - (a.diasTranscurridos || 0));
       default:
         return filtradas.sort((a, b) => parseFecha(a.fechaPagoAplicado) - parseFecha(b.fechaPagoAplicado));
     }
@@ -328,7 +320,16 @@ export default function GenerarComprobanteEgreso() {
             )}
 
             <div className="overflow-hidden rounded-2xl border border-slate-200">
-              <Table>
+              <Table className="table-fixed w-full">
+                <colgroup>
+                  <col className="w-[15%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[24%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead className="font-semibold text-slate-700">Factura</TableHead>
@@ -336,7 +337,6 @@ export default function GenerarComprobanteEgreso() {
                     <TableHead className="font-semibold text-slate-700">N° Proceso Pago</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                    <TableHead className="font-semibold text-slate-700">SLA</TableHead>
                     <TableHead className="font-semibold text-slate-700">Fecha de Pago</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
@@ -344,7 +344,7 @@ export default function GenerarComprobanteEgreso() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-8 text-center text-slate-500">
+                      <TableCell colSpan={7} className="py-8 text-center text-slate-500">
                         <div className="inline-flex items-center gap-2">
                           <Loader2 className="h-5 w-5 animate-spin" />
                           Cargando facturas pagadas...
@@ -353,15 +353,12 @@ export default function GenerarComprobanteEgreso() {
                     </TableRow>
                   ) : facturasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-slate-500">
+                      <TableCell colSpan={7} className="py-10 text-center text-slate-500">
                         No hay facturas pagadas para los filtros actuales.
                       </TableCell>
                     </TableRow>
                   ) : (
                     facturasPaginadas.map((factura, index) => {
-                      const dias = factura.diasTranscurridos || 0;
-                      const colorRiesgo = dias >= 3 ? 'bg-amber-500' : 'bg-emerald-500';
-
                       return (
                         <motion.tr
                           key={factura.id}
@@ -386,10 +383,10 @@ export default function GenerarComprobanteEgreso() {
                           </TableCell>
                           {/* Proveedor / NIT */}
                           <TableCell>
-                            <div className="flex items-start gap-2">
+                            <div className="flex items-start gap-2 min-w-0">
                               <Building className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                              <div>
-                                <p className="max-w-[200px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
+                              <div className="min-w-0">
+                                <p className="truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
                                   {displayText(factura.proveedor)}
                                 </p>
                                 <p className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</p>
@@ -397,14 +394,7 @@ export default function GenerarComprobanteEgreso() {
                             </div>
                           </TableCell>
                           {/* Monto */}
-                          <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
-                          {/* SLA */}
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className={`h-3 w-3 rounded-full ${colorRiesgo}`} />
-                              <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} compact />
-                            </div>
-                          </TableCell>
+                          <TableCell className="font-semibold text-slate-800 whitespace-nowrap">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
                           {/* Fecha de Pago */}
                           <TableCell className="text-sm text-slate-600">
                             <div className="flex items-center gap-1">
@@ -413,7 +403,7 @@ export default function GenerarComprobanteEgreso() {
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <div className="flex flex-wrap items-center justify-center gap-2">
+                            <div className="flex flex-nowrap items-center justify-center gap-1">
                               <Button
                                 size="sm"
                                 variant="outline"

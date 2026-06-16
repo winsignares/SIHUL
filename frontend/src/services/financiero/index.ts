@@ -1,4 +1,5 @@
 export * from './facturas/facturasAPI';
+export * from './catalogos-proveedores/catalogosProveedoresAPI';
 export * from './proveedores/proveedoresAPI';
 export * from './departamentos/departamentosAPI';
 export * from './cuentas-contables/cuentasContablesAPI';

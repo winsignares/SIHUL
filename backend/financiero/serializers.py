@@ -5,6 +5,7 @@ from usuarios.serializers import UsuarioSerializer
 from decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
+import unicodedata
 
 
 ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg', 'txt'}
@@ -20,6 +21,34 @@ ALLOWED_DOC_MIME_TYPES = {
 MAX_DOC_SIZE_BYTES = 10 * 1024 * 1024
 
 
+DOCUMENTOS_SENSIBLES_POR_ROL = {
+    'archivo plano bancario',
+    'soporte causacion seven',
+}
+
+ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
+    'auditoria',
+    'direccion financiera',
+}
+
+
+def _normalizar_texto_permiso(value):
+    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
+    without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
+    return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
+
+
+def _usuario_puede_ver_documentos_sensibles(user):
+    rol = _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
+    return rol in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
+
+
+def _documento_es_sensible(documento):
+    tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
+    nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
+    return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
+
+
 # ============================================================
 # SERIALIZERS SIMPLES
 # ============================================================
@@ -29,6 +58,31 @@ class ProveedorSerializer(serializers.ModelSerializer):
         model = models.Proveedor
         fields = '__all__'
         read_only_fields = ['fecha_creacion', 'fecha_modificacion', 'numero_facturas_procesadas', 'total_pagado_historico']
+
+
+class PaisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Pais
+        fields = ['id', 'nombre', 'codigo_iso', 'activo']
+
+
+class DepartamentoGeograficoSerializer(serializers.ModelSerializer):
+    pais = PaisSerializer(read_only=True)
+    pais_id = serializers.IntegerField(source='pais.id', read_only=True)
+
+    class Meta:
+        model = models.DepartamentoGeografico
+        fields = ['id', 'nombre', 'codigo', 'activo', 'pais', 'pais_id']
+
+
+class CiudadSerializer(serializers.ModelSerializer):
+    departamento = DepartamentoGeograficoSerializer(read_only=True)
+    departamento_id = serializers.IntegerField(source='departamento.id', read_only=True)
+    pais_id = serializers.IntegerField(source='departamento.pais.id', read_only=True)
+
+    class Meta:
+        model = models.Ciudad
+        fields = ['id', 'nombre', 'activo', 'departamento', 'departamento_id', 'pais_id']
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):
@@ -269,6 +323,13 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
             .filter(ciclo_documental=getattr(obj, 'ciclo_documental_actual', 1))
             .order_by('fecha_carga', 'id')
         )
+        request = self.context.get('request')
+        if request is not None and not _usuario_puede_ver_documentos_sensibles(request.user):
+            documentos = [
+                documento
+                for documento in documentos
+                if not _documento_es_sensible(documento)
+            ]
         return DocumentoAdjuntoSerializer(documentos, many=True, context=self.context).data
 
 

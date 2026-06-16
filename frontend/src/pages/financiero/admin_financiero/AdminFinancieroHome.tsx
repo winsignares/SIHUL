@@ -214,25 +214,23 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
           </div>
 
           {/* Accesos rápidos en el header */}
-          <div className="flex flex-col gap-3 xl:items-end">
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              <Button
-                onClick={() => void fetchDashboard(true)}
-                disabled={refreshing}
-                className="bg-white/15 border border-white/30 hover:bg-white/25 text-white"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Actualizando...' : 'Actualizar'}
-              </Button>
-            </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-3 2xl:grid-cols-5">
+          <div className="flex flex-col items-start gap-3 xl:items-end xl:shrink-0">
+            <Button
+              onClick={() => void fetchDashboard(true)}
+              disabled={refreshing}
+              className="self-end bg-white/15 border border-white/30 hover:bg-white/25 text-white"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Actualizando...' : 'Actualizar'}
+            </Button>
+            <div className="flex gap-2">
               {quickActions.map((qa) => {
                 const Icon = qa.icon;
                 return (
                   <button
                     key={qa.menu}
                     onClick={() => onNavigate(qa.menu)}
-                    className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/10 border border-white/20 px-3 py-3 text-center text-white transition-all hover:bg-white/20"
+                    className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/10 border border-white/20 px-5 py-3 text-center text-white transition-all hover:bg-white/20 min-w-[80px]"
                   >
                     <Icon className="h-5 w-5" />
                     <span className="text-xs font-medium">{qa.label}</span>

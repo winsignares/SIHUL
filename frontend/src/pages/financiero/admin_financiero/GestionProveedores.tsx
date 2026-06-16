@@ -1,134 +1,284 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
+import { Badge } from '../../../share/badge';
 import { Button } from '../../../share/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../share/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../share/dialog';
 import { Input } from '../../../share/input';
 import { Label } from '../../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../share/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../share/dialog';
-import { Badge } from '../../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../share/table';
-import { Building2, PauseCircle, PlayCircle, Plus, Save, Search, Trash2 } from 'lucide-react';
-import { proveedoresService } from '../../../services/financiero';
-import type { Proveedor } from '../../../models/financiero/core.models';
-import { userService } from '../../../services/users/authService';
+import { Building2, PauseCircle, PlayCircle, Plus, Save, Search, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { catalogosProveedoresService, proveedoresService } from '../../../services/financiero';
+import { userService, type Usuario } from '../../../services/users/authService';
+import type {
+  BancoCatalogo,
+  CiudadCatalogo,
+  DepartamentoGeograficoCatalogo,
+  PaisCatalogo,
+  Proveedor,
+  TipoCuentaCatalogo,
+} from '../../../models/financiero/core.models';
 
 type ProveedorUI = Proveedor & { usuario?: number | null };
-type ProveedorFormState = Partial<ProveedorUI> & { nuevaContrasena?: string };
+
+type ProveedorFormState = {
+  usuario?: number | null;
+  nombreUsuario: string;
+  correoUsuario: string;
+  nuevaContrasena: string;
+  nit: string;
+  razon_social: string;
+  nombre_comercial: string;
+  tipo_proveedor: Proveedor['tipo_proveedor'];
+  tipo_persona: NonNullable<Proveedor['tipo_persona']>;
+  direccion: string;
+  pais_id: string;
+  departamento_geo_id: string;
+  ciudad_id: string;
+  telefono: string;
+  email: string;
+  contacto_principal: string;
+  telefono_contacto: string;
+  banco_id: string;
+  tipo_cuenta_id: string;
+  numero_cuenta: string;
+  regimen_tributario: string;
+  observaciones: string;
+  estado: Proveedor['estado'];
+};
+
+const TIPO_PROVEEDOR_OPTIONS: Proveedor['tipo_proveedor'][] = ['Servicios', 'Bienes', 'Construcción', 'Mixto'];
+const TIPO_PERSONA_OPTIONS: NonNullable<Proveedor['tipo_persona']>[] = ['Jurídica', 'Natural'];
+const REGIMEN_OPTIONS = ['Responsable IVA', 'No responsable', 'Gran Contribuyente'] as const;
+const ESTADO_OPTIONS: Proveedor['estado'][] = ['Activo', 'Inactivo', 'Bloqueado', 'Verificación'];
 
 const emptyForm: ProveedorFormState = {
-  razon_social: '',
+  usuario: null,
+  nombreUsuario: '',
+  correoUsuario: '',
+  nuevaContrasena: '',
   nit: '',
+  razon_social: '',
+  nombre_comercial: '',
   tipo_proveedor: 'Servicios',
   tipo_persona: 'Jurídica',
-  estado: 'Activo',
-  email: '',
-  telefono: '',
   direccion: '',
-  ciudad: '',
-  banco: '',
-  tipo_cuenta: 'Ahorros',
+  pais_id: '',
+  departamento_geo_id: '',
+  ciudad_id: '',
+  telefono: '',
+  email: '',
+  contacto_principal: '',
+  telefono_contacto: '',
+  banco_id: '',
+  tipo_cuenta_id: '',
   numero_cuenta: '',
-  nuevaContrasena: '',
+  regimen_tributario: '',
+  observaciones: '',
+  estado: 'Activo',
 };
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
+const normalizeText = (value?: string) =>
+  (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+const toArray = <T,>(value: T[] | { results?: T[] } | unknown): T[] => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object' && Array.isArray((value as { results?: T[] }).results)) {
+    return (value as { results: T[] }).results;
+  }
+  return [];
+};
+
 export default function GestionProveedoresReal() {
   const [proveedores, setProveedores] = useState<ProveedorUI[]>([]);
+  const [usuariosProveedor, setUsuariosProveedor] = useState<Usuario[]>([]);
+  const [paises, setPaises] = useState<PaisCatalogo[]>([]);
+  const [departamentosGeo, setDepartamentosGeo] = useState<DepartamentoGeograficoCatalogo[]>([]);
+  const [ciudades, setCiudades] = useState<CiudadCatalogo[]>([]);
+  const [bancos, setBancos] = useState<BancoCatalogo[]>([]);
+  const [tiposCuenta, setTiposCuenta] = useState<TipoCuentaCatalogo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [estadoFilter, setEstadoFilter] = useState('all');
-  const [tipoFilter, setTipoFilter] = useState('all');
-  const [ciudadFilter, setCiudadFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [accionProveedorId, setAccionProveedorId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState('all');
+  const [tipoFilter, setTipoFilter] = useState('all');
+  const [ciudadFilter, setCiudadFilter] = useState('all');
   const [form, setForm] = useState<ProveedorFormState>(emptyForm);
 
-  const extractProveedores = (response: unknown): ProveedorUI[] => {
-    if (Array.isArray(response)) return response as ProveedorUI[];
-    if (response && typeof response === 'object') {
-      const maybePaginated = response as { results?: ProveedorUI[]; proveedores?: ProveedorUI[] };
-      if (Array.isArray(maybePaginated.results)) return maybePaginated.results;
-      if (Array.isArray(maybePaginated.proveedores)) return maybePaginated.proveedores;
-    }
-    return [];
-  };
+  const usuariosById = useMemo(
+    () => Object.fromEntries(usuariosProveedor.filter((u) => u.id).map((u) => [u.id as number, u])),
+    [usuariosProveedor]
+  );
 
-  const buildProveedorPayload = (source: ProveedorFormState): Partial<Proveedor> => ({
-    razon_social: source.razon_social,
-    nit: source.nit,
-    tipo_proveedor: source.tipo_proveedor,
-    tipo_persona: source.tipo_persona,
-    estado: source.estado,
-    email: source.email,
-    telefono: source.telefono,
-    direccion: source.direccion,
-    ciudad: source.ciudad,
-    banco: source.banco,
-    tipo_cuenta: source.tipo_cuenta,
-    numero_cuenta: source.numero_cuenta,
-  });
+  const paisesById = useMemo(() => Object.fromEntries(paises.map((item) => [item.id, item])), [paises]);
+  const departamentosById = useMemo(() => Object.fromEntries(departamentosGeo.map((item) => [item.id, item])), [departamentosGeo]);
+  const ciudadesById = useMemo(() => Object.fromEntries(ciudades.map((item) => [item.id, item])), [ciudades]);
+  const bancosById = useMemo(() => Object.fromEntries(bancos.map((item) => [item.id, item])), [bancos]);
+  const tiposCuentaById = useMemo(() => Object.fromEntries(tiposCuenta.map((item) => [item.id, item])), [tiposCuenta]);
+
+  const findPaisIdByName = useCallback((nombre?: string) => {
+    const match = paises.find((item) => normalizeText(item.nombre) === normalizeText(nombre));
+    return match ? String(match.id) : '';
+  }, [paises]);
+
+  const findDepartamentoIdByName = useCallback((nombre?: string, paisId?: string) => {
+    const match = departamentosGeo.find((item) =>
+      normalizeText(item.nombre) === normalizeText(nombre) &&
+      (!paisId || String(item.pais_id) === paisId)
+    );
+    return match ? String(match.id) : '';
+  }, [departamentosGeo]);
+
+  const findCiudadIdByName = useCallback((nombre?: string, departamentoId?: string) => {
+    const match = ciudades.find((item) =>
+      normalizeText(item.nombre) === normalizeText(nombre) &&
+      (!departamentoId || String(item.departamento_id) === departamentoId)
+    );
+    return match ? String(match.id) : '';
+  }, [ciudades]);
+
+  const findBancoIdByName = useCallback((nombre?: string) => {
+    const match = bancos.find((item) => normalizeText(item.nombre) === normalizeText(nombre));
+    return match ? String(match.id) : '';
+  }, [bancos]);
+
+  const findTipoCuentaIdByName = useCallback((nombre?: string) => {
+    const match = tiposCuenta.find((item) => normalizeText(item.nombre) === normalizeText(nombre));
+    return match ? String(match.id) : '';
+  }, [tiposCuenta]);
+
+  const cargarCatalogos = useCallback(async () => {
+    const [paisesResp, departamentosResp, ciudadesResp, bancosResp, tiposCuentaResp] = await Promise.all([
+      catalogosProveedoresService.getPaises(),
+      catalogosProveedoresService.getDepartamentos(),
+      catalogosProveedoresService.getCiudades(),
+      catalogosProveedoresService.getBancos(),
+      catalogosProveedoresService.getTiposCuenta(),
+    ]);
+
+    setPaises(paisesResp);
+    setDepartamentosGeo(departamentosResp);
+    setCiudades(ciudadesResp);
+    setBancos(bancosResp);
+    setTiposCuenta(tiposCuentaResp);
+  }, []);
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await proveedoresService.getAll({ limit: 200, ordering: '-id' });
-      setProveedores(extractProveedores(response));
+      const [proveedoresResp, usuariosResp] = await Promise.all([
+        proveedoresService.getAll({ limit: 500, ordering: '-id' }),
+        userService.listarUsuarios(),
+      ]);
+
+      setProveedores(toArray<ProveedorUI>(proveedoresResp));
+      setUsuariosProveedor((usuariosResp.usuarios || []).filter((usuario) => normalizeText(usuario.rol?.nombre) === 'proveedor'));
+      await cargarCatalogos();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'No se pudieron cargar los proveedores.'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cargarCatalogos]);
 
   useEffect(() => {
     void cargar();
   }, [cargar]);
 
-  const ciudadesDisponibles = useMemo(
+  const ciudadesDisponiblesFiltro = useMemo(
     () => Array.from(new Set(proveedores.map((p) => (p.ciudad || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es')),
     [proveedores]
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
+    const query = normalizeText(search);
     const base = proveedores.filter((p) => {
-      if (estadoFilter !== 'all' && p.estado !== estadoFilter) {
-        return false;
-      }
-
-      if (tipoFilter !== 'all' && p.tipo_proveedor !== tipoFilter) {
-        return false;
-      }
-
-      if (ciudadFilter !== 'all' && (p.ciudad || '').trim() !== ciudadFilter) {
-        return false;
-      }
-
-      if (!q) {
-        return true;
-      }
-
-      return [p.razon_social, p.nit, p.email, p.ciudad, p.tipo_proveedor].some((value) =>
-        (value || '').toLowerCase().includes(q)
-      );
+      if (estadoFilter !== 'all' && p.estado !== estadoFilter) return false;
+      if (tipoFilter !== 'all' && p.tipo_proveedor !== tipoFilter) return false;
+      if (ciudadFilter !== 'all' && (p.ciudad || '').trim() !== ciudadFilter) return false;
+      if (!query) return true;
+      return [p.nit, p.razon_social, p.email || '', p.ciudad || '', p.tipo_proveedor].some((value) => normalizeText(value).includes(query));
     });
 
     return [...base].sort((a, b) => (b.id || 0) - (a.id || 0));
-  }, [search, proveedores, estadoFilter, tipoFilter, ciudadFilter]);
+  }, [proveedores, search, estadoFilter, tipoFilter, ciudadFilter]);
 
-  const limpiarFiltros = () => {
-    setSearch('');
-    setEstadoFilter('all');
-    setTipoFilter('all');
-    setCiudadFilter('all');
-  };
+  const departamentosDisponibles = useMemo(() => {
+    if (form.ciudad_id) {
+      const ciudad = ciudadesById[Number(form.ciudad_id)];
+      if (ciudad) {
+        const departamento = departamentosById[ciudad.departamento_id];
+        return departamento ? [departamento] : [];
+      }
+    }
+
+    return departamentosGeo.filter((item) => !form.pais_id || String(item.pais_id) === form.pais_id);
+  }, [form.ciudad_id, form.pais_id, ciudadesById, departamentosById, departamentosGeo]);
+
+  const ciudadesDisponibles = useMemo(() => {
+    if (form.departamento_geo_id) {
+      return ciudades.filter((item) => String(item.departamento_id) === form.departamento_geo_id);
+    }
+
+    if (form.pais_id) {
+      return ciudades.filter((item) => String(item.pais_id) === form.pais_id);
+    }
+
+    return ciudades;
+  }, [ciudades, form.departamento_geo_id, form.pais_id]);
+
+  const syncPaisDepartamentoCiudad = useCallback((next: Partial<ProveedorFormState>) => {
+    setForm((prev) => {
+      const merged = { ...prev, ...next };
+
+      if (merged.ciudad_id) {
+        const ciudad = ciudadesById[Number(merged.ciudad_id)];
+        if (ciudad) {
+          merged.departamento_geo_id = String(ciudad.departamento_id);
+          merged.pais_id = String(ciudad.pais_id);
+        }
+      } else if (merged.departamento_geo_id) {
+        const departamento = departamentosById[Number(merged.departamento_geo_id)];
+        if (departamento) {
+          merged.pais_id = String(departamento.pais_id);
+        }
+      }
+
+      if (merged.departamento_geo_id && merged.ciudad_id) {
+        const ciudad = ciudadesById[Number(merged.ciudad_id)];
+        if (!ciudad || String(ciudad.departamento_id) !== merged.departamento_geo_id) {
+          merged.ciudad_id = '';
+        }
+      }
+
+      if (merged.pais_id && merged.departamento_geo_id) {
+        const departamento = departamentosById[Number(merged.departamento_geo_id)];
+        if (!departamento || String(departamento.pais_id) !== merged.pais_id) {
+          merged.departamento_geo_id = '';
+          merged.ciudad_id = '';
+        }
+      }
+
+      if (!merged.pais_id) {
+        merged.departamento_geo_id = '';
+        merged.ciudad_id = '';
+      }
+
+      return merged;
+    });
+  }, [ciudadesById, departamentosById]);
 
   const abrirNuevo = () => {
     setEditingId(null);
@@ -136,42 +286,116 @@ export default function GestionProveedoresReal() {
     setDialogOpen(true);
   };
 
-  const abrirEdicion = (p: Proveedor) => {
-    setEditingId(p.id);
-    setForm({ ...p });
+  const abrirEdicion = (proveedor: ProveedorUI) => {
+    const usuario = proveedor.usuario ? usuariosById[proveedor.usuario] : undefined;
+    const paisId = findPaisIdByName(proveedor.pais);
+    const departamentoId = findDepartamentoIdByName(proveedor.departamento, paisId);
+    const ciudadId = findCiudadIdByName(proveedor.ciudad, departamentoId);
+
+    setEditingId(proveedor.id);
+    setForm({
+      usuario: proveedor.usuario ?? null,
+      nombreUsuario: usuario?.nombre || '',
+      correoUsuario: usuario?.correo || proveedor.email || '',
+      nuevaContrasena: '',
+      nit: proveedor.nit || '',
+      razon_social: proveedor.razon_social || '',
+      nombre_comercial: proveedor.nombre_comercial || '',
+      tipo_proveedor: proveedor.tipo_proveedor || 'Servicios',
+      tipo_persona: proveedor.tipo_persona || 'Jurídica',
+      direccion: proveedor.direccion || '',
+      pais_id: paisId,
+      departamento_geo_id: departamentoId,
+      ciudad_id: ciudadId,
+      telefono: proveedor.telefono || '',
+      email: proveedor.email || '',
+      contacto_principal: proveedor.contacto_principal || '',
+      telefono_contacto: proveedor.telefono_contacto || '',
+      banco_id: findBancoIdByName(proveedor.banco),
+      tipo_cuenta_id: findTipoCuentaIdByName(proveedor.tipo_cuenta),
+      numero_cuenta: proveedor.numero_cuenta || '',
+      regimen_tributario: proveedor.regimen_tributario || '',
+      observaciones: proveedor.observaciones || '',
+      estado: proveedor.estado || 'Activo',
+    });
     setDialogOpen(true);
   };
 
+  const buildProveedorPayload = (source: ProveedorFormState) => {
+    const ciudad = source.ciudad_id ? ciudadesById[Number(source.ciudad_id)] : undefined;
+    const departamento = source.departamento_geo_id ? departamentosById[Number(source.departamento_geo_id)] : undefined;
+    const pais = source.pais_id ? paisesById[Number(source.pais_id)] : undefined;
+    const banco = source.banco_id ? bancosById[Number(source.banco_id)] : undefined;
+    const tipoCuenta = source.tipo_cuenta_id ? tiposCuentaById[Number(source.tipo_cuenta_id)] : undefined;
+
+    return {
+      nit: source.nit.trim(),
+      razon_social: source.razon_social.trim(),
+      nombre_comercial: source.nombre_comercial.trim() || undefined,
+      tipo_proveedor: source.tipo_proveedor,
+      tipo_persona: source.tipo_persona,
+      direccion: source.direccion.trim() || undefined,
+      pais_id: source.pais_id ? Number(source.pais_id) : undefined,
+      departamento_geo_id: source.departamento_geo_id ? Number(source.departamento_geo_id) : undefined,
+      ciudad_id: source.ciudad_id ? Number(source.ciudad_id) : undefined,
+      pais: pais?.nombre || undefined,
+      departamento: departamento?.nombre || undefined,
+      ciudad: ciudad?.nombre || undefined,
+      telefono: source.telefono.trim() || undefined,
+      email: source.email.trim() || undefined,
+      contacto_principal: source.contacto_principal.trim() || undefined,
+      telefono_contacto: source.telefono_contacto.trim() || undefined,
+      banco_id: source.banco_id ? Number(source.banco_id) : undefined,
+      banco: banco?.nombre || undefined,
+      tipo_cuenta_id: source.tipo_cuenta_id ? Number(source.tipo_cuenta_id) : undefined,
+      tipo_cuenta: tipoCuenta?.nombre || undefined,
+      numero_cuenta: source.numero_cuenta.trim() || undefined,
+      regimen_tributario: source.regimen_tributario || undefined,
+      observaciones: source.observaciones.trim() || undefined,
+      estado: source.estado,
+    };
+  };
+
   const guardar = async () => {
-    if (!form.razon_social || !form.nit || !form.tipo_proveedor) {
-      toast.error('Razon social, NIT y tipo de proveedor son obligatorios.');
+    if (!form.razon_social.trim() || !form.nit.trim() || !form.tipo_proveedor || !form.tipo_persona) {
+      toast.error('Razón social, NIT, tipo de proveedor y tipo de persona son obligatorios.');
+      return;
+    }
+
+    if (!editingId && (!form.nombreUsuario.trim() || !form.correoUsuario.trim() || !form.nuevaContrasena.trim())) {
+      toast.error('Para crear el proveedor también debes diligenciar nombre, correo de acceso y contraseña.');
       return;
     }
 
     setSaving(true);
     try {
-      if (editingId) {
-        await proveedoresService.update(editingId, buildProveedorPayload(form));
+      const proveedorPayload = buildProveedorPayload(form);
 
-        const nuevaContrasena = (form.nuevaContrasena || '').trim();
-        if (nuevaContrasena) {
-          if (form.usuario) {
-            await userService.actualizarUsuario({
-              id: form.usuario,
-              contrasena: nuevaContrasena,
-            });
-            toast.success('Proveedor y contraseña actualizados correctamente.');
-          } else {
-            toast.warning('Proveedor actualizado. No se pudo cambiar contraseña porque no tiene usuario vinculado.');
-          }
-        } else {
-          toast.success('Proveedor actualizado correctamente.');
+      if (editingId) {
+        await proveedoresService.update(editingId, proveedorPayload);
+
+        if (form.usuario) {
+          const updatePayload: Parameters<typeof userService.actualizarUsuario>[0] = { id: form.usuario };
+          if (form.nombreUsuario.trim()) updatePayload.nombre = form.nombreUsuario.trim();
+          if (form.correoUsuario.trim()) updatePayload.correo = form.correoUsuario.trim();
+          if (form.nuevaContrasena.trim()) updatePayload.contrasena = form.nuevaContrasena.trim();
+          updatePayload.activo = form.estado === 'Activo';
+          await userService.actualizarUsuario(updatePayload);
         }
+
+        toast.success('Proveedor actualizado correctamente.');
       } else {
-        await proveedoresService.create(buildProveedorPayload(form));
-        toast.success('Proveedor creado correctamente.');
+        await proveedoresService.crearConUsuario({
+          nombre: form.nombreUsuario.trim(),
+          correo: form.correoUsuario.trim(),
+          contrasena: form.nuevaContrasena.trim(),
+          ...proveedorPayload,
+        });
+        toast.success('Proveedor creado correctamente con su usuario de acceso.');
       }
+
       setDialogOpen(false);
+      setForm({ ...emptyForm });
       await cargar();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'No fue posible guardar el proveedor.'));
@@ -180,29 +404,33 @@ export default function GestionProveedoresReal() {
     }
   };
 
-  const toggleEstado = async (p: Proveedor) => {
-    const next = p.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    setAccionProveedorId(p.id);
+  const toggleEstado = async (proveedor: ProveedorUI) => {
+    const nextEstado: Proveedor['estado'] = proveedor.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    setAccionProveedorId(proveedor.id);
     try {
-      await proveedoresService.update(p.id, { estado: next });
-      toast.success(`Proveedor ${next.toLowerCase()} correctamente.`);
+      await proveedoresService.update(proveedor.id, { estado: nextEstado });
+      if (proveedor.usuario) {
+        await userService.actualizarUsuario({
+          id: proveedor.usuario,
+          activo: nextEstado === 'Activo',
+        });
+      }
+      toast.success(`Proveedor ${nextEstado.toLowerCase()} correctamente.`);
       await cargar();
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'No fue posible cambiar el estado.'));
+      toast.error(getErrorMessage(error, 'No fue posible cambiar el estado del proveedor.'));
     } finally {
       setAccionProveedorId(null);
     }
   };
 
-  const eliminarProveedor = async (p: Proveedor) => {
-    const confirmar = window.confirm(`¿Seguro que deseas eliminar a ${p.razon_social}? Esta acción no se puede deshacer.`);
-    if (!confirmar) {
-      return;
-    }
+  const eliminarProveedor = async (proveedor: ProveedorUI) => {
+    const confirmar = window.confirm(`¿Seguro que deseas eliminar a ${proveedor.razon_social}? Esta acción no se puede deshacer.`);
+    if (!confirmar) return;
 
-    setAccionProveedorId(p.id);
+    setAccionProveedorId(proveedor.id);
     try {
-      await proveedoresService.delete(p.id);
+      await proveedoresService.delete(proveedor.id);
       toast.success('Proveedor eliminado correctamente.');
       await cargar();
     } catch (error: unknown) {
@@ -210,6 +438,13 @@ export default function GestionProveedoresReal() {
     } finally {
       setAccionProveedorId(null);
     }
+  };
+
+  const limpiarFiltros = () => {
+    setSearch('');
+    setEstadoFilter('all');
+    setTipoFilter('all');
+    setCiudadFilter('all');
   };
 
   return (
@@ -221,14 +456,14 @@ export default function GestionProveedoresReal() {
       >
         <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Building2 className="w-8 h-8 text-amber-300" />
-              Gestión de Proveedores
-            </h1>
-            <p className="max-w-2xl text-sm text-red-100">Consolida terceros, estados de operación y datos bancarios en una bandeja más clara y fácil de revisar.</p>
-          </div>
+        <div className="space-y-2">
+          <h1 className="flex items-center gap-3 text-3xl font-bold">
+            <Building2 className="h-8 w-8 text-amber-300" />
+            Gestión de Proveedores
+          </h1>
+          <p className="max-w-3xl text-sm text-red-100">
+            Centraliza aquí el alta, edición, estado y datos bancarios de proveedores. Este módulo ya no depende de Gestión de Usuarios.
+          </p>
         </div>
       </motion.div>
 
@@ -236,20 +471,20 @@ export default function GestionProveedoresReal() {
         <CardHeader className="space-y-3 border-b border-slate-100 bg-slate-50/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-slate-900">Proveedores registrados</CardTitle>
-            <Button size="sm" onClick={abrirNuevo} className="bg-red-700 hover:bg-red-800 text-white">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button size="sm" onClick={abrirNuevo} className="bg-red-700 text-white hover:bg-red-800">
+              <Plus className="mr-2 h-4 w-4" />
               Nuevo proveedor
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
             <div className="relative lg:col-span-5">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
-                placeholder="Buscar por ID, razón social, NIT, correo o ciudad"
+                placeholder="Buscar por NIT, razón social, correo o ciudad"
               />
             </div>
 
@@ -259,11 +494,10 @@ export default function GestionProveedoresReal() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="Activo">Activo</SelectItem>
-                  <SelectItem value="Inactivo">Inactivo</SelectItem>
-                  <SelectItem value="Bloqueado">Bloqueado</SelectItem>
-                  <SelectItem value="Verificación">Verificación</SelectItem>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  {ESTADO_OPTIONS.map((estado) => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -275,10 +509,9 @@ export default function GestionProveedoresReal() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los tipos</SelectItem>
-                  <SelectItem value="Servicios">Servicios</SelectItem>
-                  <SelectItem value="Bienes">Bienes</SelectItem>
-                  <SelectItem value="Construcción">Construcción</SelectItem>
-                  <SelectItem value="Mixto">Mixto</SelectItem>
+                  {TIPO_PROVEEDOR_OPTIONS.map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -290,7 +523,7 @@ export default function GestionProveedoresReal() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las ciudades</SelectItem>
-                  {ciudadesDisponibles.map((ciudad) => (
+                  {ciudadesDisponiblesFiltro.map((ciudad) => (
                     <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
                   ))}
                 </SelectContent>
@@ -302,18 +535,20 @@ export default function GestionProveedoresReal() {
             </div>
           </div>
         </CardHeader>
+
         <CardContent>
           {loading ? (
             <p className="text-sm text-slate-500">Cargando proveedores...</p>
           ) : (
-            <div className="rounded-xl border overflow-hidden">
+            <div className="overflow-hidden rounded-xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="text-center">Razón social</TableHead>
                     <TableHead className="text-center">NIT</TableHead>
-                    <TableHead className="text-center">Ciudad</TableHead>
+                    <TableHead className="text-center">Razón social</TableHead>
                     <TableHead className="text-center">Tipo</TableHead>
+                    <TableHead className="text-center">Ciudad</TableHead>
+                    <TableHead className="text-center">Correo empresa</TableHead>
                     <TableHead className="text-center">Estado</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
@@ -321,49 +556,50 @@ export default function GestionProveedoresReal() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-slate-500 py-7">
+                      <TableCell colSpan={7} className="py-7 text-center text-slate-500">
                         No hay proveedores para mostrar.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((p) => {
-                      const isProcessing = accionProveedorId === p.id;
+                    filtered.map((proveedor) => {
+                      const isProcessing = accionProveedorId === proveedor.id;
                       return (
-                        <TableRow key={p.id}>
-                          <TableCell className="text-center font-medium text-slate-800">{p.razon_social}</TableCell>
-                          <TableCell className="text-center">{p.nit}</TableCell>
-                          <TableCell className="text-center">{p.ciudad || '—'}</TableCell>
-                          <TableCell className="text-center">{p.tipo_proveedor}</TableCell>
+                        <TableRow key={proveedor.id}>
+                          <TableCell className="text-center font-mono text-sm">{proveedor.nit}</TableCell>
+                          <TableCell className="text-center font-medium text-slate-800">{proveedor.razon_social}</TableCell>
                           <TableCell className="text-center">
-                            <Badge className={p.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
-                              {p.estado}
+                            <Badge variant="outline" className="text-slate-700">{proveedor.tipo_proveedor}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">{proveedor.ciudad || '—'}</TableCell>
+                          <TableCell className="text-center">{proveedor.email || '—'}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={proveedor.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                              {proveedor.estado}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex justify-center gap-2">
-                              <Button size="sm" variant="outline" onClick={() => abrirEdicion(p)} title="Editar">
-                                <Building2 className="w-4 h-4" />
+                              <Button size="sm" variant="outline" onClick={() => abrirEdicion(proveedor)} title="Editar proveedor">
+                                <Building2 className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 disabled={isProcessing}
-                                onClick={() => void toggleEstado(p)}
-                                title={p.estado === 'Activo' ? 'Desactivar' : 'Activar'}
-                                className={p.estado === 'Activo' ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'}
+                                onClick={() => void toggleEstado(proveedor)}
+                                title={proveedor.estado === 'Activo' ? 'Desactivar' : 'Activar'}
+                                className={proveedor.estado === 'Activo' ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'}
                               >
-                                {p.estado === 'Activo'
-                                  ? <PauseCircle className="w-4 h-4" />
-                                  : <PlayCircle className="w-4 h-4" />}
+                                {proveedor.estado === 'Activo' ? <PauseCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 disabled={isProcessing}
-                                onClick={() => void eliminarProveedor(p)}
-                                title="Eliminar"
+                                onClick={() => void eliminarProveedor(proveedor)}
+                                title="Eliminar proveedor"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -378,75 +614,185 @@ export default function GestionProveedoresReal() {
         </CardContent>
       </Card>
 
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="w-[96vw] sm:!max-w-[92vw] xl:!max-w-[80vw] max-h-[90vh] overflow-hidden p-0">
-        <DialogHeader className="border-b bg-slate-50 px-6 py-5">
-          <DialogTitle className="text-xl text-slate-900">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</DialogTitle>
-          <p className="text-sm text-slate-600">
-            Gestiona la información base del proveedor y sus datos de acceso cuando exista usuario vinculado.
-          </p>
-        </DialogHeader>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[92vh] w-[96vw] overflow-y-auto sm:!max-w-[94vw] xl:!max-w-[84vw]">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-slate-900">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</DialogTitle>
+          </DialogHeader>
 
-        <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-150px)]">
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            <div className="xl:col-span-8 rounded-xl border bg-white p-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-800 mb-3">Datos del proveedor</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Razón social</Label>
-                  <Input value={form.razon_social || ''} onChange={(e) => setForm((prev) => ({ ...prev, razon_social: e.target.value }))} />
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div className="space-y-4 rounded-xl border bg-white p-4 shadow-sm xl:col-span-4">
+              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                <UserRound className="h-4 w-4 text-red-700" />
+                Acceso del proveedor
+              </p>
+              <div className="space-y-2">
+                <Label>Nombre del usuario {editingId ? '' : <span className="text-red-600">*</span>}</Label>
+                <Input value={form.nombreUsuario} onChange={(e) => setForm((prev) => ({ ...prev, nombreUsuario: e.target.value }))} placeholder="Representante o nombre de acceso" />
+              </div>
+              <div className="space-y-2">
+                <Label>Correo de acceso {editingId ? '' : <span className="text-red-600">*</span>}</Label>
+                <Input type="email" value={form.correoUsuario} onChange={(e) => setForm((prev) => ({ ...prev, correoUsuario: e.target.value }))} placeholder="usuario@empresa.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>{editingId ? 'Nueva contraseña' : 'Contraseña'} {!editingId && <span className="text-red-600">*</span>}</Label>
+                <Input type="password" value={form.nuevaContrasena} onChange={(e) => setForm((prev) => ({ ...prev, nuevaContrasena: e.target.value }))} placeholder={editingId ? 'Solo si deseas cambiarla' : 'Contraseña inicial'} />
+              </div>
+              <div className="rounded-lg border bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                {editingId
+                  ? form.usuario
+                    ? 'Este proveedor tiene usuario vinculado y puedes actualizar su acceso desde aquí.'
+                    : 'El proveedor no tiene usuario vinculado; solo se actualizarán sus datos maestros.'
+                  : 'Al guardar, se creará automáticamente el usuario con rol Proveedor.'}
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-xl border bg-white p-4 shadow-sm xl:col-span-8">
+              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                <ShieldCheck className="h-4 w-4 text-red-700" />
+                Datos del proveedor
+              </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>NIT <span className="text-red-600">*</span></Label>
+                  <Input value={form.nit} onChange={(e) => setForm((prev) => ({ ...prev, nit: e.target.value }))} placeholder="900123456-7" />
                 </div>
-                <div className="space-y-2"><Label>NIT</Label><Input value={form.nit || ''} onChange={(e) => setForm((prev) => ({ ...prev, nit: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Email</Label><Input value={form.email || ''} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Teléfono</Label><Input value={form.telefono || ''} onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Ciudad</Label><Input value={form.ciudad || ''} onChange={(e) => setForm((prev) => ({ ...prev, ciudad: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Tipo proveedor</Label>
-                  <Select value={form.tipo_proveedor || 'Servicios'} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo_proveedor: value as Proveedor['tipo_proveedor'] }))}>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Razón social <span className="text-red-600">*</span></Label>
+                  <Input value={form.razon_social} onChange={(e) => setForm((prev) => ({ ...prev, razon_social: e.target.value }))} placeholder="Proveedor S.A.S." />
+                </div>
+                <div className="space-y-2 md:col-span-2 xl:col-span-1">
+                  <Label>Nombre comercial</Label>
+                  <Input value={form.nombre_comercial} onChange={(e) => setForm((prev) => ({ ...prev, nombre_comercial: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo de persona <span className="text-red-600">*</span></Label>
+                  <Select value={form.tipo_persona} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo_persona: value as ProveedorFormState['tipo_persona'] }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Servicios">Servicios</SelectItem>
-                      <SelectItem value="Bienes">Bienes</SelectItem>
-                      <SelectItem value="Construcción">Construcción</SelectItem>
-                      <SelectItem value="Mixto">Mixto</SelectItem>
+                      {TIPO_PERSONA_OPTIONS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Banco</Label><Input value={form.banco || ''} onChange={(e) => setForm((prev) => ({ ...prev, banco: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Número de cuenta</Label><Input value={form.numero_cuenta || ''} onChange={(e) => setForm((prev) => ({ ...prev, numero_cuenta: e.target.value }))} /></div>
-              </div>
-            </div>
-
-            <div className="xl:col-span-4 rounded-xl border bg-slate-50 p-4 space-y-3">
-              <p className="text-sm font-semibold text-slate-800">Acceso del proveedor</p>
-              <p className="text-xs text-slate-600">
-                Si el proveedor tiene usuario vinculado, puedes cambiar su contraseña desde aquí.
-              </p>
-
-              <div className="space-y-2">
-                <Label>Nueva contraseña (opcional)</Label>
-                <Input
-                  type="password"
-                  value={form.nuevaContrasena || ''}
-                  onChange={(e) => setForm((prev) => ({ ...prev, nuevaContrasena: e.target.value }))}
-                  placeholder="Solo si deseas cambiarla"
-                />
-              </div>
-
-              <div className="rounded-lg border bg-white px-3 py-2 text-xs text-slate-600">
-                {form.usuario
-                  ? 'Usuario vinculado detectado: el cambio de contraseña se aplicará al guardar.'
-                  : 'Este proveedor no tiene usuario vinculado en backend.'}
+                <div className="space-y-2">
+                  <Label>Tipo de proveedor <span className="text-red-600">*</span></Label>
+                  <Select value={form.tipo_proveedor} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo_proveedor: value as Proveedor['tipo_proveedor'] }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TIPO_PROVEEDOR_OPTIONS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado</Label>
+                  <Select value={form.estado} onValueChange={(value) => setForm((prev) => ({ ...prev, estado: value as Proveedor['estado'] }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ESTADO_OPTIONS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 xl:col-span-3">
+                  <Label>Dirección</Label>
+                  <Input value={form.direccion} onChange={(e) => setForm((prev) => ({ ...prev, direccion: e.target.value }))} placeholder="Calle 123 # 45-67" />
+                </div>
+                <div className="space-y-2">
+                  <Label>País</Label>
+                  <Select value={form.pais_id || undefined} onValueChange={(value) => syncPaisDepartamentoCiudad({ pais_id: value, departamento_geo_id: '', ciudad_id: '' })}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona país" /></SelectTrigger>
+                    <SelectContent>
+                      {paises.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Departamento</Label>
+                  <Select value={form.departamento_geo_id || undefined} onValueChange={(value) => syncPaisDepartamentoCiudad({ departamento_geo_id: value, ciudad_id: '' })}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona departamento" /></SelectTrigger>
+                    <SelectContent>
+                      {departamentosDisponibles.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Ciudad</Label>
+                  <Select value={form.ciudad_id || undefined} onValueChange={(value) => syncPaisDepartamentoCiudad({ ciudad_id: value })}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona ciudad" /></SelectTrigger>
+                    <SelectContent>
+                      {ciudadesDisponibles.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Teléfono</Label>
+                  <Input value={form.telefono} onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Correo empresa</Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="facturacion@empresa.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contacto principal</Label>
+                  <Input value={form.contacto_principal} onChange={(e) => setForm((prev) => ({ ...prev, contacto_principal: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Teléfono contacto</Label>
+                  <Input value={form.telefono_contacto} onChange={(e) => setForm((prev) => ({ ...prev, telefono_contacto: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Banco</Label>
+                  <Select value={form.banco_id || undefined} onValueChange={(value) => setForm((prev) => ({ ...prev, banco_id: value }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona banco" /></SelectTrigger>
+                    <SelectContent>
+                      {bancos.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo de cuenta</Label>
+                  <Select value={form.tipo_cuenta_id || undefined} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo_cuenta_id: value }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger>
+                    <SelectContent>
+                      {tiposCuenta.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Número de cuenta</Label>
+                  <Input value={form.numero_cuenta} onChange={(e) => setForm((prev) => ({ ...prev, numero_cuenta: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Régimen tributario</Label>
+                  <Select value={form.regimen_tributario || undefined} onValueChange={(value) => setForm((prev) => ({ ...prev, regimen_tributario: value }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona régimen" /></SelectTrigger>
+                    <SelectContent>
+                      {REGIMEN_OPTIONS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2 xl:col-span-3">
+                  <Label>Observaciones</Label>
+                  <textarea
+                    rows={4}
+                    value={form.observaciones}
+                    onChange={(e) => setForm((prev) => ({ ...prev, observaciones: e.target.value }))}
+                    className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600/30"
+                    placeholder="Notas administrativas o tributarias del proveedor"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <DialogFooter className="border-t bg-white px-6 py-4">
-          <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={guardar} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white"><Save className="w-4 h-4 mr-2" />{saving ? 'Guardando...' : 'Guardar'}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => void guardar()} disabled={saving} className="bg-red-700 text-white hover:bg-red-800">
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Crear proveedor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
