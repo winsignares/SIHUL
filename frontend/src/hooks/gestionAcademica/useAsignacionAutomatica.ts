@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { db } from '../../services/database';
 import { useNotification } from '../../share/notificationBanner';
 
@@ -22,6 +22,84 @@ export interface ResultadoAsignacion {
     exito: boolean;
     razon?: string;
 }
+
+const descargarArchivo = async (buffer: BlobPart, fileName: string, mimeType: string) => {
+    const blob = new Blob([buffer], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
+
+const parseCsvLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i += 1;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+
+    values.push(current.trim());
+    return values.map((value) => value.replace(/^"|"$/g, ''));
+};
+
+const parseCsvToObjects = async (file: File): Promise<Record<string, string>[]> => {
+    const content = await file.text();
+    const lines = content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (lines.length === 0) return [];
+
+    const headers = parseCsvLine(lines[0]);
+    return lines.slice(1).map((line) => {
+        const values = parseCsvLine(line);
+        return headers.reduce<Record<string, string>>((acc, header, index) => {
+            acc[header] = values[index] ?? '';
+            return acc;
+        }, {});
+    });
+};
+
+const parseWorksheetToObjects = (worksheet: ExcelJS.Worksheet): Record<string, string>[] => {
+    const rows = worksheet.getSheetValues();
+    const normalizedRows = rows
+        .slice(1)
+        .filter((row): row is ExcelJS.CellValue[] => Array.isArray(row))
+        .map((row) => row.slice(1).map((value) => (value == null ? '' : String(value).trim())));
+
+    if (normalizedRows.length === 0) return [];
+
+    const headers = normalizedRows[0];
+    return normalizedRows
+        .slice(1)
+        .filter((row) => row.some((value) => value !== ''))
+        .map((row) =>
+            headers.reduce<Record<string, string>>((acc, header, index) => {
+                acc[header] = row[index] ?? '';
+                return acc;
+            }, {})
+        );
+};
 
 export function useAsignacionAutomatica() {
     const { notification, showNotification } = useNotification();
@@ -48,11 +126,11 @@ export function useAsignacionAutomatica() {
         const file = e.target.files?.[0];
         if (file) {
             const extension = file.name.split('.').pop()?.toLowerCase();
-            if (extension === 'xlsx' || extension === 'xls' || extension === 'csv') {
+            if (extension === 'xlsx' || extension === 'csv') {
                 setArchivo(file);
                 procesarArchivo(file);
             } else {
-                showNotification('Por favor suba un archivo Excel (.xlsx, .xls) o CSV', 'error');
+                showNotification('Por favor suba un archivo Excel (.xlsx) o CSV', 'error');
             }
         }
     };
@@ -60,10 +138,21 @@ export function useAsignacionAutomatica() {
     // Procesar archivo Excel/CSV
     const procesarArchivo = async (file: File) => {
         try {
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            const extension = file.name.split('.').pop()?.toLowerCase();
+            let jsonData: Record<string, string>[] = [];
+
+            if (extension === 'csv') {
+                jsonData = await parseCsvToObjects(file);
+            } else {
+                const data = await file.arrayBuffer();
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(data);
+                const worksheet = workbook.worksheets[0];
+                if (!worksheet) {
+                    throw new Error('El archivo no contiene hojas para procesar.');
+                }
+                jsonData = parseWorksheetToObjects(worksheet);
+            }
 
             console.log('📄 Datos crudos del Excel:', jsonData);
 
@@ -394,27 +483,35 @@ export function useAsignacionAutomatica() {
             // ... más datos de ejemplo si se desea
         ];
 
-        const worksheet = XLSX.utils.json_to_sheet(plantilla);
+        void (async () => {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Horario Grupo');
 
-        // Ajustar ancho de columnas
-        worksheet['!cols'] = [
-            { wch: 15 }, // Facultad
-            { wch: 25 }, // Programa
-            { wch: 10 }, // Semestre
-            { wch: 10 }, // Grupo
-            { wch: 18 }, // Cantidad Estudiantes
-            { wch: 12 }, // Día
-            { wch: 12 }, // Hora Inicio
-            { wch: 12 }, // Hora Fin
-            { wch: 20 }, // Asignatura
-            { wch: 20 }, // Docente
-            { wch: 30 }  // Recursos
-        ];
+            worksheet.columns = [
+                { header: 'Facultad', key: 'Facultad', width: 15 },
+                { header: 'Programa', key: 'Programa', width: 25 },
+                { header: 'Semestre', key: 'Semestre', width: 10 },
+                { header: 'Grupo', key: 'Grupo', width: 10 },
+                { header: 'Cantidad Estudiantes', key: 'Cantidad Estudiantes', width: 18 },
+                { header: 'Día', key: 'Día', width: 12 },
+                { header: 'Hora Inicio', key: 'Hora Inicio', width: 12 },
+                { header: 'Hora Fin', key: 'Hora Fin', width: 12 },
+                { header: 'Asignatura', key: 'Asignatura', width: 20 },
+                { header: 'Docente', key: 'Docente', width: 20 },
+                { header: 'Recursos', key: 'Recursos', width: 30 },
+            ];
 
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Horario Grupo');
-        XLSX.writeFile(workbook, 'plantilla_horario_grupo_unispace.xlsx');
-        showNotification('✅ Plantilla descargada - Horario completo por grupo', 'success');
+            plantilla.forEach((row) => worksheet.addRow(row));
+            const buffer = await workbook.xlsx.writeBuffer();
+            await descargarArchivo(
+                buffer as BlobPart,
+                'plantilla_horario_grupo_unispace.xlsx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+            showNotification('✅ Plantilla descargada - Horario completo por grupo', 'success');
+        })().catch(() => {
+            showNotification('Error al generar la plantilla de horario.', 'error');
+        });
     };
 
     // Reiniciar proceso

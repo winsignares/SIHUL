@@ -1,6 +1,21 @@
 import { useState, useCallback } from 'react';
+import ExcelJS from 'exceljs';
 import type { DatoOcupacionJornada, EspacioMasUsado } from '../../models';
 import { toast } from 'sonner';
+
+const descargarExcel = async (buffer: BlobPart, fileName: string) => {
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
 
 const datosOcupacion: DatoOcupacionJornada[] = [
     { jornada: 'Mañana (07:00 - 12:00)', ocupacion: 85, espacios: 45, color: 'bg-blue-600' },
@@ -93,17 +108,16 @@ export function useConsultaReportes() {
         
         setIsExporting(true);
         try {
-            const XLSX = await import('xlsx');
-
-            const workbook = XLSX.utils.book_new();
+            const workbook = new ExcelJS.Workbook();
 
             const datosJornada = datosOcupacion.map(d => ({
                 'Jornada': d.jornada,
                 'Ocupación (%)': d.ocupacion,
                 'Espacios': d.espacios
             }));
-            const ws1 = XLSX.utils.json_to_sheet(datosJornada);
-            XLSX.utils.book_append_sheet(workbook, ws1, 'Ocupación por Jornada');
+            const ws1 = workbook.addWorksheet('Ocupación por Jornada');
+            ws1.columns = Object.keys(datosJornada[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+            datosJornada.forEach((row) => ws1.addRow(row));
 
             const datosEspacios = espaciosMasUsados.map((e, i) => ({
                 'Posición': i + 1,
@@ -111,8 +125,9 @@ export function useConsultaReportes() {
                 'Clases por Semana': e.usos,
                 'Ocupación (%)': e.ocupacion
             }));
-            const ws2 = XLSX.utils.json_to_sheet(datosEspacios);
-            XLSX.utils.book_append_sheet(workbook, ws2, 'Espacios Más Usados');
+            const ws2 = workbook.addWorksheet('Espacios Más Usados');
+            ws2.columns = Object.keys(datosEspacios[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+            datosEspacios.forEach((row) => ws2.addRow(row));
 
             const estadisticas = [
                 { 'Métrica': 'Total de Clases', 'Valor': 342 },
@@ -120,8 +135,9 @@ export function useConsultaReportes() {
                 { 'Métrica': 'Espacios Activos', 'Valor': 128 },
                 { 'Métrica': 'Programas Activos', 'Valor': 18 }
             ];
-            const ws3 = XLSX.utils.json_to_sheet(estadisticas);
-            XLSX.utils.book_append_sheet(workbook, ws3, 'Estadísticas');
+            const ws3 = workbook.addWorksheet('Estadísticas');
+            ws3.columns = Object.keys(estadisticas[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+            estadisticas.forEach((row) => ws3.addRow(row));
 
             const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
             const clasesSemanales = [68, 72, 65, 58, 45];
@@ -129,10 +145,12 @@ export function useConsultaReportes() {
                 'Día': dia,
                 'Clases': clasesSemanales[i]
             }));
-            const ws4 = XLSX.utils.json_to_sheet(datosSemanales);
-            XLSX.utils.book_append_sheet(workbook, ws4, 'Distribución Semanal');
+            const ws4 = workbook.addWorksheet('Distribución Semanal');
+            ws4.columns = Object.keys(datosSemanales[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+            datosSemanales.forEach((row) => ws4.addRow(row));
 
-            XLSX.writeFile(workbook, `reporte-consulta-${periodo}.xlsx`);
+            const buffer = await workbook.xlsx.writeBuffer();
+            await descargarExcel(buffer as BlobPart, `reporte-consulta-${periodo}.xlsx`);
             toast.success('Excel generado exitosamente');
         } catch (error) {
             console.error('Error al generar Excel:', error);

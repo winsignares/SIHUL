@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ExcelJS from 'exceljs';
 import { BarChart3, User, Building, PieChart, TrendingUp } from 'lucide-react';
 import type {
     DatoOcupacionJornada,
@@ -34,6 +35,20 @@ const REPORTES_CAPACIDAD_CACHE_KEY = 'reporte-reportes-capacidad';
 
 const PERIODO_DEFAULT = '2025-1';
 const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
+
+const descargarExcel = async (buffer: BlobPart, fileName: string) => {
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
 
 // Datos por defecto mientras se cargan los datos reales
 const datosOcupacionDefault: DatoOcupacionJornada[] = [
@@ -189,7 +204,7 @@ export function useReportes() {
                     grupo: h.grupo_nombre,
                     espacio: h.espacio_nombre,
                     docente: h.docente_nombre,
-                    docente_id: h.docente_id,
+                    docente_id: h.docente_id ?? undefined,
                     facultad: h.programa_nombre // Usar nombre del programa como facultad por ahora
                 }));
 
@@ -732,8 +747,7 @@ export function useReportes() {
             }
 
             // Para otros reportes, generar Excel localmente
-            const XLSX = await import('xlsx');
-            const workbook = XLSX.utils.book_new();
+            const workbook = new ExcelJS.Workbook();
 
             if (tipoReporte === 'ocupacion') {
                 const datosJornada = datosOcupacion.map(d => ({
@@ -741,8 +755,9 @@ export function useReportes() {
                     'Ocupación (%)': d.ocupacion,
                     'Espacios': d.espacios
                 }));
-                const ws1 = XLSX.utils.json_to_sheet(datosJornada);
-                XLSX.utils.book_append_sheet(workbook, ws1, 'Ocupación por Jornada');
+                const ws1 = workbook.addWorksheet('Ocupación por Jornada');
+                ws1.columns = Object.keys(datosJornada[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+                datosJornada.forEach((row) => ws1.addRow(row));
 
                 const datosEspacios = espaciosMasUsados.map((e, i) => ({
                     'Posición': i + 1,
@@ -750,8 +765,9 @@ export function useReportes() {
                     'Clases por Semana': e.usos,
                     'Ocupación (%)': e.ocupacion
                 }));
-                const ws2 = XLSX.utils.json_to_sheet(datosEspacios);
-                XLSX.utils.book_append_sheet(workbook, ws2, 'Espacios Más Usados');
+                const ws2 = workbook.addWorksheet('Espacios Más Usados');
+                ws2.columns = Object.keys(datosEspacios[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+                datosEspacios.forEach((row) => ws2.addRow(row));
             } else if (tipoReporte === 'horarios-docente') {
                 const datos = horariosDocente.map(h => ({
                     'Día': h.dia,
@@ -760,8 +776,9 @@ export function useReportes() {
                     'Grupo': h.grupo,
                     'Espacio': h.espacio
                 }));
-                const ws = XLSX.utils.json_to_sheet(datos);
-                XLSX.utils.book_append_sheet(workbook, ws, 'Horarios Docente');
+                const ws = workbook.addWorksheet('Horarios Docente');
+                ws.columns = Object.keys(datos[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+                datos.forEach((row) => ws.addRow(row));
             } else if (tipoReporte === 'disponibilidad') {
                 const datos = disponibilidadEspacios.map(e => ({
                     'Espacio': e.nombre,
@@ -770,8 +787,9 @@ export function useReportes() {
                     'Horas Ocupadas': e.horasOcupadas,
                     'Porcentaje Ocupación': e.porcentajeOcupacion
                 }));
-                const ws = XLSX.utils.json_to_sheet(datos);
-                XLSX.utils.book_append_sheet(workbook, ws, 'Disponibilidad');
+                const ws = workbook.addWorksheet('Disponibilidad');
+                ws.columns = Object.keys(datos[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+                datos.forEach((row) => ws.addRow(row));
             } else if (tipoReporte === 'capacidad') {
                 const datos = capacidadUtilizada.map(c => ({
                     'Tipo de Espacio': c.tipo,
@@ -779,11 +797,13 @@ export function useReportes() {
                     'Capacidad Usada': c.capacidadUsada,
                     'Porcentaje': c.porcentaje
                 }));
-                const ws = XLSX.utils.json_to_sheet(datos);
-                XLSX.utils.book_append_sheet(workbook, ws, 'Capacidad Utilizada');
+                const ws = workbook.addWorksheet('Capacidad Utilizada');
+                ws.columns = Object.keys(datos[0] || {}).map((key) => ({ header: key, key, width: 24 }));
+                datos.forEach((row) => ws.addRow(row));
             }
 
-            XLSX.writeFile(workbook, `reporte-${tipoReporte}-${periodoActual}.xlsx`);
+            const buffer = await workbook.xlsx.writeBuffer();
+            await descargarExcel(buffer as BlobPart, `reporte-${tipoReporte}-${periodoActual}.xlsx`);
         } catch (error) {
             console.error('Error al generar Excel:', error);
         }

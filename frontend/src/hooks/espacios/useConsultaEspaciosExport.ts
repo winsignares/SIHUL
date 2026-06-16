@@ -1,10 +1,25 @@
 import { useCallback } from 'react';
 import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type { EspacioView } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GetOcupacionPorHoraFn = (espacioId: string, dia: string, hora: number) => any;
+
+const descargarExcel = async (buffer: BlobPart, fileName: string) => {
+  const blob = new Blob(
+    [buffer],
+    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+  );
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
 
 export function useConsultaEspaciosExport({
   filteredEspacios,
@@ -223,24 +238,41 @@ export function useConsultaEspaciosExport({
 
   const exportarCronogramaExcel = useCallback(
     (espaciosToExport?: EspacioView[]) => {
-      const wb = XLSX.utils.book_new();
       const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const horasIntervalos = Array.from({ length: 15 }, (_, i) => `${i + 6}:00-${i + 7}:00`);
       const espaciosAExportar = espaciosToExport || filteredEspacios;
+      void (async () => {
+        const workbook = new ExcelJS.Workbook();
 
-      espaciosAExportar.forEach((espacio) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data: any[][] = [];
-        data.push(diasNombres);
+        espaciosAExportar.forEach((espacio) => {
+          const sheetName = `${espacio.nombre} - ${espacio.tipo}`.substring(0, 31);
+          const worksheet = workbook.addWorksheet(sheetName);
 
-        horasIntervalos.forEach((intervalo, horaIdx) => {
-          const hora = horaIdx + 6;
-          const row = [intervalo];
+          worksheet.columns = [
+            { header: 'Hora', key: 'hora', width: 14 },
+            { header: 'Lunes', key: 'lunes', width: 25 },
+            { header: 'Martes', key: 'martes', width: 25 },
+            { header: 'Miércoles', key: 'miercoles', width: 25 },
+            { header: 'Jueves', key: 'jueves', width: 25 },
+            { header: 'Viernes', key: 'viernes', width: 25 },
+            { header: 'Sábado', key: 'sabado', width: 25 },
+          ];
 
-          diasNombres.slice(1).forEach((dia) => {
-            const horarioEnCelda = getOcupacionPorHora(espacio.id, dia, hora);
+          worksheet.getRow(1).height = 30;
 
-            if (horarioEnCelda) {
+          horasIntervalos.forEach((intervalo, horaIdx) => {
+            const hora = horaIdx + 6;
+            const row: Record<string, string> = { hora: intervalo };
+
+            diasNombres.slice(1).forEach((dia) => {
+              const horarioEnCelda = getOcupacionPorHora(espacio.id, dia, hora);
+              const key = dia.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+              if (!horarioEnCelda) {
+                row[key] = '';
+                return;
+              }
+
               const isPrestamo = horarioEnCelda.tipo === 'prestamo';
               const isPrestamoPendiente = isPrestamo && horarioEnCelda.prestamo?.estado === 'Pendiente';
               const materia = horarioEnCelda.materia || '';
@@ -255,28 +287,23 @@ export function useConsultaEspaciosExport({
               cellText += materia;
               if (docente) cellText += ` / ${docente}`;
               if (grupo) cellText += `\n${grupo}`;
+              row[key] = cellText;
+            });
 
-              row.push(cellText);
-            } else {
-              row.push('');
-            }
+            const addedRow = worksheet.addRow(row);
+            addedRow.height = 60;
+            addedRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           });
-
-          data.push(row);
         });
 
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = [{ wch: 14 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 25 }];
-
-        const rowHeights = Array(data.length).fill({ hpt: 60 });
-        rowHeights[0] = { hpt: 30 };
-        ws['!rows'] = rowHeights;
-
-        const sheetName = `${espacio.nombre} - ${espacio.tipo}`.substring(0, 31);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        const buffer = await workbook.xlsx.writeBuffer();
+        await descargarExcel(
+          buffer as BlobPart,
+          `cronograma_espacios_${new Date().getTime()}.xlsx`
+        );
+      })().catch(() => {
+        // Mantener el hook resiliente si falla la exportación
       });
-
-      XLSX.writeFile(wb, `cronograma_espacios_${new Date().getTime()}.xlsx`);
     },
     [filteredEspacios, getOcupacionPorHora]
   );
