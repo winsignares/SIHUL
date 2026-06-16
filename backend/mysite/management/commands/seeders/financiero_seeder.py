@@ -552,7 +552,7 @@ def _slugify_email(razon_social):
 def _seed_sla(out, sty):
     """Crea los parámetros SLA."""
     parametros_sla = [
-        ('Recepción y Registro', 'Funcionario', 2, 'Registro inicial de factura'),
+        ('Recepción y Registro', 'Funcionario', 5, 'Registro inicial de factura'),
         ('Radicación', 'Contabilidad', 3, 'Radicación en contabilidad'),
         ('Causación', 'Contabilidad', 2, 'Causación contable'),
         ('Alistamiento', 'Tesorería', 3, 'Alistamiento sin CE'),
