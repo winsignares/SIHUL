@@ -128,10 +128,11 @@ class SharedStorageService:
 
     def copy_document(
         self,
-        local_path,
         factura,
         index: int = 1,
         original_filename: str = '',
+        local_path=None,
+        content_bytes: Optional[bytes] = None,
     ) -> StorageResult:
         """
         Copia un documento al NAS en documentos_especificos/.
@@ -142,7 +143,13 @@ class SharedStorageService:
             return StorageResult(False, error_code='DISABLED', message='NAS no configurado')
 
         try:
-            return self._do_copy_document(local_path, factura, index, original_filename)
+            return self._do_copy_document(
+                factura=factura,
+                index=index,
+                original_filename=original_filename,
+                local_path=local_path,
+                content_bytes=content_bytes,
+            )
         except Exception as exc:
             return self._handle_error(exc, 'copiar documento', factura)
 
@@ -203,8 +210,15 @@ class SharedStorageService:
     # Internal: operaciones de archivo                                  #
     # ---------------------------------------------------------------- #
 
-    def _do_copy_document(self, local_path, factura, index: int, original_filename: str) -> StorageResult:
-        smbclient, smb_shutil = self._get_smb_client()
+    def _do_copy_document(
+        self,
+        factura,
+        index: int,
+        original_filename: str,
+        local_path=None,
+        content_bytes: Optional[bytes] = None,
+    ) -> StorageResult:
+        smbclient, _ = self._get_smb_client()
         server, share, base = _parse_unc(self.unc_root)
 
         year, month = _factura_date_parts(factura)
@@ -222,9 +236,14 @@ class SharedStorageService:
             stem, _, ext = target_name.rpartition('.')
             dest_file_smb = f'{dest_folder_smb}/{stem}_dup.{ext}' if ext else f'{dest_folder_smb}/{target_name}_dup'
 
-        with open(str(local_path), 'rb') as local_f:
-            with smbclient.open_file(dest_file_smb, mode='wb') as remote_f:
-                remote_f.write(local_f.read())
+        if content_bytes is None:
+            if local_path is None:
+                raise ValueError('Se requiere local_path o content_bytes para copiar el documento al NAS')
+            with open(str(local_path), 'rb') as local_f:
+                content_bytes = local_f.read()
+
+        with smbclient.open_file(dest_file_smb, mode='wb') as remote_f:
+            remote_f.write(content_bytes)
 
         rel = f'facturas/{year}/{month:02d}/{factura_label}/documentos_especificos/{target_name}'
         logger.info('%s Documento copiado al NAS: %s', _TAG, rel)

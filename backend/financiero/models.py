@@ -128,7 +128,80 @@ class Proveedor(models.Model):
 
 
 # ============================================================
-# 2. DEPARTAMENTO (Nueva, reemplaza areas_departamentos)
+# 2. CATÁLOGOS GEOGRÁFICOS DE PROVEEDORES
+# ============================================================
+class Pais(models.Model):
+    id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=120, unique=True)
+    codigo_iso = models.CharField(max_length=3, unique=True)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['nombre'], name='idx_pais_nombre'),
+            Index(fields=['activo'], name='idx_pais_activo'),
+        ]
+        verbose_name = 'País'
+        verbose_name_plural = 'Países'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+class DepartamentoGeografico(models.Model):
+    id = models.AutoField(primary_key=True)
+    pais = models.ForeignKey(Pais, on_delete=models.CASCADE, related_name='departamentos_geograficos')
+    nombre = models.CharField(max_length=120)
+    codigo = models.CharField(max_length=10, blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['nombre'], name='idx_geo_departamento_nombre'),
+            Index(fields=['activo'], name='idx_geo_departamento_activo'),
+        ]
+        verbose_name = 'Departamento geográfico'
+        verbose_name_plural = 'Departamentos geográficos'
+        ordering = ['nombre']
+        constraints = [
+            models.UniqueConstraint(fields=['pais', 'nombre'], name='uq_geo_departamento_pais_nombre'),
+        ]
+
+    def __str__(self):
+        return f'{self.nombre} - {self.pais.nombre}'
+
+
+class Ciudad(models.Model):
+    id = models.AutoField(primary_key=True)
+    departamento = models.ForeignKey(DepartamentoGeografico, on_delete=models.CASCADE, related_name='ciudades')
+    nombre = models.CharField(max_length=120)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['nombre'], name='idx_ciudad_nombre'),
+            Index(fields=['activo'], name='idx_ciudad_activo'),
+        ]
+        verbose_name = 'Ciudad'
+        verbose_name_plural = 'Ciudades'
+        ordering = ['nombre']
+        constraints = [
+            models.UniqueConstraint(fields=['departamento', 'nombre'], name='uq_ciudad_departamento_nombre'),
+        ]
+
+    def __str__(self):
+        return f'{self.nombre} - {self.departamento.nombre}'
+
+
+# ============================================================
+# 3. DEPARTAMENTO (Nueva, reemplaza areas_departamentos)
 # ============================================================
 class Departamento(models.Model):
     TIPO_CHOICES = [
@@ -366,6 +439,7 @@ class Factura(models.Model):
     # Flags de control
     requiere_autorizacion_especial = models.BooleanField(default=False)
     urgente = models.BooleanField(default=False)
+    ciclo_documental_actual = models.PositiveIntegerField(default=1)
 
     class Meta:
         indexes = [
@@ -452,7 +526,9 @@ class DocumentoAdjunto(models.Model):
     tamano_bytes = models.BigIntegerField(blank=True, null=True)
     url_storage = models.CharField(max_length=500, blank=True)
     archivo = models.FileField(upload_to=documento_financiero_upload_to, blank=True, null=True)
+    contenido_archivo = models.BinaryField(blank=True, null=True, editable=False)
     hash_archivo = models.CharField(max_length=255, blank=True, null=True)
+    ciclo_documental = models.PositiveIntegerField(default=1)
     obligatorio = models.BooleanField(default=False)
     verificado = models.BooleanField(default=False)
     verificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='documentos_verificados')
@@ -485,6 +561,43 @@ class DocumentoAdjunto(models.Model):
 
     def __str__(self):
         return f"{self.nombre_archivo} - {self.factura.numero_factura}"
+
+
+class DocumentoUnificado(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='documentos_unificados')
+    scope = models.CharField(max_length=50, default='all')
+    ciclo_documental = models.PositiveIntegerField(default=1)
+    nombre_archivo = models.CharField(max_length=255)
+    tipo_mime = models.CharField(max_length=100, default='application/pdf')
+    tamano_bytes = models.BigIntegerField(blank=True, null=True)
+    contenido_archivo = models.BinaryField(blank=True, null=True, editable=False)
+    hash_archivo = models.CharField(max_length=255, blank=True, null=True)
+    fecha_generacion = models.DateTimeField(auto_now=True)
+    nas_relative_path = models.CharField(
+        max_length=500, blank=True, null=True,
+        help_text='Ruta relativa dentro del NAS (desde la raíz configurada) del PDF unificado.',
+    )
+    nas_storage_status = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text='Estado de copia al NAS del PDF unificado: stored, failed, skipped, disabled',
+    )
+
+    class Meta:
+        indexes = [
+            Index(fields=['factura', 'scope'], name='idx_doc_unificado_fact_scope'),
+            Index(fields=['factura', 'ciclo_documental'], name='idx_doc_unificado_fact_ciclo'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['factura', 'scope', 'ciclo_documental'],
+                name='uniq_doc_unificado_fact_scope_ciclo',
+            ),
+        ]
+        verbose_name = 'Documento Unificado'
+        verbose_name_plural = 'Documentos Unificados'
+
+    def __str__(self):
+        return f"{self.factura.numero_factura} - {self.scope} - ciclo {self.ciclo_documental}"
 
 
 # ============================================================

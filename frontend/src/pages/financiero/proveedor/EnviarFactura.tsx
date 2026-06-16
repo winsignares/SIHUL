@@ -139,6 +139,7 @@ const DOC_TYPE_DETAILS: Record<string, { label: string; helper?: string; optiona
     optional: true,
   },
 };
+const MAX_SPECIFIC_DOC_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_DOC_EXTENSIONS = new Set(['pdf']);
 const ALLOWED_DOC_MIME_TYPES = new Set(['application/pdf']);
 const BANCOS_COLOMBIA = [
@@ -176,6 +177,10 @@ const validateDocFile = async (file: File): Promise<string | null> => {
   const extension = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : '';
   if (!ALLOWED_DOC_EXTENSIONS.has(extension)) {
     return 'Tipo de archivo no permitido. Usa PDF, XML, PNG o JPG.';
+  }
+
+  if (file.size > MAX_SPECIFIC_DOC_SIZE_BYTES) {
+    return `El archivo "${file.name}" supera el tamaño máximo permitido de 10 MB.`;
   }
 
   if (file.type && !ALLOWED_DOC_MIME_TYPES.has(file.type)) {

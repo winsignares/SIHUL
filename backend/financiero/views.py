@@ -3,17 +3,21 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, close_old_connections
 from django.db.models import Q, Sum, Count
 from django.http import HttpResponse
 from django.conf import settings
+import hashlib
 import json
 import logging
+import mimetypes
 import os
+import threading
 import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlparse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -28,6 +32,130 @@ from usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
 
 logger = logging.getLogger(__name__)
+
+
+DOCUMENTOS_SENSIBLES_POR_ROL = {
+    'archivo plano bancario',
+    'soporte causacion seven',
+}
+
+ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
+    'auditoria',
+    'direccion financiera',
+}
+
+
+def _normalizar_texto_permiso(value):
+    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
+    without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
+    return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
+
+
+def _rol_usuario_normalizado(user):
+    return _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
+
+
+def _usuario_puede_ver_documentos_sensibles(user):
+    return _rol_usuario_normalizado(user) in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
+
+
+def _documento_es_sensible(documento):
+    tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
+    nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
+    return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
+
+
+def _resolve_documento_local_path(documento):
+    archivo = getattr(documento, 'archivo', None)
+    if archivo:
+        try:
+            archivo_name = (getattr(archivo, 'name', None) or '').strip()
+            if archivo_name:
+                candidate = Path(settings.MEDIA_ROOT) / archivo_name
+                if candidate.exists():
+                    return candidate
+        except Exception:
+            pass
+
+        try:
+            candidate = Path(archivo.path)
+            if candidate.exists():
+                return candidate
+        except Exception:
+            pass
+
+    raw_storage = (getattr(documento, 'url_storage', None) or '').strip()
+    if not raw_storage:
+        return None
+
+    parsed = urlparse(raw_storage)
+    storage_path = (parsed.path or raw_storage).strip()
+    normalized = storage_path.replace('\\', '/')
+
+    if normalized.startswith('/media/'):
+        relative = normalized.replace('/media/', '', 1)
+    elif normalized.startswith('media/'):
+        relative = normalized.replace('media/', '', 1)
+    elif normalized.startswith('/'):
+        relative = normalized.lstrip('/')
+    else:
+        relative = normalized
+
+    candidate = Path(settings.MEDIA_ROOT) / relative
+    if candidate.exists():
+        return candidate
+
+    return None
+
+
+def _documento_bytes(documento):
+    db_content = getattr(documento, 'contenido_archivo', None)
+    if db_content is not None:
+        return bytes(db_content)
+
+    local_path = _resolve_documento_local_path(documento)
+    if local_path:
+        try:
+            return local_path.read_bytes()
+        except Exception as exc:
+            logger.warning(
+                '_documento_bytes: fallo leyendo archivo local doc_id=%s path=%s error=%s',
+                documento.id, local_path, exc,
+            )
+
+    nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
+    if nas_path:
+        try:
+            from financiero.services.shared_storage_service import shared_storage, _parse_unc, _smb_path
+            if shared_storage.enabled:
+                smbclient, _ = shared_storage._get_smb_client()
+                server, share, base = _parse_unc(shared_storage.unc_root)
+                full_rel = f'{base}/{nas_path}' if base else nas_path
+                smb_file = _smb_path(server, share, full_rel)
+                with smbclient.open_file(smb_file, mode='rb') as f:
+                    return f.read()
+        except Exception as exc:
+            logger.warning(
+                '_documento_bytes: fallo leyendo NAS doc_id=%s nas_path=%s error=%s',
+                documento.id, nas_path, exc,
+            )
+
+    logger.warning(
+        '_documento_bytes: no se pudo obtener bytes de ninguna fuente doc_id=%s nombre=%s url=%s nas=%s',
+        documento.id,
+        documento.nombre_archivo,
+        getattr(documento, 'url_storage', None) or '',
+        nas_path or '',
+    )
+    return None
+
+
+def _documento_content_type(documento):
+    content_type = (getattr(documento, 'tipo_mime', None) or '').strip()
+    if content_type:
+        return content_type
+    guessed, _ = mimetypes.guess_type(getattr(documento, 'nombre_archivo', '') or '')
+    return guessed or 'application/octet-stream'
 
 
 DEFAULT_CUENTAS_CONTABLES = [
@@ -97,6 +225,35 @@ def _factura_document_base_path(factura):
     return Path(settings.MEDIA_ROOT) / f'{date:%Y}' / f'{date:%m}' / factura_label
 
 
+def _factura_ciclo_documental_actual(factura):
+    return getattr(factura, 'ciclo_documental_actual', 1) or 1
+
+
+def _documentos_queryset_ciclo_actual(factura):
+    return models.DocumentoAdjunto.objects.filter(
+        factura=factura,
+        ciclo_documental=_factura_ciclo_documental_actual(factura),
+    )
+
+
+def _documento_upload_metadata(uploaded_file):
+    if uploaded_file is None:
+        return None, None, None
+
+    uploaded_file.seek(0)
+    content = uploaded_file.read()
+    try:
+        uploaded_file.seek(0)
+    except Exception:
+        pass
+
+    return (
+        content,
+        len(content),
+        hashlib.sha256(content).hexdigest(),
+    )
+
+
 # ============================================================
 # VIEWSETS SIMPLES
 # ============================================================
@@ -110,6 +267,69 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     search_fields = ['nit', 'razon_social', 'email']
     ordering_fields = ['fecha_creacion', 'razon_social']
     ordering = ['-fecha_creacion']
+
+    def _coerce_geo_catalog_data(self, payload):
+        data = dict(payload)
+
+        pais_id = data.pop('pais_id', None)
+        departamento_id = data.pop('departamento_geo_id', None)
+        ciudad_id = data.pop('ciudad_id', None)
+        banco_id = data.pop('banco_id', None)
+        tipo_cuenta_id = data.pop('tipo_cuenta_id', None)
+
+        ciudad = None
+        departamento = None
+        pais = None
+
+        if ciudad_id:
+            ciudad = models.Ciudad.objects.filter(id=ciudad_id, activo=True).select_related('departamento__pais').first()
+            if ciudad:
+                departamento = ciudad.departamento
+                pais = departamento.pais
+
+        if departamento is None and departamento_id:
+            departamento = models.DepartamentoGeografico.objects.filter(id=departamento_id, activo=True).select_related('pais').first()
+            if departamento:
+                pais = departamento.pais
+
+        if pais is None and pais_id:
+            pais = models.Pais.objects.filter(id=pais_id, activo=True).first()
+
+        if ciudad:
+            data['ciudad'] = ciudad.nombre
+        if departamento:
+            data['departamento'] = departamento.nombre
+        if pais:
+            data['pais'] = pais.nombre
+
+        if banco_id:
+            banco = models.Banco.objects.filter(id=banco_id, activo=True).first()
+            if banco:
+                data['banco'] = banco.nombre
+
+        if tipo_cuenta_id:
+            tipo_cuenta = models.TipoCuenta.objects.filter(id=tipo_cuenta_id, activo=True).first()
+            if tipo_cuenta:
+                data['tipo_cuenta'] = tipo_cuenta.nombre
+
+        return data
+
+    def create(self, request, *args, **kwargs):
+        data = self._coerce_geo_catalog_data(request.data)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        data = self._coerce_geo_catalog_data(request.data)
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['post'], url_path='crear_con_usuario')
     def crear_con_usuario(self, request):
@@ -162,6 +382,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
         for campo in campos_opcionales:
             if campo in request.data:
                 proveedor_data[campo] = request.data[campo]
+        proveedor_data = self._coerce_geo_catalog_data(proveedor_data)
 
         try:
             with transaction.atomic():
@@ -225,6 +446,62 @@ class ProveedorViewSet(viewsets.ModelViewSet):
             {'detail': 'No se encontró un proveedor asociado a este usuario.'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+class PaisViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = models.Pais.objects.filter(activo=True).order_by('nombre')
+    serializer_class = serializers.PaisSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['activo', 'codigo_iso']
+    search_fields = ['nombre', 'codigo_iso']
+    ordering = ['nombre']
+
+
+class DepartamentoGeograficoViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.DepartamentoGeograficoSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['activo', 'pais']
+    search_fields = ['nombre', 'codigo', 'pais__nombre']
+    ordering = ['nombre']
+
+    def get_queryset(self):
+        queryset = models.DepartamentoGeografico.objects.filter(activo=True).select_related('pais').order_by('nombre')
+        pais_id = self.request.query_params.get('pais_id') or self.request.query_params.get('pais')
+        ciudad_id = self.request.query_params.get('ciudad_id')
+
+        if ciudad_id:
+            ciudad = models.Ciudad.objects.filter(id=ciudad_id, activo=True).select_related('departamento').first()
+            if ciudad:
+                queryset = queryset.filter(id=ciudad.departamento_id)
+
+        if pais_id:
+            queryset = queryset.filter(pais_id=pais_id)
+
+        return queryset
+
+
+class CiudadViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.CiudadSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['activo', 'departamento']
+    search_fields = ['nombre', 'departamento__nombre', 'departamento__pais__nombre']
+    ordering = ['nombre']
+
+    def get_queryset(self):
+        queryset = models.Ciudad.objects.filter(activo=True).select_related('departamento__pais').order_by('nombre')
+        departamento_id = self.request.query_params.get('departamento_id') or self.request.query_params.get('departamento')
+        pais_id = self.request.query_params.get('pais_id') or self.request.query_params.get('pais')
+
+        if departamento_id:
+            queryset = queryset.filter(departamento_id=departamento_id)
+
+        if pais_id:
+            queryset = queryset.filter(departamento__pais_id=pais_id)
+
+        return queryset
 
 
 class DepartamentoViewSet(viewsets.ModelViewSet):
@@ -596,54 +873,64 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
+        puede_ver_sensibles = _usuario_puede_ver_documentos_sensibles(self.request.user)
         factura_id = self.request.query_params.get('factura_id') or self.request.query_params.get('factura')
+        queryset = models.DocumentoAdjunto.objects.all()
+
+        if not puede_ver_sensibles:
+            queryset = queryset.exclude(
+                Q(tipo_documento='Archivo Plano Bancario') |
+                Q(tipo_documento='Soporte Causacion Seven') |
+                Q(nombre_archivo__icontains='archivo plano')
+            )
+
         if factura_id:
-            return models.DocumentoAdjunto.objects.filter(factura_id=factura_id)
-        return models.DocumentoAdjunto.objects.all()
+            queryset = queryset.filter(factura_id=factura_id)
+            include_historico = (self.request.query_params.get('include_historico') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
+            if not include_historico:
+                factura = models.Factura.objects.filter(id=factura_id).only('id', 'ciclo_documental_actual').first()
+                if factura:
+                    queryset = queryset.filter(ciclo_documental=_factura_ciclo_documental_actual(factura))
+            return queryset.order_by('fecha_carga', 'id')
+        return queryset
+
+    @action(detail=True, methods=['get'], url_path='contenido')
+    def contenido(self, request, pk=None):
+        documento = self.get_object()
+        raw_bytes = _documento_bytes(documento)
+        if raw_bytes is None:
+            return Response(
+                {
+                    'error': 'El documento no está disponible en ninguna fuente configurada.',
+                    'documento_id': documento.id,
+                    'nombre_archivo': documento.nombre_archivo,
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        descargar = (request.query_params.get('descargar') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
+        filename = documento.nombre_archivo or f'documento-{documento.id}'
+        response = HttpResponse(raw_bytes, content_type=_documento_content_type(documento))
+        response['Content-Disposition'] = f'{"attachment" if descargar else "inline"}; filename="{filename}"'
+        return response
 
     def perform_create(self, serializer):
-        from financiero.services.shared_storage_service import shared_storage
-
         archivo = self.request.FILES.get('archivo')
-        url_storage = self.request.data.get('url_storage', '') or ''
-        instance = serializer.save(cargado_por=self.request.user, url_storage=url_storage)
+        factura = serializer.validated_data.get('factura')
+        content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(archivo)
+        ciclo_documental = _factura_ciclo_documental_actual(factura)
+        instance = serializer.save(
+            cargado_por=self.request.user,
+            url_storage='',
+            archivo=None,
+            contenido_archivo=content_bytes,
+            tamano_bytes=tamano_bytes or serializer.validated_data.get('tamano_bytes'),
+            hash_archivo=hash_archivo,
+            ciclo_documental=ciclo_documental,
+        )
 
-        if archivo and instance.archivo:
-            try:
-                instance.url_storage = instance.archivo.url
-                instance.save(update_fields=['url_storage'])
-            except Exception:
-                pass
-
-            try:
-                local_path = Path(instance.archivo.path)
-                index = models.DocumentoAdjunto.objects.filter(factura=instance.factura).count()
-                result = shared_storage.copy_document(
-                    local_path=local_path,
-                    factura=instance.factura,
-                    index=index,
-                    original_filename=instance.nombre_archivo or archivo.name,
-                )
-                instance.nas_relative_path = result.nas_relative_path or ''
-                instance.nas_storage_status = (
-                    models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                    else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
-                )
-                instance.save(update_fields=['nas_relative_path', 'nas_storage_status'])
-
-                # Eliminar copia local — el NAS es el almacenamiento permanente
-                if result.success and local_path.exists():
-                    try:
-                        local_path.unlink()
-                    except Exception:
-                        pass
-            except Exception:
-                logger.exception(
-                    '[SHARED_STORAGE] Error al copiar documento al NAS. documento_id=%s', instance.id
-                )
-
-        # Regenerar PDF unificado en NAS tras cada subida de documento
-        _regenerar_pdf_unificado_nas(instance.factura)
+        if content_bytes is not None:
+            _programar_sincronizacion_nas_documento(instance.id)
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -857,7 +1144,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'Certificación Bancaria': ['certif', 'bancari'],
         }
 
-        documentos = list(models.DocumentoAdjunto.objects.filter(factura=factura))
+        documentos = list(_documentos_queryset_ciclo_actual(factura))
         faltantes = []
 
         for tipo_requerido, keywords in requeridos.items():
@@ -878,6 +1165,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return 'contabilidad'
         return 'all'
 
+    def _resolve_scope_documental(self, request):
+        requested_scope = (request.query_params.get('scope') or '').strip()
+        return requested_scope or self._scope_documental_por_rol(request)
+
+    def _factura_response_data(self, factura):
+        return serializers.FacturaDetailSerializer(
+            factura,
+            context={'request': self.request},
+        ).data
+
     def _roles_hasta_scope(self, scope):
         scope_normalizado = (scope or 'all').strip().lower()
         if scope_normalizado == 'proveedor':
@@ -891,8 +1188,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def _documentos_filtrados_por_scope(self, factura, scope):
         allowed_roles = self._roles_hasta_scope(scope)
         queryset = (
-            models.DocumentoAdjunto.objects
-            .filter(factura=factura)
+            _documentos_queryset_ciclo_actual(factura)
             .select_related('cargado_por__rol')
             .order_by('fecha_carga', 'id')
         )
@@ -910,6 +1206,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
         # Deduplicar por tipo_documento: conservar solo el más reciente de cada tipo
         seen_tipos = {}
         for doc in documentos:
+            if not _usuario_puede_ver_documentos_sensibles(self.request.user) and _documento_es_sensible(doc):
+                continue
             seen_tipos[doc.tipo_documento] = doc  # sobrescribe con el más reciente (orden ASC por fecha)
         return list(seen_tipos.values())
 
@@ -1109,72 +1407,42 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return False
 
     def _documento_bytes(self, documento):
-        if documento.archivo:
-            try:
-                documento.archivo.open('rb')
-                data = documento.archivo.read()
-                documento.archivo.close()
-                return data
-            except Exception as exc:
-                logger.warning(
-                    '_documento_bytes: fallo leyendo archivo Django FileField doc_id=%s path=%s error=%s',
-                    documento.id, documento.archivo.name, exc,
-                )
-
-        raw_storage = (documento.url_storage or '').strip()
-        if raw_storage:
-            possible_path = raw_storage
-            if raw_storage.startswith('/media/'):
-                possible_path = os.path.join(settings.MEDIA_ROOT, raw_storage.replace('/media/', '', 1))
-            elif raw_storage.startswith('media/'):
-                possible_path = os.path.join(settings.MEDIA_ROOT, raw_storage.replace('media/', '', 1))
-
-            if os.path.exists(possible_path):
-                try:
-                    with open(possible_path, 'rb') as file_handle:
-                        return file_handle.read()
-                except Exception as exc:
-                    logger.warning(
-                        '_documento_bytes: fallo leyendo url_storage doc_id=%s path=%s error=%s',
-                        documento.id, possible_path, exc,
-                    )
-
-        nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
-        if nas_path:
-            try:
-                from financiero.services.shared_storage_service import shared_storage, _parse_unc, _smb_path
-                if shared_storage.enabled:
-                    smbclient, _ = shared_storage._get_smb_client()
-                    server, share, base = _parse_unc(shared_storage.unc_root)
-                    full_rel = f'{base}/{nas_path}' if base else nas_path
-                    smb_file = _smb_path(server, share, full_rel)
-                    with smbclient.open_file(smb_file, mode='rb') as f:
-                        return f.read()
-            except Exception as exc:
-                logger.warning(
-                    '_documento_bytes: fallo leyendo NAS doc_id=%s nas_path=%s error=%s',
-                    documento.id, nas_path, exc,
-                )
-
-        logger.warning(
-            '_documento_bytes: no se pudo obtener bytes de ninguna fuente doc_id=%s nombre=%s',
-            documento.id, documento.nombre_archivo,
-        )
-        return None
+        return _documento_bytes(documento)
 
     def _guardar_pdf_unificado(self, factura, content, scope):
-        try:
-            output_dir = _factura_document_base_path(factura) / 'unificados'
-            output_dir.mkdir(parents=True, exist_ok=True)
-            safe_scope = models._safe_path_segment(scope or 'all')
-            safe_factura = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
-            output_path = output_dir / f'Documentos_{safe_factura}_{safe_scope}.pdf'
-            output_path.write_bytes(content)
-        except Exception:
-            logger.exception('No fue posible guardar PDF unificado factura_id=%s', factura.id)
+        safe_scope = models._safe_path_segment(scope or 'all')
+        safe_factura = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
+        nombre_archivo = f'Documentos_{safe_factura}_{safe_scope}.pdf'
+        ciclo_documental = _factura_ciclo_documental_actual(factura)
+
+        models.DocumentoUnificado.objects.update_or_create(
+            factura=factura,
+            scope=scope or 'all',
+            ciclo_documental=ciclo_documental,
+            defaults={
+                'nombre_archivo': nombre_archivo,
+                'tipo_mime': 'application/pdf',
+                'tamano_bytes': len(content),
+                'contenido_archivo': content,
+                'hash_archivo': hashlib.sha256(content).hexdigest(),
+            },
+        )
 
         from financiero.services.shared_storage_service import shared_storage
         result = shared_storage.copy_unified_pdf(content, factura, scope)
+        defaults = {
+            'nas_relative_path': result.nas_relative_path or '',
+            'nas_storage_status': (
+                models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+                else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+            ),
+        }
+        models.DocumentoUnificado.objects.filter(
+            factura=factura,
+            scope=scope or 'all',
+            ciclo_documental=ciclo_documental,
+        ).update(**defaults)
+
         if not result.success:
             logger.warning(
                 '[SHARED_STORAGE] PDF unificado no copiado al NAS. factura_id=%s error_code=%s message=%s',
@@ -1213,7 +1481,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             lower_mime = (documento.tipo_mime or '').lower()
             merged = False
 
-            if raw_bytes:
+            if raw_bytes is not None:
                 if lower_name.endswith('.pdf') or lower_mime == 'application/pdf':
                     merged = self._append_pdf_bytes(writer, raw_bytes)
                 elif lower_name.endswith(('.png', '.jpg', '.jpeg')) or lower_mime in {'image/png', 'image/jpeg'}:
@@ -1396,14 +1664,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Radicada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
     @action(detail=True, methods=['get'], url_path='documentos_consolidados')
     def documentos_consolidados(self, request, pk=None):
         factura = self.get_object()
-        scope = request.query_params.get('scope') or self._scope_documental_por_rol(request)
+        scope = self._resolve_scope_documental(request)
         descargar = (request.query_params.get('descargar') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
         doc_id = request.query_params.get('doc_id')
 
@@ -1421,7 +1689,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def documentos_historial_zip(self, request, pk=None):
         """Descarga el expediente completo: archivos originales y PDF unificado."""
         factura = self.get_object()
-        scope = request.query_params.get('scope') or self._scope_documental_por_rol(request)
+        scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
         consolidado = self._pdf_consolidado_documentos(factura, documentos, scope)
 
@@ -1440,7 +1708,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     zip_name = f'especificos/{folder}/{index:02d}-{documento.id}-{base_name}'
                 used_names.add(zip_name)
 
-                if raw_bytes:
+                if raw_bytes is not None:
                     zip_file.writestr(zip_name, raw_bytes)
                 else:
                     zip_file.writestr(
@@ -1504,7 +1772,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, ESTADO_CARGADA)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1549,7 +1817,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, ESTADO_ENVIADA_RECTORIA)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1598,7 +1866,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1653,7 +1921,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, ESTADO_RECHAZADA_POR_RECTORIA)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1709,7 +1977,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         )
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1740,7 +2008,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 )
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1764,6 +2032,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         nombre_archivo = getattr(soporte_causacion, 'name', 'soporte_causacion_seven.pdf') or 'soporte_causacion_seven.pdf'
         if not nombre_archivo.lower().endswith('.pdf'):
             return Response({'error': 'El soporte de causacion debe estar en formato PDF.'}, status=status.HTTP_400_BAD_REQUEST)
+        content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(soporte_causacion)
 
         factura.estado = 'Causada'
         factura.fecha_causacion = timezone.now().date()
@@ -1776,34 +2045,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura=factura,
             nombre_archivo=nombre_archivo[:255],
             tipo_documento='Soporte Causacion Seven',
-            archivo=soporte_causacion,
             tipo_mime=getattr(soporte_causacion, 'content_type', '') or 'application/pdf',
-            tamano_bytes=getattr(soporte_causacion, 'size', None),
+            tamano_bytes=tamano_bytes,
             cargado_por=request.user,
+            contenido_archivo=content_bytes,
+            hash_archivo=hash_archivo,
+            ciclo_documental=_factura_ciclo_documental_actual(factura),
         )
-        if documento.archivo and hasattr(documento.archivo, 'url'):
-            documento.url_storage = documento.archivo.url
-            documento.save(update_fields=['url_storage'])
 
-        try:
-            from financiero.services.shared_storage_service import shared_storage
-            local_path = Path(documento.archivo.path)
-            index = models.DocumentoAdjunto.objects.filter(factura=factura).count()
-            result = shared_storage.copy_document(
-                local_path=local_path,
-                factura=factura,
-                index=index,
-                original_filename=nombre_archivo,
-            )
-            nas_status = (
-                models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
-            )
-            documento.nas_relative_path = result.nas_relative_path or ''
-            documento.nas_storage_status = nas_status
-            documento.save(update_fields=['nas_relative_path', 'nas_storage_status'])
-        except Exception:
-            logger.exception('[SHARED_STORAGE] Error al copiar soporte causacion al NAS. factura_id=%s', factura.id)
+        _programar_sincronizacion_nas_documento(documento.id)
 
         actualizar_sla_factura(factura)
 
@@ -1821,7 +2071,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, 'Radicada', 'Causada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1888,7 +2138,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Alistada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1931,7 +2181,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Aprobada Auditoría')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -1977,7 +2227,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Rechazada Auditoría')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2022,7 +2272,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Revisada Dir. Financiera')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2107,7 +2357,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     context={'request': request}
                 )
                 documento_serializer.is_valid(raise_exception=True)
-                documento_serializer.save(cargado_por=request.user)
+                documento = documento_serializer.save(cargado_por=request.user)
+                _programar_sincronizacion_nas_documento(documento.id)
 
                 models.HistorialFactura.objects.create(
                     factura=factura,
@@ -2145,7 +2396,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2194,7 +2445,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Pagada')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2209,7 +2460,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        scope = request.query_params.get('scope') or 'tesoreria'
+        scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
         content = self._pdf_consolidado_documentos(factura, documentos, scope)
         filename = f"Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.pdf"
@@ -2347,7 +2598,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, 'Detenida')
 
         return Response(
-            serializers.FacturaDetailSerializer(factura).data,
+            self._factura_response_data(factura),
             status=status.HTTP_200_OK
         )
 
@@ -2404,6 +2655,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.etapa_actual = etapa_destino
         factura.fecha_inicio_etapa = timezone.now().date()
         factura.usuario_responsable = responsable_destino
+        factura.ciclo_documental_actual = _factura_ciclo_documental_actual(factura) + 1
         factura.save()
 
         # Archivar documentos del NAS cuando se devuelve al proveedor
@@ -2665,6 +2917,81 @@ class FacturaViewSet(viewsets.ModelViewSet):
 # HELPERS DE PDF — accesibles desde cualquier ViewSet
 # ============================================================
 
+def _sincronizar_documento_y_pdf_nas(documento_id):
+    """
+    Sincroniza en segundo plano el documento individual y el PDF unificado con el NAS.
+    Nunca interrumpe el flujo HTTP del usuario.
+    """
+    close_old_connections()
+    try:
+        from financiero.services.shared_storage_service import shared_storage
+
+        documento = (
+            models.DocumentoAdjunto.objects
+            .select_related('factura')
+            .filter(id=documento_id)
+            .first()
+        )
+        if not documento or not documento.factura_id:
+            return
+
+        raw_bytes = _documento_bytes(documento)
+        if raw_bytes is None:
+            logger.warning(
+                '[SHARED_STORAGE] No fue posible obtener bytes del documento para sincronizar NAS. documento_id=%s',
+                documento_id,
+            )
+            return
+
+        index = (
+            models.DocumentoAdjunto.objects
+            .filter(
+                factura=documento.factura,
+                ciclo_documental=_factura_ciclo_documental_actual(documento.factura),
+            )
+            .filter(fecha_carga__lt=documento.fecha_carga)
+            .count()
+        ) + 1
+
+        result = shared_storage.copy_document(
+            factura=documento.factura,
+            index=index,
+            original_filename=documento.nombre_archivo,
+            content_bytes=raw_bytes,
+        )
+        documento.nas_relative_path = result.nas_relative_path or ''
+        documento.nas_storage_status = (
+            models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+            else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+        )
+        documento.save(update_fields=['nas_relative_path', 'nas_storage_status'])
+
+        if not result.success:
+            logger.warning(
+                '[SHARED_STORAGE] Documento no copiado al NAS. documento_id=%s factura_id=%s error_code=%s message=%s',
+                documento.id,
+                documento.factura_id,
+                result.error_code,
+                result.message,
+            )
+
+        _regenerar_pdf_unificado_nas(documento.factura)
+    except Exception:
+        logger.exception('[SHARED_STORAGE] Error sincronizando documento/PDF con NAS. documento_id=%s', documento_id)
+    finally:
+        close_old_connections()
+
+
+def _programar_sincronizacion_nas_documento(documento_id):
+    def _runner():
+        _sincronizar_documento_y_pdf_nas(documento_id)
+
+    try:
+        transaction.on_commit(lambda: threading.Thread(target=_runner, daemon=True).start())
+    except Exception:
+        logger.exception('[SHARED_STORAGE] No se pudo programar sincronización NAS. documento_id=%s', documento_id)
+
+
 def _regenerar_pdf_unificado_nas(factura):
     """
     Regenera el PDF unificado con todos los documentos actuales de la factura
@@ -2674,7 +3001,10 @@ def _regenerar_pdf_unificado_nas(factura):
     try:
         documentos = list(
             models.DocumentoAdjunto.objects
-            .filter(factura=factura)
+            .filter(
+                factura=factura,
+                ciclo_documental=_factura_ciclo_documental_actual(factura),
+            )
             .select_related('cargado_por__rol')
             .order_by('fecha_carga', 'id')
         )

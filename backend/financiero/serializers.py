@@ -11,6 +11,7 @@ import os
 import re
 import uuid
 from urllib.parse import urlparse
+import unicodedata
 
 
 ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg', 'txt'}
@@ -24,6 +25,34 @@ ALLOWED_DOC_MIME_TYPES = {
     'application/octet-stream',  # .txt desde Windows/Chrome
 }
 MAX_DOC_SIZE_BYTES = 10 * 1024 * 1024
+
+
+DOCUMENTOS_SENSIBLES_POR_ROL = {
+    'archivo plano bancario',
+    'soporte causacion seven',
+}
+
+ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
+    'auditoria',
+    'direccion financiera',
+}
+
+
+def _normalizar_texto_permiso(value):
+    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
+    without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
+    return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
+
+
+def _usuario_puede_ver_documentos_sensibles(user):
+    rol = _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
+    return rol in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
+
+
+def _documento_es_sensible(documento):
+    tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
+    nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
+    return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
 
 
 # ============================================================
@@ -47,6 +76,31 @@ class ProveedorSerializer(serializers.ModelSerializer):
         except ValidationError as e:
             raise serializers.ValidationError(f"Validación fallida: {str(e)}")
         return data
+
+
+class PaisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Pais
+        fields = ['id', 'nombre', 'codigo_iso', 'activo']
+
+
+class DepartamentoGeograficoSerializer(serializers.ModelSerializer):
+    pais = PaisSerializer(read_only=True)
+    pais_id = serializers.IntegerField(source='pais.id', read_only=True)
+
+    class Meta:
+        model = models.DepartamentoGeografico
+        fields = ['id', 'nombre', 'codigo', 'activo', 'pais', 'pais_id']
+
+
+class CiudadSerializer(serializers.ModelSerializer):
+    departamento = DepartamentoGeograficoSerializer(read_only=True)
+    departamento_id = serializers.IntegerField(source='departamento.id', read_only=True)
+    pais_id = serializers.IntegerField(source='departamento.pais.id', read_only=True)
+
+    class Meta:
+        model = models.Ciudad
+        fields = ['id', 'nombre', 'activo', 'departamento', 'departamento_id', 'pais_id']
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):
@@ -131,6 +185,7 @@ class ReporteGeneradoSerializer(serializers.ModelSerializer):
 # ============================================================
 
 class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
+    archivo = serializers.FileField(write_only=True, required=False, allow_null=True)
     cargado_por = UsuarioSerializer(read_only=True)
     cargado_por_id = serializers.IntegerField(write_only=True, required=False)
     verificado_por = UsuarioSerializer(read_only=True)
@@ -138,16 +193,24 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.DocumentoAdjunto
-        fields = '__all__'
-        read_only_fields = ['fecha_carga', 'archivo_url']
+        fields = [
+            'id', 'factura', 'nombre_archivo', 'tipo_documento', 'tipo_mime', 'tamano_bytes',
+            'url_storage', 'archivo', 'hash_archivo', 'obligatorio', 'verificado',
+            'verificado_por', 'fecha_verificacion', 'observaciones', 'fecha_carga',
+            'cargado_por', 'cargado_por_id', 'archivo_url', 'nas_relative_path',
+            'nas_storage_status', 'ciclo_documental',
+        ]
+        read_only_fields = [
+            'fecha_carga', 'archivo_url', 'hash_archivo', 'nas_relative_path',
+            'nas_storage_status', 'ciclo_documental',
+        ]
 
     def get_archivo_url(self, obj):
         request = self.context.get('request')
-        if obj.archivo and hasattr(obj.archivo, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.archivo.url)
-            return obj.archivo.url
-        return obj.url_storage or None
+        relative_url = f'/api/financiero/documentos/{obj.id}/contenido/'
+        if request:
+            return request.build_absolute_uri(relative_url)
+        return relative_url
 
     def validate_archivo(self, archivo):
         filename = (getattr(archivo, 'name', '') or '').strip()
@@ -327,7 +390,7 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     creado_por = UsuarioSerializer(read_only=True)
     usuario_responsable = UsuarioSerializer(read_only=True)
     usuario_responsable_id = serializers.IntegerField(write_only=True, required=False)
-    documentos = DocumentoAdjuntoSerializer(read_only=True, many=True)
+    documentos = serializers.SerializerMethodField()
     historial = HistorialFacturaSerializer(read_only=True, many=True)
     comentarios = ComentarioFacturaSerializer(read_only=True, many=True)
     items = ItemFacturaSerializer(read_only=True, many=True)
@@ -341,13 +404,31 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Factura
         fields = '__all__'
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion', 'valor_neto_pagar', 'dias_transcurridos']
+        read_only_fields = [
+            'fecha_creacion', 'fecha_modificacion', 'valor_neto_pagar',
+            'dias_transcurridos', 'ciclo_documental_actual',
+        ]
 
     def get_sla_objetivo_dias(self, obj):
         parametro = obtener_parametro_por_etapa(getattr(obj, 'etapa_actual', None))
         if not parametro or not parametro.activo:
             return None
         return int(parametro.dias_maximos or 0)
+
+    def get_documentos(self, obj):
+        documentos = (
+            obj.documentos
+            .filter(ciclo_documental=getattr(obj, 'ciclo_documental_actual', 1))
+            .order_by('fecha_carga', 'id')
+        )
+        request = self.context.get('request')
+        if request is not None and not _usuario_puede_ver_documentos_sensibles(request.user):
+            documentos = [
+                documento
+                for documento in documentos
+                if not _documento_es_sensible(documento)
+            ]
+        return DocumentoAdjuntoSerializer(documentos, many=True, context=self.context).data
 
 
 class FacturaCreateSerializer(serializers.ModelSerializer):
