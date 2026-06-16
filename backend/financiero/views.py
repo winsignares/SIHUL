@@ -3,7 +3,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, close_old_connections
 from django.db.models import Q, Sum, Count
 from django.http import HttpResponse
 from django.conf import settings
@@ -12,6 +12,7 @@ import json
 import logging
 import mimetypes
 import os
+import threading
 import zipfile
 from datetime import datetime
 from io import BytesIO
@@ -914,8 +915,6 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
         return response
 
     def perform_create(self, serializer):
-        from financiero.services.shared_storage_service import shared_storage
-
         archivo = self.request.FILES.get('archivo')
         factura = serializer.validated_data.get('factura')
         content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(archivo)
@@ -931,31 +930,7 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
         )
 
         if content_bytes is not None:
-            try:
-                index = (
-                    models.DocumentoAdjunto.objects
-                    .filter(factura=instance.factura, ciclo_documental=ciclo_documental)
-                    .count()
-                )
-                result = shared_storage.copy_document(
-                    factura=instance.factura,
-                    index=index,
-                    original_filename=instance.nombre_archivo or getattr(archivo, 'name', ''),
-                    content_bytes=content_bytes,
-                )
-                instance.nas_relative_path = result.nas_relative_path or ''
-                instance.nas_storage_status = (
-                    models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                    else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
-                )
-                instance.save(update_fields=['nas_relative_path', 'nas_storage_status'])
-            except Exception:
-                logger.exception(
-                    '[SHARED_STORAGE] Error al copiar documento al NAS. documento_id=%s', instance.id
-                )
-
-        # Regenerar PDF unificado en NAS tras cada subida de documento
-        _regenerar_pdf_unificado_nas(instance.factura)
+            _programar_sincronizacion_nas_documento(instance.id)
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -2078,27 +2053,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             ciclo_documental=_factura_ciclo_documental_actual(factura),
         )
 
-        try:
-            from financiero.services.shared_storage_service import shared_storage
-            index = models.DocumentoAdjunto.objects.filter(
-                factura=factura,
-                ciclo_documental=_factura_ciclo_documental_actual(factura),
-            ).count()
-            result = shared_storage.copy_document(
-                factura=factura,
-                index=index,
-                original_filename=nombre_archivo,
-                content_bytes=content_bytes,
-            )
-            nas_status = (
-                models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
-            )
-            documento.nas_relative_path = result.nas_relative_path or ''
-            documento.nas_storage_status = nas_status
-            documento.save(update_fields=['nas_relative_path', 'nas_storage_status'])
-        except Exception:
-            logger.exception('[SHARED_STORAGE] Error al copiar soporte causacion al NAS. factura_id=%s', factura.id)
+        _programar_sincronizacion_nas_documento(documento.id)
 
         actualizar_sla_factura(factura)
 
@@ -2402,7 +2357,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     context={'request': request}
                 )
                 documento_serializer.is_valid(raise_exception=True)
-                documento_serializer.save(cargado_por=request.user)
+                documento = documento_serializer.save(cargado_por=request.user)
+                _programar_sincronizacion_nas_documento(documento.id)
 
                 models.HistorialFactura.objects.create(
                     factura=factura,
@@ -2960,6 +2916,81 @@ class FacturaViewSet(viewsets.ModelViewSet):
 # ============================================================
 # HELPERS DE PDF — accesibles desde cualquier ViewSet
 # ============================================================
+
+def _sincronizar_documento_y_pdf_nas(documento_id):
+    """
+    Sincroniza en segundo plano el documento individual y el PDF unificado con el NAS.
+    Nunca interrumpe el flujo HTTP del usuario.
+    """
+    close_old_connections()
+    try:
+        from financiero.services.shared_storage_service import shared_storage
+
+        documento = (
+            models.DocumentoAdjunto.objects
+            .select_related('factura')
+            .filter(id=documento_id)
+            .first()
+        )
+        if not documento or not documento.factura_id:
+            return
+
+        raw_bytes = _documento_bytes(documento)
+        if raw_bytes is None:
+            logger.warning(
+                '[SHARED_STORAGE] No fue posible obtener bytes del documento para sincronizar NAS. documento_id=%s',
+                documento_id,
+            )
+            return
+
+        index = (
+            models.DocumentoAdjunto.objects
+            .filter(
+                factura=documento.factura,
+                ciclo_documental=_factura_ciclo_documental_actual(documento.factura),
+            )
+            .filter(fecha_carga__lt=documento.fecha_carga)
+            .count()
+        ) + 1
+
+        result = shared_storage.copy_document(
+            factura=documento.factura,
+            index=index,
+            original_filename=documento.nombre_archivo,
+            content_bytes=raw_bytes,
+        )
+        documento.nas_relative_path = result.nas_relative_path or ''
+        documento.nas_storage_status = (
+            models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+            else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+        )
+        documento.save(update_fields=['nas_relative_path', 'nas_storage_status'])
+
+        if not result.success:
+            logger.warning(
+                '[SHARED_STORAGE] Documento no copiado al NAS. documento_id=%s factura_id=%s error_code=%s message=%s',
+                documento.id,
+                documento.factura_id,
+                result.error_code,
+                result.message,
+            )
+
+        _regenerar_pdf_unificado_nas(documento.factura)
+    except Exception:
+        logger.exception('[SHARED_STORAGE] Error sincronizando documento/PDF con NAS. documento_id=%s', documento_id)
+    finally:
+        close_old_connections()
+
+
+def _programar_sincronizacion_nas_documento(documento_id):
+    def _runner():
+        _sincronizar_documento_y_pdf_nas(documento_id)
+
+    try:
+        transaction.on_commit(lambda: threading.Thread(target=_runner, daemon=True).start())
+    except Exception:
+        logger.exception('[SHARED_STORAGE] No se pudo programar sincronización NAS. documento_id=%s', documento_id)
+
 
 def _regenerar_pdf_unificado_nas(factura):
     """
