@@ -58,7 +58,7 @@ export function SlaIndicator({ dias, objetivo, className, compact = false }: Sla
           {diasValue}d
         </span>
         <span className="text-[10px] text-slate-400">
-          {restantes > 0 ? `${restantes}d restantes` : `${Math.abs(restantes)}d vencido`}
+          {`/ ${objetivoValue}d`}
         </span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">

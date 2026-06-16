@@ -1643,7 +1643,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.numero_radicado = f"{numero_operacion}-{consecutivo_operacion}"
         factura.numero_operacion_contable = numero_operacion
         factura.consecutivo_operacion = consecutivo_operacion
-        factura.etapa_actual = 'Radicación'
+        factura.etapa_actual = 'Alistamiento'
         factura.fecha_inicio_etapa = factura.fecha_radicacion
         factura.usuario_responsable = request.user
         factura.save()
@@ -1747,7 +1747,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = ESTADO_CARGADA
         factura.fecha_cargue = timezone.now().date()
-        factura.etapa_actual = 'Cargue Formal'
+        factura.etapa_actual = 'Envío a Rectoría'
         factura.fecha_inicio_etapa = factura.fecha_cargue
         factura.usuario_responsable = request.user
 
@@ -1792,7 +1792,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = ESTADO_ENVIADA_RECTORIA
         factura.fecha_envio_rectoria = timezone.now().date()
-        factura.etapa_actual = 'Autorización Rectoría'
+        factura.etapa_actual = 'Aplicación de Pago'
         factura.fecha_inicio_etapa = factura.fecha_envio_rectoria
         factura.usuario_responsable = request.user
 
@@ -2036,7 +2036,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = 'Causada'
         factura.fecha_causacion = timezone.now().date()
-        factura.etapa_actual = 'Causación'
+        factura.etapa_actual = 'Alistamiento'
         factura.fecha_inicio_etapa = factura.fecha_causacion
         factura.usuario_responsable = request.user
         factura.save()
@@ -2117,7 +2117,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = 'Alistada'
         factura.fecha_alistamiento = timezone.now().date()
-        factura.etapa_actual = 'Alistamiento'
+        factura.etapa_actual = 'Control Previo'
         factura.fecha_inicio_etapa = factura.fecha_alistamiento
         factura.usuario_responsable = request.user
         factura.save()
@@ -2158,7 +2158,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = 'Aprobada Auditoría'
         factura.fecha_aprobacion_auditoria = timezone.now().date()
-        factura.etapa_actual = 'Control Previo'
+        factura.etapa_actual = 'Envío a Dirección Financiera'
         factura.fecha_inicio_etapa = factura.fecha_aprobacion_auditoria
         factura.usuario_responsable = request.user
 
@@ -2247,7 +2247,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = 'Revisada Dir. Financiera'
         factura.fecha_revision_direccion = timezone.now().date()
-        factura.etapa_actual = 'Envío a Dirección Financiera'
+        factura.etapa_actual = 'Cargue Formal'
         factura.fecha_inicio_etapa = factura.fecha_revision_direccion
         factura.usuario_responsable = request.user
 
@@ -2881,15 +2881,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             # Cambiar estado a 'Registrada' al completar el registro
             factura.estado = 'Registrada'
+            factura.etapa_actual = 'Radicación'
             # Asignar responsable si no está asignado
             if not factura.usuario_responsable:
                 factura.usuario_responsable = request.user
 
             if not factura.fecha_inicio_etapa:
                 factura.fecha_inicio_etapa = timezone.now().date()
-            
+
             serializer.save()
-            factura.save(update_fields=['estado', 'usuario_responsable', 'fecha_inicio_etapa'])
+            factura.save(update_fields=['estado', 'etapa_actual', 'usuario_responsable', 'fecha_inicio_etapa'])
 
             actualizar_sla_factura(factura)
             

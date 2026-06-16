@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
+import { useAuth } from '../../../context/AuthContext';
 
 const TESORERIA_STATES = ['Causada', 'Alistada', 'Enviada', 'Pago Aplicado', 'Pagada', 'Devuelta'] as const;
 
@@ -27,6 +28,7 @@ export default function TesoreriaHome({
   onGoToRegistrarPago,
   onGoToComprobante,
 }: TesoreriaHomeProps) {
+  const { components } = useAuth();
   const [statsData, setStatsData] = useState({
     porAlistar: 0,
     aprobadasAuditoria: 0,
@@ -88,13 +90,6 @@ export default function TesoreriaHome({
       action: onGoToEnviarDireccion,
     },
     {
-      title: 'Registrar Pago Aplicado',
-      description: 'Registra en SIHUL pagos que ya se ejecutaron en el portal bancario',
-      icon: DollarSign,
-      color: 'from-green-600 to-green-700',
-      action: onGoToRegistrarPago,
-    },
-    {
       title: 'Factura Pagada',
       description: 'Consulta facturas pagadas y descarga el expediente completo',
       icon: FileOutput,
@@ -102,6 +97,19 @@ export default function TesoreriaHome({
       action: onGoToComprobante,
     },
   ];
+
+  const visibleQuickActions = quickActions.filter((action) => {
+    if (action.title === 'Alistar Pagos') {
+      return components.some((component) => component.nombre === 'Alistar Pagos');
+    }
+    if (action.title === 'Enviar Direccion Financiera') {
+      return components.some((component) => component.nombre === 'Enviar Direccion Financiera');
+    }
+    if (action.title === 'Factura Pagada') {
+      return components.some((component) => ['Factura Pagada', 'Generar Comprobante Egreso'].includes(component.nombre));
+    }
+    return true;
+  });
 
   const recentActivity = useMemo(() => {
     const filtered = recentFacturas
@@ -222,8 +230,8 @@ export default function TesoreriaHome({
         })}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {quickActions.map((action, index) => {
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {visibleQuickActions.map((action, index) => {
           const Icon = action.icon;
           return (
             <motion.button

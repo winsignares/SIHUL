@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { reportesFinancieroService, type AdminDashboardResponse } from '../../../services/financiero';
+import { useAuth } from '../../../context/AuthContext';
 
 interface AdminFinancieroHomeProps {
   onNavigate: (menu: string) => void;
@@ -30,6 +31,7 @@ const currency = new Intl.NumberFormat('es-CO', { style: 'currency', currency: '
 const ACTIVITIES_PER_PAGE = 4;
 
 export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroHomeProps) {
+  const { components } = useAuth();
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -182,6 +184,19 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
     { label: 'SLA', icon: Clock, menu: 'sla' },
   ];
 
+  const visibleQuickActions = quickActions.filter((action) => {
+    if (action.menu === 'usuarios') {
+      return components.some((component) => component.nombre === 'Gestion Usuarios Financiero');
+    }
+    if (action.menu === 'proveedores') {
+      return components.some((component) => component.nombre === 'Gestion Proveedores');
+    }
+    if (action.menu === 'sla') {
+      return components.some((component) => component.nombre === 'Parametrizacion SLA');
+    }
+    return true;
+  });
+
 
   return (
     <div className="space-y-6">
@@ -224,7 +239,7 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
               {refreshing ? 'Actualizando...' : 'Actualizar'}
             </Button>
             <div className="flex gap-2">
-              {quickActions.map((qa) => {
+              {visibleQuickActions.map((qa) => {
                 const Icon = qa.icon;
                 return (
                   <button

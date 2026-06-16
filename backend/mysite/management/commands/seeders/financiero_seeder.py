@@ -557,7 +557,9 @@ def _seed_sla(out, sty):
         ('Causación', 'Contabilidad', 2, 'Causación contable'),
         ('Alistamiento', 'Tesorería', 3, 'Alistamiento sin CE'),
         ('Control Previo', 'Auditoría', 4, 'Control previo de auditoría'),
+        ('Envío a Dirección Financiera', 'Tesorería', 1, 'Envío a Dirección Financiera'),
         ('Cargue Formal', 'Dirección Financiera', 2, 'Cargue para autorización'),
+        ('Envío a Rectoría', 'Dirección Financiera', 1, 'Envío a Rectoría'),
         ('Autorización de Pago', 'Rectoría', 3, 'Autorización por Rectoría'),
         ('Aplicación de Pago', 'Tesorería', 1, 'Ejecución de pago y cierre de factura pagada'),
     ]

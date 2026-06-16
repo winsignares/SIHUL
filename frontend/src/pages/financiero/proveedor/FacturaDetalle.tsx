@@ -131,8 +131,8 @@ export default function FacturaDetalle() {
   const serviciosFactura = parsedDescripcion.items;
   const descripcionAdicional = serviciosFactura.length > 0 ? parsedDescripcion.remainingText : factura.descripcion;
   const heroDescripcion = serviciosFactura.length === 0 ? factura.descripcion : undefined;
-  const showServiciosSection = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(factura.observaciones);
-  const hasIdentificacionFactura = Boolean(factura.observaciones);
+  const showServiciosSection = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(factura.identificacion_factura);
+  const hasIdentificacionFactura = Boolean(factura.identificacion_factura);
 
   return (
     <div className="min-h-full px-4 md:px-8 py-6 font-['Space_Grotesk']">
@@ -237,13 +237,13 @@ export default function FacturaDetalle() {
               Identificacion y Servicios Facturados
             </h3>
 
-            {factura.observaciones && (
+            {factura.identificacion_factura && (
               <div className="rounded-2xl border border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 p-4">
                 <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-200 font-semibold mb-1">
                   Identificacion Factura
                 </p>
                 <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
-                  {factura.observaciones}
+                  {factura.identificacion_factura}
                 </p>
               </div>
             )}
@@ -347,7 +347,7 @@ export default function FacturaDetalle() {
             </h3>
             <div className="space-y-2 text-sm">
               <InfoRow label="Tipo" value={factura.tipo_documento} />
-              <InfoRow label="Identificación" value={factura.identificacion_factura || factura.observaciones || '—'} />
+              <InfoRow label="Identificación" value={factura.identificacion_factura || '—'} />
               <InfoRow label="Etapa actual" value={factura.etapa_actual || factura.estado} />
             </div>
           </motion.section>
