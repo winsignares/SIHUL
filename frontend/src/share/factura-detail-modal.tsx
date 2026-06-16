@@ -210,15 +210,15 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     'enviado a rectoria': 'Enviada Rectoría',
     'cargada para autorizacion': 'Cargada',
     cargada: 'Cargada',
-    autorizada: 'Pago Aplicado',
-    'autorizada para pago': 'Pago Aplicado',
+    autorizada: 'Autorizada',
+    'autorizada para pago': 'Autorizada',
     'rechazada por rectoria': 'Rechazada por Rectoría',
     devuelta: 'Devuelta',
     rechazada: 'Devuelta',
     detenida: 'Devuelta',
     anulada: 'Devuelta',
-    'pago aplicado': 'Pago Aplicado',
-    pagada: 'Pago Aplicado',
+    'pago aplicado': 'Pagada',
+    pagada: 'Pagada',
   };
 
   const current = mapEstado[normalize(factura.estado)] || factura.estado;
@@ -236,7 +236,8 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Enviada Rectoría', 'Direccion Financiera', 'Remitida para decision final institucional', 1, factura.fechaCargue],
     ['Rechazada por Rectoría', 'Rectoría', 'Rectoría rechaza el tramite y solicita recertificacion previa', 2, undefined],
     ['Devuelta', 'Direccion Financiera / Tesoreria', 'Tramite devuelto para ajustes operativos y documentales', 2, undefined],
-    ['Pago Aplicado', 'Rectoria', 'Pago autorizado y aplicado por Rectoria', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
+    ['Autorizada', 'Rectoria', 'Pago autorizado por Rectoria', 1, factura.fechaAutorizacion],
+    ['Pagada', 'Rectoria', 'Pago realizado por Rectoria', 1, factura.fechaPagoAplicado || factura.fechaComprobante],
   ] as const;
 
   // Los pasos negativos solo aparecen cuando la factura está efectivamente en ese estado
@@ -362,7 +363,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
   const parsedDescripcion = hasStructuredItems ? { items: [], remainingText: '' } : parseFacturaDescripcion(currentFactura.descripcion);
   const serviciosFactura = parsedDescripcion.items;
   const descripcionAdicional = (hasStructuredItems || serviciosFactura.length > 0) ? parsedDescripcion.remainingText : currentFactura.descripcion;
-  const identificacionFactura = currentFactura.identificacionFactura || currentFactura.observaciones;
+  const identificacionFactura = currentFactura.identificacionFactura;
   const showDescripcionCard = hasStructuredItems || serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(identificacionFactura);
   const hasIdentificacion = Boolean(identificacionFactura);
 

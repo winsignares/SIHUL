@@ -1837,11 +1837,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         hoy = timezone.now().date()
 
-        factura.estado = 'Pago Aplicado'
+        factura.estado = 'Pagada'
         factura.fecha_autorizacion = hoy
         factura.fecha_pago_aplicado = hoy
         factura.fecha_comprobante = hoy
-        factura.etapa_actual = 'Pago Aplicado'
+        factura.etapa_actual = 'Pagada'
         factura.fecha_inicio_etapa = hoy
         factura.usuario_responsable = request.user
 
@@ -1854,16 +1854,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         models.HistorialFactura.objects.create(
             factura=factura,
-            accion='Factura autorizada por Rectoría — pago aplicado',
+            accion='Factura pagada por Rectoría',
             estado_anterior=estado_anterior,
-            estado_nuevo='Pago Aplicado',
+            estado_nuevo='Pagada',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Pago Aplicado')
+        self._notificar_transicion(factura, estado_anterior, 'Pagada')
 
         return Response(
             self._factura_response_data(factura),

@@ -349,7 +349,7 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
 
                       <div className="min-w-0">
                         <p className="text-sm text-slate-700 dark:text-slate-200 truncate">
-                          {displayText(factura.identificacion_factura || factura.observaciones || '—')}
+                          {displayText(factura.identificacion_factura || '—')}
                         </p>
                       </div>
 

@@ -407,11 +407,13 @@ export function getIconForComponent(name: string): LucideIcon {
 
     if (!icon) {
         if (normalized.includes('dashboard')) return LayoutDashboard;
+        if (normalized.includes('contabilidad')) return Calculator;
         if (normalized.includes('mis pendientes')) return Clock3;
         if (normalized.includes('consultar')) return FileSearch;
         if (normalized.includes('radicar')) return FileCheck;
         if (normalized.includes('causar')) return Calculator;
         if (normalized.includes('tesoreria')) return Wallet;
+        if (normalized.includes('direccion financiera')) return ListChecks;
         if (normalized.includes('alistar pago')) return ListChecks;
         if (normalized.includes('registrar pago')) return CircleCheckBig;
         if (normalized.includes('comprobante')) return FileText;

@@ -282,7 +282,7 @@ export default function EnviarFactura({ miProveedor, onSuccess }: EnviarFacturaP
     setForm(prev => ({
       ...prev,
       tipoDocumento: correccionFactura.tipo_documento || prev.tipoDocumento,
-      identificacionFactura: correccionFactura.identificacion_factura || correccionFactura.observaciones || prev.identificacionFactura,
+      identificacionFactura: correccionFactura.identificacion_factura || prev.identificacionFactura,
       departamentoId: correccionFactura.departamento?.id || prev.departamentoId,
       fechaFactura: correccionFactura.fecha_factura || prev.fechaFactura,
       fechaRecepcion: getToday(),

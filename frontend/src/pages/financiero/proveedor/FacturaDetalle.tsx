@@ -22,19 +22,31 @@ const formatMoney = (val: number | string | null | undefined) => {
   return `$${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
-const ESTADO_STEP: Record<string, number> = {
-  'Recibida': 1,
-  'Registrada': 2,
-  'Radicada': 3,
-  'Causada': 4,
-  'Alistada': 5,
-  'Aprobada Auditoría': 6,
-  'Cargada': 7,
-  'Revisada Dir. Financiera': 8,
-  'Enviada Rectoría': 9,
-  'Autorizada': 10,
-  'Pago Aplicado': 11,
-  'Pagada': 12,
+const normalizeEstado = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const getEstadoStep = (estado: string) => {
+  const normalized = normalizeEstado(estado);
+
+  if (normalized === 'recibida') return 1;
+  if (normalized === 'registrada') return 2;
+  if (normalized === 'radicada') return 3;
+  if (normalized === 'causada') return 4;
+  if (normalized === 'alistada') return 5;
+  if (
+    normalized === 'aprobada auditoria' ||
+    normalized === 'revisada dir. financiera' ||
+    normalized === 'cargada' ||
+    normalized === 'enviada rectoria'
+  ) return 6;
+  if (normalized === 'autorizada') return 7;
+  if (normalized === 'pago aplicado' || normalized === 'pagada') return 8;
+
+  return 1;
 };
 
 const ESTADO_COLOR: Record<string, string> = {
@@ -121,8 +133,9 @@ export default function FacturaDetalle() {
     );
   }
 
-  const estadoStep = ESTADO_STEP[factura.estado] || 1;
-  const isPagada = factura.estado === 'Pagada' || factura.estado === 'Pago Aplicado';
+  const estadoStep = getEstadoStep(factura.estado);
+  const normalizedEstado = normalizeEstado(factura.estado);
+  const isPagada = normalizedEstado === 'pagada' || normalizedEstado === 'pago aplicado';
   const isDevuelta = factura.estado === 'Devuelta' || factura.estado === 'Rechazada' || factura.estado === 'Anulada';
   const canCorregir = factura.estado === 'Devuelta' || factura.estado === 'Rechazada';
   const diasTranscurridos = Math.max(Number(factura.dias_transcurridos) || 0, 0);
@@ -131,8 +144,9 @@ export default function FacturaDetalle() {
   const serviciosFactura = parsedDescripcion.items;
   const descripcionAdicional = serviciosFactura.length > 0 ? parsedDescripcion.remainingText : factura.descripcion;
   const heroDescripcion = serviciosFactura.length === 0 ? factura.descripcion : undefined;
-  const showServiciosSection = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(factura.observaciones);
-  const hasIdentificacionFactura = Boolean(factura.observaciones);
+  const identificacionFactura = factura.identificacion_factura || '';
+  const showServiciosSection = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(identificacionFactura);
+  const hasIdentificacionFactura = Boolean(identificacionFactura);
 
   return (
     <div className="min-h-full px-4 md:px-8 py-6 font-['Space_Grotesk']">
@@ -237,13 +251,13 @@ export default function FacturaDetalle() {
               Identificacion y Servicios Facturados
             </h3>
 
-            {factura.observaciones && (
+            {identificacionFactura && (
               <div className="rounded-2xl border border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 p-4">
                 <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-200 font-semibold mb-1">
                   Identificacion Factura
                 </p>
                 <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
-                  {factura.observaciones}
+                  {identificacionFactura}
                 </p>
               </div>
             )}
@@ -347,7 +361,7 @@ export default function FacturaDetalle() {
             </h3>
             <div className="space-y-2 text-sm">
               <InfoRow label="Tipo" value={factura.tipo_documento} />
-              <InfoRow label="Identificación" value={factura.identificacion_factura || factura.observaciones || '—'} />
+              <InfoRow label="Identificación" value={identificacionFactura || '—'} />
               <InfoRow label="Etapa actual" value={factura.etapa_actual || factura.estado} />
             </div>
           </motion.section>

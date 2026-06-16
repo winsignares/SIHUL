@@ -191,7 +191,7 @@ function DashboardHome({ miProveedor, proveedorLoading, onGoToEnviar, onGoToMisF
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 dark:text-white text-sm">{f.numero_factura}</p>
                       <p className="text-xs text-slate-600 dark:text-slate-300 truncate font-medium">
-                        {f.identificacion_factura || f.observaciones || '—'}
+                        {f.identificacion_factura || '—'}
                       </p>
                     </div>
                   </div>
