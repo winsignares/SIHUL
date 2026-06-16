@@ -83,6 +83,7 @@ class ReporteGeneradoSerializer(serializers.ModelSerializer):
 # ============================================================
 
 class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
+    archivo = serializers.FileField(write_only=True, required=False, allow_null=True)
     cargado_por = UsuarioSerializer(read_only=True)
     cargado_por_id = serializers.IntegerField(write_only=True, required=False)
     verificado_por = UsuarioSerializer(read_only=True)
@@ -90,16 +91,24 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.DocumentoAdjunto
-        fields = '__all__'
-        read_only_fields = ['fecha_carga', 'archivo_url']
+        fields = [
+            'id', 'factura', 'nombre_archivo', 'tipo_documento', 'tipo_mime', 'tamano_bytes',
+            'url_storage', 'archivo', 'hash_archivo', 'obligatorio', 'verificado',
+            'verificado_por', 'fecha_verificacion', 'observaciones', 'fecha_carga',
+            'cargado_por', 'cargado_por_id', 'archivo_url', 'nas_relative_path',
+            'nas_storage_status', 'ciclo_documental',
+        ]
+        read_only_fields = [
+            'fecha_carga', 'archivo_url', 'hash_archivo', 'nas_relative_path',
+            'nas_storage_status', 'ciclo_documental',
+        ]
 
     def get_archivo_url(self, obj):
         request = self.context.get('request')
-        if obj.archivo and hasattr(obj.archivo, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.archivo.url)
-            return obj.archivo.url
-        return obj.url_storage or None
+        relative_url = f'/api/financiero/documentos/{obj.id}/contenido/'
+        if request:
+            return request.build_absolute_uri(relative_url)
+        return relative_url
 
     def validate_archivo(self, archivo):
         filename = (getattr(archivo, 'name', '') or '').strip()
@@ -229,7 +238,7 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     creado_por = UsuarioSerializer(read_only=True)
     usuario_responsable = UsuarioSerializer(read_only=True)
     usuario_responsable_id = serializers.IntegerField(write_only=True, required=False)
-    documentos = DocumentoAdjuntoSerializer(read_only=True, many=True)
+    documentos = serializers.SerializerMethodField()
     historial = HistorialFacturaSerializer(read_only=True, many=True)
     comentarios = ComentarioFacturaSerializer(read_only=True, many=True)
     items = ItemFacturaSerializer(read_only=True, many=True)
@@ -243,13 +252,24 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Factura
         fields = '__all__'
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion', 'valor_neto_pagar', 'dias_transcurridos']
+        read_only_fields = [
+            'fecha_creacion', 'fecha_modificacion', 'valor_neto_pagar',
+            'dias_transcurridos', 'ciclo_documental_actual',
+        ]
 
     def get_sla_objetivo_dias(self, obj):
         parametro = obtener_parametro_por_etapa(getattr(obj, 'etapa_actual', None))
         if not parametro or not parametro.activo:
             return None
         return int(parametro.dias_maximos or 0)
+
+    def get_documentos(self, obj):
+        documentos = (
+            obj.documentos
+            .filter(ciclo_documental=getattr(obj, 'ciclo_documental_actual', 1))
+            .order_by('fecha_carga', 'id')
+        )
+        return DocumentoAdjuntoSerializer(documentos, many=True, context=self.context).data
 
 
 class FacturaCreateSerializer(serializers.ModelSerializer):

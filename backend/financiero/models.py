@@ -366,6 +366,7 @@ class Factura(models.Model):
     # Flags de control
     requiere_autorizacion_especial = models.BooleanField(default=False)
     urgente = models.BooleanField(default=False)
+    ciclo_documental_actual = models.PositiveIntegerField(default=1)
 
     class Meta:
         indexes = [
@@ -452,7 +453,9 @@ class DocumentoAdjunto(models.Model):
     tamano_bytes = models.BigIntegerField(blank=True, null=True)
     url_storage = models.CharField(max_length=500, blank=True)
     archivo = models.FileField(upload_to=documento_financiero_upload_to, blank=True, null=True)
+    contenido_archivo = models.BinaryField(blank=True, null=True, editable=False)
     hash_archivo = models.CharField(max_length=255, blank=True, null=True)
+    ciclo_documental = models.PositiveIntegerField(default=1)
     obligatorio = models.BooleanField(default=False)
     verificado = models.BooleanField(default=False)
     verificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='documentos_verificados')
@@ -485,6 +488,43 @@ class DocumentoAdjunto(models.Model):
 
     def __str__(self):
         return f"{self.nombre_archivo} - {self.factura.numero_factura}"
+
+
+class DocumentoUnificado(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='documentos_unificados')
+    scope = models.CharField(max_length=50, default='all')
+    ciclo_documental = models.PositiveIntegerField(default=1)
+    nombre_archivo = models.CharField(max_length=255)
+    tipo_mime = models.CharField(max_length=100, default='application/pdf')
+    tamano_bytes = models.BigIntegerField(blank=True, null=True)
+    contenido_archivo = models.BinaryField(blank=True, null=True, editable=False)
+    hash_archivo = models.CharField(max_length=255, blank=True, null=True)
+    fecha_generacion = models.DateTimeField(auto_now=True)
+    nas_relative_path = models.CharField(
+        max_length=500, blank=True, null=True,
+        help_text='Ruta relativa dentro del NAS (desde la raíz configurada) del PDF unificado.',
+    )
+    nas_storage_status = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text='Estado de copia al NAS del PDF unificado: stored, failed, skipped, disabled',
+    )
+
+    class Meta:
+        indexes = [
+            Index(fields=['factura', 'scope'], name='idx_doc_unificado_fact_scope'),
+            Index(fields=['factura', 'ciclo_documental'], name='idx_doc_unificado_fact_ciclo'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['factura', 'scope', 'ciclo_documental'],
+                name='uniq_doc_unificado_fact_scope_ciclo',
+            ),
+        ]
+        verbose_name = 'Documento Unificado'
+        verbose_name_plural = 'Documentos Unificados'
+
+    def __str__(self):
+        return f"{self.factura.numero_factura} - {self.scope} - ciclo {self.ciclo_documental}"
 
 
 # ============================================================
