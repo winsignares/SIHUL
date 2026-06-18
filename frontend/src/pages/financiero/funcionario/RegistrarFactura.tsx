@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Calendar, Check, CheckCircle2, Download, ExternalLink, FileText, Upload, X, XCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { resolveBackendBaseUrl } from '../../../core/backendUrl';
 import { formatValidationErrors, type ApiError } from '../../../core/errorHandler';
 import { downloadDocumentoIndividual } from '../../../share/documentos-consolidados';
 import { departamentosService, documentosService, facturasService, parametrosSlaService, proveedoresService } from '../../../services/financiero';
@@ -25,6 +26,7 @@ const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'xml', 'png', 'jpg', 'jpeg']);
 const BLOCKED_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'ps1', 'js', 'vbs', 'scr', 'msi', 'com', 'jar', 'sh']);
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'application/xml', 'text/xml', 'image/png', 'image/jpeg']);
+const BACKEND_BASE_URL = resolveBackendBaseUrl(import.meta.env.VITE_API_URL);
 
 const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -196,6 +198,21 @@ const resolveDocumentUrl = (urlStorage?: string): string | null => {
   return null;
 };
 
+const buildDocumentoContenidoUrl = (
+  doc: Pick<DocumentoAdjunto, 'id' | 'archivo_url' | 'url_storage'>,
+  descargar = false
+): string | null => {
+  if (doc.id) {
+    const relativeUrl = `/api/financiero/documentos/${doc.id}/contenido/${descargar ? '?descargar=1' : ''}`;
+    return BACKEND_BASE_URL ? `${BACKEND_BASE_URL}${relativeUrl}` : relativeUrl;
+  }
+
+  const fallbackUrl = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+  if (!fallbackUrl) return null;
+  if (/^https?:\/\//i.test(fallbackUrl)) return fallbackUrl;
+  return BACKEND_BASE_URL ? `${BACKEND_BASE_URL}${fallbackUrl}` : fallbackUrl;
+};
+
 const validateUploadFile = (file: File): string | null => {
   const extension = getFileExtension(file.name);
 
@@ -234,7 +251,7 @@ export default function RegistrarFactura() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
-  const [prefillWarning, setPrefillWarning] = useState<string | null>(null);
+  const [, setPrefillWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
@@ -246,7 +263,7 @@ export default function RegistrarFactura() {
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [docs, setDocs] = useState<FuncionarioUploadedDoc[]>([]);
   const [existingDocs, setExistingDocs] = useState<DocumentoAdjunto[]>([]);
-  const [diagInfo, setDiagInfo] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; count: number; source: string; rawError: string | null }>({ status: 'idle', count: 0, source: '', rawError: null });
+  const [, setDiagInfo] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; count: number; source: string; rawError: string | null }>({ status: 'idle', count: 0, source: '', rawError: null });
   const [selectedExistingDocIds, setSelectedExistingDocIds] = useState<Set<string>>(new Set());
   const [rechazarOpen, setRechazarOpen] = useState(false);
   const [rechazarMotivo, setRechazarMotivo] = useState('');
@@ -501,18 +518,18 @@ export default function RegistrarFactura() {
   };
 
   const openExistingDocument = (doc: DocumentoAdjunto) => {
-    const url = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+    const url = buildDocumentoContenidoUrl(doc);
     if (!url) {
-      setError('Este documento no tiene una URL válida para vista previa en el navegador.');
+      setError('No fue posible ubicar este documento para vista previa desde la base de datos.');
       return;
     }
     setPreviewDocument({ url, name: doc.nombre_archivo || doc.tipo_documento || 'Documento' });
   };
 
   const downloadExistingDocument = (doc: DocumentoAdjunto) => {
-    const relUrl = resolveDocumentUrl(doc.archivo_url ?? doc.url_storage);
+    const relUrl = buildDocumentoContenidoUrl(doc, true);
     if (!relUrl) {
-      setError('Este documento no tiene una URL válida para descarga directa.');
+      setError('No fue posible ubicar este documento para descarga desde la base de datos.');
       return;
     }
     downloadDocumentoIndividual(relUrl, doc.nombre_archivo || 'documento');
@@ -1021,12 +1038,6 @@ export default function RegistrarFactura() {
         </motion.div>
       )}
 
-      {showLegacyBlocks && prefillWarning && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-          {prefillWarning}
-        </motion.div>
-      )}
-
       {prefillLoading && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
           Cargando información completa de la solicitud del proveedor...
@@ -1374,25 +1385,6 @@ export default function RegistrarFactura() {
                 </button>
               )}
             </div>
-
-            {showLegacyBlocks && prefillFromPendiente && prefillApplied && (
-              <div className={`mb-5 rounded-xl border p-4 text-sm font-mono ${
-                diagInfo.status === 'error' ? 'bg-red-50 border-red-300 text-red-800' :
-                diagInfo.status === 'loading' ? 'bg-slate-50 border-slate-300 text-slate-600' :
-                diagInfo.count === 0 ? 'bg-amber-50 border-amber-300 text-amber-800' :
-                'bg-green-50 border-green-300 text-green-800'
-              }`}>
-                <p className="font-bold text-xs mb-1">🔍 DIAGNÓSTICO DE DOCUMENTOS</p>
-                <p>Fuente: <span className="font-semibold">{diagInfo.source || '—'}</span></p>
-                <p>Resultado: <span className="font-bold">{diagInfo.status === 'loading' ? 'Consultando...' : `${diagInfo.count} documento(s) encontrado(s) en BD`}</span></p>
-                {diagInfo.rawError && <p className="mt-1 text-xs">Error: {diagInfo.rawError}</p>}
-                {diagInfo.status === 'done' && diagInfo.count === 0 && (
-                  <p className="mt-1 text-xs font-semibold">
-                    ⚠ La BD no tiene documentos para esta factura. El proveedor puede no haberlos subido correctamente, o fallaron al guardarse.
-                  </p>
-                )}
-              </div>
-            )}
 
             {showLegacyBlocks && existingDocs.length > 0 && (
               <motion.div
@@ -1955,7 +1947,7 @@ export default function RegistrarFactura() {
         <DialogContent className="max-w-7xl w-[95vw] h-[90vh]">
           <DialogHeader>
             <DialogTitle>{previewDocument?.name || 'Documento'}</DialogTitle>
-            <DialogDescription>Vista previa del soporte seleccionado.</DialogDescription>
+            <DialogDescription>Vista previa del soporte seleccionado. El sistema consulta este documento directamente en la base de datos.</DialogDescription>
           </DialogHeader>
           {previewDocument && (
             <div className="h-[calc(90vh-120px)] overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
@@ -2023,3 +2015,4 @@ export default function RegistrarFactura() {
     </div>
   );
 }
+

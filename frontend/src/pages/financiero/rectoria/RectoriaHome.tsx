@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import { useRectoriaHome } from '../../../hooks/financiero/rectoria';
+import { useAuth } from '../../../context/AuthContext';
 
 interface RectoriaHomeProps {
   onGoToAutorizar: () => void;
@@ -24,6 +25,7 @@ interface RectoriaHomeProps {
 const ACTIVITIES_PER_PAGE = 3;
 
 export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
+  const { components } = useAuth();
   const [activityPage, setActivityPage] = useState(1);
   const {
     cargando,
@@ -49,6 +51,10 @@ export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
       descriptionClass: 'text-slate-500',
     },
   ];
+
+  const visibleQuickActions = quickActions.filter(() =>
+    components.some((component) => component.nombre === 'Autorizar Pagos')
+  );
 
   const totalActivityPages = Math.max(1, Math.ceil(actividadesRecientes.length / ACTIVITIES_PER_PAGE));
 
@@ -94,7 +100,7 @@ export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
             </div>
 
             <div className="grid gap-3 xl:min-w-[340px]">
-              {quickActions.map((action) => {
+              {visibleQuickActions.map((action) => {
                 const Icon = action.icon;
                 return (
                   <button

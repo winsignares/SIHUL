@@ -5,6 +5,7 @@ import { FileSearch, CheckCircle2, XCircle, Shield, AlertCircle } from 'lucide-r
 import { facturasService } from '../../../services/financiero';
 import type { Factura as APIFactura } from '../../../models/financiero/core.models';
 import { Button } from '../../../share/button';
+import { useAuth } from '../../../context/AuthContext';
 
 interface AuditoriaHomeProps {
   onGoToControl: () => void;
@@ -19,6 +20,7 @@ const toList = <T,>(data: unknown): T[] => {
 };
 
 export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
+  const { components } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentActivityPage, setCurrentActivityPage] = useState(1);
   const [statsData, setStatsData] = useState({
@@ -107,6 +109,7 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
 
   const activityTotalPages = Math.max(1, Math.ceil(recentActivity.length / ACTIVIDADES_POR_PAGINA));
   const currentActivity = recentActivity.slice((currentActivityPage - 1) * ACTIVIDADES_POR_PAGINA, currentActivityPage * ACTIVIDADES_POR_PAGINA);
+  const canShowControlPrevio = components.some((component) => component.nombre === 'Control Previo');
 
   return (
     <div className="space-y-6">
@@ -155,7 +158,7 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
         })}
       </div>
 
-      <motion.button
+      {canShowControlPrevio && <motion.button
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3 }}
@@ -175,7 +178,7 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
             </div>
           </CardContent>
         </Card>
-      </motion.button>
+      </motion.button>}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

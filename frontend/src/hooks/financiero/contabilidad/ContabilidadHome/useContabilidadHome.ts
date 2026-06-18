@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, FileCheck, Calculator, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, FileCheck, Calculator, TrendingUp, Receipt } from 'lucide-react';
 import { facturasService, historialService } from '../../../../services/financiero';
 import type { HistorialFactura } from '../../../../models/financiero/core.models';
 
@@ -7,9 +8,11 @@ interface UseContabilidadHomeParams {
   onGoToPendientes: () => void;
   onGoToRadicar: () => void;
   onGoToCausar: () => void;
+  onGoToFacturaPagada: () => void;
 }
 
-export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCausar }: UseContabilidadHomeParams) {
+export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCausar, onGoToFacturaPagada }: UseContabilidadHomeParams) {
+  const navigate = useNavigate();
   const [registradas, setRegistradas] = useState<number | null>(null);
   const [radicadas, setRadicadas] = useState<number | null>(null);
   const [causadas, setCausadas] = useState<number | null>(null);
@@ -104,11 +107,11 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCau
       action: onGoToRadicar,
     },
     {
-      title: 'Causar Facturas',
-      description: 'Registrar el reconocimiento contable de las obligaciones',
-      icon: Calculator,
-      color: 'from-green-600 to-green-700',
-      action: onGoToCausar,
+      title: 'Factura Pagada',
+      description: 'Consulta facturas pagadas y descarga el expediente completo',
+      icon: Receipt,
+      color: 'from-emerald-600 to-emerald-700',
+      action: () => navigate('/financiero/tesoreria/comprobante'),
     },
   ];
 

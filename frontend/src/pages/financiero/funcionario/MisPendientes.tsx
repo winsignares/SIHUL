@@ -17,7 +17,8 @@ const ITEMS_PER_PAGE = 5;
 
 function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
   const dias = Math.max(0, Number(f.dias_transcurridos || 0));
-  const riesgo: FuncionarioPendingRow['nivelRiesgo'] = dias > 2 ? 'vencido' : dias > 0 ? 'amarillo' : 'verde';
+  const slaMax = Number(f.sla_objetivo_dias || 5);
+  const riesgo: FuncionarioPendingRow['nivelRiesgo'] = dias > slaMax ? 'vencido' : dias > slaMax * 0.5 ? 'amarillo' : 'verde';
   const contacto = [f.proveedor?.email, f.proveedor?.telefono].filter(Boolean).join(' | ');
   const area = f.departamento?.nombre?.trim() || '';
 
@@ -35,7 +36,7 @@ function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
     fechaRecepcion: f.fecha_recepcion || '',
     areaSolicitante: area || 'Sin area asignada',
     dias,
-    slaMax: 2,
+    slaMax,
     nivelRiesgo: riesgo,
     accion: area
       ? riesgo === 'vencido'

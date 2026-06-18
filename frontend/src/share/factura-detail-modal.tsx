@@ -4,8 +4,9 @@ import { Badge } from './badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { FileText, Clock, DollarSign, Building, MapPin, Hash, CalendarDays, Paperclip, Eye, Download, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import FacturaTimeline, { type TimelineEtapa } from './factura-timeline';
+import { buildTimelineFromSeguimiento } from './timeline-builder';
 import { displayDate, displayRadicado, displayText } from './field-placeholders';
-import { facturasService, documentosService } from '../services/financiero';
+import { facturasService, documentosService, parametrosSlaService } from '../services/financiero';
 import { mapFacturaDetail } from './factura-details-helpers';
 import { parseFacturaDescripcion } from './factura-description';
 import { openDocumentosConsolidados, downloadDocumentoIndividual } from './documentos-consolidados';
@@ -231,7 +232,7 @@ function buildDefaultTimeline(factura: SharedFacturaDetail): TimelineEtapa[] {
     ['Radicada', 'Contabilidad', 'Radicacion contable ejecutada', 3, factura.fechaRadicacion],
     ['Alistada', 'Tesoreria', 'Alistamiento previo a auditoria', 3, factura.fechaAlistamiento],
     ['Aprobada Auditoría', 'Auditoria', 'Control previo de auditoria aprobado', 4, factura.fechaAprobacionAuditoria],
-    ['Revisada Dir. Financiera', 'Direccion Financiera', 'Revision financiera y trazabilidad de soportes', 2, factura.fechaAprobacionAuditoria],
+    ['Revisada Dir. Financiera', 'Tesoreria', 'Envio a Direccion Financiera ejecutado', 2, factura.fechaAprobacionAuditoria],
     ['Cargada', 'Direccion Financiera', 'Cargue formal para autorizacion de Rectoría', 2, factura.fechaCargue],
     ['Enviada Rectoría', 'Direccion Financiera', 'Remitida para decision final institucional', 1, factura.fechaCargue],
     ['Rechazada por Rectoría', 'Rectoría', 'Rectoría rechaza el tramite y solicita recertificacion previa', 2, undefined],
@@ -308,9 +309,11 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     if (!rawId || Number.isNaN(rawId)) return;
 
     void (async () => {
-      const [detail, docs] = await Promise.all([
+      const [detail, docs, seguimiento, slaParams] = await Promise.all([
         facturasService.getById(rawId),
         documentosService.getByFactura(rawId),
+        facturasService.getSeguimiento(rawId).catch(() => null),
+        parametrosSlaService.listar().catch(() => []),
       ]);
       const mapped = mapFacturaDetail(detail, factura);
       // Siempre usamos el endpoint dedicado de documentos para garantizar la lista completa
@@ -328,6 +331,13 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
           verificado: d.verificado,
           url: d.archivo_url ?? d.url_storage ?? null,
         }));
+      }
+      if (seguimiento) {
+        mapped.etapasTimeline = buildTimelineFromSeguimiento(
+          seguimiento as { factura?: { estado?: string }; historial?: { fecha_accion?: string; accion?: string; estado_nuevo?: string; usuario_nombre?: string; observacion?: string }[] },
+          mapped.estado,
+          slaParams
+        );
       }
       setDetalleFactura(mapped);
     })();

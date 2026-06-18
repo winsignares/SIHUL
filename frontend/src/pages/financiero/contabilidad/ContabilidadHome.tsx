@@ -8,25 +8,36 @@ import {
 } from 'lucide-react';
 import type { ContabilidadHomePropsModel } from '../../../models/financiero/contabilidad';
 import { useContabilidadHome } from '../../../hooks/financiero/contabilidad';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function ContabilidadHome({
   onGoToPendientes,
   onGoToRadicar,
   onGoToCausar,
+  onGoToFacturaPagada,
 }: ContabilidadHomePropsModel) {
-  const { 
-    loadingStats, 
-    stats, 
-    quickActions, 
-    recentActivity, 
-    currentPage, 
-    setCurrentPage, 
-    totalPages, 
-    getEstadoBadge 
+  const { components } = useAuth();
+  const {
+    loadingStats,
+    stats,
+    quickActions,
+    recentActivity,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    getEstadoBadge
   } = useContabilidadHome({
     onGoToPendientes,
     onGoToRadicar,
     onGoToCausar,
+    onGoToFacturaPagada,
+  });
+
+  const visibleQuickActions = quickActions.filter((action) => {
+    if (action.title === 'Radicar Facturas') {
+      return components.some((component) => component.nombre === 'Radicar Facturas');
+    }
+    return true;
   });
 
   return (
@@ -92,7 +103,7 @@ export default function ContabilidadHome({
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {quickActions.map((action, index) => {
+        {visibleQuickActions.map((action, index) => {
           const Icon = action.icon;
           return (
             <motion.div

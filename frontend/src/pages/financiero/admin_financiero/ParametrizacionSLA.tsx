@@ -15,14 +15,15 @@ import { toast } from 'sonner';
 const ETAPAS_ORDEN: Array<{ index: number; terms: string[] }> = [
   { index: 1, terms: ['registro y recepcion', 'recepcion y registro'] },
   { index: 2, terms: ['radicacion'] },
-  { index: 3, terms: ['causacion'] },
-  { index: 4, terms: ['alistamiento'] },
-  { index: 5, terms: ['control previo'] },
-  { index: 6, terms: ['direccion financiera', 'envio a direccion financiera'] },
-  { index: 7, terms: ['cargue formal'] },
-  { index: 8, terms: ['autorizacion de pago'] },
-  { index: 9, terms: ['aplicacion de pago', 'pago aplicado', 'factura pagada', 'comprobante de egreso', 'generacion comprobante'] },
+  { index: 3, terms: ['alistamiento'] },
+  { index: 4, terms: ['control previo'] },
+  { index: 5, terms: ['envio a direccion financiera'] },
+  { index: 6, terms: ['cargue formal'] },
+  { index: 7, terms: ['envio a rectoria'] },
+  { index: 8, terms: ['aplicacion de pago', 'pago aplicado', 'factura pagada', 'comprobante de egreso', 'generacion comprobante'] },
 ];
+
+const ETAPAS_OCULTAS = ['causacion', 'autorizacion de pago'];
 
 const normalizeText = (value: string) =>
   value
@@ -105,7 +106,10 @@ export default function ParametrizacionSLAReal() {
 
   const parametrosOrdenados = useMemo(
     () => {
-      const sorted = [...parametros].sort((a, b) => {
+      const visibles = parametros.filter(
+        (p) => !ETAPAS_OCULTAS.some((term) => normalizeText(p.etapa).includes(term))
+      );
+      const sorted = visibles.sort((a, b) => {
         const orderA = getOrderByEtapa(a.etapa);
         const orderB = getOrderByEtapa(b.etapa);
         if (orderA !== orderB) return orderA - orderB;

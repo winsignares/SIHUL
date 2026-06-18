@@ -22,6 +22,7 @@ import {
 import FacturaDetailModal from '../../../share/factura-detail-modal';
 import KanbanVistaCompleta from './KanbanVistaCompleta';
 import { useDireccionFinancieraHome } from '../../../hooks/financiero/direccion_financiera';
+import { useAuth } from '../../../context/AuthContext';
 
 interface DireccionFinancieraHomeProps {
   onGoToPendientes: () => void;
@@ -34,6 +35,7 @@ export default function DireccionFinancieraHome({
   onGoToRevisar,
   onGoToConfirmar,
 }: DireccionFinancieraHomeProps) {
+  const { components } = useAuth();
   const [activityPage, setActivityPage] = useState(1);
   const {
     cargando,
@@ -68,6 +70,18 @@ export default function DireccionFinancieraHome({
       className: 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-200',
     },
   ];
+
+  const visibleQuickActions = quickActions.filter((action) => {
+    if (action.title === 'Cargue y Revision') {
+      return components.some((component) => component.nombre === 'Revisar Pagos Direccion Financiera');
+    }
+    if (action.title === 'Control Bancario') {
+      return components.some((component) =>
+        ['Confirmacion Pagos Direccion Financiera', 'Control de Pago Bancario Direccion Financiera'].includes(component.nombre)
+      );
+    }
+    return true;
+  });
 
   const statsData = [
     {
@@ -146,7 +160,7 @@ export default function DireccionFinancieraHome({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[420px]">
-              {quickActions.map((action) => {
+              {visibleQuickActions.map((action) => {
                 const Icon = action.icon;
                 return (
                   <button

@@ -6,7 +6,7 @@ import CentroContable from './CentroContable';
 import { useContabilidadDashboard } from '../../../hooks/financiero/contabilidad';
 
 export default function ContabilidadDashboard() {
-  const { activeView, goToPendientes, goToRadicar, goToCausar } = useContabilidadDashboard();
+  const { activeView, goToPendientes, goToRadicar, goToCausar, goToCentroContable } = useContabilidadDashboard();
 
   const renderContent = () => {
     switch (activeView) {
@@ -24,6 +24,7 @@ export default function ContabilidadDashboard() {
             onGoToPendientes={goToPendientes}
             onGoToRadicar={goToRadicar}
             onGoToCausar={goToCausar}
+            onGoToFacturaPagada={goToCentroContable}
           />
         );
     }

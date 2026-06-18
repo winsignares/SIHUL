@@ -4,25 +4,13 @@ import { Calendar, Download, Eye, Search, Filter, FileSearch, Bell } from 'lucid
 import { useSearchParams } from 'react-router-dom';
 import { facturasService } from '../../../services/financiero';
 import type { Factura } from '../../../models/financiero/core.models';
-import type { FuncionarioConsultaRow, FuncionarioEstadoChange, FuncionarioSeguimientoResponse } from '../../../models/financiero/funcionario';
+import type { FuncionarioConsultaRow, FuncionarioEstadoChange } from '../../../models/financiero/funcionario';
 import FacturaDetailModal, { type SharedFacturaDetail } from '../../../share/factura-detail-modal';
-import type { TimelineEtapa } from '../../../share/factura-timeline';
+import { buildTimelineFromSeguimiento, TIMELINE_BLUEPRINT } from '../../../share/timeline-builder';
+import type { SeguimientoLike } from '../../../share/timeline-builder';
 import { displayDate, displayRadicado } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
 
-const TIMELINE_BLUEPRINT: Array<{ id: string; nombre: string; estadoRef: string; responsable: string; diasMaximos: number }> = [
-  { id: '1', nombre: 'Recepción', estadoRef: 'Recibida', responsable: 'Funcionario', diasMaximos: 1 },
-  { id: '1.5', nombre: 'Registro Completo', estadoRef: 'Registrada', responsable: 'Funcionario', diasMaximos: 1 },
-  { id: '2', nombre: 'Radicación', estadoRef: 'Radicada', responsable: 'Contabilidad', diasMaximos: 3 },
-  { id: '3', nombre: 'Causación', estadoRef: 'Causada', responsable: 'Contabilidad', diasMaximos: 2 },
-  { id: '4', nombre: 'Alistamiento', estadoRef: 'Alistada', responsable: 'Tesorería', diasMaximos: 3 },
-  { id: '5', nombre: 'Control Previo', estadoRef: 'Aprobada Auditoría', responsable: 'Auditoría', diasMaximos: 4 },
-  { id: '6', nombre: 'Cargue', estadoRef: 'Cargada', responsable: 'Dirección Financiera', diasMaximos: 2 },
-  { id: '7', nombre: 'Revisión Dirección Financiera', estadoRef: 'Revisada Dir. Financiera', responsable: 'Dirección Financiera', diasMaximos: 2 },
-  { id: '8', nombre: 'Envío a Rectoría', estadoRef: 'Enviada Rectoría', responsable: 'Dirección Financiera', diasMaximos: 1 },
-  { id: '9', nombre: 'Autorización de Pago', estadoRef: 'Autorizada', responsable: 'Rectoría', diasMaximos: 3 },
-  { id: '10', nombre: 'Factura Pagada', estadoRef: 'Pagada', responsable: 'Tesorería', diasMaximos: 1 },
-];
 
 const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -60,7 +48,7 @@ function mapFactura(f: Factura): FuncionarioConsultaRow {
 }
 
 function inferEtapaActual(estado: string): string {
-  const found = TIMELINE_BLUEPRINT.find((item) => item.estadoRef === estado);
+  const found = TIMELINE_BLUEPRINT.find((item) => item.estadoRef === estado || (item.id === '10' && ['Pago Aplicado', 'Pagada'].includes(estado)));
   return found?.nombre || estado;
 }
 
@@ -69,41 +57,6 @@ function mapRiesgo(risk: FuncionarioConsultaRow['riesgo']): 'verde' | 'amarillo'
   return risk;
 }
 
-function buildTimelineFromSeguimiento(seguimiento: FuncionarioSeguimientoResponse, fallbackEstado: string): TimelineEtapa[] {
-  const historial = Array.isArray(seguimiento?.historial) ? [...seguimiento.historial] : [];
-  historial.sort((a, b) => new Date(a.fecha_accion || 0).getTime() - new Date(b.fecha_accion || 0).getTime());
-
-  const estadoActual = seguimiento?.factura?.estado || fallbackEstado;
-  const estadoIndex = TIMELINE_BLUEPRINT.findIndex((step) => step.estadoRef === estadoActual);
-
-  const isRejectedFlow = ['Rechazada', 'Rechazada Auditoría', 'Devuelta', 'Detenida', 'Anulada'].includes(estadoActual);
-
-  return TIMELINE_BLUEPRINT.map((step, index) => {
-    const matchHistorial = historial.find((h) => h.estado_nuevo === step.estadoRef);
-    let estado: TimelineEtapa['estado'];
-    
-    if (isRejectedFlow && index === Math.max(estadoIndex, 0)) {
-      estado = 'rechazado';
-    } else if (estadoIndex >= 0 && index <= estadoIndex) {
-      estado = 'completado';
-    } else if (estadoIndex >= 0 && index === estadoIndex + 1) {
-      estado = 'en-proceso';
-    } else {
-      estado = 'pendiente';
-    }
-
-    return {
-      id: step.id,
-      nombre: step.nombre,
-      estado,
-      fechaInicio: matchHistorial?.fecha_accion,
-      fechaFin: matchHistorial?.fecha_accion,
-      usuarioResponsable: matchHistorial?.usuario_nombre || step.responsable,
-      observaciones: matchHistorial?.observacion || matchHistorial?.accion || undefined,
-      diasMaximos: step.diasMaximos,
-    };
-  });
-}
 
 export default function ConsultarFacturas() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -240,7 +193,7 @@ export default function ConsultarFacturas() {
         const seguimiento = await facturasService.getSeguimiento(selectedRow.facturaId);
         const factura = (seguimiento?.factura || null) as Factura | null;
         const estadoActual = factura?.estado || selectedRow.estado;
-        const timeline = buildTimelineFromSeguimiento(seguimiento as FuncionarioSeguimientoResponse, estadoActual);
+        const timeline = buildTimelineFromSeguimiento(seguimiento as SeguimientoLike, estadoActual);
 
         setSelectedDetail({
           facturaId: selectedRow.facturaId,
