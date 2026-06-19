@@ -47,8 +47,6 @@ services:
       - ./backend:/app
       # Archivos subidos por usuarios (media) — volumen persistente
       - sihul_media:/app/media
-    env_file:
-      - ./.env
     environment:
       # Database (usa los mismos valores que el servicio db)
       DB_HOST: db
