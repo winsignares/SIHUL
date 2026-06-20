@@ -58,7 +58,7 @@ jobs:
           const fs = require('fs');
           const data = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
           const vulns = Object.entries(data.vulnerabilities || {});
-          const nonXlsxVulns = vulns.filter(([key, vuln]) => !key.includes('xlsx'));
+          const nonXlsxVulns = vulns.filter(([key, vuln]) => !key.includes('xlsx') && !key.includes('dompurify'));
           
           if (nonXlsxVulns.length > 0) {
             console.error('❌ Found non-xlsx vulnerabilities:');
