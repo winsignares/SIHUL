@@ -839,15 +839,17 @@ def exportar_horarios_pdf_post(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
+        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
+        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por grupo
         grupos_dict = {}
@@ -1046,15 +1048,17 @@ def exportar_horarios_excel_post(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
+        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
+        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por grupo
         grupos_dict = {}
@@ -1711,15 +1715,17 @@ def exportar_horarios_pdf_docente(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
+        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
+        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por docente
         docentes_dict = {}
@@ -1908,15 +1914,17 @@ def exportar_horarios_excel_docente(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
+        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
+        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por docente
         docentes_dict = {}
@@ -2764,4 +2772,3 @@ def list_horarios_extendidos_usuario(usuario_id):
         print(f"ERROR en list_horarios_extendidos_usuario: {str(e)}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         return []
-

@@ -159,7 +159,7 @@ export function useReportes() {
                 }
 
                 // Cargar horarios extendidos
-                const horariosResponse = await horarioService.listExtendidos();
+                const horariosResponse = await horarioService.listExtendidos({ includePending: true });
                 const horariosExtendidos = horariosResponse.horarios;
 
                 // Cargar programas
@@ -468,7 +468,7 @@ export function useReportes() {
             if (tipoReporte === 'horarios-programa') {
                 
                 // Cargar todos los horarios extendidos del backend
-                const horariosResponse = await horarioService.listExtendidos();
+                const horariosResponse = await horarioService.listExtendidos({ includePending: true });
                 const todosLosHorarios = horariosResponse.horarios;
                 
                 // Filtrar según el filtro de programa aplicado
@@ -482,7 +482,8 @@ export function useReportes() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: horariosAExportar
+                        horarios: horariosAExportar,
+                        include_pending: true
                     })
                 });
 
@@ -507,7 +508,7 @@ export function useReportes() {
             if (tipoReporte === 'horarios-docente') {
                 
                 // Cargar todos los horarios extendidos del backend
-                const horariosResponse = await horarioService.listExtendidos();
+                const horariosResponse = await horarioService.listExtendidos({ includePending: true });
                 const todosLosHorarios = horariosResponse.horarios;
                 
                 // Filtrar según el filtro de docente aplicado
@@ -521,7 +522,8 @@ export function useReportes() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: horariosAExportar
+                        horarios: horariosAExportar,
+                        include_pending: true
                     })
                 });
 
@@ -644,7 +646,7 @@ export function useReportes() {
             if (tipoReporte === 'horarios-programa') {
                 
                 // Cargar todos los horarios extendidos del backend
-                const horariosResponse = await horarioService.listExtendidos();
+                const horariosResponse = await horarioService.listExtendidos({ includePending: true });
                 const todosLosHorarios = horariosResponse.horarios;
                 
                 // Filtrar según el filtro de programa aplicado
@@ -658,7 +660,8 @@ export function useReportes() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: horariosAExportar
+                        horarios: horariosAExportar,
+                        include_pending: true
                     })
                 });
 
@@ -684,7 +687,7 @@ export function useReportes() {
                 
                 try {
                     // Cargar todos los horarios extendidos del backend
-                    const horariosResponse = await horarioService.listExtendidos();
+                    const horariosResponse = await horarioService.listExtendidos({ includePending: true });
                     const todosLosHorarios = horariosResponse.horarios;
                     
                     // Filtrar según el filtro de docente aplicado
@@ -700,7 +703,8 @@ export function useReportes() {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            horarios: horariosAExportar
+                            horarios: horariosAExportar,
+                            include_pending: true
                         })
                     });
 
