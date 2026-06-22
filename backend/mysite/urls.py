@@ -46,7 +46,7 @@ router.register(r'roles', RolViewSet, basename='rol-api')
 router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('panel-sihul-gestion/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/auth/', include('mysite.auth_urls')),
     path('api/periodos/', include('periodos.api_urls')),
