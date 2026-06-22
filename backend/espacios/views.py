@@ -3058,7 +3058,7 @@ def generar_pdf_reporte_capacidad(request):
             
             # Legend items
             legend_data = [
-                ['Capacidad Utilizada', 'Porcentaje'],
+                ['Alta', 'Media', 'Baja'],
                 ['Alta (>75%)', '■ Media (40-75%)', 'Baja (<40%)']
             ]
             

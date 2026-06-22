@@ -126,6 +126,19 @@ export function useReportes() {
         return filtrarHorariosPorEstado(response.horarios);
     };
 
+    const assertResponseOk = async (response: Response, fallback: string) => {
+        if (response.ok) return;
+
+        let detail = '';
+        try {
+            detail = await response.text();
+        } catch {
+            detail = '';
+        }
+
+        throw new Error(`${fallback}: ${response.status}${detail ? ` - ${detail}` : ''}`);
+    };
+
     // Cargar período académico activo
     useEffect(() => {
         const cargarPeriodo = async () => {
@@ -405,9 +418,7 @@ export function useReportes() {
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -436,9 +447,7 @@ export function useReportes() {
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -467,9 +476,7 @@ export function useReportes() {
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -495,7 +502,7 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf/`, {
+                const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -506,9 +513,7 @@ export function useReportes() {
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -534,7 +539,7 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
                 
-                const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
+                const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf-docente/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -545,9 +550,7 @@ export function useReportes() {
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -671,7 +674,7 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await trackedFetch(`${apiUrl}/horario/exportar-excel/`, {
+                const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -682,9 +685,7 @@ export function useReportes() {
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar Excel');
-                }
+                await assertResponseOk(response, 'Error al generar Excel');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -713,7 +714,7 @@ export function useReportes() {
                     
                     console.log('Enviando horarios al endpoint:', horariosAExportar.length);
                     
-                    const response = await trackedFetch(`${apiUrl}/horario/exportar-excel-docente/`, {
+                    const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel-docente/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -724,11 +725,7 @@ export function useReportes() {
                         })
                     });
 
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Error response:', errorText);
-                        throw new Error(`Error al generar Excel: ${response.status}`);
-                    }
+                    await assertResponseOk(response, 'Error al generar Excel');
 
                     const blob = await response.blob();
                     console.log('Blob recibido:', blob.size, 'bytes');

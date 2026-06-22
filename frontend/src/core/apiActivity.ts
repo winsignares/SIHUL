@@ -68,7 +68,18 @@ export async function trackedFetch(
 ): Promise<Response> {
   const endRequest = beginApiRequest();
   try {
-    return await fetch(input, init);
+    const token = localStorage.getItem('auth_token');
+    const headers = new Headers(init?.headers);
+
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    return await fetch(input, {
+      ...init,
+      credentials: init?.credentials ?? 'include',
+      headers,
+    });
   } catch (error) {
     reportApiError(error);
     throw error;

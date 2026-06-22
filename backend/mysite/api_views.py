@@ -258,7 +258,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def reporte_ocupacion(self, request):
         return espacios_api.reporte_ocupacion(request._request)
 
-    @action(detail=False, methods=['get'], url_path='reporte/ocupacion/pdf')
+    @action(detail=False, methods=['post'], url_path='reporte/ocupacion/pdf')
     def reporte_ocupacion_pdf(self, request):
         return espacios_api.generar_pdf_reporte_ocupacion(request._request)
 
@@ -266,7 +266,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def reporte_disponibilidad(self, request):
         return espacios_api.reporte_disponibilidad(request._request)
 
-    @action(detail=False, methods=['get'], url_path='reporte/disponibilidad/pdf')
+    @action(detail=False, methods=['post'], url_path='reporte/disponibilidad/pdf')
     def reporte_disponibilidad_pdf(self, request):
         return espacios_api.generar_pdf_reporte_disponibilidad(request._request)
 
@@ -274,7 +274,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def reporte_capacidad(self, request):
         return espacios_api.reporte_capacidad(request._request)
 
-    @action(detail=False, methods=['get'], url_path='reporte/capacidad/pdf')
+    @action(detail=False, methods=['post'], url_path='reporte/capacidad/pdf')
     def reporte_capacidad_pdf(self, request):
         return espacios_api.generar_pdf_reporte_capacidad(request._request)
 
