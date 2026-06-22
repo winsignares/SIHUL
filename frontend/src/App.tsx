@@ -7,10 +7,13 @@ import { Toaster } from "./share/sonner";
 import AppRouter from "./router/AppRouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ApiRequestFeedback } from "./components/common/ApiRequestFeedback";
+import { BackendOfflineOverlay } from "./components/common/BackendOfflineOverlay";
+import { startBackendHealthWatcher } from "./core/backendHealth";
 
 export default function App() {
   useEffect(() => {
-    // La sesión se manejará mediante AuthContext
+    const stopWatcher = startBackendHealthWatcher();
+    return stopWatcher;
   }, []);
 
   return (
@@ -21,6 +24,7 @@ export default function App() {
             <UserProvider>
               <AppRouter />
               <ApiRequestFeedback />
+              <BackendOfflineOverlay />
               <Toaster position="top-right" richColors expand />
             </UserProvider>
           </NotificacionesProvider>
