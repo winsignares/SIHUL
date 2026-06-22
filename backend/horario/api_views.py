@@ -148,9 +148,12 @@ def list_horarios_extendidos(request):
 
     user_sede = getattr(request, 'sede', None)
     include_pending = request.GET.get('include_pending', '').lower() in ('1', 'true', 'yes')
+    estado_horario = (request.GET.get('estado_horario') or request.GET.get('estadoHorario') or '').strip().lower()
 
     qs = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa')
-    if include_pending:
+    if estado_horario == 'pendiente':
+        qs = qs.filter(estado='pendiente')
+    elif estado_horario in ('todos', 'all') or include_pending:
         qs = qs.filter(estado__in=['aprobado', 'pendiente'])
     else:
         qs = qs.filter(estado='aprobado')
@@ -587,4 +590,3 @@ def horarios_por_periodo(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-

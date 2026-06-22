@@ -33,6 +33,7 @@ export interface CreateHorarioPayload {
 
 interface ListHorariosExtendidosOptions {
     includePending?: boolean;
+    estado?: HorarioEstado | 'todos';
 }
 
 type HorarioEstado = 'pendiente' | 'aprobado' | 'rechazado';
@@ -312,7 +313,14 @@ export const horarioService = {
      * Lista todos los horarios con información extendida
      */
     listExtendidos: async (options: ListHorariosExtendidosOptions = {}): Promise<ListHorariosExtendidosResponse> => {
-        const query = options.includePending ? '?include_pending=1' : '';
+        const params = new URLSearchParams();
+        if (options.estado) {
+            params.set('estado_horario', options.estado);
+        }
+        if (!options.estado && options.includePending) {
+            params.set('include_pending', '1');
+        }
+        const query = params.toString() ? `?${params.toString()}` : '';
         return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`, { requiresAuth: false });
     },
 

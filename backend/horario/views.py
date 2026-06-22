@@ -23,6 +23,18 @@ from io import BytesIO
 import sys
 import openpyxl
 
+
+def _estados_exportables_horario(data):
+    estado = str(data.get('estado_horario') or data.get('estadoHorario') or '').strip().lower()
+    include_pending = bool(data.get('include_pending') or data.get('includePending'))
+
+    if estado == 'pendiente':
+        return {'pendiente'}
+    if estado in {'todos', 'all'} or include_pending:
+        return {'aprobado', 'pendiente'}
+    return {'aprobado'}
+
+
 # ---------- Endpoint para Mi Horario (Docente) ----------
 @csrf_exempt
 def mi_horario_docente(request):
@@ -839,13 +851,11 @@ def exportar_horarios_pdf_post(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
-        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
-        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        estados_exportables = _estados_exportables_horario(data)
         horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
@@ -1048,13 +1058,11 @@ def exportar_horarios_excel_post(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
-        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
-        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        estados_exportables = _estados_exportables_horario(data)
         horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
@@ -1715,13 +1723,11 @@ def exportar_horarios_pdf_docente(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
-        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
-        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        estados_exportables = _estados_exportables_horario(data)
         horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
@@ -1914,13 +1920,11 @@ def exportar_horarios_excel_docente(request):
     try:
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
-        include_pending = bool(data.get('include_pending') or data.get('includePending'))
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Por defecto se exportan solo aprobados. Reportes puede pedir incluir pendientes.
-        estados_exportables = {'aprobado', 'pendiente'} if include_pending else {'aprobado'}
+        estados_exportables = _estados_exportables_horario(data)
         horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
