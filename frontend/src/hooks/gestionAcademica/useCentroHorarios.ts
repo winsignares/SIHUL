@@ -641,7 +641,7 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf/`, {
+            const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -677,7 +677,7 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const response = await trackedFetch(`${apiUrl}/horario/exportar-excel/`, {
+            const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

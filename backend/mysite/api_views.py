@@ -37,7 +37,7 @@ from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global, is_admin_sistema
+from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective
 from .seccional_auth import SeccionalMixin
 from .permissions import (
     IsAdminGlobal,
@@ -85,7 +85,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
         user = self.get_current_user()
 
         if self.request.method == 'GET':
-            if user and (is_admin_global(user) or is_admin_sistema(user)):
+            if user and is_superuser_effective(user):
                 return Seccional.objects.all()
 
             seccional = self.get_user_seccional()
@@ -94,7 +94,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
             return Seccional.objects.filter(id=seccional.id)
 
-        if user and (is_admin_global(user) or is_admin_sistema(user)):
+        if user and is_superuser_effective(user):
             return super().get_queryset()
 
         return Seccional.objects.none()
@@ -274,7 +274,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def reporte_ocupacion(self, request):
         return espacios_api.reporte_ocupacion(request._request)
 
-    @action(detail=False, methods=['get'], url_path='reporte/ocupacion/pdf')
+    @action(detail=False, methods=['post'], url_path='reporte/ocupacion/pdf')
     def reporte_ocupacion_pdf(self, request):
         return espacios_api.generar_pdf_reporte_ocupacion(request._request)
 
@@ -282,7 +282,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def reporte_disponibilidad(self, request):
         return espacios_api.reporte_disponibilidad(request._request)
 
-    @action(detail=False, methods=['get'], url_path='reporte/disponibilidad/pdf')
+    @action(detail=False, methods=['post'], url_path='reporte/disponibilidad/pdf')
     def reporte_disponibilidad_pdf(self, request):
         return espacios_api.generar_pdf_reporte_disponibilidad(request._request)
 
@@ -290,7 +290,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def reporte_capacidad(self, request):
         return espacios_api.reporte_capacidad(request._request)
 
-    @action(detail=False, methods=['get'], url_path='reporte/capacidad/pdf')
+    @action(detail=False, methods=['post'], url_path='reporte/capacidad/pdf')
     def reporte_capacidad_pdf(self, request):
         return espacios_api.generar_pdf_reporte_capacidad(request._request)
 
@@ -609,6 +609,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         from espacios.models import EspacioPermitido
 
         espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permisos = espacios_permisos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
         return [
             {
                 'id': ep.espacio.id,

@@ -20,9 +20,23 @@ import {
 const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
 const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles';
 const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
-const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios';
-const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios';
+const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v2';
+const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
 const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
+
+type EspacioAsignable = {
+    id: number;
+    nombre: string;
+    tipo_id: number;
+    sede_id: number;
+    sede_seccional_id: number | null;
+};
+
+type SedeAsignable = {
+    id: number;
+    nombre: string;
+    seccional_id: number | null;
+};
 
 export function useGestionUsuarios() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -57,8 +71,8 @@ export function useGestionUsuarios() {
     // Estados para datos dinámicos desde backend
     const [rolesDisponibles, setRolesDisponibles] = useState<Rol[]>([]);
     const [facultadesDisponibles, setFacultadesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
-    const [espaciosDisponibles, setEspaciosDisponibles] = useState<Array<{ id: number, nombre: string, tipo_id: number }>>([]);
-    const [sedesDisponibles, setSedesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioAsignable[]>([]);
+    const [sedesDisponibles, setSedesDisponibles] = useState<SedeAsignable[]>([]);
 
     // Estados para espacios permitidos (solo supervisor_general)
     const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
@@ -174,7 +188,7 @@ export function useGestionUsuarios() {
             const activeToken = localStorage.getItem('auth_token');
             const cachedEspacios = force
                 ? null
-                : getSessionCacheData<Array<{ id: number, nombre: string, tipo_id: number }>>(GESTION_ESPACIOS_CACHE_KEY, activeToken);
+                : getSessionCacheData<EspacioAsignable[]>(GESTION_ESPACIOS_CACHE_KEY, activeToken);
 
             if (cachedEspacios) {
                 setEspaciosDisponibles(cachedEspacios);
@@ -185,7 +199,9 @@ export function useGestionUsuarios() {
             const espacios = (response.espacios || []).map((espacio) => ({
                 id: espacio.id as number,
                 nombre: espacio.nombre,
-                tipo_id: espacio.tipo_id
+                tipo_id: espacio.tipo_id,
+                sede_id: espacio.sede_id,
+                sede_seccional_id: espacio.sede_seccional_id ?? null,
             }));
             setEspaciosDisponibles(espacios);
             setSessionCacheData(GESTION_ESPACIOS_CACHE_KEY, activeToken, espacios);
@@ -221,7 +237,7 @@ export function useGestionUsuarios() {
             const activeToken = localStorage.getItem('auth_token');
             const cachedSedes = force
                 ? null
-                : getSessionCacheData<Array<{ id: number, nombre: string }>>(GESTION_SEDES_CACHE_KEY, activeToken);
+                : getSessionCacheData<SedeAsignable[]>(GESTION_SEDES_CACHE_KEY, activeToken);
 
             if (cachedSedes) {
                 setSedesDisponibles(cachedSedes);
@@ -232,6 +248,7 @@ export function useGestionUsuarios() {
             const sedes = (response.sedes || []).map((sede) => ({
                 id: sede.id as number,
                 nombre: sede.nombre,
+                seccional_id: sede.seccional_id ?? null,
             }));
             setSedesDisponibles(sedes);
             setSessionCacheData(GESTION_SEDES_CACHE_KEY, activeToken, sedes);
@@ -306,16 +323,41 @@ export function useGestionUsuarios() {
         setTiposEspacioPermitidosEdit(tiposEspacioPermitidosEdit.filter(id => id !== tipoId));
     }, [tiposEspacioPermitidosEdit]);
 
-    const buildEspaciosPayloadPorTipo = useCallback((tiposIds: number[], asignarTodos: boolean) => {
+    const getEspaciosDisponiblesPorSeccionalDeSede = useCallback((sedeId?: number | null) => {
+        if (!sedeId) return [];
+        const seccionalId = sedesDisponibles.find(sede => sede.id === sedeId)?.seccional_id ?? null;
+        if (!seccionalId) return [];
+        return espaciosDisponibles.filter(espacio => espacio.sede_seccional_id === seccionalId);
+    }, [espaciosDisponibles, sedesDisponibles]);
+
+    const espaciosDisponiblesCreacion = useMemo(
+        () => getEspaciosDisponiblesPorSeccionalDeSede(sedeSeleccionada ? parseInt(sedeSeleccionada, 10) : null),
+        [getEspaciosDisponiblesPorSeccionalDeSede, sedeSeleccionada]
+    );
+
+    const espaciosDisponiblesEdicion = useMemo(
+        () => getEspaciosDisponiblesPorSeccionalDeSede(editingUser?.sede_id ?? null),
+        [getEspaciosDisponiblesPorSeccionalDeSede, editingUser?.sede_id]
+    );
+
+    useEffect(() => {
+        setEspacioSeleccionado('');
+        setEspaciosPermitidos([]);
+        setTipoEspacioSeleccionado('');
+        setTiposEspacioPermitidos([]);
+        setAsignarTodosEspaciosPorTipo(false);
+    }, [sedeSeleccionada]);
+
+    const buildEspaciosPayloadPorTipo = useCallback((tiposIds: number[], asignarTodos: boolean, espaciosBase = espaciosDisponibles) => {
         if (asignarTodos) {
-            return espaciosDisponibles.map(e => e.id);
+            return espaciosBase.map(e => e.id);
         }
 
         if (tiposIds.length === 0) {
             return [];
         }
 
-        return espaciosDisponibles
+        return espaciosBase
             .filter(e => tiposIds.includes(e.tipo_id))
             .map(e => e.id);
     }, [espaciosDisponibles]);
@@ -354,7 +396,7 @@ export function useGestionUsuarios() {
             if (rol?.nombre === 'supervisor_general') {
                 espaciosPayload = modoAsignacionSupervisor === 'individual'
                     ? espaciosPermitidos
-                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo);
+                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, espaciosDisponiblesCreacion);
             }
 
             await userService.crearUsuario({
@@ -395,7 +437,7 @@ export function useGestionUsuarios() {
             if (rol?.nombre === 'supervisor_general') {
                 espaciosPayload = modoAsignacionSupervisorEdit === 'individual'
                     ? espaciosPermitidosEdit
-                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit);
+                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, espaciosDisponiblesEdicion);
             }
 
             await userService.actualizarUsuario({
@@ -627,6 +669,8 @@ export function useGestionUsuarios() {
         rolesDisponibles,
         facultadesDisponibles,
         espaciosDisponibles,
+        espaciosDisponiblesCreacion,
+        espaciosDisponiblesEdicion,
         sedesDisponibles,
         tiposEspacioDisponibles,
         espacioSeleccionado, setEspacioSeleccionado,

@@ -10,7 +10,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 from notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import is_admin_global, is_admin_sistema
+from mysite.auth_helpers import is_superuser_effective
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -23,48 +23,17 @@ from io import BytesIO
 import sys
 import openpyxl
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
-from mysite.xss_protection import sanitize_dict, HORARIO_SCHEMA
 
+def _estados_exportables_horario(data):
+    estado = str(data.get('estado_horario') or data.get('estadoHorario') or '').strip().lower()
+    include_pending = bool(data.get('include_pending') or data.get('includePending'))
 
-def _get_request_user(request):
-    return getattr(request, 'user_obj', None)
+    if estado == 'pendiente':
+        return {'pendiente'}
+    if estado in {'todos', 'all'} or include_pending:
+        return {'aprobado', 'pendiente'}
+    return {'aprobado'}
 
-
-def _is_admin_user(user):
-    if not user:
-        return False
-    if getattr(user, 'es_superusuario', False):
-        return True
-    role_name = get_role_name(user)
-    return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
-
-
-def _require_auth(request):
-    user = _get_request_user(request)
-    if not user:
-        return None, JsonResponse({"error": "Autenticación requerida"}, status=403)
-    return user, None
-
-
-def _require_admin(request):
-    user, auth_error = _require_auth(request)
-    if auth_error:
-        return None, auth_error
-    if not _is_admin_user(user):
-        return None, JsonResponse({"error": "No autorizado"}, status=403)
-    return user, None
-
-
-def _require_same_user_or_admin(request, usuario_id):
-    user, auth_error = _require_auth(request)
-    if auth_error:
-        return None, auth_error
-    if _is_admin_user(user):
-        return user, None
-    if not usuario_id or user.id != int(usuario_id):
-        return None, JsonResponse({"error": "No autorizado"}, status=403)
-    return user, None
 
 # ---------- Endpoint para Mi Horario (Docente) ----------
 @csrf_exempt
@@ -79,10 +48,6 @@ def mi_horario_docente(request):
         
         if not usuario_id:
             return JsonResponse({"error": "usuario_id es requerido"}, status=400)
-
-        user, auth_error = _require_same_user_or_admin(request, usuario_id)
-        if auth_error:
-            return auth_error
         
         # Verificar que el usuario existe
         try:
@@ -183,10 +148,6 @@ def inscribir_estudiante(request):
         
         if not usuario_id or not horario_id:
             return JsonResponse({"error": "usuario_id y horario_id son requeridos"}, status=400)
-
-        user, auth_error = _require_same_user_or_admin(request, usuario_id)
-        if auth_error:
-            return auth_error
             
         estudiante = Usuario.objects.get(id=usuario_id)
         horario = Horario.objects.get(id=horario_id)
@@ -212,27 +173,16 @@ def create_horario(request):
     if request.method != 'POST':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
-        
-        # Sanitizar y validar inputs contra XSS
-        try:
-            sanitized_data = sanitize_dict(data, HORARIO_SCHEMA)
-        except ValidationError as e:
-            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
-        
-        grupo_id = sanitized_data.get('grupo_id')
-        asignatura_id = sanitized_data.get('asignatura_id')
-        espacio_id = sanitized_data.get('espacio_id')
-        dia_semana = sanitized_data.get('dia_semana')
-        hora_inicio = sanitized_data.get('hora_inicio')
-        hora_fin = sanitized_data.get('hora_fin')
-        docente_id = sanitized_data.get('docente_id')
-        cantidad = sanitized_data.get('cantidad_estudiantes')
-        usuario_id = sanitized_data.get('usuario_id')  # Usuario que hace la solicitud
+        grupo_id = data.get('grupo_id')
+        asignatura_id = data.get('asignatura_id')
+        espacio_id = data.get('espacio_id')
+        dia_semana = data.get('dia_semana')
+        hora_inicio = data.get('hora_inicio')
+        hora_fin = data.get('hora_fin')
+        docente_id = data.get('docente_id')
+        cantidad = data.get('cantidad_estudiantes')
+        usuario_id = data.get('usuario_id')  # Usuario que hace la solicitud
         
         if not grupo_id or not asignatura_id or not espacio_id or not dia_semana or not hora_inicio or not hora_fin:
             return JsonResponse({"error": "Faltan campos requeridos"}, status=400)
@@ -241,10 +191,6 @@ def create_horario(request):
         asignatura = Asignatura.objects.get(id=asignatura_id)
         espacio = EspacioFisico.objects.get(id=espacio_id)
         docente = Usuario.objects.get(id=docente_id) if docente_id else None
-        if usuario_id and not _is_admin_user(user) and user.id != int(usuario_id):
-            return JsonResponse({"error": "No autorizado"}, status=403)
-        if not _is_admin_user(user):
-            usuario_id = user.id
         usuario = Usuario.objects.get(id=usuario_id) if usuario_id else None
         
         hi = datetime.time.fromisoformat(hora_inicio)
@@ -320,10 +266,6 @@ def update_horario(request):
     if request.method != 'PUT':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         id = data.get('id')
         if not id:
@@ -366,10 +308,6 @@ def delete_horario(request):
     if request.method != 'DELETE':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         id = data.get('id')
         if not id:
@@ -414,10 +352,6 @@ def get_horario(request, id=None):
 @csrf_exempt
 def list_horarios(request):
     if request.method == 'GET':
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         #obtenemos sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         if user_sede:
@@ -441,14 +375,10 @@ def list_horarios(request):
 def list_horarios_extendidos(request):
     """Lista horarios con información extendida (nombres de relaciones) - Solo aprobados"""
     if request.method == 'GET':
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         #obtener sede de usuario autenticado
         user_sede = getattr(request, 'sede', None)
         user_obj = getattr(request, 'user_obj', None)
-        is_admin = user_obj and (is_admin_global(user_obj) or is_admin_sistema(user_obj))
+        is_admin = user_obj and is_superuser_effective(user_obj)
         #validar que la sede tenga seccional para filtrar por seccional; si no tiene seccional, no se filtra
         if user_sede and user_sede.seccional_id and not is_admin:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
@@ -485,10 +415,6 @@ def create_horario_fusionado(request):
     if request.method != 'POST':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         grupo1_id = data.get('grupo1_id')
         grupo2_id = data.get('grupo2_id')
@@ -528,10 +454,6 @@ def update_horario_fusionado(request):
     if request.method != 'PUT':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         id = data.get('id')
         if not id:
@@ -577,10 +499,6 @@ def delete_horario_fusionado(request):
     if request.method != 'DELETE':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         id = data.get('id')
         if not id:
@@ -627,10 +545,6 @@ def get_horario_fusionado(request, id=None):
 
 def list_horarios_fusionados(request):
     if request.method == 'GET':
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         #obtener sede del usuario autenticado
         user_sede = getattr(request, 'sede', None)
         if user_sede:
@@ -935,21 +849,17 @@ def exportar_horarios_pdf_post(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        estados_exportables = _estados_exportables_horario(data)
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por grupo
         grupos_dict = {}
@@ -1146,21 +1056,17 @@ def exportar_horarios_excel_post(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        estados_exportables = _estados_exportables_horario(data)
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por grupo
         grupos_dict = {}
@@ -1363,10 +1269,6 @@ def exportar_pdf_usuario(request):
         usuario_id = request.GET.get('usuario_id')
         if not usuario_id:
             return JsonResponse({"error": "usuario_id requerido"}, status=400)
-
-        user, auth_error = _require_same_user_or_admin(request, usuario_id)
-        if auth_error:
-            return auth_error
         
         try:
             # Obtener horarios del usuario
@@ -1400,10 +1302,6 @@ def exportar_excel_usuario(request):
         usuario_id = request.GET.get('usuario_id')
         if not usuario_id:
             return JsonResponse({"error": "usuario_id requerido"}, status=400)
-
-        user, auth_error = _require_same_user_or_admin(request, usuario_id)
-        if auth_error:
-            return auth_error
         
         try:
             # Obtener horarios del usuario
@@ -1823,21 +1721,17 @@ def exportar_horarios_pdf_docente(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        estados_exportables = _estados_exportables_horario(data)
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por docente
         docentes_dict = {}
@@ -2024,21 +1918,17 @@ def exportar_horarios_excel_docente(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         horarios_data = data.get('horarios', [])
         
         if not horarios_data:
             return JsonResponse({"error": "No se proporcionaron horarios"}, status=400)
         
-        # Filtrar solo horarios aprobados
-        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() == 'aprobado']
+        estados_exportables = _estados_exportables_horario(data)
+        horarios_data = [h for h in horarios_data if h.get('estado', '').lower() in estados_exportables]
         
         if not horarios_data:
-            return JsonResponse({"error": "No hay horarios aprobados para exportar"}, status=400)
+            return JsonResponse({"error": "No hay horarios para exportar"}, status=400)
         
         # Agrupar horarios por docente
         docentes_dict = {}
@@ -2239,10 +2129,6 @@ def list_solicitudes_espacio(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         estado = request.GET.get('estado')  # Filtro opcional: pendiente, aprobada, rechazada
         
         solicitudes = SolicitudEspacio.objects.select_related(
@@ -2290,10 +2176,6 @@ def aprobar_solicitud_espacio(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         solicitud_id = data.get('solicitud_id')
         admin_id = data.get('admin_id')
@@ -2366,10 +2248,6 @@ def rechazar_solicitud_espacio(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
     
     try:
-        user, auth_error = _require_admin(request)
-        if auth_error:
-            return auth_error
-
         data = json.loads(request.body)
         solicitud_id = data.get('solicitud_id')
         admin_id = data.get('admin_id')
@@ -2898,4 +2776,3 @@ def list_horarios_extendidos_usuario(usuario_id):
         print(f"ERROR en list_horarios_extendidos_usuario: {str(e)}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         return []
-

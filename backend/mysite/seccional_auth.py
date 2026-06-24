@@ -8,7 +8,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from .auth_helpers import is_admin_global, is_admin_sistema
+from .auth_helpers import is_superuser_effective
 
 
 class SessionUsuarioAuthentication(BaseAuthentication):
@@ -70,7 +70,7 @@ class SeccionalMixin:
         if not user:
             return queryset.none()
 
-        if is_admin_global(user) or is_admin_sistema(user):
+        if is_superuser_effective(user):
             return queryset
 
         seccional = self.get_user_seccional()
@@ -86,6 +86,8 @@ class SeccionalMixin:
     def get_create_defaults(self, serializer):
         user = self.get_current_user()
         if not user:
+            return {}
+        if is_superuser_effective(user):
             return {}
 
         defaults = {}
@@ -123,4 +125,3 @@ class SeccionalMixin:
             serializer.save()
         except DjangoValidationError as exc:
             raise DRFValidationError(self._normalize_django_validation_error(exc)) from exc
-

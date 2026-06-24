@@ -11,7 +11,7 @@ const ERROR_VISIBLE_MS = 7000;
 const LOADING_DELAY_MS = 180;
 
 export function ApiRequestFeedback() {
-  const { pendingRequests, error } = useSyncExternalStore(
+  const { pendingRequests, error, backendUnreachable, backendRecovering } = useSyncExternalStore(
     subscribeApiActivity,
     getApiActivitySnapshot,
     getApiActivitySnapshot,
@@ -42,7 +42,7 @@ export function ApiRequestFeedback() {
         </div>
       )}
 
-      {error && (
+      {error && !backendUnreachable && !backendRecovering && (
         <div
           role="alert"
           className="pointer-events-auto flex max-w-xl items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 shadow-lg dark:border-red-900 dark:bg-red-950 dark:text-red-200"

@@ -5,13 +5,9 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from werkzeug.security import check_password_hash
-import logging
 import datetime
 import secrets
 import hashlib
-from django.core.cache import cache
-from django.core.exceptions import ValidationError
-from mysite.xss_protection import sanitize_dict, ROL_SCHEMA, USUARIO_SCHEMA
 
 
 def _password_valida(usuario, password_plano):
@@ -26,17 +22,36 @@ def _password_valida(usuario, password_plano):
         legacy_ok = False
 
     return legacy_ok, legacy_ok
-# ---------- Protección Auth ----------
-
-MAX_LOGIN_ATTEMPTS = 5
-LOGIN_LOCKOUT_SECONDS = 2 * 60
 
 
-def _get_client_ip(request):
-    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if forwarded_for:
-        return forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', 'unknown')
+def _sync_espacios_permitidos_usuario(usuario, espacios_ids):
+    from espacios.models import EspacioFisico, EspacioPermitido
+
+    ids_unicos = list(dict.fromkeys(espacios_ids or []))
+    espacios = list(EspacioFisico.objects.filter(id__in=ids_unicos).select_related('sede', 'sede__seccional'))
+    espacios_map = {espacio.id: espacio for espacio in espacios}
+    faltantes = [espacio_id for espacio_id in ids_unicos if espacio_id not in espacios_map]
+    if faltantes:
+        return f'IDs de espacios no válidos: {faltantes}'
+
+    usuario_seccional_id = getattr(getattr(usuario, 'sede', None), 'seccional_id', None)
+    if ids_unicos and not usuario_seccional_id:
+        return 'El usuario debe tener una sede con seccional para asignarle espacios.'
+
+    fuera_seccional = [
+        espacio_id
+        for espacio_id in ids_unicos
+        if getattr(getattr(espacios_map[espacio_id], 'sede', None), 'seccional_id', None) != usuario_seccional_id
+    ]
+    if fuera_seccional:
+        return f'Los espacios no pertenecen a la seccional del usuario: {fuera_seccional}'
+
+    EspacioPermitido.objects.filter(usuario=usuario).delete()
+    EspacioPermitido.objects.bulk_create([
+        EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id])
+        for espacio_id in ids_unicos
+    ])
+    return None
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -44,15 +59,8 @@ def create_rol(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            
-            # Sanitizar y validar inputs contra XSS
-            try:
-                sanitized_data = sanitize_dict(data, ROL_SCHEMA)
-            except ValidationError as e:
-                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
-            
-            nombre = sanitized_data.get('nombre')
-            descripcion = sanitized_data.get('descripcion')
+            nombre = data.get('nombre')
+            descripcion = data.get('descripcion')
             if not nombre or not descripcion:
                 return JsonResponse({"error": "El nombre y la descripción son requeridos"}, status=400)
             nuevo_rol = Rol(nombre=nombre, descripcion=descripcion)
@@ -69,19 +77,10 @@ def update_rol(request):
         try:
             data = json.loads(request.body)
             id = data.get('id')
-            
-            # Sanitizar y validar inputs contra XSS
-            try:
-                sanitized_data = sanitize_dict(data, ROL_SCHEMA)
-            except ValidationError as e:
-                return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
-            
-            if not id:
-                return JsonResponse({"error": "ID es requerido"}, status=400)
-            nombre = sanitized_data.get('nombre')
-            descripcion = sanitized_data.get('descripcion')
-            if not nombre or not descripcion:
-                return JsonResponse({"error": "nombre y descripción son requeridos"}, status=400)
+            nombre = data.get('nombre')
+            descripcion = data.get('descripcion')
+            if not id or not nombre or not descripcion:
+                return JsonResponse({"error": "ID, nombre y descripción son requeridos"}, status=400)
             rol_existente = Rol.objects.get(id=id)
             rol_existente.nombre = nombre
             rol_existente.descripcion = descripcion
@@ -125,30 +124,8 @@ def get_rol(request, id=None):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
-def _is_admin_user(user):
-    if not user:
-        return False
-    if getattr(user, 'es_superusuario', False):
-        return True
-    role_name = (getattr(getattr(user, 'rol', None), 'nombre', '') or '').strip().lower()
-    role_name = role_name.replace('_', ' ')
-    return role_name in {'admin', 'admin global', 'admin sistema', 'admin financiero'}
-
-
-def _require_admin(request):
-    user = getattr(request, 'user_obj', None)
-    if not user:
-        return JsonResponse({"error": "Autenticación requerida"}, status=403)
-    if not _is_admin_user(user):
-        return JsonResponse({"error": "No autorizado"}, status=403)
-    return None
-
 @csrf_exempt
 def list_roles(request):
-    auth_error = _require_admin(request)
-    if auth_error:
-        return auth_error
     if request.method == 'GET':
         roles = Rol.objects.all()
         roles_list = [{"id": rol.id, "nombre": rol.nombre, "descripcion": rol.descripcion} for rol in roles]
@@ -157,26 +134,16 @@ def list_roles(request):
 # ---------- Usuario CRUD ----------
 @csrf_exempt
 def create_usuario(request):
-    auth_error = _require_admin(request)
-    if auth_error:
-        return auth_error
     if request.method != 'POST':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
         data = json.loads(request.body)
-        
-        # Sanitizar y validar inputs contra XSS
-        try:
-            sanitized_data = sanitize_dict(data, USUARIO_SCHEMA)
-        except ValidationError as e:
-            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
-        
-        nombre = sanitized_data.get('nombre')
-        correo = sanitized_data.get('correo')
+        nombre = data.get('nombre')
+        correo = data.get('correo')
         contrasena = data.get('contrasena') or data.get('contrasena_hash')
         rol_id = data.get('rol_id')
         facultad_id = data.get('facultad_id')
-        sede = sanitized_data.get('sede')  # Agregar campo sede
+        sede = data.get('sede')  # Agregar campo sede
         activo = data.get('activo', True)
         espacios_permitidos = data.get('espacios_permitidos', []) # Lista de IDs de espacios
 
@@ -207,13 +174,10 @@ def create_usuario(request):
 
         # Manejar espacios permitidos
         if espacios_permitidos and isinstance(espacios_permitidos, list):
-            from espacios.models import EspacioFisico, EspacioPermitido
-            for espacio_id in espacios_permitidos:
-                try:
-                    espacio = EspacioFisico.objects.get(id=espacio_id)
-                    EspacioPermitido.objects.create(usuario=u, espacio=espacio)
-                except EspacioFisico.DoesNotExist:
-                    pass # Ignorar si el espacio no existe
+            error_espacios = _sync_espacios_permitidos_usuario(u, espacios_permitidos)
+            if error_espacios:
+                u.delete()
+                return JsonResponse({"error": error_espacios}, status=400)
 
         return JsonResponse({"message": "Usuario creado", "id": u.id}, status=201)
     except Rol.DoesNotExist:
@@ -225,9 +189,6 @@ def create_usuario(request):
 
 @csrf_exempt
 def update_usuario(request):
-    auth_error = _require_admin(request)
-    if auth_error:
-        return auth_error
     if request.method != 'PUT':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -235,18 +196,11 @@ def update_usuario(request):
         id = data.get('id')
         if not id:
             return JsonResponse({"error": "ID es requerido"}, status=400)
-        
-        # Sanitizar y validar inputs contra XSS
-        try:
-            sanitized_data = sanitize_dict(data, USUARIO_SCHEMA)
-        except ValidationError as e:
-            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
-        
         u = Usuario.objects.get(id=id)
         if 'nombre' in data:
-            u.nombre = sanitized_data.get('nombre')
+            u.nombre = data.get('nombre')
         if 'correo' in data:
-            u.correo = sanitized_data.get('correo')
+            u.correo = data.get('correo')
         if 'contrasena' in data or 'contrasena_hash' in data:
             nueva_contrasena = data.get('contrasena') or data.get('contrasena_hash')
             u.contrasena_hash = make_password(nueva_contrasena)
@@ -263,16 +217,9 @@ def update_usuario(request):
         if 'espacios_permitidos' in data:
             espacios_permitidos = data.get('espacios_permitidos')
             if isinstance(espacios_permitidos, list):
-                from espacios.models import EspacioFisico, EspacioPermitido
-                # Eliminar permisos existentes
-                EspacioPermitido.objects.filter(usuario=u).delete()
-                # Crear nuevos permisos
-                for espacio_id in espacios_permitidos:
-                    try:
-                        espacio = EspacioFisico.objects.get(id=espacio_id)
-                        EspacioPermitido.objects.create(usuario=u, espacio=espacio)
-                    except EspacioFisico.DoesNotExist:
-                        pass
+                error_espacios = _sync_espacios_permitidos_usuario(u, espacios_permitidos)
+                if error_espacios:
+                    return JsonResponse({"error": error_espacios}, status=400)
 
         return JsonResponse({"message": "Usuario actualizado", "id": u.id}, status=200)
     except Usuario.DoesNotExist:
@@ -289,9 +236,6 @@ def update_usuario(request):
 
 @csrf_exempt
 def delete_usuario(request):
-    auth_error = _require_admin(request)
-    if auth_error:
-        return auth_error
     if request.method != 'DELETE':
         return JsonResponse({"error": "Método no permitido"}, status=405)
     try:
@@ -315,12 +259,6 @@ def get_usuario(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         usuario_actual = getattr(request, 'user_obj', None)
-        if not usuario_actual:
-            return JsonResponse({"error": "Autenticación requerida"}, status=403)
-
-        if not _is_admin_user(usuario_actual) and usuario_actual.id != int(id):
-            return JsonResponse({"error": "No autorizado"}, status=403)
-
         sede_actual = getattr(request, 'sede', None)
 
         if usuario_actual and sede_actual and sede_actual.seccional_id:
@@ -338,18 +276,12 @@ def get_usuario(request, id=None):
 def list_usuarios(request):
     if request.method == 'GET':
         usuario_actual = getattr(request, 'user_obj', None)
-        if not usuario_actual:
-            return JsonResponse({"error": "Autenticación requerida"}, status=403)
-
         sede_actual = getattr(request, 'sede', None)
 
-        if _is_admin_user(usuario_actual):
-            if sede_actual and sede_actual.seccional_id:
-                items = Usuario.objects.select_related('sede').filter(sede__seccional_id=sede_actual.seccional_id)
-            else:
-                items = Usuario.objects.all()
+        if usuario_actual and sede_actual and sede_actual.seccional_id:
+            items = Usuario.objects.select_related('sede').filter(sede__seccional_id=sede_actual.seccional_id)
         else:
-            items = Usuario.objects.select_related('sede').filter(id=usuario_actual.id)
+            items = Usuario.objects.all()
 
         lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
         return JsonResponse({"usuarios": lst}, status=200)
@@ -368,42 +300,13 @@ def login(request):
         contrasena = data.get('contrasena')
         if not correo or not contrasena:
             return JsonResponse({"error": "correo y contrasena son requeridos"}, status=400)
-        correo_normalizado = correo.strip().lower()
-        ip_cliente = _get_client_ip(request)
-        lock_key = f"login_lock:{correo_normalizado}:{ip_cliente}"
-        if cache.get(lock_key):
-            return JsonResponse(
-                {"error": "Demasiados intentos. Intenta de nuevo en unos minutos."},
-                status=429,
-            )
         try:
-            u = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo_normalizado)
+            u = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo)
         except Usuario.DoesNotExist:
-            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
-            attempts = cache.get(attempts_key, 0) + 1
-            if attempts >= MAX_LOGIN_ATTEMPTS:
-                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
-                cache.delete(attempts_key)
-                return JsonResponse(
-                    {"error": "Demasiados intentos. Intenta de nuevo en unos minutos."},
-                    status=429,
-                )
-            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         password_ok, es_legacy = _password_valida(u, contrasena)
         if not password_ok:
-            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
-            attempts = cache.get(attempts_key, 0) + 1
-            if attempts >= MAX_LOGIN_ATTEMPTS:
-                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
-                cache.delete(attempts_key)
-                return JsonResponse(
-                    {"error": "Demasiados intentos. Intenta de nuevo en unos minutos."},
-                    status=429,
-                )
-            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
-        cache.delete(f"login_attempts:{correo_normalizado}:{ip_cliente}")
         if es_legacy:
             nuevo_hash = make_password(contrasena)
             u.contrasena_hash = nuevo_hash
@@ -444,12 +347,7 @@ def login(request):
                 for ep in espacios_permisos
             ]
         except Exception:
-            logger = logging.getLogger(__name__)
-            logger.warning(
-                "No se pudieron cargar espacios permitidos para usuario %s",
-                u.id,
-                exc_info=True,
-            )
+            pass
         
         request.session['user_id'] = u.id
         request.session['correo'] = u.correo
@@ -593,4 +491,3 @@ def change_password(request):
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-

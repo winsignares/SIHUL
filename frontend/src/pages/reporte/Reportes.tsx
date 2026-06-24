@@ -18,6 +18,9 @@ export default function Reportes() {
     periodoActual,
     tipoReporte,
     setTipoReporte,
+    estadoReporte,
+    setEstadoReporte,
+    estadosReporte,
     filtroDocente,
     setFiltroDocente,
     filtroPrograma,
@@ -505,6 +508,18 @@ export default function Reportes() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={estadoReporte} onValueChange={(value) => setEstadoReporte(value as typeof estadoReporte)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            {estadosReporte.map(estado => (
+              <SelectItem key={estado.id} value={estado.id}>
+                {estado.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           onClick={exportarPDF}
@@ -523,7 +538,7 @@ export default function Reportes() {
 
       {/* Main Report View */}
       <motion.div
-        key={tipoReporte}
+        key={`${tipoReporte}-${estadoReporte}`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}

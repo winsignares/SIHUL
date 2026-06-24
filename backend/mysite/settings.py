@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 
 def env_bool(name, default=False):
     value = os.getenv(name)
@@ -23,13 +25,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-6vspu_xp0x41924(a&3!5kkn35+pew*ckujv96vwyq$m*uzz_l',
-)
+DEFAULT_DEV_SECRET_KEY = 'django-insecure-6vspu_xp0x41924(a&3!5kkn35+pew*ckujv96vwyq$m*uzz_l'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or DEFAULT_DEV_SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DJANGO_DEBUG', True)
+
+if not DEBUG and SECRET_KEY == DEFAULT_DEV_SECRET_KEY:
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set to a non-empty value when DJANGO_DEBUG=False.')
 
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', ['*'])
 
@@ -165,7 +168,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = os.getenv('STATIC_URL', '/static/')
+STATIC_ROOT = Path(os.getenv('STATIC_ROOT', BASE_DIR / 'staticfiles'))
 
 # Media files (user-uploaded content)
 MEDIA_URL = '/media/'

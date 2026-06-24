@@ -11,59 +11,105 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta, time
 from django.utils import timezone
 from django.db.models import Count
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from collections import defaultdict
+import unicodedata
+
+from mysite.auth_helpers import is_superuser_effective
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
     """Filtra espacios por la seccional de la sede del usuario logueado."""
+    if is_superuser_effective(getattr(request, 'user_obj', None)):
+        return queryset
+
     user_sede = getattr(request, 'sede', None)
     if user_sede and user_sede.seccional_id:
         return queryset.filter(sede__seccional_id=user_sede.seccional_id)
     return queryset
 
 
-def _get_request_user(request):
-    return getattr(request, 'user_obj', None)
+def _env_bool_param(value):
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on', 'si', 'sí'}
 
 
-def _is_admin_user(user):
-    if not user:
-        return False
-    if getattr(user, 'es_superusuario', False):
-        return True
-    role_name = get_role_name(user)
-    return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+def _estados_horario_reporte(estado_horario='aprobado', include_pending=False):
+    if isinstance(estado_horario, bool):
+        include_pending = estado_horario
+        estado_horario = 'todos' if include_pending else 'aprobado'
+
+    estado_normalizado = str(estado_horario or '').strip().lower()
+    if estado_normalizado == 'pendiente':
+        return ['pendiente']
+    if estado_normalizado in {'todos', 'all'} or include_pending:
+        return ['aprobado', 'pendiente']
+    return ['aprobado']
 
 
-def _require_auth(request):
-    user = _get_request_user(request)
-    if not user:
-        return None, JsonResponse({'error': 'Autenticación requerida'}, status=403)
-    return user, None
+def _estado_horario_param(request, data=None):
+    if data is not None:
+        estado = data.get('estado_horario') or data.get('estadoHorario')
+        include_pending = bool(data.get('include_pending') or data.get('includePending'))
+    else:
+        estado = request.GET.get('estado_horario') or request.GET.get('estadoHorario')
+        include_pending = _env_bool_param(request.GET.get('include_pending') or request.GET.get('includePending'))
+
+    if estado:
+        return str(estado).strip().lower()
+    return 'todos' if include_pending else 'aprobado'
 
 
-def _require_supervisor_or_admin(request, usuario_id=None):
-    user, auth_error = _require_auth(request)
-    if auth_error:
-        return None, auth_error
+def _normalizar_dia_semana(valor):
+    texto = str(valor or '').strip().lower()
+    return ''.join(
+        char for char in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(char) != 'Mn'
+    )
 
-    role_name = get_role_name(user)
-    if not (_is_admin_user(user) or role_name.startswith('supervisor')):
-        return None, JsonResponse({'error': 'No autorizado'}, status=403)
 
-    if usuario_id and not _is_admin_user(user) and user.id != int(usuario_id):
-        return None, JsonResponse({'error': 'No autorizado'}, status=403)
+def _iterar_fechas_semana(lunes, sabado):
+    fecha_actual = lunes
+    while fecha_actual <= sabado:
+        yield fecha_actual
+        fecha_actual += timedelta(days=1)
 
-    return user, None
+
+def _preparar_datos_reporte_espacios(espacios, lunes, sabado, include_pending=False):
+    espacios_lista = list(espacios)
+    espacios_ids = [espacio.id for espacio in espacios_lista]
+    estados_horario = _estados_horario_reporte(include_pending)
+
+    horarios_por_espacio_dia = defaultdict(list)
+    if espacios_ids:
+        horarios = Horario.objects.filter(
+            espacio_id__in=espacios_ids,
+            estado__in=estados_horario
+        ).select_related('grupo')
+        for horario in horarios:
+            horarios_por_espacio_dia[
+                (horario.espacio_id, _normalizar_dia_semana(horario.dia_semana))
+            ].append(horario)
+
+    prestamos_por_espacio_fecha = defaultdict(list)
+    if espacios_ids:
+        prestamos = PrestamoEspacio.objects.filter(
+            espacio_id__in=espacios_ids,
+            fecha__range=(lunes, sabado),
+            estado='Aprobado'
+        )
+        for prestamo in prestamos:
+            prestamos_por_espacio_fecha[(prestamo.espacio_id, prestamo.fecha)].append(prestamo)
+
+    return {
+        'espacios': espacios_lista,
+        'horarios_por_espacio_dia': horarios_por_espacio_dia,
+        'prestamos_por_espacio_fecha': prestamos_por_espacio_fecha,
+    }
 
 # ---------- TipoEspacio CRUD ----------
 @csrf_exempt
 def list_tipos_espacio(request):
     """Lista todos los tipos de espacio"""
     if request.method == 'GET':
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
         tipos = TipoEspacio.objects.all()
         lst = [{"id": t.id, "nombre": t.nombre, "descripcion": t.descripcion} for t in tipos]
         return JsonResponse({"tipos_espacio": lst}, status=200)
@@ -74,9 +120,6 @@ def get_tipo_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
         tipo = TipoEspacio.objects.get(id=id)
         return JsonResponse({"id": tipo.id, "nombre": tipo.nombre, "descripcion": tipo.descripcion}, status=200)
     except TipoEspacio.DoesNotExist:
@@ -91,12 +134,6 @@ def create_tipo_espacio(request):
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-        if not _is_admin_user(user):
-            return JsonResponse({"error": "No autorizado"}, status=403)
-
         data = json.loads(request.body)
         nombre = (data.get('nombre') or '').strip()
         descripcion = (data.get('descripcion') or '').strip()
@@ -126,12 +163,6 @@ def create_tipo_espacio(request):
 def create_espacio(request):
     if request.method == 'POST':
         try:
-            user, auth_error = _require_auth(request)
-            if auth_error:
-                return auth_error
-            if not _is_admin_user(user):
-                return JsonResponse({"error": "No autorizado"}, status=403)
-
             data = json.loads(request.body)
             sede_id = data.get('sede_id')
             nombre = data.get('nombre')
@@ -181,12 +212,6 @@ def create_espacio(request):
 def update_espacio(request):
     if request.method == 'PUT':
         try:
-            user, auth_error = _require_auth(request)
-            if auth_error:
-                return auth_error
-            if not _is_admin_user(user):
-                return JsonResponse({"error": "No autorizado"}, status=403)
-
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
@@ -246,12 +271,6 @@ def update_espacio(request):
 def delete_espacio(request):
     if request.method == 'DELETE':
         try:
-            user, auth_error = _require_auth(request)
-            if auth_error:
-                return auth_error
-            if not _is_admin_user(user):
-                return JsonResponse({"error": "No autorizado"}, status=403)
-
             data = json.loads(request.body)
             id = data.get('id')
             if not id:
@@ -275,10 +294,6 @@ def get_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
@@ -319,10 +334,6 @@ def get_espacio(request, id=None):
 @csrf_exempt
 def list_espacios(request):
     if request.method == 'GET':
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         usuario_actual = getattr(request, 'user_obj', None)
         sede_actual = getattr(request, 'sede', None)
 
@@ -434,10 +445,6 @@ def list_all_espacios_with_horarios(request):
         return JsonResponse({"error": "Solo se permite GET"}, status=405)
     
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         from horario.models import Horario
         from django.db.models import Prefetch
         
@@ -445,7 +452,7 @@ def list_all_espacios_with_horarios(request):
         # Solo mostrar horarios aprobados
         #obtener sede del usuario autenticado en la request del middleware
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             espacios = EspacioFisico.objects.filter(
                 sede__seccional_id=user_sede.seccional_id
             ).select_related(
@@ -516,16 +523,12 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         return JsonResponse({"error": "usuario_id es requerido"}, status=400)
     
     try:
-        user, auth_error = _require_supervisor_or_admin(request, usuario_id=usuario_id)
-        if auth_error:
-            return auth_error
-
         from horario.models import Horario
         from django.db.models import Prefetch
         
         # Verificar que el usuario existe
         try:
-            usuario = Usuario.objects.get(id=usuario_id)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Usuario no encontrado"}, status=404)
         
@@ -533,6 +536,10 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         espacios_permitidos = EspacioPermitido.objects.filter(
             usuario=usuario
         ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permitidos = espacios_permitidos.filter(
+                espacio__sede__seccional_id=usuario.sede.seccional_id
+            )
         
         if not espacios_permitidos.exists():
             return JsonResponse({"espacios": []}, status=200)
@@ -591,12 +598,6 @@ def create_espacio_permitido(request):
     """Crear un nuevo EspacioPermitido"""
     if request.method == 'POST':
         try:
-            user, auth_error = _require_auth(request)
-            if auth_error:
-                return auth_error
-            if not _is_admin_user(user):
-                return JsonResponse({"error": "No autorizado"}, status=403)
-
             data = json.loads(request.body)
             espacio_id = data.get('espacio_id')
             usuario_id = data.get('usuario_id')
@@ -606,6 +607,13 @@ def create_espacio_permitido(request):
             
             espacio = EspacioFisico.objects.get(id=espacio_id)
             usuario = Usuario.objects.get(id=usuario_id)
+
+            usuario_seccional_id = getattr(getattr(usuario, 'sede', None), 'seccional_id', None)
+            espacio_seccional_id = getattr(getattr(espacio, 'sede', None), 'seccional_id', None)
+            if not usuario_seccional_id:
+                return JsonResponse({"error": "El usuario debe tener una sede con seccional para asignarle espacios"}, status=400)
+            if espacio_seccional_id != usuario_seccional_id:
+                return JsonResponse({"error": "El espacio no pertenece a la seccional del usuario"}, status=400)
             
             # Verificar si ya existe
             if EspacioPermitido.objects.filter(espacio=espacio, usuario=usuario).exists():
@@ -636,12 +644,6 @@ def list_espacios_permitidos(request):
     """Listar todos los EspaciosPermitidos"""
     if request.method == 'GET':
         try:
-            user, auth_error = _require_auth(request)
-            if auth_error:
-                return auth_error
-            if not _is_admin_user(user):
-                return JsonResponse({"error": "No autorizado"}, status=403)
-
             espacios_permitidos = EspacioPermitido.objects.all().select_related('espacio', 'usuario')
             lista = [
                 {
@@ -667,13 +669,7 @@ def get_espacio_permitido(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-
         espacio_permitido = EspacioPermitido.objects.select_related('espacio', 'usuario').get(id=id)
-        if not _is_admin_user(user) and espacio_permitido.usuario_id != user.id:
-            return JsonResponse({"error": "No autorizado"}, status=403)
         return JsonResponse({
             "id": espacio_permitido.id,
             "espacio_id": espacio_permitido.espacio.id,
@@ -694,12 +690,6 @@ def delete_espacio_permitido(request):
     """Eliminar un EspacioPermitido"""
     if request.method == 'DELETE':
         try:
-            user, auth_error = _require_auth(request)
-            if auth_error:
-                return auth_error
-            if not _is_admin_user(user):
-                return JsonResponse({"error": "No autorizado"}, status=403)
-
             data = json.loads(request.body)
             id = data.get('id')
             
@@ -727,14 +717,12 @@ def list_espacios_by_usuario(request, usuario_id=None):
     if usuario_id is None:
         return JsonResponse({"error": "El usuario_id es requerido en la URL"}, status=400)
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
-        if not _is_admin_user(user) and user.id != int(usuario_id):
-            return JsonResponse({"error": "No autorizado"}, status=403)
-
-        usuario = Usuario.objects.get(id=usuario_id)
+        usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio')
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permitidos = espacios_permitidos.filter(
+                espacio__sede__seccional_id=usuario.sede.seccional_id
+            )
         lista = []
         for ep in espacios_permitidos:
             # Obtener recursos del espacio
@@ -822,7 +810,7 @@ def proximos_apertura_cierre(request):
         dia_actual = get_dia_semana_actual()
         
         try:
-            usuario = Usuario.objects.select_related('rol').get(id=usuario_id)
+            usuario = Usuario.objects.select_related('rol', 'sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
@@ -834,6 +822,10 @@ def proximos_apertura_cierre(request):
             ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
 
             espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
+            if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+                espacios_permitidos = espacios_permitidos.filter(
+                    espacio__sede__seccional_id=usuario.sede.seccional_id
+                )
 
             if not espacios_permitidos.exists():
                 return JsonResponse({
@@ -848,7 +840,11 @@ def proximos_apertura_cierre(request):
         else:
             espacios_qs = EspacioFisico.objects.select_related('sede', 'tipo').all()
             user_sede = getattr(request, 'sede', None)
-            if user_sede and getattr(user_sede, 'seccional_id', None):
+            if (
+                user_sede
+                and getattr(user_sede, 'seccional_id', None)
+                and not is_superuser_effective(getattr(request, 'user_obj', None))
+            ):
                 espacios_qs = espacios_qs.filter(sede__seccional_id=user_sede.seccional_id)
             espacios_qs = espacios_qs.filter(estado='Disponible')
 
@@ -1243,7 +1239,7 @@ def get_horario_espacio(request, espacio_id=None):
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
         #Obtener sede del usuario logueado
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             # Verificar que el espacio pertenece a la misma sede
             if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
                 return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403) 
@@ -1801,7 +1797,7 @@ def generar_pdf_ocupacion_semanal(request):
         )
 
         elements.append(Paragraph('Reporte de Ocupación Semanal de Espacios', title_style))
-        periodo_parrafo = f'Período: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")} - Semana: {semana_offset:+d}'
+        periodo_parrafo = f'<b>Período:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")} - <b>Semana:</b> {semana_offset:+d}'
         elements.append(Paragraph(periodo_parrafo, subtitle_style))
         elements.append(Spacer(1, 0.2 * inch))
 
@@ -1967,6 +1963,7 @@ def reporte_ocupacion(request):
     try:
         # Obtener parámetro de semana
         semana_offset = int(request.GET.get('semana_offset', 0))
+        include_pending = _estado_horario_param(request)
         
         # Calcular rango de fechas (Lunes a Sábado)
         hoy = timezone.now().date()
@@ -1999,14 +1996,16 @@ def reporte_ocupacion(request):
                 "espacios_mas_usados": []
             }, status=200)
         
+        datos_reporte = _preparar_datos_reporte_espacios(espacios, lunes, sabado, include_pending)
+
         # ======== OCUPACIÓN POR JORNADA ========
         ocupacion_por_jornada = _calcular_ocupacion_por_jornada_reporte(
-            espacios, lunes, sabado, dias_nombre
+            espacios, lunes, sabado, dias_nombre, include_pending, datos_reporte
         )
         
         # ======== ESPACIOS MÁS USADOS ========
         espacios_mas_usados = _calcular_espacios_mas_usados_reporte(
-            espacios, lunes, sabado, dias_nombre
+            espacios, lunes, sabado, dias_nombre, include_pending, datos_reporte
         )
         
         # Construcción del periodo
@@ -2029,7 +2028,7 @@ def reporte_ocupacion(request):
         return JsonResponse({"error": f"Error del servidor: {str(e)}"}, status=500)
 
 
-def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre):
+def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre, include_pending=False, datos_reporte=None):
     """
     Calcula el porcentaje de ocupación por jornada para todos los espacios.
     Usa la misma lógica que ocupacion_semanal para calcular horas.
@@ -2040,39 +2039,26 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
         horas_totales_manana = 0.0
         horas_totales_tarde = 0.0
         horas_totales_noche = 0.0
+        datos_reporte = datos_reporte or _preparar_datos_reporte_espacios(espacios, lunes, sabado, include_pending)
+        espacios_lista = datos_reporte['espacios']
+        horarios_por_espacio_dia = datos_reporte['horarios_por_espacio_dia']
+        prestamos_por_espacio_fecha = datos_reporte['prestamos_por_espacio_fecha']
         
         # Recorrer cada espacio
-        for espacio in espacios:
+        for espacio in espacios_lista:
             horas_manana_espacio = 0.0
             horas_tarde_espacio = 0.0
             horas_noche_espacio = 0.0
             
             # Recorrer cada día de la semana
-            fecha_actual = lunes
-            while fecha_actual <= sabado:
+            for fecha_actual in _iterar_fechas_semana(lunes, sabado):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
-                
-                # Obtener horarios para este día y espacio - Solo aprobados
-                horarios_dia = Horario.objects.filter(
-                    espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es,
-                    estado='aprobado'
+                horarios_dia = horarios_por_espacio_dia.get(
+                    (espacio.id, _normalizar_dia_semana(dia_nombre_es)),
+                    []
                 )
-                
-                if not horarios_dia.exists():
-                    horarios_dia = Horario.objects.filter(
-                        espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en,
-                        estado='aprobado'
-                    )
-                
-                # Obtener préstamos aprobados para este día y espacio
-                prestamos_dia = PrestamoEspacio.objects.filter(
-                    espacio=espacio,
-                    fecha=fecha_actual,
-                    estado='Aprobado'
-                )
+                prestamos_dia = prestamos_por_espacio_fecha.get((espacio.id, fecha_actual), [])
                 
                 # Calcular horas ocupadas por horarios
                 for horario in horarios_dia:
@@ -2094,15 +2080,13 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
                     horas_tarde_espacio += horas_ocupadas_en_jornadas['tarde']
                     horas_noche_espacio += horas_ocupadas_en_jornadas['noche']
                 
-                fecha_actual += timedelta(days=1)
-            
             # Sumar las horas de este espacio al total
             horas_totales_manana += horas_manana_espacio
             horas_totales_tarde += horas_tarde_espacio
             horas_totales_noche += horas_noche_espacio
         
         # Calcular máximas horas posibles
-        total_espacios = len(list(espacios))
+        total_espacios = len(espacios_lista)
         horas_max_manana = 36 * total_espacios if total_espacios > 0 else 1
         horas_max_tarde = 36 * total_espacios if total_espacios > 0 else 1
         horas_max_noche = 24 * total_espacios if total_espacios > 0 else 1
@@ -2117,33 +2101,19 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
         espacios_con_clase_tarde = 0
         espacios_con_clase_noche = 0
         
-        for espacio in espacios:
-            fecha_actual = lunes
+        for espacio in espacios_lista:
             tiene_manana = False
             tiene_tarde = False
             tiene_noche = False
             
-            while fecha_actual <= sabado:
+            for fecha_actual in _iterar_fechas_semana(lunes, sabado):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
-                
-                horarios_dia = Horario.objects.filter(
-                    espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es,
-                    estado='aprobado'
+                horarios_dia = horarios_por_espacio_dia.get(
+                    (espacio.id, _normalizar_dia_semana(dia_nombre_es)),
+                    []
                 )
-                if not horarios_dia.exists():
-                    horarios_dia = Horario.objects.filter(
-                        espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en,
-                        estado='aprobado'
-                    )
-                
-                prestamos_dia = PrestamoEspacio.objects.filter(
-                    espacio=espacio,
-                    fecha=fecha_actual,
-                    estado='Aprobado'
-                )
+                prestamos_dia = prestamos_por_espacio_fecha.get((espacio.id, fecha_actual), [])
                 
                 for horario in horarios_dia:
                     dist = _distribuir_horas_en_jornadas(horario.hora_inicio, horario.hora_fin)
@@ -2163,8 +2133,6 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
                     if dist['noche'] > 0:
                         tiene_noche = True
                 
-                fecha_actual += timedelta(days=1)
-            
             if tiene_manana:
                 espacios_con_clase_manana += 1
             if tiene_tarde:
@@ -2196,7 +2164,7 @@ def _calcular_ocupacion_por_jornada_reporte(espacios, lunes, sabado, dias_nombre
         return []
 
 
-def _calcular_espacios_mas_usados_reporte(espacios, lunes, sabado, dias_nombre):
+def _calcular_espacios_mas_usados_reporte(espacios, lunes, sabado, dias_nombre, include_pending=False, datos_reporte=None):
     """
     Calcula los espacios más utilizados durante la semana.
     Usa la misma lógica que ocupacion_semanal.
@@ -2204,56 +2172,40 @@ def _calcular_espacios_mas_usados_reporte(espacios, lunes, sabado, dias_nombre):
     """
     try:
         espacios_uso = {}
+        datos_reporte = datos_reporte or _preparar_datos_reporte_espacios(espacios, lunes, sabado, include_pending)
+        espacios_lista = datos_reporte['espacios']
+        horarios_por_espacio_dia = datos_reporte['horarios_por_espacio_dia']
+        prestamos_por_espacio_fecha = datos_reporte['prestamos_por_espacio_fecha']
         
         # Recorrer cada espacio
-        for espacio in espacios:
+        for espacio in espacios_lista:
             contador_usos = 0
             horas_ocupadas_total = 0.0
             horas_disponibles = 16 * 6  # 16 horas/día * 6 días = 96 horas
             
             # Recorrer cada día de la semana
-            fecha_actual = lunes
-            while fecha_actual <= sabado:
+            for fecha_actual in _iterar_fechas_semana(lunes, sabado):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
-                
-                # Obtener horarios (clases) - Solo aprobados
-                horarios_dia = Horario.objects.filter(
-                    espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es,
-                    estado='aprobado'
+                horarios_dia = horarios_por_espacio_dia.get(
+                    (espacio.id, _normalizar_dia_semana(dia_nombre_es)),
+                    []
                 )
-                
-                if not horarios_dia.exists():
-                    horarios_dia = Horario.objects.filter(
-                        espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en,
-                        estado='aprobado'
-                    )
-                
-                contador_usos += horarios_dia.count()
+                contador_usos += len(horarios_dia)
                 
                 # Sumar horas ocupadas por horarios
                 for horario in horarios_dia:
                     duracion = _calcular_duracion_horas(horario.hora_inicio, horario.hora_fin)
                     horas_ocupadas_total += duracion
                 
-                # Obtener préstamos aprobados
-                prestamos_dia = PrestamoEspacio.objects.filter(
-                    espacio=espacio,
-                    fecha=fecha_actual,
-                    estado='Aprobado'
-                )
-                
-                contador_usos += prestamos_dia.count()
+                prestamos_dia = prestamos_por_espacio_fecha.get((espacio.id, fecha_actual), [])
+                contador_usos += len(prestamos_dia)
                 
                 # Sumar horas ocupadas por préstamos
                 for prestamo in prestamos_dia:
                     duracion = _calcular_duracion_horas(prestamo.hora_inicio, prestamo.hora_fin)
                     horas_ocupadas_total += duracion
                 
-                fecha_actual += timedelta(days=1)
-            
             # Calcular porcentaje de ocupación
             porcentaje_ocupacion = int((horas_ocupadas_total / horas_disponibles * 100)) if horas_disponibles > 0 else 0
             
@@ -2307,6 +2259,7 @@ def generar_pdf_reporte_ocupacion(request):
 
         data = json.loads(request.body) if request.body else {}
         semana_offset = int(data.get('semana_offset', 0))
+        include_pending = _estado_horario_param(request, data)
         tipo_espacio_id = data.get('tipo_espacio_id')
         espacios_nombres = data.get('espacios')
 
@@ -2335,11 +2288,12 @@ def generar_pdf_reporte_ocupacion(request):
         elif tipo_espacio_id:
             espacios_qs = espacios_qs.filter(tipo_id=tipo_espacio_id)
 
+        datos_reporte = _preparar_datos_reporte_espacios(espacios_qs, lunes, sabado, include_pending)
         ocupacion_por_jornada = _calcular_ocupacion_por_jornada_reporte(
-            espacios_qs, lunes, sabado, dias_nombre
+            espacios_qs, lunes, sabado, dias_nombre, include_pending, datos_reporte
         )
         espacios_mas_usados = _calcular_espacios_mas_usados_reporte(
-            espacios_qs, lunes, sabado, dias_nombre
+            espacios_qs, lunes, sabado, dias_nombre, include_pending, datos_reporte
         )
 
         buffer = BytesIO()
@@ -2387,7 +2341,7 @@ def generar_pdf_reporte_ocupacion(request):
         elements.append(Paragraph('Reporte: Ocupación de Espacios', title_style))
         elements.append(
             Paragraph(
-                f'Semana: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
+                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
                 subtitle_style
             )
         )
@@ -2524,6 +2478,7 @@ def reporte_disponibilidad(request):
     try:
         # Obtener parámetro de semana
         semana_offset = int(request.GET.get('semana_offset', 0))
+        include_pending = _estado_horario_param(request)
         
         # Calcular rango de fechas (Lunes a Sábado)
         hoy = timezone.now().date()
@@ -2562,7 +2517,7 @@ def reporte_disponibilidad(request):
         
         # ======== CÁLCULO DE DISPONIBILIDAD ========
         disponibilidad, resumen = _calcular_disponibilidad_reporte(
-            espacios, lunes, sabado, dias_nombre
+            espacios, lunes, sabado, dias_nombre, include_pending
         )
         
         # Construcción del periodo
@@ -2585,7 +2540,7 @@ def reporte_disponibilidad(request):
         return JsonResponse({"error": f"Error del servidor: {str(e)}"}, status=500)
 
 
-def _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre):
+def _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre, include_pending=False, datos_reporte=None):
     """
     Calcula la disponibilidad (horas disponibles vs ocupadas) para cada espacio.
     Retorna: tupla (lista con disponibilidad de cada espacio, dict con resumen)
@@ -2594,49 +2549,34 @@ def _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre):
         disponibilidad = []
         total_horas_disponibles = 0
         total_horas_ocupadas = 0
+        datos_reporte = datos_reporte or _preparar_datos_reporte_espacios(espacios, lunes, sabado, include_pending)
+        horarios_por_espacio_dia = datos_reporte['horarios_por_espacio_dia']
+        prestamos_por_espacio_fecha = datos_reporte['prestamos_por_espacio_fecha']
         
-        for espacio in espacios:
+        for espacio in datos_reporte['espacios']:
             horas_ocupadas_total = 0.0
             
             # Recorrer cada día de la semana
-            fecha_actual = lunes
-            while fecha_actual <= sabado:
+            for fecha_actual in _iterar_fechas_semana(lunes, sabado):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
-                
-                # Obtener horarios
-                horarios_dia = Horario.objects.filter(
-                    espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es,
-                    estado='aprobado'
+                horarios_dia = horarios_por_espacio_dia.get(
+                    (espacio.id, _normalizar_dia_semana(dia_nombre_es)),
+                    []
                 )
-                
-                if not horarios_dia.exists():
-                    horarios_dia = Horario.objects.filter(
-                        espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en,
-                        estado='aprobado'
-                    )
                 
                 # Sumar horas ocupadas por horarios
                 for horario in horarios_dia:
                     duracion = _calcular_duracion_horas(horario.hora_inicio, horario.hora_fin)
                     horas_ocupadas_total += duracion
                 
-                # Obtener préstamos aprobados
-                prestamos_dia = PrestamoEspacio.objects.filter(
-                    espacio=espacio,
-                    fecha=fecha_actual,
-                    estado='Aprobado'
-                )
+                prestamos_dia = prestamos_por_espacio_fecha.get((espacio.id, fecha_actual), [])
                 
                 # Sumar horas ocupadas por préstamos
                 for prestamo in prestamos_dia:
                     duracion = _calcular_duracion_horas(prestamo.hora_inicio, prestamo.hora_fin)
                     horas_ocupadas_total += duracion
                 
-                fecha_actual += timedelta(days=1)
-            
             # Calcular horas disponibles (16 horas/día * 6 días)
             horas_disponibles = 16 * 6  # 96 horas
             horas_libres = horas_disponibles - horas_ocupadas_total
@@ -2701,6 +2641,7 @@ def reporte_capacidad(request):
     try:
         # Obtener parámetro de semana
         semana_offset = int(request.GET.get('semana_offset', 0))
+        include_pending = _estado_horario_param(request)
         
         # Calcular rango de fechas (Lunes a Sábado)
         hoy = timezone.now().date()
@@ -2734,7 +2675,7 @@ def reporte_capacidad(request):
         
         # ======== CÁLCULO DE CAPACIDAD ========
         capacidad = _calcular_capacidad_reporte(
-            espacios, lunes, sabado, dias_nombre
+            espacios, lunes, sabado, dias_nombre, include_pending
         )
         
         # Construcción del periodo
@@ -2775,6 +2716,7 @@ def generar_pdf_reporte_disponibilidad(request):
 
         data = json.loads(request.body) if request.body else {}
         semana_offset = int(data.get('semana_offset', 0))
+        include_pending = _estado_horario_param(request, data)
 
         hoy = timezone.now().date()
         dias_hasta_lunes = (hoy.weekday() - 0) % 7
@@ -2794,7 +2736,7 @@ def generar_pdf_reporte_disponibilidad(request):
 
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
         espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
-        disponibilidad, resumen = _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre)
+        disponibilidad, resumen = _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre, include_pending)
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
@@ -2839,7 +2781,7 @@ def generar_pdf_reporte_disponibilidad(request):
         elements.append(Paragraph('Reporte: Disponibilidad General de Espacios', title_style))
         elements.append(
             Paragraph(
-                f'Semana: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
+                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
                 subtitle_style
             )
         )
@@ -2946,6 +2888,7 @@ def generar_pdf_reporte_capacidad(request):
 
         data = json.loads(request.body) if request.body else {}
         semana_offset = int(data.get('semana_offset', 0))
+        include_pending = _estado_horario_param(request, data)
 
         hoy = timezone.now().date()
         dias_hasta_lunes = (hoy.weekday() - 0) % 7
@@ -2965,7 +2908,7 @@ def generar_pdf_reporte_capacidad(request):
 
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
         espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
-        capacidad = _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre)
+        capacidad = _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre, include_pending)
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
@@ -2998,7 +2941,7 @@ def generar_pdf_reporte_capacidad(request):
         elements.append(Paragraph('Reporte: Capacidad Utilizada', title_style))
         elements.append(
             Paragraph(
-                f'Semana: {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
+                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
                 subtitle_style
             )
         )
@@ -3143,7 +3086,7 @@ def generar_pdf_reporte_capacidad(request):
             
             # Legend items
             legend_data = [
-                ['Capacidad Utilizada', 'Porcentaje'],
+                ['Alta', 'Media', 'Baja'],
                 ['Alta (>75%)', '■ Media (40-75%)', 'Baja (<40%)']
             ]
             
@@ -3188,7 +3131,7 @@ def generar_pdf_reporte_capacidad(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
+def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre, include_pending=False, datos_reporte=None):
     """
     Calcula la capacidad utilizada agrupada por tipo de espacio.
     Usa el promedio de estudiantes simultáneos en cada franja horaria.
@@ -3196,8 +3139,11 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
     """
     try:
         capacidad_por_tipo = {}
+        datos_reporte = datos_reporte or _preparar_datos_reporte_espacios(espacios, lunes, sabado, include_pending)
+        horarios_por_espacio_dia = datos_reporte['horarios_por_espacio_dia']
+        prestamos_por_espacio_fecha = datos_reporte['prestamos_por_espacio_fecha']
         
-        for espacio in espacios:
+        for espacio in datos_reporte['espacios']:
             tipo_nombre = espacio.tipo.nombre
             
             # Inicializar si es la primera vez que vemos este tipo
@@ -3216,46 +3162,24 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
             estudiantes_por_dia = {}
             
             # Recorrer cada día de la semana
-            fecha_actual = lunes
-            while fecha_actual <= sabado:
+            for fecha_actual in _iterar_fechas_semana(lunes, sabado):
                 dia_nombre_en = fecha_actual.strftime('%A')
                 dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
                 
                 estudiantes_este_dia = set()
-                
-                # Obtener horarios (clases) para este día
-                horarios_dia = Horario.objects.filter(
-                    espacio=espacio,
-                    dia_semana__iexact=dia_nombre_es,
-                    estado='aprobado'
+                horarios_dia = horarios_por_espacio_dia.get(
+                    (espacio.id, _normalizar_dia_semana(dia_nombre_es)),
+                    []
                 )
-                
-                if not horarios_dia.exists():
-                    horarios_dia = Horario.objects.filter(
-                        espacio=espacio,
-                        dia_semana__iexact=dia_nombre_en,
-                        estado='aprobado'
-                    )
                 
                 # Contar estudiantes en horarios
                 for horario in horarios_dia:
                     if horario.grupo:
-                        try:
-                            from grupos.models import Grupo
-                            grupo = Grupo.objects.get(id=horario.grupo.id)
-                            grupo_size = grupo.estudiantes.count()
-                            if grupo_size > 0:
-                                estudiantes_este_dia.add(f"horario_{horario.id}")
-                                estudiantes_por_dia[fecha_actual] = grupo_size
-                        except:
-                            estudiantes_por_dia[fecha_actual] = 30  # Default
+                        grupo_size = horario.cantidad_estudiantes or 30
+                        estudiantes_este_dia.add(f"horario_{horario.id}")
+                        estudiantes_por_dia[fecha_actual] = grupo_size
                 
-                # Obtener préstamos aprobados para este día
-                prestamos_dia = PrestamoEspacio.objects.filter(
-                    espacio=espacio,
-                    fecha=fecha_actual,
-                    estado='Aprobado'
-                )
+                prestamos_dia = prestamos_por_espacio_fecha.get((espacio.id, fecha_actual), [])
                 
                 # Contar préstamos (cada préstamo = ocupación)
                 for prestamo in prestamos_dia:
@@ -3263,8 +3187,6 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
                     if fecha_actual not in estudiantes_por_dia:
                         estudiantes_por_dia[fecha_actual] = int(espacio.capacidad * 0.3)  # 30% de ocupación
                 
-                fecha_actual += timedelta(days=1)
-            
             # Calcular ocupación promedio para este espacio
             if estudiantes_por_dia:
                 ocupacion_promedio = sum(estudiantes_por_dia.values()) / len(estudiantes_por_dia)
@@ -3302,5 +3224,3 @@ def _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre):
     except Exception as e:
         print(f"Error en _calcular_capacidad_reporte: {str(e)}")
         return []
-
-

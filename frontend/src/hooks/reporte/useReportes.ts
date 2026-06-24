@@ -17,6 +17,7 @@ export interface Docente {
     correo?: string;
 }
 import { reporteOcupacionService } from '../../services/reporte/reporteOcupacionAPI';
+import type { EstadoHorarioReporte } from '../../services/reporte/reporteOcupacionAPI';
 import { disponibilidadService } from '../../services/reporte/disponibilidadAPI';
 import { capacidadService } from '../../services/reporte/capacidadAPI';
 import { horarioService } from '../../services/horarios/horariosAPI';
@@ -96,11 +97,18 @@ const reportesDisponibles: ReporteDisponible[] = [
     { id: 'capacidad', nombre: 'Capacidad Utilizada', icon: TrendingUp, color: 'text-purple-600', descripcion: 'Análisis de capacidad instalada (RF20-4)' }
 ];
 
+const estadosReporte: { id: EstadoHorarioReporte; nombre: string }[] = [
+    { id: 'aprobado', nombre: 'Aprobados' },
+    { id: 'pendiente', nombre: 'Pendientes' },
+    { id: 'todos', nombre: 'Todos' }
+];
+
 import { useAuth } from '../../context/AuthContext';
 
 export function useReportes() {
     const { user, role } = useAuth();
     const [tipoReporte, setTipoReporte] = useState('ocupacion');
+    const [estadoReporte, setEstadoReporte] = useState<EstadoHorarioReporte>('aprobado');
     const [filtroDocente, setFiltroDocente] = useState('Todos');
     const [filtroPrograma, setFiltroPrograma] = useState('Todos');
     const [periodoActual, setPeriodoActual] = useState(PERIODO_DEFAULT);
@@ -122,6 +130,29 @@ export function useReportes() {
     const [docentes, setDocentes] = useState<Docente[]>([]);
     const [docenteSeleccionado, setDocenteSeleccionado] = useState<string | null>(null);
     const [showHorarioDocenteModal, setShowHorarioDocenteModal] = useState(false);
+
+    const filtrarHorariosPorEstado = <T extends { estado?: string }>(horarios: T[]) => {
+        if (estadoReporte === 'todos') return horarios;
+        return horarios.filter(h => (h.estado || '').toLowerCase() === estadoReporte);
+    };
+
+    const cargarHorariosExtendidosReporte = async () => {
+        const response = await horarioService.listExtendidos({ estado: estadoReporte });
+        return filtrarHorariosPorEstado(response.horarios);
+    };
+
+    const assertResponseOk = async (response: Response, fallback: string) => {
+        if (response.ok) return;
+
+        let detail = '';
+        try {
+            detail = await response.text();
+        } catch {
+            detail = '';
+        }
+
+        throw new Error(`${fallback}: ${response.status}${detail ? ` - ${detail}` : ''}`);
+    };
 
     // Cargar período académico activo
     useEffect(() => {
@@ -156,7 +187,7 @@ export function useReportes() {
         const cargarHorarios = async () => {
             try {
                 const activeToken = localStorage.getItem('auth_token');
-                const userScope = `${role?.nombre || 'sin-rol'}-${user?.id || 'anonimo'}-${user?.facultad?.id || 'sin-facultad'}`;
+                const userScope = `${role?.nombre || 'sin-rol'}-${user?.id || 'anonimo'}-${user?.facultad?.id || 'sin-facultad'}-${estadoReporte}`;
                 const cacheKey = `${REPORTES_HORARIOS_CACHE_KEY}-${userScope}`;
                 const cachedData = getSessionCacheData<{
                     horariosPrograma: HorarioPrograma[];
@@ -174,8 +205,7 @@ export function useReportes() {
                 }
 
                 // Cargar horarios extendidos
-                const horariosResponse = await horarioService.listExtendidos();
-                const horariosExtendidos = horariosResponse.horarios;
+                const horariosExtendidos = await cargarHorariosExtendidosReporte();
 
                 // Cargar programas
                 const programasResponse = await programaService.listarProgramas();
@@ -260,7 +290,7 @@ export function useReportes() {
 
         cargarHorarios();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [estadoReporte]);
 
     // Cargar datos de ocupación cuando el componente monta
     useEffect(() => {
@@ -272,7 +302,7 @@ export function useReportes() {
                 const cachedData = getSessionCacheData<{
                     datosOcupacion: DatoOcupacionJornada[];
                     espaciosMasUsados: EspacioMasUsado[];
-                }>(REPORTES_OCUPACION_CACHE_KEY, activeToken);
+                }>(`${REPORTES_OCUPACION_CACHE_KEY}-${estadoReporte}`, activeToken);
 
                 if (cachedData) {
                     setDatosOcupacion(cachedData.datosOcupacion);
@@ -280,7 +310,7 @@ export function useReportes() {
                     return;
                 }
 
-                const response = await reporteOcupacionService.getOcupacionReporte(0);
+                const response = await reporteOcupacionService.getOcupacionReporte(0, estadoReporte);
                 
                 // Mapear datos con colores
                 const datosConColor = response.ocupacion_por_jornada.map((dato, index) => ({
@@ -290,7 +320,7 @@ export function useReportes() {
                 
                 setDatosOcupacion(datosConColor);
                 setEspaciosMasUsados(response.espacios_mas_usados);
-                setSessionCacheData(REPORTES_OCUPACION_CACHE_KEY, activeToken, {
+                setSessionCacheData(`${REPORTES_OCUPACION_CACHE_KEY}-${estadoReporte}`, activeToken, {
                     datosOcupacion: datosConColor,
                     espaciosMasUsados: response.espacios_mas_usados
                 });
@@ -304,7 +334,7 @@ export function useReportes() {
         };
 
         cargarOcupacionReporte();
-    }, []);
+    }, [estadoReporte]);
 
     // Cargar datos de disponibilidad cuando el componente monta
     useEffect(() => {
@@ -314,7 +344,7 @@ export function useReportes() {
             try {
                 const activeToken = localStorage.getItem('auth_token');
                 const cachedData = getSessionCacheData<{ disponibilidadEspacios: DisponibilidadEspacio[] }>(
-                    REPORTES_DISPONIBILIDAD_CACHE_KEY,
+                    `${REPORTES_DISPONIBILIDAD_CACHE_KEY}-${estadoReporte}`,
                     activeToken
                 );
 
@@ -323,9 +353,9 @@ export function useReportes() {
                     return;
                 }
 
-                const response = await disponibilidadService.getDisponibilidad(0);
+                const response = await disponibilidadService.getDisponibilidad(0, estadoReporte);
                 setDisponibilidadEspacios(response.disponibilidad);
-                setSessionCacheData(REPORTES_DISPONIBILIDAD_CACHE_KEY, activeToken, {
+                setSessionCacheData(`${REPORTES_DISPONIBILIDAD_CACHE_KEY}-${estadoReporte}`, activeToken, {
                     disponibilidadEspacios: response.disponibilidad
                 });
             } catch (error) {
@@ -337,7 +367,7 @@ export function useReportes() {
         };
 
         cargarDisponibilidadReporte();
-    }, []);
+    }, [estadoReporte]);
 
     // Cargar datos de capacidad cuando el componente monta
     useEffect(() => {
@@ -347,7 +377,7 @@ export function useReportes() {
             try {
                 const activeToken = localStorage.getItem('auth_token');
                 const cachedData = getSessionCacheData<{ capacidadUtilizada: CapacidadUtilizada[] }>(
-                    REPORTES_CAPACIDAD_CACHE_KEY,
+                    `${REPORTES_CAPACIDAD_CACHE_KEY}-${estadoReporte}`,
                     activeToken
                 );
 
@@ -356,9 +386,9 @@ export function useReportes() {
                     return;
                 }
 
-                const response = await capacidadService.getCapacidad(0);
+                const response = await capacidadService.getCapacidad(0, estadoReporte);
                 setCapacidadUtilizada(response.capacidad);
-                setSessionCacheData(REPORTES_CAPACIDAD_CACHE_KEY, activeToken, {
+                setSessionCacheData(`${REPORTES_CAPACIDAD_CACHE_KEY}-${estadoReporte}`, activeToken, {
                     capacidadUtilizada: response.capacidad
                 });
             } catch (error) {
@@ -370,7 +400,7 @@ export function useReportes() {
         };
 
         cargarCapacidadReporte();
-    }, []);
+    }, [estadoReporte]);
 
     // Filtrar programas según facultad del usuario
     let programasFiltrados = programas;
@@ -398,13 +428,12 @@ export function useReportes() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        semana_offset: 0
+                        semana_offset: 0,
+                        estado_horario: estadoReporte
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -428,13 +457,12 @@ export function useReportes() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        semana_offset: 0
+                        semana_offset: 0,
+                        estado_horario: estadoReporte
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -458,13 +486,12 @@ export function useReportes() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        semana_offset: 0
+                        semana_offset: 0,
+                        estado_horario: estadoReporte
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -483,27 +510,25 @@ export function useReportes() {
             if (tipoReporte === 'horarios-programa') {
                 
                 // Cargar todos los horarios extendidos del backend
-                const horariosResponse = await horarioService.listExtendidos();
-                const todosLosHorarios = horariosResponse.horarios;
+                const todosLosHorarios = await cargarHorariosExtendidosReporte();
                 
                 // Filtrar según el filtro de programa aplicado
                 const horariosAExportar = filtroPrograma === 'Todos' 
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf/`, {
+                const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: horariosAExportar
+                        horarios: horariosAExportar,
+                        estado_horario: estadoReporte
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -522,27 +547,25 @@ export function useReportes() {
             if (tipoReporte === 'horarios-docente') {
                 
                 // Cargar todos los horarios extendidos del backend
-                const horariosResponse = await horarioService.listExtendidos();
-                const todosLosHorarios = horariosResponse.horarios;
+                const todosLosHorarios = await cargarHorariosExtendidosReporte();
                 
                 // Filtrar según el filtro de docente aplicado
                 const horariosAExportar = filtroDocente === 'Todos' 
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
                 
-                const response = await trackedFetch(`${apiUrl}/horario/exportar-pdf-docente/`, {
+                const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf-docente/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: horariosAExportar
+                        horarios: horariosAExportar,
+                        estado_horario: estadoReporte
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar PDF');
-                }
+                await assertResponseOk(response, 'Error al generar PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -659,27 +682,25 @@ export function useReportes() {
             if (tipoReporte === 'horarios-programa') {
                 
                 // Cargar todos los horarios extendidos del backend
-                const horariosResponse = await horarioService.listExtendidos();
-                const todosLosHorarios = horariosResponse.horarios;
+                const todosLosHorarios = await cargarHorariosExtendidosReporte();
                 
                 // Filtrar según el filtro de programa aplicado
                 const horariosAExportar = filtroPrograma === 'Todos' 
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await trackedFetch(`${apiUrl}/horario/exportar-excel/`, {
+                const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        horarios: horariosAExportar
+                        horarios: horariosAExportar,
+                        estado_horario: estadoReporte
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error('Error al generar Excel');
-                }
+                await assertResponseOk(response, 'Error al generar Excel');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -699,8 +720,7 @@ export function useReportes() {
                 
                 try {
                     // Cargar todos los horarios extendidos del backend
-                    const horariosResponse = await horarioService.listExtendidos();
-                    const todosLosHorarios = horariosResponse.horarios;
+                    const todosLosHorarios = await cargarHorariosExtendidosReporte();
                     
                     // Filtrar según el filtro de docente aplicado
                     const horariosAExportar = filtroDocente === 'Todos' 
@@ -709,21 +729,18 @@ export function useReportes() {
                     
                     console.log('Enviando horarios al endpoint:', horariosAExportar.length);
                     
-                    const response = await trackedFetch(`${apiUrl}/horario/exportar-excel-docente/`, {
+                    const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel-docente/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            horarios: horariosAExportar
+                            horarios: horariosAExportar,
+                            estado_horario: estadoReporte
                         })
                     });
 
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Error response:', errorText);
-                        throw new Error(`Error al generar Excel: ${response.status}`);
-                    }
+                    await assertResponseOk(response, 'Error al generar Excel');
 
                     const blob = await response.blob();
                     console.log('Blob recibido:', blob.size, 'bytes');
@@ -831,6 +848,9 @@ export function useReportes() {
         periodoActual,
         tipoReporte,
         setTipoReporte,
+        estadoReporte,
+        setEstadoReporte,
+        estadosReporte,
         filtroDocente,
         setFiltroDocente,
         filtroPrograma,

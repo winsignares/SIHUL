@@ -8,9 +8,13 @@ from .models import EspacioFisico, EspacioPermitido
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
+from mysite.auth_helpers import is_superuser_effective
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
+    if is_superuser_effective(getattr(request, 'user_obj', None)):
+        return queryset
+
     user_sede = getattr(request, 'sede', None)
     if user_sede and user_sede.seccional_id:
         return queryset.filter(sede__seccional_id=user_sede.seccional_id)
@@ -40,7 +44,7 @@ def list_all_espacios_with_horarios(request):
 
         user_sede = getattr(request, 'sede', None)
         base = EspacioFisico.objects.all()
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             base = base.filter(sede__seccional_id=user_sede.seccional_id)
 
         espacios = base.select_related('sede', 'tipo').prefetch_related(
@@ -97,13 +101,15 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         from django.db.models import Prefetch
 
         try:
-            usuario = Usuario.objects.get(id=usuario_id)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related(
             'espacio', 'espacio__sede', 'espacio__tipo'
         )
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permitidos = espacios_permitidos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
 
         if not espacios_permitidos.exists():
             return JsonResponse({'espacios': []}, status=200)
@@ -161,7 +167,7 @@ def list_all_espacios_disponibles_with_horarios(request):
 
         user_sede = getattr(request, 'sede', None)
         base = EspacioFisico.objects.all()
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             base = base.filter(sede__seccional_id=user_sede.seccional_id)
 
         espacios = base.filter(estado='Disponible').select_related('sede', 'tipo').prefetch_related(
@@ -218,13 +224,15 @@ def list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=None)
         from django.db.models import Prefetch
 
         try:
-            usuario = Usuario.objects.get(id=usuario_id)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related(
             'espacio', 'espacio__sede', 'espacio__tipo'
         )
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permitidos = espacios_permitidos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
 
         if not espacios_permitidos.exists():
             return JsonResponse({'espacios': []}, status=200)
@@ -338,7 +346,7 @@ def proximos_apertura_cierre(request):
         dia_actual = get_dia_semana_actual()
 
         try:
-            usuario = Usuario.objects.select_related('rol').get(id=usuario_id)
+            usuario = Usuario.objects.select_related('rol', 'sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
@@ -349,6 +357,8 @@ def proximos_apertura_cierre(request):
             )
 
             espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
+            if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+                espacios_permitidos = espacios_permitidos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
 
             if not espacios_permitidos.exists():
                 return JsonResponse(
@@ -648,7 +658,7 @@ def get_horario_espacio(request, espacio_id=None):
             return JsonResponse({'error': 'Espacio no encontrado'}, status=404)
 
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
                 return JsonResponse({'error': 'No tienes permiso para ver el horario de este espacio'}, status=403)
 
@@ -893,4 +903,3 @@ def ocupacion_semanal(request):
         return JsonResponse({'semana_inicio': lunes.isoformat(), 'semana_fin': sabado.isoformat(), 'ocupacion': ocupacion_list}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
