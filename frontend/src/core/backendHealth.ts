@@ -3,7 +3,7 @@ import { reportBackendReachable, getApiActivitySnapshot } from './apiActivity';
 
 const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 const PING_INTERVAL_MS = 5000;
-const PING_TIMEOUT_MS = 4000;
+const PING_TIMEOUT_MS = 10000;
 
 let pingTimerId: ReturnType<typeof setTimeout> | null = null;
 let started = false;
@@ -14,7 +14,7 @@ async function ping(): Promise<void> {
 
   try {
     // Cualquier respuesta HTTP (incluso 401/403/404) confirma que el backend está vivo.
-    await fetch(`${apiUrl}/`, { method: 'GET', signal: controller.signal, credentials: 'include' });
+    await fetch(`${apiUrl}/`, { method: 'HEAD', signal: controller.signal, credentials: 'include' });
     reportBackendReachable();
   } catch {
     // Backend sigue inalcanzable; no hacemos nada, el siguiente ping lo reintentará.

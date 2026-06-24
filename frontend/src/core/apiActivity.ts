@@ -58,6 +58,13 @@ export function beginApiRequest(): () => void {
  * Cualquier otro error (4xx/5xx ya manejados por errorHandler) no cuenta aquí.
  */
 function isNetworkUnreachableError(error: unknown): boolean {
+  if (
+    error instanceof DOMException &&
+    (error.name === 'AbortError' || error.name === 'TimeoutError')
+  ) {
+    return false;
+  }
+
   return error instanceof TypeError;
 }
 
