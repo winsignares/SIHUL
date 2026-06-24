@@ -219,7 +219,11 @@ const resolveSedeId = (usuario: CreateUsuarioPayload): number | undefined => {
 const toFrontendUsuario = (usuario: UsuarioApi): Usuario => {
   const rolId = usuario.rol_id ?? (typeof usuario.rol === 'number' ? usuario.rol : usuario.rol?.id ?? null);
   const facultadId = usuario.facultad_id ?? (typeof usuario.facultad === 'number' ? usuario.facultad : usuario.facultad?.id ?? null);
-  const sedeId = usuario.sede_id ?? (typeof usuario.sede === 'object' && usuario.sede && 'id' in usuario.sede ? usuario.sede.id : null);
+  const sedeId = usuario.sede_id ?? (
+    typeof usuario.sede === 'number'
+      ? usuario.sede
+      : (typeof usuario.sede === 'object' && usuario.sede && 'id' in usuario.sede ? usuario.sede.id : null)
+  );
 
   const rolObj = typeof usuario.rol === 'object' && usuario.rol !== null ? usuario.rol : undefined;
   const facultadObj =

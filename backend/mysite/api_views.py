@@ -36,7 +36,7 @@ from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global, is_admin_sistema
+from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective
 from .seccional_auth import SeccionalMixin
 from .permissions import IsAuthenticatedReadOnlyOrAdminWrite, IsAdminGlobal, IsAdminSistema
 
@@ -68,7 +68,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
         user = self.get_current_user()
 
         if self.request.method == 'GET':
-            if user and (is_admin_global(user) or is_admin_sistema(user)):
+            if user and is_superuser_effective(user):
                 return Seccional.objects.all()
 
             seccional = self.get_user_seccional()
@@ -77,7 +77,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
             return Seccional.objects.filter(id=seccional.id)
 
-        if user and (is_admin_global(user) or is_admin_sistema(user)):
+        if user and is_superuser_effective(user):
             return super().get_queryset()
         return Seccional.objects.none()
 
@@ -578,6 +578,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         from espacios.models import EspacioPermitido
 
         espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permisos = espacios_permisos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
         return [
             {
                 'id': ep.espacio.id,

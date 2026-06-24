@@ -22,6 +22,36 @@ def _password_valida(usuario, password_plano):
         legacy_ok = False
 
     return legacy_ok, legacy_ok
+
+
+def _sync_espacios_permitidos_usuario(usuario, espacios_ids):
+    from espacios.models import EspacioFisico, EspacioPermitido
+
+    ids_unicos = list(dict.fromkeys(espacios_ids or []))
+    espacios = list(EspacioFisico.objects.filter(id__in=ids_unicos).select_related('sede', 'sede__seccional'))
+    espacios_map = {espacio.id: espacio for espacio in espacios}
+    faltantes = [espacio_id for espacio_id in ids_unicos if espacio_id not in espacios_map]
+    if faltantes:
+        return f'IDs de espacios no válidos: {faltantes}'
+
+    usuario_seccional_id = getattr(getattr(usuario, 'sede', None), 'seccional_id', None)
+    if ids_unicos and not usuario_seccional_id:
+        return 'El usuario debe tener una sede con seccional para asignarle espacios.'
+
+    fuera_seccional = [
+        espacio_id
+        for espacio_id in ids_unicos
+        if getattr(getattr(espacios_map[espacio_id], 'sede', None), 'seccional_id', None) != usuario_seccional_id
+    ]
+    if fuera_seccional:
+        return f'Los espacios no pertenecen a la seccional del usuario: {fuera_seccional}'
+
+    EspacioPermitido.objects.filter(usuario=usuario).delete()
+    EspacioPermitido.objects.bulk_create([
+        EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id])
+        for espacio_id in ids_unicos
+    ])
+    return None
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -144,13 +174,10 @@ def create_usuario(request):
 
         # Manejar espacios permitidos
         if espacios_permitidos and isinstance(espacios_permitidos, list):
-            from espacios.models import EspacioFisico, EspacioPermitido
-            for espacio_id in espacios_permitidos:
-                try:
-                    espacio = EspacioFisico.objects.get(id=espacio_id)
-                    EspacioPermitido.objects.create(usuario=u, espacio=espacio)
-                except EspacioFisico.DoesNotExist:
-                    pass # Ignorar si el espacio no existe
+            error_espacios = _sync_espacios_permitidos_usuario(u, espacios_permitidos)
+            if error_espacios:
+                u.delete()
+                return JsonResponse({"error": error_espacios}, status=400)
 
         return JsonResponse({"message": "Usuario creado", "id": u.id}, status=201)
     except Rol.DoesNotExist:
@@ -190,16 +217,9 @@ def update_usuario(request):
         if 'espacios_permitidos' in data:
             espacios_permitidos = data.get('espacios_permitidos')
             if isinstance(espacios_permitidos, list):
-                from espacios.models import EspacioFisico, EspacioPermitido
-                # Eliminar permisos existentes
-                EspacioPermitido.objects.filter(usuario=u).delete()
-                # Crear nuevos permisos
-                for espacio_id in espacios_permitidos:
-                    try:
-                        espacio = EspacioFisico.objects.get(id=espacio_id)
-                        EspacioPermitido.objects.create(usuario=u, espacio=espacio)
-                    except EspacioFisico.DoesNotExist:
-                        pass
+                error_espacios = _sync_espacios_permitidos_usuario(u, espacios_permitidos)
+                if error_espacios:
+                    return JsonResponse({"error": error_espacios}, status=400)
 
         return JsonResponse({"message": "Usuario actualizado", "id": u.id}, status=200)
     except Usuario.DoesNotExist:
@@ -471,4 +491,3 @@ def change_password(request):
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-

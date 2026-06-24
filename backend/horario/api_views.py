@@ -11,7 +11,7 @@ from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
-from mysite.auth_helpers import is_admin_global, is_admin_sistema
+from mysite.auth_helpers import is_superuser_effective
 
 
 @csrf_exempt
@@ -159,7 +159,7 @@ def list_horarios_extendidos(request):
         qs = qs.filter(estado='aprobado')
 
     user_obj = getattr(request, 'user_obj', None)
-    is_admin = user_obj and (is_admin_global(user_obj) or is_admin_sistema(user_obj))
+    is_admin = user_obj and is_superuser_effective(user_obj)
     if user_sede and user_sede.seccional_id and not is_admin:
         qs = qs.filter(espacio__sede__seccional_id=user_sede.seccional_id)
 
@@ -251,7 +251,7 @@ def list_horarios_asignacion_espacios(request):
         qs = qs.filter(dia_semana__iexact=dia_semana)
 
     user_obj = getattr(request, 'user_obj', None)
-    is_admin = user_obj and (is_admin_global(user_obj) or is_admin_sistema(user_obj))
+    is_admin = user_obj and is_superuser_effective(user_obj)
 
     seccional_filter_id = None
     if user_sede and user_sede.seccional_id and not is_admin:
@@ -351,7 +351,13 @@ def asignar_espacio_horario(request):
         if horario_seccional_id and espacio_seccional_id and horario_seccional_id != espacio_seccional_id:
             return JsonResponse({'error': 'El espacio no pertenece a la misma seccional del horario.'}, status=400)
 
-        if user_sede and user_sede.seccional_id and espacio_seccional_id and user_sede.seccional_id != espacio_seccional_id:
+        if (
+            user_sede
+            and user_sede.seccional_id
+            and espacio_seccional_id
+            and user_sede.seccional_id != espacio_seccional_id
+            and not is_superuser_effective(getattr(request, 'user_obj', None))
+        ):
             return JsonResponse({'error': 'El espacio no pertenece a la seccional del usuario.'}, status=403)
 
         horario.espacio = espacio

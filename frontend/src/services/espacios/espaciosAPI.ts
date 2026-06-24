@@ -7,6 +7,7 @@ export interface EspacioFisico {
     id?: number;
     nombre: string;
     sede_id: number;
+    sede_seccional_id?: number | null;
     tipo_id: number;
     tipo_espacio?: {
         id: number;

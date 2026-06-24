@@ -51,11 +51,28 @@ class UsuarioSerializer(serializers.ModelSerializer):
             return
 
         ids_unicos = list(dict.fromkeys(espacios_ids))
-        espacios = list(EspacioFisico.objects.filter(id__in=ids_unicos).select_related('sede'))
+        espacios = list(EspacioFisico.objects.filter(id__in=ids_unicos).select_related('sede', 'sede__seccional'))
         espacios_map = {espacio.id: espacio for espacio in espacios}
         faltantes = [espacio_id for espacio_id in ids_unicos if espacio_id not in espacios_map]
         if faltantes:
             raise serializers.ValidationError({'espacios_permitidos': f'IDs de espacios no válidos: {faltantes}'})
+
+        usuario_sede = getattr(usuario, 'sede', None)
+        usuario_seccional_id = getattr(usuario_sede, 'seccional_id', None)
+        if ids_unicos and not usuario_seccional_id:
+            raise serializers.ValidationError({
+                'espacios_permitidos': 'El usuario debe tener una sede con seccional para asignarle espacios.'
+            })
+
+        fuera_seccional = [
+            espacio_id
+            for espacio_id in ids_unicos
+            if getattr(getattr(espacios_map[espacio_id], 'sede', None), 'seccional_id', None) != usuario_seccional_id
+        ]
+        if fuera_seccional:
+            raise serializers.ValidationError({
+                'espacios_permitidos': f'Los espacios no pertenecen a la seccional del usuario: {fuera_seccional}'
+            })
 
         EspacioPermitido.objects.filter(usuario=usuario).delete()
         if not ids_unicos:

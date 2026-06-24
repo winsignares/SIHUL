@@ -14,9 +14,14 @@ from django.db.models import Count
 from collections import defaultdict
 import unicodedata
 
+from mysite.auth_helpers import is_superuser_effective
+
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
     """Filtra espacios por la seccional de la sede del usuario logueado."""
+    if is_superuser_effective(getattr(request, 'user_obj', None)):
+        return queryset
+
     user_sede = getattr(request, 'sede', None)
     if user_sede and user_sede.seccional_id:
         return queryset.filter(sede__seccional_id=user_sede.seccional_id)
@@ -447,7 +452,7 @@ def list_all_espacios_with_horarios(request):
         # Solo mostrar horarios aprobados
         #obtener sede del usuario autenticado en la request del middleware
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             espacios = EspacioFisico.objects.filter(
                 sede__seccional_id=user_sede.seccional_id
             ).select_related(
@@ -523,7 +528,7 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         
         # Verificar que el usuario existe
         try:
-            usuario = Usuario.objects.get(id=usuario_id)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Usuario no encontrado"}, status=404)
         
@@ -531,6 +536,10 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         espacios_permitidos = EspacioPermitido.objects.filter(
             usuario=usuario
         ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permitidos = espacios_permitidos.filter(
+                espacio__sede__seccional_id=usuario.sede.seccional_id
+            )
         
         if not espacios_permitidos.exists():
             return JsonResponse({"espacios": []}, status=200)
@@ -598,6 +607,13 @@ def create_espacio_permitido(request):
             
             espacio = EspacioFisico.objects.get(id=espacio_id)
             usuario = Usuario.objects.get(id=usuario_id)
+
+            usuario_seccional_id = getattr(getattr(usuario, 'sede', None), 'seccional_id', None)
+            espacio_seccional_id = getattr(getattr(espacio, 'sede', None), 'seccional_id', None)
+            if not usuario_seccional_id:
+                return JsonResponse({"error": "El usuario debe tener una sede con seccional para asignarle espacios"}, status=400)
+            if espacio_seccional_id != usuario_seccional_id:
+                return JsonResponse({"error": "El espacio no pertenece a la seccional del usuario"}, status=400)
             
             # Verificar si ya existe
             if EspacioPermitido.objects.filter(espacio=espacio, usuario=usuario).exists():
@@ -701,8 +717,12 @@ def list_espacios_by_usuario(request, usuario_id=None):
     if usuario_id is None:
         return JsonResponse({"error": "El usuario_id es requerido en la URL"}, status=400)
     try:
-        usuario = Usuario.objects.get(id=usuario_id)
+        usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio')
+        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+            espacios_permitidos = espacios_permitidos.filter(
+                espacio__sede__seccional_id=usuario.sede.seccional_id
+            )
         lista = []
         for ep in espacios_permitidos:
             # Obtener recursos del espacio
@@ -790,7 +810,7 @@ def proximos_apertura_cierre(request):
         dia_actual = get_dia_semana_actual()
         
         try:
-            usuario = Usuario.objects.select_related('rol').get(id=usuario_id)
+            usuario = Usuario.objects.select_related('rol', 'sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
@@ -802,6 +822,10 @@ def proximos_apertura_cierre(request):
             ).select_related('espacio', 'espacio__sede', 'espacio__tipo')
 
             espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
+            if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+                espacios_permitidos = espacios_permitidos.filter(
+                    espacio__sede__seccional_id=usuario.sede.seccional_id
+                )
 
             if not espacios_permitidos.exists():
                 return JsonResponse({
@@ -816,7 +840,11 @@ def proximos_apertura_cierre(request):
         else:
             espacios_qs = EspacioFisico.objects.select_related('sede', 'tipo').all()
             user_sede = getattr(request, 'sede', None)
-            if user_sede and getattr(user_sede, 'seccional_id', None):
+            if (
+                user_sede
+                and getattr(user_sede, 'seccional_id', None)
+                and not is_superuser_effective(getattr(request, 'user_obj', None))
+            ):
                 espacios_qs = espacios_qs.filter(sede__seccional_id=user_sede.seccional_id)
             espacios_qs = espacios_qs.filter(estado='Disponible')
 
@@ -1211,7 +1239,7 @@ def get_horario_espacio(request, espacio_id=None):
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
         #Obtener sede del usuario logueado
         user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id:
+        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
             # Verificar que el espacio pertenece a la misma sede
             if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
                 return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403) 

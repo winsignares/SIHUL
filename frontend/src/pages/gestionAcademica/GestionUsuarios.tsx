@@ -49,6 +49,8 @@ export default function GestionUsuarios() {
     rolesDisponibles,
     facultadesDisponibles,
     espaciosDisponibles,
+    espaciosDisponiblesCreacion,
+    espaciosDisponiblesEdicion,
     sedesDisponibles,
     tiposEspacioDisponibles,
     espacioSeleccionado, setEspacioSeleccionado,
@@ -342,7 +344,7 @@ export default function GestionUsuarios() {
                       <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <div className="flex gap-2">
                           <SearchableSelect
-                            items={espaciosDisponibles.filter(e => !espaciosPermitidos.includes(e.id))}
+                            items={espaciosDisponiblesCreacion.filter(e => !espaciosPermitidos.includes(e.id))}
                             value={espacioSeleccionado}
                             onSelect={(espacio) => setEspacioSeleccionado(espacio.id.toString())}
                             getItemId={(espacio) => espacio.id.toString()}
@@ -780,7 +782,7 @@ export default function GestionUsuarios() {
                       <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <div className="flex gap-2">
                           <SearchableSelect
-                            items={espaciosDisponibles.filter(e => !espaciosPermitidosEdit.includes(e.id))}
+                            items={espaciosDisponiblesEdicion.filter(e => !espaciosPermitidosEdit.includes(e.id))}
                             value={espacioSeleccionadoEdit}
                             onSelect={(espacio) => setEspacioSeleccionadoEdit(espacio.id.toString())}
                             getItemId={(espacio) => espacio.id.toString()}

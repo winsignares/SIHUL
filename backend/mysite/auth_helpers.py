@@ -1,8 +1,14 @@
+def is_superuser_effective(user):
+    if not user:
+        return False
+    return bool(getattr(user, 'is_superuser', False) or getattr(user, 'es_superusuario', False))
+
+
 def is_admin_global(user):
     if not user:
         return False
 
-    if getattr(user, 'is_superuser', False):
+    if is_superuser_effective(user):
         return True
 
     rol = getattr(user, 'rol', None)
@@ -13,7 +19,7 @@ def is_admin_sistema(user):
     if not user:
         return False
 
-    if getattr(user, 'is_superuser', False):
+    if is_superuser_effective(user):
         return True
 
     rol = getattr(user, 'rol', None)

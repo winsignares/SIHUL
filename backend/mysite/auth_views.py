@@ -54,6 +54,8 @@ def _build_componentes(usuario: Usuario):
 
 def _build_espacios_permitidos(usuario: Usuario):
     espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
+    if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+        espacios_permisos = espacios_permisos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
     return [
         {
             'id': ep.espacio.id,
