@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
+import { publicServices } from '../services/publicServices';
 
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent } from '../config/componentRoutes';
@@ -74,23 +76,68 @@ function AppLayout() {
   return <AdminDashboard onLogout={handleLogout}><Outlet /></AdminDashboard>;
 }
 
+// Pantalla de verificación reCAPTCHA para acceso público directo por URL
+function PublicCaptchaGate({ onVerified }: { onVerified: () => void }) {
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
+
+  const handleVerify = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setError('');
+    try {
+      await publicServices.verifyRecaptcha(token);
+      localStorage.setItem('public_access_verified', 'true');
+      localStorage.setItem('auth_is_public', 'true');
+      onVerified();
+    } catch {
+      setError('No se pudo validar reCAPTCHA. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, onVerified]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+      <div className="bg-white rounded-2xl shadow-xl p-10 flex flex-col items-center gap-6 max-w-sm w-full">
+        <h2 className="text-xl font-bold text-slate-800 text-center">Verificación de acceso público</h2>
+        <p className="text-sm text-slate-600 text-center">Confirma que eres humano para continuar.</p>
+        {siteKey ? (
+          <ReCAPTCHA sitekey={siteKey} onChange={setToken} />
+        ) : (
+          <p className="text-xs text-red-600">reCAPTCHA no configurado.</p>
+        )}
+        {error && <p className="text-xs text-red-600">{error}</p>}
+        <button
+          onClick={handleVerify}
+          disabled={!token || loading}
+          className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? 'Verificando...' : 'Continuar'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Componente Layout para rutas públicas (sin componentes)
 function PublicLayout() {
   const navigate = useNavigate();
+  const [verified, setVerified] = useState(
+    localStorage.getItem('public_access_verified') === 'true'
+  );
 
-  useEffect(() => {
-    const hasVerified = localStorage.getItem('public_access_verified') === 'true';
-    if (!hasVerified) {
-      navigate('/login', { replace: true });
-    }
-  }, [navigate]);
-  
   const handlePublicLogout = () => {
-    // Solo limpiar localStorage sin llamar al backend
     localStorage.clear();
     navigate('/login');
   };
-  
+
+  if (!verified) {
+    return <PublicCaptchaGate onVerified={() => setVerified(true)} />;
+  }
+
   return <AdminDashboard onLogout={handlePublicLogout}><Outlet /></AdminDashboard>;
 }
 
