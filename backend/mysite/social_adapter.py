@@ -1,6 +1,5 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.core.exceptions import ValidationError
-from django.db import transaction
 import unicodedata
 
 from usuarios.models import Rol, Usuario
@@ -69,26 +68,24 @@ def _buscar_usuario_por_nombre_normalizado(nombre):
     return None
 
 
-def _correo_temporal_duplicado(usuario):
-    local_part, _, domain = (usuario.correo or 'usuario@duplicado.local').partition('@')
-    domain = domain or 'duplicado.local'
-    return f'{local_part}.oauth-duplicate-{usuario.id}@{domain}'[:100]
-
-
 def _actualizar_correo_usuario(usuario, email):
     if not email or usuario.correo.lower() == email.lower():
         return
+    if Usuario.objects.filter(correo__iexact=email).exclude(id=usuario.id).exists():
+        return
 
-    with transaction.atomic():
-        duplicado = Usuario.objects.select_for_update().filter(correo__iexact=email).exclude(id=usuario.id).first()
-        if duplicado:
-            duplicado.correo = _correo_temporal_duplicado(duplicado)
-            duplicado.email = duplicado.correo
-            duplicado.save(update_fields=['correo', 'email'])
+    usuario.correo = email
+    usuario.email = email
+    usuario.save(update_fields=['correo', 'email'])
 
-        usuario.correo = email
-        usuario.email = email
-        usuario.save(update_fields=['correo', 'email'])
+
+def _actualizar_nombre_usuario(usuario, nombre):
+    nombre = str(nombre or '').strip()
+    if not nombre or usuario.nombre == nombre:
+        return
+
+    usuario.nombre = nombre[:100]
+    usuario.save(update_fields=['nombre'])
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -103,13 +100,16 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         if not email and not display_name:
             return
 
-        existing_user = _buscar_usuario_por_nombre_normalizado(display_name)
-        if existing_user is None and email:
+        existing_user = None
+        if email:
             existing_user = Usuario.objects.filter(correo__iexact=email).first()
+        if existing_user is None:
+            existing_user = _buscar_usuario_por_nombre_normalizado(display_name)
 
         if existing_user is None:
             return
 
+        _actualizar_nombre_usuario(existing_user, display_name)
         if email:
             _actualizar_correo_usuario(existing_user, email)
 
