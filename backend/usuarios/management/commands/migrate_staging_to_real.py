@@ -118,6 +118,22 @@ class Command(BaseCommand):
     def _find_role(nombre):
         return Rol.objects.filter(nombre__iexact=nombre).first()
 
+    @classmethod
+    def _find_usuario_by_normalized_name(cls, nombre, rol_nombre=None):
+        nombre_normalizado = cls._normalize_text(nombre)
+        if not nombre_normalizado:
+            return None
+
+        usuarios = Usuario.objects.exclude(nombre__isnull=True).exclude(nombre='')
+        if rol_nombre:
+            usuarios = usuarios.filter(rol__nombre__iexact=rol_nombre)
+
+        for usuario in usuarios.order_by('id'):
+            if cls._normalize_text(usuario.nombre) == nombre_normalizado:
+                return usuario
+
+        return None
+
     @staticmethod
     def _resolve_sede(source_system, external_id):
         external = str(external_id or '').strip()
@@ -658,6 +674,8 @@ class Command(BaseCommand):
                     usuario = Usuario.objects.filter(correo=f'{numero_doc}@docente.local').first()
                 if not usuario and id_docente:
                     usuario = Usuario.objects.filter(correo=f'{id_docente}@docente.local').first()
+                if not usuario:
+                    usuario = self._find_usuario_by_normalized_name(nombre, rol_nombre='docente')
 
                 sede = self._resolve_sede(source_system, stg_docente.id_sede_oracle)
                 facultad = self._resolve_facultad(source_system, stg_docente.id_facultad_oracle)
@@ -700,11 +718,6 @@ class Command(BaseCommand):
                     changed = True
                 if facultad and usuario.facultad_id != facultad.id:
                     usuario.facultad = facultad
-                    changed = True
-
-                correo_canon = self._to_text(usuario.correo).lower()
-                if correo_pref and correo_canon != correo_pref:
-                    usuario.correo = self._build_unique_email(correo_pref, current_user_id=usuario.id)
                     changed = True
 
                 if changed:
@@ -769,6 +782,8 @@ class Command(BaseCommand):
                     id_est = self._to_text(stg_estudiante.id_estudiante_oracle)
                     if id_est:
                         usuario = Usuario.objects.filter(correo=f'{id_est}@estudiante.local').first()
+                if not usuario:
+                    usuario = self._find_usuario_by_normalized_name(nombre, rol_nombre='estudiante')
                 source_system = stg_estudiante.source_system or 'ORACLE_SIU'
                 sede = self._resolve_sede(source_system, getattr(stg_estudiante, 'id_sede_oracle', None))
 
@@ -805,11 +820,6 @@ class Command(BaseCommand):
                     changed = True
                 if sede and usuario.sede_id != sede.id:
                     usuario.sede = sede
-                    changed = True
-
-                correo_canon = self._to_text(usuario.correo).lower()
-                if correo_canon != correo_pref:
-                    usuario.correo = self._build_unique_email(correo_pref, current_user_id=usuario.id)
                     changed = True
 
                 if changed:
