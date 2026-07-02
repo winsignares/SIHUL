@@ -1,4 +1,7 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.core.exceptions import ValidationError
+from django.db import transaction
+import unicodedata
 
 from usuarios.models import Rol, Usuario
 
@@ -10,6 +13,8 @@ def _microsoft_email(sociallogin, data=None):
         data.get('email')
         or extra_data.get('mail')
         or extra_data.get('userPrincipalName')
+        or extra_data.get('preferred_username')
+        or extra_data.get('upn')
         or extra_data.get('email')
     )
 
@@ -42,6 +47,50 @@ def _rol_por_correo(email):
     return Rol.objects.create(nombre=role_name, descripcion=f'Rol {role_name}')
 
 
+def _normalizar_nombre(nombre):
+    texto = str(nombre or '').strip().upper()
+    texto = ''.join(
+        char for char in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(char) != 'Mn'
+    )
+    return ' '.join(texto.split())
+
+
+def _buscar_usuario_por_nombre_normalizado(nombre):
+    nombre_normalizado = _normalizar_nombre(nombre)
+    if not nombre_normalizado:
+        return None
+
+    usuarios = Usuario.objects.exclude(nombre__isnull=True).exclude(nombre='')
+    for usuario in usuarios.order_by('id'):
+        if _normalizar_nombre(usuario.nombre) == nombre_normalizado:
+            return usuario
+
+    return None
+
+
+def _correo_temporal_duplicado(usuario):
+    local_part, _, domain = (usuario.correo or 'usuario@duplicado.local').partition('@')
+    domain = domain or 'duplicado.local'
+    return f'{local_part}.oauth-duplicate-{usuario.id}@{domain}'[:100]
+
+
+def _actualizar_correo_usuario(usuario, email):
+    if not email or usuario.correo.lower() == email.lower():
+        return
+
+    with transaction.atomic():
+        duplicado = Usuario.objects.select_for_update().filter(correo__iexact=email).exclude(id=usuario.id).first()
+        if duplicado:
+            duplicado.correo = _correo_temporal_duplicado(duplicado)
+            duplicado.email = duplicado.correo
+            duplicado.save(update_fields=['correo', 'email'])
+
+        usuario.correo = email
+        usuario.email = email
+        usuario.save(update_fields=['correo', 'email'])
+
+
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
     """Adapta datos de Microsoft al modelo Usuario del proyecto."""
 
@@ -54,15 +103,15 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         if not email and not display_name:
             return
 
-        existing_user = None
-        if email:
+        existing_user = _buscar_usuario_por_nombre_normalizado(display_name)
+        if existing_user is None and email:
             existing_user = Usuario.objects.filter(correo__iexact=email).first()
-
-        if existing_user is None and display_name:
-            existing_user = Usuario.objects.filter(nombre__iexact=display_name).first()
 
         if existing_user is None:
             return
+
+        if email:
+            _actualizar_correo_usuario(existing_user, email)
 
         sociallogin.connect(request, existing_user)
 
@@ -70,9 +119,11 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         user = super().populate_user(request, sociallogin, data)
         email = _microsoft_email(sociallogin, data)
         display_name = _microsoft_display_name(sociallogin, data)
+        if not email:
+            raise ValidationError('Microsoft no entregó un correo institucional para autenticar el usuario.')
 
-        user.correo = email or user.correo
-        user.email = email or ''
+        user.correo = email
+        user.email = email
         user.nombre = display_name[:100]
         user.activo = True
         user.contrasena_hash = user.contrasena_hash or ''
@@ -87,6 +138,8 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
         email = _microsoft_email(sociallogin)
+        if not email:
+            raise ValidationError('Microsoft no entregó un correo institucional para autenticar el usuario.')
 
         changed_fields = []
         if email and not user.rol_id:
