@@ -68,6 +68,15 @@ def _buscar_usuario_por_nombre_normalizado(nombre):
     return None
 
 
+def _resolver_usuario_objetivo(email, display_name):
+    if email:
+        usuario = Usuario.objects.filter(correo__iexact=email).first()
+        if usuario:
+            return usuario
+
+    return _buscar_usuario_por_nombre_normalizado(display_name)
+
+
 def _actualizar_correo_usuario(usuario, email):
     if not email or usuario.correo.lower() == email.lower():
         return
@@ -92,26 +101,27 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
     """Adapta datos de Microsoft al modelo Usuario del proyecto."""
 
     def pre_social_login(self, request, sociallogin):
-        if sociallogin.is_existing:
-            return
-
         email = _microsoft_email(sociallogin)
         display_name = _microsoft_display_name(sociallogin)
         if not email and not display_name:
             return
 
-        existing_user = None
-        if email:
-            existing_user = Usuario.objects.filter(correo__iexact=email).first()
-        if existing_user is None:
-            existing_user = _buscar_usuario_por_nombre_normalizado(display_name)
-
+        existing_user = _resolver_usuario_objetivo(email, display_name)
         if existing_user is None:
             return
 
         _actualizar_nombre_usuario(existing_user, display_name)
         if email:
             _actualizar_correo_usuario(existing_user, email)
+
+        if sociallogin.is_existing:
+            current_user = getattr(sociallogin, 'user', None)
+            if current_user and current_user.id == existing_user.id:
+                return
+            sociallogin.account.user = existing_user
+            sociallogin.account.save(update_fields=['user'])
+            sociallogin.user = existing_user
+            return
 
         sociallogin.connect(request, existing_user)
 
