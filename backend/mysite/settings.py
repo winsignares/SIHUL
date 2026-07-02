@@ -225,7 +225,8 @@ if MICROSOFT_OAUTH_ENABLED:
         }
     }
 
-    ACCOUNT_LOGIN_REDIRECT_URL = '/api/auth/login-success/'
+    LOGIN_REDIRECT_URL = '/api/auth/login-success/'
+    ACCOUNT_LOGIN_REDIRECT_URL = LOGIN_REDIRECT_URL
     ACCOUNT_LOGOUT_REDIRECT_URL = f'{FRONTEND_URL}/login'
 
 # CORS Configuration
