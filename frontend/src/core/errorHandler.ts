@@ -1,3 +1,5 @@
+import { clearAuthClientState } from './clearStaleState';
+
 export interface ApiError {
   message: string;
   status: number;
@@ -109,6 +111,7 @@ export async function handleApiError(
         break;
       }
       // Limpiar sesión local y navegar al login sin recargar toda la página
+      clearAuthClientState();
       try {
         // Evitar dependencias circulares importando dinámicamente
         const { db } = await import('../services/database');

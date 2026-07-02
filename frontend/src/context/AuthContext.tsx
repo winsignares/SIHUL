@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../services/users/authService';
 import type { AuthState } from '../models/auth/auth.model';
+import { clearAuthClientState } from '../core/clearStaleState';
 
 type AuthComponent = AuthState['components'][number];
 
@@ -13,27 +14,36 @@ interface AuthContextType extends AuthState {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function readStoredJson<T>(key: string, fallback: T): T {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+        return fallback;
+    }
+
+    try {
+        return JSON.parse(raw) as T;
+    } catch (error) {
+        console.warn(`Estado local inválido en ${key}; se eliminará.`, error);
+        localStorage.removeItem(key);
+        return fallback;
+    }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const authSignatureRef = useRef<string>(localStorage.getItem('auth_signature') || '');
     const [state, setState] = useState<AuthState>({
         token: localStorage.getItem('auth_token'),
-        user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
-        role: JSON.parse(localStorage.getItem('auth_role') || 'null'),
-        components: JSON.parse(localStorage.getItem('auth_components') || '[]'),
-        faculties: JSON.parse(localStorage.getItem('auth_faculties') || 'null') || undefined,
-        areas: JSON.parse(localStorage.getItem('auth_areas') || 'null') || undefined,
+        user: readStoredJson('auth_user', null),
+        role: readStoredJson('auth_role', null),
+        components: readStoredJson('auth_components', []),
+        faculties: readStoredJson('auth_faculties', null) || undefined,
+        areas: readStoredJson('auth_areas', null) || undefined,
         isAuthenticated: !!localStorage.getItem('auth_token'),
         isLoading: false,
     });
 
     const clearAuthState = () => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_role');
-        localStorage.removeItem('auth_components');
-        localStorage.removeItem('auth_faculties');
-        localStorage.removeItem('auth_areas');
-        localStorage.removeItem('auth_signature');
+        clearAuthClientState();
 
         authSignatureRef.current = '';
         setState({
