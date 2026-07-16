@@ -353,9 +353,13 @@ export default function GestionUsuarios() {
                             onSelect={(espacio) => setEspacioSeleccionado(espacio.id.toString())}
                             getItemId={(espacio) => espacio.id.toString()}
                             getItemLabel={(espacio) => espacio.nombre}
-                            placeholder="Seleccione un espacio..."
-                            searchPlaceholder="Buscar espacio..."
-                            emptyMessage="No hay espacios disponibles."
+                            placeholder={sedeSeleccionada ? 'Seleccione un espacio...' : 'Seleccione primero una sede'}
+                            searchPlaceholder={sedeSeleccionada ? 'Buscar espacio...' : 'Primero seleccione una sede'}
+                            emptyMessage={
+                              sedeSeleccionada
+                                ? 'No hay espacios disponibles para la sede seleccionada.'
+                                : 'Primero seleccione una sede universitaria para asignar espacios.'
+                            }
                             className="flex-1"
                           />
                           <Button
@@ -800,9 +804,13 @@ export default function GestionUsuarios() {
                             onSelect={(espacio) => setEspacioSeleccionadoEdit(espacio.id.toString())}
                             getItemId={(espacio) => espacio.id.toString()}
                             getItemLabel={(espacio) => espacio.nombre}
-                            placeholder="Seleccione un espacio..."
-                            searchPlaceholder="Buscar espacio..."
-                            emptyMessage="No hay espacios disponibles."
+                            placeholder={editingUser?.sede_id ? 'Seleccione un espacio...' : 'Seleccione primero una sede'}
+                            searchPlaceholder={editingUser?.sede_id ? 'Buscar espacio...' : 'Primero seleccione una sede'}
+                            emptyMessage={
+                              editingUser?.sede_id
+                                ? 'No hay espacios disponibles para la sede seleccionada.'
+                                : 'Primero seleccione una sede universitaria para asignar espacios.'
+                            }
                             className="flex-1"
                           />
                           <Button
