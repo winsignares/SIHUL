@@ -16,7 +16,7 @@ export function useOcupacionSemanal() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState(new Date());
   const [espaciosOcupacion, setEspaciosOcupacion] = useState<EspacioOcupacion[]>([]);
   const [semanaInfo, setSemanaInfo] = useState({ inicio: '', fin: '' });
-  const [periodoActual, setPeriodoActual] = useState('2025-1');
+  const [periodoActual, setPeriodoActual] = useState('Cargando...');
   const [periodoInfo, setPeriodoInfo] = useState({ nombre: '', inicio: '', fin: '' });
   const [validacionPeriodo, setValidacionPeriodo] = useState<{ valido: boolean; mensaje: string }>({ valido: true, mensaje: '' });
 
@@ -25,17 +25,6 @@ export function useOcupacionSemanal() {
     const cargarPeriodo = async () => {
       try {
         const activeToken = localStorage.getItem('auth_token');
-        const cachedPeriodo = getSessionCacheData<{
-          periodoActual: string;
-          periodoInfo: { nombre: string; inicio: string; fin: string };
-        }>(OCUPACION_SEMANAL_PERIODO_CACHE_KEY, activeToken);
-
-        if (cachedPeriodo) {
-          setPeriodoActual(cachedPeriodo.periodoActual);
-          setPeriodoInfo(cachedPeriodo.periodoInfo);
-          return;
-        }
-
         const periodo = await periodoActivoService.getPeriodoActivo();
         if (periodo && periodo.nombre) {
           setPeriodoActual(periodo.nombre);
@@ -49,9 +38,12 @@ export function useOcupacionSemanal() {
             periodoActual: periodo.nombre,
             periodoInfo: periodoInfoData
           });
+        } else {
+          setPeriodoActual('Sin periodo activo');
         }
       } catch (error) {
         console.error('Error al cargar período activo:', error);
+        setPeriodoActual('Sin periodo activo');
       }
     };
     cargarPeriodo();

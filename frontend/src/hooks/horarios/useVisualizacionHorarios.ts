@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../../services/database';
 import type { Facultad, Programa, Asignatura, EspacioFisico } from '../../models/index';
 import type { HorarioCompleto, AsignaturaHorario } from '../../models/horarios/visualizacion.model';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 
 export function useVisualizacionHorarios() {
     const [facultades, setFacultades] = useState<Facultad[]>([]);
@@ -19,6 +20,7 @@ export function useVisualizacionHorarios() {
     const [tipoVista, setTipoVista] = useState<'grupo' | 'docente' | 'espacio'>('grupo');
 
     const [horarioVisualizado, setHorarioVisualizado] = useState<HorarioCompleto | null>(null);
+    const [periodoActual, setPeriodoActual] = useState('Cargando...');
 
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const horasDelDia = [
@@ -27,10 +29,9 @@ export function useVisualizacionHorarios() {
         '20:00', '21:00', '22:00'
     ];
 
-    const PERIODO_ACTUAL = '2025-1';
-
     useEffect(() => {
         loadData();
+        loadPeriodoActivo();
 
         // Escuchar cambios en localStorage para actualizar automáticamente
         const handleStorageChange = () => {
@@ -62,6 +63,16 @@ export function useVisualizacionHorarios() {
             console.log('Horarios cargados:', horariosData);
         } else {
             console.log('No hay horarios en localStorage');
+        }
+    };
+
+    const loadPeriodoActivo = async () => {
+        try {
+            const periodo = await periodoActivoService.getPeriodoActivo();
+            setPeriodoActual(periodo?.nombre || 'Sin periodo activo');
+        } catch (error) {
+            console.error('Error al cargar período activo:', error);
+            setPeriodoActual('Sin periodo activo');
         }
     };
 
@@ -171,7 +182,7 @@ export function useVisualizacionHorarios() {
         setHorarioVisualizado,
         dias,
         horasDelDia,
-        PERIODO_ACTUAL,
+        periodoActual,
         loadData,
         programasFiltrados,
         semestresDisponibles,

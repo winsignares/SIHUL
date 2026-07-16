@@ -28,13 +28,13 @@ import { resolveApiBaseUrl } from '../../core/backendUrl';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { trackedFetch } from '../../core/apiActivity';
 
-const REPORTES_PERIODO_CACHE_KEY = 'reporte-reportes-periodo';
 const REPORTES_HORARIOS_CACHE_KEY = 'reporte-reportes-horarios';
 const REPORTES_OCUPACION_CACHE_KEY = 'reporte-reportes-ocupacion';
 const REPORTES_DISPONIBILIDAD_CACHE_KEY = 'reporte-reportes-disponibilidad';
 const REPORTES_CAPACIDAD_CACHE_KEY = 'reporte-reportes-capacidad';
 
-const PERIODO_DEFAULT = '2025-1';
+const PERIODO_LOADING = 'Cargando...';
+const PERIODO_EMPTY = 'Sin periodo activo';
 const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 const descargarExcel = async (buffer: BlobPart, fileName: string) => {
@@ -111,7 +111,7 @@ export function useReportes() {
     const [estadoReporte, setEstadoReporte] = useState<EstadoHorarioReporte>('aprobado');
     const [filtroDocente, setFiltroDocente] = useState('Todos');
     const [filtroPrograma, setFiltroPrograma] = useState('Todos');
-    const [periodoActual, setPeriodoActual] = useState(PERIODO_DEFAULT);
+    const [periodoActual, setPeriodoActual] = useState(PERIODO_LOADING);
     const [datosOcupacion, setDatosOcupacion] = useState<DatoOcupacionJornada[]>(datosOcupacionDefault);
     const [espaciosMasUsados, setEspaciosMasUsados] = useState<EspacioMasUsado[]>(espaciosMasUsadosDefault);
     const [cargandoOcupacion, setCargandoOcupacion] = useState(false);
@@ -158,24 +158,11 @@ export function useReportes() {
     useEffect(() => {
         const cargarPeriodo = async () => {
             try {
-                const activeToken = localStorage.getItem('auth_token');
-                const cachedData = getSessionCacheData<{ periodoActual: string }>(REPORTES_PERIODO_CACHE_KEY, activeToken);
-
-                if (cachedData?.periodoActual) {
-                    setPeriodoActual(cachedData.periodoActual);
-                    return;
-                }
-
                 const periodo = await periodoActivoService.getPeriodoActivo();
-                if (periodo && periodo.nombre) {
-                    setPeriodoActual(periodo.nombre);
-                    setSessionCacheData(REPORTES_PERIODO_CACHE_KEY, activeToken, {
-                        periodoActual: periodo.nombre
-                    });
-                }
+                setPeriodoActual(periodo?.nombre || PERIODO_EMPTY);
             } catch (error) {
                 console.error('Error al cargar período activo:', error);
-                // Mantener período default en caso de error
+                setPeriodoActual(PERIODO_EMPTY);
             }
         };
 

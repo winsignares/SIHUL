@@ -66,7 +66,7 @@ export default function ConsultaOcupacion() {
             <SelectValue placeholder="Periodo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="2025-1">Periodo 2025-1</SelectItem>
+            <SelectItem value={periodo}>Periodo {periodo}</SelectItem>
             <SelectItem value="2024-2">Periodo 2024-2</SelectItem>
             <SelectItem value="2024-1">Periodo 2024-1</SelectItem>
           </SelectContent>

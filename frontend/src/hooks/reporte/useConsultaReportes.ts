@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import ExcelJS from 'exceljs';
 import type { DatoOcupacionJornada, EspacioMasUsado } from '../../models';
 import { toast } from 'sonner';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 
 const descargarExcel = async (buffer: BlobPart, fileName: string) => {
     const blob = new Blob([buffer], {
@@ -31,8 +32,22 @@ const espaciosMasUsados: EspacioMasUsado[] = [
 ];
 
 export function useConsultaReportes() {
-    const [periodo, setPeriodo] = useState('2025-1');
+    const [periodo, setPeriodo] = useState('Cargando...');
     const [isExporting, setIsExporting] = useState(false);
+
+    useEffect(() => {
+        const cargarPeriodo = async () => {
+            try {
+                const periodoActivo = await periodoActivoService.getPeriodoActivo();
+                setPeriodo(periodoActivo?.nombre || 'Sin periodo activo');
+            } catch (error) {
+                console.error('Error al cargar período activo:', error);
+                setPeriodo('Sin periodo activo');
+            }
+        };
+
+        cargarPeriodo();
+    }, []);
 
     const exportarPDF = useCallback(async () => {
         if (isExporting) return;

@@ -12,15 +12,15 @@ export interface Docente {
     correo?: string;
 }
 
-const PERIODO_DEFAULT = '2025-2';
-const CONSULTA_HORARIO_PERIODO_CACHE_KEY = 'horarios-consulta-periodo';
+const PERIODO_LOADING = 'Cargando...';
+const PERIODO_EMPTY = 'Sin periodo activo';
 const CONSULTA_HORARIO_DATA_CACHE_KEY = 'horarios-consulta-data';
 
 export function useConsultaHorario() {
     const [tipoConsulta, setTipoConsulta] = useState('horarios-programa');
     const [filtroDocente, setFiltroDocente] = useState('Todos');
     const [filtroPrograma, setFiltroPrograma] = useState('Todos');
-    const [periodoActual, setPeriodoActual] = useState(PERIODO_DEFAULT);
+    const [periodoActual, setPeriodoActual] = useState(PERIODO_LOADING);
     const [showHorarioModal, setShowHorarioModal] = useState(false);
     const [grupoSeleccionado, setGrupoSeleccionado] = useState<string | null>(null);
     const [horariosPrograma, setHorariosPrograma] = useState<HorarioPrograma[]>([]);
@@ -30,27 +30,13 @@ export function useConsultaHorario() {
     const [docenteSeleccionado, setDocenteSeleccionado] = useState<string | null>(null);
     const [showHorarioDocenteModal, setShowHorarioDocenteModal] = useState(false);
 
-    const cargarPeriodo = async ({ force = false }: { force?: boolean } = {}) => {
+    const cargarPeriodo = async () => {
         try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedData = force
-                ? null
-                : getSessionCacheData<{ periodoActual: string }>(CONSULTA_HORARIO_PERIODO_CACHE_KEY, activeToken);
-
-            if (cachedData?.periodoActual) {
-                setPeriodoActual(cachedData.periodoActual);
-                return;
-            }
-
             const periodo = await periodoActivoService.getPeriodoActivo();
-            if (periodo && periodo.nombre) {
-                setPeriodoActual(periodo.nombre);
-                setSessionCacheData(CONSULTA_HORARIO_PERIODO_CACHE_KEY, activeToken, {
-                    periodoActual: periodo.nombre
-                });
-            }
+            setPeriodoActual(periodo?.nombre || PERIODO_EMPTY);
         } catch (error) {
             console.error('Error al cargar período activo:', error);
+            setPeriodoActual(PERIODO_EMPTY);
         }
     };
 

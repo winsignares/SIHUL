@@ -21,7 +21,7 @@ export default function ConsultaHorarios() {
     setFilterFacultad,
     filterEspacio,
     setFilterEspacio,
-    PERIODO_FIJO,
+    periodoActual,
     horarios,
     docentes,
     programas,
@@ -47,7 +47,7 @@ export default function ConsultaHorarios() {
           </div>
           <Badge className="bg-blue-600 text-white px-4 py-2">
             <Calendar className="w-4 h-4 mr-2" />
-            Periodo {PERIODO_FIJO}
+            Periodo {periodoActual}
           </Badge>
         </div>
       </motion.div>

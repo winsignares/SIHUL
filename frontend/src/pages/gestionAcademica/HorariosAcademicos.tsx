@@ -9,7 +9,7 @@ import { Checkbox } from '../../share/checkbox';
 import { Plus, Clock, AlertCircle, Trash2, CheckCircle, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NotificationBanner } from '../../share/notificationBanner';
-import { useHorariosAcademicos, PERIODO_FIJO, dias } from '../../hooks/gestionAcademica/useHorariosAcademicos';
+import { useHorariosAcademicos, dias } from '../../hooks/gestionAcademica/useHorariosAcademicos';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function HorariosAcademicos() {
@@ -20,6 +20,7 @@ export default function HorariosAcademicos() {
     asignaturas,
     espacios,
     docentes,
+    periodoActual,
     facultadSeleccionada,
     programaSeleccionado,
     semestreSeleccionado,
@@ -75,7 +76,7 @@ export default function HorariosAcademicos() {
             <h3 className="text-slate-900 dark:text-slate-100">
               Horario: {programas.find(p => p.id === horarioAMostrar.programaId)?.nombre} - Semestre {horarioAMostrar.semestre} - Grupo {horarioAMostrar.grupoNombre}
             </h3>
-            <p className="text-slate-600 dark:text-slate-400">Periodo: {PERIODO_FIJO}</p>
+            <p className="text-slate-600 dark:text-slate-400">Periodo: {periodoActual}</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -226,7 +227,7 @@ export default function HorariosAcademicos() {
         <div className="flex items-center gap-4">
           <Badge className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 text-sm">
             <Calendar className="w-4 h-4 mr-2" />
-            Periodo {PERIODO_FIJO}
+            Periodo {periodoActual}
           </Badge>
           <Button
             onClick={handleOpenCreateDialog}

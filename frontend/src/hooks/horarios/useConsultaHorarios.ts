@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { horarioService } from '../../services/horarios/horariosAPI';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const CACHE_KEY = 'consulta-horarios';
@@ -44,13 +45,24 @@ export function useConsultaHorarios() {
   const [filterEspacio, setFilterEspacio] = useState('todos');
   const [horarios, setHorarios] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(true);
+  const [periodoActual, setPeriodoActual] = useState('Cargando...');
 
-  const PERIODO_FIJO = '2025-2';
   const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
   useEffect(() => {
+    loadPeriodoActivo();
     loadHorarios();
   }, []);
+
+  const loadPeriodoActivo = async () => {
+    try {
+      const periodo = await periodoActivoService.getPeriodoActivo();
+      setPeriodoActual(periodo?.nombre || 'Sin periodo activo');
+    } catch (error) {
+      console.error('Error al cargar período activo:', error);
+      setPeriodoActual('Sin periodo activo');
+    }
+  };
 
   const loadHorarios = async () => {
     const activeToken = localStorage.getItem('auth_token');
@@ -143,7 +155,7 @@ export function useConsultaHorarios() {
     setFilterFacultad,
     filterEspacio,
     setFilterEspacio,
-    PERIODO_FIJO,
+    periodoActual,
     horarios,
     docentes,
     programas,

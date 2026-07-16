@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import type { EspacioOcupacion } from '../../models';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { espacioService } from '../../services/espacios/espaciosAPI';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const CONSULTA_OCUPACION_SEDES_CACHE_KEY = 'reporte-consulta-ocupacion-sedes';
@@ -77,7 +78,7 @@ const espaciosOcupacion: EspacioOcupacion[] = [
 ];
 
 export function useConsultaOcupacion() {
-    const [periodo, setPeriodo] = useState('2025-1');
+    const [periodo, setPeriodo] = useState('Cargando...');
     const [tipoEspacio, setTipoEspacio] = useState<string>('todos');
     const [sedeId, setSedeId] = useState<string>('todas');
     const [sedes, setSedes] = useState<Sede[]>([]);
@@ -86,6 +87,16 @@ export function useConsultaOcupacion() {
 
     // Cargar sedes al montar el componente
     useEffect(() => {
+        const cargarPeriodo = async () => {
+            try {
+                const periodoActivo = await periodoActivoService.getPeriodoActivo();
+                setPeriodo(periodoActivo?.nombre || 'Sin periodo activo');
+            } catch (error) {
+                console.error('Error al cargar período activo:', error);
+                setPeriodo('Sin periodo activo');
+            }
+        };
+
         const cargarSedes = async () => {
             try {
                 const activeToken = localStorage.getItem('auth_token');
@@ -103,6 +114,7 @@ export function useConsultaOcupacion() {
                 console.error('Error al cargar sedes:', error);
             }
         };
+        cargarPeriodo();
         cargarSedes();
     }, []);
 

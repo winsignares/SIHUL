@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { db } from '../../services/database';
+import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { useNotification } from '../../share/notificationBanner';
 import type { Asignatura, EspacioFisico, Facultad, Grupo, HorarioAcademico, Programa, Usuario } from '../../models';
 
-export const PERIODO_FIJO = '2025-1';
 export const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 type HorarioAsignado = {
@@ -47,6 +47,7 @@ export function useHorariosAcademicos() {
   const [docentes, setDocentes] = useState<Usuario[]>([]);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [horarios, setHorarios] = useState<HorarioAcademico[]>([]);
+  const [periodoActual, setPeriodoActual] = useState('Cargando...');
 
   const [facultadSeleccionada, setFacultadSeleccionada] = useState('');
   const [programaSeleccionado, setProgramaSeleccionado] = useState('');
@@ -84,7 +85,18 @@ export function useHorariosAcademicos() {
 
   useEffect(() => {
     loadData();
+    loadPeriodoActivo();
   }, []);
+
+  const loadPeriodoActivo = async () => {
+    try {
+      const periodo = await periodoActivoService.getPeriodoActivo();
+      setPeriodoActual(periodo?.nombre || 'Sin periodo activo');
+    } catch (error) {
+      console.error('Error al cargar período activo:', error);
+      setPeriodoActual('Sin periodo activo');
+    }
+  };
 
   const programasFiltrados = useMemo(
     () => programas.filter((p) => !facultadSeleccionada || p.facultadId === facultadSeleccionada),
@@ -298,6 +310,7 @@ export function useHorariosAcademicos() {
     asignaturas,
     espacios,
     docentes,
+    periodoActual,
     facultadSeleccionada,
     programaSeleccionado,
     semestreSeleccionado,
