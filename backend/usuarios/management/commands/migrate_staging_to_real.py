@@ -670,12 +670,14 @@ class Command(BaseCommand):
                     correo_pref = f'{base}@docente.local'
 
                 usuario = Usuario.objects.filter(correo=correo_pref).first()
+                matched_by_name = False
                 if not usuario and numero_doc:
                     usuario = Usuario.objects.filter(correo=f'{numero_doc}@docente.local').first()
                 if not usuario and id_docente:
                     usuario = Usuario.objects.filter(correo=f'{id_docente}@docente.local').first()
                 if not usuario:
-                    usuario = self._find_usuario_by_normalized_name(nombre, rol_nombre='docente')
+                    usuario = self._find_usuario_by_normalized_name(nombre)
+                    matched_by_name = usuario is not None
 
                 sede = self._resolve_sede(source_system, stg_docente.id_sede_oracle)
                 facultad = self._resolve_facultad(source_system, stg_docente.id_facultad_oracle)
@@ -706,11 +708,11 @@ class Command(BaseCommand):
                 if usuario.nombre != nombre:
                     usuario.nombre = nombre
                     changed = True
-                if usuario.activo != activo:
+                if not matched_by_name and usuario.activo != activo:
                     usuario.activo = activo
                     usuario.is_active = activo
                     changed = True
-                if rol_docente and usuario.rol_id != rol_docente.id:
+                if not matched_by_name and rol_docente and usuario.rol_id != rol_docente.id:
                     usuario.rol = rol_docente
                     changed = True
                 if sede and usuario.sede_id != sede.id:
@@ -778,12 +780,14 @@ class Command(BaseCommand):
                 correo_pref = f'{base_id}@estudiante.local'.lower()
 
                 usuario = Usuario.objects.filter(correo=correo_pref).first()
+                matched_by_name = False
                 if not usuario:
                     id_est = self._to_text(stg_estudiante.id_estudiante_oracle)
                     if id_est:
                         usuario = Usuario.objects.filter(correo=f'{id_est}@estudiante.local').first()
                 if not usuario:
-                    usuario = self._find_usuario_by_normalized_name(nombre, rol_nombre='estudiante')
+                    usuario = self._find_usuario_by_normalized_name(nombre)
+                    matched_by_name = usuario is not None
                 source_system = stg_estudiante.source_system or 'ORACLE_SIU'
                 sede = self._resolve_sede(source_system, getattr(stg_estudiante, 'id_sede_oracle', None))
 
@@ -811,10 +815,10 @@ class Command(BaseCommand):
                 if usuario.nombre != nombre:
                     usuario.nombre = nombre
                     changed = True
-                if rol_estudiante and usuario.rol_id != rol_estudiante.id:
+                if not matched_by_name and rol_estudiante and usuario.rol_id != rol_estudiante.id:
                     usuario.rol = rol_estudiante
                     changed = True
-                if not usuario.activo:
+                if not matched_by_name and not usuario.activo:
                     usuario.activo = True
                     usuario.is_active = True
                     changed = True
