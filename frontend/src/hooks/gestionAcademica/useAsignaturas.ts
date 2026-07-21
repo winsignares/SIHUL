@@ -15,9 +15,11 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas';
+const ASIGNATURAS_LIST_CACHE_KEY = 'gestion-academica-asignaturas-list';
+const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
 
 export const tiposAsignatura = [
     { value: 'teórica', label: 'Teórica' },
@@ -93,6 +95,15 @@ export function useAsignaturas() {
         await loadData({ force: true });
     };
 
+    const notifyAcademicCatalogUpdated = () => {
+        clearSessionCache(ASIGNATURAS_CACHE_KEY);
+        clearSessionCache(ASIGNATURAS_LIST_CACHE_KEY);
+        clearSessionCacheByPrefix('gestion-academica-asignaturas-programa');
+        clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+        clearSessionCacheByPrefix('gestion-academica-centro-horarios-v2');
+        window.dispatchEvent(new Event(ACADEMIC_CATALOG_UPDATED_EVENT));
+    };
+
     // ==================== CREAR ASIGNATURA ====================
 
     const handleCreateAsignatura = async () => {
@@ -137,6 +148,7 @@ export function useAsignaturas() {
 
             console.log('Asignatura creada exitosamente');
             await loadAsignaturas();
+            notifyAcademicCatalogUpdated();
             resetForm();
             setShowCreateDialog(false);
 
@@ -195,6 +207,7 @@ export function useAsignaturas() {
             });
 
             await loadAsignaturas();
+            notifyAcademicCatalogUpdated();
             setShowEditDialog(false);
             setSelectedAsignatura(null);
             resetForm();
@@ -222,6 +235,7 @@ export function useAsignaturas() {
             await asignaturaService.delete({ id: selectedAsignatura.id });
 
             await loadAsignaturas();
+            notifyAcademicCatalogUpdated();
             setShowDeleteDialog(false);
             setSelectedAsignatura(null);
 

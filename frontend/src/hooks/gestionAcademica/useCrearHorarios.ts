@@ -9,11 +9,14 @@ import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
 import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
 import { useAuth } from '../../context/AuthContext';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
 
 const CREAR_HORARIOS_CACHE_KEY = 'gestion-academica-crear-horarios';
+const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const HORARIOS_UPDATED_EVENT = 'horariosUpdated';
 
 export interface GrupoConInfo extends Grupo {
     programa_nombre?: string;
@@ -287,6 +290,27 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         }
     }, [user, role, loadData]);
 
+    useEffect(() => {
+        const reloadCatalogos = () => {
+            clearSessionCacheByPrefix(CREAR_HORARIOS_CACHE_KEY);
+            void loadData({ force: true });
+        };
+
+        window.addEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadCatalogos);
+        window.addEventListener(ESPACIOS_UPDATED_EVENT, reloadCatalogos);
+
+        return () => {
+            window.removeEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadCatalogos);
+            window.removeEventListener(ESPACIOS_UPDATED_EVENT, reloadCatalogos);
+        };
+    }, [loadData]);
+
+    const notifyHorariosUpdated = () => {
+        clearSessionCacheByPrefix(CREAR_HORARIOS_CACHE_KEY);
+        clearSessionCacheByPrefix('gestion-academica-centro-horarios-v2');
+        window.dispatchEvent(new Event(HORARIOS_UPDATED_EVENT));
+    };
+
     // Filtrar grupos
     const gruposSinHorarioFiltrados = useMemo(() => grupos.filter(grupo => {
         const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
@@ -500,6 +524,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
             // Recargar datos forzadamente y actualizar horarios del grupo
             const refreshed = await loadData({ force: true });
+            notifyHorariosUpdated();
             if (grupoSeleccionado.id) {
                 const horariosDelGrupo = refreshed.todosHorarios.filter(h => h.grupo_id === grupoSeleccionado.id);
                 setHorariosAsignados(horariosDelGrupo);
@@ -530,6 +555,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 
                 // Recargar datos
                 const refreshed = await loadData({ force: true });
+                notifyHorariosUpdated();
 
                 if (grupoSeleccionado?.id) {
                     const horariosDelGrupo = refreshed.todosHorarios.filter(h => h.grupo_id === grupoSeleccionado.id);
@@ -603,6 +629,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
 
             // Recargar datos (incluye solicitudes pendientes)
             const refreshed = await loadData({ force: true });
+            notifyHorariosUpdated();
             
             if (grupoSeleccionado?.id) {
                 const horariosDelGrupo = refreshed.todosHorarios.filter(h => h.grupo_id === grupoSeleccionado.id);

@@ -16,12 +16,15 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData, clearSessionCacheByPrefix } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData, clearSessionCacheByPrefix } from '../../core/sessionCache';
 
 const FACULTADES_CACHE_KEY = 'gestion-academica-facultades';
 const PROGRAMAS_CACHE_KEY = 'gestion-academica-programas';
 const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas-list';
 const ASIGNATURAS_PROGRAMA_CACHE_KEY = 'gestion-academica-asignaturas-programa';
+const GESTION_USUARIOS_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
+const ASIGNATURAS_STANDALONE_CACHE_KEY = 'gestion-academica-asignaturas';
+const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
 
 // Mapear tipos de API a modelo del frontend
 type Facultad = FacultadAPI;
@@ -235,6 +238,18 @@ export function useFacultadesPrograms() {
         setReloadKey(prev => prev + 1); // Forzar recarga de componentes hijos
     };
 
+    const notifyAcademicCatalogUpdated = () => {
+        clearSessionCache(FACULTADES_CACHE_KEY);
+        clearSessionCache(PROGRAMAS_CACHE_KEY);
+        clearSessionCache(ASIGNATURAS_CACHE_KEY);
+        clearSessionCache(ASIGNATURAS_STANDALONE_CACHE_KEY);
+        clearSessionCache(GESTION_USUARIOS_FACULTADES_CACHE_KEY);
+        clearSessionCacheByPrefix(ASIGNATURAS_PROGRAMA_CACHE_KEY);
+        clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+        clearSessionCacheByPrefix('gestion-academica-centro-horarios-v2');
+        window.dispatchEvent(new Event(ACADEMIC_CATALOG_UPDATED_EVENT));
+    };
+
     // ==================== ASIGNATURAS DEL PROGRAMA ====================
 
     const openAsignaturasModal = async (programa: Programa) => {
@@ -283,6 +298,7 @@ export function useFacultadesPrograms() {
             });
 
             clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+            notifyAcademicCatalogUpdated();
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
             setShowAddAsignaturaModal(false);
             setAsignaturaForm({
@@ -311,6 +327,7 @@ export function useFacultadesPrograms() {
             await asignaturaProgramaService.delete({ id: asignaturaPrograma.id });
 
             clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+            notifyAcademicCatalogUpdated();
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
 
             toast.error('Asignatura eliminada del programa correctamente');
@@ -332,6 +349,7 @@ export function useFacultadesPrograms() {
             });
 
             clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+            notifyAcademicCatalogUpdated();
             await loadAsignaturasPrograma(selectedProgramaForAsignaturas.id, { force: true });
 
             toast.info('Asignatura actualizada correctamente');
@@ -359,6 +377,7 @@ export function useFacultadesPrograms() {
             });
 
             await loadFacultades({ force: true });
+            notifyAcademicCatalogUpdated();
             setFacultadForm({ nombre: '' });
             setShowCreateFacultad(false);
 
@@ -389,6 +408,7 @@ export function useFacultadesPrograms() {
 
             await loadFacultades({ force: true });
             loadProgramas({ force: true }); // Por si el nombre cambió en programas
+            notifyAcademicCatalogUpdated();
 
             setShowEditFacultad(false);
             setSelectedFacultad(null);
@@ -411,6 +431,7 @@ export function useFacultadesPrograms() {
 
             await loadFacultades({ force: true });
             loadProgramas({ force: true });
+            notifyAcademicCatalogUpdated();
 
             setShowDeleteFacultad(false);
             setSelectedFacultad(null);
@@ -446,6 +467,7 @@ export function useFacultadesPrograms() {
             });
 
             await loadFacultades({ force: true });
+            notifyAcademicCatalogUpdated();
 
             toast.warning(facultad.activa ? 'Facultad inactivada correctamente' : 'Facultad activada correctamente');
         } catch (error) {
@@ -484,6 +506,7 @@ export function useFacultadesPrograms() {
             });
 
             await loadProgramas({ force: true });
+            notifyAcademicCatalogUpdated();
             setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
             setShowCreatePrograma(false);
 
@@ -525,6 +548,7 @@ export function useFacultadesPrograms() {
             });
 
             await loadProgramas({ force: true });
+            notifyAcademicCatalogUpdated();
             setShowEditPrograma(false);
             setSelectedPrograma(null);
             setProgramaForm({ nombre: '', facultadId: '', semestres: '' });
@@ -545,6 +569,7 @@ export function useFacultadesPrograms() {
             await programaService.eliminarPrograma(selectedPrograma.id);
 
             await loadProgramas({ force: true });
+            notifyAcademicCatalogUpdated();
             setShowDeletePrograma(false);
             setSelectedPrograma(null);
 
@@ -585,6 +610,7 @@ export function useFacultadesPrograms() {
             });
 
             await loadProgramas({ force: true });
+            notifyAcademicCatalogUpdated();
 
             toast.warning(programa.activo ? 'Programa inactivado correctamente' : 'Programa activado correctamente');
         } catch (error) {

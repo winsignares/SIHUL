@@ -18,6 +18,8 @@ import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../
 
 const SEDES_CACHE_KEY = 'gestion-academica-sedes';
 const GESTION_USUARIOS_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
+const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
+const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
 const SEDES_UPDATED_EVENT = 'sedes-updated';
 
 export function useSedes() {
@@ -76,6 +78,9 @@ export function useSedes() {
     const notifySedesUpdated = () => {
         clearSessionCache(SEDES_CACHE_KEY);
         clearSessionCache(GESTION_USUARIOS_SEDES_CACHE_KEY);
+        clearSessionCache(ESPACIOS_FISICOS_CACHE_KEY);
+        clearSessionCache(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`);
+        clearSessionCache(ESTADO_RECURSOS_CACHE_KEY);
         window.dispatchEvent(new Event(SEDES_UPDATED_EVENT));
     };
 

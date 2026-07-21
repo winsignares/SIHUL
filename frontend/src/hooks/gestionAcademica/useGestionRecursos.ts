@@ -12,10 +12,12 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const PAGE_SIZE = PAGE_SIZE_DEFAULT;
 const GESTION_RECURSOS_CACHE_KEY = 'gestion-academica-recursos';
+const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
+const RECURSOS_UPDATED_EVENT = 'recursos-updated';
 
 export function useGestionRecursos() {
   const [recursos, setRecursos] = useState<Recurso[]>([]);
@@ -55,6 +57,12 @@ export function useGestionRecursos() {
   useEffect(() => {
     loadRecursos();
   }, []);
+
+  const notifyRecursosUpdated = () => {
+    clearSessionCache(GESTION_RECURSOS_CACHE_KEY);
+    clearSessionCache(ESTADO_RECURSOS_CACHE_KEY);
+    window.dispatchEvent(new Event(RECURSOS_UPDATED_EVENT));
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -113,6 +121,7 @@ export function useGestionRecursos() {
       setShowCrearRecursoModal(false);
       setNuevoRecurso({ nombre: '', descripcion: '' });
       await loadRecursos({ force: true });
+      notifyRecursosUpdated();
       setCurrentPage(1);
     } catch (error) {
       toast.error(`Error al crear recurso: ${error instanceof Error ? error.message : 'Error desconocido'}`);

@@ -25,6 +25,7 @@ const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
 const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
 const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
 const SEDES_UPDATED_EVENT = 'sedes-updated';
+const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
 
 type EspacioAsignable = {
     id: number;
@@ -319,6 +320,20 @@ export function useGestionUsuarios() {
 
         return () => {
             window.removeEventListener(SEDES_UPDATED_EVENT, reloadSedesParaUsuarios);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const reloadFacultadesParaUsuarios = () => {
+            clearSessionCache(GESTION_FACULTADES_CACHE_KEY);
+            void loadFacultades({ force: true });
+        };
+
+        window.addEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadFacultadesParaUsuarios);
+
+        return () => {
+            window.removeEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadFacultadesParaUsuarios);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

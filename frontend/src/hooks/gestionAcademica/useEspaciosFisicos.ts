@@ -22,6 +22,8 @@ const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
 const GESTION_USUARIOS_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
 const GESTION_USUARIOS_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
 const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const RECURSOS_UPDATED_EVENT = 'recursos-updated';
+const SEDES_UPDATED_EVENT = 'sedes-updated';
 
 export function useEspaciosFisicos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -155,6 +157,20 @@ export function useEspaciosFisicos() {
             toast.error('Error al cargar los datos');
         }
     };
+
+    useEffect(() => {
+        const handleCatalogoUpdated = () => {
+            void loadData({ force: true });
+        };
+
+        window.addEventListener(RECURSOS_UPDATED_EVENT, handleCatalogoUpdated);
+        window.addEventListener(SEDES_UPDATED_EVENT, handleCatalogoUpdated);
+        return () => {
+            window.removeEventListener(RECURSOS_UPDATED_EVENT, handleCatalogoUpdated);
+            window.removeEventListener(SEDES_UPDATED_EVENT, handleCatalogoUpdated);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const loadEspacios = async ({ force = false }: { force?: boolean } = {}) => {
         try {

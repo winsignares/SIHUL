@@ -28,6 +28,8 @@ import {
 
 const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
 const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const RECURSOS_UPDATED_EVENT = 'recursos-updated';
+const SEDES_UPDATED_EVENT = 'sedes-updated';
 
 export function useEstadoRecursos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -51,8 +53,12 @@ export function useEstadoRecursos() {
         };
 
         window.addEventListener(ESPACIOS_UPDATED_EVENT, handleEspaciosUpdated);
+        window.addEventListener(RECURSOS_UPDATED_EVENT, handleEspaciosUpdated);
+        window.addEventListener(SEDES_UPDATED_EVENT, handleEspaciosUpdated);
         return () => {
             window.removeEventListener(ESPACIOS_UPDATED_EVENT, handleEspaciosUpdated);
+            window.removeEventListener(RECURSOS_UPDATED_EVENT, handleEspaciosUpdated);
+            window.removeEventListener(SEDES_UPDATED_EVENT, handleEspaciosUpdated);
         };
     }, []);
 

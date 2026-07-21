@@ -8,7 +8,7 @@ import { programaService, type Programa } from '../../services/programas/program
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { useAuth } from '../../context/AuthContext';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { resolveApiBaseUrl } from '../../core/backendUrl';
 import { trackedFetch } from '../../core/apiActivity';
 import { userService } from '../../services/users/authService';
@@ -16,6 +16,9 @@ import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
 
 const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios-v2';
+const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const HORARIOS_UPDATED_EVENT = 'horariosUpdated';
 const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 export interface Docente {
@@ -320,6 +323,27 @@ export function useCentroHorarios() {
         }
     }, [loadData]);
 
+    useEffect(() => {
+        const reloadCatalogos = () => {
+            clearSessionCacheByPrefix(CENTRO_HORARIOS_CACHE_KEY);
+            void loadData({ force: true });
+        };
+
+        window.addEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadCatalogos);
+        window.addEventListener(ESPACIOS_UPDATED_EVENT, reloadCatalogos);
+
+        return () => {
+            window.removeEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadCatalogos);
+            window.removeEventListener(ESPACIOS_UPDATED_EVENT, reloadCatalogos);
+        };
+    }, [loadData]);
+
+    const notifyHorariosUpdated = () => {
+        clearSessionCacheByPrefix(CENTRO_HORARIOS_CACHE_KEY);
+        clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+        window.dispatchEvent(new Event(HORARIOS_UPDATED_EVENT));
+    };
+
     // Generar horas para el grid semanal
     const generarHoras = () => {
         const horas = [];
@@ -468,6 +492,7 @@ export function useCentroHorarios() {
             
             showNotification('✅ Horario actualizado correctamente', 'success');
             await loadData({ force: true });
+            notifyHorariosUpdated();
             setShowEditModal(false);
             setHorarioEditar(null);
         } catch (error) {
@@ -487,6 +512,7 @@ export function useCentroHorarios() {
                 await horarioService.delete({ id });
                 showNotification('✅ Horario eliminado correctamente', 'success');
                 await loadData({ force: true });
+                notifyHorariosUpdated();
             } catch (error) {
                 showNotification(
                     `Error al eliminar el horario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -531,6 +557,7 @@ export function useCentroHorarios() {
             setShowDeleteGrupoModal(false);
             setGrupoAEliminar(null);
             await loadData({ force: true });
+            notifyHorariosUpdated();
         } catch (error) {
             showNotification(
                 `Error al eliminar el grupo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -601,6 +628,7 @@ export function useCentroHorarios() {
                 if (eliminados > 0) {
                     showNotification(`✅ ${eliminados} horario(s) eliminado(s) correctamente`, 'success');
                     await loadData({ force: true });
+                    notifyHorariosUpdated();
                     setHorariosSeleccionados(new Set());
                     setSeleccionarTodos(false);
                 } else {
