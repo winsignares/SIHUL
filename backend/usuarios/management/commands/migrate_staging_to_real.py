@@ -23,7 +23,7 @@ from grupos.models import Grupo, StgOracleGrupoAcademico
 from horario.models import Horario, StgOracleHorario
 from periodos.models import PeriodoAcademico
 from programas.models import Programa
-from sedes.models import Seccional, Sede
+from sedes.models import MapOracleSedeSeccional, Seccional, Sede
 from usuarios.models import Rol, StgOracleDocente, StgOracleEstudiante, Usuario
 
 
@@ -139,10 +139,51 @@ class Command(BaseCommand):
         external = str(external_id or '').strip()
         if not external:
             return None
-        return Sede.objects.filter(
+        sede = Sede.objects.filter(
             Q(source_system=source_system, external_id=external) |
             Q(external_id=external)
         ).first()
+        if sede:
+            return sede
+
+        mapping = MapOracleSedeSeccional.objects.select_related('sede').filter(
+            source_system=source_system,
+            external_id_oracle=external,
+            sede__isnull=False,
+        ).first()
+        if mapping:
+            return mapping.sede
+
+        return None
+
+    @classmethod
+    def _resolve_sede_from_oracle_payload(cls, source_system, primary_external_id=None, raw_data=None, nombre_sede=None):
+        candidates = [
+            primary_external_id,
+            (raw_data or {}).get('cod_sede'),
+            (raw_data or {}).get('id_sede'),
+            (raw_data or {}).get('idsede'),
+            (raw_data or {}).get('sede_id'),
+        ]
+        seen = set()
+        for candidate in candidates:
+            candidate_text = cls._to_text(candidate)
+            if not candidate_text or candidate_text in seen:
+                continue
+            seen.add(candidate_text)
+            sede = cls._resolve_sede(source_system, candidate_text)
+            if sede:
+                return sede
+
+        nombre_norm = cls._normalize_text(nombre_sede or (raw_data or {}).get('nombre_sede') or (raw_data or {}).get('sede'))
+        if nombre_norm:
+            for sede in Sede.objects.select_related('seccional').all():
+                if cls._normalize_text(sede.nombre) == nombre_norm:
+                    return sede
+                if sede.seccional and cls._normalize_text(sede.seccional.ciudad) == nombre_norm:
+                    return sede
+
+        return None
 
     @staticmethod
     def _resolve_facultad(source_system, external_id):
@@ -679,7 +720,11 @@ class Command(BaseCommand):
                     usuario = self._find_usuario_by_normalized_name(nombre)
                     matched_by_name = usuario is not None
 
-                sede = self._resolve_sede(source_system, stg_docente.id_sede_oracle)
+                sede = self._resolve_sede_from_oracle_payload(
+                    source_system,
+                    stg_docente.id_sede_oracle,
+                    getattr(stg_docente, 'raw_data', None),
+                )
                 facultad = self._resolve_facultad(source_system, stg_docente.id_facultad_oracle)
                 activo = (self._to_text(stg_docente.estado_docente).lower() not in ('inactivo', '0', 'false', 'no'))
 
@@ -789,7 +834,11 @@ class Command(BaseCommand):
                     usuario = self._find_usuario_by_normalized_name(nombre)
                     matched_by_name = usuario is not None
                 source_system = stg_estudiante.source_system or 'ORACLE_SIU'
-                sede = self._resolve_sede(source_system, getattr(stg_estudiante, 'id_sede_oracle', None))
+                sede = self._resolve_sede_from_oracle_payload(
+                    source_system,
+                    getattr(stg_estudiante, 'id_sede_oracle', None),
+                    getattr(stg_estudiante, 'raw_data', None),
+                )
 
                 if dry_run:
                     if usuario:
@@ -867,14 +916,28 @@ class Command(BaseCommand):
         espacios_error = 0
         sede_no_encontrada = 0
         tipo_creado = 0
+        sedes_no_resueltas = {}
 
         for stg_espacio in stg_espacios:
             try:
                 source_system = stg_espacio.source_system or 'ORACLE_SIU'
-                sede = self._resolve_sede(source_system, stg_espacio.id_sede_oracle)
+                sede = self._resolve_sede_from_oracle_payload(
+                    source_system,
+                    stg_espacio.id_sede_oracle,
+                    stg_espacio.raw_data,
+                    stg_espacio.nombre_sede_oracle,
+                )
                 if not sede:
                     sede_no_encontrada += 1
                     espacios_error += 1
+                    raw = stg_espacio.raw_data or {}
+                    key = (
+                        self._to_text(stg_espacio.id_sede_oracle),
+                        self._to_text(raw.get('cod_sede')),
+                        self._to_text(raw.get('id_sede')),
+                        self._to_text(stg_espacio.nombre_sede_oracle),
+                    )
+                    sedes_no_resueltas[key] = sedes_no_resueltas.get(key, 0) + 1
                     continue
 
                 tipo_nombre, tipo_desc = self._map_tipo_espacio(stg_espacio.tipo_espacio_oracle)
@@ -958,6 +1021,19 @@ class Command(BaseCommand):
                 f'Tipos nuevos: {tipo_creado}'
             )
         )
+        if sedes_no_resueltas:
+            muestras = sorted(sedes_no_resueltas.items(), key=lambda item: item[1], reverse=True)[:10]
+            detalle = [
+                {
+                    'id_sede_oracle': key[0],
+                    'raw_cod_sede': key[1],
+                    'raw_id_sede': key[2],
+                    'nombre_sede_oracle': key[3],
+                    'filas': count,
+                }
+                for key, count in muestras
+            ]
+            self.stdout.write(self.style.WARNING(f'Muestras de sedes no resueltas en espacios: {detalle}'))
 
     def migrate_horarios(self, dry_run=False, limit=None, seccional_filter=None):
         self.stdout.write('=' * 60)
@@ -1110,7 +1186,12 @@ class Command(BaseCommand):
                         espacio_no_encontrado += 1
                         if nom_aula_raw and not self._is_placeholder_space_name(nom_aula_raw):
                             source_system = stg_horario.source_system or 'ORACLE_SIU'
-                            sede_horario = self._resolve_sede(source_system, id_sede)
+                            sede_horario = self._resolve_sede_from_oracle_payload(
+                                source_system,
+                                id_sede,
+                                raw,
+                                stg_horario.nombre_sede_oracle,
+                            )
                             if sede_horario:
                                 # Reintento por alias de aula descriptiva antes de crear fallback.
                                 alias_sources = [nom_aula_raw] + self._space_alias_candidates(nom_aula_raw)

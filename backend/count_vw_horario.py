@@ -17,7 +17,7 @@ def count_horarios():
         
         # Contar registros en VW_HORARIO (sin listar columnas para ahorrar tiempo)
         print("Contando registros en VW_HORARIO (esto puede demorar)...")
-        periodo = os.getenv('ETL_PERIODO', '20261')
+        periodo = os.getenv('ETL_PERIODO', '20262')
         print(f"Buscando periodo: {periodo}")
         cursor.execute(f"SELECT COUNT(*) as total FROM VW_HORARIO WHERE PERIODO LIKE '{periodo}'")
         result = cursor.fetchone()

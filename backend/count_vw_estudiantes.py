@@ -16,7 +16,7 @@ def count_estudiantes():
         cursor = connection.cursor()
         
         # Contar registros en VW_ESTUDIANTES
-        periodo = os.getenv('ETL_PERIODO', '20261')
+        periodo = os.getenv('ETL_PERIODO', '20262')
         print(f"Buscando periodo: {periodo}")
         cursor.execute(f"SELECT COUNT(*) as total FROM VW_ESTUDIANTES WHERE PERIODO_ACADEMICO LIKE '{periodo}'")
         result = cursor.fetchone()

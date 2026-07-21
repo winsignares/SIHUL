@@ -37,7 +37,7 @@ class Command(BaseCommand):
             "--periodo",
             type=str,
             default="",
-            help="Filtra por periodo academico (ej: 20261).",
+            help="Filtra por periodo academico (ej: 20262).",
         )
         parser.add_argument(
             "--top",
