@@ -366,6 +366,18 @@ class Command(BaseCommand):
     @staticmethod
     def _map_tipo_espacio(tipo_oracle):
         code = Command._normalize_text(tipo_oracle)
+        if code.isdigit():
+            mapping = {
+                '14': ('Aula', 'Aula de clase'),
+                '11': ('Oficina', 'Oficina'),
+                '3': ('Aula', 'Aula de clase'),
+                '1': ('Laboratorio', 'Laboratorio academico'),
+                '43': ('Sala Computo', 'Sala de computo'),
+                '5': ('Zona Comun', 'Zona comun'),
+                '0': ('Sala', 'Sala'),
+                '42': ('Sala Derecho', 'Sala Derecho'),
+            }
+            return mapping.get(code, ('Aula', f'Aula de clase; tipo Oracle no homologado {code}'))
         if 'LAB' in code:
             return 'Laboratorio', 'Laboratorio academico'
         if 'AUD' in code:
