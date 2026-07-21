@@ -99,7 +99,8 @@ class SeccionalMixin:
             defaults['seccional'] = seccional
 
         sede = getattr(user, 'sede', None)
-        if sede is not None and 'sede' in model_fields:
+        request_sede = getattr(serializer, 'validated_data', {}).get('sede')
+        if sede is not None and 'sede' in model_fields and request_sede is None:
             defaults['sede'] = sede
 
         return defaults

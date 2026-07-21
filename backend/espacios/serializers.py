@@ -31,19 +31,18 @@ class EspacioPermitidoSerializer(serializers.ModelSerializer):
         usuario = attrs.get('usuario') or getattr(self.instance, 'usuario', None)
 
         if espacio and usuario:
-            usuario_sede = getattr(usuario, 'sede', None)
-            usuario_seccional_id = getattr(usuario_sede, 'seccional_id', None)
+            usuario_sede_id = getattr(usuario, 'sede_id', None)
             espacio_sede = getattr(espacio, 'sede', None)
-            espacio_seccional_id = getattr(espacio_sede, 'seccional_id', None)
+            espacio_sede_id = getattr(espacio_sede, 'id', None)
 
-            if not usuario_seccional_id:
+            if not usuario_sede_id:
                 raise serializers.ValidationError({
-                    'usuario': 'El usuario debe tener una sede con seccional para asignarle espacios.'
+                    'usuario': 'El usuario debe tener una sede para asignarle espacios.'
                 })
 
-            if espacio_seccional_id != usuario_seccional_id:
+            if espacio_sede_id != usuario_sede_id:
                 raise serializers.ValidationError({
-                    'espacio': 'El espacio no pertenece a la seccional del usuario.'
+                    'espacio': 'El espacio no pertenece a la sede del usuario.'
                 })
 
         return attrs

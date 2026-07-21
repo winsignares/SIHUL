@@ -53,21 +53,20 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if faltantes:
             raise serializers.ValidationError({'espacios_permitidos': f'IDs de espacios no válidos: {faltantes}'})
 
-        usuario_sede = getattr(usuario, 'sede', None)
-        usuario_seccional_id = getattr(usuario_sede, 'seccional_id', None)
-        if ids_unicos and not usuario_seccional_id:
+        usuario_sede_id = getattr(usuario, 'sede_id', None)
+        if ids_unicos and not usuario_sede_id:
             raise serializers.ValidationError({
-                'espacios_permitidos': 'El usuario debe tener una sede con seccional para asignarle espacios.'
+                'espacios_permitidos': 'El usuario debe tener una sede para asignarle espacios.'
             })
 
-        fuera_seccional = [
+        fuera_sede = [
             espacio_id
             for espacio_id in ids_unicos
-            if getattr(getattr(espacios_map[espacio_id], 'sede', None), 'seccional_id', None) != usuario_seccional_id
+            if getattr(espacios_map[espacio_id], 'sede_id', None) != usuario_sede_id
         ]
-        if fuera_seccional:
+        if fuera_sede:
             raise serializers.ValidationError({
-                'espacios_permitidos': f'Los espacios no pertenecen a la seccional del usuario: {fuera_seccional}'
+                'espacios_permitidos': f'Los espacios no pertenecen a la sede del usuario: {fuera_sede}'
             })
 
         EspacioPermitido.objects.filter(usuario=usuario).delete()
@@ -85,6 +84,18 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             usuario = super().create(validated_data)
+            self._sync_espacios_permitidos(usuario, espacios_permitidos)
+
+        return usuario
+
+    def update(self, instance, validated_data):
+        espacios_permitidos = validated_data.pop('espacios_permitidos', None)
+        contrasena = validated_data.pop('contrasena', None)
+        if contrasena:
+            validated_data['contrasena_hash'] = make_password(contrasena)
+
+        with transaction.atomic():
+            usuario = super().update(instance, validated_data)
             self._sync_espacios_permitidos(usuario, espacios_permitidos)
 
         return usuario

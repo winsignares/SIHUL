@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
-import { espacioService, espacioPermitidoService, type TipoEspacio } from '../../services/espacios/espaciosAPI';
+import { espacioService, espacioPermitidoService, type EspacioFisico, type TipoEspacio } from '../../services/espacios/espaciosAPI';
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
@@ -20,7 +20,7 @@ import {
 const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
 const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles';
 const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
-const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v2';
+const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
 const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
 const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
 
@@ -36,6 +36,32 @@ type SedeAsignable = {
     id: number;
     nombre: string;
     seccional_id: number | null;
+};
+
+const getRelationId = (value: unknown): number | null => {
+    if (typeof value === 'number') return value;
+    if (value && typeof value === 'object' && 'id' in value) {
+        const id = (value as { id?: unknown }).id;
+        return typeof id === 'number' ? id : null;
+    }
+    return null;
+};
+
+const normalizeEspacioAsignable = (espacio: EspacioFisico): EspacioAsignable | null => {
+    const tipoId = espacio.tipo_id ?? espacio.tipo_espacio?.id ?? getRelationId(espacio.tipo);
+    const sedeId = espacio.sede_id ?? getRelationId(espacio.sede);
+
+    if (!espacio.id || !tipoId || !sedeId) {
+        return null;
+    }
+
+    return {
+        id: espacio.id,
+        nombre: espacio.nombre,
+        tipo_id: tipoId,
+        sede_id: sedeId,
+        sede_seccional_id: espacio.sede_seccional_id ?? null,
+    };
 };
 
 export function useGestionUsuarios() {
@@ -196,13 +222,9 @@ export function useGestionUsuarios() {
             }
 
             const response = await espacioService.list();
-            const espacios = (response.espacios || []).map((espacio) => ({
-                id: espacio.id as number,
-                nombre: espacio.nombre,
-                tipo_id: espacio.tipo_id,
-                sede_id: espacio.sede_id,
-                sede_seccional_id: espacio.sede_seccional_id ?? null,
-            }));
+            const espacios = (response.espacios || [])
+                .map(normalizeEspacioAsignable)
+                .filter((espacio): espacio is EspacioAsignable => espacio !== null);
             setEspaciosDisponibles(espacios);
             setSessionCacheData(GESTION_ESPACIOS_CACHE_KEY, activeToken, espacios);
         } catch (error) {
@@ -323,21 +345,26 @@ export function useGestionUsuarios() {
         setTiposEspacioPermitidosEdit(tiposEspacioPermitidosEdit.filter(id => id !== tipoId));
     }, [tiposEspacioPermitidosEdit]);
 
-    const getEspaciosDisponiblesPorSeccionalDeSede = useCallback((sedeId?: number | null) => {
+    const getEspaciosDisponiblesPorSede = useCallback((sedeId?: number | null) => {
         if (!sedeId) return [];
+        const espaciosDeSede = espaciosDisponibles.filter(espacio => espacio.sede_id === sedeId);
+        if (espaciosDeSede.length > 0) {
+            return espaciosDeSede;
+        }
+
         const seccionalId = sedesDisponibles.find(sede => sede.id === sedeId)?.seccional_id ?? null;
         if (!seccionalId) return [];
         return espaciosDisponibles.filter(espacio => espacio.sede_seccional_id === seccionalId);
     }, [espaciosDisponibles, sedesDisponibles]);
 
     const espaciosDisponiblesCreacion = useMemo(
-        () => getEspaciosDisponiblesPorSeccionalDeSede(sedeSeleccionada ? parseInt(sedeSeleccionada, 10) : null),
-        [getEspaciosDisponiblesPorSeccionalDeSede, sedeSeleccionada]
+        () => getEspaciosDisponiblesPorSede(sedeSeleccionada ? parseInt(sedeSeleccionada, 10) : null),
+        [getEspaciosDisponiblesPorSede, sedeSeleccionada]
     );
 
     const espaciosDisponiblesEdicion = useMemo(
-        () => getEspaciosDisponiblesPorSeccionalDeSede(editingUser?.sede_id ?? null),
-        [getEspaciosDisponiblesPorSeccionalDeSede, editingUser?.sede_id]
+        () => getEspaciosDisponiblesPorSede(editingUser?.sede_id ?? null),
+        [getEspaciosDisponiblesPorSede, editingUser?.sede_id]
     );
 
     useEffect(() => {
@@ -531,9 +558,19 @@ export function useGestionUsuarios() {
         if (rolNombre === 'supervisor_general') {
             try {
                 const response = await espacioPermitidoService.listByUsuario(usuario.id as number);
+                const espaciosPermitidosNormalizados = (response.espacios || [])
+                    .map(normalizeEspacioAsignable)
+                    .filter((espacio): espacio is EspacioAsignable => espacio !== null);
                 const espaciosIds = (response.espacios || [])
                     .map((espacio) => espacio.id)
                     .filter((id): id is number => typeof id === 'number');
+                setEspaciosDisponibles((prev) => {
+                    const espaciosPorId = new Map(prev.map((espacio) => [espacio.id, espacio]));
+                    espaciosPermitidosNormalizados.forEach((espacio) => {
+                        espaciosPorId.set(espacio.id, espacio);
+                    });
+                    return Array.from(espaciosPorId.values());
+                });
                 setEspaciosPermitidosEdit(espaciosIds);
                 setModoAsignacionSupervisorEdit('individual');
                 setTiposEspacioPermitidosEdit([]);

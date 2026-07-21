@@ -6,8 +6,10 @@ import { apiClient } from '../../core/apiClient';
 export interface EspacioFisico {
     id?: number;
     nombre: string;
+    sede?: number | { id: number };
     sede_id: number;
     sede_seccional_id?: number | null;
+    tipo?: number | { id: number };
     tipo_id: number;
     tipo_espacio?: {
         id: number;

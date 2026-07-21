@@ -358,6 +358,7 @@ def list_espacios(request):
             lst.append({
                 "id": i.id, 
                 "sede_id": i.sede.id, 
+                "sede_seccional_id": i.sede.seccional_id,
                 "nombre": i.nombre,
                 "tipo_id": i.tipo.id,
                 "tipo_espacio": {
@@ -718,10 +719,14 @@ def list_espacios_by_usuario(request, usuario_id=None):
         return JsonResponse({"error": "El usuario_id es requerido en la URL"}, status=400)
     try:
         usuario = Usuario.objects.select_related('sede', 'sede__seccional').get(id=usuario_id)
-        espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio')
-        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
+        espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related(
+            'espacio',
+            'espacio__sede',
+            'espacio__tipo',
+        )
+        if getattr(usuario, 'sede_id', None):
             espacios_permitidos = espacios_permitidos.filter(
-                espacio__sede__seccional_id=usuario.sede.seccional_id
+                espacio__sede_id=usuario.sede_id
             )
         lista = []
         for ep in espacios_permitidos:
@@ -747,6 +752,7 @@ def list_espacios_by_usuario(request, usuario_id=None):
                 "ubicacion": ep.espacio.ubicacion,
                 "estado": ep.espacio.estado,
                 "sede_id": ep.espacio.sede.id,
+                "sede_seccional_id": ep.espacio.sede.seccional_id,
                 "recursos": recursos
             })
         return JsonResponse({"espacios": lista}, status=200)

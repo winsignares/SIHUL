@@ -34,17 +34,17 @@ def _sync_espacios_permitidos_usuario(usuario, espacios_ids):
     if faltantes:
         return f'IDs de espacios no válidos: {faltantes}'
 
-    usuario_seccional_id = getattr(getattr(usuario, 'sede', None), 'seccional_id', None)
-    if ids_unicos and not usuario_seccional_id:
-        return 'El usuario debe tener una sede con seccional para asignarle espacios.'
+    usuario_sede_id = getattr(usuario, 'sede_id', None)
+    if ids_unicos and not usuario_sede_id:
+        return 'El usuario debe tener una sede para asignarle espacios.'
 
-    fuera_seccional = [
+    fuera_sede = [
         espacio_id
         for espacio_id in ids_unicos
-        if getattr(getattr(espacios_map[espacio_id], 'sede', None), 'seccional_id', None) != usuario_seccional_id
+        if getattr(espacios_map[espacio_id], 'sede_id', None) != usuario_sede_id
     ]
-    if fuera_seccional:
-        return f'Los espacios no pertenecen a la seccional del usuario: {fuera_seccional}'
+    if fuera_sede:
+        return f'Los espacios no pertenecen a la sede del usuario: {fuera_sede}'
 
     EspacioPermitido.objects.filter(usuario=usuario).delete()
     EspacioPermitido.objects.bulk_create([

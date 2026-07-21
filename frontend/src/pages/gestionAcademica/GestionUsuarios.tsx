@@ -10,7 +10,7 @@ import { Search, UserPlus, Edit, Trash2, UserCog, CheckCircle, XCircle, Plus, X,
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function GestionUsuarios() {
   const isMobile = useIsMobile();
@@ -139,10 +139,27 @@ export default function GestionUsuarios() {
     return rolActual?.nombre || '';
   };
 
-  const tiposEspacioOpciones = [
-    { id: 'todos', nombre: 'Todos' },
-    ...tiposEspacioDisponibles.map((tipo) => ({ id: tipo.id.toString(), nombre: tipo.nombre }))
-  ];
+  const tiposEspacioOpcionesCreacion = useMemo(() => {
+    const tiposConEspacios = new Set(espaciosDisponiblesCreacion.map((espacio) => espacio.tipo_id));
+    const tipos = tiposEspacioDisponibles
+      .filter((tipo) => tiposConEspacios.has(tipo.id))
+      .map((tipo) => ({ id: tipo.id.toString(), nombre: tipo.nombre }));
+
+    return espaciosDisponiblesCreacion.length > 0
+      ? [{ id: 'todos', nombre: `Todos (${espaciosDisponiblesCreacion.length} espacios)` }, ...tipos]
+      : [];
+  }, [espaciosDisponiblesCreacion, tiposEspacioDisponibles]);
+
+  const tiposEspacioOpcionesEdicion = useMemo(() => {
+    const tiposConEspacios = new Set(espaciosDisponiblesEdicion.map((espacio) => espacio.tipo_id));
+    const tipos = tiposEspacioDisponibles
+      .filter((tipo) => tiposConEspacios.has(tipo.id))
+      .map((tipo) => ({ id: tipo.id.toString(), nombre: tipo.nombre }));
+
+    return espaciosDisponiblesEdicion.length > 0
+      ? [{ id: 'todos', nombre: `Todos (${espaciosDisponiblesEdicion.length} espacios)` }, ...tipos]
+      : [];
+  }, [espaciosDisponiblesEdicion, tiposEspacioDisponibles]);
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
@@ -405,7 +422,7 @@ export default function GestionUsuarios() {
                       <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <div className="flex gap-2">
                           <SearchableSelect
-                            items={tiposEspacioOpciones.filter((tipo) => {
+                            items={tiposEspacioOpcionesCreacion.filter((tipo) => {
                               if (tipo.id === 'todos') return !asignarTodosEspaciosPorTipo;
                               return !tiposEspacioPermitidos.includes(parseInt(tipo.id, 10));
                             })}
@@ -413,9 +430,13 @@ export default function GestionUsuarios() {
                             onSelect={(tipo) => setTipoEspacioSeleccionado(tipo.id)}
                             getItemId={(tipo) => tipo.id}
                             getItemLabel={(tipo) => tipo.nombre}
-                            placeholder="Seleccione un tipo de espacio..."
-                            searchPlaceholder="Buscar tipo de espacio..."
-                            emptyMessage="No hay tipos disponibles."
+                            placeholder={sedeSeleccionada ? 'Seleccione un tipo de espacio...' : 'Seleccione primero una sede'}
+                            searchPlaceholder={sedeSeleccionada ? 'Buscar tipo de espacio...' : 'Primero seleccione una sede'}
+                            emptyMessage={
+                              sedeSeleccionada
+                                ? 'No hay tipos con espacios disponibles para la sede seleccionada.'
+                                : 'Primero seleccione una sede universitaria para asignar espacios por tipo.'
+                            }
                             className="flex-1"
                           />
                           <Button
@@ -855,7 +876,7 @@ export default function GestionUsuarios() {
                       <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <div className="flex gap-2">
                           <SearchableSelect
-                            items={tiposEspacioOpciones.filter((tipo) => {
+                            items={tiposEspacioOpcionesEdicion.filter((tipo) => {
                               if (tipo.id === 'todos') return !asignarTodosEspaciosPorTipoEdit;
                               return !tiposEspacioPermitidosEdit.includes(parseInt(tipo.id, 10));
                             })}
@@ -863,9 +884,13 @@ export default function GestionUsuarios() {
                             onSelect={(tipo) => setTipoEspacioSeleccionadoEdit(tipo.id)}
                             getItemId={(tipo) => tipo.id}
                             getItemLabel={(tipo) => tipo.nombre}
-                            placeholder="Seleccione un tipo de espacio..."
-                            searchPlaceholder="Buscar tipo de espacio..."
-                            emptyMessage="No hay tipos disponibles."
+                            placeholder={editingUser?.sede_id ? 'Seleccione un tipo de espacio...' : 'Seleccione primero una sede'}
+                            searchPlaceholder={editingUser?.sede_id ? 'Buscar tipo de espacio...' : 'Primero seleccione una sede'}
+                            emptyMessage={
+                              editingUser?.sede_id
+                                ? 'No hay tipos con espacios disponibles para la sede seleccionada.'
+                                : 'Primero seleccione una sede universitaria para asignar espacios por tipo.'
+                            }
                             className="flex-1"
                           />
                           <Button
