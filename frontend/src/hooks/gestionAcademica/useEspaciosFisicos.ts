@@ -19,6 +19,8 @@ import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../
 
 const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
 const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
+const GESTION_USUARIOS_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
+const GESTION_USUARIOS_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
 const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
 
 export function useEspaciosFisicos() {
@@ -66,6 +68,8 @@ export function useEspaciosFisicos() {
     const notifyEspaciosUpdated = () => {
         clearSessionCache(ESTADO_RECURSOS_CACHE_KEY);
         clearSessionCache(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`);
+        clearSessionCache(GESTION_USUARIOS_ESPACIOS_CACHE_KEY);
+        clearSessionCache(GESTION_USUARIOS_TIPOS_ESPACIO_CACHE_KEY);
         window.dispatchEvent(new Event(ESPACIOS_UPDATED_EVENT));
     };
 
@@ -260,6 +264,7 @@ export function useEspaciosFisicos() {
             });
 
             await loadData({ force: true });
+            notifyEspaciosUpdated();
 
             setTipoEspacioForm({ nombre: '', descripcion: '' });
             setShowCreateTipoDialog(false);

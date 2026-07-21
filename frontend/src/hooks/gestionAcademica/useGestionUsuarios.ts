@@ -4,7 +4,7 @@ import { userService, rolService, type Usuario, type Rol } from '../../services/
 import { espacioService, espacioPermitidoService, type EspacioFisico, type TipoEspacio } from '../../services/espacios/espaciosAPI';
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import {
     PAGE_SIZE_DEFAULT,
     getPageNumbers,
@@ -23,6 +23,8 @@ const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
 const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
 const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
 const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const SEDES_UPDATED_EVENT = 'sedes-updated';
 
 type EspacioAsignable = {
     id: number;
@@ -143,6 +145,14 @@ export function useGestionUsuarios() {
             loadTiposEspacio({ force })
         ]);
     };
+
+    const setUsuariosAndCache = useCallback((updater: (prev: Usuario[]) => Usuario[]) => {
+        setUsuarios((prev) => {
+            const next = updater(prev);
+            setSessionCacheData(GESTION_USUARIOS_CACHE_KEY, localStorage.getItem('auth_token'), next);
+            return next;
+        });
+    }, []);
 
     // Cargar usuarios desde backend
     const loadUsuarios = async ({ force = false }: { force?: boolean } = {}) => {
@@ -278,6 +288,40 @@ export function useGestionUsuarios() {
             console.error('Error cargando sedes:', error);
         }
     };
+
+    useEffect(() => {
+        const reloadEspaciosParaAsignacion = () => {
+            clearSessionCache(GESTION_ESPACIOS_CACHE_KEY);
+            clearSessionCache(GESTION_TIPOS_ESPACIO_CACHE_KEY);
+            void Promise.all([
+                loadEspacios({ force: true }),
+                loadTiposEspacio({ force: true }),
+            ]);
+        };
+
+        window.addEventListener(ESPACIOS_UPDATED_EVENT, reloadEspaciosParaAsignacion);
+        window.addEventListener('focus', reloadEspaciosParaAsignacion);
+
+        return () => {
+            window.removeEventListener(ESPACIOS_UPDATED_EVENT, reloadEspaciosParaAsignacion);
+            window.removeEventListener('focus', reloadEspaciosParaAsignacion);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const reloadSedesParaUsuarios = () => {
+            clearSessionCache(GESTION_SEDES_CACHE_KEY);
+            void loadSedes({ force: true });
+        };
+
+        window.addEventListener(SEDES_UPDATED_EVENT, reloadSedesParaUsuarios);
+
+        return () => {
+            window.removeEventListener(SEDES_UPDATED_EVENT, reloadSedesParaUsuarios);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Funciones para manejar espacios permitidos (Creación)
     const agregarEspacioPermitido = useCallback(() => {
@@ -426,7 +470,7 @@ export function useGestionUsuarios() {
                     : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, espaciosDisponiblesCreacion);
             }
 
-            await userService.crearUsuario({
+            const created = await userService.crearUsuario({
                 nombre: nuevoUsuario.nombre,
                 correo: nuevoUsuario.correo,
                 contrasena: nuevoUsuario.contrasena,
@@ -437,10 +481,17 @@ export function useGestionUsuarios() {
                 sede_id: parseInt(sedeSeleccionada)
             });
 
+            try {
+                const usuarioCreado = await userService.obtenerUsuario(created.id);
+                setUsuariosAndCache((prev) => [usuarioCreado, ...prev.filter((u) => u.id !== usuarioCreado.id)]);
+                setCurrentUsuarioPage(1);
+            } catch {
+                void loadUsuarios({ force: true });
+            }
+
             showNotification('Usuario creado exitosamente', 'success');
             setDialogOpen(false);
             resetNuevoUsuario();
-            await loadUsuarios({ force: true });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error creando usuario:', error);
@@ -467,6 +518,13 @@ export function useGestionUsuarios() {
                     : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, espaciosDisponiblesEdicion);
             }
 
+            const rolActualizado = editingUser.rol_id
+                ? rolesDisponibles.find((r) => r.id === editingUser.rol_id)
+                : null;
+            const facultadActualizada = facultadSeleccionadaEdit
+                ? facultadesDisponibles.find((f) => f.id === facultadSeleccionadaEdit) ?? null
+                : null;
+
             await userService.actualizarUsuario({
                 id: editingUser.id,
                 nombre: editingUser.nombre,
@@ -480,7 +538,7 @@ export function useGestionUsuarios() {
             });
 
             // Reflejar cambio local de inmediato para mejor feedback en UI.
-            setUsuarios((prev) => prev.map((u) => (
+            setUsuariosAndCache((prev) => prev.map((u) => (
                 u.id === editingUser.id
                     ? {
                         ...u,
@@ -488,6 +546,9 @@ export function useGestionUsuarios() {
                         correo: editingUser.correo,
                         rol_id: editingUser.rol_id,
                         facultad_id: facultadSeleccionadaEdit,
+                        rol: rolActualizado ?? u.rol,
+                        facultad: facultadActualizada,
+                        espacios_permitidos: espaciosPayload,
                         activo: editingUser.activo,
                     }
                     : u
@@ -496,7 +557,7 @@ export function useGestionUsuarios() {
             showNotification('Usuario actualizado exitosamente', 'success');
             setEditDialogOpen(false);
             resetEditStates();
-            await loadUsuarios({ force: true });
+            void loadUsuarios({ force: true });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error actualizando usuario:', error);
@@ -510,12 +571,17 @@ export function useGestionUsuarios() {
             const usuario = usuarios.find(u => u.id === id);
             if (!usuario) return;
 
-            await userService.actualizarUsuario({ id, activo: !usuario.activo });
+            const nuevoEstado = !usuario.activo;
+            setUsuariosAndCache((prev) => prev.map((u) => (
+                u.id === id ? { ...u, activo: nuevoEstado } : u
+            )));
+            await userService.actualizarUsuario({ id, activo: nuevoEstado });
             showNotification(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'} exitosamente`, 'success');
-            await loadUsuarios({ force: true });
+            void loadUsuarios({ force: true });
         } catch (error) {
             console.error('Error cambiando estado:', error);
             showNotification('Error al cambiar estado del usuario', 'error');
+            void loadUsuarios({ force: true });
         }
     };
 
@@ -525,10 +591,11 @@ export function useGestionUsuarios() {
 
         try {
             await userService.eliminarUsuario(userToDelete.id as number);
+            setUsuariosAndCache((prev) => prev.filter((u) => u.id !== userToDelete.id));
             showNotification('Usuario eliminado exitosamente', 'success');
             setDeleteDialogOpen(false);
             setUserToDelete(null);
-            await loadUsuarios({ force: true });
+            void loadUsuarios({ force: true });
         } catch (error) {
             console.error('Error eliminando usuario:', error);
             showNotification('Error al eliminar usuario', 'error');

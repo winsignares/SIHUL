@@ -14,9 +14,11 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const SEDES_CACHE_KEY = 'gestion-academica-sedes';
+const GESTION_USUARIOS_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
+const SEDES_UPDATED_EVENT = 'sedes-updated';
 
 export function useSedes() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -71,6 +73,12 @@ export function useSedes() {
         }
     };
 
+    const notifySedesUpdated = () => {
+        clearSessionCache(SEDES_CACHE_KEY);
+        clearSessionCache(GESTION_USUARIOS_SEDES_CACHE_KEY);
+        window.dispatchEvent(new Event(SEDES_UPDATED_EVENT));
+    };
+
     // Crear sede
     const handleCreate = async () => {
         if (!sedeForm.nombre.trim()) {
@@ -93,6 +101,7 @@ export function useSedes() {
             });
 
             await loadSedes({ force: true });
+            notifySedesUpdated();
             setSedeForm({ nombre: '', direccion: '', seccionalId: '' });
             setShowCreate(false);
 
@@ -129,6 +138,7 @@ export function useSedes() {
             });
 
             await loadSedes({ force: true });
+            notifySedesUpdated();
             setShowEdit(false);
             setSelectedSede(null);
             setSedeForm({ nombre: '', direccion: '', seccionalId: '' });
@@ -150,6 +160,7 @@ export function useSedes() {
             await sedeService.eliminarSede(selectedSede.id);
 
             await loadSedes({ force: true });
+            notifySedesUpdated();
             setShowDelete(false);
             setSelectedSede(null);
 
@@ -173,6 +184,7 @@ export function useSedes() {
             });
             
             await loadSedes({ force: true });
+            notifySedesUpdated();
 
             toast.warning(sede.activa ? 'Sede inactivada correctamente' : 'Sede activada correctamente');
         } catch (error) {
