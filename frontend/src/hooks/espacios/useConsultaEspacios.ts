@@ -41,7 +41,8 @@ export function useConsultaEspacios() {
 
   const datos = useConsultaEspaciosDatos({
     user: userParams,
-    filterFechaInicio: filtros.filterFechaInicio
+    filterFechaInicio: filtros.filterFechaInicio,
+    filterPeriodo: filtros.filterPeriodo
   });
 
   const periodoSeleccionado = useMemo(
@@ -326,6 +327,7 @@ export function useConsultaEspacios() {
     horariosLoading: periodos.horariosLoading,
     errorBusquedaPeriodo: periodos.errorBusquedaPeriodo,
     buscarPeriodoPorRangoFechas: periodos.buscarPeriodoPorRangoFechas,
-    cargarHorariosPorPeriodo: periodos.cargarHorariosPorPeriodo
+    cargarHorariosPorPeriodo: periodos.cargarHorariosPorPeriodo,
+    cargarPeriodos: periodos.cargarPeriodos
   };
 }

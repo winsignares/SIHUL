@@ -168,6 +168,7 @@ export default function ConsultaEspacios() {
     errorBusquedaPeriodo,
     buscarPeriodoPorRangoFechas,
     cargarHorariosPorPeriodo,
+    cargarPeriodos,
     // Vista individual
     espacioSeleccionado,
     verCronogramaIndividual,
@@ -247,6 +248,14 @@ export default function ConsultaEspacios() {
       setMensajeAutoPeriodo(null);
     }
   };
+
+  const recargarDisponibilidad = useCallback(async () => {
+    await Promise.all([
+      recargarDatos(),
+      cargarPeriodos(),
+      filterPeriodo ? cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente']) : Promise.resolve()
+    ]);
+  }, [cargarHorariosPorPeriodo, cargarPeriodos, filterPeriodo, recargarDatos]);
 
   const resolverPeriodoVigente = () => {
     const hoy = getHoyColombia();
@@ -1036,7 +1045,7 @@ export default function ConsultaEspacios() {
       toast.success(`Horario de ${horarioToDelete.materia} eliminado exitosamente`);
       setConfirmDeleteDialogOpen(false);
       setHorarioToDelete(null);
-      recargarDatos();
+      recargarDisponibilidad();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error al eliminar horario:', error);
@@ -1115,7 +1124,7 @@ export default function ConsultaEspacios() {
       toast.success(`Horario movido exitosamente a ${targetDia} ${formatHoraDecimal(targetHoraInicio)}-${formatHoraDecimal(targetHoraFin)}`);
 
       // Recargar los datos
-      recargarDatos();
+      recargarDisponibilidad();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error completo al mover horario:', error);
@@ -1202,7 +1211,7 @@ export default function ConsultaEspacios() {
       setTargetEspacioId('');
       setTargetMoveDia('');
       setTargetMoveHoraInicio(null);
-      recargarDatos();
+      recargarDisponibilidad();
     } catch {
       setMoveClassError('Error al mover la clase');
     } finally {
@@ -1317,7 +1326,7 @@ export default function ConsultaEspacios() {
             </>
           )}
           <Button
-            onClick={recargarDatos}
+            onClick={recargarDisponibilidad}
             variant="outline"
             className="flex-1 sm:flex-none border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
             title="Limpiar caché y recargar datos"
