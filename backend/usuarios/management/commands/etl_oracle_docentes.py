@@ -136,7 +136,7 @@ class Command(BaseCommand):
                 data = dict(zip(columns, row))
 
                 # VW_DOCENTES actual:
-                # TIP_IDENTIFICACION, ID_DOCENTE, NOMBRES, APELLIDOS, CORREO_INSTITUCIONAL, PERIODO, ID_SEDE
+                # TIP_IDENTIFICACION, ID_DOCENTE, NOMBRES, APELLIDOS, CORREO_INSTITUCIONAL, PERIODO, SEDE
                 raw_payload = {
                     'tip_identificacion': self._first_present(data, ['tip_identificacion', 'tipo_id']),
                     'id_docente': self._first_present(data, ['id_docente', 'cod_docente']),
@@ -145,6 +145,7 @@ class Command(BaseCommand):
                     'correo_institucional': self._first_present(data, ['correo_institucional', 'email_institucional']),
                     'periodo': self._first_present(data, ['periodo', 'periodo_academico']),
                     'id_sede': self._first_present(data, ['id_sede']),
+                    'sede': self._first_present(data, ['sede']),
                     'cod_sede': self._first_present(data, ['cod_sede']),
                 }
 
@@ -177,7 +178,9 @@ class Command(BaseCommand):
                     'correo_personal': None,  # No disponible en VW_DOCENTES
                     'id_sede_oracle': (
                         self._to_text(raw_payload['cod_sede'])
+                        or sede_id_to_cod.get(self._to_text(raw_payload['sede']))
                         or sede_id_to_cod.get(self._to_text(raw_payload['id_sede']))
+                        or self._to_text(raw_payload['sede'])
                         or self._to_text(raw_payload['id_sede'])
                         or None
                     ),
