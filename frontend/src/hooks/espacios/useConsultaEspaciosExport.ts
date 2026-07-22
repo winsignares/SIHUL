@@ -241,6 +241,22 @@ export function useConsultaEspaciosExport({
       const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
       const horasIntervalos = Array.from({ length: 15 }, (_, i) => `${i + 6}:00-${i + 7}:00`);
       const espaciosAExportar = espaciosToExport || filteredEspacios;
+      // Mismos colores usados en la exportación a PDF, para que ambos formatos luzcan consistentes.
+      const COLOR_HEADER = 'FF1E293B';
+      const COLOR_TEXTO_BLANCO = 'FFFFFFFF';
+      const COLOR_TEXTO_OSCURO = 'FF0F172A';
+      const COLOR_HORA = 'FFF3F4F6';
+      const COLOR_PENDIENTE = 'FFFDE047';
+      const COLOR_APROBADO = 'FF22C55E';
+      const COLOR_OCUPADO = 'FFEF4444';
+      const COLOR_MANTENIMIENTO = 'FFEAB308';
+      const COLOR_CLASE = 'FFDBEAFE';
+      const COLOR_BORDE = 'FFD1D5DB';
+
+      const fill = (color: string): ExcelJS.Fill => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: color } });
+      const bordeFino = { style: 'thin' as const, color: { argb: COLOR_BORDE } };
+      const bordeCompleto = { top: bordeFino, left: bordeFino, bottom: bordeFino, right: bordeFino };
+
       void (async () => {
         const workbook = new ExcelJS.Workbook();
 
@@ -259,7 +275,14 @@ export function useConsultaEspaciosExport({
             { header: 'Domingo', key: 'domingo', width: 25 },
           ];
 
-          worksheet.getRow(1).height = 30;
+          const headerRow = worksheet.getRow(1);
+          headerRow.height = 30;
+          headerRow.eachCell((cell) => {
+            cell.fill = fill(COLOR_HEADER);
+            cell.font = { bold: true, color: { argb: COLOR_TEXTO_BLANCO } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = bordeCompleto;
+          });
 
           horasIntervalos.forEach((intervalo, horaIdx) => {
             const hora = horaIdx + 6;
@@ -294,6 +317,43 @@ export function useConsultaEspaciosExport({
             const addedRow = worksheet.addRow(row);
             addedRow.height = 60;
             addedRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+            const horaCell = addedRow.getCell('hora');
+            horaCell.fill = fill(COLOR_HORA);
+            horaCell.font = { bold: true, color: { argb: COLOR_TEXTO_OSCURO } };
+            horaCell.border = bordeCompleto;
+
+            diasNombres.slice(1).forEach((dia) => {
+              const horarioEnCelda = getOcupacionPorHora(espacio.id, dia, hora);
+              const key = dia.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              const cell = addedRow.getCell(key);
+              cell.border = bordeCompleto;
+
+              if (!horarioEnCelda) return;
+
+              const isPrestamo = horarioEnCelda.tipo === 'prestamo';
+              const isPrestamoPendiente = isPrestamo && horarioEnCelda.prestamo?.estado === 'Pendiente';
+              const isPrestamoAprobado = isPrestamo && horarioEnCelda.prestamo?.estado === 'Aprobado';
+              const isOcupado = horarioEnCelda.estado === 'ocupado';
+              const isMantenimiento = horarioEnCelda.estado === 'mantenimiento';
+
+              if (isPrestamoPendiente) {
+                cell.fill = fill(COLOR_PENDIENTE);
+                cell.font = { color: { argb: COLOR_TEXTO_OSCURO } };
+              } else if (isPrestamoAprobado) {
+                cell.fill = fill(COLOR_APROBADO);
+                cell.font = { color: { argb: COLOR_TEXTO_BLANCO } };
+              } else if (isOcupado) {
+                cell.fill = fill(COLOR_OCUPADO);
+                cell.font = { color: { argb: COLOR_TEXTO_BLANCO } };
+              } else if (isMantenimiento) {
+                cell.fill = fill(COLOR_MANTENIMIENTO);
+                cell.font = { color: { argb: COLOR_TEXTO_BLANCO } };
+              } else {
+                cell.fill = fill(COLOR_CLASE);
+                cell.font = { color: { argb: COLOR_TEXTO_OSCURO } };
+              }
+            });
           });
         });
 
