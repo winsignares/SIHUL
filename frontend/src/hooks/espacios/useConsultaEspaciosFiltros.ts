@@ -195,28 +195,6 @@ export function useConsultaEspaciosFiltros() {
     }).format(new Date());
   }, []);
 
-  const getIndiceDiaColombia = useCallback((): number => {
-    const diaSemana = new Intl.DateTimeFormat('es-CO', {
-      timeZone: 'America/Bogota',
-      weekday: 'long'
-    })
-      .format(new Date())
-      .toLowerCase();
-
-    const mapaDias: Record<string, number> = {
-      lunes: 0,
-      martes: 1,
-      miercoles: 2,
-      'miércoles': 2,
-      jueves: 3,
-      viernes: 4,
-      sabado: 5,
-      'sábado': 5
-    };
-
-    return mapaDias[diaSemana] ?? -1;
-  }, []);
-
   const getHoraColombia = useCallback((): number => {
     const hora = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Bogota',
@@ -227,35 +205,56 @@ export function useConsultaEspaciosFiltros() {
     return parseInt(hora, 10);
   }, []);
 
+  // Fecha real de calendario (YYYY-MM-DD) que le corresponde a una columna del cronograma,
+  // calculada a partir del lunes de la semana de `filterFechaInicio` (misma lógica que
+  // `encabezadosDiasCronograma`). Esto permite bloquear celdas por fecha real, sin importar
+  // si el rango consultado corresponde a la semana actual, una semana futura o una pasada
+  // (ej. al consultar un período académico ya finalizado, solo para lectura).
+  const getFechaDiaCronograma = useCallback(
+    (dia: string): string | null => {
+      const indiceDia = diasSemana.indexOf(dia);
+      if (indiceDia === -1) return null;
+
+      const referencia = filterFechaInicio ? new Date(filterFechaInicio + 'T12:00:00') : getFechaColombia();
+      referencia.setHours(12, 0, 0, 0);
+
+      const diaSemana = referencia.getDay();
+      const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+      const lunes = new Date(referencia);
+      lunes.setDate(referencia.getDate() + diasHastaLunes);
+
+      const fechaDia = new Date(lunes);
+      fechaDia.setDate(lunes.getDate() + indiceDia);
+      return formatFechaLocalYYYYMMDD(fechaDia);
+    },
+    [diasSemana, filterFechaInicio]
+  );
+
   const isDiaBloqueado = useCallback(
     (dia: string): boolean => {
+      const fechaDia = getFechaDiaCronograma(dia);
+      if (!fechaDia) return false;
+
       const hoyColombia = getFechaColombiaISO();
-      const indiceDiaActual = getIndiceDiaColombia();
-      const semanaActual = !filterFechaInicio || filterFechaInicio === hoyColombia;
-
-      if (!semanaActual || indiceDiaActual < 0) return false;
-
-      const indiceDia = diasSemana.indexOf(dia);
-      return indiceDia !== -1 && indiceDia < indiceDiaActual;
+      return fechaDia < hoyColombia;
     },
-    [diasSemana, filterFechaInicio, getFechaColombiaISO, getIndiceDiaColombia]
+    [getFechaDiaCronograma, getFechaColombiaISO]
   );
 
   const isCeldaBloqueada = useCallback(
     (dia: string, hora: number): boolean => {
       if (isDiaBloqueado(dia)) return true;
 
+      const fechaDia = getFechaDiaCronograma(dia);
+      if (!fechaDia) return false;
+
       const hoyColombia = getFechaColombiaISO();
-      const indiceDiaActual = getIndiceDiaColombia();
+      if (fechaDia !== hoyColombia) return false;
+
       const horaActualColombia = getHoraColombia();
-      const semanaActual = !filterFechaInicio || filterFechaInicio === hoyColombia;
-
-      if (!semanaActual || indiceDiaActual < 0) return false;
-
-      const indiceDia = diasSemana.indexOf(dia);
-      return indiceDia === indiceDiaActual && hora < horaActualColombia;
+      return hora < horaActualColombia;
     },
-    [diasSemana, filterFechaInicio, getFechaColombiaISO, getHoraColombia, getIndiceDiaColombia, isDiaBloqueado]
+    [getFechaDiaCronograma, getFechaColombiaISO, getHoraColombia, isDiaBloqueado]
   );
 
   const limpiarFiltros = useCallback(() => {

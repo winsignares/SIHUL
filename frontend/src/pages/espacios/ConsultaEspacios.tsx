@@ -205,7 +205,18 @@ export default function ConsultaEspacios() {
     inicioPeriodo.setHours(0, 0, 0, 0);
     finPeriodo.setHours(0, 0, 0, 0);
 
-    if (hoy > finPeriodo) return null;
+    // Período ya finalizado: solo permite consultar, mostrando su última semana.
+    if (hoy > finPeriodo) {
+      const inicioRango = new Date(finPeriodo);
+      inicioRango.setDate(inicioRango.getDate() - 7);
+      const inicioValido = inicioRango < inicioPeriodo ? inicioPeriodo : inicioRango;
+
+      return {
+        inicio: formatFechaLocalYYYYMMDD(inicioValido),
+        fin: formatFechaLocalYYYYMMDD(finPeriodo),
+        ajustadoPorDomingo: false
+      };
+    }
 
     const inicioValido = hoy < inicioPeriodo ? inicioPeriodo : hoy;
     const finRango = new Date(inicioValido);
