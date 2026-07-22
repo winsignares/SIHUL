@@ -14,11 +14,12 @@ import {
   normalizePage,
   PAGE_SIZE_DEFAULT
 } from './paginacion';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
 const GRUPOS_CACHE_KEY = 'gestion-academica-grupos';
 const GRUPOS_PROGRAMAS_CACHE_KEY = 'gestion-academica-grupos-programas';
 const GRUPOS_PERIODOS_CACHE_KEY = 'gestion-academica-grupos-periodos';
+const PERIODOS_ACADEMICOS_CACHE_KEY = 'gestion-academica-periodos';
 
 export interface GrupoAcademico {
     id?: number;
@@ -114,6 +115,10 @@ export function useGrupos() {
         }
     };
 
+    const invalidatePeriodoSummaryCache = () => {
+        clearSessionCache(PERIODOS_ACADEMICOS_CACHE_KEY);
+    };
+
     // Cargar datos al montar el componente
     useEffect(() => {
         loadGrupos();
@@ -151,6 +156,7 @@ export function useGrupos() {
                 activo: true
             });
 
+            invalidatePeriodoSummaryCache();
             await loadGrupos({ force: true });
             resetForm();
             setShowCreateGrupo(false);
@@ -204,6 +210,7 @@ export function useGrupos() {
                 semestre: Number(grupoForm.semestre)
             });
 
+            invalidatePeriodoSummaryCache();
             await loadGrupos({ force: true });
             setShowEditGrupo(false);
             setSelectedGrupo(null);
@@ -229,6 +236,7 @@ export function useGrupos() {
             setLoading(true);
             await grupoService.delete({ id: selectedGrupo.id });
 
+            invalidatePeriodoSummaryCache();
             await loadGrupos({ force: true });
             setShowDeleteGrupo(false);
             setSelectedGrupo(null);
@@ -251,6 +259,7 @@ export function useGrupos() {
                 activo: !grupo.activo
             });
 
+            invalidatePeriodoSummaryCache();
             await loadGrupos({ force: true });
             toast.warning(grupo.activo ? 'Grupo inactivado correctamente' : 'Grupo activado correctamente');
         } catch (error) {

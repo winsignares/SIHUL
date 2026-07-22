@@ -445,6 +445,27 @@ export function usePeriodosAcademicos() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        const refreshPeriodosOnFocus = () => {
+            loadPeriodos({ force: true });
+        };
+
+        const refreshPeriodosOnVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                loadPeriodos({ force: true });
+            }
+        };
+
+        window.addEventListener('focus', refreshPeriodosOnFocus);
+        document.addEventListener('visibilitychange', refreshPeriodosOnVisibilityChange);
+
+        return () => {
+            window.removeEventListener('focus', refreshPeriodosOnFocus);
+            document.removeEventListener('visibilitychange', refreshPeriodosOnVisibilityChange);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     return {
         loading,
         periodos,
