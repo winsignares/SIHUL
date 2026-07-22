@@ -13,7 +13,7 @@ import {
 } from './prestamosCronogramaUtils';
 import type { EspacioView, OcupacionView } from './types';
 
-const CONSULTA_ESPACIOS_CACHE_VERSION = 'v3';
+const CONSULTA_ESPACIOS_CACHE_VERSION = 'v4';
 const CONSULTA_ESPACIOS_CACHE_KEY = `espacios-consulta-espacios-${CONSULTA_ESPACIOS_CACHE_VERSION}`;
 
 type UserLike = {
@@ -23,8 +23,13 @@ type UserLike = {
   facultad?: { id?: number | null } | null;
 };
 
-function getConsultaEspaciosCacheKey(userId?: number, rol?: string, facultadId?: number | null): string {
-  return `${CONSULTA_ESPACIOS_CACHE_KEY}-${String(rol ?? 'publico')}-${userId ?? 'anonimo'}-${facultadId ?? 'sin-facultad'}`;
+function getConsultaEspaciosCacheKey(
+  userId?: number,
+  rol?: string,
+  facultadId?: number | null,
+  periodoId?: number | null
+): string {
+  return `${CONSULTA_ESPACIOS_CACHE_KEY}-${String(rol ?? 'publico')}-${userId ?? 'anonimo'}-${facultadId ?? 'sin-facultad'}-${periodoId ?? 'sin-periodo'}`;
 }
 
 function formatFechaLocalYYYYMMDD(d: Date): string {
@@ -126,7 +131,15 @@ function calcularProximaClaseYEstadoPrevio(
   };
 }
 
-export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: UserLike; filterFechaInicio: string }) {
+export function useConsultaEspaciosDatos({
+  user,
+  filterFechaInicio,
+  filterPeriodo
+}: {
+  user?: UserLike;
+  filterFechaInicio: string;
+  filterPeriodo?: number | null;
+}) {
   const [espacios, setEspacios] = useState<EspacioView[]>([]);
   const [horarios, setHorarios] = useState<OcupacionView[]>([]);
   const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]);
@@ -140,7 +153,8 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
         const cacheKey = getConsultaEspaciosCacheKey(
           user?.id,
           user?.supervisa_espacios ? `${String(user?.rol ?? 'rol')}-supervisa-espacios` : String(user?.rol ?? 'publico'),
-          user?.facultad?.id ?? null
+          user?.facultad?.id ?? null,
+          filterPeriodo ?? null
         );
         const cachedData = force
           ? null
@@ -149,7 +163,6 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
         if (cachedData) {
           setEspacios(cachedData.espacios);
           setHorarios(cachedData.horarios);
-          return;
         }
 
         let espaciosConHorarios;
@@ -300,7 +313,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
         setLoading(false);
       }
     },
-    [user]
+    [filterPeriodo, user]
   );
 
   useEffect(() => {
@@ -399,11 +412,12 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
       getConsultaEspaciosCacheKey(
         user?.id,
         user?.supervisa_espacios ? `${String(user?.rol ?? 'rol')}-supervisa-espacios` : String(user?.rol ?? 'publico'),
-        user?.facultad?.id ?? null
+        user?.facultad?.id ?? null,
+        filterPeriodo ?? null
       )
     );
     await loadData({ force: true });
-  }, [loadData, user?.facultad?.id, user?.id, user?.rol, user?.supervisa_espacios]);
+  }, [filterPeriodo, loadData, user?.facultad?.id, user?.id, user?.rol, user?.supervisa_espacios]);
 
   return {
     espacios,
