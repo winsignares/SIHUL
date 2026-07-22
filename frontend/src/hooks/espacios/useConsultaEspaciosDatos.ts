@@ -5,6 +5,7 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import type { PrestamoEspacio } from '../../services/prestamos/prestamoAPI';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import {
   expandirPrestamosParaCronograma,
   getDiaSemanaEspanolDesdeISO,
@@ -12,12 +13,13 @@ import {
 } from './prestamosCronogramaUtils';
 import type { EspacioView, OcupacionView } from './types';
 
-const CONSULTA_ESPACIOS_CACHE_VERSION = 'v2';
+const CONSULTA_ESPACIOS_CACHE_VERSION = 'v3';
 const CONSULTA_ESPACIOS_CACHE_KEY = `espacios-consulta-espacios-${CONSULTA_ESPACIOS_CACHE_VERSION}`;
 
 type UserLike = {
   id?: number;
   rol?: string;
+  supervisa_espacios?: boolean;
   facultad?: { id?: number | null } | null;
 };
 
@@ -137,7 +139,7 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
         const activeToken = localStorage.getItem('auth_token');
         const cacheKey = getConsultaEspaciosCacheKey(
           user?.id,
-          String(user?.rol ?? 'publico'),
+          user?.supervisa_espacios ? `${String(user?.rol ?? 'rol')}-supervisa-espacios` : String(user?.rol ?? 'publico'),
           user?.facultad?.id ?? null
         );
         const cachedData = force
@@ -152,7 +154,10 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
 
         let espaciosConHorarios;
 
-        const esSupervisor = String(user?.rol ?? '').toLowerCase().startsWith('supervisor');
+        const esSupervisor = isSpaceSupervisorRole({
+          nombre: String(user?.rol ?? ''),
+          supervisa_espacios: user?.supervisa_espacios
+        });
 
         if (user?.id && esSupervisor) {
           const response = await espacioHorariosService.getSupervisorDisponiblesHorarios(user.id);
@@ -391,10 +396,14 @@ export function useConsultaEspaciosDatos({ user, filterFechaInicio }: { user?: U
 
   const recargarDatos = useCallback(async () => {
     clearSessionCache(
-      getConsultaEspaciosCacheKey(user?.id, String(user?.rol ?? 'publico'), user?.facultad?.id ?? null)
+      getConsultaEspaciosCacheKey(
+        user?.id,
+        user?.supervisa_espacios ? `${String(user?.rol ?? 'rol')}-supervisa-espacios` : String(user?.rol ?? 'publico'),
+        user?.facultad?.id ?? null
+      )
     );
     await loadData({ force: true });
-  }, [loadData, user?.facultad?.id, user?.id, user?.rol]);
+  }, [loadData, user?.facultad?.id, user?.id, user?.rol, user?.supervisa_espacios]);
 
   return {
     espacios,

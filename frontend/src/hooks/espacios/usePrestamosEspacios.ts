@@ -5,6 +5,7 @@ import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import {
   getPageNumbers,
   getPageSlice,
@@ -22,7 +23,7 @@ import {
 } from '../../services/prestamos/prestamosChanges';
 import { trackedFetch } from '../../core/apiActivity';
 
-const PRESTAMOS_CACHE_KEY = 'prestamos-espacios-admin';
+const PRESTAMOS_CACHE_KEY = 'prestamos-espacios';
 const PRESTAMOS_SYNC_INTERVAL_MS = 15_000;
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
@@ -68,7 +69,7 @@ export function usePrestamosEspacios() {
     const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]);
     const [loading, setLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const { user } = useAuth();
+    const { user, areas } = useAuth();
 
     const normalizarEstado = (estado: PrestamoEspacio['estado']) => {
         return estado.charAt(0).toUpperCase() + estado.slice(1);
@@ -122,9 +123,17 @@ export function usePrestamosEspacios() {
     const loadData = async ({ force = false }: { force?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
+            const rolNombre = typeof user?.rol === 'string' ? user.rol : String(user?.rol?.nombre ?? 'sin-rol');
+            const esSupervisorPorRol = isSpaceSupervisorRole(
+                typeof user?.rol === 'string'
+                    ? { nombre: user.rol }
+                    : user?.rol
+            );
+            const esSupervisorPorEspacios = Boolean(areas?.length);
+            const cacheKey = `${PRESTAMOS_CACHE_KEY}-${user?.id ?? 'anonimo'}-${rolNombre}-${esSupervisorPorRol || esSupervisorPorEspacios ? 'supervisa-espacios' : 'general'}`;
             const cachedPrestamos = force
                 ? null
-                : getSessionCacheData<PrestamoEspacio[]>(PRESTAMOS_CACHE_KEY, activeToken);
+                : getSessionCacheData<PrestamoEspacio[]>(cacheKey, activeToken);
 
             // Reutilizar datos cargados en esta sesión si no se fuerza recarga.
             if (cachedPrestamos) {
@@ -134,13 +143,8 @@ export function usePrestamosEspacios() {
 
             setLoading(true);
 
-            // Detectar si es supervisor para usar el endpoint específico
-            const rol = user?.rol
-                ? typeof user.rol === 'string'
-                    ? user.rol
-                    : String(user.rol?.nombre ?? '')
-                : '';
-            const esSupervisor = rol.toLowerCase().startsWith('supervisor');
+            // Detectar si el rol supervisa espacios para usar el endpoint específico.
+            const esSupervisor = esSupervisorPorRol || esSupervisorPorEspacios;
 
             // Cargar TODOS los préstamos (autenticados + públicos) desde la API combinada
             // Si es supervisor, usar endpoint específico de prestamos de espacios permitidos
@@ -197,7 +201,7 @@ export function usePrestamosEspacios() {
             });
 
             setPrestamos(prestamosUI);
-            setSessionCacheData(PRESTAMOS_CACHE_KEY, activeToken, prestamosUI);
+            setSessionCacheData(cacheKey, activeToken, prestamosUI);
         } catch (error) {
             showNotification({
                 message: `Error al cargar préstamos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
