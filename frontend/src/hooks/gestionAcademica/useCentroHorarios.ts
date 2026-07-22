@@ -107,8 +107,14 @@ export function useCentroHorarios() {
     const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
     const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
     const [filtroPeriodo, setFiltroPeriodo] = useState<string>('all');
+    const [filtroDocente, setFiltroDocente] = useState<string>('all');
+    const [filtroEspacio, setFiltroEspacio] = useState<string>('all');
 
     // Filtros para horarios fusionados
+    const [filtroFusionadoFacultad, setFiltroFusionadoFacultad] = useState<string>('all');
+    const [filtroFusionadoPrograma, setFiltroFusionadoPrograma] = useState<string>('all');
+    const [filtroFusionadoGrupo, setFiltroFusionadoGrupo] = useState<string>('all');
+    const [filtroFusionadoSemestre, setFiltroFusionadoSemestre] = useState<string>('all');
     const [filtroFusionadoDia, setFiltroFusionadoDia] = useState<string>('all');
     const [filtroFusionadoAsignatura, setFiltroFusionadoAsignatura] = useState<string>('all');
     const [filtroFusionadoDocente, setFiltroFusionadoDocente] = useState<string>('all');
@@ -424,8 +430,12 @@ export function useCentroHorarios() {
         const matchGrupo = filtroGrupo === 'all' || horario.grupo_nombre === filtroGrupo;
         const matchSemestre = filtroSemestre === 'all' || horario.semestre?.toString() === filtroSemestre;
         const matchPeriodo = filtroPeriodo === 'all' || getHorarioPeriodoId(horario)?.toString() === filtroPeriodo;
+        const matchDocente = filtroDocente === 'all'
+            || (filtroDocente === 'sin-asignar' ? horario.docente_id == null : horario.docente_id?.toString() === filtroDocente);
+        const matchEspacio = filtroEspacio === 'all'
+            || (filtroEspacio === 'sin-espacio' ? horario.espacio_id == null : horario.espacio_id?.toString() === filtroEspacio);
 
-        return matchFacultad && matchPrograma && matchGrupo && matchSemestre && matchPeriodo;
+        return matchFacultad && matchPrograma && matchGrupo && matchSemestre && matchPeriodo && matchDocente && matchEspacio;
     });
 
     // Obtener grupos agrupados después de filtrar
@@ -437,6 +447,8 @@ export function useCentroHorarios() {
     // Obtener listas únicas para filtros
     const gruposUnicos = [...new Set(horarios.map(h => h.grupo_nombre).filter(Boolean))].sort();
     const semestresUnicos = [...new Set(horarios.map(h => h.semestre).filter(Boolean))].sort((a, b) => a - b);
+    const docentesDisponibles = docentes.filter(docente => horarios.some(h => h.docente_id === docente.id));
+    const espaciosDisponibles = espacios.filter(espacio => horarios.some(h => h.espacio_id === espacio.id));
     const periodosDisponibles = periodos
         .filter(periodo => periodo.id !== undefined && horarios.some(h => getHorarioPeriodoId(h) === periodo.id))
         .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
@@ -444,24 +456,62 @@ export function useCentroHorarios() {
         filtroFacultad === 'all' || p.facultad_id === parseInt(filtroFacultad)
     );
 
+    const getFusionadoGrupos = (hf: HorarioFusionadoExtendido): Grupo[] => {
+        const ids = [hf.grupo1_id, hf.grupo2_id, hf.grupo3_id].filter((id): id is number => id != null);
+        return ids
+            .map(id => grupos.find(g => g.id === id))
+            .filter((grupo): grupo is Grupo => grupo !== undefined);
+    };
+
+    const fusionadoMatchesFacultad = (hf: HorarioFusionadoExtendido, facultadId: string): boolean => {
+        if (facultadId === 'all') return true;
+        return getFusionadoGrupos(hf).some(grupo => {
+            const programa = programas.find(p => p.id === grupo.programa_id);
+            return programa?.facultad_id?.toString() === facultadId;
+        });
+    };
+
+    const fusionadoMatchesPrograma = (hf: HorarioFusionadoExtendido, programaId: string): boolean => {
+        if (programaId === 'all') return true;
+        return getFusionadoGrupos(hf).some(grupo => grupo.programa_id?.toString() === programaId);
+    };
+
     // Listas únicas para filtros de horarios fusionados
+    const gruposFusionadosUnicos = [...new Set(horariosFusionados.flatMap(h => [
+        h.grupo1_nombre,
+        h.grupo2_nombre,
+        h.grupo3_nombre
+    ]).filter((nombre): nombre is string => Boolean(nombre)))].sort();
+    const semestresFusionadosUnicos = [...new Set(horariosFusionados.flatMap(h => getFusionadoGrupos(h).map(g => g.semestre)).filter(Boolean))].sort((a, b) => a - b);
+    const programasFusionadosFiltrados = programas.filter(p =>
+        filtroFusionadoFacultad === 'all' || p.facultad_id?.toString() === filtroFusionadoFacultad
+    );
     const diasFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.dia_semana))].sort();
     const asignaturasFusionadasUnicas = [...new Set(horariosFusionados.map(h => h.asignatura_nombre))].sort();
-    const docentesFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.docente_nombre))].sort();
-    const espaciosFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.espacio_nombre))].sort();
+    const docentesFusionadosDisponibles = docentes.filter(docente => horariosFusionados.some(h => h.docente_id === docente.id));
+    const espaciosFusionadosDisponibles = espacios.filter(espacio => horariosFusionados.some(h => h.espacio_id === espacio.id));
     const periodosFusionadosDisponibles = periodos
         .filter(periodo => periodo.id !== undefined && horariosFusionados.some(h => h.periodo_id === periodo.id))
         .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
 
     // Filtrar horarios fusionados
     const horariosFusionadosFiltrados = horariosFusionados.filter(hf => {
+        const gruposDelFusionado = getFusionadoGrupos(hf);
+        const matchFacultad = fusionadoMatchesFacultad(hf, filtroFusionadoFacultad);
+        const matchPrograma = fusionadoMatchesPrograma(hf, filtroFusionadoPrograma);
+        const matchGrupo = filtroFusionadoGrupo === 'all'
+            || [hf.grupo1_nombre, hf.grupo2_nombre, hf.grupo3_nombre].includes(filtroFusionadoGrupo);
+        const matchSemestre = filtroFusionadoSemestre === 'all'
+            || gruposDelFusionado.some(grupo => grupo.semestre?.toString() === filtroFusionadoSemestre);
         const matchDia = filtroFusionadoDia === 'all' || hf.dia_semana.toLowerCase() === filtroFusionadoDia.toLowerCase();
         const matchAsignatura = filtroFusionadoAsignatura === 'all' || hf.asignatura_nombre === filtroFusionadoAsignatura;
-        const matchDocente = filtroFusionadoDocente === 'all' || hf.docente_nombre === filtroFusionadoDocente;
-        const matchEspacio = filtroFusionadoEspacio === 'all' || hf.espacio_nombre === filtroFusionadoEspacio;
+        const matchDocente = filtroFusionadoDocente === 'all'
+            || (filtroFusionadoDocente === 'sin-asignar' ? hf.docente_id == null : hf.docente_id?.toString() === filtroFusionadoDocente);
+        const matchEspacio = filtroFusionadoEspacio === 'all'
+            || (filtroFusionadoEspacio === 'sin-espacio' ? hf.espacio_id == null : hf.espacio_id?.toString() === filtroFusionadoEspacio);
         const matchPeriodo = filtroFusionadoPeriodo === 'all' || hf.periodo_id?.toString() === filtroFusionadoPeriodo;
 
-        return matchDia && matchAsignatura && matchDocente && matchEspacio && matchPeriodo;
+        return matchFacultad && matchPrograma && matchGrupo && matchSemestre && matchDia && matchAsignatura && matchDocente && matchEspacio && matchPeriodo;
     });
 
     // Handlers
@@ -608,9 +658,15 @@ export function useCentroHorarios() {
         setFiltroGrupo('all');
         setFiltroSemestre('all');
         setFiltroPeriodo('all');
+        setFiltroDocente('all');
+        setFiltroEspacio('all');
     };
 
     const limpiarFiltrosFusionados = () => {
+        setFiltroFusionadoFacultad('all');
+        setFiltroFusionadoPrograma('all');
+        setFiltroFusionadoGrupo('all');
+        setFiltroFusionadoSemestre('all');
         setFiltroFusionadoDia('all');
         setFiltroFusionadoAsignatura('all');
         setFiltroFusionadoDocente('all');
@@ -787,6 +843,8 @@ export function useCentroHorarios() {
         filtroGrupo, setFiltroGrupo,
         filtroSemestre, setFiltroSemestre,
         filtroPeriodo, setFiltroPeriodo,
+        filtroDocente, setFiltroDocente,
+        filtroEspacio, setFiltroEspacio,
         showEditModal, setShowEditModal,
         horarioEditar, setHorarioEditar,
         showDetallesModal, setShowDetallesModal,
@@ -815,6 +873,8 @@ export function useCentroHorarios() {
         goToNextPageWindow: paginacion.goToNextPageWindow,
         gruposUnicos,
         semestresUnicos,
+        docentesDisponibles,
+        espaciosDisponibles,
         periodosDisponibles,
         programasFiltrados,
         handleVerDetalles,
@@ -839,15 +899,22 @@ export function useCentroHorarios() {
         dias,
         notification,
         // Filtros de horarios fusionados
+        filtroFusionadoFacultad, setFiltroFusionadoFacultad,
+        filtroFusionadoPrograma, setFiltroFusionadoPrograma,
+        filtroFusionadoGrupo, setFiltroFusionadoGrupo,
+        filtroFusionadoSemestre, setFiltroFusionadoSemestre,
         filtroFusionadoDia, setFiltroFusionadoDia,
         filtroFusionadoAsignatura, setFiltroFusionadoAsignatura,
         filtroFusionadoDocente, setFiltroFusionadoDocente,
         filtroFusionadoEspacio, setFiltroFusionadoEspacio,
         filtroFusionadoPeriodo, setFiltroFusionadoPeriodo,
+        gruposFusionadosUnicos,
+        semestresFusionadosUnicos,
+        programasFusionadosFiltrados,
         diasFusionadosUnicos,
         asignaturasFusionadasUnicas,
-        docentesFusionadosUnicos,
-        espaciosFusionadosUnicos,
+        docentesFusionadosDisponibles,
+        espaciosFusionadosDisponibles,
         periodosFusionadosDisponibles,
         horariosFusionadosFiltrados,
         limpiarFiltrosFusionados

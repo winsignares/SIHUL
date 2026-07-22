@@ -58,6 +58,10 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     filtroSemestre, setFiltroSemestre,
     filtroGrupo, setFiltroGrupo,
     filtroPeriodo, setFiltroPeriodo,
+    filtroAsignatura, setFiltroAsignatura,
+    filtroDocente, setFiltroDocente,
+    filtroEspacio, setFiltroEspacio,
+    filtroDia, setFiltroDia,
     vistaActual,
     grupoSeleccionado,
     horariosAsignados,
@@ -83,6 +87,10 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     programasFiltrados,
     gruposFiltroDisponibles,
     periodosDisponibles,
+    asignaturasFiltroDisponibles,
+    docentesFiltroDisponibles,
+    espaciosFiltroDisponibles,
+    diasFiltroDisponibles,
     // Paginación
     currentPage,
     totalPages,
@@ -237,6 +245,94 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                     placeholder="Seleccionar periodo..."
                     searchPlaceholder="Buscar periodo..."
                     emptyMessage="No se encontró ningún periodo"
+                  />
+                </div>
+
+                <div>
+                  <Label>Asignatura</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todas las asignaturas', codigo: '' },
+                      ...asignaturasFiltroDisponibles.map(a => ({
+                        id: a.id?.toString() || '',
+                        nombre: a.nombre,
+                        codigo: a.codigo
+                      }))
+                    ]}
+                    value={filtroAsignatura}
+                    onSelect={(item) => setFiltroAsignatura(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.codigo}
+                    placeholder="Seleccionar asignatura..."
+                    searchPlaceholder="Buscar asignatura..."
+                    emptyMessage="No se encontró ninguna asignatura"
+                  />
+                </div>
+
+                <div>
+                  <Label>Docente</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los docentes', correo: '' },
+                      { id: 'sin-asignar', nombre: 'Sin asignar', correo: '' },
+                      ...docentesFiltroDisponibles.map(d => ({
+                        id: d.id.toString(),
+                        nombre: d.nombre,
+                        correo: d.correo
+                      }))
+                    ]}
+                    value={filtroDocente}
+                    onSelect={(item) => setFiltroDocente(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.correo}
+                    placeholder="Seleccionar docente..."
+                    searchPlaceholder="Buscar docente..."
+                    emptyMessage="No se encontró ningún docente"
+                  />
+                </div>
+
+                <div>
+                  <Label>Espacio</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
+                      { id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined },
+                      ...espaciosFiltroDisponibles.map(e => ({
+                        id: e.id?.toString() || '',
+                        nombre: e.nombre,
+                        capacidad: e.capacidad
+                      }))
+                    ]}
+                    value={filtroEspacio}
+                    onSelect={(item) => setFiltroEspacio(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
+                    placeholder="Seleccionar espacio..."
+                    searchPlaceholder="Buscar espacio..."
+                    emptyMessage="No se encontró ningún espacio"
+                  />
+                </div>
+
+                <div>
+                  <Label>Día</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los días' },
+                      ...diasFiltroDisponibles.map(dia => ({
+                        id: dia,
+                        nombre: dia.charAt(0).toUpperCase() + dia.slice(1)
+                      }))
+                    ]}
+                    value={filtroDia}
+                    onSelect={(item) => setFiltroDia(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar día..."
+                    searchPlaceholder="Buscar día..."
+                    emptyMessage="No se encontró ningún día"
                   />
                 </div>
               </div>

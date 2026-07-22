@@ -46,6 +46,8 @@ export default function CentroHorarios() {
     filtroGrupo, setFiltroGrupo,
     filtroSemestre, setFiltroSemestre,
     filtroPeriodo, setFiltroPeriodo,
+    filtroDocente, setFiltroDocente,
+    filtroEspacio, setFiltroEspacio,
     showEditModal, setShowEditModal,
     horarioEditar, setHorarioEditar,
     showDetallesModal, setShowDetallesModal,
@@ -54,6 +56,7 @@ export default function CentroHorarios() {
     loadData,
     generarHoras,
     obtenerClaseEnHora,
+    horariosFiltrados,
     gruposAgrupados,
     gruposAgrupadosTotal,
     // Paginación
@@ -70,6 +73,8 @@ export default function CentroHorarios() {
     goToNextPageWindow,
     gruposUnicos,
     semestresUnicos,
+    docentesDisponibles,
+    espaciosDisponibles,
     periodosDisponibles,
     programasFiltrados,
     handleVerDetalles,
@@ -89,15 +94,22 @@ export default function CentroHorarios() {
     dias,
     notification,
     // Filtros de horarios fusionados
+    filtroFusionadoFacultad, setFiltroFusionadoFacultad,
+    filtroFusionadoPrograma, setFiltroFusionadoPrograma,
+    filtroFusionadoGrupo, setFiltroFusionadoGrupo,
+    filtroFusionadoSemestre, setFiltroFusionadoSemestre,
     filtroFusionadoDia, setFiltroFusionadoDia,
     filtroFusionadoAsignatura, setFiltroFusionadoAsignatura,
     filtroFusionadoDocente, setFiltroFusionadoDocente,
     filtroFusionadoEspacio, setFiltroFusionadoEspacio,
     filtroFusionadoPeriodo, setFiltroFusionadoPeriodo,
+    gruposFusionadosUnicos,
+    semestresFusionadosUnicos,
+    programasFusionadosFiltrados,
     diasFusionadosUnicos,
     asignaturasFusionadasUnicas,
-    docentesFusionadosUnicos,
-    espaciosFusionadosUnicos,
+    docentesFusionadosDisponibles,
+    espaciosFusionadosDisponibles,
     periodosFusionadosDisponibles,
     horariosFusionadosFiltrados,
     limpiarFiltrosFusionados
@@ -163,7 +175,7 @@ export default function CentroHorarios() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Filtros en Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
                 {/* Facultad */}
                 <div>
                   <Label>Facultad</Label>
@@ -266,6 +278,52 @@ export default function CentroHorarios() {
                     placeholder="Seleccionar periodo..."
                     searchPlaceholder="Buscar periodo..."
                     emptyMessage="No se encontró ningún periodo"
+                  />
+                </div>
+
+                <div>
+                  <Label>Docente</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los docentes', correo: '' },
+                      ...(horariosFiltrados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
+                      ...docentesDisponibles.map(d => ({
+                        id: d.id.toString(),
+                        nombre: d.nombre,
+                        correo: d.correo
+                      }))
+                    ]}
+                    value={filtroDocente}
+                    onSelect={(item) => setFiltroDocente(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.correo}
+                    placeholder="Seleccionar docente..."
+                    searchPlaceholder="Buscar docente..."
+                    emptyMessage="No se encontró ningún docente"
+                  />
+                </div>
+
+                <div>
+                  <Label>Espacio</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
+                      ...(horariosFiltrados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
+                      ...espaciosDisponibles.map(e => ({
+                        id: (e.id ?? '').toString(),
+                        nombre: e.nombre,
+                        capacidad: e.capacidad
+                      }))
+                    ]}
+                    value={filtroEspacio}
+                    onSelect={(item) => setFiltroEspacio(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
+                    placeholder="Seleccionar espacio..."
+                    searchPlaceholder="Buscar espacio..."
+                    emptyMessage="No se encontró ningún espacio"
                   />
                 </div>
               </div>
@@ -415,7 +473,7 @@ export default function CentroHorarios() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Filtros en Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
                 {/* Facultad */}
                 <div>
                   <Label>Facultad</Label>
@@ -518,6 +576,52 @@ export default function CentroHorarios() {
                     placeholder="Seleccionar periodo..."
                     searchPlaceholder="Buscar periodo..."
                     emptyMessage="No se encontró ningún periodo"
+                  />
+                </div>
+
+                <div>
+                  <Label>Docente</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los docentes', correo: '' },
+                      ...(horariosFiltrados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
+                      ...docentesDisponibles.map(d => ({
+                        id: d.id.toString(),
+                        nombre: d.nombre,
+                        correo: d.correo
+                      }))
+                    ]}
+                    value={filtroDocente}
+                    onSelect={(item) => setFiltroDocente(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.correo}
+                    placeholder="Seleccionar docente..."
+                    searchPlaceholder="Buscar docente..."
+                    emptyMessage="No se encontró ningún docente"
+                  />
+                </div>
+
+                <div>
+                  <Label>Espacio</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
+                      ...(horariosFiltrados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
+                      ...espaciosDisponibles.map(e => ({
+                        id: (e.id ?? '').toString(),
+                        nombre: e.nombre,
+                        capacidad: e.capacidad
+                      }))
+                    ]}
+                    value={filtroEspacio}
+                    onSelect={(item) => setFiltroEspacio(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
+                    placeholder="Seleccionar espacio..."
+                    searchPlaceholder="Buscar espacio..."
+                    emptyMessage="No se encontró ningún espacio"
                   />
                 </div>
               </div>
@@ -780,6 +884,15 @@ export default function CentroHorarios() {
           <HorariosFusionados 
             horariosFusionados={horariosFusionadosFiltrados}
             loading={loading}
+            facultades={facultades}
+            filtroFusionadoFacultad={filtroFusionadoFacultad}
+            setFiltroFusionadoFacultad={setFiltroFusionadoFacultad}
+            filtroFusionadoPrograma={filtroFusionadoPrograma}
+            setFiltroFusionadoPrograma={setFiltroFusionadoPrograma}
+            filtroFusionadoGrupo={filtroFusionadoGrupo}
+            setFiltroFusionadoGrupo={setFiltroFusionadoGrupo}
+            filtroFusionadoSemestre={filtroFusionadoSemestre}
+            setFiltroFusionadoSemestre={setFiltroFusionadoSemestre}
             filtroFusionadoDia={filtroFusionadoDia}
             setFiltroFusionadoDia={setFiltroFusionadoDia}
             filtroFusionadoAsignatura={filtroFusionadoAsignatura}
@@ -790,10 +903,13 @@ export default function CentroHorarios() {
             setFiltroFusionadoEspacio={setFiltroFusionadoEspacio}
             filtroFusionadoPeriodo={filtroFusionadoPeriodo}
             setFiltroFusionadoPeriodo={setFiltroFusionadoPeriodo}
+            programasFusionadosFiltrados={programasFusionadosFiltrados}
+            gruposFusionadosUnicos={gruposFusionadosUnicos}
+            semestresFusionadosUnicos={semestresFusionadosUnicos}
             diasFusionadosUnicos={diasFusionadosUnicos}
             asignaturasFusionadasUnicas={asignaturasFusionadasUnicas}
-            docentesFusionadosUnicos={docentesFusionadosUnicos}
-            espaciosFusionadosUnicos={espaciosFusionadosUnicos}
+            docentesFusionadosDisponibles={docentesFusionadosDisponibles}
+            espaciosFusionadosDisponibles={espaciosFusionadosDisponibles}
             periodosFusionadosDisponibles={periodosFusionadosDisponibles}
             limpiarFiltrosFusionados={limpiarFiltrosFusionados}
           />

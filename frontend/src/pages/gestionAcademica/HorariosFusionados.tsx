@@ -2,9 +2,31 @@ import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Label } from '../../share/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
+import { SearchableSelect } from '../../share/searchableSelect';
 import { Clock, List, MapPin, Filter, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
+
+interface FacultadFiltro {
+  id?: number;
+  nombre: string;
+}
+
+interface ProgramaFiltro {
+  id?: number;
+  nombre: string;
+}
+
+interface DocenteFiltro {
+  id: number;
+  nombre: string;
+  correo: string;
+}
+
+interface EspacioFiltro {
+  id?: number;
+  nombre: string;
+  capacidad: number;
+}
 
 interface HorarioFusionadoExtendido {
   id: number;
@@ -31,6 +53,15 @@ interface HorarioFusionadoExtendido {
 interface HorariosFusionadosProps {
   horariosFusionados: HorarioFusionadoExtendido[];
   loading: boolean;
+  facultades: FacultadFiltro[];
+  filtroFusionadoFacultad: string;
+  setFiltroFusionadoFacultad: (value: string) => void;
+  filtroFusionadoPrograma: string;
+  setFiltroFusionadoPrograma: (value: string) => void;
+  filtroFusionadoGrupo: string;
+  setFiltroFusionadoGrupo: (value: string) => void;
+  filtroFusionadoSemestre: string;
+  setFiltroFusionadoSemestre: (value: string) => void;
   filtroFusionadoDia: string;
   setFiltroFusionadoDia: (value: string) => void;
   filtroFusionadoAsignatura: string;
@@ -43,8 +74,11 @@ interface HorariosFusionadosProps {
   setFiltroFusionadoPeriodo: (value: string) => void;
   diasFusionadosUnicos: string[];
   asignaturasFusionadasUnicas: string[];
-  docentesFusionadosUnicos: string[];
-  espaciosFusionadosUnicos: string[];
+  programasFusionadosFiltrados: ProgramaFiltro[];
+  gruposFusionadosUnicos: string[];
+  semestresFusionadosUnicos: number[];
+  docentesFusionadosDisponibles: DocenteFiltro[];
+  espaciosFusionadosDisponibles: EspacioFiltro[];
   periodosFusionadosDisponibles: Array<{ id?: number; nombre: string }>;
   limpiarFiltrosFusionados: () => void;
 }
@@ -52,6 +86,15 @@ interface HorariosFusionadosProps {
 export default function HorariosFusionados({ 
   horariosFusionados, 
   loading,
+  facultades,
+  filtroFusionadoFacultad,
+  setFiltroFusionadoFacultad,
+  filtroFusionadoPrograma,
+  setFiltroFusionadoPrograma,
+  filtroFusionadoGrupo,
+  setFiltroFusionadoGrupo,
+  filtroFusionadoSemestre,
+  setFiltroFusionadoSemestre,
   filtroFusionadoDia,
   setFiltroFusionadoDia,
   filtroFusionadoAsignatura,
@@ -64,8 +107,11 @@ export default function HorariosFusionados({
   setFiltroFusionadoPeriodo,
   diasFusionadosUnicos,
   asignaturasFusionadasUnicas,
-  docentesFusionadosUnicos,
-  espaciosFusionadosUnicos,
+  programasFusionadosFiltrados,
+  gruposFusionadosUnicos,
+  semestresFusionadosUnicos,
+  docentesFusionadosDisponibles,
+  espaciosFusionadosDisponibles,
   periodosFusionadosDisponibles,
   limpiarFiltrosFusionados
 }: HorariosFusionadosProps) {
@@ -81,88 +127,190 @@ export default function HorariosFusionados({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Filtro Día */}
             <div>
-              <Label>Día de la semana</Label>
-              <Select value={filtroFusionadoDia} onValueChange={setFiltroFusionadoDia}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {diasFusionadosUnicos.map(dia => (
-                    <SelectItem key={dia} value={dia}>
-                      {dia.charAt(0).toUpperCase() + dia.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Facultad</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todas las facultades' },
+                  ...facultades.map(f => ({
+                    id: (f.id ?? '').toString(),
+                    nombre: f.nombre
+                  }))
+                ]}
+                value={filtroFusionadoFacultad}
+                onSelect={(item) => setFiltroFusionadoFacultad(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar facultad..."
+                searchPlaceholder="Buscar facultad..."
+                emptyMessage="No se encontró ninguna facultad"
+              />
             </div>
 
-            {/* Filtro Asignatura */}
             <div>
-              <Label>Asignatura</Label>
-              <Select value={filtroFusionadoAsignatura} onValueChange={setFiltroFusionadoAsignatura}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {asignaturasFusionadasUnicas.map(asig => (
-                    <SelectItem key={asig} value={asig}>{asig}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Programa</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los programas' },
+                  ...programasFusionadosFiltrados.map(p => ({
+                    id: (p.id ?? '').toString(),
+                    nombre: p.nombre
+                  }))
+                ]}
+                value={filtroFusionadoPrograma}
+                onSelect={(item) => setFiltroFusionadoPrograma(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar programa..."
+                searchPlaceholder="Buscar programa..."
+                emptyMessage="No se encontró ningún programa"
+              />
             </div>
 
-            {/* Filtro Docente */}
             <div>
-              <Label>Docente</Label>
-              <Select value={filtroFusionadoDocente} onValueChange={setFiltroFusionadoDocente}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {docentesFusionadosUnicos.map(doc => (
-                    <SelectItem key={doc} value={doc}>{doc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Grupo</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los grupos' },
+                  ...gruposFusionadosUnicos.map(g => ({
+                    id: g,
+                    nombre: g
+                  }))
+                ]}
+                value={filtroFusionadoGrupo}
+                onSelect={(item) => setFiltroFusionadoGrupo(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar grupo..."
+                searchPlaceholder="Buscar grupo..."
+                emptyMessage="No se encontró ningún grupo"
+              />
             </div>
 
-            {/* Filtro Espacio */}
             <div>
-              <Label>Espacio</Label>
-              <Select value={filtroFusionadoEspacio} onValueChange={setFiltroFusionadoEspacio}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {espaciosFusionadosUnicos.map(esp => (
-                    <SelectItem key={esp} value={esp}>{esp}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Semestre</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los semestres' },
+                  ...semestresFusionadosUnicos.map(s => ({
+                    id: s.toString(),
+                    nombre: `Semestre ${s}`
+                  }))
+                ]}
+                value={filtroFusionadoSemestre}
+                onSelect={(item) => setFiltroFusionadoSemestre(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar semestre..."
+                searchPlaceholder="Buscar semestre..."
+                emptyMessage="No se encontró ningún semestre"
+              />
             </div>
 
-            {/* Filtro Periodo */}
             <div>
               <Label>Periodo</Label>
-              <Select value={filtroFusionadoPeriodo} onValueChange={setFiltroFusionadoPeriodo}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {periodosFusionadosDisponibles.map(periodo => (
-                    <SelectItem key={periodo.id} value={periodo.id?.toString() || ''}>
-                      {periodo.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los periodos' },
+                  ...periodosFusionadosDisponibles.map(periodo => ({
+                    id: periodo.id?.toString() || '',
+                    nombre: periodo.nombre
+                  }))
+                ]}
+                value={filtroFusionadoPeriodo}
+                onSelect={(item) => setFiltroFusionadoPeriodo(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar periodo..."
+                searchPlaceholder="Buscar periodo..."
+                emptyMessage="No se encontró ningún periodo"
+              />
+            </div>
+
+            <div>
+              <Label>Día de la semana</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los días' },
+                  ...diasFusionadosUnicos.map(dia => ({
+                    id: dia,
+                    nombre: dia.charAt(0).toUpperCase() + dia.slice(1)
+                  }))
+                ]}
+                value={filtroFusionadoDia}
+                onSelect={(item) => setFiltroFusionadoDia(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar día..."
+                searchPlaceholder="Buscar día..."
+                emptyMessage="No se encontró ningún día"
+              />
+            </div>
+
+            <div>
+              <Label>Asignatura</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todas las asignaturas' },
+                  ...asignaturasFusionadasUnicas.map(asignatura => ({
+                    id: asignatura,
+                    nombre: asignatura
+                  }))
+                ]}
+                value={filtroFusionadoAsignatura}
+                onSelect={(item) => setFiltroFusionadoAsignatura(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar asignatura..."
+                searchPlaceholder="Buscar asignatura..."
+                emptyMessage="No se encontró ninguna asignatura"
+              />
+            </div>
+
+            <div>
+              <Label>Docente</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los docentes', correo: '' },
+                  ...(horariosFusionados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
+                  ...docentesFusionadosDisponibles.map(docente => ({
+                    id: docente.id.toString(),
+                    nombre: docente.nombre,
+                    correo: docente.correo
+                  }))
+                ]}
+                value={filtroFusionadoDocente}
+                onSelect={(item) => setFiltroFusionadoDocente(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                getItemSecondary={(item) => item.correo}
+                placeholder="Seleccionar docente..."
+                searchPlaceholder="Buscar docente..."
+                emptyMessage="No se encontró ningún docente"
+              />
+            </div>
+
+            <div>
+              <Label>Espacio</Label>
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
+                  ...(horariosFusionados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
+                  ...espaciosFusionadosDisponibles.map(espacio => ({
+                    id: (espacio.id ?? '').toString(),
+                    nombre: espacio.nombre,
+                    capacidad: espacio.capacidad
+                  }))
+                ]}
+                value={filtroFusionadoEspacio}
+                onSelect={(item) => setFiltroFusionadoEspacio(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
+                placeholder="Seleccionar espacio..."
+                searchPlaceholder="Buscar espacio..."
+                emptyMessage="No se encontró ningún espacio"
+              />
             </div>
           </div>
 
