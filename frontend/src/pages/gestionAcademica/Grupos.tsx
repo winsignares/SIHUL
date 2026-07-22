@@ -18,6 +18,7 @@ export default function Grupos() {
     periodos,
     selectedProgramaFilter, setSelectedProgramaFilter,
     selectedSemestreFilter, setSelectedSemestreFilter,
+    selectedPeriodoFilter, setSelectedPeriodoFilter,
     showCreateGrupo, setShowCreateGrupo,
     showEditGrupo, setShowEditGrupo,
     showDeleteGrupo, setShowDeleteGrupo,
@@ -43,6 +44,7 @@ export default function Grupos() {
     hasNextPageWindow,
     goToPrevPageWindow,
     goToNextPageWindow,
+    periodosDisponibles,
     getProgramaNombre,
     getPeriodoNombre,
     getSemestresDisponiblesPorPrograma
@@ -70,7 +72,7 @@ export default function Grupos() {
       {/* Filtros en Card */}
       <Card className="mb-6 border-slate-200 shadow-sm">
         <CardContent className="p-6">
-          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
             <div className="relative">
               <Label className="text-slate-700 mb-2 block">Buscar</Label>
               <div className="relative">
@@ -111,6 +113,23 @@ export default function Grupos() {
                   <SelectItem value="all">Todos los semestres</SelectItem>
                   {getSemestresDisponiblesPorPrograma().map(s => (
                     <SelectItem key={s} value={s.toString()}>Semestre {s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-slate-700 mb-2 block">Periodo</Label>
+              <Select value={selectedPeriodoFilter} onValueChange={setSelectedPeriodoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los periodos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los periodos</SelectItem>
+                  {periodosDisponibles.map(p => (
+                    <SelectItem key={p.id} value={p.id?.toString() || ''}>
+                      {p.nombre}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

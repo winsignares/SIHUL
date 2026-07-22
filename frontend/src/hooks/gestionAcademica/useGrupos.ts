@@ -38,6 +38,7 @@ export function useGrupos() {
     const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
     const [selectedProgramaFilter, setSelectedProgramaFilter] = useState<string>('all');
     const [selectedSemestreFilter, setSelectedSemestreFilter] = useState<string>('all');
+    const [selectedPeriodoFilter, setSelectedPeriodoFilter] = useState<string>('all');
     const [currentPage, setCurrentPage] = useState(1);
 
     // Estados de modales
@@ -277,9 +278,10 @@ export function useGrupos() {
             const matchesSearch = (grupo.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchesPrograma = selectedProgramaFilter === 'all' || grupo.programa_id.toString() === selectedProgramaFilter;
             const matchesSemestre = selectedSemestreFilter === 'all' || grupo.semestre.toString() === selectedSemestreFilter;
-            return matchesSearch && matchesPrograma && matchesSemestre;
+            const matchesPeriodo = selectedPeriodoFilter === 'all' || grupo.periodo_id.toString() === selectedPeriodoFilter;
+            return matchesSearch && matchesPrograma && matchesSemestre && matchesPeriodo;
         });
-    }, [grupos, searchTerm, selectedProgramaFilter, selectedSemestreFilter]);
+    }, [grupos, searchTerm, selectedProgramaFilter, selectedSemestreFilter, selectedPeriodoFilter]);
 
     const totalFilteredGrupos = filteredGrupos.length;
     const totalPages = getTotalPages(totalFilteredGrupos, PAGE_SIZE);
@@ -291,7 +293,7 @@ export function useGrupos() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedProgramaFilter, selectedSemestreFilter]);
+    }, [searchTerm, selectedProgramaFilter, selectedSemestreFilter, selectedPeriodoFilter]);
 
     useEffect(() => {
         setCurrentPage((prev) => normalizePage(prev, totalPages));
@@ -320,6 +322,9 @@ export function useGrupos() {
     };
 
     const semestresDisponibles = Array.from(new Set(grupos.map(g => g.semestre).filter(s => s !== undefined))).sort((a, b) => a - b);
+    const periodosDisponibles = periodos
+        .filter(periodo => periodo.id !== undefined && grupos.some(grupo => grupo.periodo_id === periodo.id))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
 
     // Obtener nombre del programa por ID
     const getProgramaNombre = (programaId: number): string => {
@@ -354,6 +359,7 @@ export function useGrupos() {
         periodos,
         selectedProgramaFilter, setSelectedProgramaFilter,
         selectedSemestreFilter, setSelectedSemestreFilter,
+        selectedPeriodoFilter, setSelectedPeriodoFilter,
         showCreateGrupo, setShowCreateGrupo,
         showEditGrupo, setShowEditGrupo,
         showDeleteGrupo, setShowDeleteGrupo,
@@ -381,6 +387,7 @@ export function useGrupos() {
         goToPrevPageWindow,
         goToNextPageWindow,
         semestresDisponibles,
+        periodosDisponibles,
         getProgramaNombre,
         getPeriodoNombre,
         getSemestresDisponiblesPorPrograma
