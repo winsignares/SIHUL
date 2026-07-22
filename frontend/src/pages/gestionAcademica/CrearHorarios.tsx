@@ -34,18 +34,18 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
   const [dragSource, setDragSource] = useState<{ dia: string; hora: string } | null>(null);
   const rowHeightClasses = [
     '',
-    'h-[5rem]',
-    'h-[10rem]',
-    'h-[15rem]',
-    'h-[20rem]',
-    'h-[25rem]',
-    'h-[30rem]',
-    'h-[35rem]',
-    'h-[40rem]',
-    'h-[45rem]',
-    'h-[50rem]',
-    'h-[55rem]',
-    'h-[60rem]'
+    'h-[7.5rem]',
+    'h-[12.5rem]',
+    'h-[17.5rem]',
+    'h-[22.5rem]',
+    'h-[27.5rem]',
+    'h-[32.5rem]',
+    'h-[37.5rem]',
+    'h-[42.5rem]',
+    'h-[47.5rem]',
+    'h-[52.5rem]',
+    'h-[57.5rem]',
+    'h-[62.5rem]'
   ];
 
   const {
@@ -605,33 +605,33 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
                                       setDraggedHorario(null);
                                       setDragSource(null);
                                     }}
-                                    className={`rounded-lg p-3 text-xs h-full relative group shadow-md hover:shadow-lg transition-shadow ${
+                                    className={`rounded-lg p-2 text-xs h-full relative group shadow-md hover:shadow-lg transition-shadow overflow-hidden ${
                                       clase.estado === 'pendiente' || clase.es_solicitud
                                         ? 'bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 border-l-4 border-amber-500 cursor-default'
                                         : 'bg-gradient-to-br from-red-100 via-yellow-50 to-orange-50 border-l-4 border-red-600 cursor-move'
                                     }`}
                                   >
                                     <div className="flex items-start justify-between h-full gap-2">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1 mb-1 flex-wrap">
+                                      <div className="flex-1 min-w-0 space-y-0.5">
+                                        <div className="flex items-center gap-1 flex-wrap">
                                           {clase.estado !== 'pendiente' && !clase.es_solicitud && (
                                             <GripVertical className="w-3 h-3 text-slate-400 flex-shrink-0" />
                                           )}
-                                          <p className="text-slate-900 truncate font-bold">{clase.asignatura_nombre}</p>
+                                          <p className="text-slate-900 truncate font-bold leading-tight">{clase.asignatura_nombre}</p>
                                           {(clase.estado === 'pendiente' || clase.es_solicitud) && (
                                             <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 h-4">
                                               Pendiente
                                             </Badge>
                                           )}
                                         </div>
-                                        <p className="text-slate-600 text-xs truncate mt-1">
+                                        <p className="text-slate-600 text-xs truncate leading-tight">
                                           <User className="w-3 h-3 inline mr-1" />
                                           {clase.docente_nombre}
                                         </p>
-                                        <p className="text-slate-600 text-xs truncate mt-1">
+                                        <p className="text-slate-600 text-xs truncate leading-tight">
                                           📍 {clase.espacio_nombre}
                                         </p>
-                                        <p className="text-slate-600 text-xs truncate mt-1 font-semibold">
+                                        <p className="text-slate-600 text-xs truncate leading-tight font-semibold">
                                           <Clock className="w-3 h-3 inline mr-1" />
                                           {clase.hora_inicio} - {clase.hora_fin}
                                         </p>
