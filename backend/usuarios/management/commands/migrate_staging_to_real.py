@@ -372,8 +372,9 @@ class Command(BaseCommand):
                 '11': ('Oficina', 'Oficina'),
                 '3': ('Aula', 'Aula de clase'),
                 '1': ('Laboratorio', 'Laboratorio academico'),
-                '43': ('Sala Computo', 'Sala de computo'),
-                '5': ('Zona Comun', 'Zona comun'),
+                '4': ('Auditorio', 'Auditorio'),
+                '43': ('Sala Cómputo', 'Sala de cómputo'),
+                '5': ('Zona Común', 'Zona común'),
                 '0': ('Sala', 'Sala'),
                 '42': ('Sala Derecho', 'Sala Derecho'),
             }
