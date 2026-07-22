@@ -8,10 +8,10 @@ import { Input } from '../../share/input';
 import { Label } from '../../share/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { SearchableSelect } from '../../share/searchableSelect';
+import { HorarioFiltersCard, FilterField } from '../../share/horarioFiltersCard';
 import {
   Clock,
   Search,
-  Filter,
   Calendar,
   MapPin,
   Edit,
@@ -166,188 +166,161 @@ export default function CentroHorarios() {
         {/* Tab: Consulta de Horarios */}
         <TabsContent value="consulta" className="space-y-6">
           {/* Filtros */}
-          <Card className="border-slate-200 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-blue-600" />
-                Filtros de Búsqueda
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Filtros en Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                {/* Facultad */}
-                <div>
-                  <Label>Facultad</Label>
-                  <SearchableSelect
-                    items={[
-                      ...(facultades.length > 1 ? [{ id: 'all', nombre: 'Todas las facultades' }] : []),
-                      ...facultades.map(f => ({
-                        id: (f.id ?? '').toString(),
-                        nombre: f.nombre
-                      }))
-                    ]}
-                    value={filtroFacultad}
-                    onSelect={(item) => setFiltroFacultad(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar facultad..."
-                    searchPlaceholder="Buscar facultad..."
-                    emptyMessage="No se encontró ninguna facultad"
-                    disabled={facultades.length === 1}
-                  />
-                </div>
+          <HorarioFiltersCard
+            activeCount={[filtroFacultad, filtroPrograma, filtroGrupo, filtroSemestre, filtroPeriodo, filtroDocente, filtroEspacio].filter(v => v && v !== 'all').length}
+            onClear={limpiarFiltros}
+            accentClassName="text-blue-600"
+            actions={
+              <Button
+                onClick={() => loadData({ force: true })}
+                className="ml-auto bg-blue-600 hover:bg-blue-700"
+                size="sm"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Actualizar
+              </Button>
+            }
+          >
+            <FilterField label="Facultad">
+              <SearchableSelect
+                items={[
+                  ...(facultades.length > 1 ? [{ id: 'all', nombre: 'Todas las facultades' }] : []),
+                  ...facultades.map(f => ({
+                    id: (f.id ?? '').toString(),
+                    nombre: f.nombre
+                  }))
+                ]}
+                value={filtroFacultad}
+                onSelect={(item) => setFiltroFacultad(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar facultad..."
+                searchPlaceholder="Buscar facultad..."
+                emptyMessage="No se encontró ninguna facultad"
+                disabled={facultades.length === 1}
+              />
+            </FilterField>
 
-                {/* Programa */}
-                <div>
-                  <Label>Programa</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los programas' },
-                      ...programasFiltrados.map(p => ({
-                        id: (p.id ?? '').toString(),
-                        nombre: p.nombre
-                      }))
-                    ]}
-                    value={filtroPrograma}
-                    onSelect={(item) => setFiltroPrograma(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar programa..."
-                    searchPlaceholder="Buscar programa..."
-                    emptyMessage="No se encontró ningún programa"
-                  />
-                </div>
+            <FilterField label="Programa">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los programas' },
+                  ...programasFiltrados.map(p => ({
+                    id: (p.id ?? '').toString(),
+                    nombre: p.nombre
+                  }))
+                ]}
+                value={filtroPrograma}
+                onSelect={(item) => setFiltroPrograma(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar programa..."
+                searchPlaceholder="Buscar programa..."
+                emptyMessage="No se encontró ningún programa"
+              />
+            </FilterField>
 
-                {/* Grupo */}
-                <div>
-                  <Label>Grupo</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los grupos' },
-                      ...gruposUnicos.map(g => ({
-                        id: g,
-                        nombre: g
-                      }))
-                    ]}
-                    value={filtroGrupo}
-                    onSelect={(item) => setFiltroGrupo(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar grupo..."
-                    searchPlaceholder="Buscar grupo..."
-                    emptyMessage="No se encontró ningún grupo"
-                  />
-                </div>
+            <FilterField label="Grupo">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los grupos' },
+                  ...gruposUnicos.map(g => ({
+                    id: g,
+                    nombre: g
+                  }))
+                ]}
+                value={filtroGrupo}
+                onSelect={(item) => setFiltroGrupo(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar grupo..."
+                searchPlaceholder="Buscar grupo..."
+                emptyMessage="No se encontró ningún grupo"
+              />
+            </FilterField>
 
-                {/* Semestre */}
-                <div>
-                  <Label>Semestre</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los semestres' },
-                      ...semestresUnicos.map(s => ({
-                        id: s.toString(),
-                        nombre: `Semestre ${s}`
-                      }))
-                    ]}
-                    value={filtroSemestre}
-                    onSelect={(item) => setFiltroSemestre(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar semestre..."
-                    searchPlaceholder="Buscar semestre..."
-                    emptyMessage="No se encontró ningún semestre"
-                  />
-                </div>
+            <FilterField label="Semestre">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los semestres' },
+                  ...semestresUnicos.map(s => ({
+                    id: s.toString(),
+                    nombre: `Semestre ${s}`
+                  }))
+                ]}
+                value={filtroSemestre}
+                onSelect={(item) => setFiltroSemestre(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar semestre..."
+                searchPlaceholder="Buscar semestre..."
+                emptyMessage="No se encontró ningún semestre"
+              />
+            </FilterField>
 
-                <div>
-                  <Label>Periodo</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los periodos' },
-                      ...periodosDisponibles.map(p => ({
-                        id: (p.id ?? '').toString(),
-                        nombre: p.nombre
-                      }))
-                    ]}
-                    value={filtroPeriodo}
-                    onSelect={(item) => setFiltroPeriodo(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar periodo..."
-                    searchPlaceholder="Buscar periodo..."
-                    emptyMessage="No se encontró ningún periodo"
-                  />
-                </div>
+            <FilterField label="Periodo">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los periodos' },
+                  ...periodosDisponibles.map(p => ({
+                    id: (p.id ?? '').toString(),
+                    nombre: p.nombre
+                  }))
+                ]}
+                value={filtroPeriodo}
+                onSelect={(item) => setFiltroPeriodo(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar periodo..."
+                searchPlaceholder="Buscar periodo..."
+                emptyMessage="No se encontró ningún periodo"
+              />
+            </FilterField>
 
-                <div>
-                  <Label>Docente</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los docentes', correo: '' },
-                      ...(horariosFiltrados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
-                      ...docentesDisponibles.map(d => ({
-                        id: d.id.toString(),
-                        nombre: d.nombre,
-                        correo: d.correo
-                      }))
-                    ]}
-                    value={filtroDocente}
-                    onSelect={(item) => setFiltroDocente(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    getItemSecondary={(item) => item.correo}
-                    placeholder="Seleccionar docente..."
-                    searchPlaceholder="Buscar docente..."
-                    emptyMessage="No se encontró ningún docente"
-                  />
-                </div>
+            <FilterField label="Docente">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los docentes', correo: '' },
+                  ...(horariosFiltrados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
+                  ...docentesDisponibles.map(d => ({
+                    id: d.id.toString(),
+                    nombre: d.nombre,
+                    correo: d.correo
+                  }))
+                ]}
+                value={filtroDocente}
+                onSelect={(item) => setFiltroDocente(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                getItemSecondary={(item) => item.correo}
+                placeholder="Seleccionar docente..."
+                searchPlaceholder="Buscar docente..."
+                emptyMessage="No se encontró ningún docente"
+              />
+            </FilterField>
 
-                <div>
-                  <Label>Espacio</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
-                      ...(horariosFiltrados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
-                      ...espaciosDisponibles.map(e => ({
-                        id: (e.id ?? '').toString(),
-                        nombre: e.nombre,
-                        capacidad: e.capacidad
-                      }))
-                    ]}
-                    value={filtroEspacio}
-                    onSelect={(item) => setFiltroEspacio(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
-                    placeholder="Seleccionar espacio..."
-                    searchPlaceholder="Buscar espacio..."
-                    emptyMessage="No se encontró ningún espacio"
-                  />
-                </div>
-              </div>
-
-              {/* Botones de acción */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={limpiarFiltros}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Limpiar Filtros
-                </Button>
-                <Button
-                  onClick={() => loadData({ force: true })}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Actualizar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <FilterField label="Espacio">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
+                  ...(horariosFiltrados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
+                  ...espaciosDisponibles.map(e => ({
+                    id: (e.id ?? '').toString(),
+                    nombre: e.nombre,
+                    capacidad: e.capacidad
+                  }))
+                ]}
+                value={filtroEspacio}
+                onSelect={(item) => setFiltroEspacio(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
+                placeholder="Seleccionar espacio..."
+                searchPlaceholder="Buscar espacio..."
+                emptyMessage="No se encontró ningún espacio"
+              />
+            </FilterField>
+          </HorarioFiltersCard>
 
           {/* Resultados */}
           <Card className="border-slate-200 shadow-lg">
@@ -464,188 +437,161 @@ export default function CentroHorarios() {
         {/* Tab: Modificación */}
         <TabsContent value="modificacion" className="space-y-6">
           {/* Filtros (reutilizados) */}
-          <Card className="border-slate-200 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-orange-600" />
-                Filtros de Búsqueda
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Filtros en Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                {/* Facultad */}
-                <div>
-                  <Label>Facultad</Label>
-                  <SearchableSelect
-                    items={[
-                      ...(facultades.length > 1 ? [{ id: 'all', nombre: 'Todas las facultades' }] : []),
-                      ...facultades.map(f => ({
-                        id: (f.id ?? '').toString(),
-                        nombre: f.nombre
-                      }))
-                    ]}
-                    value={filtroFacultad}
-                    onSelect={(item) => setFiltroFacultad(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar facultad..."
-                    searchPlaceholder="Buscar facultad..."
-                    emptyMessage="No se encontró ninguna facultad"
-                    disabled={facultades.length === 1}
-                  />
-                </div>
+          <HorarioFiltersCard
+            activeCount={[filtroFacultad, filtroPrograma, filtroGrupo, filtroSemestre, filtroPeriodo, filtroDocente, filtroEspacio].filter(v => v && v !== 'all').length}
+            onClear={limpiarFiltros}
+            accentClassName="text-orange-600"
+            actions={
+              <Button
+                onClick={() => loadData({ force: true })}
+                className="ml-auto bg-orange-600 hover:bg-orange-700"
+                size="sm"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Actualizar
+              </Button>
+            }
+          >
+            <FilterField label="Facultad">
+              <SearchableSelect
+                items={[
+                  ...(facultades.length > 1 ? [{ id: 'all', nombre: 'Todas las facultades' }] : []),
+                  ...facultades.map(f => ({
+                    id: (f.id ?? '').toString(),
+                    nombre: f.nombre
+                  }))
+                ]}
+                value={filtroFacultad}
+                onSelect={(item) => setFiltroFacultad(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar facultad..."
+                searchPlaceholder="Buscar facultad..."
+                emptyMessage="No se encontró ninguna facultad"
+                disabled={facultades.length === 1}
+              />
+            </FilterField>
 
-                {/* Programa */}
-                <div>
-                  <Label>Programa</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los programas' },
-                      ...programasFiltrados.map(p => ({
-                        id: (p.id ?? '').toString(),
-                        nombre: p.nombre
-                      }))
-                    ]}
-                    value={filtroPrograma}
-                    onSelect={(item) => setFiltroPrograma(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar programa..."
-                    searchPlaceholder="Buscar programa..."
-                    emptyMessage="No se encontró ningún programa"
-                  />
-                </div>
+            <FilterField label="Programa">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los programas' },
+                  ...programasFiltrados.map(p => ({
+                    id: (p.id ?? '').toString(),
+                    nombre: p.nombre
+                  }))
+                ]}
+                value={filtroPrograma}
+                onSelect={(item) => setFiltroPrograma(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar programa..."
+                searchPlaceholder="Buscar programa..."
+                emptyMessage="No se encontró ningún programa"
+              />
+            </FilterField>
 
-                {/* Grupo */}
-                <div>
-                  <Label>Grupo</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los grupos' },
-                      ...gruposUnicos.map(g => ({
-                        id: g,
-                        nombre: g
-                      }))
-                    ]}
-                    value={filtroGrupo}
-                    onSelect={(item) => setFiltroGrupo(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar grupo..."
-                    searchPlaceholder="Buscar grupo..."
-                    emptyMessage="No se encontró ningún grupo"
-                  />
-                </div>
+            <FilterField label="Grupo">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los grupos' },
+                  ...gruposUnicos.map(g => ({
+                    id: g,
+                    nombre: g
+                  }))
+                ]}
+                value={filtroGrupo}
+                onSelect={(item) => setFiltroGrupo(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar grupo..."
+                searchPlaceholder="Buscar grupo..."
+                emptyMessage="No se encontró ningún grupo"
+              />
+            </FilterField>
 
-                {/* Semestre */}
-                <div>
-                  <Label>Semestre</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los semestres' },
-                      ...semestresUnicos.map(s => ({
-                        id: s.toString(),
-                        nombre: `Semestre ${s}`
-                      }))
-                    ]}
-                    value={filtroSemestre}
-                    onSelect={(item) => setFiltroSemestre(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar semestre..."
-                    searchPlaceholder="Buscar semestre..."
-                    emptyMessage="No se encontró ningún semestre"
-                  />
-                </div>
+            <FilterField label="Semestre">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los semestres' },
+                  ...semestresUnicos.map(s => ({
+                    id: s.toString(),
+                    nombre: `Semestre ${s}`
+                  }))
+                ]}
+                value={filtroSemestre}
+                onSelect={(item) => setFiltroSemestre(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar semestre..."
+                searchPlaceholder="Buscar semestre..."
+                emptyMessage="No se encontró ningún semestre"
+              />
+            </FilterField>
 
-                <div>
-                  <Label>Periodo</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los periodos' },
-                      ...periodosDisponibles.map(p => ({
-                        id: (p.id ?? '').toString(),
-                        nombre: p.nombre
-                      }))
-                    ]}
-                    value={filtroPeriodo}
-                    onSelect={(item) => setFiltroPeriodo(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    placeholder="Seleccionar periodo..."
-                    searchPlaceholder="Buscar periodo..."
-                    emptyMessage="No se encontró ningún periodo"
-                  />
-                </div>
+            <FilterField label="Periodo">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los periodos' },
+                  ...periodosDisponibles.map(p => ({
+                    id: (p.id ?? '').toString(),
+                    nombre: p.nombre
+                  }))
+                ]}
+                value={filtroPeriodo}
+                onSelect={(item) => setFiltroPeriodo(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                placeholder="Seleccionar periodo..."
+                searchPlaceholder="Buscar periodo..."
+                emptyMessage="No se encontró ningún periodo"
+              />
+            </FilterField>
 
-                <div>
-                  <Label>Docente</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los docentes', correo: '' },
-                      ...(horariosFiltrados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
-                      ...docentesDisponibles.map(d => ({
-                        id: d.id.toString(),
-                        nombre: d.nombre,
-                        correo: d.correo
-                      }))
-                    ]}
-                    value={filtroDocente}
-                    onSelect={(item) => setFiltroDocente(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    getItemSecondary={(item) => item.correo}
-                    placeholder="Seleccionar docente..."
-                    searchPlaceholder="Buscar docente..."
-                    emptyMessage="No se encontró ningún docente"
-                  />
-                </div>
+            <FilterField label="Docente">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los docentes', correo: '' },
+                  ...(horariosFiltrados.some(h => h.docente_id == null) ? [{ id: 'sin-asignar', nombre: 'Sin asignar', correo: '' }] : []),
+                  ...docentesDisponibles.map(d => ({
+                    id: d.id.toString(),
+                    nombre: d.nombre,
+                    correo: d.correo
+                  }))
+                ]}
+                value={filtroDocente}
+                onSelect={(item) => setFiltroDocente(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                getItemSecondary={(item) => item.correo}
+                placeholder="Seleccionar docente..."
+                searchPlaceholder="Buscar docente..."
+                emptyMessage="No se encontró ningún docente"
+              />
+            </FilterField>
 
-                <div>
-                  <Label>Espacio</Label>
-                  <SearchableSelect
-                    items={[
-                      { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
-                      ...(horariosFiltrados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
-                      ...espaciosDisponibles.map(e => ({
-                        id: (e.id ?? '').toString(),
-                        nombre: e.nombre,
-                        capacidad: e.capacidad
-                      }))
-                    ]}
-                    value={filtroEspacio}
-                    onSelect={(item) => setFiltroEspacio(item.id)}
-                    getItemId={(item) => item.id}
-                    getItemLabel={(item) => item.nombre}
-                    getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
-                    placeholder="Seleccionar espacio..."
-                    searchPlaceholder="Buscar espacio..."
-                    emptyMessage="No se encontró ningún espacio"
-                  />
-                </div>
-              </div>
-
-              {/* Botones de acción */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={limpiarFiltros}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Limpiar Filtros
-                </Button>
-                <Button
-                  onClick={() => loadData({ force: true })}
-                  className="flex-1 bg-orange-600 hover:bg-orange-700"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Actualizar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <FilterField label="Espacio">
+              <SearchableSelect
+                items={[
+                  { id: 'all', nombre: 'Todos los espacios', capacidad: undefined },
+                  ...(horariosFiltrados.some(h => h.espacio_id == null) ? [{ id: 'sin-espacio', nombre: 'Sin espacio', capacidad: undefined }] : []),
+                  ...espaciosDisponibles.map(e => ({
+                    id: (e.id ?? '').toString(),
+                    nombre: e.nombre,
+                    capacidad: e.capacidad
+                  }))
+                ]}
+                value={filtroEspacio}
+                onSelect={(item) => setFiltroEspacio(item.id)}
+                getItemId={(item) => item.id}
+                getItemLabel={(item) => item.nombre}
+                getItemSecondary={(item) => item.capacidad ? `Capacidad: ${item.capacidad}` : ''}
+                placeholder="Seleccionar espacio..."
+                searchPlaceholder="Buscar espacio..."
+                emptyMessage="No se encontró ningún espacio"
+              />
+            </FilterField>
+          </HorarioFiltersCard>
 
           {/* Tabla de Modificación */}
           <Card className="border-slate-200 shadow-lg">
