@@ -41,6 +41,24 @@ def get_role_name(user):
     return (getattr(rol, 'nombre', '') or '').strip().lower()
 
 
+def role_supervisa_espacios(rol):
+    if not rol:
+        return False
+
+    if bool(getattr(rol, 'supervisa_espacios', False)):
+        return True
+
+    rol_nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
+    return rol_nombre == 'supervisor_general'
+
+
+def user_supervisa_espacios(user):
+    if not is_authenticated_user(user):
+        return False
+
+    return role_supervisa_espacios(getattr(user, 'rol', None))
+
+
 def has_any_role(user, allowed_roles):
     if not is_authenticated_user(user):
         return False

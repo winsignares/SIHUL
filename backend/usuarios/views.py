@@ -8,6 +8,7 @@ from werkzeug.security import check_password_hash
 import datetime
 import secrets
 import hashlib
+from mysite.auth_helpers import user_supervisa_espacios
 
 
 def _password_valida(usuario, password_plano):
@@ -61,9 +62,10 @@ def create_rol(request):
             data = json.loads(request.body)
             nombre = data.get('nombre')
             descripcion = data.get('descripcion')
+            supervisa_espacios = bool(data.get('supervisa_espacios', False))
             if not nombre or not descripcion:
                 return JsonResponse({"error": "El nombre y la descripción son requeridos"}, status=400)
-            nuevo_rol = Rol(nombre=nombre, descripcion=descripcion)
+            nuevo_rol = Rol(nombre=nombre, descripcion=descripcion, supervisa_espacios=supervisa_espacios)
             nuevo_rol.save()
             return JsonResponse({"message": "Rol creado", "id": nuevo_rol.id}, status=201)
         except json.JSONDecodeError:
@@ -79,11 +81,13 @@ def update_rol(request):
             id = data.get('id')
             nombre = data.get('nombre')
             descripcion = data.get('descripcion')
+            supervisa_espacios = bool(data.get('supervisa_espacios', False))
             if not id or not nombre or not descripcion:
                 return JsonResponse({"error": "ID, nombre y descripción son requeridos"}, status=400)
             rol_existente = Rol.objects.get(id=id)
             rol_existente.nombre = nombre
             rol_existente.descripcion = descripcion
+            rol_existente.supervisa_espacios = supervisa_espacios
             rol_existente.save()
             return JsonResponse({"message": "Rol actualizado", "id": rol_existente.id}, status=200)
         
@@ -118,7 +122,7 @@ def get_rol(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         rol_existente = Rol.objects.get(id=id)
-        return JsonResponse({"id": rol_existente.id, "nombre": rol_existente.nombre, "descripcion": rol_existente.descripcion}, status=200)
+        return JsonResponse({"id": rol_existente.id, "nombre": rol_existente.nombre, "descripcion": rol_existente.descripcion, "supervisa_espacios": rol_existente.supervisa_espacios}, status=200)
     except Rol.DoesNotExist:
         return JsonResponse({"error": "El rol con el ID proporcionado no existe."}, status=404)
     except Exception as e:
@@ -128,7 +132,7 @@ def get_rol(request, id=None):
 def list_roles(request):
     if request.method == 'GET':
         roles = Rol.objects.all()
-        roles_list = [{"id": rol.id, "nombre": rol.nombre, "descripcion": rol.descripcion} for rol in roles]
+        roles_list = [{"id": rol.id, "nombre": rol.nombre, "descripcion": rol.descripcion, "supervisa_espacios": rol.supervisa_espacios} for rol in roles]
         return JsonResponse({"roles": roles_list}, status=200)
 
 # ---------- Usuario CRUD ----------
@@ -365,7 +369,8 @@ def login(request):
             "rol": {
                 "id": u.rol.id,
                 "nombre": u.rol.nombre,
-                "descripcion": u.rol.descripcion
+                "descripcion": u.rol.descripcion,
+                "supervisa_espacios": u.rol.supervisa_espacios
             } if u.rol else None,
             "facultad": {
                 "id": u.facultad.id,
@@ -436,7 +441,8 @@ def session_auth_state(request):
         for c in sorted(componentes, key=lambda x: (x['id'], x['permiso'])):
             parts.append(f"{c['id']}:{c['permiso']}")
         role_part = str(u.rol.id) if u.rol else 'no-role'
-        signature_source = f"{role_part}|{'|'.join(parts)}"
+        supervisa_part = 'supervisa-espacios' if user_supervisa_espacios(u) else 'no-supervisa-espacios'
+        signature_source = f"{role_part}|{supervisa_part}|{'|'.join(parts)}"
         signature = hashlib.sha256(signature_source.encode('utf-8')).hexdigest()[:16]
 
         since = request.GET.get('since')
@@ -452,7 +458,8 @@ def session_auth_state(request):
             "rol": {
                 "id": u.rol.id,
                 "nombre": u.rol.nombre,
-                "descripcion": u.rol.descripcion
+                "descripcion": u.rol.descripcion,
+                "supervisa_espacios": u.rol.supervisa_espacios
             } if u.rol else None,
             "componentes": componentes
         }, status=200)

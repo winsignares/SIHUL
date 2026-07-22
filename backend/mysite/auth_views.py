@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET
 
 from componentes.models import ComponenteRol, ComponenteUsuario
 from espacios.models import EspacioPermitido
+from mysite.auth_helpers import role_supervisa_espacios
 from usuarios.models import Usuario
 
 
@@ -73,7 +74,8 @@ def _build_espacios_permitidos(usuario: Usuario):
 def _session_signature(rol, componentes):
     parts = [f"{c['id']}:{c['permiso']}" for c in sorted(componentes, key=lambda item: (item['id'], item['permiso']))]
     role_part = str(rol.id) if rol else 'no-role'
-    signature_source = f"{role_part}|{'|'.join(parts)}"
+    supervisa_part = 'supervisa-espacios' if role_supervisa_espacios(rol) else 'no-supervisa-espacios'
+    signature_source = f"{role_part}|{supervisa_part}|{'|'.join(parts)}"
     return hashlib.sha256(signature_source.encode('utf-8')).hexdigest()[:16]
 
 
@@ -124,6 +126,7 @@ def user_view(request):
                 'id': usuario.rol.id,
                 'nombre': usuario.rol.nombre,
                 'descripcion': usuario.rol.descripcion,
+                'supervisa_espacios': usuario.rol.supervisa_espacios,
             } if usuario.rol else None,
             'facultad': {
                 'id': usuario.facultad.id,

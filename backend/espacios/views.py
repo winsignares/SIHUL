@@ -820,8 +820,9 @@ def proximos_apertura_cierre(request):
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
-        role_name = (usuario.rol.nombre if usuario.rol else '').lower()
-        if role_name.startswith('supervisor'):
+        from mysite.auth_helpers import user_supervisa_espacios
+
+        if user_supervisa_espacios(usuario):
             # Para supervisor: solo espacios permitidos explicitos.
             espacios_permitidos = EspacioPermitido.objects.filter(
                 usuario_id=usuario_id

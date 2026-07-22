@@ -6,6 +6,7 @@ import { publicServices } from '../services/publicServices';
 import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent } from '../config/componentRoutes';
 import { normalizeFinancialRole, normalizeFinancialText, resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
+import { isSpaceSupervisorRole } from '../context/spaceSupervisorRole';
 
 // Lazy load de componentes para mejorar el rendimiento
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
@@ -350,7 +351,7 @@ export default function AppRouter() {
       if (hasComponentByName('Dashboard')) return '/admin/dashboard';
     }
 
-    if (roleName === 'supervisor_general') {
+    if (isSpaceSupervisorRole(effectiveRole)) {
       if (hasComponentByName('Dashboard Supervisor')) return '/supervisor/dashboard';
     }
 

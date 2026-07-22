@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGestionRoles } from '../../hooks/permisos/useGestionRoles';
 import type { Rol } from '../../services/users/authService';
-import { Search, Edit, Trash2, ChevronLeft, ChevronRight, Plus, Shield } from 'lucide-react';
+import { Search, Edit, Trash2, ChevronLeft, ChevronRight, Plus, Shield, Building2 } from 'lucide-react';
 
 export default function GestionRoles() {
   const {
@@ -23,12 +23,14 @@ export default function GestionRoles() {
   const [rolEdicion, setRolEdicion] = useState<Rol | null>(null);
   const [nombreRol, setNombreRol] = useState('');
   const [descripcionRol, setDescripcionRol] = useState('');
+  const [supervisaEspacios, setSupervisaEspacios] = useState(false);
 
   const abrirModalCrear = () => {
     setModoEdicion(false);
     setRolEdicion(null);
     setNombreRol('');
     setDescripcionRol('');
+    setSupervisaEspacios(false);
     setMostrarModal(true);
   };
 
@@ -37,6 +39,7 @@ export default function GestionRoles() {
     setRolEdicion(rol);
     setNombreRol(rol.nombre);
     setDescripcionRol(rol.descripcion);
+    setSupervisaEspacios(Boolean(rol.supervisa_espacios) || rol.nombre === 'supervisor_general');
     setMostrarModal(true);
   };
 
@@ -47,9 +50,9 @@ export default function GestionRoles() {
     }
     try {
       if (modoEdicion && rolEdicion) {
-        await actualizarRol({ id: rolEdicion.id, nombre: nombreRol, descripcion: descripcionRol });
+        await actualizarRol({ id: rolEdicion.id, nombre: nombreRol, descripcion: descripcionRol, supervisa_espacios: supervisaEspacios });
       } else {
-        await crearRol({ nombre: nombreRol, descripcion: descripcionRol });
+        await crearRol({ nombre: nombreRol, descripcion: descripcionRol, supervisa_espacios: supervisaEspacios });
       }
       setMostrarModal(false);
     } catch (err) {
@@ -124,6 +127,7 @@ export default function GestionRoles() {
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Descripción</th>
+                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Supervisor de espacios</th>
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Acciones</th>
                 </tr>
               </thead>
@@ -135,6 +139,16 @@ export default function GestionRoles() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-gray-600 text-sm">{rol.descripcion}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {(rol.supervisa_espacios || rol.nombre === 'supervisor_general') ? (
+                        <span className="inline-flex items-center justify-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                          <Building2 className="h-3.5 w-3.5" />
+                          Si
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">No</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
@@ -163,7 +177,7 @@ export default function GestionRoles() {
 
                 {rolesPaginados.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                       {terminoBusqueda ? 'No se encontraron roles que coincidan con la búsqueda' : 'No hay roles registrados'}
                     </td>
                   </tr>
@@ -245,6 +259,18 @@ export default function GestionRoles() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                   />
                 </div>
+                <label className="flex items-start gap-3 rounded-lg border border-gray-200 p-3">
+                  <input
+                    type="checkbox"
+                    checked={supervisaEspacios}
+                    onChange={(e) => setSupervisaEspacios(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-800">Supervisor de espacios</span>
+                    <span className="block text-sm text-gray-500">Permite asignar espacios al rol y limitar su gestión a esos espacios.</span>
+                  </span>
+                </label>
               </div>
               <div className="flex gap-3 mt-6">
                 <button

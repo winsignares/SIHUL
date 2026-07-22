@@ -11,6 +11,7 @@ import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useMemo, useState } from 'react';
+import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 
 export default function GestionUsuarios() {
   const isMobile = useIsMobile();
@@ -100,6 +101,7 @@ export default function GestionUsuarios() {
       docente: 'bg-green-600',
       estudiante: 'bg-yellow-600'
     };
+    const rolActual = usuario.rol || rolesDisponibles.find(r => r.id === usuario.rol_id);
 
     // Para planeacion_facultad, mostrar "Planeacion (Facultad)"
     if (rolNombre === 'planeacion_facultad') {
@@ -119,7 +121,7 @@ export default function GestionUsuarios() {
       }
     }
 
-    return <Badge className={`${colors[rolNombre] || 'bg-gray-600'} text-white`}><UserCog className="w-3 h-3 mr-1" />{rolNombre}</Badge>;
+    return <Badge className={`${colors[rolNombre] || (isSpaceSupervisorRole(rolActual) ? 'bg-purple-600' : 'bg-gray-600')} text-white`}><UserCog className="w-3 h-3 mr-1" />{rolNombre}</Badge>;
   };
 
   const getEstadoBadge = (activo: boolean) => {
@@ -133,10 +135,17 @@ export default function GestionUsuarios() {
     return rolActual?.nombre || '';
   };
 
+  const getRolActual = () => rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
+
   const getRolNombreEdit = () => {
     const rolId = editingUser?.rol_id || editingUser?.rol?.id;
     const rolActual = rolesDisponibles.find(r => r.id === rolId);
     return rolActual?.nombre || '';
+  };
+
+  const getRolActualEdit = () => {
+    const rolId = editingUser?.rol_id || editingUser?.rol?.id;
+    return rolesDisponibles.find(r => r.id === rolId) || editingUser?.rol;
   };
 
   const tiposEspacioOpcionesCreacion = useMemo(() => {
@@ -336,8 +345,8 @@ export default function GestionUsuarios() {
                 </div>
               )}
 
-              {/* Espacios Permitidos (solo para supervisor_general) */}
-              {getRolNombre() === 'supervisor_general' && (
+              {/* Espacios Permitidos (roles con supervisión de espacios) */}
+              {isSpaceSupervisorRole(getRolActual()) && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Espacios Permitidos</h3>
 
@@ -791,8 +800,8 @@ export default function GestionUsuarios() {
                 </div>
               )}
 
-              {/* Espacios Permitidos (solo para supervisor_general) */}
-              {getRolNombreEdit() === 'supervisor_general' && (
+              {/* Espacios Permitidos (roles con supervisión de espacios) */}
+              {isSpaceSupervisorRole(getRolActualEdit()) && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-900 border-b pb-2">Espacios Permitidos</h3>
 

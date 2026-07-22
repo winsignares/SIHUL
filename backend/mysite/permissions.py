@@ -1,6 +1,6 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .auth_helpers import get_role_name, has_any_role, is_admin_global, is_authenticated_user, is_admin_sistema
+from .auth_helpers import get_role_name, has_any_role, is_admin_global, is_authenticated_user, is_admin_sistema, user_supervisa_espacios
 
 
 class IsAuthenticatedUsuario(BasePermission):
@@ -57,4 +57,5 @@ class IsEstudiante(BasePermission):
 
 class IsSupervisorGeneral(BasePermission):
     def has_permission(self, request, view):
-        return has_any_role(getattr(request, 'user', None), {'supervisor_general'})
+        user = getattr(request, 'user', None)
+        return user_supervisa_espacios(user) or has_any_role(user, {'supervisor_general'})

@@ -8,6 +8,7 @@ export interface Rol {
   id: number;
   nombre: string;
   descripcion: string;
+  supervisa_espacios?: boolean;
 }
 
 export interface Usuario {
@@ -99,6 +100,7 @@ export interface LoginResponse {
     id: number;
     nombre: string;
     descripcion: string;
+    supervisa_espacios?: boolean;
   } | null;
   facultad: {
     id: number;
@@ -143,6 +145,7 @@ export interface SessionAuthStateResponse {
     id: number;
     nombre: string;
     descripcion: string;
+    supervisa_espacios?: boolean;
   } | null;
   componentes?: Array<{
     id: number;
@@ -161,6 +164,7 @@ export interface SessionUserAuthenticatedResponse {
     id: number;
     nombre: string;
     descripcion: string;
+    supervisa_espacios?: boolean;
   } | null;
   facultad: {
     id: number;
@@ -444,7 +448,8 @@ export const rolService = {
   crearRol: async (rol: Omit<Rol, 'id'>): Promise<{ message: string; id: number }> => {
     const creado = await apiClient.post<Rol>('/roles/', {
       nombre: rol.nombre,
-      descripcion: rol.descripcion
+      descripcion: rol.descripcion,
+      supervisa_espacios: rol.supervisa_espacios ?? false
     });
     return { message: 'Rol creado', id: creado.id ?? 0 };
   },
@@ -459,7 +464,8 @@ export const rolService = {
 
     const actualizado = await apiClient.put<Rol>(`/roles/${rol.id}/`, {
       nombre: rol.nombre,
-      descripcion: rol.descripcion
+      descripcion: rol.descripcion,
+      supervisa_espacios: rol.supervisa_espacios ?? false
     });
     return { message: 'Rol actualizado', id: actualizado.id ?? rol.id };
   },

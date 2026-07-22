@@ -5,6 +5,7 @@ import { espacioService, espacioPermitidoService, type EspacioFisico, type TipoE
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import {
     PAGE_SIZE_DEFAULT,
     getPageNumbers,
@@ -18,7 +19,7 @@ import {
 } from './paginacion';
 
 const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
-const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles';
+const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles-v3';
 const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
 const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
 const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
@@ -26,6 +27,7 @@ const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuario
 const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
 const SEDES_UPDATED_EVENT = 'sedes-updated';
 const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
+const ROLES_UPDATED_EVENT = 'roles-updated';
 
 type EspacioAsignable = {
     id: number;
@@ -103,7 +105,7 @@ export function useGestionUsuarios() {
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioAsignable[]>([]);
     const [sedesDisponibles, setSedesDisponibles] = useState<SedeAsignable[]>([]);
 
-    // Estados para espacios permitidos (solo supervisor_general)
+    // Estados para espacios permitidos (roles con supervisión de espacios)
     const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
     const [espaciosPermitidos, setEspaciosPermitidos] = useState<number[]>([]);
     const [espacioSeleccionadoEdit, setEspacioSeleccionadoEdit] = useState('');
@@ -291,6 +293,22 @@ export function useGestionUsuarios() {
     };
 
     useEffect(() => {
+        const reloadRolesParaUsuarios = () => {
+            clearSessionCache(GESTION_ROLES_CACHE_KEY);
+            void loadRoles({ force: true });
+        };
+
+        window.addEventListener(ROLES_UPDATED_EVENT, reloadRolesParaUsuarios);
+        window.addEventListener('focus', reloadRolesParaUsuarios);
+
+        return () => {
+            window.removeEventListener(ROLES_UPDATED_EVENT, reloadRolesParaUsuarios);
+            window.removeEventListener('focus', reloadRolesParaUsuarios);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
         const reloadEspaciosParaAsignacion = () => {
             clearSessionCache(GESTION_ESPACIOS_CACHE_KEY);
             clearSessionCache(GESTION_TIPOS_ESPACIO_CACHE_KEY);
@@ -475,11 +493,11 @@ export function useGestionUsuarios() {
         }
 
         try {
-            // Si es supervisor_general, incluir espacios permitidos
+            // Si el rol supervisa espacios, incluir espacios permitidos.
             const rol = rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
             let espaciosPayload: number[] = [];
 
-            if (rol?.nombre === 'supervisor_general') {
+            if (isSpaceSupervisorRole(rol)) {
                 espaciosPayload = modoAsignacionSupervisor === 'individual'
                     ? espaciosPermitidos
                     : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, espaciosDisponiblesCreacion);
@@ -522,12 +540,12 @@ export function useGestionUsuarios() {
         }
 
         try {
-            // Si es supervisor_general, incluir espacios permitidos
+            // Si el rol supervisa espacios, incluir espacios permitidos.
             const rolId = editingUser.rol_id || editingUser.rol?.id;
             const rol = rolesDisponibles.find(r => r.id === rolId);
             let espaciosPayload: number[] = [];
 
-            if (rol?.nombre === 'supervisor_general') {
+            if (isSpaceSupervisorRole(rol)) {
                 espaciosPayload = modoAsignacionSupervisorEdit === 'individual'
                     ? espaciosPermitidosEdit
                     : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, espaciosDisponiblesEdicion);
@@ -621,7 +639,7 @@ export function useGestionUsuarios() {
     const abrirEdicion = async (usuario: Usuario) => {
         // Resolver el rol completo usando rol_id si es necesario
         const rolId = usuario.rol_id || usuario.rol?.id;
-        const rolNombre = usuario.rol?.nombre || rolesDisponibles.find(r => r.id === rolId)?.nombre;
+        const rol = usuario.rol || rolesDisponibles.find(r => r.id === rolId);
 
         // Resolver facultad_id
         const facultadId = usuario.facultad_id || usuario.facultad?.id || null;
@@ -636,8 +654,8 @@ export function useGestionUsuarios() {
         setEditingUser(usuarioConDatosCompletos);
         setFacultadSeleccionadaEdit(facultadId);
 
-        // Cargar espacios permitidos si es supervisor_general
-        if (rolNombre === 'supervisor_general') {
+        // Cargar espacios permitidos si el rol supervisa espacios.
+        if (isSpaceSupervisorRole(rol)) {
             try {
                 const response = await espacioPermitidoService.listByUsuario(usuario.id as number);
                 const espaciosPermitidosNormalizados = (response.espacios || [])

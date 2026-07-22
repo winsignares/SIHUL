@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mysite.seccional_auth import SeccionalMixin
-from mysite.auth_helpers import get_role_name
+from mysite.auth_helpers import user_supervisa_espacios
 from espacios.models import EspacioPermitido
 
 from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
@@ -120,9 +120,8 @@ class SupervisorEspaciosPermitidosPrestamosAPIView(SeccionalMixin, generics.List
     def get_queryset(self):
         user = self.get_current_user()
         
-        # Validar que el usuario sea supervisor
-        role_name = get_role_name(user)
-        if not role_name.startswith('supervisor'):
+        # Validar que el usuario tenga capacidad de supervisar espacios.
+        if not user_supervisa_espacios(user):
             return PrestamoEspacio.objects.none()
         
         # Obtener los espacios permitidos del supervisor

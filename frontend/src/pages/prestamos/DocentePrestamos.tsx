@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from '../../share/alert';
 import { useDocentePrestamos } from '../../hooks/prestamos/useDocentePrestamos';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
+import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import ConsultaEspacios from '../espacios/ConsultaEspacios';
 
 export default function DocentePrestamos() {
@@ -77,7 +78,7 @@ export default function DocentePrestamos() {
   if (mostrarConsulta) {
     return (
       <div>
-        {String(user?.rol) !== 'supervisor_general' && (
+        {!isSpaceSupervisorRole(user?.rol) && (
           <div className="p-6 pb-0">
             <Button
               variant="outline"

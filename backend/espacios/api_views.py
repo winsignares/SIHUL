@@ -8,7 +8,7 @@ from .models import EspacioFisico, EspacioPermitido
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
-from mysite.auth_helpers import is_superuser_effective
+from mysite.auth_helpers import is_superuser_effective, user_supervisa_espacios
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
@@ -350,8 +350,7 @@ def proximos_apertura_cierre(request):
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
-        role_name = (usuario.rol.nombre if usuario.rol else '').lower()
-        if role_name.startswith('supervisor'):
+        if user_supervisa_espacios(usuario):
             espacios_permitidos = EspacioPermitido.objects.filter(usuario_id=usuario_id).select_related(
                 'espacio', 'espacio__sede', 'espacio__tipo'
             )

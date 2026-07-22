@@ -18,6 +18,7 @@ import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 import { useAuth } from '../context/AuthContext';
+import { isSpaceSupervisorRole } from '../context/spaceSupervisorRole';
 
 interface AdminDashboardProps {
   userName?: string;
@@ -30,7 +31,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [componentsGraceExpired, setComponentsGraceExpired] = useState(false);
-  const { isAuthenticated, isLoading, components } = useAuth();
+  const { isAuthenticated, isLoading, components, role } = useAuth();
 
   const {
     userRole,
@@ -83,7 +84,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
       .replace(/[_-]+/g, ' ')
       .trim();
 
-    if (userRole === 'supervisor_general') return 'Supervisor General';
+    if (isSpaceSupervisorRole(role)) return role?.nombre === 'supervisor_general' ? 'Supervisor General' : role?.nombre || 'Supervisor de espacios';
     if (userRole === 'planeacion_facultad') return `Planeación (${userFacultyName})`;
     if (userRole === 'docente') return 'Docente';
     if (userRole === 'estudiante') return 'Estudiante';
@@ -232,8 +233,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             <div className="border-t border-red-700/50 p-4 space-y-2">
               {!isPublicAccess && (
                 <>
-                  {/* Notificaciones - Ocultar para supervisor_general, docente, estudiante */}
-                  {!['supervisor_general', 'docente', 'estudiante'].includes(userRole) && (
+                  {/* Notificaciones - Ocultar para supervisores de espacios, docente, estudiante */}
+                  {!isSpaceSupervisorRole(role) && !['docente', 'estudiante'].includes(userRole) && (
                     (() => {
                       const path = '/notificaciones';
                       const isActive = location.pathname === path || location.pathname.startsWith(path + '/');
@@ -437,8 +438,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
               <div className="border-t border-red-700/50 pt-4 space-y-2">
                 {!isPublicAccess && (
                   <>
-                    {/* Notificaciones - Ocultar para supervisor_general, docente, estudiante */}
-                    {!['supervisor_general', 'docente', 'estudiante'].includes(userRole) && (
+                    {/* Notificaciones - Ocultar para supervisores de espacios, docente, estudiante */}
+                    {!isSpaceSupervisorRole(role) && !['docente', 'estudiante'].includes(userRole) && (
                       <Link to="/notificaciones" className="block">
                         <motion.div className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-700/50 relative">
                           <Bell className="w-5 h-5 flex-shrink-0" />

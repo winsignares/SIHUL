@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { rolService } from '../../services/users/authService';
 import type { Rol } from '../../services/users/authService';
-import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
-const GESTION_ROLES_CACHE_KEY = 'permisos-gestion-roles';
+const GESTION_ROLES_CACHE_KEY = 'permisos-gestion-roles-v3';
+const GESTION_USUARIOS_ROLES_CACHE_KEY = 'gestion-academica-roles-v3';
+const ROLES_UPDATED_EVENT = 'roles-updated';
 
 interface UseGestionRolesReturn {
   roles: Rol[];
@@ -84,7 +86,9 @@ export function useGestionRoles(): UseGestionRolesReturn {
     setError(null);
     try {
       await rolService.crearRol(rol);
+      clearSessionCache(GESTION_USUARIOS_ROLES_CACHE_KEY);
       await cargarRoles({ force: true });
+      window.dispatchEvent(new Event(ROLES_UPDATED_EVENT));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear rol');
       throw err;
@@ -98,7 +102,9 @@ export function useGestionRoles(): UseGestionRolesReturn {
     setError(null);
     try {
       await rolService.actualizarRol(rol);
+      clearSessionCache(GESTION_USUARIOS_ROLES_CACHE_KEY);
       await cargarRoles({ force: true });
+      window.dispatchEvent(new Event(ROLES_UPDATED_EVENT));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al actualizar rol');
       throw err;
@@ -112,7 +118,9 @@ export function useGestionRoles(): UseGestionRolesReturn {
     setError(null);
     try {
       await rolService.eliminarRol(id);
+      clearSessionCache(GESTION_USUARIOS_ROLES_CACHE_KEY);
       await cargarRoles({ force: true });
+      window.dispatchEvent(new Event(ROLES_UPDATED_EVENT));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar rol');
       throw err;

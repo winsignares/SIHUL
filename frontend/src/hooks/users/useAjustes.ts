@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { userService, authService, type Usuario, type ChangePasswordPayload } from '../../services/users/authService';
 import { espacioPermitidoService } from '../../services/espacios/espaciosAPI';
+import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import { toast } from 'sonner';
 
 interface EspacioPermitido {
@@ -109,8 +110,8 @@ export function useAjustes() {
                 // Actualizar localStorage
                 localStorage.setItem('auth_user', JSON.stringify(fullUserData));
 
-                // Si es supervisor general, cargar espacios permitidos
-                if (fullUserData.rol?.nombre === 'supervisor_general') {
+                // Si el rol supervisa espacios, cargar espacios permitidos.
+                if (isSpaceSupervisorRole(fullUserData.rol)) {
                     try {
                         const espaciosResponse = await espacioPermitidoService.listByUsuario(fullUserData.id!);
                         // Map to EspacioPermitido interface
@@ -255,7 +256,7 @@ export function useAjustes() {
     // Determinar permisos según rol
     const canEditEmail = usuario?.rol?.nombre === 'admin';
     const canEditRol = usuario?.rol?.nombre === 'admin';
-    const isSupervisorGeneral = usuario?.rol?.nombre === 'supervisor_general';
+    const isSupervisorGeneral = isSpaceSupervisorRole(usuario?.rol);
 
     return {
         usuario,

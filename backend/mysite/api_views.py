@@ -37,7 +37,7 @@ from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective
+from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, user_supervisa_espacios
 from .seccional_auth import SeccionalMixin
 from .permissions import (
     IsAdminGlobal,
@@ -217,7 +217,18 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
         user = self.get_current_user()
         if not user:
             return self.queryset.none()
+        if user_supervisa_espacios(user):
+            espacios_ids = EspacioPermitido.objects.filter(usuario=user).values_list('espacio_id', flat=True)
+            return self.queryset.filter(id__in=espacios_ids)
         return super().get_queryset()
+
+    def _deny_unassigned_space_for_supervisor(self, pk):
+        user = self.get_current_user()
+        if user and user_supervisa_espacios(user):
+            has_access = EspacioPermitido.objects.filter(usuario=user, espacio_id=pk).exists()
+            if not has_access:
+                return Response({'error': 'No tienes permiso para gestionar este espacio.'}, status=status.HTTP_403_FORBIDDEN)
+        return None
 
     @action(detail=False, methods=['get'], url_path='horarios/all', permission_classes=[permissions.AllowAny])
     def horarios_all(self, request):
@@ -246,20 +257,32 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get', 'put'], url_path='estado')
     def estado(self, request, pk=None):
+        denied = self._deny_unassigned_space_for_supervisor(pk)
+        if denied:
+            return denied
         return espacios_api.get_estado_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['post'], url_path='cerrar')
     def cerrar_espacio(self, request, pk=None):
         """Cierra un espacio validando que no haya clase en curso."""
+        denied = self._deny_unassigned_space_for_supervisor(pk)
+        if denied:
+            return denied
         return espacios_api.cerrar_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['post'], url_path='abrir')
     def abrir_espacio(self, request, pk=None):
         """Abre un espacio marcando su estado fisico como abierto."""
+        denied = self._deny_unassigned_space_for_supervisor(pk)
+        if denied:
+            return denied
         return espacios_api.abrir_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['get'], url_path='horario')
     def horario(self, request, pk=None):
+        denied = self._deny_unassigned_space_for_supervisor(pk)
+        if denied:
+            return denied
         return espacios_api.get_horario_espacio(request._request, espacio_id=pk)
 
     @action(detail=False, methods=['get'], url_path='ocupacion/semanal')
@@ -704,6 +727,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 'id': usuario.rol.id,
                 'nombre': usuario.rol.nombre,
                 'descripcion': usuario.rol.descripcion,
+                'supervisa_espacios': usuario.rol.supervisa_espacios,
             } if usuario.rol else None,
             'facultad': {
                 'id': usuario.facultad.id,
@@ -740,7 +764,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         componentes = self._build_componentes(usuario)
         parts = [f"{c['id']}:{c['permiso']}" for c in sorted(componentes, key=lambda item: (item['id'], item['permiso']))]
         role_part = str(usuario.rol.id) if usuario.rol else 'no-role'
-        signature_source = f"{role_part}|{'|'.join(parts)}"
+        supervisa_part = 'supervisa-espacios' if user_supervisa_espacios(usuario) else 'no-supervisa-espacios'
+        signature_source = f"{role_part}|{supervisa_part}|{'|'.join(parts)}"
         signature = hashlib.sha256(signature_source.encode('utf-8')).hexdigest()[:16]
 
         since = request.query_params.get('since')
@@ -754,6 +779,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 'id': usuario.rol.id,
                 'nombre': usuario.rol.nombre,
                 'descripcion': usuario.rol.descripcion,
+                'supervisa_espacios': usuario.rol.supervisa_espacios,
             } if usuario.rol else None,
             'componentes': componentes,
         }, status=status.HTTP_200_OK)
@@ -811,6 +837,8 @@ class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
         user = self.get_current_user()
         if not user:
             return Recurso.objects.none()
+        if user_supervisa_espacios(user):
+            return super().get_queryset().filter(recurso_espacios__espacio__espacios_permitidos__usuario=user).distinct().order_by('nombre')
         return super().get_queryset().distinct().order_by('nombre')
 
 
@@ -819,6 +847,15 @@ class EspacioRecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     serializer_class = EspacioRecursoSerializer
     seccional_lookup = 'espacio__sede__seccional'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
+
+    def get_queryset(self):
+        user = self.get_current_user()
+        queryset = super().get_queryset()
+        if not user:
+            return queryset.none()
+        if user_supervisa_espacios(user):
+            return queryset.filter(espacio__espacios_permitidos__usuario=user)
+        return queryset
 
     @action(detail=False, methods=['get'], url_path=r'por-ids/(?P<espacio_id>\d+)/(?P<recurso_id>\d+)')
     def por_ids(self, request, espacio_id=None, recurso_id=None):

@@ -8,16 +8,23 @@ class Command(BaseCommand):
         roles = [
             {'nombre': 'admin', 'descripcion': 'Administrador del Sistema'},
             {'nombre': 'planeacion_facultad', 'descripcion': 'Planeación de Facultad'},
-            {'nombre': 'supervisor_general', 'descripcion': 'Supervisor General'},
+            {'nombre': 'supervisor_general', 'descripcion': 'Supervisor General', 'supervisa_espacios': True},
             {'nombre': 'docente', 'descripcion': 'Docente'},
             {'nombre': 'estudiante', 'descripcion': 'Estudiante'},
         ]
 
         for role_data in roles:
+            defaults = {'descripcion': role_data['descripcion']}
+            if 'supervisa_espacios' in role_data:
+                defaults['supervisa_espacios'] = role_data['supervisa_espacios']
+
             rol, created = Rol.objects.get_or_create(
                 nombre=role_data['nombre'],
-                defaults={'descripcion': role_data['descripcion']}
+                defaults=defaults
             )
+            if not created and 'supervisa_espacios' in role_data and rol.supervisa_espacios != role_data['supervisa_espacios']:
+                rol.supervisa_espacios = role_data['supervisa_espacios']
+                rol.save(update_fields=['supervisa_espacios'])
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Successfully created role "{rol.nombre}"'))
             else:
