@@ -14,6 +14,8 @@ interface HorarioFusionadoExtendido {
   grupo1_nombre: string;
   grupo2_nombre: string;
   grupo3_nombre: string | null;
+  periodo_id: number | null;
+  periodo_nombre: string | null;
   asignatura_id: number;
   asignatura_nombre: string;
   docente_id: number | null;
@@ -37,10 +39,13 @@ interface HorariosFusionadosProps {
   setFiltroFusionadoDocente: (value: string) => void;
   filtroFusionadoEspacio: string;
   setFiltroFusionadoEspacio: (value: string) => void;
+  filtroFusionadoPeriodo: string;
+  setFiltroFusionadoPeriodo: (value: string) => void;
   diasFusionadosUnicos: string[];
   asignaturasFusionadasUnicas: string[];
   docentesFusionadosUnicos: string[];
   espaciosFusionadosUnicos: string[];
+  periodosFusionadosDisponibles: Array<{ id?: number; nombre: string }>;
   limpiarFiltrosFusionados: () => void;
 }
 
@@ -55,10 +60,13 @@ export default function HorariosFusionados({
   setFiltroFusionadoDocente,
   filtroFusionadoEspacio,
   setFiltroFusionadoEspacio,
+  filtroFusionadoPeriodo,
+  setFiltroFusionadoPeriodo,
   diasFusionadosUnicos,
   asignaturasFusionadasUnicas,
   docentesFusionadosUnicos,
   espaciosFusionadosUnicos,
+  periodosFusionadosDisponibles,
   limpiarFiltrosFusionados
 }: HorariosFusionadosProps) {
   return (
@@ -72,7 +80,7 @@ export default function HorariosFusionados({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Filtro Día */}
             <div>
               <Label>Día de la semana</Label>
@@ -134,6 +142,24 @@ export default function HorariosFusionados({
                   <SelectItem value="all">Todos</SelectItem>
                   {espaciosFusionadosUnicos.map(esp => (
                     <SelectItem key={esp} value={esp}>{esp}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Periodo */}
+            <div>
+              <Label>Periodo</Label>
+              <Select value={filtroFusionadoPeriodo} onValueChange={setFiltroFusionadoPeriodo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {periodosFusionadosDisponibles.map(periodo => (
+                    <SelectItem key={periodo.id} value={periodo.id?.toString() || ''}>
+                      {periodo.nombre}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

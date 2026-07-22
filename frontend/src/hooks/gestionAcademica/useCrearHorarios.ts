@@ -8,6 +8,7 @@ import { userService, type Usuario } from '../../services/users/authService';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { horarioService, type HorarioExtendido } from '../../services/horarios/horariosAPI';
 import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { useAuth } from '../../context/AuthContext';
 import { clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { useValidacionHorarios } from './useValidacionHorarios';
@@ -61,6 +62,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
     const [asignaturasPrograma, setAsignaturasPrograma] = useState<AsignaturaPrograma[]>([]);
     const [docentes, setDocentes] = useState<Usuario[]>([]);
+    const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
     const [todosLosHorarios, setTodosLosHorarios] = useState<HorarioExtendido[]>([]);
     const loadedRef = useRef(false);
 
@@ -69,12 +71,14 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const [filtroPrograma, setFiltroProgramaState] = useState<number | string>('all');
     const [filtroSemestre, setFiltroSemestreState] = useState<string>('all');
     const [filtroGrupo, setFiltroGrupoState] = useState<string>('all');
+    const [filtroPeriodo, setFiltroPeriodoState] = useState<string>('all');
 
     // Stable setters wrapped in useCallback
     const setFiltroFacultad = useCallback((v: string) => setFiltroFacultadState(v), []);
     const setFiltroPrograma = useCallback((v: number | string) => setFiltroProgramaState(v), []);
     const setFiltroSemestre = useCallback((v: string) => setFiltroSemestreState(v), []);
     const setFiltroGrupo = useCallback((v: string) => setFiltroGrupoState(v), []);
+    const setFiltroPeriodo = useCallback((v: string) => setFiltroPeriodoState(v), []);
 
     // Estados de la UI
     const [vistaActual, setVistaActual] = useState<'lista' | 'asignar'>('lista');
@@ -133,6 +137,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 asignaturas: Asignatura[];
                 asignaturasPrograma: AsignaturaPrograma[];
                 docentes: Usuario[];
+                periodos: PeriodoAcademico[];
                 todosLosHorarios: HorarioExtendido[];
                 filtroFacultad?: string;
             }>(cacheKey, activeToken);
@@ -146,6 +151,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 setAsignaturas(cachedData.asignaturas);
                 setAsignaturasPrograma(cachedData.asignaturasPrograma);
                 setDocentes(cachedData.docentes);
+                setPeriodos(cachedData.periodos ?? []);
                 setTodosLosHorarios(cachedData.todosLosHorarios);
                 if (cachedData.filtroFacultad) {
                     setFiltroFacultad(cachedData.filtroFacultad);
@@ -166,14 +172,16 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                 espaciosResponse,
                 asignaturasResponse,
                 asignaturasProgramaResponse,
-                usuariosResponse
+                usuariosResponse,
+                periodosResponse
             ] = await Promise.all([
                 facultadService.list(),
                 programaService.listarProgramas(),
                 espacioService.list(),
                 asignaturaService.list(),
                 asignaturaProgramaService.list(),
-                userService.listarDocentes()
+                userService.listarDocentes(),
+                periodoService.listarPeriodos()
             ]);
 
             // Aplicar datos pequeños inmediatamente para mostrar filtros
@@ -190,6 +198,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             setAsignaturas(asignaturasResponse.asignaturas);
             setAsignaturasPrograma(asignaturasProgramaResponse.asignaturas_programa);
             setDocentes(usuariosResponse.usuarios);
+            setPeriodos(periodosResponse.periodos);
 
             // 3. FASE 2: Cargar grupos (datos masivos) - esto puede tardar
             const gruposResponse = await grupoService.list();
@@ -261,6 +270,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
                     asignaturas: asignaturasResponse.asignaturas,
                     asignaturasPrograma: asignaturasProgramaResponse.asignaturas_programa,
                     docentes: usuariosResponse.usuarios,
+                    periodos: periodosResponse.periodos,
                     todosLosHorarios: todosHorarios,
                     filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
                         ? user.facultad.id.toString()
@@ -316,10 +326,11 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
         const matchPrograma = filtroPrograma === 'all' || grupo.programa_id?.toString() === filtroPrograma.toString();
         const matchSemestre = filtroSemestre === 'all' || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
-        const matchGrupo = filtroGrupo === 'all' || (grupo.nombre && grupo.nombre.toLowerCase().includes(filtroGrupo.toLowerCase()));
+        const matchGrupo = filtroGrupo === 'all' || grupo.nombre === filtroGrupo;
+        const matchPeriodo = filtroPeriodo === 'all' || grupo.periodo_id?.toString() === filtroPeriodo;
 
-        return matchFacultad && matchPrograma && matchSemestre && matchGrupo;
-    }), [grupos, filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo]);
+        return matchFacultad && matchPrograma && matchSemestre && matchGrupo && matchPeriodo;
+    }), [grupos, filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo, filtroPeriodo]);
 
     // Paginación para grupos sin horario
     const [currentPage, setCurrentPage] = useState(1);
@@ -335,11 +346,30 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     // Resetear a página 1 cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
-    }, [filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo]);
+    }, [filtroFacultad, filtroPrograma, filtroSemestre, filtroGrupo, filtroPeriodo]);
 
     const programasFiltrados = useMemo(() =>
         programas.filter(p => filtroFacultad === 'all' || p.facultad_id?.toString() === filtroFacultad),
         [programas, filtroFacultad]
+    );
+
+    const gruposFiltroDisponibles = useMemo(() => {
+        const gruposFiltrados = grupos.filter(grupo => {
+            const matchFacultad = filtroFacultad === 'all' || grupo.facultad_id?.toString() === filtroFacultad;
+            const matchPrograma = filtroPrograma === 'all' || grupo.programa_id?.toString() === filtroPrograma.toString();
+            const matchSemestre = filtroSemestre === 'all' || (grupo.semestre && grupo.semestre.toString() === filtroSemestre);
+            const matchPeriodo = filtroPeriodo === 'all' || grupo.periodo_id?.toString() === filtroPeriodo;
+            return matchFacultad && matchPrograma && matchSemestre && matchPeriodo;
+        });
+
+        return Array.from(new Set(gruposFiltrados.map(g => g.nombre).filter(Boolean))).sort();
+    }, [grupos, filtroFacultad, filtroPrograma, filtroSemestre, filtroPeriodo]);
+
+    const periodosDisponibles = useMemo(() =>
+        periodos
+            .filter(periodo => periodo.id !== undefined && grupos.some(grupo => grupo.periodo_id === periodo.id))
+            .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true })),
+        [periodos, grupos]
     );
 
     // Resetear programa seleccionado si ya no está en la lista filtrada
@@ -358,6 +388,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         setFiltroProgramaState('all');
         setFiltroSemestreState('all');
         setFiltroGrupoState('all');
+        setFiltroPeriodoState('all');
     }, []);
 
     // Obtener asignaturas de un programa específico y semestre
@@ -679,10 +710,12 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         asignaturas,
         asignaturasPrograma,
         docentes,
+        periodos,
         filtroFacultad, setFiltroFacultad,
         filtroPrograma, setFiltroPrograma,
         filtroSemestre, setFiltroSemestre,
         filtroGrupo, setFiltroGrupo,
+        filtroPeriodo, setFiltroPeriodo,
         vistaActual, setVistaActual,
         grupoSeleccionado, setGrupoSeleccionado,
         horariosAsignados, setHorariosAsignados,
@@ -706,6 +739,8 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         gruposSinHorarioFiltrados,
         paginatedGrupos,
         programasFiltrados,
+        gruposFiltroDisponibles,
+        periodosDisponibles,
         // Paginación
         currentPage,
         totalPages,

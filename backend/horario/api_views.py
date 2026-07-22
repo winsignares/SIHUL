@@ -191,7 +191,7 @@ def list_horarios_extendidos(request):
     include_pending = request.GET.get('include_pending', '').lower() in ('1', 'true', 'yes')
     estado_horario = (request.GET.get('estado_horario') or request.GET.get('estadoHorario') or '').strip().lower()
 
-    qs = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa')
+    qs = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa', 'grupo__periodo')
     if estado_horario == 'pendiente':
         qs = qs.filter(estado='pendiente')
     elif estado_horario in ('todos', 'all') or include_pending:
@@ -217,6 +217,8 @@ def list_horarios_extendidos(request):
                 'grupo_nombre': grupo.nombre if grupo else 'Sin grupo',
                 'programa_id': programa.id if programa else None,
                 'programa_nombre': programa.nombre if programa else 'Sin programa',
+                'periodo_id': grupo.periodo_id if grupo else None,
+                'periodo_nombre': grupo.periodo.nombre if grupo and grupo.periodo else None,
                 'semestre': grupo.semestre if grupo else None,
                 'asignatura_id': asignatura.id if asignatura else None,
                 'asignatura_nombre': asignatura.nombre if asignatura else 'Sin asignatura',

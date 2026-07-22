@@ -76,6 +76,8 @@ export interface HorarioExtendido {
     grupo_nombre: string;
     programa_id: number;
     programa_nombre: string;
+    periodo_id?: number | null;
+    periodo_nombre?: string | null;
     semestre: number;
     asignatura_id: number;
     asignatura_nombre: string;

@@ -57,6 +57,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     filtroPrograma, setFiltroPrograma,
     filtroSemestre, setFiltroSemestre,
     filtroGrupo, setFiltroGrupo,
+    filtroPeriodo, setFiltroPeriodo,
     vistaActual,
     grupoSeleccionado,
     horariosAsignados,
@@ -80,6 +81,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     gruposSinHorarioFiltrados,
     paginatedGrupos,
     programasFiltrados,
+    gruposFiltroDisponibles,
+    periodosDisponibles,
     // Paginación
     currentPage,
     totalPages,
@@ -136,7 +139,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                   <Label>Facultad</Label>
                   <SearchableSelect
@@ -199,10 +202,41 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
 
                 <div>
                   <Label>Grupo</Label>
-                  <Input
-                    placeholder="Filtrar grupo por nombre..."
-                    value={filtroGrupo === 'all' ? '' : filtroGrupo}
-                    onChange={(e) => setFiltroGrupo(e.target.value || 'all')}
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los grupos' },
+                      ...gruposFiltroDisponibles.map(g => ({
+                        id: g,
+                        nombre: g
+                      }))
+                    ]}
+                    value={filtroGrupo}
+                    onSelect={(item) => setFiltroGrupo(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar grupo..."
+                    searchPlaceholder="Buscar grupo..."
+                    emptyMessage="No se encontró ningún grupo"
+                  />
+                </div>
+
+                <div>
+                  <Label>Periodo</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los periodos' },
+                      ...periodosDisponibles.map(p => ({
+                        id: p.id?.toString() || '',
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroPeriodo}
+                    onSelect={(item) => setFiltroPeriodo(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar periodo..."
+                    searchPlaceholder="Buscar periodo..."
+                    emptyMessage="No se encontró ningún periodo"
                   />
                 </div>
               </div>

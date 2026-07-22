@@ -7,6 +7,7 @@ import { facultadService, type Facultad } from '../../services/facultades/facult
 import { programaService, type Programa } from '../../services/programas/programaAPI';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { useAuth } from '../../context/AuthContext';
 import { clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { resolveApiBaseUrl } from '../../core/backendUrl';
@@ -33,6 +34,8 @@ export interface HorarioExtendido {
     grupo_nombre: string;
     programa_id: number;
     programa_nombre: string;
+    periodo_id?: number | null;
+    periodo_nombre?: string | null;
     semestre: number;
     asignatura_id: number;
     asignatura_nombre: string;
@@ -48,6 +51,7 @@ export interface HorarioExtendido {
 
 export interface GrupoAgrupado {
     programaId: number;
+    periodoId: number | null;
     grupo: string;
     semestre: number;
     horarios: HorarioExtendido[];
@@ -61,6 +65,8 @@ export interface HorarioFusionadoExtendido {
     grupo1_nombre: string;
     grupo2_nombre: string;
     grupo3_nombre: string | null;
+    periodo_id: number | null;
+    periodo_nombre: string | null;
     asignatura_id: number;
     asignatura_nombre: string;
     docente_id: number | null;
@@ -93,18 +99,21 @@ export function useCentroHorarios() {
     const [programas, setProgramas] = useState<Programa[]>([]);
     const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
     const [docentes, setDocentes] = useState<Docente[]>([]);
+    const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
 
     // Filtros
     const [filtroFacultad, setFiltroFacultad] = useState<string>('all');
     const [filtroPrograma, setFiltroPrograma] = useState<string>('all');
     const [filtroGrupo, setFiltroGrupo] = useState<string>('all');
     const [filtroSemestre, setFiltroSemestre] = useState<string>('all');
+    const [filtroPeriodo, setFiltroPeriodo] = useState<string>('all');
 
     // Filtros para horarios fusionados
     const [filtroFusionadoDia, setFiltroFusionadoDia] = useState<string>('all');
     const [filtroFusionadoAsignatura, setFiltroFusionadoAsignatura] = useState<string>('all');
     const [filtroFusionadoDocente, setFiltroFusionadoDocente] = useState<string>('all');
     const [filtroFusionadoEspacio, setFiltroFusionadoEspacio] = useState<string>('all');
+    const [filtroFusionadoPeriodo, setFiltroFusionadoPeriodo] = useState<string>('all');
 
     // Modal de edición
     const [showEditModal, setShowEditModal] = useState(false);
@@ -178,6 +187,7 @@ export function useCentroHorarios() {
                     programas: Programa[];
                     espacios: EspacioFisico[];
                     docentes: Docente[];
+                    periodos: PeriodoAcademico[];
                     filtroFacultad?: string;
                 }>(cacheKey, activeToken);
 
@@ -189,6 +199,7 @@ export function useCentroHorarios() {
                 setProgramas(cachedData.programas);
                 setEspacios(cachedData.espacios);
                 setDocentes(cachedData.docentes);
+                setPeriodos(cachedData.periodos ?? []);
                 if (cachedData.filtroFacultad) {
                     setFiltroFacultad(cachedData.filtroFacultad);
                 }
@@ -225,6 +236,7 @@ export function useCentroHorarios() {
 
                             // Buscar información adicional de horarios
                             const horario1 = horariosResponse.horarios.find(h => h.grupo_id === hf.grupo1_id && h.asignatura_id === hf.asignatura_id);
+                            const periodoId = grupo1.periodo_id ?? grupo2.periodo_id ?? grupo3?.periodo_id ?? null;
                             
                             return {
                                 id: hf.id as number,
@@ -234,6 +246,8 @@ export function useCentroHorarios() {
                                 grupo1_nombre: grupo1.nombre,
                                 grupo2_nombre: grupo2.nombre,
                                 grupo3_nombre: grupo3?.nombre || null,
+                                periodo_id: periodoId,
+                                periodo_nombre: null,
                                 asignatura_id: hf.asignatura_id,
                                 asignatura_nombre: horario1?.asignatura_nombre || 'N/A',
                                 docente_id: horario1?.docente_id ?? null,
@@ -291,6 +305,10 @@ export function useCentroHorarios() {
                 }));
             setDocentes(docentesList);
 
+            // Cargar periodos
+            const periodosResponse = await periodoService.listarPeriodos();
+            setPeriodos(periodosResponse.periodos);
+
             setSessionCacheData(cacheKey, activeToken, {
                 horarios: horariosResponse.horarios,
                 horariosFusionados: fusionadosConInfo,
@@ -299,6 +317,7 @@ export function useCentroHorarios() {
                 programas: programasResponse.programas,
                 espacios: espaciosResponse.espacios,
                 docentes: docentesList,
+                periodos: periodosResponse.periodos,
                 filtroFacultad: role?.nombre === 'planeacion_facultad' && user?.facultad
                     ? user.facultad.id.toString()
                     : undefined
@@ -368,16 +387,22 @@ export function useCentroHorarios() {
         });
     };
 
-    // Agrupar horarios por programa + grupo + semestre
+    const getHorarioPeriodoId = (horario: HorarioExtendido): number | null => {
+        return horario.periodo_id ?? grupos.find(g => g.id === horario.grupo_id)?.periodo_id ?? null;
+    };
+
+    // Agrupar horarios por programa + grupo + semestre + periodo
     const agruparHorarios = (horariosArray: HorarioExtendido[]): GrupoAgrupado[] => {
         const grupos = new Map<string, GrupoAgrupado>();
 
         horariosArray.forEach(horario => {
-            const key = `${horario.programa_id}-${horario.grupo_nombre}-${horario.semestre}`;
+            const periodoId = getHorarioPeriodoId(horario);
+            const key = `${horario.programa_id}-${horario.grupo_nombre}-${horario.semestre}-${periodoId ?? 'sin-periodo'}`;
 
             if (!grupos.has(key)) {
                 grupos.set(key, {
                     programaId: horario.programa_id,
+                    periodoId,
                     grupo: horario.grupo_nombre,
                     semestre: horario.semestre,
                     horarios: []
@@ -398,8 +423,9 @@ export function useCentroHorarios() {
         const matchPrograma = filtroPrograma === 'all' || horario.programa_id === parseInt(filtroPrograma);
         const matchGrupo = filtroGrupo === 'all' || horario.grupo_nombre === filtroGrupo;
         const matchSemestre = filtroSemestre === 'all' || horario.semestre?.toString() === filtroSemestre;
+        const matchPeriodo = filtroPeriodo === 'all' || getHorarioPeriodoId(horario)?.toString() === filtroPeriodo;
 
-        return matchFacultad && matchPrograma && matchGrupo && matchSemestre;
+        return matchFacultad && matchPrograma && matchGrupo && matchSemestre && matchPeriodo;
     });
 
     // Obtener grupos agrupados después de filtrar
@@ -411,6 +437,9 @@ export function useCentroHorarios() {
     // Obtener listas únicas para filtros
     const gruposUnicos = [...new Set(horarios.map(h => h.grupo_nombre).filter(Boolean))].sort();
     const semestresUnicos = [...new Set(horarios.map(h => h.semestre).filter(Boolean))].sort((a, b) => a - b);
+    const periodosDisponibles = periodos
+        .filter(periodo => periodo.id !== undefined && horarios.some(h => getHorarioPeriodoId(h) === periodo.id))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
     const programasFiltrados = programas.filter(p =>
         filtroFacultad === 'all' || p.facultad_id === parseInt(filtroFacultad)
     );
@@ -420,6 +449,9 @@ export function useCentroHorarios() {
     const asignaturasFusionadasUnicas = [...new Set(horariosFusionados.map(h => h.asignatura_nombre))].sort();
     const docentesFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.docente_nombre))].sort();
     const espaciosFusionadosUnicos = [...new Set(horariosFusionados.map(h => h.espacio_nombre))].sort();
+    const periodosFusionadosDisponibles = periodos
+        .filter(periodo => periodo.id !== undefined && horariosFusionados.some(h => h.periodo_id === periodo.id))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
 
     // Filtrar horarios fusionados
     const horariosFusionadosFiltrados = horariosFusionados.filter(hf => {
@@ -427,8 +459,9 @@ export function useCentroHorarios() {
         const matchAsignatura = filtroFusionadoAsignatura === 'all' || hf.asignatura_nombre === filtroFusionadoAsignatura;
         const matchDocente = filtroFusionadoDocente === 'all' || hf.docente_nombre === filtroFusionadoDocente;
         const matchEspacio = filtroFusionadoEspacio === 'all' || hf.espacio_nombre === filtroFusionadoEspacio;
+        const matchPeriodo = filtroFusionadoPeriodo === 'all' || hf.periodo_id?.toString() === filtroFusionadoPeriodo;
 
-        return matchDia && matchAsignatura && matchDocente && matchEspacio;
+        return matchDia && matchAsignatura && matchDocente && matchEspacio && matchPeriodo;
     });
 
     // Handlers
@@ -574,6 +607,7 @@ export function useCentroHorarios() {
         setFiltroPrograma('all');
         setFiltroGrupo('all');
         setFiltroSemestre('all');
+        setFiltroPeriodo('all');
     };
 
     const limpiarFiltrosFusionados = () => {
@@ -581,6 +615,7 @@ export function useCentroHorarios() {
         setFiltroFusionadoAsignatura('all');
         setFiltroFusionadoDocente('all');
         setFiltroFusionadoEspacio('all');
+        setFiltroFusionadoPeriodo('all');
     };
 
     // Funciones para selección múltiple
@@ -746,10 +781,12 @@ export function useCentroHorarios() {
         programas,
         espacios,
         docentes,
+        periodos,
         filtroFacultad, setFiltroFacultad,
         filtroPrograma, setFiltroPrograma,
         filtroGrupo, setFiltroGrupo,
         filtroSemestre, setFiltroSemestre,
+        filtroPeriodo, setFiltroPeriodo,
         showEditModal, setShowEditModal,
         horarioEditar, setHorarioEditar,
         showDetallesModal, setShowDetallesModal,
@@ -778,6 +815,7 @@ export function useCentroHorarios() {
         goToNextPageWindow: paginacion.goToNextPageWindow,
         gruposUnicos,
         semestresUnicos,
+        periodosDisponibles,
         programasFiltrados,
         handleVerDetalles,
         handleEditar,
@@ -805,10 +843,12 @@ export function useCentroHorarios() {
         filtroFusionadoAsignatura, setFiltroFusionadoAsignatura,
         filtroFusionadoDocente, setFiltroFusionadoDocente,
         filtroFusionadoEspacio, setFiltroFusionadoEspacio,
+        filtroFusionadoPeriodo, setFiltroFusionadoPeriodo,
         diasFusionadosUnicos,
         asignaturasFusionadasUnicas,
         docentesFusionadosUnicos,
         espaciosFusionadosUnicos,
+        periodosFusionadosDisponibles,
         horariosFusionadosFiltrados,
         limpiarFiltrosFusionados
     };

@@ -45,6 +45,7 @@ export default function CentroHorarios() {
     filtroPrograma, setFiltroPrograma,
     filtroGrupo, setFiltroGrupo,
     filtroSemestre, setFiltroSemestre,
+    filtroPeriodo, setFiltroPeriodo,
     showEditModal, setShowEditModal,
     horarioEditar, setHorarioEditar,
     showDetallesModal, setShowDetallesModal,
@@ -69,6 +70,7 @@ export default function CentroHorarios() {
     goToNextPageWindow,
     gruposUnicos,
     semestresUnicos,
+    periodosDisponibles,
     programasFiltrados,
     handleVerDetalles,
     handleEditar,
@@ -91,10 +93,12 @@ export default function CentroHorarios() {
     filtroFusionadoAsignatura, setFiltroFusionadoAsignatura,
     filtroFusionadoDocente, setFiltroFusionadoDocente,
     filtroFusionadoEspacio, setFiltroFusionadoEspacio,
+    filtroFusionadoPeriodo, setFiltroFusionadoPeriodo,
     diasFusionadosUnicos,
     asignaturasFusionadasUnicas,
     docentesFusionadosUnicos,
     espaciosFusionadosUnicos,
+    periodosFusionadosDisponibles,
     horariosFusionadosFiltrados,
     limpiarFiltrosFusionados
   } = useCentroHorarios();
@@ -244,6 +248,26 @@ export default function CentroHorarios() {
                     emptyMessage="No se encontró ningún semestre"
                   />
                 </div>
+
+                <div>
+                  <Label>Periodo</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los periodos' },
+                      ...periodosDisponibles.map(p => ({
+                        id: (p.id ?? '').toString(),
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroPeriodo}
+                    onSelect={(item) => setFiltroPeriodo(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar periodo..."
+                    searchPlaceholder="Buscar periodo..."
+                    emptyMessage="No se encontró ningún periodo"
+                  />
+                </div>
               </div>
 
               {/* Botones de acción */}
@@ -296,7 +320,7 @@ export default function CentroHorarios() {
                     </thead>
                     <tbody>
                       {gruposAgrupados.map((grupo) => (
-                        <tr key={`${grupo.programaId}-${grupo.grupo}-${grupo.semestre}`} className="border-t border-slate-200 hover:bg-slate-50">
+                        <tr key={`${grupo.programaId}-${grupo.grupo}-${grupo.semestre}-${grupo.periodoId ?? 'sin-periodo'}`} className="border-t border-slate-200 hover:bg-slate-50">
                           <td className="px-4 py-3 text-slate-900">{grupo.horarios[0]?.programa_nombre || 'N/A'}</td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="border-blue-600 text-blue-600">{grupo.grupo}</Badge>
@@ -476,6 +500,26 @@ export default function CentroHorarios() {
                     emptyMessage="No se encontró ningún semestre"
                   />
                 </div>
+
+                <div>
+                  <Label>Periodo</Label>
+                  <SearchableSelect
+                    items={[
+                      { id: 'all', nombre: 'Todos los periodos' },
+                      ...periodosDisponibles.map(p => ({
+                        id: (p.id ?? '').toString(),
+                        nombre: p.nombre
+                      }))
+                    ]}
+                    value={filtroPeriodo}
+                    onSelect={(item) => setFiltroPeriodo(item.id)}
+                    getItemId={(item) => item.id}
+                    getItemLabel={(item) => item.nombre}
+                    placeholder="Seleccionar periodo..."
+                    searchPlaceholder="Buscar periodo..."
+                    emptyMessage="No se encontró ningún periodo"
+                  />
+                </div>
               </div>
 
               {/* Botones de acción */}
@@ -530,7 +574,7 @@ export default function CentroHorarios() {
                     </thead>
                     <tbody>
                       {gruposAgrupados.map((grupo) => {
-                        const grupoKey = `${grupo.programaId}-${grupo.grupo}-${grupo.semestre}`;
+                        const grupoKey = `${grupo.programaId}-${grupo.grupo}-${grupo.semestre}-${grupo.periodoId ?? 'sin-periodo'}`;
                         const estaExpandido = gruposExpandidos.has(grupoKey);
 
                         return (
@@ -744,10 +788,13 @@ export default function CentroHorarios() {
             setFiltroFusionadoDocente={setFiltroFusionadoDocente}
             filtroFusionadoEspacio={filtroFusionadoEspacio}
             setFiltroFusionadoEspacio={setFiltroFusionadoEspacio}
+            filtroFusionadoPeriodo={filtroFusionadoPeriodo}
+            setFiltroFusionadoPeriodo={setFiltroFusionadoPeriodo}
             diasFusionadosUnicos={diasFusionadosUnicos}
             asignaturasFusionadasUnicas={asignaturasFusionadasUnicas}
             docentesFusionadosUnicos={docentesFusionadosUnicos}
             espaciosFusionadosUnicos={espaciosFusionadosUnicos}
+            periodosFusionadosDisponibles={periodosFusionadosDisponibles}
             limpiarFiltrosFusionados={limpiarFiltrosFusionados}
           />
         </TabsContent>
