@@ -481,7 +481,7 @@ export default function PublicConsultaHorario() {
                           <Clock className="w-5 h-5 mx-auto mb-1" />
                           Hora
                         </th>
-                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((dia) => (
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dia) => (
                           <th key={dia} className="border-2 border-slate-300 dark:border-slate-600 p-4 text-white">
                             {dia}
                           </th>
@@ -493,13 +493,13 @@ export default function PublicConsultaHorario() {
                         const horaNum = parseInt(hora.split(':')[0]);
                         const horaFin = horaNum + 1;
                         const horaRango = `${hora} - ${horaFin.toString().padStart(2, '0')}:00`;
-                        
+
                         return (
                         <tr key={hora} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                           <td className="border-2 border-slate-300 dark:border-slate-600 p-3 bg-slate-100 dark:bg-slate-800 text-center text-slate-700 dark:text-slate-300 text-xs font-medium">
                             <div>{horaRango}</div>
                           </td>
-                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'].map((dia) => {
+                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => {
                             const horariosDelGrupo = obtenerHorariosGrupo(grupoSeleccionado);
                             const clase = horariosDelGrupo.find(h => {
                               const diaMatch = h.dia.toLowerCase() === dia;
@@ -615,7 +615,7 @@ export default function PublicConsultaHorario() {
                           <Clock className="w-5 h-5 mx-auto mb-1" />
                           Hora
                         </th>
-                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dia) => (
                           <th key={dia} className="border-2 border-slate-300 dark:border-slate-600 p-4 text-white">
                             {dia}
                           </th>
@@ -628,7 +628,7 @@ export default function PublicConsultaHorario() {
                           <td className="border-2 border-slate-300 dark:border-slate-600 p-3 bg-slate-100 dark:bg-slate-800 text-center text-slate-700 dark:text-slate-300">
                             {hora}
                           </td>
-                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => {
                             const horariosDelDocente = obtenerHorariosDocente(docenteSeleccionado);
                             const clase = horariosDelDocente.find(h => {
                               const diaMatch = h.dia.toLowerCase() === dia;

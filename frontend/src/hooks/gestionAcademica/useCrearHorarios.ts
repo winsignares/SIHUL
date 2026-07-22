@@ -126,7 +126,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         espacios,
     });
 
-    const diasSemana = useMemo(() => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'], []);
+    const diasSemana = useMemo(() => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'], []);
     const semestres = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], []);
 
     // Carga progresiva: primero datos pequeños, luego grupos masivos

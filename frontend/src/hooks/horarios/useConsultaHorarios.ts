@@ -47,7 +47,7 @@ export function useConsultaHorarios() {
   const [loading, setLoading] = useState(true);
   const [periodoActual, setPeriodoActual] = useState('Cargando...');
 
-  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
   useEffect(() => {
     loadPeriodoActivo();

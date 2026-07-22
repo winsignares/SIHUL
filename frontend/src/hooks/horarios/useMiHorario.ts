@@ -31,7 +31,7 @@ export function useMiHorario() {
     const [loading, setLoading] = useState(true);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const esDocente = user?.rol?.nombre === 'docente';
     const esEstudiante = user?.rol?.nombre === 'estudiante';
 

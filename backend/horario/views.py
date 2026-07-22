@@ -15,7 +15,8 @@ from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -604,7 +605,7 @@ def generar_tabla_horario(horarios, rol_nombre):
     Organiza los horarios en una estructura de tabla (días x horas)
     """
     # Días de la semana
-    dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
     
     # Obtener rango de horas (de 7:00 a 20:00 por defecto)
     horas_inicio = set()
@@ -626,7 +627,7 @@ def generar_tabla_horario(horarios, rol_nombre):
     tabla = {}
     dia_map = {
         'Lunes': 0, 'Martes': 1, 'Miércoles': 2,
-        'Jueves': 3, 'Viernes': 4, 'Sábado': 5
+        'Jueves': 3, 'Viernes': 4, 'Sábado': 5, 'Domingo': 6
     }
     
     for h in horarios:
@@ -686,10 +687,11 @@ def exportar_horario_pdf(request):
     
     # Crear tabla con anchos uniformes
     # Calcular ancho disponible (landscape A4 = 11.69 inches - margins)
+    num_columnas = len(dias) + 1  # 1 hora + N días
     available_width = 11.69*inch - 60  # 60 points total margins
-    col_width = available_width / 7  # 7 columnas (1 hora + 6 días)
-    
-    table = Table(data, colWidths=[col_width]*7, rowHeights=[0.7*inch]*(len(data)))
+    col_width = available_width / num_columnas
+
+    table = Table(data, colWidths=[col_width]*num_columnas, rowHeights=[0.7*inch]*(len(data)))
     
     # Estilo de tabla
     style = TableStyle([
@@ -819,7 +821,7 @@ def exportar_horario_excel(request):
     
     # Ajustar ancho de columnas
     ws.column_dimensions['A'].width = 18
-    for col in 'BCDEFG':
+    for col in 'BCDEFGH':
         ws.column_dimensions[col].width = 22
     
     # Ajustar alto de filas
@@ -882,16 +884,19 @@ def exportar_horarios_pdf_post(request):
             dias_dict = {}
             
             # Inicializar estructura de días (mapeo de nombres en español)
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
-            
+
             for dia in dias_orden:
                 dias_dict[dia] = {}
             
@@ -973,25 +978,36 @@ def exportar_horarios_pdf_post(request):
                 horas_intervalos.append((intervalo, f"{h:02d}:00"))  # (etiqueta, clave_busqueda)
             
             # Preparar datos para tabla
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             table_data = [['Hora'] + dias_nombres]
-            
+
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                fontName='Helvetica',
+                fontSize=5,
+                leading=6,
+                alignment=TA_CENTER,
+            )
+
             for intervalo, hora_key in horas_intervalos:
                 row = [intervalo]
                 for dia in dias_orden:
                     cell_text = dias_dict[dia].get(hora_key, '')
-                    row.append(cell_text)
+                    if cell_text:
+                        row.append(Paragraph(cell_text.replace('\n', '<br/>'), cell_style))
+                    else:
+                        row.append('')
                 table_data.append(row)
-            
+
             # Crear tabla optimizada para una página
-            # Ancho: 1 col hora (0.8") + 5 cols días (2.0" c/u) = 10.8"
-            col_widths = [0.8 * inch] + [2.0 * inch] * 5
+            # Ancho: 1 col hora (0.8") + 7 cols días (1.4" c/u) = 10.6" (cabe en landscape A4)
+            col_widths = [0.8 * inch] + [1.4 * inch] * 7
             # Alto: ajustar según cantidad de filas
             num_filas = len(table_data)
             # Primera fila (header) más compacta, resto para 3 líneas de contenido
             row_heights = [0.35 * inch] + [0.4 * inch] * (num_filas - 1)
             table = Table(table_data, colWidths=col_widths, rowHeights=row_heights)
-            
+
             # Estilo optimizado para una página
             style = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991B1B')),
@@ -1098,16 +1114,19 @@ def exportar_horarios_excel_post(request):
             dias_dict = {}
             
             # Inicializar estructura de días (mapeo de nombres en español)
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
-            
+
             for dia in dias_orden:
                 dias_dict[dia] = {}
             
@@ -1191,7 +1210,7 @@ def exportar_horarios_excel_post(request):
             ws = wb.create_sheet(title=grupo_key[:31])  # Excel limita nombre a 31 caracteres
             
             # Header con días
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             ws.append(['Hora'] + dias_nombres)
             
             for cell in ws[1]:
@@ -1224,7 +1243,7 @@ def exportar_horarios_excel_post(request):
             
             # Ajustar ancho de columnas
             ws.column_dimensions['A'].width = 14
-            for col in 'BCDEF':
+            for col in 'BCDEFGH':
                 ws.column_dimensions[col].width = 25
             
             # Ajustar alto de filas para 3 líneas de contenido
@@ -1346,14 +1365,17 @@ def generar_pdf_horarios(horarios_data):
         
         for grupo_key, horarios_grupo in grupos_dict.items():
             dias_dict = {}
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
             
             for dia in dias_orden:
@@ -1417,22 +1439,33 @@ def generar_pdf_horarios(horarios_data):
                 horas_intervalos.append((intervalo, f"{h:02d}:00"))
             
             # Preparar datos para tabla
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             table_data = [['Hora'] + dias_nombres]
-            
+
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                fontName='Helvetica',
+                fontSize=5,
+                leading=6,
+                alignment=TA_CENTER,
+            )
+
             for intervalo, hora_key in horas_intervalos:
                 row = [intervalo]
                 for dia in dias_orden:
                     cell_text = dias_dict[dia].get(hora_key, '')
-                    row.append(cell_text)
+                    if cell_text:
+                        row.append(Paragraph(cell_text.replace('\n', '<br/>'), cell_style))
+                    else:
+                        row.append('')
                 table_data.append(row)
-            
+
             # Crear tabla
-            col_widths = [0.8 * inch] + [2.0 * inch] * 5
+            col_widths = [0.8 * inch] + [1.4 * inch] * 7
             num_filas = len(table_data)
             row_heights = [0.35 * inch] + [0.4 * inch] * (num_filas - 1)
             table = Table(table_data, colWidths=col_widths, rowHeights=row_heights)
-            
+
             # Estilo
             style = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991B1B')),
@@ -1513,14 +1546,17 @@ def generar_excel_horarios(horarios_data):
         
         for grupo_key, horarios_grupo in grupos_dict.items():
             dias_dict = {}
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
             
             for dia in dias_orden:
@@ -1587,7 +1623,7 @@ def generar_excel_horarios(horarios_data):
             ws = wb.create_sheet(title=grupo_key[:31])
             
             # Header
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             ws.append(['Hora'] + dias_nombres)
             
             for cell in ws[1]:
@@ -1614,7 +1650,7 @@ def generar_excel_horarios(horarios_data):
             
             # Ajustar ancho de columnas
             ws.column_dimensions['A'].width = 14
-            for col in 'BCDEF':
+            for col in 'BCDEFGH':
                 ws.column_dimensions[col].width = 25
             
             # Ajustar alto de filas
@@ -1762,14 +1798,17 @@ def exportar_horarios_pdf_docente(request):
             dias_dict = {}
             
             # Inicializar estructura de días
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
             
             for dia in dias_orden:
@@ -1838,22 +1877,33 @@ def exportar_horarios_pdf_docente(request):
                 horas_intervalos.append((intervalo, f"{h:02d}:00"))
             
             # Preparar datos para tabla
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             table_data = [['Hora'] + dias_nombres]
-            
+
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                fontName='Helvetica',
+                fontSize=5,
+                leading=6,
+                alignment=TA_CENTER,
+            )
+
             for intervalo, hora_key in horas_intervalos:
                 row = [intervalo]
                 for dia in dias_orden:
                     cell_text = dias_dict[dia].get(hora_key, '')
-                    row.append(cell_text)
+                    if cell_text:
+                        row.append(Paragraph(cell_text.replace('\n', '<br/>'), cell_style))
+                    else:
+                        row.append('')
                 table_data.append(row)
-            
+
             # Crear tabla
-            col_widths = [0.8 * inch] + [2.0 * inch] * 5
+            col_widths = [0.8 * inch] + [1.4 * inch] * 7
             num_filas = len(table_data)
             row_heights = [0.35 * inch] + [0.4 * inch] * (num_filas - 1)
             table = Table(table_data, colWidths=col_widths, rowHeights=row_heights)
-            
+
             # Estilo
             style = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991B1B')),
@@ -1955,14 +2005,17 @@ def exportar_horarios_excel_docente(request):
             dias_dict = {}
             
             # Inicializar estructura de días
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
             
             for dia in dias_orden:
@@ -2031,7 +2084,7 @@ def exportar_horarios_excel_docente(request):
                 horas_intervalos.append((intervalo, f"{h:02d}:00"))
             
             # Preparar datos para tabla
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             table_data = [['Hora'] + dias_nombres]
             
             for intervalo, hora_key in horas_intervalos:
@@ -2095,7 +2148,7 @@ def exportar_horarios_excel_docente(request):
             
             # Ajustar ancho de columnas
             ws.column_dimensions['A'].width = 14
-            for col_idx in range(2, 7):
+            for col_idx in range(2, 9):
                 ws.column_dimensions[get_column_letter(col_idx)].width = 25
             
             # Ajustar altura de filas
@@ -2411,14 +2464,17 @@ def generar_pdf_horarios(horarios_data):
         
         for grupo_key, horarios_grupo in grupos_dict.items():
             dias_dict = {}
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
             
             for dia in dias_orden:
@@ -2482,22 +2538,33 @@ def generar_pdf_horarios(horarios_data):
                 horas_intervalos.append((intervalo, f"{h:02d}:00"))
             
             # Preparar datos para tabla
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             table_data = [['Hora'] + dias_nombres]
-            
+
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                fontName='Helvetica',
+                fontSize=5,
+                leading=6,
+                alignment=TA_CENTER,
+            )
+
             for intervalo, hora_key in horas_intervalos:
                 row = [intervalo]
                 for dia in dias_orden:
                     cell_text = dias_dict[dia].get(hora_key, '')
-                    row.append(cell_text)
+                    if cell_text:
+                        row.append(Paragraph(cell_text.replace('\n', '<br/>'), cell_style))
+                    else:
+                        row.append('')
                 table_data.append(row)
-            
+
             # Crear tabla
-            col_widths = [0.8 * inch] + [2.0 * inch] * 5
+            col_widths = [0.8 * inch] + [1.4 * inch] * 7
             num_filas = len(table_data)
             row_heights = [0.35 * inch] + [0.4 * inch] * (num_filas - 1)
             table = Table(table_data, colWidths=col_widths, rowHeights=row_heights)
-            
+
             # Estilo
             style = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991B1B')),
@@ -2578,14 +2645,17 @@ def generar_excel_horarios(horarios_data):
         
         for grupo_key, horarios_grupo in grupos_dict.items():
             dias_dict = {}
-            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+            dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
             dias_map = {
                 'lunes': 'lunes',
                 'martes': 'martes',
                 'miercoles': 'miercoles',
                 'miércoles': 'miercoles',
                 'jueves': 'jueves',
-                'viernes': 'viernes'
+                'viernes': 'viernes',
+                'sabado': 'sabado',
+                'sábado': 'sabado',
+                'domingo': 'domingo'
             }
             
             for dia in dias_orden:
@@ -2652,7 +2722,7 @@ def generar_excel_horarios(horarios_data):
             ws = wb.create_sheet(title=grupo_key[:31])
             
             # Header
-            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+            dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
             ws.append(['Hora'] + dias_nombres)
             
             for cell in ws[1]:
@@ -2679,7 +2749,7 @@ def generar_excel_horarios(horarios_data):
             
             # Ajustar ancho de columnas
             ws.column_dimensions['A'].width = 14
-            for col in 'BCDEF':
+            for col in 'BCDEFGH':
                 ws.column_dimensions[col].width = 25
             
             # Ajustar alto de filas

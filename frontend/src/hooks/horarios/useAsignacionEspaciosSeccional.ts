@@ -12,7 +12,7 @@ import { periodoService, type PeriodoAcademico } from '../../services/periodos/p
 import { useAuth } from '../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 
-const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const ASIGNACION_ESPACIOS_CACHE_KEY = 'asignacion-espacios-seccional';
 
 const getSeccionalIdFromUser = (user: ReturnType<typeof useAuth>['user']) => {

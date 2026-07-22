@@ -34,7 +34,7 @@ export function useConsultaEspaciosExport({
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
-      const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
       const horasIntervalos = Array.from({ length: 15 }, (_, i) => i + 6);
       const espaciosAExportar = espaciosToExport || filteredEspacios;
 
@@ -58,7 +58,7 @@ export function useConsultaEspaciosExport({
           { align: 'center' }
         );
 
-        const cellWidth = (pageWidth - 30) / 7;
+        const cellWidth = (pageWidth - 30) / (diasNombres.length + 1);
         const startX = 15;
         const startY = 30;
         const headerHeight = 8;
@@ -238,7 +238,7 @@ export function useConsultaEspaciosExport({
 
   const exportarCronogramaExcel = useCallback(
     (espaciosToExport?: EspacioView[]) => {
-      const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
       const horasIntervalos = Array.from({ length: 15 }, (_, i) => `${i + 6}:00-${i + 7}:00`);
       const espaciosAExportar = espaciosToExport || filteredEspacios;
       void (async () => {
@@ -256,6 +256,7 @@ export function useConsultaEspaciosExport({
             { header: 'Jueves', key: 'jueves', width: 25 },
             { header: 'Viernes', key: 'viernes', width: 25 },
             { header: 'Sábado', key: 'sabado', width: 25 },
+            { header: 'Domingo', key: 'domingo', width: 25 },
           ];
 
           worksheet.getRow(1).height = 30;

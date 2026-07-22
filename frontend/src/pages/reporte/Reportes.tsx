@@ -720,7 +720,7 @@ export default function Reportes() {
                           <Clock className="w-5 h-5 mx-auto mb-1" />
                           Hora
                         </th>
-                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dia) => (
                           <th key={dia} className="border-2 border-slate-300 p-4 text-white">
                             {dia}
                           </th>
@@ -733,7 +733,7 @@ export default function Reportes() {
                           <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center text-slate-700">
                             {hora}
                           </td>
-                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => {
                             const horariosDelDocente = obtenerHorariosDocente(docenteSeleccionado);
                             const clase = horariosDelDocente.find(h => {
                               const diaMatch = h.dia.toLowerCase() === dia;

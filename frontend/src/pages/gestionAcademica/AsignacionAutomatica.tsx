@@ -637,7 +637,7 @@ export default function AsignacionAutomatica() {
                                     <Clock className="w-5 h-5 mx-auto mb-1" />
                                     Hora
                                   </th>
-                                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia) => (
+                                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dia) => (
                                     <th key={dia} className="border-2 border-slate-300 p-4 text-white">
                                       {dia}
                                     </th>
@@ -650,7 +650,7 @@ export default function AsignacionAutomatica() {
                                     <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center font-semibold text-slate-700">
                                       {hora}
                                     </td>
-                                    {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+                                    {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => {
                                       const clase = obtenerClaseEnHora(dia, hora);
                                       return (
                                         <td
@@ -757,8 +757,8 @@ export default function AsignacionAutomatica() {
               </Card>
 
               {/* Calendario Semanal Creativo */}
-              <div className="grid grid-cols-5 gap-3">
-                {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
+              <div className="grid grid-cols-7 gap-3">
+                {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => {
                   const esDiaAsignado = dia === horarioSeleccionado.horario.diaSemana.toLowerCase();
 
                   return (
@@ -766,7 +766,7 @@ export default function AsignacionAutomatica() {
                       key={dia}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].indexOf(dia) * 0.1 }}
+                      transition={{ delay: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].indexOf(dia) * 0.1 }}
                     >
                       <Card className={`${esDiaAsignado
                           ? 'bg-gradient-to-br from-red-600 to-red-700 border-red-700 shadow-lg transform scale-105'

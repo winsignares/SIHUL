@@ -903,7 +903,7 @@ export default function CentroHorarios() {
                           <Clock className="w-5 h-5 mx-auto mb-1" />
                           Hora
                         </th>
-                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((dia) => (
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dia) => (
                           <th key={dia} className="border-2 border-slate-300 p-4 text-white">
                             {dia}
                           </th>
@@ -922,7 +922,7 @@ export default function CentroHorarios() {
                           <td className="border-2 border-slate-300 p-3 bg-slate-100 text-center text-slate-700 text-xs font-medium">
                             <div>{horaRango}</div>
                           </td>
-                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'].map((dia) => {
+                          {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => {
                             const clase = obtenerClaseEnHora(dia, hora, grupoDetalles.horarios);
                             return (
                               <td

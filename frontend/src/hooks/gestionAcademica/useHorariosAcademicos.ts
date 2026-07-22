@@ -4,7 +4,7 @@ import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { useNotification } from '../../share/notificationBanner';
 import type { Asignatura, EspacioFisico, Facultad, Grupo, HorarioAcademico, Programa, Usuario } from '../../models';
 
-export const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+export const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 type HorarioAsignado = {
   id: string;
@@ -32,6 +32,7 @@ const normalizeDia = (value: string): string => {
   if (lower.includes('jue')) return 'Jueves';
   if (lower.includes('vie')) return 'Viernes';
   if (lower.includes('sab') || lower.includes('sáb')) return 'Sábado';
+  if (lower.includes('dom')) return 'Domingo';
   return value;
 };
 

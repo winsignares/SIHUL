@@ -166,7 +166,7 @@ export function useCentroHorarios() {
         espacios,
     });
 
-    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
     // Si cambian los query params, sincronizar la pestaña activa
     useEffect(() => {
