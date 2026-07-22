@@ -439,7 +439,21 @@ export function useCentroHorarios() {
     });
 
     // Obtener grupos agrupados después de filtrar
+    // Nota: docente/espacio solo sirven para LOCALIZAR el grupo en la tabla; una vez
+    // localizado, el horario completo del grupo (todas sus asignaturas) se resuelve
+    // aparte con obtenerHorariosCompletosDeGrupo, para no recortar clases de otros
+    // docentes/espacios al ver el detalle o expandir el grupo.
     const gruposAgrupados = agruparHorarios(horariosFiltrados);
+
+    const obtenerHorariosCompletosDeGrupo = (grupo: GrupoAgrupado): HorarioExtendido[] => {
+        return horarios.filter(horario => {
+            const periodoId = getHorarioPeriodoId(horario);
+            return horario.programa_id === grupo.programaId
+                && horario.grupo_nombre === grupo.grupo
+                && horario.semestre === grupo.semestre
+                && (periodoId ?? 'sin-periodo') === (grupo.periodoId ?? 'sin-periodo');
+        });
+    };
 
     // Aplicar paginación a los grupos (10 por página)
     const paginacion = useConsultaEspaciosPaginacion(gruposAgrupados);
@@ -516,7 +530,9 @@ export function useCentroHorarios() {
 
     // Handlers
     const handleVerDetalles = (grupo: GrupoAgrupado) => {
-        setGrupoDetalles(grupo);
+        // El horario mostrado debe incluir TODAS las clases del grupo, sin importar
+        // los filtros (docente, espacio, etc.) usados para encontrarlo en la tabla.
+        setGrupoDetalles({ ...grupo, horarios: obtenerHorariosCompletosDeGrupo(grupo) });
         setShowDetallesModal(true);
     };
 
@@ -609,7 +625,9 @@ export function useCentroHorarios() {
 
     // Abrir modal de confirmación para eliminar grupo
     const handleAbrirModalEliminarGrupo = (grupo: GrupoAgrupado) => {
-        setGrupoAEliminar(grupo);
+        // "Eliminar grupo completo" debe borrar TODAS las clases del grupo, no solo
+        // las que coinciden con los filtros (docente/espacio) usados para localizarlo.
+        setGrupoAEliminar({ ...grupo, horarios: obtenerHorariosCompletosDeGrupo(grupo) });
         setShowDeleteGrupoModal(true);
         setProgresoEliminacion(0);
     };
@@ -859,6 +877,7 @@ export function useCentroHorarios() {
         horariosFiltrados,
         gruposAgrupados: paginacion.paginatedEspacios,
         gruposAgrupadosTotal: gruposAgrupados.length,
+        obtenerHorariosCompletosDeGrupo,
         // Paginación
         currentPage: paginacion.currentPage,
         totalPages: paginacion.totalPages,

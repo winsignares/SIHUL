@@ -59,6 +59,7 @@ export default function CentroHorarios() {
     horariosFiltrados,
     gruposAgrupados,
     gruposAgrupadosTotal,
+    obtenerHorariosCompletosDeGrupo,
     // Paginación
     currentPage,
     totalPages,
@@ -626,6 +627,9 @@ export default function CentroHorarios() {
                       {gruposAgrupados.map((grupo) => {
                         const grupoKey = `${grupo.programaId}-${grupo.grupo}-${grupo.semestre}-${grupo.periodoId ?? 'sin-periodo'}`;
                         const estaExpandido = gruposExpandidos.has(grupoKey);
+                        // Horario completo del grupo (todas las asignaturas), sin recortar por
+                        // los filtros de docente/espacio usados solo para localizar el grupo.
+                        const horariosCompletos = obtenerHorariosCompletosDeGrupo(grupo);
 
                         return (
                           <Fragment key={grupoKey}>
@@ -637,7 +641,7 @@ export default function CentroHorarios() {
                               </td>
                               <td className="px-4 py-3 text-slate-700">{grupo.semestre}</td>
                               <td className="px-4 py-3 text-center">
-                                <Badge className="bg-slate-600">{grupo.horarios.length} clases</Badge>
+                                <Badge className="bg-slate-600">{horariosCompletos.length} clases</Badge>
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex gap-2 justify-center">
@@ -694,7 +698,7 @@ export default function CentroHorarios() {
                                         <div className="flex items-center gap-2 mb-4">
                                           <List className="w-5 h-5 text-purple-600" />
                                           <h3 className="text-slate-900">Asignaturas del Grupo {grupo.grupo}</h3>
-                                          <Badge className="bg-purple-600">{grupo.horarios.length} asignaturas</Badge>
+                                          <Badge className="bg-purple-600">{horariosCompletos.length} asignaturas</Badge>
                                         </div>
 
                                         {/* Tabla interna de asignaturas */}
@@ -711,7 +715,7 @@ export default function CentroHorarios() {
                                               </tr>
                                             </thead>
                                             <tbody>
-                                              {grupo.horarios.map((horario, idx) => (
+                                              {horariosCompletos.map((horario, idx) => (
                                                 <motion.tr
                                                   key={horario.id}
                                                   initial={{ opacity: 0, x: -20 }}
