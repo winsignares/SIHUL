@@ -10,7 +10,8 @@ SECCIONAL_OBJETIVO = "Barranquilla"
 
 class Command(BaseCommand):
     help = (
-        "Elimina los espacios fisicos de Barranquilla con capacidad mayor a 0. "
+        "Elimina los espacios fisicos de Barranquilla con capacidad mayor a 0 "
+        "que no tengan horarios, solicitudes de espacio ni prestamos. "
         "Por seguridad, sin --confirmar solo muestra una simulacion."
     )
 
@@ -34,8 +35,14 @@ class Command(BaseCommand):
             EspacioFisico.objects.filter(
                 capacidad__gt=0,
                 sede__seccional__ciudad__iexact=SECCIONAL_OBJETIVO,
+                horarios__isnull=True,
+                horarios_fusionados__isnull=True,
+                solicitudes_espacio__isnull=True,
+                prestamos__isnull=True,
+                prestamos_publicos__isnull=True,
             )
             .select_related("sede", "sede__seccional")
+            .distinct()
             .order_by("id")
         )
         total_espacios = espacios.count()
@@ -44,7 +51,8 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     "No hay espacios fisicos de la seccional "
-                    f"{SECCIONAL_OBJETIVO} con capacidad mayor a 0."
+                    f"{SECCIONAL_OBJETIVO} con capacidad mayor a 0 "
+                    "y sin horarios ni prestamos."
                 )
             )
             return
@@ -52,7 +60,8 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.WARNING(
                 "Espacios fisicos de la seccional "
-                f"{SECCIONAL_OBJETIVO} con capacidad mayor a 0: {total_espacios}."
+                f"{SECCIONAL_OBJETIVO} con capacidad mayor a 0 "
+                f"y sin horarios ni prestamos: {total_espacios}."
             )
         )
 
