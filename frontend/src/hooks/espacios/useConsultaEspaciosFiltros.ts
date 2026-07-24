@@ -9,9 +9,14 @@ function formatFechaLocalYYYYMMDD(d: Date): string {
 }
 
 function getFechaColombia(): Date {
-  const ahora = new Date();
-  const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
-  return new Date(utc + 3600000 * -5);
+  const hoyISO = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+
+  return new Date(`${hoyISO}T00:00:00`);
 }
 
 function getFechaMasDias(fecha: Date, dias: number): Date {

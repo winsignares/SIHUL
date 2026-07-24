@@ -74,11 +74,14 @@ function formatFechaLocalYYYYMMDD(d: Date): string {
 }
 
 function getHoyColombia(): Date {
-  const ahora = new Date();
-  const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
-  const colombia = new Date(utc + 3600000 * -5);
-  colombia.setHours(0, 0, 0, 0);
-  return colombia;
+  const hoyISO = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+
+  return new Date(`${hoyISO}T00:00:00`);
 }
 
 // Helper para formatear hora decimal (e.g., 7.5) a formato de tiempo (e.g., "7:30")
@@ -197,6 +200,7 @@ export default function ConsultaEspacios() {
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState<typeof periodos[0] | null>(null);
   const [mensajeAutoPeriodo, setMensajeAutoPeriodo] = useState<string | null>(null);
   const [inicializacionAplicada, setInicializacionAplicada] = useState(false);
+  const [rangoDefaultSincronizado, setRangoDefaultSincronizado] = useState(false);
   const puedeEditarDisponibilidad = hasEditPermission('Disponibilidad de Espacios');
 
   const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
@@ -281,6 +285,27 @@ export default function ConsultaEspacios() {
     setInicializacionAplicada(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicializacionAplicada, periodosLoading, periodos]);
+
+  useEffect(() => {
+    if (rangoDefaultSincronizado || !inicializacionAplicada || !periodoSeleccionado) return;
+
+    const hoyISO = formatFechaLocalYYYYMMDD(getHoyColombia());
+    const hoyEstaEnPeriodo =
+      periodoSeleccionado.fecha_inicio <= hoyISO && periodoSeleccionado.fecha_fin >= hoyISO;
+
+    if (!hoyEstaEnPeriodo) {
+      setRangoDefaultSincronizado(true);
+      return;
+    }
+
+    if (filterFechaInicio !== hoyISO) {
+      const intervalo = encontrarInicioValidoPeriodo(periodoSeleccionado);
+      aplicarRangoPeriodo(intervalo.inicio, intervalo.fin);
+    }
+
+    setRangoDefaultSincronizado(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangoDefaultSincronizado, inicializacionAplicada, periodoSeleccionado]);
 
   // Integrar búsqueda de período cuando se cambian las fechas
   useEffect(() => {
