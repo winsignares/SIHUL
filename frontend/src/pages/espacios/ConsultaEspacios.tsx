@@ -73,15 +73,27 @@ function formatFechaLocalYYYYMMDD(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function getHoyColombia(): Date {
-  const hoyISO = new Intl.DateTimeFormat('en-CA', {
+function getFechaColombiaISO(): string {
+  const partes = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Bogota',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).format(new Date());
+  }).formatToParts(new Date());
 
-  return new Date(`${hoyISO}T00:00:00`);
+  const year = partes.find((p) => p.type === 'year')?.value;
+  const month = partes.find((p) => p.type === 'month')?.value;
+  const day = partes.find((p) => p.type === 'day')?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function getHoyColombia(): Date {
+  return new Date(`${getFechaColombiaISO()}T00:00:00`);
 }
 
 // Helper para formatear hora decimal (e.g., 7.5) a formato de tiempo (e.g., "7:30")

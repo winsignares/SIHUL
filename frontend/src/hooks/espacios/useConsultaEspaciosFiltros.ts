@@ -8,15 +8,27 @@ function formatFechaLocalYYYYMMDD(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function getFechaColombia(): Date {
-  const hoyISO = new Intl.DateTimeFormat('en-CA', {
+function getFechaColombiaISO(): string {
+  const partes = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Bogota',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).format(new Date());
+  }).formatToParts(new Date());
 
-  return new Date(`${hoyISO}T00:00:00`);
+  const year = partes.find((p) => p.type === 'year')?.value;
+  const month = partes.find((p) => p.type === 'month')?.value;
+  const day = partes.find((p) => p.type === 'day')?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function getFechaColombia(): Date {
+  return new Date(`${getFechaColombiaISO()}T00:00:00`);
 }
 
 function getFechaMasDias(fecha: Date, dias: number): Date {
