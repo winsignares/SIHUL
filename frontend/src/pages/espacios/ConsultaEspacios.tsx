@@ -283,8 +283,12 @@ export default function ConsultaEspacios() {
     const contieneHoy = periodos.find((p) => p.fecha_inicio <= hoyISO && p.fecha_fin >= hoyISO);
     if (contieneHoy) return contieneHoy;
 
-    const futuros = [...periodos].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
-    return futuros[0] ?? null;
+    const proximo = periodos
+      .filter((p) => p.fecha_inicio > hoyISO)
+      .sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio))[0];
+    if (proximo) return proximo;
+
+    return [...periodos].sort((a, b) => b.fecha_fin.localeCompare(a.fecha_fin))[0] ?? null;
   };
 
   useEffect(() => {
