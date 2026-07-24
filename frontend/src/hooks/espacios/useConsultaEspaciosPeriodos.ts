@@ -85,6 +85,7 @@ function ordenarPeriodosPorRelevancia(periodos: PeriodoConMetricas[]): PeriodoCo
 
 export function useConsultaEspaciosPeriodos() {
   const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
+  const [fechaServidor, setFechaServidor] = useState<string | null>(null);
   const [horariosPeriodo, setHorariosPeriodo] = useState<OcupacionView[]>([]);
   const [periodosLoading, setPerodosLoading] = useState(false);
   const [horariosLoading, setHorariosLoading] = useState(false);
@@ -95,6 +96,7 @@ export function useConsultaEspaciosPeriodos() {
     try {
       const result = await periodoService.listarPeriodos();
       setPeriodos(result.periodos);
+      setFechaServidor(result.periodos.find((periodo) => periodo.fecha_servidor)?.fecha_servidor ?? null);
     } catch (error) {
       console.error('Error cargando períodos:', error);
     } finally {
@@ -174,6 +176,7 @@ export function useConsultaEspaciosPeriodos() {
 
   return {
     periodos,
+    fechaServidor,
     horariosPeriodo,
     periodosLoading,
     horariosLoading,

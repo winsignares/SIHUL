@@ -323,6 +323,7 @@ export function useConsultaEspacios() {
     recargarDatos: datos.recargarDatos,
     // Período académico
     periodos: periodos.periodos,
+    fechaServidor: periodos.fechaServidor,
     periodosLoading: periodos.periodosLoading,
     horariosLoading: periodos.horariosLoading,
     errorBusquedaPeriodo: periodos.errorBusquedaPeriodo,

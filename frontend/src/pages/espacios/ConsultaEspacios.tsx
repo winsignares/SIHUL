@@ -178,6 +178,7 @@ export default function ConsultaEspacios() {
     nuevaSolicitudData,
     // Período académico
     periodos,
+    fechaServidor,
     periodosLoading,
     horariosLoading,
     errorBusquedaPeriodo,
@@ -216,7 +217,7 @@ export default function ConsultaEspacios() {
   const puedeEditarDisponibilidad = hasEditPermission('Disponibilidad de Espacios');
 
   const encontrarInicioValidoPeriodo = (periodo: typeof periodos[0]) => {
-    const hoy = getHoyColombia();
+    const hoy = fechaServidor ? new Date(`${fechaServidor}T00:00:00`) : getHoyColombia();
     const inicioPeriodo = new Date(`${periodo.fecha_inicio}T00:00:00`);
     const finPeriodo = new Date(`${periodo.fecha_fin}T00:00:00`);
     inicioPeriodo.setHours(0, 0, 0, 0);
@@ -274,8 +275,7 @@ export default function ConsultaEspacios() {
   }, [cargarHorariosPorPeriodo, cargarPeriodos, filterPeriodo, recargarDatos]);
 
   const resolverPeriodoVigente = () => {
-    const hoy = getHoyColombia();
-    const hoyISO = formatFechaLocalYYYYMMDD(hoy);
+    const hoyISO = fechaServidor || formatFechaLocalYYYYMMDD(getHoyColombia());
 
     const activo = periodos.find((p) => p.activo);
     if (activo) return activo;
@@ -288,7 +288,7 @@ export default function ConsultaEspacios() {
   };
 
   useEffect(() => {
-    if (inicializacionAplicada || periodosLoading || periodos.length === 0) return;
+    if (inicializacionAplicada || periodosLoading || periodos.length === 0 || !fechaServidor) return;
 
     const vigente = resolverPeriodoVigente();
     if (!vigente) return;
@@ -296,12 +296,12 @@ export default function ConsultaEspacios() {
     aplicarPeriodoConIntervaloValido(vigente, true);
     setInicializacionAplicada(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inicializacionAplicada, periodosLoading, periodos]);
+  }, [inicializacionAplicada, periodosLoading, periodos, fechaServidor]);
 
   useEffect(() => {
     if (rangoDefaultSincronizado || !inicializacionAplicada || !periodoSeleccionado) return;
 
-    const hoyISO = formatFechaLocalYYYYMMDD(getHoyColombia());
+    const hoyISO = fechaServidor || formatFechaLocalYYYYMMDD(getHoyColombia());
     const hoyEstaEnPeriodo =
       periodoSeleccionado.fecha_inicio <= hoyISO && periodoSeleccionado.fecha_fin >= hoyISO;
 
@@ -317,10 +317,12 @@ export default function ConsultaEspacios() {
 
     setRangoDefaultSincronizado(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangoDefaultSincronizado, inicializacionAplicada, periodoSeleccionado]);
+  }, [rangoDefaultSincronizado, inicializacionAplicada, periodoSeleccionado, fechaServidor]);
 
   // Integrar búsqueda de período cuando se cambian las fechas
   useEffect(() => {
+    if (!inicializacionAplicada || !rangoDefaultSincronizado) return;
+
     if (filterFechaInicio && filterFechaFin) {
       buscarPeriodoPorRangoFechas(filterFechaInicio, filterFechaFin).then((periodo) => {
         if (periodo) {
@@ -329,7 +331,14 @@ export default function ConsultaEspacios() {
         }
       });
     }
-  }, [buscarPeriodoPorRangoFechas, filterFechaInicio, filterFechaFin, setFilterPeriodo]);
+  }, [
+    buscarPeriodoPorRangoFechas,
+    filterFechaInicio,
+    filterFechaFin,
+    inicializacionAplicada,
+    rangoDefaultSincronizado,
+    setFilterPeriodo
+  ]);
 
   // Estados para el formulario de solicitud
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
