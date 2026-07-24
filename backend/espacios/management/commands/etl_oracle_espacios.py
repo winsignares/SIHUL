@@ -120,6 +120,7 @@ class Command(BaseCommand):
                     'bloque': self._first_present(data, ['bloque']),
                     'nombre_espacio': self._first_present(data, ['nombre_espacio']),
                     'tipo_espacio': self._first_present(data, ['tipo_espacio']),
+                    'capacidad_aula': self._first_present(data, ['capacidad_aula']),
                     'id_sede': self._first_present(data, ['id_sede']),
                     'cod_sede': self._first_present(data, ['cod_sede']),
                     'sede': self._first_present(data, ['sede']),

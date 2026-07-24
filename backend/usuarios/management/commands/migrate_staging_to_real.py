@@ -972,6 +972,8 @@ class Command(BaseCommand):
 
                 bloque = self._to_text(stg_espacio.bloque_oracle)
                 ubicacion = ' '.join([piece for piece in [bloque, ident] if piece]).strip() or ident or None
+                raw = stg_espacio.raw_data or {}
+                capacidad = max(0, self._to_int(raw.get('capacidad_aula'), default=0) or 0)
 
                 espacio = EspacioFisico.objects.filter(sede=sede, nombre=nombre).first()
                 if not espacio and ident:
@@ -989,7 +991,7 @@ class Command(BaseCommand):
                         nombre=nombre,
                         sede=sede,
                         tipo=tipo,
-                        capacidad=0,
+                        capacidad=capacidad,
                         ubicacion=ubicacion,
                         estado='Disponible',
                         esta_abierto=True,
@@ -1003,6 +1005,9 @@ class Command(BaseCommand):
                     changed = True
                 if espacio.ubicacion != ubicacion:
                     espacio.ubicacion = ubicacion
+                    changed = True
+                if espacio.capacidad != capacidad:
+                    espacio.capacidad = capacidad
                     changed = True
                 if espacio.estado != 'Disponible':
                     espacio.estado = 'Disponible'
