@@ -506,7 +506,7 @@ class Command(BaseCommand):
                 fecha_inicio = datetime(year, 2, 2).date()
                 fecha_fin = datetime(year, 6, 30).date()
             else:
-                fecha_inicio = datetime(year, 7, 28).date()
+                fecha_inicio = datetime(year, 7, 1).date()
                 fecha_fin = datetime(year, 12, 19).date()
 
             if dry_run:
