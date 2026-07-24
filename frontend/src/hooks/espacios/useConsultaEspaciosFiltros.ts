@@ -90,17 +90,6 @@ export function useConsultaEspaciosFiltros() {
     }
 
     const fechaInicio = new Date(fecha + 'T00:00:00');
-    const hoy = getFechaColombia();
-    hoy.setHours(0, 0, 0, 0);
-
-    if (fechaInicio < hoy) {
-      setMensajeFiltroFecha({
-        tipo: 'error',
-        texto: 'La fecha de inicio ya pasó. Debes seleccionar tu día actual o una fecha futura.'
-      });
-      return;
-    }
-
     setFilterFechaInicio(fecha);
     setFilterFechaFin(formatFechaLocalYYYYMMDD(getFechaMasDias(fechaInicio, 7)));
     setMensajeFiltroFecha({
@@ -127,17 +116,6 @@ export function useConsultaEspaciosFiltros() {
 
       const fechaFin = new Date(fecha + 'T00:00:00');
       const fechaInicio = new Date(filterFechaInicio + 'T00:00:00');
-      const hoy = getFechaColombia();
-      hoy.setHours(0, 0, 0, 0);
-
-      if (fechaFin < hoy) {
-        setMensajeFiltroFecha({
-          tipo: 'error',
-          texto: 'La fecha fin no puede estar en el pasado. Selecciona el día actual o una fecha futura.'
-        });
-        return;
-      }
-
       if (fechaFin < fechaInicio) {
         setMensajeFiltroFecha({
           tipo: 'error',
