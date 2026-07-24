@@ -1992,6 +1992,9 @@ export default function ConsultaEspacios() {
                           const isPrestamoPendiente = isPrestamo && ocupacion.prestamo?.estado === 'Pendiente';
                           const isPrestamoAprobado = isPrestamo && ocupacion.prestamo?.estado === 'Aprobado';
                           const isHorarioPendiente = !isPrestamo && ocupacion.estado === 'pendiente';
+                          const prestamoMotivo = isPrestamo
+                            ? ocupacion.prestamo?.motivo || ocupacion.grupo || ocupacion.materia || 'Préstamo'
+                            : '';
                           
                           let colorClass = '';
                           let labelText = '';
@@ -2001,7 +2004,7 @@ export default function ConsultaEspacios() {
                             labelText = 'PENDIENTE';
                           } else if (isPrestamoAprobado) {
                             colorClass = 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white';
-                            labelText = 'APROBADO';
+                            labelText = '';
                           } else if (isHorarioPendiente) {
                             colorClass = 'bg-[#f97316] hover:bg-[#ea580c] text-white';
                             labelText = 'PENDIENTE';
@@ -2069,10 +2072,12 @@ export default function ConsultaEspacios() {
                                         </button>
                                       </>
                                     )}
-                                    {isPrestamo && labelText && (
+                                    {isPrestamoPendiente && labelText && (
                                       <p className="text-[8px] sm:text-[9px] font-bold mb-0.5 bg-white/30 px-1 py-0.5 rounded shrink-0">{labelText}</p>
                                     )}
-                                    <p className="font-semibold text-[9px] sm:text-[10px] md:text-[11px] leading-tight break-words w-full line-clamp-2">{ocupacion.materia}</p>
+                                    <p className="font-semibold text-[9px] sm:text-[10px] md:text-[11px] leading-tight break-words w-full line-clamp-2">
+                                      {isPrestamo ? prestamoMotivo : ocupacion.materia}
+                                    </p>
                                     <p className="text-[8px] sm:text-[9px] opacity-90 leading-tight break-words w-full line-clamp-1">{ocupacion.docente}</p>
                                     {rowSpan > 1 && (
                                       <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">
@@ -2799,7 +2804,11 @@ export default function ConsultaEspacios() {
                                 ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700'
                                 : 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
                               hoverClass = '';
-                              labelText = isPrestamoPendiente ? 'Préstamo (Pendiente)' : 'Préstamo (Aprobado)';
+                              labelText =
+                                prestamoEnCelda.prestamo?.motivo ||
+                                prestamoEnCelda.grupo ||
+                                prestamoEnCelda.materia ||
+                                (isPrestamoPendiente ? 'Préstamo pendiente' : 'Préstamo aprobado');
                               textClass = isPrestamoPendiente ? 'text-yellow-600' : 'text-green-600';
                             } else if (horarioEnCelda) {
                               bgClass = 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
