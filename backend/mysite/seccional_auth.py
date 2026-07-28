@@ -6,9 +6,10 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from .auth_helpers import is_superuser_effective
+from .auth_helpers import MISSING_SECCIONAL_MESSAGE, is_superuser_effective
 
 
 class SessionUsuarioAuthentication(BaseAuthentication):
@@ -81,7 +82,7 @@ class SeccionalMixin:
         if seccional is not None:
             return queryset.filter(**{lookup: seccional})
 
-        return queryset.none()
+        raise PermissionDenied({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE})
 
     def get_create_defaults(self, serializer):
         user = self.get_current_user()

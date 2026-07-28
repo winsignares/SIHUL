@@ -10,7 +10,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 from notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -32,6 +32,10 @@ def _get_seccional_scope(request):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 def _estados_exportables_horario(data):
@@ -345,7 +349,7 @@ def get_horario(request, id=None):
             if not h:
                 return JsonResponse({"error": "Horario no encontrado."}, status=404)
         else:
-            return JsonResponse({"error": "Horario no encontrado."}, status=404)
+            return _missing_seccional_response()
         return JsonResponse({
             "id": h.id,
             "grupo_id": h.grupo.id,
@@ -371,7 +375,7 @@ def list_horarios(request):
         elif seccional_id:
             items = Horario.objects.filter(estado='aprobado', espacio__sede__seccional_id=seccional_id)
         else:
-            items = Horario.objects.none()
+            return _missing_seccional_response()
         lst = [{
             "id": i.id,
             "grupo_id": i.grupo.id,
@@ -395,7 +399,7 @@ def list_horarios_extendidos(request):
         elif seccional_id:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=seccional_id)
         else:
-            items = Horario.objects.none()
+            return _missing_seccional_response()
         # Traer solo horarios aprobados
         lst = []
         for i in items:
@@ -538,7 +542,7 @@ def get_horario_fusionado(request, id=None):
             if not h:
                 return JsonResponse({"error": "Horario fusionado no encontrado."}, status=404)
         else:
-            return JsonResponse({"error": "Horario fusionado no encontrado."}, status=404)
+            return _missing_seccional_response()
         return JsonResponse({
             "id": h.id,
             "grupo1_id": h.grupo1.id,
@@ -566,7 +570,7 @@ def list_horarios_fusionados(request):
         elif seccional_id:
             items = HorarioFusionado.objects.filter(espacio__sede__seccional_id=seccional_id)
         else:
-            items = HorarioFusionado.objects.none()
+            return _missing_seccional_response()
         lst = [{
             "id": i.id,
             "grupo1_id": i.grupo1.id,

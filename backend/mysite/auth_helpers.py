@@ -1,3 +1,6 @@
+MISSING_SECCIONAL_MESSAGE = 'Usuario sin sede o seccional asignada. Asignarle una sede para consultar datos por seccional.'
+
+
 def is_superuser_effective(user):
     if not user:
         return False

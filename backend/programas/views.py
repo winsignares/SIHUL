@@ -6,7 +6,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, PROGRAMA_SCHEMA
 
 
@@ -43,6 +43,10 @@ def _get_seccional_scope(user):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 # ---------- Programa CRUD ----------
 @csrf_exempt
@@ -159,7 +163,7 @@ def get_programa(request, id=None):
             if not p:
                 return JsonResponse({"error": "Programa no encontrado o no accesible."}, status=404)
         else:
-            return JsonResponse({"error": "Programa no encontrado o no accesible."}, status=404)
+            return _missing_seccional_response()
         return JsonResponse({
             "id": p.id, 
             "nombre": p.nombre, 
@@ -186,7 +190,7 @@ def list_programas(request):
         elif seccional_id:
             items = Programa.objects.filter(facultad__sede__seccional_id=seccional_id)
         else:
-            items = Programa.objects.none()
+            return _missing_seccional_response()
             
         lst = [{
             "id": i.id, 

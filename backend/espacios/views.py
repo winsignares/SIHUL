@@ -14,7 +14,7 @@ from django.db.models import Count
 from collections import defaultdict
 import unicodedata
 
-from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
@@ -31,6 +31,15 @@ def _filtrar_espacios_por_sede_usuario(request, queryset):
         return queryset.filter(sede__seccional_id=seccional_id)
 
     return queryset.none()
+
+
+def _usuario_sin_seccional(request):
+    user = getattr(request, 'user_obj', None)
+    return bool(user and not is_superuser_effective(user) and not get_user_seccional_id(user))
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 def _usuario_puede_acceder_espacio(request, espacio_id):
@@ -311,6 +320,9 @@ def get_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
+
         if not _usuario_puede_acceder_espacio(request, id):
             return JsonResponse({"error": "Espacio no encontrado."}, status=404)
 
@@ -348,6 +360,9 @@ def get_espacio(request, id=None):
 @csrf_exempt
 def list_espacios(request):
     if request.method == 'GET':
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
+
         items = _filtrar_espacios_por_sede_usuario(
             request,
             EspacioFisico.objects.select_related('sede', 'tipo').all()
@@ -458,6 +473,9 @@ def list_all_espacios_with_horarios(request):
         from horario.models import Horario
         from django.db.models import Prefetch
         
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
+
         # Optimizar consulta con select_related y prefetch_related
         # Solo mostrar horarios aprobados
         espacios_base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
@@ -1233,6 +1251,8 @@ def get_horario_espacio(request, espacio_id=None):
         # Verificar que el espacio existe
         if not EspacioFisico.objects.filter(id=espacio_id).exists():
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
         if not _usuario_puede_acceder_espacio(request, espacio_id):
             return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403)
             

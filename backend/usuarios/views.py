@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash
 import datetime
 import secrets
 import hashlib
-from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
 
 
 def _password_valida(usuario, password_plano):
@@ -61,6 +61,10 @@ def _get_seccional_scope(user):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 # ---------- Rol CRUD ----------
@@ -282,7 +286,7 @@ def get_usuario(request, id=None):
         elif seccional_id:
             u = Usuario.objects.select_related('sede').get(id=id, sede__seccional_id=seccional_id)
         else:
-            return JsonResponse({"error": "Usuario no encontrado."}, status=404)
+            return _missing_seccional_response()
 
         return JsonResponse({"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol_id": (u.rol.id if u.rol else None), "facultad_id": (u.facultad.id if u.facultad else None), "activo": u.activo}, status=200)
     except Usuario.DoesNotExist:
@@ -303,7 +307,7 @@ def list_usuarios(request):
         elif seccional_id:
             items = Usuario.objects.select_related('sede').filter(sede__seccional_id=seccional_id)
         else:
-            items = Usuario.objects.none()
+            return _missing_seccional_response()
 
         lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
         return JsonResponse({"usuarios": lst}, status=200)

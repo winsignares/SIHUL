@@ -11,7 +11,7 @@ from espacios.models import EspacioFisico
 from usuarios.models import Usuario
 from recursos.models import Recurso
 from horario.models import Horario
-from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
 import json
 import datetime
@@ -39,6 +39,10 @@ def _get_seccional_scope(request):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 def check_espacio_disponible(espacio_id, fecha, hora_inicio, hora_fin, prestamo_id=None, es_publico=False):
     """
@@ -779,7 +783,7 @@ def get_prestamo(request, id=None):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            return JsonResponse({"error": "Prestamo no encontrado."}, status=404)
+            return _missing_seccional_response()
         
         
         # Obtener recursos asociados
@@ -850,7 +854,7 @@ def list_prestamos(request):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            items = PrestamoEspacio.objects.none()
+            return _missing_seccional_response()
 
         if not include_ocurrencias:
             items = items.filter(prestamo_padre__isnull=True)
@@ -915,7 +919,7 @@ def list_prestamos_todos_admin(request):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            items_auth = PrestamoEspacio.objects.none()
+            return _missing_seccional_response()
 
         if not include_ocurrencias:
             items_auth = items_auth.filter(prestamo_padre__isnull=True)
@@ -966,7 +970,7 @@ def list_prestamos_todos_admin(request):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            items_public = PrestamoEspacioPublico.objects.none()
+            return _missing_seccional_response()
 
         if not include_ocurrencias:
             items_public = items_public.filter(prestamo_padre__isnull=True)
@@ -1396,7 +1400,7 @@ def list_prestamos_publicos(request):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            items = PrestamoEspacioPublico.objects.none()
+            return _missing_seccional_response()
 
         if not include_ocurrencias:
             items = items.filter(prestamo_padre__isnull=True)

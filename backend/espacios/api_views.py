@@ -8,7 +8,7 @@ from .models import EspacioFisico, EspacioPermitido
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
-from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
@@ -24,6 +24,15 @@ def _filtrar_espacios_por_sede_usuario(request, queryset):
         return queryset.filter(sede__seccional_id=seccional_id)
 
     return queryset.none()
+
+
+def _usuario_sin_seccional(request):
+    user = getattr(request, 'user_obj', None)
+    return bool(user and not is_superuser_effective(user) and not get_user_seccional_id(user))
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 def _usuario_puede_acceder_espacio(request, espacio_id):
@@ -58,6 +67,9 @@ def list_all_espacios_with_horarios(request):
 
     try:
         from django.db.models import Prefetch
+
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
 
         base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
 
@@ -178,6 +190,9 @@ def list_all_espacios_disponibles_with_horarios(request):
 
     try:
         from django.db.models import Prefetch
+
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
 
         base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
 
@@ -360,6 +375,9 @@ def proximos_apertura_cierre(request):
             usuario = Usuario.objects.select_related('rol', 'sede', 'sede__seccional').get(id=usuario_id)
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+        if not is_superuser_effective(usuario) and not get_user_seccional_id(usuario):
+            return _missing_seccional_response()
 
         if user_supervisa_espacios(usuario):
             espacios_permitidos = EspacioPermitido.objects.filter(usuario_id=usuario_id).select_related(
@@ -667,6 +685,9 @@ def get_horario_espacio(request, espacio_id=None):
         if not EspacioFisico.objects.filter(id=espacio_id).exists():
             return JsonResponse({'error': 'Espacio no encontrado'}, status=404)
 
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
+
         if not _usuario_puede_acceder_espacio(request, espacio_id):
             return JsonResponse({'error': 'No tienes permiso para ver el horario de este espacio'}, status=403)
 
@@ -700,6 +721,9 @@ def abrir_espacio(request, espacio_id=None):
         return JsonResponse({'error': 'El espacio_id es requerido'}, status=400)
 
     try:
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
+
         if not _usuario_puede_acceder_espacio(request, espacio_id):
             return JsonResponse({'error': 'No tienes permiso para abrir este espacio'}, status=403)
 
@@ -731,6 +755,9 @@ def cerrar_espacio(request, espacio_id=None):
         return JsonResponse({'error': 'El espacio_id es requerido'}, status=400)
 
     try:
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
+
         if not _usuario_puede_acceder_espacio(request, espacio_id):
             return JsonResponse({'error': 'No tienes permiso para cerrar este espacio'}, status=403)
 
@@ -818,6 +845,9 @@ def ocupacion_semanal(request):
 
     try:
         from django.utils import timezone
+
+        if _usuario_sin_seccional(request):
+            return _missing_seccional_response()
 
         tipo_espacio_id = request.GET.get('tipo_espacio_id')
         espacio_id = request.GET.get('espacio_id')

@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from .models import Asignatura, AsignaturaPrograma
 from programas.models import Programa
 
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
 
 
@@ -46,6 +46,10 @@ def _get_seccional_scope(user):
         return None, True
     return get_user_seccional_id(user), False
 
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
+
 # ---------- Asignatura CRUD ----------
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -57,6 +61,8 @@ def create_asignatura(request):
 
         #sede del usuario actual
         sede_actual = getattr(request, 'sede', None)
+        if not is_superuser_effective(user) and not get_user_seccional_id(user):
+            return _missing_seccional_response()
         
         data = json.loads(request.body)
         
@@ -207,7 +213,7 @@ def list_asignaturas(request):
                 sede__seccional_id=seccional_id
             ) | Asignatura.objects.filter(sede__isnull=True)
         else:
-            asignaturas = Asignatura.objects.filter(sede__isnull=True)
+            return _missing_seccional_response()
             
         data = []
         for asignatura in asignaturas:

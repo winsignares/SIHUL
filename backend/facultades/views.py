@@ -5,7 +5,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, FACULTAD_SCHEMA
 
 
@@ -42,6 +42,10 @@ def _get_seccional_scope(user):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 # ---------- Facultad CRUD ----------
 @csrf_exempt
@@ -145,7 +149,7 @@ def get_facultad(request, id=None):
         elif seccional_id:
             f = Facultad.objects.select_related('sede').get(id=id, sede__seccional_id=seccional_id)
         else:
-            return JsonResponse({"error": "Facultad no encontrada."}, status=404)
+            return _missing_seccional_response()
 
         return JsonResponse({
             "id": f.id,
@@ -174,7 +178,7 @@ def list_facultades(request):
         elif seccional_id:
             items = Facultad.objects.filter(sede__seccional_id=seccional_id).select_related('sede')
         else:
-            items = Facultad.objects.none().select_related('sede')
+            return _missing_seccional_response()
 
         lst = [{
             "id": i.id,

@@ -5,7 +5,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, SEDE_SCHEMA
 
 
@@ -42,6 +42,10 @@ def _get_seccional_scope(user):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 # ---------- Sede CRUD ----------
 @csrf_exempt
@@ -172,7 +176,7 @@ def list_sedes(request):
         elif seccional_id:
             sedes = Sede.objects.filter(seccional_id=seccional_id)
         else:
-            sedes = Sede.objects.none()
+            return _missing_seccional_response()
         lst = [{
             "id": s.id,
             "nombre": s.nombre,

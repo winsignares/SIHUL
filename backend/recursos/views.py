@@ -6,7 +6,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, RECURSO_SCHEMA
 
 
@@ -43,6 +43,10 @@ def _get_seccional_scope(user):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 # ---------- Recurso CRUD ----------
 @csrf_exempt
@@ -147,7 +151,7 @@ def get_recurso(request, id=None):
                 recurso_espacios__espacio__sede__seccional_id=seccional_id
             ).first()
         else:
-            r = None
+            return _missing_seccional_response()
 
         if not r:
             return JsonResponse({"error": "Recurso no encontrado o no accesible."}, status=404)
@@ -272,7 +276,7 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            return JsonResponse({"error": "Relación Espacio-Recurso no encontrada."}, status=404)
+            return _missing_seccional_response()
 
         return JsonResponse({"espacio_id": er.espacio.id, "recurso_id": er.recurso.id, "estado": er.estado}, status=200)
     except EspacioRecurso.DoesNotExist:
@@ -295,7 +299,7 @@ def list_espacio_recursos(request):
                 espacio__sede__seccional_id=seccional_id
             )
         else:
-            items = EspacioRecurso.objects.none().select_related('espacio', 'recurso', 'espacio__sede')
+            return _missing_seccional_response()
 
         lst = [{"espacio_id": i.espacio.id, "recurso_id": i.recurso.id, "estado": i.estado} for i in items]
         return JsonResponse({"espacio_recursos": lst}, status=200)

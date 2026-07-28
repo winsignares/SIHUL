@@ -129,7 +129,9 @@ export async function handleApiError(
       }
       break;
     case 403:
-      apiError.message = 'No tienes permisos para realizar esta acción';
+      if (!hasServerMessage) {
+        apiError.message = 'No tienes permisos para realizar esta acción';
+      }
       break;
     case 404:
       apiError.message = 'Recurso no encontrado';

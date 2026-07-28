@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
 from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
@@ -48,6 +48,10 @@ def _get_authenticated_seccional_scope(request):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 @csrf_exempt
@@ -212,7 +216,7 @@ def list_horarios_extendidos(request):
         if seccional_scope_id:
             qs = qs.filter(espacio__sede__seccional_id=seccional_scope_id)
         else:
-            qs = qs.none()
+            return _missing_seccional_response()
 
     lst = []
     for i in qs:
@@ -310,7 +314,7 @@ def list_horarios_asignacion_espacios(request):
             | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=seccional_filter_id)
         )
     elif not is_superuser:
-        qs = qs.none()
+        return _missing_seccional_response()
 
     def resolve_sede(horario):
         if horario.espacio and horario.espacio.sede:
@@ -402,7 +406,7 @@ def asignar_espacio_horario(request):
         seccional_scope_id, is_superuser = _get_authenticated_seccional_scope(request)
         if not is_superuser:
             if not seccional_scope_id:
-                return JsonResponse({'error': 'El usuario no tiene una seccional asignada.'}, status=403)
+                return _missing_seccional_response()
             if espacio_seccional_id and seccional_scope_id != espacio_seccional_id:
                 return JsonResponse({'error': 'El espacio no pertenece a la seccional del usuario.'}, status=403)
             if horario_seccional_id and seccional_scope_id != horario_seccional_id:

@@ -7,7 +7,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, GRUPO_SCHEMA
 
 
@@ -44,6 +44,10 @@ def _get_seccional_scope(user):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 # ---------- Grupo CRUD ----------
 @csrf_exempt
@@ -172,7 +176,7 @@ def get_grupo(request, id=None):
             if not g:
                 return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
         else:
-            return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
+            return _missing_seccional_response()
         return JsonResponse({"id": g.id, "nombre": g.nombre, "programa_id": g.programa.id, "periodo_id": g.periodo.id, "semestre": g.semestre, "activo": g.activo}, status=200)
     except Grupo.DoesNotExist:
         return JsonResponse({"error": "Grupo no encontrado."}, status=404)
@@ -194,7 +198,7 @@ def list_grupos(request):
                 programa__facultad__sede__seccional_id=seccional_id
             )
         else:
-            items = Grupo.objects.none()
+            return _missing_seccional_response()
         
         lst = [{"id": i.id, "nombre": i.nombre, "programa_id": i.programa.id, "periodo_id": i.periodo.id, "semestre": i.semestre, "activo": i.activo} for i in items]
         return JsonResponse({"grupos": lst}, status=200)

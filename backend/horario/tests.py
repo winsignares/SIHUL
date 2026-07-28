@@ -93,17 +93,22 @@ class SeccionalScopeTests(TestCase):
         request.user_obj = usuario
         request.sede = usuario.sede
         response = list_horarios_asignacion_espacios(request)
-        return json.loads(response.content.decode('utf-8'))['horarios']
+        return response, json.loads(response.content.decode('utf-8'))
 
     def test_admin_planeacion_con_sede_solo_ve_su_seccional(self):
         usuario = self._crear_usuario_planeacion(self.sede_a)
 
-        ids = {horario['id'] for horario in self._get_horarios(usuario)}
+        response, payload = self._get_horarios(usuario)
+        ids = {horario['id'] for horario in payload['horarios']}
 
+        self.assertEqual(response.status_code, 200)
         self.assertIn(self.horario_a.id, ids)
         self.assertNotIn(self.horario_b.id, ids)
 
     def test_admin_planeacion_sin_sede_no_ve_todas_las_seccionales(self):
         usuario = self._crear_usuario_planeacion()
 
-        self.assertEqual(self._get_horarios(usuario), [])
+        response, payload = self._get_horarios(usuario)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(payload['code'], 'usuario_sin_seccional')
