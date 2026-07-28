@@ -18,7 +18,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from asignaturas.models import Asignatura
-from espacios.models import EspacioFisico, StgOracleEspacioFisico, TipoEspacio
+from espacios.models import EspacioFisico, EspacioPermitido, StgOracleEspacioFisico, TipoEspacio
 from grupos.models import Grupo, StgOracleGrupoAcademico
 from horario.models import Horario, StgOracleHorario
 from periodos.models import PeriodoAcademico
@@ -203,6 +203,16 @@ class Command(BaseCommand):
                 return target_sede
 
         return sede
+
+    @staticmethod
+    def _cleanup_space_permissions_for_sede(espacio, target_sede):
+        if not espacio or not target_sede:
+            return 0
+        return EspacioPermitido.objects.filter(
+            espacio=espacio,
+        ).exclude(
+            usuario__sede=target_sede,
+        ).delete()[0]
 
     @staticmethod
     def _resolve_facultad(source_system, external_id):
@@ -948,6 +958,7 @@ class Command(BaseCommand):
         espacios_error = 0
         sede_no_encontrada = 0
         tipo_creado = 0
+        permisos_retirados_por_cambio_sede = 0
         sedes_no_resueltas = {}
 
         for stg_espacio in stg_espacios:
@@ -999,6 +1010,20 @@ class Command(BaseCommand):
                 espacio = EspacioFisico.objects.filter(sede=sede, nombre=nombre).first()
                 if not espacio and ident:
                     espacio = EspacioFisico.objects.filter(sede=sede, ubicacion__icontains=ident).first()
+                if not espacio and getattr(sede, 'seccional_id', None):
+                    espacios_misma_seccional = EspacioFisico.objects.filter(
+                        sede__seccional_id=sede.seccional_id,
+                        nombre__iexact=nombre,
+                    )
+                    if espacios_misma_seccional.count() == 1:
+                        espacio = espacios_misma_seccional.first()
+                if not espacio and ident and getattr(sede, 'seccional_id', None):
+                    espacios_misma_seccional = EspacioFisico.objects.filter(
+                        sede__seccional_id=sede.seccional_id,
+                        ubicacion__icontains=ident,
+                    )
+                    if espacios_misma_seccional.count() == 1:
+                        espacio = espacios_misma_seccional.first()
 
                 if dry_run:
                     if espacio:
@@ -1021,6 +1046,10 @@ class Command(BaseCommand):
                     continue
 
                 changed = False
+                if espacio.sede_id != sede.id:
+                    permisos_retirados_por_cambio_sede += self._cleanup_space_permissions_for_sede(espacio, sede)
+                    espacio.sede = sede
+                    changed = True
                 if espacio.tipo_id != tipo.id:
                     espacio.tipo = tipo
                     changed = True
@@ -1057,7 +1086,8 @@ class Command(BaseCommand):
                 f'Sin cambio: {espacios_sin_cambio}, '
                 f'Errores: {espacios_error}, '
                 f'Sede no encontrada: {sede_no_encontrada}, '
-                f'Tipos nuevos: {tipo_creado}'
+                f'Tipos nuevos: {tipo_creado}, '
+                f'Permisos retirados por cambio de sede: {permisos_retirados_por_cambio_sede}'
             )
         )
         if sedes_no_resueltas:

@@ -134,8 +134,8 @@ def list_supervisor_espacios_with_horarios(request, usuario_id=None):
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related(
             'espacio', 'espacio__sede', 'espacio__tipo'
         )
-        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
-            espacios_permitidos = espacios_permitidos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
+        if getattr(usuario, 'sede_id', None):
+            espacios_permitidos = espacios_permitidos.filter(espacio__sede_id=usuario.sede_id)
 
         if not espacios_permitidos.exists():
             return JsonResponse({'espacios': []}, status=200)
@@ -257,8 +257,8 @@ def list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=None)
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related(
             'espacio', 'espacio__sede', 'espacio__tipo'
         )
-        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
-            espacios_permitidos = espacios_permitidos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
+        if getattr(usuario, 'sede_id', None):
+            espacios_permitidos = espacios_permitidos.filter(espacio__sede_id=usuario.sede_id)
 
         if not espacios_permitidos.exists():
             return JsonResponse({'espacios': []}, status=200)
@@ -312,8 +312,10 @@ def list_espacios_by_usuario(request, usuario_id=None):
         return JsonResponse({'error': 'El usuario_id es requerido en la URL'}, status=400)
 
     try:
-        usuario = Usuario.objects.get(id=usuario_id)
+        usuario = Usuario.objects.select_related('sede').get(id=usuario_id)
         espacios_permitidos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio')
+        if getattr(usuario, 'sede_id', None):
+            espacios_permitidos = espacios_permitidos.filter(espacio__sede_id=usuario.sede_id)
 
         lista = []
         for ep in espacios_permitidos:
@@ -385,8 +387,8 @@ def proximos_apertura_cierre(request):
             )
 
             espacios_permitidos = espacios_permitidos.filter(espacio__estado='Disponible')
-            if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
-                espacios_permitidos = espacios_permitidos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
+            if getattr(usuario, 'sede_id', None):
+                espacios_permitidos = espacios_permitidos.filter(espacio__sede_id=usuario.sede_id)
 
             if not espacios_permitidos.exists():
                 return JsonResponse(

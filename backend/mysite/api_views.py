@@ -632,8 +632,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         from espacios.models import EspacioPermitido
 
         espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
-        if getattr(getattr(usuario, 'sede', None), 'seccional_id', None):
-            espacios_permisos = espacios_permisos.filter(espacio__sede__seccional_id=usuario.sede.seccional_id)
+        if getattr(usuario, 'sede_id', None):
+            espacios_permisos = espacios_permisos.filter(espacio__sede_id=usuario.sede_id)
         return [
             {
                 'id': ep.espacio.id,
