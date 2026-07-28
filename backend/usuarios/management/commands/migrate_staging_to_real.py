@@ -185,6 +185,25 @@ class Command(BaseCommand):
 
         return None
 
+    @classmethod
+    def _resolve_barranquilla_sede_for_space(cls, sede, nombre_espacio):
+        if not sede or not sede.seccional:
+            return sede
+        if cls._normalize_text(sede.seccional.ciudad) != 'BARRANQUILLA':
+            return sede
+
+        nombre_norm = cls._normalize_text(nombre_espacio)
+        target_names = ['Sede Centro'] if 'CENTRO' in nombre_norm else ['Sede Norte', 'Sede Principal']
+        for target_name in target_names:
+            target_sede = Sede.objects.filter(
+                nombre__iexact=target_name,
+                seccional__ciudad__iexact='Barranquilla',
+            ).first()
+            if target_sede:
+                return target_sede
+
+        return sede
+
     @staticmethod
     def _resolve_facultad(source_system, external_id):
         from facultades.models import Facultad
@@ -940,6 +959,17 @@ class Command(BaseCommand):
                     stg_espacio.raw_data,
                     stg_espacio.nombre_sede_oracle,
                 )
+
+                nombre_oracle = self._to_text(stg_espacio.nombre_espacio_oracle)
+                ident = self._to_text(stg_espacio.ident_aula_oracle)
+                if self._is_placeholder_space_name(nombre_oracle) and ident:
+                    nombre = ident
+                else:
+                    nombre = nombre_oracle or ident
+                if not nombre:
+                    nombre = f'Espacio {stg_espacio.external_id}'
+
+                sede = self._resolve_barranquilla_sede_for_space(sede, nombre)
                 if not sede:
                     sede_no_encontrada += 1
                     espacios_error += 1
@@ -960,15 +990,6 @@ class Command(BaseCommand):
                 )
                 if created_tipo:
                     tipo_creado += 1
-
-                nombre_oracle = self._to_text(stg_espacio.nombre_espacio_oracle)
-                ident = self._to_text(stg_espacio.ident_aula_oracle)
-                if self._is_placeholder_space_name(nombre_oracle) and ident:
-                    nombre = ident
-                else:
-                    nombre = nombre_oracle or ident
-                if not nombre:
-                    nombre = f'Espacio {stg_espacio.external_id}'
 
                 bloque = self._to_text(stg_espacio.bloque_oracle)
                 ubicacion = ' '.join([piece for piece in [bloque, ident] if piece]).strip() or ident or None
@@ -1211,6 +1232,7 @@ class Command(BaseCommand):
                                 stg_horario.nombre_sede_oracle,
                             )
                             if sede_horario:
+                                sede_horario = self._resolve_barranquilla_sede_for_space(sede_horario, nom_aula_raw)
                                 # Reintento por alias de aula descriptiva antes de crear fallback.
                                 alias_sources = [nom_aula_raw] + self._space_alias_candidates(nom_aula_raw)
                                 alias_candidates = []
