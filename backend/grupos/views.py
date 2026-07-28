@@ -7,7 +7,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, GRUPO_SCHEMA
 
 
@@ -38,6 +38,12 @@ def _require_admin(request):
     if not _is_admin_user(user):
         return None, JsonResponse({"error": "No autorizado"}, status=403)
     return user, None
+
+
+def _get_seccional_scope(user):
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 # ---------- Grupo CRUD ----------
 @csrf_exempt
@@ -158,15 +164,15 @@ def get_grupo(request, id=None):
 
         #buscamos el grupo solo si su programa está en la misma seccional de la sede del usuario (a través de programa -> facultad -> sede)
         #obtenemos la sede del usuario desde el middleware
-        user_sede = getattr(request, 'sede', None)
-        #si el usuario tiene una sede con seccional, filtramos el grupo por esa seccional
-        if user_sede and user_sede.seccional_id:
-            g = Grupo.objects.filter(id=id, programa__facultad__sede__seccional_id=user_sede.seccional_id).first()
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
+            g = Grupo.objects.get(id=id)
+        elif seccional_id:
+            g = Grupo.objects.filter(id=id, programa__facultad__sede__seccional_id=seccional_id).first()
             if not g:
                 return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
         else:
-            #si no tiene sede o seccional, buscamos el grupo sin filtro de seccional
-            g = Grupo.objects.get(id=id)
+            return JsonResponse({"error": "Grupo no encontrado o no accesible."}, status=404)
         return JsonResponse({"id": g.id, "nombre": g.nombre, "programa_id": g.programa.id, "periodo_id": g.periodo.id, "semestre": g.semestre, "activo": g.activo}, status=200)
     except Grupo.DoesNotExist:
         return JsonResponse({"error": "Grupo no encontrado."}, status=404)
@@ -180,17 +186,15 @@ def list_grupos(request):
         if auth_error:
             return auth_error
 
-        # Obtener sede del usuario desde middleware
-        user_sede = getattr(request, 'sede', None)
-        
-        # Filtrar grupos por la misma seccional de la sede del usuario (a través de programa -> facultad -> sede)
-        if user_sede and user_sede.seccional_id:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
+            items = Grupo.objects.select_related('programa__facultad__sede').all()
+        elif seccional_id:
             items = Grupo.objects.select_related('programa__facultad__sede').filter(
-                programa__facultad__sede__seccional_id=user_sede.seccional_id
+                programa__facultad__sede__seccional_id=seccional_id
             )
         else:
-            items = Grupo.objects.all()
+            items = Grupo.objects.none()
         
         lst = [{"id": i.id, "nombre": i.nombre, "programa_id": i.programa.id, "periodo_id": i.periodo.id, "semestre": i.semestre, "activo": i.activo} for i in items]
         return JsonResponse({"grupos": lst}, status=200)
-

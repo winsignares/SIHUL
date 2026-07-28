@@ -8,17 +8,34 @@ from .models import EspacioFisico, EspacioPermitido
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
-from mysite.auth_helpers import is_superuser_effective, user_supervisa_espacios
+from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
-    if is_superuser_effective(getattr(request, 'user_obj', None)):
+    user = getattr(request, 'user_obj', None)
+    if not user:
         return queryset
 
-    user_sede = getattr(request, 'sede', None)
-    if user_sede and user_sede.seccional_id:
-        return queryset.filter(sede__seccional_id=user_sede.seccional_id)
-    return queryset
+    if is_superuser_effective(user):
+        return queryset
+
+    seccional_id = get_user_seccional_id(user)
+    if seccional_id:
+        return queryset.filter(sede__seccional_id=seccional_id)
+
+    return queryset.none()
+
+
+def _usuario_puede_acceder_espacio(request, espacio_id):
+    user = getattr(request, 'user_obj', None)
+    if not user or is_superuser_effective(user):
+        return True
+
+    seccional_id = get_user_seccional_id(user)
+    if not seccional_id:
+        return False
+
+    return EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=seccional_id).exists()
 
 
 def get_dia_semana_actual():
@@ -42,10 +59,7 @@ def list_all_espacios_with_horarios(request):
     try:
         from django.db.models import Prefetch
 
-        user_sede = getattr(request, 'sede', None)
-        base = EspacioFisico.objects.all()
-        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
-            base = base.filter(sede__seccional_id=user_sede.seccional_id)
+        base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
 
         espacios = base.select_related('sede', 'tipo').prefetch_related(
             Prefetch(
@@ -165,10 +179,7 @@ def list_all_espacios_disponibles_with_horarios(request):
     try:
         from django.db.models import Prefetch
 
-        user_sede = getattr(request, 'sede', None)
-        base = EspacioFisico.objects.all()
-        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
-            base = base.filter(sede__seccional_id=user_sede.seccional_id)
+        base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
 
         espacios = base.filter(estado='Disponible').select_related('sede', 'tipo').prefetch_related(
             Prefetch(
@@ -656,10 +667,8 @@ def get_horario_espacio(request, espacio_id=None):
         if not EspacioFisico.objects.filter(id=espacio_id).exists():
             return JsonResponse({'error': 'Espacio no encontrado'}, status=404)
 
-        user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
-            if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
-                return JsonResponse({'error': 'No tienes permiso para ver el horario de este espacio'}, status=403)
+        if not _usuario_puede_acceder_espacio(request, espacio_id):
+            return JsonResponse({'error': 'No tienes permiso para ver el horario de este espacio'}, status=403)
 
         horarios = Horario.objects.filter(espacio_id=espacio_id, estado='aprobado').select_related('asignatura', 'docente', 'grupo')
         lista_horarios = []
@@ -691,6 +700,9 @@ def abrir_espacio(request, espacio_id=None):
         return JsonResponse({'error': 'El espacio_id es requerido'}, status=400)
 
     try:
+        if not _usuario_puede_acceder_espacio(request, espacio_id):
+            return JsonResponse({'error': 'No tienes permiso para abrir este espacio'}, status=403)
+
         espacio = EspacioFisico.objects.get(id=espacio_id)
         espacio.esta_abierto = True
         espacio.save(update_fields=['esta_abierto'])
@@ -719,6 +731,9 @@ def cerrar_espacio(request, espacio_id=None):
         return JsonResponse({'error': 'El espacio_id es requerido'}, status=400)
 
     try:
+        if not _usuario_puede_acceder_espacio(request, espacio_id):
+            return JsonResponse({'error': 'No tienes permiso para cerrar este espacio'}, status=403)
+
         espacio = EspacioFisico.objects.get(id=espacio_id)
 
         ahora = datetime.now()

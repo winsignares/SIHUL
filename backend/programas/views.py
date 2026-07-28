@@ -6,7 +6,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, PROGRAMA_SCHEMA
 
 
@@ -37,6 +37,12 @@ def _require_admin(request):
     if not _is_admin_user(user):
         return None, JsonResponse({"error": "No autorizado"}, status=403)
     return user, None
+
+
+def _get_seccional_scope(user):
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 # ---------- Programa CRUD ----------
 @csrf_exempt
@@ -145,11 +151,15 @@ def get_programa(request, id=None):
         if auth_error:
             return auth_error
 
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            p = Programa.objects.filter(id=id, facultad__sede__seccional_id=user_sede.seccional_id).first()
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
+            p = Programa.objects.get(id=id)
+        elif seccional_id:
+            p = Programa.objects.filter(id=id, facultad__sede__seccional_id=seccional_id).first()
             if not p:
                 return JsonResponse({"error": "Programa no encontrado o no accesible."}, status=404)
+        else:
+            return JsonResponse({"error": "Programa no encontrado o no accesible."}, status=404)
         return JsonResponse({
             "id": p.id, 
             "nombre": p.nombre, 
@@ -169,12 +179,14 @@ def list_programas(request):
         if auth_error:
             return auth_error
 
-        user_sede = getattr(request, 'sede', None)
-        
-        if user_sede:
-            items = Programa.objects.filter(facultad__sede__seccional_id=user_sede.seccional_id)
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+
+        if is_superuser:
             items = Programa.objects.all()
+        elif seccional_id:
+            items = Programa.objects.filter(facultad__sede__seccional_id=seccional_id)
+        else:
+            items = Programa.objects.none()
             
         lst = [{
             "id": i.id, 
@@ -184,4 +196,3 @@ def list_programas(request):
             "activo": i.activo
         } for i in items]
         return JsonResponse({"programas": lst}, status=200)
-

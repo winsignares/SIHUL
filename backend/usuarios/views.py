@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash
 import datetime
 import secrets
 import hashlib
-from mysite.auth_helpers import user_supervisa_espacios
+from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
 
 
 def _password_valida(usuario, password_plano):
@@ -53,6 +53,16 @@ def _sync_espacios_permitidos_usuario(usuario, espacios_ids):
         for espacio_id in ids_unicos
     ])
     return None
+
+
+def _get_seccional_scope(user):
+    if not user:
+        return None, False
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
+
+
 # ---------- Rol CRUD ----------
 
 @csrf_exempt
@@ -263,12 +273,16 @@ def get_usuario(request, id=None):
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
         usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
+        if not usuario_actual:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
 
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            u = Usuario.objects.select_related('sede').get(id=id, sede__seccional_id=sede_actual.seccional_id)
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(usuario_actual)
+        if is_superuser:
             u = Usuario.objects.select_related('sede').get(id=id)
+        elif seccional_id:
+            u = Usuario.objects.select_related('sede').get(id=id, sede__seccional_id=seccional_id)
+        else:
+            return JsonResponse({"error": "Usuario no encontrado."}, status=404)
 
         return JsonResponse({"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol_id": (u.rol.id if u.rol else None), "facultad_id": (u.facultad.id if u.facultad else None), "activo": u.activo}, status=200)
     except Usuario.DoesNotExist:
@@ -280,12 +294,16 @@ def get_usuario(request, id=None):
 def list_usuarios(request):
     if request.method == 'GET':
         usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
+        if not usuario_actual:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
 
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            items = Usuario.objects.select_related('sede').filter(sede__seccional_id=sede_actual.seccional_id)
+        seccional_id, is_superuser = _get_seccional_scope(usuario_actual)
+        if is_superuser:
+            items = Usuario.objects.select_related('sede').all()
+        elif seccional_id:
+            items = Usuario.objects.select_related('sede').filter(sede__seccional_id=seccional_id)
         else:
-            items = Usuario.objects.all()
+            items = Usuario.objects.none()
 
         lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
         return JsonResponse({"usuarios": lst}, status=200)

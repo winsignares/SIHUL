@@ -41,6 +41,18 @@ def get_role_name(user):
     return (getattr(rol, 'nombre', '') or '').strip().lower()
 
 
+def get_user_seccional_id(user):
+    if not user:
+        return None
+
+    seccional_id = getattr(user, 'seccional_id', None)
+    if seccional_id:
+        return seccional_id
+
+    sede = getattr(user, 'sede', None)
+    return getattr(sede, 'seccional_id', None)
+
+
 def role_supervisa_espacios(rol):
     if not rol:
         return False

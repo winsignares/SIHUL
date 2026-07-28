@@ -14,18 +14,35 @@ from django.db.models import Count
 from collections import defaultdict
 import unicodedata
 
-from mysite.auth_helpers import is_superuser_effective
+from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
     """Filtra espacios por la seccional de la sede del usuario logueado."""
-    if is_superuser_effective(getattr(request, 'user_obj', None)):
+    user = getattr(request, 'user_obj', None)
+    if not user:
         return queryset
 
-    user_sede = getattr(request, 'sede', None)
-    if user_sede and user_sede.seccional_id:
-        return queryset.filter(sede__seccional_id=user_sede.seccional_id)
-    return queryset
+    if is_superuser_effective(user):
+        return queryset
+
+    seccional_id = get_user_seccional_id(user)
+    if seccional_id:
+        return queryset.filter(sede__seccional_id=seccional_id)
+
+    return queryset.none()
+
+
+def _usuario_puede_acceder_espacio(request, espacio_id):
+    user = getattr(request, 'user_obj', None)
+    if not user or is_superuser_effective(user):
+        return True
+
+    seccional_id = get_user_seccional_id(user)
+    if not seccional_id:
+        return False
+
+    return EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=seccional_id).exists()
 
 
 def _env_bool_param(value):
@@ -294,13 +311,10 @@ def get_espacio(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
+        if not _usuario_puede_acceder_espacio(request, id):
+            return JsonResponse({"error": "Espacio no encontrado."}, status=404)
 
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id, sede__seccional_id=sede_actual.seccional_id)
-        else:
-            e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id)
+        e = EspacioFisico.objects.select_related('sede', 'tipo').get(id=id)
 
         # Obtener recursos del espacio
         recursos = []
@@ -334,15 +348,10 @@ def get_espacio(request, id=None):
 @csrf_exempt
 def list_espacios(request):
     if request.method == 'GET':
-        usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
-
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            items = EspacioFisico.objects.select_related('sede', 'tipo').filter(
-                sede__seccional_id=sede_actual.seccional_id
-            )
-        else:
-            items = EspacioFisico.objects.select_related('sede', 'tipo').all()
+        items = _filtrar_espacios_por_sede_usuario(
+            request,
+            EspacioFisico.objects.select_related('sede', 'tipo').all()
+        )
         
         lst = []
         for i in items:
@@ -451,24 +460,8 @@ def list_all_espacios_with_horarios(request):
         
         # Optimizar consulta con select_related y prefetch_related
         # Solo mostrar horarios aprobados
-        #obtener sede del usuario autenticado en la request del middleware
-        user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
-            espacios = EspacioFisico.objects.filter(
-                sede__seccional_id=user_sede.seccional_id
-            ).select_related(
-                'sede', 'tipo'
-            ).prefetch_related(
-                Prefetch('horarios',
-                    queryset=Horario.objects.filter(
-                        estado='aprobado'
-                    ).select_related(
-                        'asignatura', 'docente', 'grupo'
-                    )
-                )
-            )
-        else:
-            espacios = EspacioFisico.objects.all().select_related(
+        espacios_base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
+        espacios = espacios_base.select_related(
                 'sede', 'tipo'
             ).prefetch_related(
                 Prefetch('horarios',
@@ -845,14 +838,10 @@ def proximos_apertura_cierre(request):
             espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
             espacios_map = {ep.espacio.id: ep.espacio for ep in espacios_permitidos}
         else:
-            espacios_qs = EspacioFisico.objects.select_related('sede', 'tipo').all()
-            user_sede = getattr(request, 'sede', None)
-            if (
-                user_sede
-                and getattr(user_sede, 'seccional_id', None)
-                and not is_superuser_effective(getattr(request, 'user_obj', None))
-            ):
-                espacios_qs = espacios_qs.filter(sede__seccional_id=user_sede.seccional_id)
+            espacios_qs = _filtrar_espacios_por_sede_usuario(
+                request,
+                EspacioFisico.objects.select_related('sede', 'tipo').all()
+            )
             espacios_qs = espacios_qs.filter(estado='Disponible')
 
             espacios = list(espacios_qs)
@@ -1244,12 +1233,8 @@ def get_horario_espacio(request, espacio_id=None):
         # Verificar que el espacio existe
         if not EspacioFisico.objects.filter(id=espacio_id).exists():
              return JsonResponse({"error": "Espacio no encontrado"}, status=404)
-        #Obtener sede del usuario logueado
-        user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id and not is_superuser_effective(getattr(request, 'user_obj', None)):
-            # Verificar que el espacio pertenece a la misma sede
-            if not EspacioFisico.objects.filter(id=espacio_id, sede__seccional_id=user_sede.seccional_id).exists():
-                return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403) 
+        if not _usuario_puede_acceder_espacio(request, espacio_id):
+            return JsonResponse({"error": "No tienes permiso para ver el horario de este espacio"}, status=403)
             
         # Obtener todos los horarios del espacio
         horarios = Horario.objects.filter(

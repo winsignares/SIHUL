@@ -5,7 +5,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, SEDE_SCHEMA
 
 
@@ -36,6 +36,12 @@ def _require_admin(request):
     if not _is_admin_user(user):
         return None, JsonResponse({"error": "No autorizado"}, status=403)
     return user, None
+
+
+def _get_seccional_scope(user):
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 # ---------- Sede CRUD ----------
 @csrf_exempt
@@ -160,11 +166,13 @@ def list_sedes(request):
         if auth_error:
             return auth_error
 
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            sedes = Sede.objects.filter(seccional_id=user_sede.seccional_id)
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
             sedes = Sede.objects.all()
+        elif seccional_id:
+            sedes = Sede.objects.filter(seccional_id=seccional_id)
+        else:
+            sedes = Sede.objects.none()
         lst = [{
             "id": s.id,
             "nombre": s.nombre,
@@ -174,4 +182,3 @@ def list_sedes(request):
             "activa": s.activa,
         } for s in sedes]
         return JsonResponse({"sedes": lst}, status=200)
-

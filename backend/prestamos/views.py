@@ -11,6 +11,7 @@ from espacios.models import EspacioFisico
 from usuarios.models import Usuario
 from recursos.models import Recurso
 from horario.models import Horario
+from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
 import json
 import datetime
@@ -27,6 +28,17 @@ def _require_auth(request):
     if not user or not user.is_authenticated:
         return JsonResponse({"error": "Autenticación requerida"}, status=403)
     return None
+
+
+def _get_request_user(request):
+    return getattr(request, 'user_obj', None) or getattr(request, 'user', None)
+
+
+def _get_seccional_scope(request):
+    user = _get_request_user(request)
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 def check_espacio_disponible(espacio_id, fecha, hora_inicio, hora_fin, prestamo_id=None, es_publico=False):
     """
@@ -754,18 +766,20 @@ def get_prestamo(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
+            p = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso', 'ocurrencias_generadas').get(id=id)
+        elif seccional_id:
             p = PrestamoEspacio.objects.select_related(
                 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).prefetch_related('prestamo_recursos__recurso', 'ocurrencias_generadas').get(
                 id=id,
-                espacio__sede__seccional_id=user_sede.seccional_id
+                espacio__sede__seccional_id=seccional_id
             )
         else:
-            p = PrestamoEspacio.objects.select_related(
-                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
-            ).prefetch_related('prestamo_recursos__recurso', 'ocurrencias_generadas').get(id=id)
+            return JsonResponse({"error": "Prestamo no encontrado."}, status=404)
         
         
         # Obtener recursos asociados
@@ -822,22 +836,21 @@ def list_prestamos(request):
     if auth_error:
         return auth_error
     if request.method == 'GET':
-        # Obtener sede del usuario desde middleware
-        user_sede = getattr(request, 'sede', None)
-        
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        # Filtrar prestamos por la misma seccional de la sede del usuario (a través de espacio -> sede)
-        if user_sede and user_sede.seccional_id:
-            items = PrestamoEspacio.objects.select_related(
-                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
-            ).prefetch_related('prestamo_recursos__recurso').filter(
-                espacio__sede__seccional_id=user_sede.seccional_id
-            )
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
             items = PrestamoEspacio.objects.select_related(
                 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).prefetch_related('prestamo_recursos__recurso').all()
+        elif seccional_id:
+            items = PrestamoEspacio.objects.select_related(
+                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            items = PrestamoEspacio.objects.none()
 
         if not include_ocurrencias:
             items = items.filter(prestamo_padre__isnull=True)
@@ -885,22 +898,24 @@ def list_prestamos_todos_admin(request):
     if auth_error:
         return auth_error
     if request.method == 'GET':
-        user_sede = getattr(request, 'sede', None)
         lst = []
         
         # 1. Obtener préstamos de usuarios autenticados
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        if user_sede and user_sede.seccional_id:
-            items_auth = PrestamoEspacio.objects.select_related(
-                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
-            ).prefetch_related('prestamo_recursos__recurso').filter(
-                espacio__sede__seccional_id=user_sede.seccional_id
-            )
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
             items_auth = PrestamoEspacio.objects.select_related(
                 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).prefetch_related('prestamo_recursos__recurso').all()
+        elif seccional_id:
+            items_auth = PrestamoEspacio.objects.select_related(
+                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            items_auth = PrestamoEspacio.objects.none()
 
         if not include_ocurrencias:
             items_auth = items_auth.filter(prestamo_padre__isnull=True)
@@ -940,16 +955,18 @@ def list_prestamos_todos_admin(request):
             lst.append(item)
         
         # 2. Obtener préstamos públicos
-        if user_sede and user_sede.seccional_id:
-            items_public = PrestamoEspacioPublico.objects.select_related(
-                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
-            ).filter(
-                espacio__sede__seccional_id=user_sede.seccional_id
-            )
-        else:
+        if is_superuser:
             items_public = PrestamoEspacioPublico.objects.select_related(
                 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).all()
+        elif seccional_id:
+            items_public = PrestamoEspacioPublico.objects.select_related(
+                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            items_public = PrestamoEspacioPublico.objects.none()
 
         if not include_ocurrencias:
             items_public = items_public.filter(prestamo_padre__isnull=True)
@@ -1365,19 +1382,21 @@ def list_prestamos_publicos(request):
         if not user or not user.is_authenticated:
             return JsonResponse({"error": "Autenticación requerida"}, status=403)
 
-        user_sede = getattr(request, 'sede', None)
         include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
 
-        if user_sede and user_sede.seccional_id:
-            items = PrestamoEspacioPublico.objects.select_related(
-                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
-            ).filter(
-                espacio__sede__seccional_id=user_sede.seccional_id
-            )
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
             items = PrestamoEspacioPublico.objects.select_related(
                 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
             ).all()
+        elif seccional_id:
+            items = PrestamoEspacioPublico.objects.select_related(
+                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            items = PrestamoEspacioPublico.objects.none()
 
         if not include_ocurrencias:
             items = items.filter(prestamo_padre__isnull=True)
@@ -1789,4 +1808,3 @@ def delete_prestamo_publico(request):
         return JsonResponse({"error": "JSON inválido."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-

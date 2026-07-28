@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from .models import Asignatura, AsignaturaPrograma
 from programas.models import Programa
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
 
 
@@ -39,6 +39,12 @@ def _require_admin(request):
     if not _is_admin_user(user):
         return None, JsonResponse({"error": "No autorizado"}, status=403)
     return user, None
+
+
+def _get_seccional_scope(user):
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 # ---------- Asignatura CRUD ----------
 @csrf_exempt
@@ -192,16 +198,16 @@ def list_asignaturas(request):
         if auth_error:
             return auth_error
 
-        #sede del usuario actual
-        sede_actual = getattr(request, 'sede', None)
-        
-        #se compara que la seccional de la sede del usuario actual sea igual a la seccional de la sede de cada asignatura; si sede_actual es None se listan todas las asignaturas
-        if sede_actual:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+
+        if is_superuser:
+            asignaturas = Asignatura.objects.all()
+        elif seccional_id:
             asignaturas = Asignatura.objects.filter(
-                sede__seccional_id=sede_actual.seccional_id
+                sede__seccional_id=seccional_id
             ) | Asignatura.objects.filter(sede__isnull=True)
         else:
-            asignaturas = Asignatura.objects.all()
+            asignaturas = Asignatura.objects.filter(sede__isnull=True)
             
         data = []
         for asignatura in asignaturas:
@@ -396,4 +402,3 @@ def list_asignaturas_programa(request):
         return JsonResponse({'asignaturas_programa': data}, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-

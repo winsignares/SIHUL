@@ -6,7 +6,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, RECURSO_SCHEMA
 
 
@@ -37,6 +37,12 @@ def _require_admin(request):
     if not _is_admin_user(user):
         return None, JsonResponse({"error": "No autorizado"}, status=403)
     return user, None
+
+
+def _get_seccional_scope(user):
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 # ---------- Recurso CRUD ----------
 @csrf_exempt
@@ -132,14 +138,16 @@ def get_recurso(request, id=None):
         if auth_error:
             return auth_error
 
-        user_sede = getattr(request, 'sede', None)
-        if user_sede and user_sede.seccional_id:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
+            r = Recurso.objects.filter(id=id).first()
+        elif seccional_id:
             r = Recurso.objects.filter(
                 id=id,
-                recurso_espacios__espacio__sede__seccional_id=user_sede.seccional_id
+                recurso_espacios__espacio__sede__seccional_id=seccional_id
             ).first()
         else:
-            r = Recurso.objects.filter(id=id).first()
+            r = None
 
         if not r:
             return JsonResponse({"error": "Recurso no encontrado o no accesible."}, status=404)
@@ -251,20 +259,20 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
         if auth_error:
             return auth_error
 
-        usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
-
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
-                espacio_id=espacio_id,
-                recurso_id=recurso_id,
-                espacio__sede__seccional_id=sede_actual.seccional_id
-            )
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
             er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
                 espacio_id=espacio_id,
                 recurso_id=recurso_id
             )
+        elif seccional_id:
+            er = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').get(
+                espacio_id=espacio_id,
+                recurso_id=recurso_id,
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            return JsonResponse({"error": "Relación Espacio-Recurso no encontrada."}, status=404)
 
         return JsonResponse({"espacio_id": er.espacio.id, "recurso_id": er.recurso.id, "estado": er.estado}, status=200)
     except EspacioRecurso.DoesNotExist:
@@ -275,16 +283,19 @@ def get_espacio_recurso(request, espacio_id=None, recurso_id=None):
 @csrf_exempt
 def list_espacio_recursos(request):
     if request.method == 'GET':
-        usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
+        user, auth_error = _require_auth(request)
+        if auth_error:
+            return auth_error
 
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
+            items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').all()
+        elif seccional_id:
             items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').filter(
-                espacio__sede__seccional_id=sede_actual.seccional_id
+                espacio__sede__seccional_id=seccional_id
             )
         else:
-            items = EspacioRecurso.objects.select_related('espacio', 'recurso', 'espacio__sede').all()
+            items = EspacioRecurso.objects.none().select_related('espacio', 'recurso', 'espacio__sede')
 
         lst = [{"espacio_id": i.espacio.id, "recurso_id": i.recurso.id, "estado": i.estado} for i in items]
         return JsonResponse({"espacio_recursos": lst}, status=200)
-

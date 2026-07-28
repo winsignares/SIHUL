@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
 from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
@@ -39,6 +39,15 @@ def _require_auth(request):
     if not user:
         return None, JsonResponse({'error': 'Autenticación requerida'}, status=403)
     return user, None
+
+
+def _get_authenticated_seccional_scope(request):
+    user = _get_request_user(request)
+    if not user:
+        return None, False
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 
 @csrf_exempt
@@ -187,7 +196,6 @@ def list_horarios_extendidos(request):
     if request.method != 'GET':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-    user_sede = getattr(request, 'sede', None)
     include_pending = request.GET.get('include_pending', '').lower() in ('1', 'true', 'yes')
     estado_horario = (request.GET.get('estado_horario') or request.GET.get('estadoHorario') or '').strip().lower()
 
@@ -199,10 +207,12 @@ def list_horarios_extendidos(request):
     else:
         qs = qs.filter(estado='aprobado')
 
-    user_obj = getattr(request, 'user_obj', None)
-    is_admin = user_obj and is_superuser_effective(user_obj)
-    if user_sede and user_sede.seccional_id and not is_admin:
-        qs = qs.filter(espacio__sede__seccional_id=user_sede.seccional_id)
+    seccional_scope_id, is_superuser = _get_authenticated_seccional_scope(request)
+    if not is_superuser:
+        if seccional_scope_id:
+            qs = qs.filter(espacio__sede__seccional_id=seccional_scope_id)
+        else:
+            qs = qs.none()
 
     lst = []
     for i in qs:
@@ -241,8 +251,6 @@ def list_horarios_extendidos(request):
 def list_horarios_asignacion_espacios(request):
     if request.method != 'GET':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    user_sede = getattr(request, 'sede', None)
 
     seccional_id = request.GET.get('seccional_id')
     programa_id = request.GET.get('programa_id')
@@ -293,18 +301,16 @@ def list_horarios_asignacion_espacios(request):
     if dia_semana:
         qs = qs.filter(dia_semana__iexact=dia_semana)
 
-    user_obj = getattr(request, 'user_obj', None)
-    is_admin = user_obj and is_superuser_effective(user_obj)
-
-    seccional_filter_id = None
-    if user_sede and user_sede.seccional_id and not is_admin:
-        seccional_filter_id = user_sede.seccional_id
+    seccional_scope_id, is_superuser = _get_authenticated_seccional_scope(request)
+    seccional_filter_id = seccional_id if is_superuser else seccional_scope_id
 
     if seccional_filter_id:
         qs = qs.filter(
             Q(espacio__sede__seccional_id=seccional_filter_id)
             | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=seccional_filter_id)
         )
+    elif not is_superuser:
+        qs = qs.none()
 
     def resolve_sede(horario):
         if horario.espacio and horario.espacio.sede:
@@ -377,7 +383,6 @@ def asignar_espacio_horario(request):
         ).get(id=horario_id)
         espacio = EspacioFisico.objects.select_related('sede').get(id=espacio_id)
 
-        user_sede = getattr(request, 'sede', None)
         espacio_seccional_id = espacio.sede.seccional_id if espacio.sede else None
 
         horario_sede = None
@@ -394,14 +399,14 @@ def asignar_espacio_horario(request):
         if horario_seccional_id and espacio_seccional_id and horario_seccional_id != espacio_seccional_id:
             return JsonResponse({'error': 'El espacio no pertenece a la misma seccional del horario.'}, status=400)
 
-        if (
-            user_sede
-            and user_sede.seccional_id
-            and espacio_seccional_id
-            and user_sede.seccional_id != espacio_seccional_id
-            and not is_superuser_effective(getattr(request, 'user_obj', None))
-        ):
-            return JsonResponse({'error': 'El espacio no pertenece a la seccional del usuario.'}, status=403)
+        seccional_scope_id, is_superuser = _get_authenticated_seccional_scope(request)
+        if not is_superuser:
+            if not seccional_scope_id:
+                return JsonResponse({'error': 'El usuario no tiene una seccional asignada.'}, status=403)
+            if espacio_seccional_id and seccional_scope_id != espacio_seccional_id:
+                return JsonResponse({'error': 'El espacio no pertenece a la seccional del usuario.'}, status=403)
+            if horario_seccional_id and seccional_scope_id != horario_seccional_id:
+                return JsonResponse({'error': 'El horario no pertenece a la seccional del usuario.'}, status=403)
 
         horario.espacio = espacio
         horario.save()

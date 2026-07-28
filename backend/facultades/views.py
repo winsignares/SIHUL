@@ -5,7 +5,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
 from mysite.xss_protection import sanitize_dict, FACULTAD_SCHEMA
 
 
@@ -36,6 +36,12 @@ def _require_admin(request):
     if not _is_admin_user(user):
         return None, JsonResponse({"error": "No autorizado"}, status=403)
     return user, None
+
+
+def _get_seccional_scope(user):
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 # ---------- Facultad CRUD ----------
 @csrf_exempt
@@ -133,13 +139,13 @@ def get_facultad(request, id=None):
         if auth_error:
             return auth_error
 
-        usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
-
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            f = Facultad.objects.select_related('sede').get(id=id, sede__seccional_id=sede_actual.seccional_id)
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
             f = Facultad.objects.select_related('sede').get(id=id)
+        elif seccional_id:
+            f = Facultad.objects.select_related('sede').get(id=id, sede__seccional_id=seccional_id)
+        else:
+            return JsonResponse({"error": "Facultad no encontrada."}, status=404)
 
         return JsonResponse({
             "id": f.id,
@@ -162,13 +168,13 @@ def list_facultades(request):
         if auth_error:
             return auth_error
 
-        usuario_actual = getattr(request, 'user_obj', None)
-        sede_actual = getattr(request, 'sede', None)
-
-        if usuario_actual and sede_actual and sede_actual.seccional_id:
-            items = Facultad.objects.filter(sede__seccional_id=sede_actual.seccional_id).select_related('sede')
-        else:
+        seccional_id, is_superuser = _get_seccional_scope(user)
+        if is_superuser:
             items = Facultad.objects.all().select_related('sede')
+        elif seccional_id:
+            items = Facultad.objects.filter(sede__seccional_id=seccional_id).select_related('sede')
+        else:
+            items = Facultad.objects.none().select_related('sede')
 
         lst = [{
             "id": i.id,
@@ -180,4 +186,3 @@ def list_facultades(request):
             "sede_seccional_ciudad": i.sede.seccional.ciudad if i.sede and i.sede.seccional else None
         } for i in items]
         return JsonResponse({"facultades": lst}, status=200)
-

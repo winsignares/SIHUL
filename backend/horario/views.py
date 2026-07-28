@@ -10,7 +10,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 from notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import is_superuser_effective
+from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -23,6 +23,15 @@ from openpyxl.utils import get_column_letter
 from io import BytesIO
 import sys
 import openpyxl
+
+
+def _get_seccional_scope(request):
+    user = getattr(request, 'user_obj', None)
+    if not user:
+        return None, True
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
 
 
 def _estados_exportables_horario(data):
@@ -328,12 +337,15 @@ def get_horario(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        #obtenemos la sede del usuario autenticado
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            h = Horario.objects.filter(id=id, espacio__sede__seccional_id=user_sede.seccional_id).first()
-        else: 
+        seccional_id, unrestricted = _get_seccional_scope(request)
+        if unrestricted:
             h = Horario.objects.get(id=id)
+        elif seccional_id:
+            h = Horario.objects.filter(id=id, espacio__sede__seccional_id=seccional_id).first()
+            if not h:
+                return JsonResponse({"error": "Horario no encontrado."}, status=404)
+        else:
+            return JsonResponse({"error": "Horario no encontrado."}, status=404)
         return JsonResponse({
             "id": h.id,
             "grupo_id": h.grupo.id,
@@ -353,12 +365,13 @@ def get_horario(request, id=None):
 @csrf_exempt
 def list_horarios(request):
     if request.method == 'GET':
-        #obtenemos sede del usuario autenticado
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            items = Horario.objects.filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
-        else:
+        seccional_id, unrestricted = _get_seccional_scope(request)
+        if unrestricted:
             items = Horario.objects.filter(estado='aprobado')
+        elif seccional_id:
+            items = Horario.objects.filter(estado='aprobado', espacio__sede__seccional_id=seccional_id)
+        else:
+            items = Horario.objects.none()
         lst = [{
             "id": i.id,
             "grupo_id": i.grupo.id,
@@ -376,15 +389,13 @@ def list_horarios(request):
 def list_horarios_extendidos(request):
     """Lista horarios con información extendida (nombres de relaciones) - Solo aprobados"""
     if request.method == 'GET':
-        #obtener sede de usuario autenticado
-        user_sede = getattr(request, 'sede', None)
-        user_obj = getattr(request, 'user_obj', None)
-        is_admin = user_obj and is_superuser_effective(user_obj)
-        #validar que la sede tenga seccional para filtrar por seccional; si no tiene seccional, no se filtra
-        if user_sede and user_sede.seccional_id and not is_admin:
-            items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=user_sede.seccional_id)
-        else:
+        seccional_id, unrestricted = _get_seccional_scope(request)
+        if unrestricted:
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado')
+        elif seccional_id:
+            items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=seccional_id)
+        else:
+            items = Horario.objects.none()
         # Traer solo horarios aprobados
         lst = []
         for i in items:
@@ -519,12 +530,15 @@ def get_horario_fusionado(request, id=None):
     if id is None:
         return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
     try:
-        #obtener sede del usuario autenticado
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            h = HorarioFusionado.objects.filter(id=id, espacio__sede__seccional_id=user_sede.seccional_id).first()
+        seccional_id, unrestricted = _get_seccional_scope(request)
+        if unrestricted:
+            h = HorarioFusionado.objects.get(id=id)
+        elif seccional_id:
+            h = HorarioFusionado.objects.filter(id=id, espacio__sede__seccional_id=seccional_id).first()
+            if not h:
+                return JsonResponse({"error": "Horario fusionado no encontrado."}, status=404)
         else:
-             h = HorarioFusionado.objects.get(id=id)
+            return JsonResponse({"error": "Horario fusionado no encontrado."}, status=404)
         return JsonResponse({
             "id": h.id,
             "grupo1_id": h.grupo1.id,
@@ -546,12 +560,13 @@ def get_horario_fusionado(request, id=None):
 
 def list_horarios_fusionados(request):
     if request.method == 'GET':
-        #obtener sede del usuario autenticado
-        user_sede = getattr(request, 'sede', None)
-        if user_sede:
-            items = HorarioFusionado.objects.filter(espacio__sede__seccional_id=user_sede.seccional_id)
-        else:
+        seccional_id, unrestricted = _get_seccional_scope(request)
+        if unrestricted:
             items = HorarioFusionado.objects.all()
+        elif seccional_id:
+            items = HorarioFusionado.objects.filter(espacio__sede__seccional_id=seccional_id)
+        else:
+            items = HorarioFusionado.objects.none()
         lst = [{
             "id": i.id,
             "grupo1_id": i.grupo1.id,
