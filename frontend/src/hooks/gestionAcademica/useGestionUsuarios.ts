@@ -557,6 +557,9 @@ export function useGestionUsuarios() {
             const facultadActualizada = facultadSeleccionadaEdit
                 ? facultadesDisponibles.find((f) => f.id === facultadSeleccionadaEdit) ?? null
                 : null;
+            const sedeActualizada = editingUser.sede_id
+                ? sedesDisponibles.find((s) => s.id === editingUser.sede_id) ?? null
+                : null;
 
             await userService.actualizarUsuario({
                 id: editingUser.id,
@@ -566,6 +569,7 @@ export function useGestionUsuarios() {
                 contrasena_hash: editingUser.contrasena_hash,
                 rol_id: editingUser.rol_id,
                 facultad_id: facultadSeleccionadaEdit,
+                sede_id: editingUser.sede_id ?? null,
                 activo: editingUser.activo,
                 espacios_permitidos: espaciosPayload
             });
@@ -579,8 +583,16 @@ export function useGestionUsuarios() {
                         correo: editingUser.correo,
                         rol_id: editingUser.rol_id,
                         facultad_id: facultadSeleccionadaEdit,
+                        sede_id: editingUser.sede_id ?? null,
                         rol: rolActualizado ?? u.rol,
                         facultad: facultadActualizada,
+                        sede: sedeActualizada
+                            ? {
+                                id: sedeActualizada.id,
+                                nombre: sedeActualizada.nombre,
+                                seccional_id: sedeActualizada.seccional_id,
+                            }
+                            : null,
                         espacios_permitidos: espaciosPayload,
                         activo: editingUser.activo,
                     }
@@ -643,11 +655,13 @@ export function useGestionUsuarios() {
 
         // Resolver facultad_id
         const facultadId = usuario.facultad_id || usuario.facultad?.id || null;
+        const sedeId = usuario.sede_id || getRelationId(usuario.sede) || null;
 
         const usuarioConDatosCompletos = {
             ...usuario,
             rol_id: rolId,
             facultad_id: facultadId,
+            sede_id: sedeId,
             rol: usuario.rol || rolesDisponibles.find(r => r.id === rolId) // Asegurar que el objeto rol exista si es posible
         };
 
@@ -820,9 +834,11 @@ export function useGestionUsuarios() {
         eliminarTipoEspacioPermitido,
         espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
         espaciosPermitidosEdit,
+        setEspaciosPermitidosEdit,
         modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit,
         tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit,
         tiposEspacioPermitidosEdit,
+        setTiposEspacioPermitidosEdit,
         asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit,
         agregarTipoEspacioPermitidoEdit,
         eliminarTipoEspacioPermitidoEdit,

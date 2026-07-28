@@ -20,7 +20,7 @@ export type {
 export function useConsultaEspacios() {
   const [vistaActual, setVistaActual] = useState<'tarjetas' | 'cronograma'>('tarjetas');
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<EspacioView | null>(null);
-  const { user, areas } = useAuth();
+  const { user } = useAuth();
 
   const puedeCrearSolicitudes = !!user;
 
@@ -33,11 +33,11 @@ export function useConsultaEspacios() {
       ? {
           id: user.id,
           rol: typeof user.rol === 'string' ? user.rol : String(user.rol?.nombre ?? ''),
-          supervisa_espacios: (typeof user.rol === 'object' ? Boolean(user.rol?.supervisa_espacios) : false) || Boolean(areas?.length),
+          supervisa_espacios: typeof user.rol === 'object' ? Boolean(user.rol?.supervisa_espacios) : false,
           facultad: user.facultad ? { id: user.facultad.id ?? null } : null
         }
       : undefined;
-  }, [areas?.length, user]);
+  }, [user]);
 
   const datos = useConsultaEspaciosDatos({
     user: userParams,

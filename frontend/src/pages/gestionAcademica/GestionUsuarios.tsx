@@ -64,9 +64,11 @@ export default function GestionUsuarios() {
     eliminarTipoEspacioPermitido,
     espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
     espaciosPermitidosEdit,
+    setEspaciosPermitidosEdit,
     modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit,
     tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit,
     tiposEspacioPermitidosEdit,
+    setTiposEspacioPermitidosEdit,
     asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit,
     agregarTipoEspacioPermitidoEdit,
     eliminarTipoEspacioPermitidoEdit,
@@ -745,6 +747,35 @@ export default function GestionUsuarios() {
                         placeholder="usuario@unilibre.edu.co"
                         value={editingUser.correo}
                         onChange={(e) => setEditingUser({ ...editingUser, correo: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sede Universitaria *</Label>
+                    <div className="relative group">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={sedesDisponibles}
+                        value={editingUser.sede_id?.toString() || ''}
+                        onSelect={(sede) => {
+                          setEditingUser({ ...editingUser, sede_id: sede.id });
+                          setEspacioSeleccionadoEdit('');
+                          setEspaciosPermitidosEdit(
+                            espaciosPermitidosEdit.filter((espacioId) => {
+                              const espacio = espaciosDisponibles.find((item) => item.id === espacioId);
+                              return espacio?.sede_id === sede.id;
+                            })
+                          );
+                          setTipoEspacioSeleccionadoEdit('');
+                          setTiposEspacioPermitidosEdit([]);
+                          setAsignarTodosEspaciosPorTipoEdit(false);
+                        }}
+                        getItemId={(sede) => sede.id.toString()}
+                        getItemLabel={(sede) => sede.nombre}
+                        placeholder="Seleccione una sede"
+                        searchPlaceholder="Buscar sede..."
+                        emptyMessage="No se encontraron sedes."
                         className="pl-10"
                       />
                     </div>

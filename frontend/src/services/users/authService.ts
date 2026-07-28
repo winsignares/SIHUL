@@ -82,6 +82,7 @@ export interface UpdateUsuarioPayload {
   contrasena_hash?: string;
   rol_id?: number | null;
   facultad_id?: number | null;
+  sede_id?: number | null;
   activo?: boolean;
   espacios_permitidos?: number[];
 }
@@ -408,6 +409,7 @@ export const userService = {
       contrasena_hash: usuario.contrasena_hash,
       rol: usuario.rol_id,
       facultad: usuario.facultad_id,
+      sede: usuario.sede_id,
       activo: usuario.activo,
       espacios_permitidos: usuario.espacios_permitidos
     });
