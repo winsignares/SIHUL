@@ -56,6 +56,7 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
     usuario_correo = serializers.CharField(source='usuario.correo', read_only=True)
     administrador_nombre = serializers.CharField(source='administrador.nombre', read_only=True)
     tipo_actividad_nombre = serializers.CharField(source='tipo_actividad.nombre', read_only=True)
+    periodo_nombre = serializers.CharField(source='periodo.nombre', read_only=True)
     recursos = RecursoPrestamoInputSerializer(
         source='prestamo_recursos',
         many=True,
@@ -65,6 +66,7 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrestamoEspacio
         fields = '__all__'
+        read_only_fields = ['periodo']
 
     def validate(self, attrs):
         instance = self.instance or PrestamoEspacio()
@@ -115,6 +117,7 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     espacio_tipo = serializers.CharField(source='espacio.tipo.nombre', read_only=True)
     administrador_nombre = serializers.CharField(source='administrador.nombre', read_only=True)
     tipo_actividad_nombre = serializers.CharField(source='tipo_actividad.nombre', read_only=True)
+    periodo_nombre = serializers.CharField(source='periodo.nombre', read_only=True)
     solicitante_publico_nombre = serializers.CharField(source='nombre_solicitante', read_only=True)
     solicitante_publico_correo = serializers.CharField(source='correo_solicitante', read_only=True)
     solicitante_publico_telefono = serializers.CharField(source='telefono_solicitante', read_only=True)
@@ -128,6 +131,7 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrestamoEspacioPublico
         fields = '__all__'
+        read_only_fields = ['periodo']
 
     def validate(self, attrs):
         instance = self.instance or PrestamoEspacioPublico()

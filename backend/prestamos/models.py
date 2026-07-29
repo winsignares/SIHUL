@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import F, CheckConstraint, Q, Index
 from espacios.models import EspacioFisico
+from periodos.models import PeriodoAcademico
 from usuarios.models import Usuario
 
 class TipoActividad(models.Model):
@@ -45,6 +46,13 @@ class PrestamoEspacio(models.Model):
 
     id = models.AutoField(primary_key=True)
     espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='prestamos')
+    periodo = models.ForeignKey(
+        PeriodoAcademico,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='prestamos'
+    )
     usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='prestamos_solicitados')
     administrador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='prestamos_admin')
     tipo_actividad = models.ForeignKey(TipoActividad, on_delete=models.PROTECT, related_name='prestamos')
@@ -116,6 +124,13 @@ class PrestamoEspacioPublico(models.Model):
 
     id = models.AutoField(primary_key=True)
     espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='prestamos_publicos')
+    periodo = models.ForeignKey(
+        PeriodoAcademico,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='prestamos_publicos'
+    )
     # Datos del solicitante público (sin tabla separada)
     nombre_solicitante = models.CharField(max_length=200)
     correo_solicitante = models.EmailField()
