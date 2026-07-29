@@ -173,11 +173,29 @@ class PrestamoRecurso(models.Model):
     prestamo = models.ForeignKey(PrestamoEspacio, on_delete=models.CASCADE, related_name='prestamo_recursos')
     recurso = models.ForeignKey('recursos.Recurso', on_delete=models.CASCADE, related_name='prestamos')
     cantidad = models.PositiveIntegerField(default=1)
-    
+
     class Meta:
         unique_together = ('prestamo', 'recurso')
         verbose_name = 'Recurso de Préstamo'
         verbose_name_plural = 'Recursos de Préstamos'
-    
+
+    def __str__(self):
+        return f"{self.prestamo} - {self.recurso} (x{self.cantidad})"
+
+
+class PrestamoRecursoPublico(models.Model):
+    """
+    Tabla intermedia para asociar recursos con préstamos de usuarios públicos
+    """
+    id = models.AutoField(primary_key=True)
+    prestamo = models.ForeignKey(PrestamoEspacioPublico, on_delete=models.CASCADE, related_name='prestamo_recursos')
+    recurso = models.ForeignKey('recursos.Recurso', on_delete=models.CASCADE, related_name='prestamos_publicos')
+    cantidad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        unique_together = ('prestamo', 'recurso')
+        verbose_name = 'Recurso de Préstamo Público'
+        verbose_name_plural = 'Recursos de Préstamos Públicos'
+
     def __str__(self):
         return f"{self.prestamo} - {self.recurso} (x{self.cantidad})"

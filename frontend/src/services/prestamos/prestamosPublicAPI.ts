@@ -1,5 +1,6 @@
 import { apiClient } from '../../core/apiClient';
 import { notifyPrestamosChanged } from './prestamosChanges';
+import type { RecursoPrestamo } from './prestamoAPI';
 
 export interface SedeAPI {
     id: number;
@@ -63,6 +64,7 @@ export interface PrestamoPublicoItem {
     telefono: string;
     identificacion: string;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    recursos?: RecursoPrestamo[];
     es_recurrente?: boolean;
     frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
     intervalo?: number;
@@ -90,6 +92,7 @@ interface PrestamoPublicoApi {
     motivo: string;
     asistentes: number;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    recursos?: RecursoPrestamo[];
     es_recurrente?: boolean;
     frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
     intervalo?: number;
@@ -117,6 +120,7 @@ export interface ActualizarPrestamoPublicoPayload {
     motivo: string;
     asistentes: number;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    recursos?: RecursoPrestamo[];
     es_recurrente?: boolean;
     frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
     intervalo?: number;
@@ -137,6 +141,7 @@ export interface PrestamoPublicoDetalle {
     asistentes: number;
     telefono: string;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
+    recursos?: RecursoPrestamo[];
     usuario_nombre?: string;
     usuario_correo?: string;
     administrador_id?: number | null;
@@ -175,7 +180,7 @@ export interface PrestamoPublicoListado {
     asistentes: number;
     telefono: string;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido';
-    recursos: [];
+    recursos: RecursoPrestamo[];
     es_recurrente?: boolean;
     frecuencia?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
     intervalo?: number;
@@ -206,6 +211,7 @@ const toPrestamoPublicoItem = (item: PrestamoPublicoApi): PrestamoPublicoItem =>
     telefono: item.telefono_solicitante,
     identificacion: item.identificacion_solicitante,
     estado: item.estado,
+    recursos: item.recursos,
     es_recurrente: item.es_recurrente,
     frecuencia: item.frecuencia,
     intervalo: item.intervalo,
@@ -358,6 +364,7 @@ export const prestamosPublicAPI = {
             motivo: payload.motivo,
             asistentes: payload.asistentes,
             estado: payload.estado,
+            ...(payload.recursos !== undefined ? { recursos: payload.recursos } : {}),
             es_recurrente: payload.es_recurrente,
             frecuencia: payload.frecuencia,
             intervalo: payload.intervalo,
@@ -387,6 +394,7 @@ export const prestamosPublicAPI = {
             asistentes: normalizado.asistentes,
             telefono: normalizado.telefono,
             estado: normalizado.estado,
+            recursos: normalizado.recursos,
             usuario_nombre: normalizado.usuario_nombre,
             usuario_correo: normalizado.usuario_correo,
             administrador_id: normalizado.administrador_id,

@@ -2,7 +2,13 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .availability import validar_disponibilidad_prestamo
-from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
+from .models import (
+    PrestamoEspacio,
+    PrestamoEspacioPublico,
+    PrestamoRecurso,
+    PrestamoRecursoPublico,
+    TipoActividad,
+)
 from recursos.models import Recurso
 
 
@@ -90,6 +96,11 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     solicitante_publico_correo = serializers.CharField(source='correo_solicitante', read_only=True)
     solicitante_publico_telefono = serializers.CharField(source='telefono_solicitante', read_only=True)
     solicitante_publico_identificacion = serializers.CharField(source='identificacion_solicitante', read_only=True)
+    recursos = RecursoPrestamoInputSerializer(
+        source='prestamo_recursos',
+        many=True,
+        required=False,
+    )
 
     class Meta:
         model = PrestamoEspacioPublico
@@ -98,9 +109,44 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         instance = self.instance or PrestamoEspacioPublico()
         for field, value in attrs.items():
+            if field == 'prestamo_recursos':
+                continue
             setattr(instance, field, value)
         validar_disponibilidad_prestamo(instance)
         return attrs
+
+    def validate_recursos(self, recursos):
+        recurso_ids = [item['recurso'].id for item in recursos]
+        if len(recurso_ids) != len(set(recurso_ids)):
+            raise serializers.ValidationError('No se puede solicitar el mismo recurso más de una vez.')
+        return recursos
+
+    @staticmethod
+    def _guardar_recursos(prestamo, recursos):
+        PrestamoRecursoPublico.objects.bulk_create([
+            PrestamoRecursoPublico(
+                prestamo=prestamo,
+                recurso=item['recurso'],
+                cantidad=item['cantidad'],
+            )
+            for item in recursos
+        ])
+
+    @transaction.atomic
+    def create(self, validated_data):
+        recursos = validated_data.pop('prestamo_recursos', [])
+        prestamo = super().create(validated_data)
+        self._guardar_recursos(prestamo, recursos)
+        return prestamo
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        recursos = validated_data.pop('prestamo_recursos', None)
+        prestamo = super().update(instance, validated_data)
+        if recursos is not None:
+            prestamo.prestamo_recursos.all().delete()
+            self._guardar_recursos(prestamo, recursos)
+        return prestamo
 
 
 class PrestamoRecursoSerializer(serializers.ModelSerializer):

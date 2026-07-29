@@ -32,6 +32,9 @@ export default function PrestamosEspacios() {
     modoEdicion,
     prestamoEditando,
     setPrestamoEditando,
+    espaciosDisponibles,
+    tiposActividad,
+    recursosDisponibles,
     paginatedPrestamos,
     totalFilteredPrestamos,
     currentPage,
@@ -457,11 +460,57 @@ export default function PrestamosEspacios() {
                               <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Espacio Solicitado</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.espacio}</p>
+                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                    <Select
+                                      value={prestamoEditando.espacio_id ? String(prestamoEditando.espacio_id) : ''}
+                                      onValueChange={(v) => {
+                                        const espacioSeleccionado = espaciosDisponibles.find((e) => String(e.id) === v);
+                                        setPrestamoEditando({
+                                          ...prestamoEditando,
+                                          espacio_id: Number(v),
+                                          espacio: espacioSeleccionado?.nombre || prestamoEditando.espacio
+                                        });
+                                      }}
+                                    >
+                                      <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Espacio" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {espaciosDisponibles.map((e) => (
+                                          <SelectItem key={e.id} value={String(e.id)}>{e.nombre}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <p className="text-slate-900 dark:text-slate-100">{prestamoActual.espacio}</p>
+                                  )}
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Tipo de Evento</Label>
-                                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.tipoEvento}</p>
+                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                    <Select
+                                      value={prestamoEditando.tipo_actividad_id ? String(prestamoEditando.tipo_actividad_id) : ''}
+                                      onValueChange={(v) => {
+                                        const tipoSeleccionado = tiposActividad.find((t) => String(t.id) === v);
+                                        setPrestamoEditando({
+                                          ...prestamoEditando,
+                                          tipo_actividad_id: Number(v),
+                                          tipoEvento: tipoSeleccionado?.nombre || prestamoEditando.tipoEvento
+                                        });
+                                      }}
+                                    >
+                                      <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Tipo de evento" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {tiposActividad.map((t) => (
+                                          <SelectItem key={t.id} value={String(t.id)}>{t.nombre}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <p className="text-slate-900 dark:text-slate-100">{prestamoActual.tipoEvento}</p>
+                                  )}
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha</Label>
@@ -697,21 +746,90 @@ export default function PrestamosEspacios() {
                                 <Package className="w-5 h-5 text-green-600" />
                                 Recursos Necesarios
                               </h3>
-                              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                {prestamoActual.recursosNecesarios.length > 0 ? (
-                                  prestamoActual.recursosNecesarios.map((recurso) => (
-                                    <Badge
-                                      key={recurso}
-                                      variant="outline"
-                                      className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
-                                    >
-                                      {recurso}
-                                    </Badge>
-                                  ))
-                                ) : (
-                                  <p className="text-sm text-slate-500 dark:text-slate-400">Sin recursos solicitados</p>
-                                )}
-                              </div>
+                              {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                                  {(prestamoEditando.recursos || []).map((r, idx) => (
+                                    <div key={r.recurso_id} className="flex items-center gap-2">
+                                      <Select
+                                        value={String(r.recurso_id)}
+                                        onValueChange={(v) => {
+                                          const nuevo = [...(prestamoEditando.recursos || [])];
+                                          const recursoSeleccionado = recursosDisponibles.find((rec) => String(rec.id) === v);
+                                          nuevo[idx] = {
+                                            ...nuevo[idx],
+                                            recurso_id: Number(v),
+                                            recurso_nombre: recursoSeleccionado?.nombre
+                                          };
+                                          setPrestamoEditando({ ...prestamoEditando, recursos: nuevo });
+                                        }}
+                                      >
+                                        <SelectTrigger className="flex-1">
+                                          <SelectValue placeholder="Recurso" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {recursosDisponibles.map((rec) => (
+                                            <SelectItem key={rec.id} value={String(rec.id)}>{rec.nombre}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        value={r.cantidad}
+                                        onChange={(e) => {
+                                          const nuevo = [...(prestamoEditando.recursos || [])];
+                                          nuevo[idx] = { ...nuevo[idx], cantidad: parseInt(e.target.value) || 1 };
+                                          setPrestamoEditando({ ...prestamoEditando, recursos: nuevo });
+                                        }}
+                                        className="w-20"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const nuevo = (prestamoEditando.recursos || []).filter((_, i) => i !== idx);
+                                          setPrestamoEditando({ ...prestamoEditando, recursos: nuevo });
+                                        }}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const yaUsados = new Set((prestamoEditando.recursos || []).map((r) => r.recurso_id));
+                                      const disponible = recursosDisponibles.find((rec) => rec.id != null && !yaUsados.has(rec.id));
+                                      if (!disponible?.id) return;
+                                      setPrestamoEditando({
+                                        ...prestamoEditando,
+                                        recursos: [...(prestamoEditando.recursos || []), { recurso_id: disponible.id, recurso_nombre: disponible.nombre, cantidad: 1 }]
+                                      });
+                                    }}
+                                  >
+                                    + Agregar recurso
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                                  {prestamoActual.recursosNecesarios.length > 0 ? (
+                                    prestamoActual.recursosNecesarios.map((recurso) => (
+                                      <Badge
+                                        key={recurso}
+                                        variant="outline"
+                                        className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                                      >
+                                        {recurso}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Sin recursos solicitados</p>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Información del Administrador (si existe) */}

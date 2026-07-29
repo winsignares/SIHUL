@@ -1,3 +1,9 @@
+export interface RecursoPrestamoUI {
+    recurso_id: number;
+    recurso_nombre?: string;
+    cantidad: number;
+}
+
 export interface PrestamoEspacioUI {
     id: string;
     solicitante: string;
@@ -13,6 +19,7 @@ export interface PrestamoEspacioUI {
     tipo_actividad_id?: number;
     asistentes: number;
     recursosNecesarios: string[];
+    recursos: RecursoPrestamoUI[];
     estado: 'pendiente' | 'aprobado' | 'rechazado';
     fechaSolicitud: string;
     comentariosAdmin?: string;

@@ -60,7 +60,7 @@ class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestro
 
 
 class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
-    queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+    queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioPublicoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
@@ -73,12 +73,12 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
 
 
 class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+    queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioPublicoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
@@ -89,7 +89,7 @@ class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdat
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').all()
+            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
 
 

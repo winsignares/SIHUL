@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import type { PrestamoEspacioUI as PrestamoEspacio } from '../../models';
 import { Clock, Check, X, TrendingUp } from 'lucide-react';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
-import { prestamosPublicAPI } from '../../services/prestamos/prestamosPublicAPI';
+import { prestamosPublicAPI, type TipoActividadAPI } from '../../services/prestamos/prestamosPublicAPI';
+import { espaciosAPI, type EspacioFisico } from '../../services/espacios/espaciosAPI';
+import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
@@ -69,7 +71,31 @@ export function usePrestamosEspacios() {
     const [prestamos, setPrestamos] = useState<PrestamoEspacio[]>([]);
     const [loading, setLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioFisico[]>([]);
+    const [tiposActividad, setTiposActividad] = useState<TipoActividadAPI[]>([]);
+    const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
     const { user, areas } = useAuth();
+
+    // Cargar catálogos usados en el formulario de edición (espacios, tipos de actividad, recursos)
+    useEffect(() => {
+        (async () => {
+            try {
+                const [espaciosResp, tiposResp, recursosResp] = await Promise.all([
+                    espaciosAPI.list(),
+                    prestamosPublicAPI.listarTiposActividad(),
+                    recursoService.listarRecursos()
+                ]);
+                setEspaciosDisponibles(espaciosResp.espacios);
+                setTiposActividad(tiposResp.tipos_actividad);
+                setRecursosDisponibles(recursosResp.recursos);
+            } catch (error) {
+                showNotification({
+                    message: `Error al cargar catálogos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+                    type: 'error'
+                });
+            }
+        })();
+    }, []);
 
     const normalizarEstado = (estado: PrestamoEspacio['estado']) => {
         return estado.charAt(0).toUpperCase() + estado.slice(1);
@@ -181,6 +207,11 @@ export function usePrestamosEspacios() {
                         .map(r => r.cantidad > 1
                             ? `${r.recurso_nombre} (x${r.cantidad})`
                             : r.recurso_nombre!.trim()),
+                    recursos: (p.recursos || []).map(r => ({
+                        recurso_id: r.recurso_id,
+                        recurso_nombre: r.recurso_nombre,
+                        cantidad: r.cantidad
+                    })),
                     estado: p.estado.toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
                     fechaSolicitud: p.fecha + ' ' + p.hora_inicio,
                     comentariosAdmin: '', // No disponible en el backend actual
@@ -493,6 +524,11 @@ export function usePrestamosEspacios() {
                   }
                 : { es_recurrente: false };
 
+            const recursosPayload = (prestamoEditando.recursos || []).map((r) => ({
+                recurso_id: r.recurso_id,
+                cantidad: r.cantidad
+            }));
+
             if (tipo === 'publico') {
                 await prestamosPublicAPI.actualizarSolicitud({
                     id: numericId,
@@ -509,6 +545,7 @@ export function usePrestamosEspacios() {
                     motivo: prestamoEditando.motivo,
                     asistentes: prestamoEditando.asistentes,
                     estado: normalizarEstado(prestamoEditando.estado) as 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Vencido',
+                    recursos: recursosPayload,
                     ...recurrencePayload
                 });
             } else {
@@ -520,6 +557,7 @@ export function usePrestamosEspacios() {
                     usuario_id: prestamoActual.usuario_id,
                     administrador_id: prestamoActual.administrador_id || user?.id || null,
                     tipo_actividad_id: tipoActividadId,
+                    recursos: recursosPayload,
                     fecha: prestamoEditando.fecha,
                     hora_inicio: `${prestamoEditando.horaInicio}:00`,
                     hora_fin: `${prestamoEditando.horaFin}:00`,
@@ -709,6 +747,9 @@ export function usePrestamosEspacios() {
         modoEdicion,
         prestamoEditando,
         setPrestamoEditando,
+        espaciosDisponibles,
+        tiposActividad,
+        recursosDisponibles,
         prestamos,
         filteredPrestamos,
         paginatedPrestamos,
