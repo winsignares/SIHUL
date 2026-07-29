@@ -7,17 +7,16 @@ import {
     type PrestamoPublicoItem
 } from '../../services/prestamos/prestamosPublicAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { clearSessionCache } from '../../core/sessionCache';
-
-type RepeatQuickOption =
-    | 'none'
-    | 'daily'
-    | 'weekly_current'
-    | 'monthly_date'
-    | 'yearly_date'
-    | 'custom';
-
-type CustomPeriod = 'day' | 'week' | 'month' | 'year';
+import {
+    opcionRapidaPermitida,
+    maxIntervaloPermitido,
+    maxOcurrenciasPorOpcion,
+    fechaFinPeriodo,
+    type RepeatQuickOption,
+    type CustomPeriod,
+} from '../../utils/recurrenceLimits';
 
 const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -51,6 +50,7 @@ export function usePublicPrestamo() {
     const [finRepeticionTipo, setFinRepeticionTipo] = useState<'never' | 'until_date' | 'count'>('never');
     const [finRepeticionFecha, setFinRepeticionFecha] = useState('');
     const [finRepeticionOcurrencias, setFinRepeticionOcurrencias] = useState<number | ''>('');
+    const [periodoFecha, setPeriodoFecha] = useState<PeriodoAcademico | null>(null);
 
     // Estados de UI
     const [loading, setLoading] = useState(false);
@@ -144,6 +144,24 @@ export function usePublicPrestamo() {
         }
     };
 
+    // Buscar el periodo académico al que pertenece la fecha seleccionada,
+    // para limitar las opciones de repetición a lo que resta del periodo.
+    useEffect(() => {
+        if (!formData.fecha) {
+            setPeriodoFecha(null);
+            return;
+        }
+        let cancelado = false;
+        periodoService.periodoPorRangoFechas(formData.fecha, formData.fecha)
+            .then((response) => {
+                if (!cancelado) setPeriodoFecha(response.periodos?.[0] ?? null);
+            })
+            .catch(() => {
+                if (!cancelado) setPeriodoFecha(null);
+            });
+        return () => { cancelado = true; };
+    }, [formData.fecha]);
+
     const toggleDiaSemana = (dayIndex: number) => {
         setDiasSemana((prev) => {
             const exists = prev.includes(dayIndex);
@@ -159,7 +177,7 @@ export function usePublicPrestamo() {
             ? `${dayOfMonth} de ${MONTH_NAMES[date.getMonth()]}`
             : 'la fecha seleccionada';
 
-        return [
+        const opciones = [
             { value: 'none' as const, label: 'No se repite' },
             { value: 'daily' as const, label: 'Cada día' },
             { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
@@ -167,7 +185,33 @@ export function usePublicPrestamo() {
             { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
             { value: 'custom' as const, label: 'Personalizar' },
         ];
+
+        return opciones.filter((opt) => opcionRapidaPermitida(opt.value, formData.fecha, periodoFecha));
     })();
+
+    const intervaloMaximoPeriodo = maxIntervaloPermitido(customPeriod, formData.fecha, periodoFecha);
+    const finRepeticionMaxFecha = fechaFinPeriodo(periodoFecha);
+    const ocurrenciasMaximoPeriodo = maxOcurrenciasPorOpcion(
+        repeatOption,
+        customPeriod,
+        intervalo,
+        formData.fecha,
+        periodoFecha
+    );
+
+    useEffect(() => {
+        if (!repeatOptions.some((opt) => opt.value === repeatOption)) {
+            setRepeatOption('none');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.fecha, periodoFecha]);
+
+    useEffect(() => {
+        if (intervaloMaximoPeriodo != null && intervalo > intervaloMaximoPeriodo) {
+            setIntervalo(intervaloMaximoPeriodo);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [intervaloMaximoPeriodo]);
 
     const recurrenceSummary = (() => {
         const date = formData.fecha ? new Date(`${formData.fecha}T00:00:00`) : null;
@@ -594,6 +638,9 @@ export function usePublicPrestamo() {
         finRepeticionOcurrencias,
         setFinRepeticionOcurrencias,
         repeatOptions,
-        recurrenceSummary
+        recurrenceSummary,
+        intervaloMaximoPeriodo,
+        finRepeticionMaxFecha,
+        ocurrenciasMaximoPeriodo
     };
 }

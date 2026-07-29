@@ -76,7 +76,10 @@ export default function PublicPrestamo() {
         repeatOptions,
         recurrenceSummary,
         recaptchaToken,
-        handleRecaptchaChange
+        handleRecaptchaChange,
+        intervaloMaximoPeriodo,
+        finRepeticionMaxFecha,
+        ocurrenciasMaximoPeriodo
     } = usePublicPrestamo();
 
     const getEstadoBadge = (estado: string) => {
@@ -486,9 +489,18 @@ export default function PublicPrestamo() {
                                             <Input
                                                 type="number"
                                                 min="1"
+                                                max={intervaloMaximoPeriodo ?? undefined}
                                                 value={intervalo}
-                                                onChange={(e) => setIntervalo(Math.max(1, Number(e.target.value) || 1))}
+                                                onChange={(e) => {
+                                                    const maxValue = intervaloMaximoPeriodo ?? Infinity;
+                                                    setIntervalo(Math.max(1, Math.min(maxValue, Number(e.target.value) || 1)));
+                                                }}
                                             />
+                                            {intervaloMaximoPeriodo != null && (
+                                                <p className="text-xs text-slate-500">
+                                                    Máximo {intervaloMaximoPeriodo} por lo que resta del periodo académico.
+                                                </p>
+                                            )}
                                             {errors.recurrencia_intervalo && (
                                                 <p className="text-xs text-red-600 dark:text-red-400">{errors.recurrencia_intervalo}</p>
                                             )}
@@ -561,7 +573,22 @@ export default function PublicPrestamo() {
                                     {finRepeticionTipo === 'until_date' && (
                                         <div className="space-y-1">
                                             <Label>Fecha fin</Label>
-                                            <Input type="date" value={finRepeticionFecha} onChange={(e) => setFinRepeticionFecha(e.target.value)} />
+                                            <Input
+                                                type="date"
+                                                max={finRepeticionMaxFecha ?? undefined}
+                                                value={finRepeticionFecha}
+                                                onChange={(e) => {
+                                                    const value = finRepeticionMaxFecha && e.target.value > finRepeticionMaxFecha
+                                                        ? finRepeticionMaxFecha
+                                                        : e.target.value;
+                                                    setFinRepeticionFecha(value);
+                                                }}
+                                            />
+                                            {finRepeticionMaxFecha && (
+                                                <p className="text-xs text-slate-500">
+                                                    El periodo académico finaliza el {new Date(`${finRepeticionMaxFecha}T00:00:00`).toLocaleDateString('es-CO')}.
+                                                </p>
+                                            )}
                                             {errors.recurrencia_fin_fecha && (
                                                 <p className="text-xs text-red-600 dark:text-red-400">{errors.recurrencia_fin_fecha}</p>
                                             )}
@@ -574,9 +601,21 @@ export default function PublicPrestamo() {
                                             <Input
                                                 type="number"
                                                 min="1"
+                                                max={ocurrenciasMaximoPeriodo ?? undefined}
                                                 value={finRepeticionOcurrencias}
-                                                onChange={(e) => setFinRepeticionOcurrencias(Number(e.target.value) || '')}
+                                                onChange={(e) => {
+                                                    let value = Number(e.target.value) || '';
+                                                    if (ocurrenciasMaximoPeriodo != null && value !== '' && value > ocurrenciasMaximoPeriodo) {
+                                                        value = ocurrenciasMaximoPeriodo;
+                                                    }
+                                                    setFinRepeticionOcurrencias(value);
+                                                }}
                                             />
+                                            {ocurrenciasMaximoPeriodo != null && (
+                                                <p className="text-xs text-slate-500">
+                                                    Máximo {ocurrenciasMaximoPeriodo} repeticiones dentro del periodo académico.
+                                                </p>
+                                            )}
                                             {errors.recurrencia_fin_ocurrencias && (
                                                 <p className="text-xs text-red-600 dark:text-red-400">{errors.recurrencia_fin_ocurrencias}</p>
                                             )}

@@ -41,6 +41,12 @@ import { prestamoService, type RecursoPrestamo } from '../../services/prestamos/
 import { horarioService } from '../../services/horarios/horariosAPI';
 import { toast } from 'sonner';
 import type { Sede } from '../../services/sedes/sedeAPI';
+import {
+  opcionRapidaPermitida,
+  maxIntervaloPermitido,
+  maxOcurrenciasPorOpcion,
+  fechaFinPeriodo,
+} from '../../utils/recurrenceLimits';
 
 type RepeatQuickOption =
   | 'none'
@@ -458,7 +464,7 @@ export default function ConsultaEspacios() {
 
     const ordinalWeekdayText = getOrdinalWeekdayText(fechaBase, diaG);
 
-    return [
+    const opciones = [
       { value: 'none' as const, label: 'No se repite' },
       { value: 'daily' as const, label: 'Cada día' },
       { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
@@ -466,7 +472,33 @@ export default function ConsultaEspacios() {
       { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
       { value: 'custom' as const, label: 'Personalizar' }
     ];
+
+    return opciones.filter((opt) => opcionRapidaPermitida(opt.value, fechaBase, periodoSeleccionado));
   })();
+
+  const intervaloMaximoPeriodo = maxIntervaloPermitido(customPeriod, nuevaSolicitudData?.fecha, periodoSeleccionado);
+  const finRepeticionMaxFecha = fechaFinPeriodo(periodoSeleccionado);
+  const ocurrenciasMaximoPeriodo = maxOcurrenciasPorOpcion(
+    repeatOption,
+    customPeriod,
+    formData.intervalo,
+    nuevaSolicitudData?.fecha,
+    periodoSeleccionado
+  );
+
+  useEffect(() => {
+    if (!repeatOptions.some((opt) => opt.value === repeatOption)) {
+      setRepeatOption('none');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nuevaSolicitudData?.fecha, periodoSeleccionado]);
+
+  useEffect(() => {
+    if (intervaloMaximoPeriodo != null && formData.intervalo > intervaloMaximoPeriodo) {
+      setFormData((prev) => ({ ...prev, intervalo: intervaloMaximoPeriodo }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intervaloMaximoPeriodo]);
 
   const toggleDiaSemana = (dayValue: number) => {
     setFormData((prev) => {
@@ -2384,10 +2416,16 @@ export default function ConsultaEspacios() {
                         <Input
                           type="number"
                           min="1"
-                          max={customPeriod === 'day' ? 31 : customPeriod === 'week' ? 3 : customPeriod === 'month' ? 11 : 5}
+                          max={Math.min(
+                            customPeriod === 'day' ? 31 : customPeriod === 'week' ? 3 : customPeriod === 'month' ? 11 : 5,
+                            intervaloMaximoPeriodo ?? Infinity
+                          )}
                           value={formData.intervalo}
                           onChange={(e) => {
-                            const maxValue = customPeriod === 'day' ? 31 : customPeriod === 'week' ? 3 : customPeriod === 'month' ? 11 : 5;
+                            const maxValue = Math.min(
+                              customPeriod === 'day' ? 31 : customPeriod === 'week' ? 3 : customPeriod === 'month' ? 11 : 5,
+                              intervaloMaximoPeriodo ?? Infinity
+                            );
                             const value = Math.max(1, Math.min(maxValue, Number(e.target.value) || 1));
                             setFormData((prev) => ({
                               ...prev,
@@ -2397,6 +2435,9 @@ export default function ConsultaEspacios() {
                         />
                         <p className="text-xs text-slate-500">
                           Máximo: {customPeriod === 'day' ? '31 días' : customPeriod === 'week' ? '3 semanas' : customPeriod === 'month' ? '11 meses' : '5 años'}
+                          {intervaloMaximoPeriodo != null && (
+                            <> (limitado a {intervaloMaximoPeriodo} por lo que resta del periodo académico)</>
+                          )}
                         </p>
                       </div>
 
@@ -2473,9 +2514,20 @@ export default function ConsultaEspacios() {
                         <Label>Fecha de finalización *</Label>
                         <Input
                           type="date"
+                          max={finRepeticionMaxFecha ?? undefined}
                           value={formData.fin_repeticion_fecha}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, fin_repeticion_fecha: e.target.value }))}
+                          onChange={(e) => {
+                            const value = finRepeticionMaxFecha && e.target.value > finRepeticionMaxFecha
+                              ? finRepeticionMaxFecha
+                              : e.target.value;
+                            setFormData((prev) => ({ ...prev, fin_repeticion_fecha: value }));
+                          }}
                         />
+                        {finRepeticionMaxFecha && (
+                          <p className="text-xs text-slate-500">
+                            El periodo académico finaliza el {new Date(`${finRepeticionMaxFecha}T00:00:00`).toLocaleDateString('es-CO')}.
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -2485,10 +2537,22 @@ export default function ConsultaEspacios() {
                         <Input
                           type="number"
                           min="1"
+                          max={ocurrenciasMaximoPeriodo ?? undefined}
                           value={formData.fin_repeticion_ocurrencias}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, fin_repeticion_ocurrencias: e.target.value }))}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            if (ocurrenciasMaximoPeriodo != null && Number(value) > ocurrenciasMaximoPeriodo) {
+                              value = String(ocurrenciasMaximoPeriodo);
+                            }
+                            setFormData((prev) => ({ ...prev, fin_repeticion_ocurrencias: value }));
+                          }}
                           placeholder="Ej: 10"
                         />
+                        {ocurrenciasMaximoPeriodo != null && (
+                          <p className="text-xs text-slate-500">
+                            Máximo {ocurrenciasMaximoPeriodo} repeticiones dentro del periodo académico.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

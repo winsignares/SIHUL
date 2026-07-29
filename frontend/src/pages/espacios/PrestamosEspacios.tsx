@@ -13,11 +13,24 @@ import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios'
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
 import { Loading } from '../../components/common/Loading';
+import { useState, useEffect } from 'react';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
+import {
+  maxIntervaloPermitido,
+  maxOcurrenciasEnPeriodo,
+  diasPorOcurrencia,
+  diasRestantesEnPeriodo,
+  mesesRestantesEnPeriodo,
+  aniosRestantesEnPeriodo,
+  fechaFinPeriodo,
+  type CustomPeriod,
+} from '../../utils/recurrenceLimits';
 
 export default function PrestamosEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
   const puedeGestionarPrestamos = hasEditPermission('Préstamos de Espacios');
+  const [periodoEdicion, setPeriodoEdicion] = useState<PeriodoAcademico | null>(null);
   const {
     searchTerm,
     setSearchTerm,
@@ -57,6 +70,52 @@ export default function PrestamosEspacios() {
     eliminarSolicitud,
     loading
   } = usePrestamosEspacios();
+
+  const fechaEnEdicion = prestamoEditando?.fecha;
+  useEffect(() => {
+    if (!fechaEnEdicion) {
+      setPeriodoEdicion(null);
+      return;
+    }
+    let cancelado = false;
+    periodoService.periodoPorRangoFechas(fechaEnEdicion, fechaEnEdicion)
+      .then((response) => {
+        if (!cancelado) setPeriodoEdicion(response.periodos?.[0] ?? null);
+      })
+      .catch(() => {
+        if (!cancelado) setPeriodoEdicion(null);
+      });
+    return () => { cancelado = true; };
+  }, [fechaEnEdicion]);
+
+  const frecuenciaAMaxIntervalo = (frecuencia: string | undefined): number | null => {
+    if (!fechaEnEdicion || !periodoEdicion) return null;
+    const customPeriod: CustomPeriod =
+      frecuencia === 'daily' || frecuencia === 'weekdays' ? 'day'
+        : frecuencia === 'weekly' ? 'week'
+        : frecuencia === 'monthly' ? 'month'
+        : 'year';
+    return maxIntervaloPermitido(customPeriod, fechaEnEdicion, periodoEdicion);
+  };
+
+  const frecuenciaCabeEnPeriodo = (frecuencia: string): boolean => {
+    if (!fechaEnEdicion || !periodoEdicion) return true;
+    if (frecuencia === 'none') return true;
+    if (frecuencia === 'daily' || frecuencia === 'weekdays') return diasRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 1;
+    if (frecuencia === 'weekly') return diasRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 7;
+    if (frecuencia === 'monthly') return mesesRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 1;
+    if (frecuencia === 'yearly') return aniosRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 1;
+    return true;
+  };
+
+  const frecuenciaAMaxOcurrencias = (frecuencia: string | undefined, intervalo: number): number | null => {
+    if (!fechaEnEdicion || !periodoEdicion) return null;
+    const dias = frecuencia === 'daily' || frecuencia === 'weekdays' ? diasPorOcurrencia('daily', intervalo)
+      : frecuencia === 'weekly' ? diasPorOcurrencia('weekly', intervalo)
+      : frecuencia === 'monthly' ? diasPorOcurrencia('monthly', intervalo)
+      : diasPorOcurrencia('yearly', intervalo);
+    return maxOcurrenciasEnPeriodo(dias, fechaEnEdicion, periodoEdicion);
+  };
 
   const FRECUENCIA_LABELS: Record<string, string> = {
     none: 'No se repite',
@@ -606,11 +665,11 @@ export default function PrestamosEspacios() {
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="none">No se repite</SelectItem>
-                                                <SelectItem value="daily">Diario</SelectItem>
-                                                <SelectItem value="weekly">Semanal</SelectItem>
-                                                <SelectItem value="monthly">Mensual</SelectItem>
-                                                <SelectItem value="yearly">Anual</SelectItem>
-                                                <SelectItem value="weekdays">Días laborales</SelectItem>
+                                                <SelectItem value="daily" disabled={!frecuenciaCabeEnPeriodo('daily')}>Diario</SelectItem>
+                                                <SelectItem value="weekly" disabled={!frecuenciaCabeEnPeriodo('weekly')}>Semanal</SelectItem>
+                                                <SelectItem value="monthly" disabled={!frecuenciaCabeEnPeriodo('monthly')}>Mensual</SelectItem>
+                                                <SelectItem value="yearly" disabled={!frecuenciaCabeEnPeriodo('yearly')}>Anual</SelectItem>
+                                                <SelectItem value="weekdays" disabled={!frecuenciaCabeEnPeriodo('weekdays')}>Días laborales</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -619,13 +678,22 @@ export default function PrestamosEspacios() {
                                             <Input
                                               type="number"
                                               min="1"
+                                              max={frecuenciaAMaxIntervalo(prestamoEditando.frecuencia) ?? undefined}
                                               value={prestamoEditando.intervalo || 1}
-                                              onChange={(e) => setPrestamoEditando({
-                                                ...prestamoEditando,
-                                                intervalo: Math.max(1, Number(e.target.value) || 1)
-                                              })}
+                                              onChange={(e) => {
+                                                const maxValue = frecuenciaAMaxIntervalo(prestamoEditando.frecuencia) ?? Infinity;
+                                                setPrestamoEditando({
+                                                  ...prestamoEditando,
+                                                  intervalo: Math.max(1, Math.min(maxValue, Number(e.target.value) || 1))
+                                                });
+                                              }}
                                               className="mt-1"
                                             />
+                                            {frecuenciaAMaxIntervalo(prestamoEditando.frecuencia) != null && (
+                                              <p className="text-xs text-slate-500 mt-1">
+                                                Máximo {frecuenciaAMaxIntervalo(prestamoEditando.frecuencia)} por lo que resta del periodo.
+                                              </p>
+                                            )}
                                           </div>
                                         </div>
 
@@ -686,10 +754,20 @@ export default function PrestamosEspacios() {
                                               <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha fin</Label>
                                               <Input
                                                 type="date"
+                                                max={fechaFinPeriodo(periodoEdicion) ?? undefined}
                                                 value={prestamoEditando.fin_repeticion_fecha || ''}
-                                                onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fin_repeticion_fecha: e.target.value })}
+                                                onChange={(e) => {
+                                                  const tope = fechaFinPeriodo(periodoEdicion);
+                                                  const value = tope && e.target.value > tope ? tope : e.target.value;
+                                                  setPrestamoEditando({ ...prestamoEditando, fin_repeticion_fecha: value });
+                                                }}
                                                 className="mt-1"
                                               />
+                                              {periodoEdicion && (
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                  El periodo académico finaliza el {new Date(`${periodoEdicion.fecha_fin}T00:00:00`).toLocaleDateString('es-CO')}.
+                                                </p>
+                                              )}
                                             </div>
                                           )}
                                           {prestamoEditando.fin_repeticion_tipo === 'count' && (
@@ -698,10 +776,21 @@ export default function PrestamosEspacios() {
                                               <Input
                                                 type="number"
                                                 min="1"
+                                                max={frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1) ?? undefined}
                                                 value={prestamoEditando.fin_repeticion_ocurrencias || ''}
-                                                onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fin_repeticion_ocurrencias: Number(e.target.value) || null })}
+                                                onChange={(e) => {
+                                                  const maxValue = frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1);
+                                                  let value = Number(e.target.value) || null;
+                                                  if (maxValue != null && value != null && value > maxValue) value = maxValue;
+                                                  setPrestamoEditando({ ...prestamoEditando, fin_repeticion_ocurrencias: value });
+                                                }}
                                                 className="mt-1"
                                               />
+                                              {frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1) != null && (
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                  Máximo {frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1)} repeticiones dentro del periodo.
+                                                </p>
+                                              )}
                                             </div>
                                           )}
                                         </div>
