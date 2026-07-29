@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from mysite.auth_helpers import user_can_edit_componente
 from .availability import validar_disponibilidad_prestamo
 from .models import (
     PrestamoEspacio,
@@ -10,6 +11,27 @@ from .models import (
     TipoActividad,
 )
 from recursos.models import Recurso
+
+COMPONENTE_DISPONIBILIDAD_ESPACIOS = 'Disponibilidad de Espacios'
+
+
+def _reevaluar_estado_si_estaba_aprobado(instance, validated_data, request):
+    """Si se edita un préstamo que estaba Aprobado y el estado enviado sigue
+    siendo Aprobado (es decir, no es una acción explícita de aprobar/rechazar
+    a otro estado), lo mantiene Aprobado solo cuando quien edita tiene
+    permiso EDITAR en "Disponibilidad de Espacios"; de lo contrario lo
+    regresa a Pendiente para que sea reaprobado.
+    """
+    if instance.estado != 'Aprobado':
+        return
+
+    nuevo_estado = validated_data.get('estado', instance.estado)
+    if nuevo_estado != 'Aprobado':
+        return
+
+    user = getattr(request, 'user', None) if request else None
+    if not user_can_edit_componente(user, COMPONENTE_DISPONIBILIDAD_ESPACIOS):
+        validated_data['estado'] = 'Pendiente'
 
 
 class TipoActividadSerializer(serializers.ModelSerializer):
@@ -80,6 +102,7 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         recursos = validated_data.pop('prestamo_recursos', None)
+        _reevaluar_estado_si_estaba_aprobado(instance, validated_data, self.context.get('request'))
         prestamo = super().update(instance, validated_data)
         if recursos is not None:
             prestamo.prestamo_recursos.all().delete()
@@ -142,6 +165,7 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         recursos = validated_data.pop('prestamo_recursos', None)
+        _reevaluar_estado_si_estaba_aprobado(instance, validated_data, self.context.get('request'))
         prestamo = super().update(instance, validated_data)
         if recursos is not None:
             prestamo.prestamo_recursos.all().delete()

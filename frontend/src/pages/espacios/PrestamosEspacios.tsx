@@ -235,12 +235,10 @@ export default function PrestamosEspacios() {
                       prestamo.email &&
                       prestamo.email.toLowerCase() === user.correo.toLowerCase()
                     );
-                    const puedeEditarEliminar =
-                      puedeGestionarPrestamos && (
-                        prestamo.estado === 'pendiente' ||
-                        prestamo.estado === 'rechazado' ||
-                        solicitanteEsAdmin
-                      );
+                    // La edición ya no está restringida por estado (incluye 'aprobado'):
+                    // el backend decide si el préstamo permanece Aprobado o vuelve a Pendiente
+                    // según si quien edita tiene permiso EDITAR en "Disponibilidad de Espacios".
+                    const puedeEditarEliminar = puedeGestionarPrestamos || solicitanteEsAdmin;
 
                     return (
                   <div className="flex items-start justify-between gap-6">
@@ -413,7 +411,7 @@ export default function PrestamosEspacios() {
 
                           <div className="space-y-6 py-4">
                             {(() => {
-                              const prestamoActual = puedeGestionarPrestamos && modoEdicion && prestamoEditando && prestamoEditando.id === prestamo.id
+                              const prestamoActual = puedeEditarEliminar && modoEdicion && prestamoEditando && prestamoEditando.id === prestamo.id
                                 ? prestamoEditando
                                 : prestamo;
 
@@ -460,7 +458,7 @@ export default function PrestamosEspacios() {
                               <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Espacio Solicitado</Label>
-                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <Select
                                       value={prestamoEditando.espacio_id ? String(prestamoEditando.espacio_id) : ''}
                                       onValueChange={(v) => {
@@ -487,7 +485,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Tipo de Evento</Label>
-                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <Select
                                       value={prestamoEditando.tipo_actividad_id ? String(prestamoEditando.tipo_actividad_id) : ''}
                                       onValueChange={(v) => {
@@ -514,7 +512,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha</Label>
-                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <Input
                                       type="date"
                                       value={prestamoEditando.fecha}
@@ -527,7 +525,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Horario</Label>
-                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <div className="flex gap-2 items-center mt-1">
                                       <Input
                                         type="time"
@@ -547,7 +545,7 @@ export default function PrestamosEspacios() {
                                 </div>
                                 <div>
                                   <Label className="text-slate-600 dark:text-slate-400 text-xs">Número de Asistentes</Label>
-                                  {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                  {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                     <Input
                                       type="number"
                                       min="1"
@@ -569,7 +567,7 @@ export default function PrestamosEspacios() {
                                 Repetición
                               </h3>
                               <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700 space-y-4">
-                                {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                   <>
                                     <div className="flex items-center gap-3">
                                       <Checkbox
@@ -728,7 +726,7 @@ export default function PrestamosEspacios() {
                                 Motivo de la Solicitud
                               </h3>
                               <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-                                {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                   <Textarea
                                     value={prestamoEditando.motivo}
                                     onChange={(e) => setPrestamoEditando({ ...prestamoEditando, motivo: e.target.value })}
@@ -746,7 +744,7 @@ export default function PrestamosEspacios() {
                                 <Package className="w-5 h-5 text-green-600" />
                                 Recursos Necesarios
                               </h3>
-                              {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                              {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
                                 <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
                                   {(prestamoEditando.recursos || []).map((r, idx) => (
                                     <div key={r.recurso_id} className="flex items-center gap-2">
@@ -888,7 +886,7 @@ export default function PrestamosEspacios() {
                                 </div>
                               </div>
                             )}
-                            {puedeGestionarPrestamos && modoEdicion && prestamoEditando?.id === prestamo.id && (
+                            {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id && (
                               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                                 <Button onClick={cancelarEdicion} variant="outline">
                                   <XIcon className="w-4 h-4 mr-2" />
