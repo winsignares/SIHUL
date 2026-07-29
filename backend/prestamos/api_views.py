@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mysite.seccional_auth import SeccionalMixin
-from mysite.auth_helpers import user_supervisa_espacios
+from mysite.auth_helpers import is_authenticated_user, user_supervisa_espacios
+from mysite.permissions import CanManagePrestamosEspacios
 from espacios.models import EspacioPermitido
 
 from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
@@ -55,7 +56,7 @@ class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
 class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, CanManagePrestamosEspacios]
     seccional_lookup = 'espacio__sede__seccional'
 
 
@@ -84,6 +85,12 @@ class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdat
     seccional_lookup = 'espacio__sede__seccional'
 
     def get_permissions(self):
+        # Solicitantes anónimos (sin cuenta) siguen pudiendo editar/cancelar
+        # su propia solicitud desde /public/prestamo, tal como hoy.
+        # Si la petición SÍ viene autenticada (panel admin), se exige el
+        # permiso "Préstamos de Espacios" = EDITAR (o ser el propio dueño).
+        if is_authenticated_user(getattr(self.request, 'user', None)):
+            return [permissions.IsAuthenticated(), CanManagePrestamosEspacios()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):

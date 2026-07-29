@@ -84,3 +84,48 @@ def has_any_role(user, allowed_roles):
     role_name = get_role_name(user)
     allowed = {str(r).strip().lower() for r in allowed_roles}
     return role_name in allowed
+
+
+def get_componente_permiso(user, nombre_componente):
+    """Resuelve el permiso efectivo ('VER'/'EDITAR'/None) de `user` sobre el
+    Componente `nombre_componente`, replicando la precedencia usada por
+    mysite.api_views para construir la lista de componentes del frontend:
+    el override de ComponenteUsuario (si existe y está activo) reemplaza al
+    permiso del rol; si el override existe pero activo=False, se revoca el
+    acceso aunque el rol lo conceda; si no hay grant de rol pero sí un
+    override activo, igual se concede acceso con el permiso del override.
+
+    Réplica exacta de mysite.api_views._build_componentes: no hay bypass
+    implícito por rol (ni siquiera admin_global); el acceso depende
+    estrictamente de los registros ComponenteRol/ComponenteUsuario, igual
+    que en el frontend (hasEditPermission solo consulta la lista enviada
+    por el backend).
+    """
+    if not is_authenticated_user(user):
+        return None
+
+    from componentes.models import Componente, ComponenteRol, ComponenteUsuario
+
+    try:
+        componente = Componente.objects.get(nombre=nombre_componente)
+    except Componente.DoesNotExist:
+        return None
+
+    override = ComponenteUsuario.objects.filter(usuario=user, componente=componente).first()
+
+    rol = getattr(user, 'rol', None)
+    cr = ComponenteRol.objects.filter(rol=rol, componente=componente).first() if rol else None
+
+    if cr:
+        if override and not override.activo:
+            return None
+        return override.permiso if override else cr.permiso
+
+    if override and override.activo:
+        return override.permiso
+
+    return None
+
+
+def user_can_edit_componente(user, nombre_componente):
+    return get_componente_permiso(user, nombre_componente) == 'EDITAR'
