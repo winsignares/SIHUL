@@ -1394,7 +1394,7 @@ class Command(BaseCommand):
                             **lookup,
                             docente=docente,
                             cantidad_estudiantes=cantidad,
-                            estado='pendiente',
+                            estado='aprobado',
                         )
                         created = True
 
