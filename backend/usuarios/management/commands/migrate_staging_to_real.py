@@ -339,15 +339,15 @@ class Command(BaseCommand):
     def _resolve_dia_semana(stg_horario):
         num_dia = Command._to_int(getattr(stg_horario, 'num_dia_oracle', None), default=None)
         if num_dia is not None:
-            # Convencion operativa SIU esperada: 1=Lunes ... 7=Domingo
+            # Convencion Oracle real: 1=Domingo, 2=Lunes, 3=Martes ... 7=Sabado
             mapping_num = {
-                1: 'Lunes',
-                2: 'Martes',
-                3: 'Miercoles',
-                4: 'Jueves',
-                5: 'Viernes',
-                6: 'Sabado',
-                7: 'Domingo',
+                1: 'Domingo',
+                2: 'Lunes',
+                3: 'Martes',
+                4: 'Miercoles',
+                5: 'Jueves',
+                6: 'Viernes',
+                7: 'Sabado',
             }
             if num_dia in mapping_num:
                 return mapping_num[num_dia]
@@ -362,13 +362,13 @@ class Command(BaseCommand):
         possible_num = Command._to_int(possible, default=None)
         if possible_num is not None:
             mapping_num = {
-                1: 'Lunes',
-                2: 'Martes',
-                3: 'Miercoles',
-                4: 'Jueves',
-                5: 'Viernes',
-                6: 'Sabado',
-                7: 'Domingo',
+                1: 'Domingo',
+                2: 'Lunes',
+                3: 'Martes',
+                4: 'Miercoles',
+                5: 'Jueves',
+                6: 'Viernes',
+                7: 'Sabado',
             }
             if possible_num in mapping_num:
                 return mapping_num[possible_num]
