@@ -569,7 +569,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             role_name_normalized = ' '.join(role_name_normalized.split())
 
             if is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero':
-                base_queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
+                # Acceso administrativo, pero restringido a la seccional del
+                # usuario salvo que sea superusuario real (SeccionalMixin.get_queryset).
+                base_queryset = super().get_queryset()
                 if self.action == 'list_docentes':
                     return base_queryset.filter(activo=True, rol__nombre__iexact='docente')
                 return base_queryset
