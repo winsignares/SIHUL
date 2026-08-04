@@ -4,6 +4,7 @@ import { Clock, Check, X, TrendingUp } from 'lucide-react';
 import { prestamoService } from '../../services/prestamos/prestamoAPI';
 import { prestamosPublicAPI, type TipoActividadAPI } from '../../services/prestamos/prestamosPublicAPI';
 import { espaciosAPI, type EspacioFisico } from '../../services/espacios/espaciosAPI';
+import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { recursoService, type Recurso } from '../../services/recursos/recursoAPI';
 import { showNotification } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -64,6 +65,8 @@ export function usePrestamosEspacios() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
     const [filterFechaHora, setFilterFechaHora] = useState('todos');
+    const [filterFechaEspecifica, setFilterFechaEspecifica] = useState('');
+    const [filterPeriodo, setFilterPeriodo] = useState('todos');
     const [verSolicitudDialog, setVerSolicitudDialog] = useState<string | null>(null);
     const [comentariosAccion, setComentariosAccion] = useState('');
     const [modoEdicion, setModoEdicion] = useState(false);
@@ -74,20 +77,25 @@ export function usePrestamosEspacios() {
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioFisico[]>([]);
     const [tiposActividad, setTiposActividad] = useState<TipoActividadAPI[]>([]);
     const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
+    const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
     const { user, areas } = useAuth();
 
-    // Cargar catálogos usados en el formulario de edición (espacios, tipos de actividad, recursos)
+    // Cargar catálogos usados en el formulario de edición (espacios, tipos de actividad, recursos, periodos)
     useEffect(() => {
         (async () => {
             try {
-                const [espaciosResp, tiposResp, recursosResp] = await Promise.all([
+                const [espaciosResp, tiposResp, recursosResp, periodosResp] = await Promise.all([
                     espaciosAPI.list(),
                     prestamosPublicAPI.listarTiposActividad(),
-                    recursoService.listarRecursos()
+                    recursoService.listarRecursos(),
+                    periodoService.listarPeriodos()
                 ]);
                 setEspaciosDisponibles(espaciosResp.espacios);
                 setTiposActividad(tiposResp.tipos_actividad);
                 setRecursosDisponibles(recursosResp.recursos);
+                setPeriodos(
+                    [...periodosResp.periodos].sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio))
+                );
             } catch (error) {
                 showNotification({
                     message: `Error al cargar catálogos: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -227,7 +235,9 @@ export function usePrestamosEspacios() {
                     fin_repeticion_ocurrencias: p.fin_repeticion_ocurrencias ?? null,
                     serie_id: p.serie_id || null,
                     es_ocurrencia_generada: Boolean(p.es_ocurrencia_generada),
-                    prestamo_padre_id: p.prestamo_padre_id ?? null
+                    prestamo_padre_id: p.prestamo_padre_id ?? null,
+                    periodo_id: p.periodo_id ?? null,
+                    periodo_nombre: p.periodo_nombre ?? null
                 };
             });
 
@@ -631,6 +641,7 @@ export function usePrestamosEspacios() {
                 p.espacio.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.tipoEvento.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesEstado = filterEstado === 'todos' || p.estado === filterEstado;
+            const matchesPeriodo = filterPeriodo === 'todos' || String(p.periodo_id ?? '') === filterPeriodo;
 
             let matchesFechaHora = true;
             if (filterFechaHora !== 'todos') {
@@ -651,12 +662,14 @@ export function usePrestamosEspacios() {
                     matchesFechaHora = prestamoFecha >= now;
                 } else if (filterFechaHora === 'pasados') {
                     matchesFechaHora = prestamoFecha < now;
+                } else if (filterFechaHora === 'fecha-especifica') {
+                    matchesFechaHora = !filterFechaEspecifica || p.fecha === filterFechaEspecifica;
                 }
             }
 
-            return matchesSearch && matchesEstado && matchesFechaHora;
+            return matchesSearch && matchesEstado && matchesFechaHora && matchesPeriodo;
         });
-    }, [prestamos, searchTerm, filterEstado, filterFechaHora]);
+    }, [prestamos, searchTerm, filterEstado, filterFechaHora, filterFechaEspecifica, filterPeriodo]);
 
     const statsData = useMemo(() => [
         {
@@ -705,7 +718,7 @@ export function usePrestamosEspacios() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, filterEstado, filterFechaHora]);
+    }, [searchTerm, filterEstado, filterFechaHora, filterFechaEspecifica, filterPeriodo]);
 
     useEffect(() => {
         setCurrentPage((prev) => normalizePage(prev, totalPages));
@@ -740,6 +753,11 @@ export function usePrestamosEspacios() {
         setFilterEstado,
         filterFechaHora,
         setFilterFechaHora,
+        filterFechaEspecifica,
+        setFilterFechaEspecifica,
+        filterPeriodo,
+        setFilterPeriodo,
+        periodos,
         verSolicitudDialog,
         setVerSolicitudDialog,
         comentariosAccion,

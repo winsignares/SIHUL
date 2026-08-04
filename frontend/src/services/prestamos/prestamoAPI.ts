@@ -43,6 +43,8 @@ export interface PrestamoEspacio {
   serie_id?: string | null;
   es_ocurrencia_generada?: boolean;
   prestamo_padre_id?: number | null;
+  periodo_id?: number | null;
+  periodo_nombre?: string | null;
 }
 
 interface PrestamoEspacioApi {
@@ -75,6 +77,8 @@ interface PrestamoEspacioApi {
   fin_repeticion_ocurrencias?: number | null;
   serie_id?: string | null;
   es_ocurrencia_generada?: boolean;
+  periodo?: number | null;
+  periodo_nombre?: string | null;
 }
 
 const toFrontendPrestamo = (prestamo: PrestamoEspacioApi): PrestamoEspacio => ({
@@ -107,6 +111,8 @@ const toFrontendPrestamo = (prestamo: PrestamoEspacioApi): PrestamoEspacio => ({
   fin_repeticion_ocurrencias: prestamo.fin_repeticion_ocurrencias,
   serie_id: prestamo.serie_id,
   es_ocurrencia_generada: prestamo.es_ocurrencia_generada,
+  periodo_id: prestamo.periodo ?? null,
+  periodo_nombre: prestamo.periodo_nombre ?? null,
 });
 
 const buildRecurrencePayload = (prestamo: Partial<PrestamoEspacio>) => {

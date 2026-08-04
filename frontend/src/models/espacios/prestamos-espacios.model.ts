@@ -36,6 +36,8 @@ export interface PrestamoEspacioUI {
     serie_id?: string | null;
     es_ocurrencia_generada?: boolean;
     prestamo_padre_id?: number | null;
+    periodo_id?: number | null;
+    periodo_nombre?: string | null;
 }
 
 export interface StatsData {

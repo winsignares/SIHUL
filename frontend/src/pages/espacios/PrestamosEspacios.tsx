@@ -38,6 +38,11 @@ export default function PrestamosEspacios() {
     setFilterEstado,
     filterFechaHora,
     setFilterFechaHora,
+    filterFechaEspecifica,
+    setFilterFechaEspecifica,
+    filterPeriodo,
+    setFilterPeriodo,
+    periodos,
     verSolicitudDialog,
     setVerSolicitudDialog,
     comentariosAccion,
@@ -225,8 +230,8 @@ export default function PrestamosEspacios() {
       {/* Filters */}
       <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <CardContent className="p-4">
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
                 placeholder="Buscar por solicitante, espacio o tipo de evento..."
@@ -235,7 +240,13 @@ export default function PrestamosEspacios() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterFechaHora} onValueChange={setFilterFechaHora}>
+            <Select
+              value={filterFechaHora}
+              onValueChange={(value) => {
+                setFilterFechaHora(value);
+                if (value !== 'fecha-especifica') setFilterFechaEspecifica('');
+              }}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Fecha y Hora" />
               </SelectTrigger>
@@ -246,8 +257,17 @@ export default function PrestamosEspacios() {
                 <SelectItem value="este-mes">Este mes</SelectItem>
                 <SelectItem value="proximos">Próximos</SelectItem>
                 <SelectItem value="pasados">Pasados</SelectItem>
+                <SelectItem value="fecha-especifica">Fecha específica</SelectItem>
               </SelectContent>
             </Select>
+            {filterFechaHora === 'fecha-especifica' && (
+              <Input
+                type="date"
+                value={filterFechaEspecifica}
+                onChange={(e) => setFilterFechaEspecifica(e.target.value)}
+                className="w-[200px]"
+              />
+            )}
             <Select value={filterEstado} onValueChange={setFilterEstado}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Estado" />
@@ -257,6 +277,19 @@ export default function PrestamosEspacios() {
                 <SelectItem value="pendiente">Pendientes</SelectItem>
                 <SelectItem value="aprobado">Aprobados</SelectItem>
                 <SelectItem value="rechazado">Rechazados</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterPeriodo} onValueChange={setFilterPeriodo}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Periodo académico" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los periodos</SelectItem>
+                {periodos.map((periodo) => (
+                  <SelectItem key={periodo.id} value={String(periodo.id)}>
+                    {periodo.nombre}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
