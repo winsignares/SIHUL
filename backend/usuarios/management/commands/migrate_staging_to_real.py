@@ -1409,8 +1409,8 @@ class Command(BaseCommand):
                     if horario.cantidad_estudiantes != cantidad:
                         horario.cantidad_estudiantes = cantidad
                         changed = True
-                    if horario.estado not in ('pendiente', 'aprobado', 'rechazado'):
-                        horario.estado = 'pendiente'
+                    if horario.estado != 'aprobado':
+                        horario.estado = 'aprobado'
                         changed = True
 
                     if changed:
