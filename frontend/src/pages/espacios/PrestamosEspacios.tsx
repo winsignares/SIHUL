@@ -7,7 +7,8 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../share/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Checkbox } from '../../share/checkbox';
-import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../../share/tooltip';
+import { Calendar, Clock, MapPin, Check, X, Search, User, Mail, Phone, FileText, Users, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, LayoutGrid, List } from 'lucide-react';
 import { motion } from 'motion/react';
 import { usePrestamosEspacios } from '../../hooks/espacios/usePrestamosEspacios';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -31,6 +32,8 @@ export default function PrestamosEspacios() {
   const { user, hasEditPermission } = useAuth();
   const puedeGestionarPrestamos = hasEditPermission('Préstamos de Espacios');
   const [periodoEdicion, setPeriodoEdicion] = useState<PeriodoAcademico | null>(null);
+  const [vista, setVista] = useState<'lista' | 'cuadricula'>('lista');
+  const [detalleGridId, setDetalleGridId] = useState<string | null>(null);
   const {
     searchTerm,
     setSearchTerm,
@@ -54,6 +57,7 @@ export default function PrestamosEspacios() {
     tiposActividad,
     recursosDisponibles,
     paginatedPrestamos,
+    filteredPrestamos,
     totalFilteredPrestamos,
     currentPage,
     totalPages,
@@ -292,11 +296,35 @@ export default function PrestamosEspacios() {
                 ))}
               </SelectContent>
             </Select>
+
+            <div className="flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+              <Button
+                type="button"
+                variant={vista === 'lista' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setVista('lista')}
+                title="Vista lista"
+              >
+                <List className="w-4 h-4 mr-2" />
+                Vista Lista
+              </Button>
+              <Button
+                type="button"
+                variant={vista === 'cuadricula' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setVista('cuadricula')}
+                title="Vista cuadrícula"
+              >
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                Vista Cuadrícula
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Solicitudes Grid */}
+      {/* Solicitudes Lista */}
+      {vista === 'lista' && (
       <div className="grid grid-cols-1 gap-4">
         {loading && totalFilteredPrestamos === 0 ? (
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
@@ -1040,8 +1068,205 @@ export default function PrestamosEspacios() {
           ))
         )}
       </div>
+      )}
 
-      {totalFilteredPrestamos > 0 && (
+      {/* Solicitudes Cuadrícula */}
+      {vista === 'cuadricula' && (
+        loading && totalFilteredPrestamos === 0 ? (
+          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <CardContent>
+              <Loading message="Cargando solicitudes de préstamo..." />
+            </CardContent>
+          </Card>
+        ) : totalFilteredPrestamos === 0 ? (
+          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <CardContent className="p-12 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-500 dark:text-slate-400">No hay solicitudes que mostrar</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {[...filteredPrestamos]
+              .sort((a, b) => {
+                const fechaHoraA = `${a.fecha}T${a.horaInicio}`;
+                const fechaHoraB = `${b.fecha}T${b.horaInicio}`;
+                return fechaHoraA.localeCompare(fechaHoraB);
+              })
+              .map((prestamo) => (
+                <Tooltip key={prestamo.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setDetalleGridId(prestamo.id)}
+                      className={`text-left p-3 rounded-lg border transition-shadow hover:shadow-md bg-white dark:bg-slate-800 ${
+                        prestamo.estado === 'pendiente'
+                          ? 'border-yellow-300 dark:border-yellow-700'
+                          : prestamo.estado === 'aprobado'
+                            ? 'border-green-300 dark:border-green-700'
+                            : 'border-red-300 dark:border-red-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        {getEstadoIcon(prestamo.estado)}
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {new Date(`${prestamo.fecha}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-900 dark:text-slate-100 truncate">{prestamo.espacio}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{prestamo.horaInicio} - {prestamo.horaFin}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{prestamo.solicitante}</p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="font-medium">{prestamo.tipoEvento}</p>
+                    <p>{prestamo.espacio} · {prestamo.fecha} · {prestamo.horaInicio}-{prestamo.horaFin}</p>
+                    <p>{prestamo.solicitante}</p>
+                    {prestamo.motivo && <p className="opacity-80">{prestamo.motivo}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+          </div>
+        )
+      )}
+
+      {/* Detalle de solicitud (vista cuadrícula) */}
+      <Dialog open={detalleGridId !== null} onOpenChange={(open) => { if (!open) setDetalleGridId(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {(() => {
+            const prestamo = filteredPrestamos.find((p) => p.id === detalleGridId);
+            if (!prestamo) return null;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-2xl flex items-center gap-2">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${prestamo.estado === 'pendiente' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+                        prestamo.estado === 'aprobado' ? 'bg-green-50 dark:bg-green-950/20' :
+                          'bg-red-50 dark:bg-red-950/20'
+                      }`}>
+                      {getEstadoIcon(prestamo.estado)}
+                    </div>
+                    Detalles de la Solicitud
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6 py-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Estado actual</span>
+                    {getEstadoBadge(prestamo.estado)}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                      Información del Solicitante
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Nombre</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.solicitante}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Email</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.email}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Teléfono</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.telefono}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha de Solicitud</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.fechaSolicitud}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-600" />
+                      Detalles del Evento
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Espacio Solicitado</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.espacio}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Tipo de Evento</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.tipoEvento}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.fecha}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Horario</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.horaInicio} - {prestamo.horaFin}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-600 dark:text-slate-400 text-xs">Asistentes</Label>
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.asistentes}</p>
+                      </div>
+                      {prestamo.periodo_nombre && (
+                        <div>
+                          <Label className="text-slate-600 dark:text-slate-400 text-xs">Periodo académico</Label>
+                          <p className="text-slate-900 dark:text-slate-100">{prestamo.periodo_nombre}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {prestamo.recursosNecesarios.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <Package className="w-5 h-5 text-blue-600" />
+                        Recursos Necesarios
+                      </h3>
+                      <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                        {prestamo.recursosNecesarios.map((recurso, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
+                          >
+                            {recurso}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {prestamo.motivo && (
+                    <div className="space-y-3">
+                      <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-slate-600" />
+                        Motivo
+                      </h3>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <p className="text-slate-900 dark:text-slate-100">{prestamo.motivo}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {prestamo.es_recurrente && (
+                    <div className="space-y-3">
+                      <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-indigo-600" />
+                        Repetición
+                      </h3>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <p className="text-slate-900 dark:text-slate-100 text-sm">{recurrenceSummary(prestamo)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {vista === 'lista' && totalFilteredPrestamos > 0 && (
         <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
