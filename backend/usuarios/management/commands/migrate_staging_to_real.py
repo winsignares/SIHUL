@@ -1376,6 +1376,7 @@ class Command(BaseCommand):
                             docente=docente,
                             cantidad_estudiantes=cantidad,
                             estado='aprobado',
+                            origen='SIUL',
                         )
                         created = True
 

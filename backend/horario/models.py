@@ -12,6 +12,11 @@ class Horario(models.Model):
         ('rechazado', 'Rechazado'),
     ]
     
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='horarios')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='horarios')
@@ -22,6 +27,7 @@ class Horario(models.Model):
     hora_fin = models.TimeField()
     cantidad_estudiantes = models.IntegerField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
 
     class Meta:
         constraints = [
