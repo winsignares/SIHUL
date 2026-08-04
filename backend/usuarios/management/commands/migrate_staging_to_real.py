@@ -1341,48 +1341,28 @@ class Command(BaseCommand):
                     if cantidad is None:
                         cantidad = self._to_int(raw.get('cantidad_estudiantes'), default=None)
 
+                    # Identidad de un horario = la misma sesion de clase (grupo +
+                    # asignatura + dia + hora). El espacio, docente y cantidad de
+                    # estudiantes son atributos mutables: si Oracle trae un cambio
+                    # (p.ej. el salon A paso a ser el salon B) se debe actualizar el
+                    # registro existente en vez de crear uno nuevo.
+                    identidad = {
+                        'grupo': grupo,
+                        'asignatura': asignatura,
+                        'dia_semana': dia_semana,
+                        'hora_inicio': hora_inicio,
+                        'hora_fin': hora_fin,
+                    }
+
                     if dry_run:
-                        exists = Horario.objects.filter(
-                            grupo=grupo,
-                            asignatura=asignatura,
-                            espacio=espacio,
-                            dia_semana=dia_semana,
-                            hora_inicio=hora_inicio,
-                            hora_fin=hora_fin,
-                        ).exists()
+                        exists = Horario.objects.filter(**identidad).exists()
                         if exists:
                             horarios_actualizados += 1
                         else:
                             horarios_creados += 1
                         continue
 
-                    lookup = {
-                        'grupo': grupo,
-                        'asignatura': asignatura,
-                        'espacio': espacio,
-                        'dia_semana': dia_semana,
-                        'hora_inicio': hora_inicio,
-                        'hora_fin': hora_fin,
-                    }
-
-                    coincidencias = Horario.objects.filter(**lookup).order_by('id')
-                    # Evita duplicados cuando ya existe el mismo bloque horario sin espacio.
-                    # Caso comun: corrida anterior creo slot con espacio=NULL y una nueva corrida
-                    # encuentra/crea espacio para el mismo bloque; reutilizamos el existente.
-                    if not coincidencias.exists() and espacio is not None:
-                        coincidencias = Horario.objects.filter(
-                            grupo=grupo,
-                            asignatura=asignatura,
-                            espacio__isnull=True,
-                            dia_semana=dia_semana,
-                            hora_inicio=hora_inicio,
-                            hora_fin=hora_fin,
-                        ).order_by('id')
-                        if coincidencias.exists():
-                            horario_base = coincidencias.first()
-                            horario_base.espacio = espacio
-                            horario_base.save(update_fields=['espacio'])
-                            coincidencias = Horario.objects.filter(id=horario_base.id)
+                    coincidencias = Horario.objects.filter(**identidad).order_by('id')
 
                     if coincidencias.exists():
                         horario = coincidencias.first()
@@ -1391,7 +1371,8 @@ class Command(BaseCommand):
                             duplicados_horario_reutilizados += 1
                     else:
                         horario = Horario.objects.create(
-                            **lookup,
+                            **identidad,
+                            espacio=espacio,
                             docente=docente,
                             cantidad_estudiantes=cantidad,
                             estado='aprobado',
@@ -1403,6 +1384,9 @@ class Command(BaseCommand):
                         continue
 
                     changed = False
+                    if espacio is not None and horario.espacio_id != espacio.id:
+                        horario.espacio = espacio
+                        changed = True
                     if docente and horario.docente_id != docente.id:
                         horario.docente = docente
                         changed = True
