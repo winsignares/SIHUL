@@ -26,18 +26,30 @@ class IsAdminGlobal(BasePermission):
 
 
 class IsAuthenticatedReadOnlyOrAdminWrite(BasePermission):
-    """GET/HEAD/OPTIONS para cualquier usuario autenticado; escritura solo admins."""
+    """GET/HEAD/OPTIONS para cualquier usuario autenticado; escritura para
+    admins o para cualquier usuario cuyo rol/override tenga permiso EDITAR
+    en el componente "Centro Institucional" (gestiona sedes, facultades,
+    programas, grupos, asignaturas, espacios y recursos)."""
 
     def has_permission(self, request, view):
         user = getattr(request, 'user', None)
         if request.method in SAFE_METHODS:
             return is_authenticated_user(user)
         role_name = get_role_name(user)
-        return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+        return (
+            is_admin_global(user)
+            or is_admin_sistema(user)
+            or role_name == 'admin financiero'
+            or user_can_edit_componente(user, 'Centro Institucional')
+        )
 
 
-class IsAdminUserManagement(BasePermission):
-    """Permite escritura solo para admins (global, sistema, financiero)."""
+class IsAdminOnly(BasePermission):
+    """Permite escritura solo para admins (global, sistema, financiero),
+    sin bypass vía componentes. Usar para endpoints que administran el
+    propio sistema de permisos (p. ej. Gestión de Componentes) para evitar
+    que un rol se auto-conceda o conceda a otros más acceso del que
+    debería tener."""
 
     def has_permission(self, request, view):
         user = getattr(request, 'user', None)
@@ -46,6 +58,44 @@ class IsAdminUserManagement(BasePermission):
 
         role_name = get_role_name(user)
         return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+
+
+class IsAdminUserManagement(BasePermission):
+    """Permite escritura para admins (global, sistema, financiero) o para
+    cualquier usuario con permiso EDITAR en 'Gestión de Usuarios' vía el
+    sistema de componentes."""
+
+    def has_permission(self, request, view):
+        user = getattr(request, 'user', None)
+        if not is_authenticated_user(user):
+            return False
+
+        role_name = get_role_name(user)
+        return (
+            is_admin_global(user)
+            or is_admin_sistema(user)
+            or role_name == 'admin financiero'
+            or user_can_edit_componente(user, 'Gestión de Usuarios')
+        )
+
+
+class IsAdminRoleManagement(BasePermission):
+    """Permite escritura para admins (global, sistema, financiero) o para
+    cualquier usuario con permiso EDITAR en 'Gestión de Roles' vía el
+    sistema de componentes."""
+
+    def has_permission(self, request, view):
+        user = getattr(request, 'user', None)
+        if not is_authenticated_user(user):
+            return False
+
+        role_name = get_role_name(user)
+        return (
+            is_admin_global(user)
+            or is_admin_sistema(user)
+            or role_name == 'admin financiero'
+            or user_can_edit_componente(user, 'Gestión de Roles')
+        )
 
 
 class IsCoordinador(BasePermission):

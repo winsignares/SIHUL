@@ -41,7 +41,7 @@ from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effect
 from .seccional_auth import SeccionalMixin
 from .permissions import (
     IsAdminGlobal,
-    IsAdminSistema,
+    IsAdminRoleManagement,
     IsAdminUserManagement,
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
@@ -518,7 +518,7 @@ class RolViewSet(SeccionalMixin, viewsets.ModelViewSet):
     queryset = Rol.objects.all()
     serializer_class = RolSerializer
     seccional_lookup = None
-    permission_classes = [permissions.IsAuthenticated, IsAdminSistema]
+    permission_classes = [permissions.IsAuthenticated, IsAdminRoleManagement]
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):

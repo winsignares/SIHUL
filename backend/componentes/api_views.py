@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions
 
 from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from mysite.permissions import IsAdminOnly
 
 from .models import Componente, ComponenteRol, ComponenteUsuario
 from .serializers import ComponenteRolSerializer, ComponenteSerializer, ComponenteUsuarioSerializer
@@ -11,11 +12,21 @@ class ComponenteListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = ComponenteSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminOnly()]
+
 
 class ComponenteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Componente.objects.all()
     serializer_class = ComponenteSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminOnly()]
 
 
 class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
@@ -23,16 +34,31 @@ class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = ComponenteRolSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminOnly()]
+
 
 class ComponenteRolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ComponenteRol.objects.select_related('componente', 'rol').all()
     serializer_class = ComponenteRolSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminOnly()]
+
 
 class ComponenteUsuarioListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = ComponenteUsuarioSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminOnly()]
 
     def get_queryset(self):
         queryset = ComponenteUsuario.objects.select_related('componente', 'usuario').all()
@@ -54,6 +80,11 @@ class ComponenteUsuarioDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ComponenteUsuario.objects.select_related('componente', 'usuario').all()
     serializer_class = ComponenteUsuarioSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminOnly()]
 
     def get_queryset(self):
         queryset = super().get_queryset()
