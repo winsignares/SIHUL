@@ -75,11 +75,20 @@ def obtener_id_usuario():
     # Usuario por defecto (admin o sistema)
     return 1
 
+def es_origen_siul(instance):
+    """
+    True si el registro proviene del ETL de Oracle (origen='SIUL').
+    Los cambios masivos del ETL no deben generar notificaciones individuales.
+    """
+    return getattr(instance, 'origen', None) == 'SIUL'
+
 # ==================== SEÑALES PARA USUARIO ====================
 
 @receiver(post_save, sender=Usuario)
 def usuario_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza un usuario"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -108,6 +117,8 @@ def usuario_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Usuario)
 def usuario_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina un usuario"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
@@ -220,6 +231,8 @@ def facultad_post_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Programa)
 def programa_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza un programa"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -240,6 +253,8 @@ def programa_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Programa)
 def programa_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina un programa"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
@@ -253,6 +268,8 @@ def programa_post_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Asignatura)
 def asignatura_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza una asignatura"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -273,6 +290,8 @@ def asignatura_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Asignatura)
 def asignatura_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina una asignatura"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
@@ -312,6 +331,8 @@ def asignatura_programa_post_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=PeriodoAcademico)
 def periodo_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza un período académico"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -332,6 +353,8 @@ def periodo_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=PeriodoAcademico)
 def periodo_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina un período académico"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
@@ -345,6 +368,8 @@ def periodo_post_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Grupo)
 def grupo_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza un grupo"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -365,6 +390,8 @@ def grupo_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Grupo)
 def grupo_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina un grupo"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
@@ -404,6 +431,8 @@ def tipo_espacio_post_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=EspacioFisico)
 def espacio_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza un espacio físico"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -424,6 +453,8 @@ def espacio_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=EspacioFisico)
 def espacio_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina un espacio físico"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
@@ -460,6 +491,8 @@ def espacio_permitido_post_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Horario)
 def horario_post_save(sender, instance, created, **kwargs):
     """Notificación cuando se crea o actualiza un horario"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     
     if created:
@@ -489,6 +522,8 @@ def horario_post_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Horario)
 def horario_post_delete(sender, instance, **kwargs):
     """Notificación cuando se elimina un horario"""
+    if es_origen_siul(instance):
+        return
     id_usuario = obtener_id_usuario()
     crear_notificacion(
         id_usuario=id_usuario,
