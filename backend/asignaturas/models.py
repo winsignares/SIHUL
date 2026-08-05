@@ -6,6 +6,11 @@ from programas.models import Programa
 from sedes.models import Sede
 
 class Asignatura(models.Model):
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     codigo = models.CharField(max_length=20, unique=True)
@@ -13,6 +18,7 @@ class Asignatura(models.Model):
     tipo = models.CharField(max_length=20, choices=[('teórica', 'Teórica'), ('práctica', 'Práctica'), ('mixta', 'Mixta')], default='presencial')
     horas = models.PositiveIntegerField(default=0)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='asignaturas_sede', blank=True, null=True)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre} ({self.tipo})"

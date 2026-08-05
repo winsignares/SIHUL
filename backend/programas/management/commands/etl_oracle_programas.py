@@ -365,6 +365,7 @@ class Command(BaseCommand):
                             'facultad': item['facultad'],
                             'semestres': 10,
                             'activo': True,
+                            'origen': 'SIUL',
                         },
                     )
 
@@ -381,6 +382,8 @@ class Command(BaseCommand):
                         changed = True
 
                     if changed:
+                        if programa.origen != 'SIUL':
+                            programa.origen = 'SIUL'
                         programa.save()
                         summary['load_programa']['updated'] += 1
                     else:

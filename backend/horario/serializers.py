@@ -7,6 +7,7 @@ class HorarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Horario
         fields = '__all__'
+        read_only_fields = ['origen']
 
 
 class HorarioFusionadoSerializer(serializers.ModelSerializer):

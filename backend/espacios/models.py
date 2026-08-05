@@ -12,12 +12,18 @@ class TipoEspacio(models.Model):
         return self.nombre
 
 class EspacioFisico(models.Model):
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)  # Nombre del espacio
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='espacios')
     tipo = models.ForeignKey(TipoEspacio, on_delete=models.PROTECT, related_name='espacios')
     capacidad = models.PositiveIntegerField()
     ubicacion = models.CharField(max_length=100, blank=True, null=True)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
     # Indica si el espacio esta abierto (True) o cerrado (False) para acceso fisico.
     esta_abierto = models.BooleanField(default=True)
     # Disponible: apto para uso.

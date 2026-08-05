@@ -22,6 +22,7 @@ class EspacioFisicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = EspacioFisico
         fields = '__all__'
+        read_only_fields = ['origen']
 
 
 class EspacioPermitidoSerializer(serializers.ModelSerializer):

@@ -4,11 +4,17 @@ from django.utils import timezone
 # Create your models here.
 
 class PeriodoAcademico(models.Model):
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
     activo = models.BooleanField(default=True)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
 
     @classmethod
     def sincronizar_activos_por_fecha(cls, fecha=None):

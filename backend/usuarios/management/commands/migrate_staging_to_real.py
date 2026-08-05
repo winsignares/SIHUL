@@ -555,6 +555,7 @@ class Command(BaseCommand):
                     'fecha_inicio': fecha_inicio,
                     'fecha_fin': fecha_fin,
                     'activo': True,
+                    'origen': 'SIUL',
                 },
             )
             if created:
@@ -569,6 +570,8 @@ class Command(BaseCommand):
                 periodo.fecha_fin = fecha_fin
                 changed = True
             if changed:
+                if periodo.origen != 'SIUL':
+                    periodo.origen = 'SIUL'
                 periodo.save()
                 periodos_actualizados += 1
             else:
@@ -655,6 +658,7 @@ class Command(BaseCommand):
                             'nombre': nombre,
                             'semestre': semestre,
                             'activo': True,
+                            'origen': 'SIUL',
                         },
                     )
                 else:
@@ -665,6 +669,7 @@ class Command(BaseCommand):
                         defaults={
                             'semestre': semestre,
                             'activo': True,
+                            'origen': 'SIUL',
                         },
                     )
 
@@ -690,6 +695,8 @@ class Command(BaseCommand):
                     changed = True
 
                 if changed:
+                    if grupo.origen != 'SIUL':
+                        grupo.origen = 'SIUL'
                     grupo.save()
                     grupos_actualizados += 1
                 else:
@@ -787,6 +794,7 @@ class Command(BaseCommand):
                         rol=rol_docente,
                         sede=sede,
                         facultad=facultad,
+                        origen='SIUL',
                     )
                     docentes_creados += 1
                     continue
@@ -810,6 +818,8 @@ class Command(BaseCommand):
                     changed = True
 
                 if changed:
+                    if usuario.origen != 'SIUL':
+                        usuario.origen = 'SIUL'
                     usuario.save()
                     docentes_actualizados += 1
                 else:
@@ -898,6 +908,7 @@ class Command(BaseCommand):
                         is_active=True,
                         rol=rol_estudiante,
                         sede=sede,
+                        origen='SIUL',
                     )
                     estudiantes_creados += 1
                     continue
@@ -918,6 +929,8 @@ class Command(BaseCommand):
                     changed = True
 
                 if changed:
+                    if usuario.origen != 'SIUL':
+                        usuario.origen = 'SIUL'
                     usuario.save()
                     estudiantes_actualizados += 1
                 else:
@@ -1041,6 +1054,7 @@ class Command(BaseCommand):
                         ubicacion=ubicacion,
                         estado='Disponible',
                         esta_abierto=True,
+                        origen='SIUL',
                     )
                     espacios_creados += 1
                     continue
@@ -1067,6 +1081,8 @@ class Command(BaseCommand):
                     changed = True
 
                 if changed:
+                    if espacio.origen != 'SIUL':
+                        espacio.origen = 'SIUL'
                     espacio.save()
                     espacios_actualizados += 1
                 else:
@@ -1306,6 +1322,7 @@ class Command(BaseCommand):
                                         ubicacion=nom_aula_raw,
                                         estado='Disponible',
                                         esta_abierto=True,
+                                        origen='SIUL',
                                     )
                                     espacio_autocreado += 1
                                     _indexar_espacio(espacio)
@@ -1399,6 +1416,8 @@ class Command(BaseCommand):
                         changed = True
 
                     if changed:
+                        if horario.origen != 'SIUL':
+                            horario.origen = 'SIUL'
                         horario.save()
                         horarios_actualizados += 1
                     else:

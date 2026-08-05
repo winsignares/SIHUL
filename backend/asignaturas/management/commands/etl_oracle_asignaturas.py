@@ -337,6 +337,7 @@ class Command(BaseCommand):
                             'creditos': item['creditos'],
                             'horas': item['horas'],
                             'sede': sede,
+                            'origen': 'SIUL',
                         },
                     )
 
@@ -362,6 +363,8 @@ class Command(BaseCommand):
                         changed = True
 
                     if changed:
+                        if asignatura.origen != 'SIUL':
+                            asignatura.origen = 'SIUL'
                         asignatura.save()
                         summary['updated'] += 1
                     else:

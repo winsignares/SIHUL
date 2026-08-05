@@ -45,6 +45,11 @@ class Rol(models.Model):
         return self.nombre
 
 class Usuario(AbstractUser):
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     username = None
     password = models.CharField(max_length=128, default='')
@@ -57,6 +62,7 @@ class Usuario(AbstractUser):
     sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     seccional = models.ForeignKey(Seccional, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     es_superusuario = models.BooleanField(default=False)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'correo'

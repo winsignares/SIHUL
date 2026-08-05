@@ -7,3 +7,4 @@ class ProgramaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Programa
         fields = '__all__'
+        read_only_fields = ['origen']

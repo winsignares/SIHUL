@@ -27,7 +27,9 @@ class PeriodoAcademicoSerializer(serializers.ModelSerializer):
             'fecha_inicio',
             'fecha_fin',
             'activo',
+            'origen',
             'programas_activos',
             'horarios_registrados',
             'fecha_servidor',
         ]
+        read_only_fields = ['origen']

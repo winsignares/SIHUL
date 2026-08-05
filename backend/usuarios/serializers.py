@@ -40,7 +40,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'seccional',
             'espacios_permitidos',
             'es_superusuario',
+            'origen',
         ]
+        read_only_fields = ['origen']
 
     def _sync_espacios_permitidos(self, usuario, espacios_ids):
         if espacios_ids is None:

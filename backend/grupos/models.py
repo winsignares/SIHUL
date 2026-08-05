@@ -5,12 +5,18 @@ from programas.models import Programa
 from periodos.models import PeriodoAcademico
 
 class Grupo(models.Model):
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name='grupos')
     periodo = models.ForeignKey(PeriodoAcademico, on_delete=models.CASCADE, related_name='grupos')
     nombre = models.CharField(max_length=50)
     semestre = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     activo = models.BooleanField(default=True)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
 
     class Meta:
         indexes = [

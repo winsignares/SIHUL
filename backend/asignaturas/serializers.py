@@ -7,6 +7,7 @@ class AsignaturaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asignatura
         fields = '__all__'
+        read_only_fields = ['origen']
 
 
 class AsignaturaProgramaSerializer(serializers.ModelSerializer):

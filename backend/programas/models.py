@@ -5,11 +5,17 @@ from facultades.models import Facultad
 # Create your models here.
 
 class Programa(models.Model):
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
     id = models.AutoField(primary_key=True)
     facultad = models.ForeignKey(Facultad, on_delete=models.CASCADE, related_name='programas')
     nombre = models.CharField(max_length=100)
     semestres = models.IntegerField(default=10)
     activo = models.BooleanField(default=False)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
 
     def __str__(self):
         return self.nombre
