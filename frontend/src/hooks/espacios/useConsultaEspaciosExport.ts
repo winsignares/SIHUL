@@ -35,7 +35,7 @@ export function useConsultaEspaciosExport({
       const pageHeight = doc.internal.pageSize.getHeight();
 
       const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-      const horasIntervalos = Array.from({ length: 15 }, (_, i) => i + 6);
+      const horasIntervalos = Array.from({ length: 17 }, (_, i) => i + 6);
       const espaciosAExportar = espaciosToExport || filteredEspacios;
 
       const getTextLines = (text: string, maxWidth: number, fontSize: number): string[] => {
@@ -239,7 +239,7 @@ export function useConsultaEspaciosExport({
   const exportarCronogramaExcel = useCallback(
     (espaciosToExport?: EspacioView[]) => {
       const diasNombres = ['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-      const horasIntervalos = Array.from({ length: 15 }, (_, i) => `${i + 6}:00-${i + 7}:00`);
+      const horasIntervalos = Array.from({ length: 17 }, (_, i) => `${i + 6}:00-${i + 7}:00`);
       const espaciosAExportar = espaciosToExport || filteredEspacios;
       // Mismos colores usados en la exportación a PDF, para que ambos formatos luzcan consistentes.
       const COLOR_HEADER = 'FF1E293B';
