@@ -1126,6 +1126,31 @@ class Command(BaseCommand):
         self.stdout.write('=' * 60)
 
         stg_horarios = StgOracleHorario.objects.filter(estado_registro='valido')
+
+        # El staging puede acumular filas de corridas ETL anteriores con un
+        # PERIODO distinto (ETL_PERIODO cambia entre semestres y el ETL de
+        # extraccion no purga filas obsoletas). Promover TODO el staging sin
+        # distinguir periodo termina reescribiendo horarios del periodo
+        # actual con datos de periodos viejos. Solo se promueve el periodo
+        # Oracle mas reciente presente en el staging.
+        periodos_en_staging = list(
+            stg_horarios.exclude(periodo_oracle__isnull=True)
+            .exclude(periodo_oracle='')
+            .order_by('periodo_oracle')
+            .values_list('periodo_oracle', flat=True)
+            .distinct()
+        )
+        periodo_oracle_actual = max(periodos_en_staging) if periodos_en_staging else None
+        if periodo_oracle_actual:
+            omitidos_por_periodo = stg_horarios.exclude(periodo_oracle=periodo_oracle_actual).count()
+            stg_horarios = stg_horarios.filter(periodo_oracle=periodo_oracle_actual)
+            self.stdout.write(
+                self.style.WARNING(
+                    f'Procesando solo periodo Oracle {periodo_oracle_actual} '
+                    f'({omitidos_por_periodo} filas de otros periodos en staging omitidas).'
+                )
+            )
+
         if seccional_filter:
             sedes_ids = list(Sede.objects.filter(seccional=seccional_filter).values_list('external_id', flat=True))
             sedes_ids = [self._to_text(s) for s in sedes_ids if self._to_text(s)]
