@@ -28,6 +28,7 @@ class Horario(models.Model):
     cantidad_estudiantes = models.IntegerField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
+    oracle_external_id = models.CharField(max_length=120, null=True, blank=True, db_index=True)
 
     class Meta:
         constraints = [

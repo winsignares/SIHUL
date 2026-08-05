@@ -1169,6 +1169,9 @@ class Command(BaseCommand):
         espacio_autocreado_sede_no_resuelta = 0
         hora_default = 0
         duplicados_horario_reutilizados = 0
+        horarios_huerfanos_eliminados = 0
+        horario_ids_procesados = set()
+        periodo_ids_afectados = set()
 
         grupos = list(Grupo.objects.select_related('periodo', 'programa'))
         grupos_by_id = {str(g.id): g for g in grupos}
@@ -1395,6 +1398,7 @@ class Command(BaseCommand):
                         'hora_inicio': hora_inicio,
                         'hora_fin': hora_fin,
                     }
+                    oracle_external_id = self._to_text(stg_horario.external_id)
 
                     if dry_run:
                         exists = Horario.objects.filter(**identidad).exists()
@@ -1404,12 +1408,29 @@ class Command(BaseCommand):
                             horarios_creados += 1
                         continue
 
-                    coincidencias = Horario.objects.filter(**identidad).order_by('id')
+                    periodo_ids_afectados.add(grupo.periodo_id)
+                    coincidencias = list(Horario.objects.filter(**identidad).order_by('id'))
 
-                    if coincidencias.exists():
-                        horario = coincidencias.first()
+                    if coincidencias:
+                        # Si dos sesiones distintas de Oracle colisionan en la misma
+                        # identidad (grupo+asignatura+dia+hora, sin espacio), usar el
+                        # external_id de Oracle para no fusionarlas por error: solo se
+                        # reutiliza una coincidencia previa si es la MISMA fila Oracle
+                        # (mismo oracle_external_id) o si ninguna coincidencia tiene
+                        # aun un oracle_external_id distinto asignado.
+                        horario = next(
+                            (h for h in coincidencias if oracle_external_id and h.oracle_external_id == oracle_external_id),
+                            None,
+                        )
+                        if horario is None:
+                            horario = next(
+                                (h for h in coincidencias if h.id not in horario_ids_procesados),
+                                None,
+                            )
+                        if horario is None:
+                            horario = coincidencias[0]
                         created = False
-                        if coincidencias.count() > 1:
+                        if len(coincidencias) > 1:
                             duplicados_horario_reutilizados += 1
                     else:
                         horario = Horario.objects.create(
@@ -1419,8 +1440,11 @@ class Command(BaseCommand):
                             cantidad_estudiantes=cantidad,
                             estado='aprobado',
                             origen='SIUL',
+                            oracle_external_id=oracle_external_id or None,
                         )
                         created = True
+
+                    horario_ids_procesados.add(horario.id)
 
                     if created:
                         horarios_creados += 1
@@ -1438,6 +1462,9 @@ class Command(BaseCommand):
                         changed = True
                     if horario.estado != 'aprobado':
                         horario.estado = 'aprobado'
+                        changed = True
+                    if oracle_external_id and horario.oracle_external_id != oracle_external_id:
+                        horario.oracle_external_id = oracle_external_id
                         changed = True
 
                     if changed:
@@ -1465,6 +1492,29 @@ class Command(BaseCommand):
                 except Exception as exc:
                     self.stdout.write(self.style.WARNING(f'No fue posible reactivar signals de horarios: {exc}'))
 
+        # Reconciliacion: cualquier Horario de origen SIUL, perteneciente a un
+        # periodo que se toco en esta corrida, que no fue creado ni actualizado
+        # arriba, significa que Oracle ya no lo reporta (cambio de identidad,
+        # aula, grupo cancelado, etc.). Sin esto, los horarios obsoletos quedan
+        # huerfanos para siempre en la BD tras un cambio de aula/horario.
+        # Se omite si la corrida fue acotada (--limit o --seccional), porque en
+        # ese caso el staging procesado no representa el universo completo del
+        # periodo y borrar por ausencia seria incorrecto.
+        if not dry_run and periodo_ids_afectados and not limit and not seccional_filter:
+            huerfanos_qs = Horario.objects.filter(
+                origen='SIUL',
+                grupo__periodo_id__in=periodo_ids_afectados,
+            ).exclude(id__in=horario_ids_procesados)
+            horarios_huerfanos_eliminados = huerfanos_qs.count()
+            if horarios_huerfanos_eliminados:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'Eliminando {horarios_huerfanos_eliminados} horarios SIUL obsoletos '
+                        '(ya no aparecen en el staging Oracle actual para su periodo).'
+                    )
+                )
+                huerfanos_qs.delete()
+
         self.stdout.write(
             self.style.SUCCESS(
                 'Horarios - '
@@ -1473,6 +1523,7 @@ class Command(BaseCommand):
                 f'Sin cambio: {horarios_sin_cambio}, '
                 f'Errores: {horarios_error}, '
                 f'Duplicados reutilizados: {duplicados_horario_reutilizados}, '
+                f'Huerfanos eliminados: {horarios_huerfanos_eliminados}, '
                 f'Grupo no encontrado: {grupo_no_encontrado}, '
                 f'Asignatura no encontrada: {asignatura_no_encontrada}, '
                 f'Espacio no encontrado: {espacio_no_encontrado}, '
