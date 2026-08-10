@@ -151,7 +151,10 @@ class StgOracleHorario(models.Model):
                 name='uq_stg_oracle_horario_source_external',
             )
         ]
-        ordering = ['external_id']
+        # Orden cronologico (no por external_id/hash): si llegaran a coexistir
+        # filas duplicadas para la misma sesion, migrate_horarios debe procesar
+        # primero las mas antiguas para que la mas reciente sea la que prevalezca.
+        ordering = ['fecha_carga', 'id']
 
     def __str__(self):
         display_name = self.nombre_grupo_oracle or self.id_grupo_oracle or self.id_asignatura_oracle or ''

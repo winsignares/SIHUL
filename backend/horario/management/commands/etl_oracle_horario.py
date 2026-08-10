@@ -218,6 +218,14 @@ class Command(BaseCommand):
 
                 row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
                 if id_grupo or id_asignatura or periodo:
+                    # nom_aula (y cualquier otro atributo mutable) NO debe formar
+                    # parte de la clave de identidad: si solo cambia el aula de
+                    # una sesion existente, debe reconocerse como la MISMA fila
+                    # de staging (para que update_or_create la actualice) en vez
+                    # de generar un external_id distinto y dejar la fila vieja
+                    # con el aula desactualizada. La identidad debe reflejar la
+                    # misma sesion de clase usada en migrate_horarios (grupo +
+                    # asignatura + periodo + dia + hora).
                     key_payload = {
                         'id_grupo': id_grupo,
                         'id_asignatura': id_asignatura,
@@ -225,7 +233,6 @@ class Command(BaseCommand):
                         'num_dia': num_dia,
                         'hor_inicio': hor_inicio,
                         'hor_fin': hor_fin,
-                        'nom_aula': nom_aula,
                     }
                     external_id = f'HOR:{self._row_hash(key_payload)[:32]}'
                 else:
