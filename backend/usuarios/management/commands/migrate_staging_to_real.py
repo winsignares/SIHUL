@@ -1387,16 +1387,25 @@ class Command(BaseCommand):
                         cantidad = self._to_int(raw.get('cantidad_estudiantes'), default=None)
 
                     # Identidad de un horario = la misma sesion de clase (grupo +
-                    # asignatura + dia + hora). El espacio, docente y cantidad de
-                    # estudiantes son atributos mutables: si Oracle trae un cambio
-                    # (p.ej. el salon A paso a ser el salon B) se debe actualizar el
-                    # registro existente en vez de crear uno nuevo.
+                    # asignatura + dia + hora + espacio). El espacio SI forma
+                    # parte de la identidad: VW_HORARIO puede traer, para la
+                    # misma sesion, mas de una fila con aulas distintas
+                    # simultaneas (clases "mixta" que usan aula teorica + sala
+                    # de computo a la vez), y cada una debe quedar como un
+                    # Horario real independiente. Docente y cantidad de
+                    # estudiantes si son atributos mutables de esa combinacion
+                    # (grupo+asignatura+dia+hora+espacio) y se actualizan en el
+                    # mismo registro. Si Oracle reasigna el aula de una sesion
+                    # entre corridas, la fila vieja (con el espacio anterior)
+                    # deja de aparecer en el staging vigente y la reconciliacion
+                    # de huerfanos de mas abajo la elimina.
                     identidad = {
                         'grupo': grupo,
                         'asignatura': asignatura,
                         'dia_semana': dia_semana,
                         'hora_inicio': hora_inicio,
                         'hora_fin': hora_fin,
+                        'espacio': espacio,
                     }
                     oracle_external_id = self._to_text(stg_horario.external_id)
 
@@ -1412,8 +1421,8 @@ class Command(BaseCommand):
                     coincidencias = list(Horario.objects.filter(**identidad).order_by('id'))
 
                     if coincidencias:
-                        # Si dos sesiones distintas de Oracle colisionan en la misma
-                        # identidad (grupo+asignatura+dia+hora, sin espacio), usar el
+                        # Si dos filas de staging distintas colisionan en la misma
+                        # identidad (grupo+asignatura+dia+hora+espacio), usar el
                         # external_id de Oracle para no fusionarlas por error: solo se
                         # reutiliza una coincidencia previa si es la MISMA fila Oracle
                         # (mismo oracle_external_id) o si ninguna coincidencia tiene
@@ -1435,7 +1444,6 @@ class Command(BaseCommand):
                     else:
                         horario = Horario.objects.create(
                             **identidad,
-                            espacio=espacio,
                             docente=docente,
                             cantidad_estudiantes=cantidad,
                             estado='aprobado',
@@ -1450,10 +1458,9 @@ class Command(BaseCommand):
                         horarios_creados += 1
                         continue
 
+                    # espacio ya no se reasigna aqui: forma parte de `identidad`,
+                    # asi que coincidencias ya viene filtrado por el mismo espacio.
                     changed = False
-                    if espacio is not None and horario.espacio_id != espacio.id:
-                        horario.espacio = espacio
-                        changed = True
                     if docente and horario.docente_id != docente.id:
                         horario.docente = docente
                         changed = True

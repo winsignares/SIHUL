@@ -156,6 +156,7 @@ class Command(BaseCommand):
                 'without_strong_id': 0,
                 'unique_external_ids': 0,
                 'duplicate_external_ids_in_batch': 0,
+                'purgados_antes_de_cargar': 0,
             },
             'dry_run': dry_run,
         }
@@ -218,14 +219,16 @@ class Command(BaseCommand):
 
                 row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
                 if id_grupo or id_asignatura or periodo:
-                    # nom_aula (y cualquier otro atributo mutable) NO debe formar
-                    # parte de la clave de identidad: si solo cambia el aula de
-                    # una sesion existente, debe reconocerse como la MISMA fila
-                    # de staging (para que update_or_create la actualice) en vez
-                    # de generar un external_id distinto y dejar la fila vieja
-                    # con el aula desactualizada. La identidad debe reflejar la
-                    # misma sesion de clase usada en migrate_horarios (grupo +
-                    # asignatura + periodo + dia + hora).
+                    # nom_aula SI forma parte de la clave de identidad: VW_HORARIO
+                    # puede traer mas de una fila para la misma sesion (mismo
+                    # grupo+asignatura+periodo+dia+hora) con aulas distintas
+                    # simultaneas (p.ej. clases "mixta" que usan aula teorica +
+                    # sala de computo a la vez). Si se excluye el aula de la
+                    # identidad, esas filas colisionan y una se pierde de forma
+                    # no determinista. La reconciliacion de aulas desactualizadas
+                    # entre corridas se maneja purgando el staging antes de cada
+                    # extraccion (ver mas abajo) y con la limpieza de huerfanos
+                    # en migrate_horarios, no colapsando la identidad aqui.
                     key_payload = {
                         'id_grupo': id_grupo,
                         'id_asignatura': id_asignatura,
@@ -233,6 +236,7 @@ class Command(BaseCommand):
                         'num_dia': num_dia,
                         'hor_inicio': hor_inicio,
                         'hor_fin': hor_fin,
+                        'nom_aula': nom_aula,
                     }
                     external_id = f'HOR:{self._row_hash(key_payload)[:32]}'
                 else:
@@ -298,6 +302,13 @@ class Command(BaseCommand):
                 return
 
             with transaction.atomic():
+                # Purga el staging previo antes de cargar el lote nuevo. Sin esto,
+                # filas de una extraccion anterior cuya aula/identidad ya no
+                # aparece en la extraccion actual quedarian "valido" para
+                # siempre, y migrate_horarios no tendria forma de distinguir
+                # una sesion realmente vigente de una que Oracle ya no reporta.
+                borrados, _ = StgOracleHorario.objects.filter(source_system=source_system).delete()
+                summary['staging']['purgados_antes_de_cargar'] = borrados
                 for external_id, defaults in staged_by_external.items():
                     StgOracleHorario.objects.update_or_create(
                         source_system=source_system,
