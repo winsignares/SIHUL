@@ -25,6 +25,7 @@ app = FastAPI(
         "- **Historial** filtrable por sede.\n"
     ),
     version="2.0.0",
+    root_path="/chatbot",
     lifespan=lifespan,
 )
 
