@@ -25,7 +25,9 @@ app = FastAPI(
         "- **Historial** filtrable por sede.\n"
     ),
     version="2.0.0",
-    root_path="/chatbot",
+    docs_url="/chatbot/docs",
+    redoc_url="/chatbot/redoc",
+    openapi_url="/chatbot/openapi.json",
     lifespan=lifespan,
 )
 
