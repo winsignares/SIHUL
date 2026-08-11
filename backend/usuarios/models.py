@@ -95,7 +95,6 @@ class Usuario(AbstractUser):
         else:
             self.is_superuser = False
             self.es_superusuario = False
-            self.is_staff = False
 
         if self.password and self.password != self.contrasena_hash:
             self.contrasena_hash = self.password
