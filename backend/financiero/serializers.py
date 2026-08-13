@@ -372,7 +372,10 @@ class FacturaListSerializer(serializers.ModelSerializer):
         ]
 
     def get_sla_objetivo_dias(self, obj):
-        parametro = obtener_parametro_por_etapa(getattr(obj, 'etapa_actual', None))
+        parametro = obtener_parametro_por_etapa(
+            getattr(obj, 'etapa_actual', None),
+            seccional_id=getattr(obj, 'seccional_id', None),
+        )
         if not parametro or not parametro.activo:
             return None
         return int(parametro.dias_maximos or 0)
@@ -410,7 +413,10 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_sla_objetivo_dias(self, obj):
-        parametro = obtener_parametro_por_etapa(getattr(obj, 'etapa_actual', None))
+        parametro = obtener_parametro_por_etapa(
+            getattr(obj, 'etapa_actual', None),
+            seccional_id=getattr(obj, 'seccional_id', None),
+        )
         if not parametro or not parametro.activo:
             return None
         return int(parametro.dias_maximos or 0)

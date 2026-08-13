@@ -47,8 +47,10 @@ def normalize_text(value: str) -> str:
     )
 
 
-def build_parametros_sla_map() -> Dict[str, ParametroSLA]:
+def build_parametros_sla_map(seccional_id: Optional[int] = None) -> Dict[str, ParametroSLA]:
     parametros = ParametroSLA.objects.all()
+    if seccional_id:
+        parametros = parametros.filter(seccional_id=seccional_id)
     return {normalize_text(param.etapa): param for param in parametros}
 
 
@@ -74,8 +76,9 @@ def _resolve_parametro(etapa_actual: Optional[str], parametros_map: Dict[str, Pa
 def obtener_parametro_por_etapa(
     etapa_actual: Optional[str],
     parametros_map: Optional[Dict[str, ParametroSLA]] = None,
+    seccional_id: Optional[int] = None,
 ) -> Optional[ParametroSLA]:
-    parametros_map = parametros_map or build_parametros_sla_map()
+    parametros_map = parametros_map or build_parametros_sla_map(seccional_id=seccional_id)
     return _resolve_parametro(etapa_actual, parametros_map)
 
 
@@ -109,7 +112,7 @@ def aplicar_sla_factura(
     parametros_map: Optional[Dict[str, ParametroSLA]] = None,
     fecha_actual: Optional[date] = None,
 ) -> bool:
-    parametros_map = parametros_map or build_parametros_sla_map()
+    parametros_map = parametros_map or build_parametros_sla_map(seccional_id=getattr(factura, 'seccional_id', None))
     parametro = _resolve_parametro(factura.etapa_actual, parametros_map)
 
     indicador_anterior = factura.indicador_riesgo
@@ -157,7 +160,11 @@ def actualizar_sla_factura(
         factura.save(update_fields=['indicador_riesgo', 'sla_cumplido', 'fecha_modificacion'])
 
         if factura.indicador_riesgo != indicador_anterior and factura.indicador_riesgo in {'atencion', 'atrasada', 'vencida'}:
-            parametro = obtener_parametro_por_etapa(factura.etapa_actual, parametros_map)
+            parametro = obtener_parametro_por_etapa(
+                factura.etapa_actual,
+                parametros_map,
+                seccional_id=getattr(factura, 'seccional_id', None),
+            )
             fecha_inicio = factura.fecha_inicio_etapa or factura.fecha_recepcion
             dias_transcurridos = _calcular_dias_transcurridos(
                 fecha_inicio,

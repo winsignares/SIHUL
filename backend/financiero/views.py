@@ -28,10 +28,61 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from . import models, serializers
 from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
+from mysite.auth_helpers import get_user_seccional_id, is_admin_global
 from usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
 
 logger = logging.getLogger(__name__)
+
+
+def _financial_scope_seccional_id(user):
+    if user and is_admin_global(user):
+        return None
+    return get_user_seccional_id(user)
+
+
+def _user_can_access_financial_seccional(user, seccional_id):
+    if user and is_admin_global(user):
+        return True
+    user_seccional_id = get_user_seccional_id(user)
+    return bool(user_seccional_id and seccional_id == user_seccional_id)
+
+
+def _scoped_factura_queryset(user):
+    queryset = models.Factura.objects.all()
+    seccional_id = _financial_scope_seccional_id(user)
+    if seccional_id:
+        queryset = queryset.filter(seccional_id=seccional_id)
+    elif user and not is_admin_global(user):
+        queryset = queryset.none()
+    return queryset
+
+
+class FinancieroTenantMixin:
+    seccional_lookup = 'seccional_id'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = getattr(self.request, 'user', None)
+        if user and is_admin_global(user):
+            return queryset
+
+        seccional_id = get_user_seccional_id(user)
+        if not seccional_id:
+            return queryset.none()
+
+        return queryset.filter(**{self.seccional_lookup: seccional_id})
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, 'user', None)
+        seccional_id = _financial_scope_seccional_id(user)
+        model = getattr(getattr(serializer, 'Meta', None), 'model', None)
+        if seccional_id and model is not None:
+            model_fields = {field.name for field in model._meta.fields}
+            if 'seccional' in model_fields:
+                serializer.save(seccional_id=seccional_id)
+                return
+        serializer.save()
 
 
 DOCUMENTOS_SENSIBLES_POR_ROL = {
@@ -258,7 +309,7 @@ def _documento_upload_metadata(uploaded_file):
 # VIEWSETS SIMPLES
 # ============================================================
 
-class ProveedorViewSet(viewsets.ModelViewSet):
+class ProveedorViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
     queryset = models.Proveedor.objects.all()
     serializer_class = serializers.ProveedorSerializer
     permission_classes = [IsAuthenticated]
@@ -364,7 +415,11 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if models.Proveedor.objects.filter(nit=nit).exists():
+        seccional_id = _financial_scope_seccional_id(request.user)
+        proveedor_nit_qs = models.Proveedor.objects.filter(nit=nit)
+        if seccional_id:
+            proveedor_nit_qs = proveedor_nit_qs.filter(seccional_id=seccional_id)
+        if proveedor_nit_qs.exists():
             return Response(
                 {'error': f'Ya existe un proveedor con el NIT "{nit}".'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -399,6 +454,8 @@ class ProveedorViewSet(viewsets.ModelViewSet):
 
                 proveedor_data['usuario'] = nuevo_usuario
                 proveedor_data['creado_por'] = request.user
+                if seccional_id:
+                    proveedor_data['seccional_id'] = seccional_id
                 proveedor = models.Proveedor.objects.create(**proveedor_data)
 
         except IntegrityError as exc:
@@ -416,17 +473,18 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     def mi_perfil(self, request):
         """Encuentra el proveedor asociado al usuario actual por vínculo directo, email o NIT."""
         user = request.user
-        proveedor = models.Proveedor.objects.filter(usuario=user).first()
+        proveedores_scope = self.get_queryset()
+        proveedor = proveedores_scope.filter(usuario=user).first()
 
         # 1. Fallback por email del usuario
         if not proveedor and user.correo:
-            proveedor = models.Proveedor.objects.filter(email__iexact=user.correo).first()
+            proveedor = proveedores_scope.filter(email__iexact=user.correo).first()
 
         # 2. Fallback por NIT pasado como query param
         if not proveedor:
             nit = (request.query_params.get('nit') or '').strip()
             if nit:
-                proveedor = models.Proveedor.objects.filter(nit=nit).first()
+                proveedor = proveedores_scope.filter(nit=nit).first()
 
         if proveedor and proveedor.usuario_id and proveedor.usuario_id != user.id:
             return Response(
@@ -504,7 +562,7 @@ class CiudadViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class DepartamentoViewSet(viewsets.ModelViewSet):
+class DepartamentoViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
     queryset = models.Departamento.objects.all()
     serializer_class = serializers.DepartamentoSerializer
     permission_classes = [IsAuthenticated]
@@ -525,9 +583,13 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
         ]
 
         excluded = excluded_default
-        config = models.ParametrosFinanciero.objects.filter(
+        config_qs = models.ParametrosFinanciero.objects.filter(
             clave='areas_solicitantes_excluidas'
-        ).first()
+        )
+        seccional_id = _financial_scope_seccional_id(request.user)
+        if seccional_id:
+            config_qs = config_qs.filter(seccional_id=seccional_id)
+        config = config_qs.first()
 
         if config and config.valor:
             try:
@@ -537,12 +599,12 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
             except (TypeError, ValueError, json.JSONDecodeError):
                 excluded = excluded_default
 
-        queryset = models.Departamento.objects.filter(estado='Activo').exclude(nombre__in=excluded).order_by('nombre')
+        queryset = self.get_queryset().filter(estado='Activo').exclude(nombre__in=excluded).order_by('nombre')
         serializer = serializers.DepartamentoSerializer(queryset, many=True)
         return Response(serializer.data)
 
 
-class CuentaContableViewSet(viewsets.ModelViewSet):
+class CuentaContableViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
     queryset = models.CuentaContable.objects.all()
     serializer_class = serializers.CuentaContableSerializer
     permission_classes = [IsAuthenticated]
@@ -551,13 +613,19 @@ class CuentaContableViewSet(viewsets.ModelViewSet):
     search_fields = ['codigo', 'nombre']
 
     def list(self, request, *args, **kwargs):
-        if not models.CuentaContable.objects.exists():
+        seccional_id = _financial_scope_seccional_id(request.user)
+        if not self.get_queryset().exists():
             for cuenta in DEFAULT_CUENTAS_CONTABLES:
-                models.CuentaContable.objects.get_or_create(codigo=cuenta['codigo'], defaults=cuenta)
+                lookup = {'codigo': cuenta['codigo']}
+                defaults = dict(cuenta)
+                if seccional_id:
+                    lookup['seccional_id'] = seccional_id
+                    defaults.pop('seccional_id', None)
+                models.CuentaContable.objects.get_or_create(**lookup, defaults=defaults)
         return super().list(request, *args, **kwargs)
 
 
-class CentroCostoViewSet(viewsets.ModelViewSet):
+class CentroCostoViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
     queryset = models.CentroCosto.objects.all()
     serializer_class = serializers.CentroCostoSerializer
     permission_classes = [IsAuthenticated]
@@ -566,13 +634,19 @@ class CentroCostoViewSet(viewsets.ModelViewSet):
     search_fields = ['codigo', 'nombre']
 
     def list(self, request, *args, **kwargs):
-        if not models.CentroCosto.objects.exists():
+        seccional_id = _financial_scope_seccional_id(request.user)
+        if not self.get_queryset().exists():
             for centro in DEFAULT_CENTROS_COSTO:
-                models.CentroCosto.objects.get_or_create(codigo=centro['codigo'], defaults=centro)
+                lookup = {'codigo': centro['codigo']}
+                defaults = dict(centro)
+                if seccional_id:
+                    lookup['seccional_id'] = seccional_id
+                    defaults.pop('seccional_id', None)
+                models.CentroCosto.objects.get_or_create(**lookup, defaults=defaults)
         return super().list(request, *args, **kwargs)
 
 
-class ParametroSLAViewSet(viewsets.ModelViewSet):
+class ParametroSLAViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
     queryset = models.ParametroSLA.objects.all()
     serializer_class = serializers.ParametroSLASerializer
     permission_classes = [IsAuthenticated]
@@ -580,13 +654,17 @@ class ParametroSLAViewSet(viewsets.ModelViewSet):
     search_fields = ['etapa', 'rol_responsable']
 
     def perform_create(self, serializer):
+        seccional_id = _financial_scope_seccional_id(self.request.user)
+        if seccional_id:
+            serializer.save(modificado_por=self.request.user, seccional_id=seccional_id)
+            return
         serializer.save(modificado_por=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save(modificado_por=self.request.user)
 
 
-class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
+class ParametrosFinancieroViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
     queryset = models.ParametrosFinanciero.objects.all()
     serializer_class = serializers.ParametrosFinancieroSerializer
     permission_classes = [IsAuthenticated]
@@ -594,6 +672,10 @@ class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
     filterset_fields = ['categoria']
 
     def perform_create(self, serializer):
+        seccional_id = _financial_scope_seccional_id(self.request.user)
+        if seccional_id:
+            serializer.save(modificado_por=self.request.user, seccional_id=seccional_id)
+            return
         serializer.save(modificado_por=self.request.user)
 
     def perform_update(self, serializer):
@@ -602,7 +684,7 @@ class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def por_categoria(self, request):
         """Obtener parámetros agrupados por categoría"""
-        params = models.ParametrosFinanciero.objects.all()
+        params = self.get_queryset()
         grouped = {}
         for param in params:
             if param.categoria not in grouped:
@@ -615,7 +697,7 @@ class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
         return Response(grouped)
 
 
-class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
+class ReporteGeneradoViewSet(FinancieroTenantMixin, viewsets.ReadOnlyModelViewSet):
     queryset = models.ReporteGenerado.objects.all()
     serializer_class = serializers.ReporteGeneradoSerializer
     permission_classes = [IsAuthenticated]
@@ -625,7 +707,7 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # Cada usuario ve solo sus reportes
-        return models.ReporteGenerado.objects.filter(generado_por=self.request.user)
+        return super().get_queryset().filter(generado_por=self.request.user)
 
     def _parse_date(self, value):
         if not value:
@@ -637,6 +719,9 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _filtrar_facturas(self, filtros):
         queryset = models.Factura.objects.select_related('proveedor', 'departamento').all()
+        seccional_id = _financial_scope_seccional_id(self.request.user)
+        if seccional_id:
+            queryset = queryset.filter(seccional_id=seccional_id)
 
         fecha_inicio = self._parse_date(filtros.get('fecha_inicio'))
         fecha_fin = self._parse_date(filtros.get('fecha_fin'))
@@ -674,7 +759,9 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
         return rows
 
     def _registrar_reporte(self, *, tipo_reporte, formato, filtros, nombre, cantidad_registros, tamano):
+        seccional_id = _financial_scope_seccional_id(self.request.user)
         return models.ReporteGenerado.objects.create(
+            seccional_id=seccional_id,
             tipo_reporte=tipo_reporte,
             nombre_reporte=nombre,
             formato=formato,
@@ -686,7 +773,7 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='dashboard_admin')
     def dashboard_admin(self, request):
-        facturas = models.Factura.objects.all()
+        facturas = _scoped_factura_queryset(request.user)
         estados_cierre = ['Pagada', 'Anulada']
         facturas_en_proceso = facturas.exclude(estado__in=estados_cierre)
 
@@ -708,8 +795,15 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
         for nombre_rol in roles_financieros:
             roles_q |= Q(rol__nombre__iexact=nombre_rol)
 
-        usuarios_activos = Usuario.objects.filter(activo=True).filter(roles_q).count()
-        proveedores_activos = models.Proveedor.objects.filter(estado='Activo').count()
+        usuarios_qs = Usuario.objects.filter(activo=True).filter(roles_q)
+        seccional_id = _financial_scope_seccional_id(request.user)
+        if seccional_id:
+            usuarios_qs = usuarios_qs.filter(sede__seccional_id=seccional_id)
+        usuarios_activos = usuarios_qs.count()
+        proveedores_activos = models.Proveedor.objects.filter(estado='Activo')
+        if seccional_id:
+            proveedores_activos = proveedores_activos.filter(seccional_id=seccional_id)
+        proveedores_activos = proveedores_activos.count()
 
         total_facturas = facturas.count()
         cantidad_proceso = facturas_en_proceso.count()
@@ -731,7 +825,7 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
             facturas.values('estado').annotate(cantidad=Count('id')).order_by('-cantidad')
         )
 
-        alertas_qs = models.Factura.objects.filter(indicador_riesgo__in=['atencion', 'atrasada', 'vencida']).order_by('-fecha_recepcion')[:15]
+        alertas_qs = facturas.filter(indicador_riesgo__in=['atencion', 'atrasada', 'vencida']).order_by('-fecha_recepcion')[:15]
         alertas = [
             {
                 'id': f.id,
@@ -744,7 +838,10 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
             for f in alertas_qs
         ]
 
-        actividades_qs = models.HistorialFactura.objects.select_related('factura', 'usuario').order_by('-fecha_accion')[:12]
+        actividades_qs = models.HistorialFactura.objects.select_related('factura', 'usuario')
+        if seccional_id:
+            actividades_qs = actividades_qs.filter(factura__seccional_id=seccional_id)
+        actividades_qs = actividades_qs.order_by('-fecha_accion')[:12]
         actividades = [
             {
                 'id': h.id,
@@ -865,7 +962,9 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
 # VIEWSETS COMPLEJOS
 # ============================================================
 
-class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
+class DocumentoAdjuntoViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
+    seccional_lookup = 'factura__seccional_id'
+    queryset = models.DocumentoAdjunto.objects.all()
     serializer_class = serializers.DocumentoAdjuntoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
@@ -875,7 +974,7 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         puede_ver_sensibles = _usuario_puede_ver_documentos_sensibles(self.request.user)
         factura_id = self.request.query_params.get('factura_id') or self.request.query_params.get('factura')
-        queryset = models.DocumentoAdjunto.objects.all()
+        queryset = super().get_queryset()
 
         if not puede_ver_sensibles:
             queryset = queryset.exclude(
@@ -917,6 +1016,8 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         archivo = self.request.FILES.get('archivo')
         factura = serializer.validated_data.get('factura')
+        if factura and not _user_can_access_financial_seccional(self.request.user, factura.seccional_id):
+            raise ValidationError('No puedes cargar documentos para facturas de otra seccional.')
         content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(archivo)
         ciclo_documental = _factura_ciclo_documental_actual(factura)
         instance = serializer.save(
@@ -933,7 +1034,9 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
             _programar_sincronizacion_nas_documento(instance.id)
 
 
-class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
+class HistorialFacturaViewSet(FinancieroTenantMixin, viewsets.ReadOnlyModelViewSet):
+    seccional_lookup = 'factura__seccional_id'
+    queryset = models.HistorialFactura.objects.all()
     serializer_class = serializers.HistorialFacturaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -942,12 +1045,15 @@ class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         factura_id = self.request.query_params.get('factura_id')
+        queryset = super().get_queryset()
         if factura_id:
-            return models.HistorialFactura.objects.filter(factura_id=factura_id)
-        return models.HistorialFactura.objects.all()
+            return queryset.filter(factura_id=factura_id)
+        return queryset
 
 
-class ComentarioFacturaViewSet(viewsets.ModelViewSet):
+class ComentarioFacturaViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
+    seccional_lookup = 'factura__seccional_id'
+    queryset = models.ComentarioFactura.objects.all()
     serializer_class = serializers.ComentarioFacturaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -956,15 +1062,21 @@ class ComentarioFacturaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         factura_id = self.request.query_params.get('factura_id')
+        queryset = super().get_queryset()
         if factura_id:
-            return models.ComentarioFactura.objects.filter(factura_id=factura_id)
-        return models.ComentarioFactura.objects.all()
+            return queryset.filter(factura_id=factura_id)
+        return queryset
 
     def perform_create(self, serializer):
+        factura = serializer.validated_data.get('factura')
+        if factura and not _user_can_access_financial_seccional(self.request.user, factura.seccional_id):
+            raise ValidationError('No puedes comentar facturas de otra seccional.')
         serializer.save(usuario=self.request.user)
 
 
-class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
+class RechazoDevolacionViewSet(FinancieroTenantMixin, viewsets.ReadOnlyModelViewSet):
+    seccional_lookup = 'factura__seccional_id'
+    queryset = models.RechazoDevolucion.objects.all()
     serializer_class = serializers.RechazoDevolacionSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
@@ -972,16 +1084,18 @@ class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         factura_id = self.request.query_params.get('factura_id')
+        queryset = super().get_queryset()
         if factura_id:
-            return models.RechazoDevolucion.objects.filter(factura_id=factura_id)
-        return models.RechazoDevolucion.objects.all()
+            return queryset.filter(factura_id=factura_id)
+        return queryset
 
 
 # ============================================================
 # FACTURA VIEWSET (PRINCIPAL)
 # ============================================================
 
-class FacturaViewSet(viewsets.ModelViewSet):
+class FacturaViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
+    queryset = models.Factura.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'indicador_riesgo', 'proveedor', 'departamento', 'urgente']
@@ -992,7 +1106,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = models.Factura.objects.all()
+        queryset = super().get_queryset()
 
         rol_nombre = (user.rol.nombre if getattr(user, 'rol', None) else '').strip()
         if rol_nombre == 'Funcionario':
@@ -1004,9 +1118,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
             ).distinct()
         elif rol_nombre == 'Proveedor':
             # Proveedor solo ve sus propias facturas (por vínculo directo o email)
-            proveedor = models.Proveedor.objects.filter(usuario=user).first()
+            proveedores_scope = models.Proveedor.objects.all()
+            seccional_id = _financial_scope_seccional_id(user)
+            if seccional_id:
+                proveedores_scope = proveedores_scope.filter(seccional_id=seccional_id)
+            proveedor = proveedores_scope.filter(usuario=user).first()
             if not proveedor and user.correo:
-                proveedor = models.Proveedor.objects.filter(email__iexact=user.correo).first()
+                proveedor = proveedores_scope.filter(email__iexact=user.correo).first()
 
             if proveedor and not proveedor.usuario_id:
                 proveedor.usuario = user
@@ -1526,7 +1644,26 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return serializers.FacturaDetailSerializer
 
     def perform_create(self, serializer):
-        factura = serializer.save(creado_por=self.request.user)
+        seccional_id = _financial_scope_seccional_id(self.request.user)
+        if seccional_id:
+            validated_data = serializer.validated_data
+            related_checks = [
+                ('proveedor', models.Proveedor),
+                ('departamento', models.Departamento),
+                ('cuenta_contable', models.CuentaContable),
+                ('centro_costo', models.CentroCosto),
+            ]
+            for field_name, model in related_checks:
+                related = validated_data.get(field_name)
+                related_id = getattr(related, 'id', None) or validated_data.get(f'{field_name}_id')
+                if not related_id:
+                    continue
+                related_seccional_id = model.objects.filter(id=related_id).values_list('seccional_id', flat=True).first()
+                if related_seccional_id and related_seccional_id != seccional_id:
+                    raise ValidationError(f'{field_name} pertenece a otra seccional.')
+            factura = serializer.save(creado_por=self.request.user, seccional_id=seccional_id)
+        else:
+            factura = serializer.save(creado_por=self.request.user)
 
         if not factura.etapa_actual:
             factura.etapa_actual = 'Recepción y Registro'
@@ -2800,7 +2937,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         
         # Pendientes = SOLO facturas sin responsable en estado Recibida
         # (facturas nuevas que vienen del proveedor y deben ser procesadas)
-        pendientes = models.Factura.objects.filter(
+        pendientes = self.get_queryset().filter(
             usuario_responsable__isnull=True, 
             estado='Recibida'
         ).order_by('-fecha_recepcion', '-id')
@@ -2811,7 +2948,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
         """Obtener estadísticas de facturas"""
-        queryset = models.Factura.objects.all()
+        queryset = self.get_queryset()
         rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
         if rol_nombre == 'Funcionario':
             queryset = queryset.filter(estado__in=['Recibida', 'Registrada'])
@@ -2838,8 +2975,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='sincronizar_sla')
     def sincronizar_sla(self, request):
         """Sincroniza indicadores SLA para facturas en proceso."""
-        facturas = models.Factura.objects.exclude(estado__in=['Pagada', 'Anulada'])
-        parametros_map = build_parametros_sla_map()
+        facturas = self.get_queryset().exclude(estado__in=['Pagada', 'Anulada'])
+        parametros_map = build_parametros_sla_map(seccional_id=_financial_scope_seccional_id(request.user))
         actualizadas = sincronizar_sla_facturas(facturas, parametros_map=parametros_map)
         return Response({'actualizadas': actualizadas, 'total': facturas.count()})
 

@@ -58,7 +58,9 @@ def crear_notificacion(id_usuario, tipo, mensaje, prioridad='media'):
     """Función helper para crear notificaciones"""
     try:
         if id_usuario:
+            usuario = Usuario.objects.filter(id=id_usuario).first()
             Notificacion.objects.create(
+                usuario=usuario,
                 id_usuario=id_usuario,
                 tipo_notificacion=tipo,
                 mensaje=mensaje,

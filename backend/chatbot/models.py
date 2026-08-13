@@ -1,9 +1,7 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.utils import timezone
+from usuarios.models import Usuario
 import uuid
-
-User = get_user_model()
 
 class Agente(models.Model):
     nombre = models.CharField(max_length=100)
@@ -51,6 +49,7 @@ class Conversacion(models.Model):
     
     # Relaciones
     chatbot = models.ForeignKey(Agente, on_delete=models.CASCADE, related_name='conversaciones')
+    usuario_ref = models.ForeignKey(Usuario, on_delete=models.CASCADE, null=True, blank=True, related_name='conversaciones_chatbot')
     id_usuario = models.IntegerField(db_index=True, help_text='ID del usuario que envió el mensaje')
     usuario = models.CharField(max_length=255, help_text='Nombre completo del usuario')
     
@@ -67,9 +66,17 @@ class Conversacion(models.Model):
         ordering = ['-fecha']  # Más recientes primero
         indexes = [
             models.Index(fields=['chat_id', 'fecha']),
+            models.Index(fields=['usuario_ref', 'fecha']),
             models.Index(fields=['chatbot', 'id_usuario', 'fecha']),
             models.Index(fields=['id_usuario', 'fecha']),
         ]
     
     def __str__(self):
         return f"{self.usuario} -> {self.chatbot.nombre}: {self.mensaje[:50]} ({self.fecha.strftime('%Y-%m-%d %H:%M')})"
+
+    def save(self, *args, **kwargs):
+        if self.usuario_ref_id and not self.id_usuario:
+            self.id_usuario = self.usuario_ref_id
+        elif self.id_usuario and not self.usuario_ref_id:
+            self.usuario_ref = Usuario.objects.filter(id=self.id_usuario).first()
+        super().save(*args, **kwargs)

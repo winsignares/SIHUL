@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Index
 from usuarios.models import Usuario
 from facultades.models import Facultad
+from sedes.models import Seccional
 from django.utils import timezone
 
 
@@ -67,7 +68,7 @@ class Proveedor(models.Model):
         blank=True,
         related_name='perfil_proveedor'
     )
-    nit = models.CharField(max_length=50, unique=True)
+    nit = models.CharField(max_length=50)
     razon_social = models.CharField(max_length=255)
     nombre_comercial = models.CharField(max_length=255, blank=True, null=True)
     tipo_persona = models.CharField(max_length=20, choices=TIPO_PERSONA_CHOICES, default='Jurídica')
@@ -97,6 +98,7 @@ class Proveedor(models.Model):
     autoretenedor = models.BooleanField(default=False)
 
     # Estado y control
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='proveedores_financieros')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Activo')
     calificacion_riesgo = models.CharField(max_length=20, choices=CALIFICACION_RIESGO_CHOICES, blank=True, null=True)
     fecha_ultimo_pago = models.DateField(blank=True, null=True)
@@ -119,6 +121,9 @@ class Proveedor(models.Model):
             Index(fields=['nit'], name='idx_proveedor_nit'),
             Index(fields=['estado'], name='idx_proveedor_estado'),
             Index(fields=['razon_social'], name='idx_proveedor_razon_social'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'nit'], name='uq_proveedor_seccional_nit'),
         ]
         verbose_name = 'Proveedor'
         verbose_name_plural = 'Proveedores'
@@ -215,9 +220,10 @@ class Departamento(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
-    codigo = models.CharField(max_length=20, unique=True)
+    codigo = models.CharField(max_length=20)
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='departamentos_financieros')
     facultad = models.ForeignKey(Facultad, on_delete=models.SET_NULL, null=True, blank=True, related_name='departamentos')
     responsable = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='departamentos_responsable')
     tipo = models.CharField(max_length=50, choices=TIPO_CHOICES, default='Administrativo')
@@ -231,6 +237,9 @@ class Departamento(models.Model):
             Index(fields=['codigo'], name='idx_departamento_codigo'),
             Index(fields=['tipo'], name='idx_departamento_tipo'),
             Index(fields=['estado'], name='idx_departamento_estado'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'codigo'], name='uq_departamento_seccional_codigo'),
         ]
         verbose_name = 'Departamento'
         verbose_name_plural = 'Departamentos'
@@ -261,7 +270,8 @@ class CuentaContable(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
-    codigo = models.CharField(max_length=20, unique=True)
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='cuentas_contables_financieras')
+    codigo = models.CharField(max_length=20)
     nombre = models.CharField(max_length=255)
     tipo_cuenta = models.CharField(max_length=50, choices=TIPO_CUENTA_CHOICES)
     nivel = models.IntegerField()  # 1=Clase, 2=Grupo, 3=Cuenta, 4=Subcuenta
@@ -279,6 +289,9 @@ class CuentaContable(models.Model):
             Index(fields=['codigo'], name='idx_cuenta_contable_codigo'),
             Index(fields=['tipo_cuenta'], name='idx_cuenta_contable_tipo'),
             Index(fields=['estado'], name='idx_cuenta_contable_estado'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'codigo'], name='uq_cuenta_seccional_codigo'),
         ]
         verbose_name = 'Cuenta Contable'
         verbose_name_plural = 'Cuentas Contables'
@@ -304,7 +317,8 @@ class CentroCosto(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
-    codigo = models.CharField(max_length=20, unique=True)
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='centros_costo_financieros')
+    codigo = models.CharField(max_length=20)
     nombre = models.CharField(max_length=255)
     tipo = models.CharField(max_length=50, choices=TIPO_CHOICES)
     departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null=True, blank=True, related_name='centros_costo')
@@ -319,6 +333,9 @@ class CentroCosto(models.Model):
             Index(fields=['codigo'], name='idx_centro_costo_codigo'),
             Index(fields=['tipo'], name='idx_centro_costo_tipo'),
             Index(fields=['estado'], name='idx_centro_costo_estado'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'codigo'], name='uq_centro_costo_seccional_codigo'),
         ]
         verbose_name = 'Centro de Costo'
         verbose_name_plural = 'Centros de Costo'
@@ -384,6 +401,7 @@ class Factura(models.Model):
     consecutivo_operacion = models.CharField(max_length=100, blank=True, null=True)
 
     # Relaciones
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='facturas_financieras')
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='facturas')
     departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null=True, related_name='facturas')
     cuenta_contable = models.ForeignKey(CuentaContable, on_delete=models.SET_NULL, null=True, blank=True, related_name='facturas')
@@ -637,7 +655,8 @@ class HistorialFactura(models.Model):
 # ============================================================
 class ParametroSLA(models.Model):
     id = models.AutoField(primary_key=True)
-    etapa = models.CharField(max_length=100, unique=True)
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='parametros_sla_financieros')
+    etapa = models.CharField(max_length=100)
     rol_responsable = models.CharField(max_length=50)
     dias_maximos = models.IntegerField()
     alerta_amarillo_porcentaje = models.IntegerField(default=60)
@@ -653,6 +672,9 @@ class ParametroSLA(models.Model):
         indexes = [
             Index(fields=['etapa'], name='idx_sla_etapa'),
             Index(fields=['rol_responsable'], name='idx_sla_rol'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'etapa'], name='uq_sla_seccional_etapa'),
         ]
         verbose_name = 'Parámetro SLA'
         verbose_name_plural = 'Parámetros SLA'
@@ -681,7 +703,8 @@ class ParametrosFinanciero(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
-    clave = models.CharField(max_length=100, unique=True)
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='parametros_financieros')
+    clave = models.CharField(max_length=100)
     valor = models.TextField()
     tipo_dato = models.CharField(max_length=20, choices=TIPO_DATO_CHOICES)
     descripcion = models.TextField(blank=True, null=True)
@@ -694,6 +717,9 @@ class ParametrosFinanciero(models.Model):
         indexes = [
             Index(fields=['categoria'], name='idx_parametros_categoria'),
             Index(fields=['clave'], name='idx_parametros_clave'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'clave'], name='uq_parametro_seccional_clave'),
         ]
         verbose_name = 'Parámetro Financiero'
         verbose_name_plural = 'Parámetros Financieros'
@@ -714,6 +740,7 @@ class ReporteGenerado(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
+    seccional = models.ForeignKey(Seccional, on_delete=models.PROTECT, null=True, blank=True, related_name='reportes_financieros')
     tipo_reporte = models.CharField(max_length=100)
     nombre_reporte = models.CharField(max_length=255)
     formato = models.CharField(max_length=20, choices=FORMATO_CHOICES)

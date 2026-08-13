@@ -114,7 +114,14 @@ def get_componente_permiso(user, nombre_componente):
     override = ComponenteUsuario.objects.filter(usuario=user, componente=componente).first()
 
     rol = getattr(user, 'rol', None)
-    cr = ComponenteRol.objects.filter(rol=rol, componente=componente).first() if rol else None
+    cr = None
+    if rol:
+        seccional_id = get_user_seccional_id(user)
+        cr_queryset = ComponenteRol.objects.filter(rol=rol, componente=componente)
+        if seccional_id:
+            cr = cr_queryset.filter(seccional_id=seccional_id).first()
+        if cr is None:
+            cr = cr_queryset.filter(seccional__isnull=True).first()
 
     if cr:
         if override and not override.activo:

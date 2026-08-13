@@ -1,4 +1,5 @@
 from django.db import models
+from sedes.models import Seccional
 from usuarios.models import Rol, Usuario
 
 
@@ -17,10 +18,17 @@ class ComponenteRol(models.Model):
 
     componente = models.ForeignKey(Componente, on_delete=models.CASCADE)
     rol = models.ForeignKey(Rol, on_delete=models.CASCADE)
+    seccional = models.ForeignKey(Seccional, on_delete=models.CASCADE, null=True, blank=True, related_name='componentes_rol')
     permiso = models.CharField(max_length=20, choices=Permiso.choices, default=Permiso.VER)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['componente', 'rol', 'seccional'], name='uniq_componente_rol_seccional'),
+        ]
+
     def __str__(self):
-        return f"{self.rol.nombre} - {self.componente.nombre} ({self.get_permiso_display()})"
+        seccional = str(self.seccional) if self.seccional_id else 'Global'
+        return f"{self.rol.nombre} - {self.componente.nombre} - {seccional} ({self.get_permiso_display()})"
 
 
 class ComponenteUsuario(models.Model):

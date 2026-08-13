@@ -6,6 +6,7 @@ Carga: roles, componentes, permisos, departamentos, catálogos contables,
 
 import re
 from usuarios.models import Rol, Usuario
+from sedes.models import Seccional, Sede
 from componentes.models import Componente, ComponenteRol
 from financiero.models import (
     Departamento,
@@ -22,24 +23,59 @@ from financiero.models import (
 )
 
 
-def create_financiero_data(out, sty):
+def create_financiero_data(out, sty, seccional_ciudad='Barranquilla'):
     """Función principal que ejecuta todos los seeds del módulo financiero."""
     out.write(sty.SUCCESS('\n[Financiero] Iniciando carga de datos financieros...'))
 
+    seccional, sede = _resolve_financiero_scope(seccional_ciudad, out, sty)
     roles = _seed_roles(out, sty)
     componentes = _seed_componentes(out, sty)
-    _seed_permisos(roles, componentes, out, sty)
-    _seed_departamentos(out, sty)
-    _seed_catalogos_contables(out, sty)
+    _seed_permisos(roles, componentes, seccional, out, sty)
+    _seed_departamentos(seccional, out, sty)
+    _seed_catalogos_contables(seccional, out, sty)
     _seed_bancos_y_tipos_cuenta(out, sty)
     _seed_catalogos_geograficos(out, sty)
-    _seed_proveedores_demo(out, sty)
-    _seed_usuarios_proveedores(roles, out, sty)
-    _seed_sla(out, sty)
-    _seed_parametros(out, sty)
-    _seed_usuarios_prueba(roles, out, sty)
+    _seed_proveedores_demo(seccional, out, sty)
+    _seed_usuarios_proveedores(roles, seccional, sede, out, sty)
+    _seed_sla(seccional, out, sty)
+    _seed_parametros(seccional, out, sty)
+    _seed_usuarios_prueba(roles, seccional, sede, out, sty)
 
     out.write(sty.SUCCESS('[Financiero] Datos financieros cargados exitosamente.'))
+
+
+def _resolve_financiero_scope(seccional_ciudad, out, sty):
+    ciudad = (seccional_ciudad or 'Barranquilla').strip() or 'Barranquilla'
+    seccional = Seccional.objects.filter(ciudad__iexact=ciudad).first()
+    created_seccional = False
+    if not seccional:
+        seccional = Seccional.objects.create(ciudad=ciudad, activa=True)
+        created_seccional = True
+    if not seccional.activa:
+        seccional.activa = True
+        seccional.save(update_fields=['activa'])
+
+    sede = (
+        Sede.objects
+        .filter(seccional=seccional, nombre__icontains=ciudad)
+        .order_by('id')
+        .first()
+    )
+    if not sede:
+        sede = Sede.objects.filter(seccional=seccional).order_by('id').first()
+    if not sede:
+        sede = Sede.objects.create(
+            nombre=ciudad,
+            direccion='',
+            seccional=seccional,
+            activa=True,
+        )
+
+    out.write(sty.NOTICE(
+        f'\n  Scope financiero: seccional={seccional.ciudad} '
+        f'({"creada" if created_seccional else "existente"}), sede={sede.nombre}'
+    ))
+    return seccional, sede
 
 
 def _seed_roles(out, sty):
@@ -138,7 +174,7 @@ def _seed_componentes(out, sty):
     return result
 
 
-def _seed_permisos(roles, componentes, out, sty):
+def _seed_permisos(roles, componentes, seccional, out, sty):
     """Asigna permisos a los roles financieros."""
     permisos_por_rol = {
         "Funcionario": [
@@ -213,13 +249,14 @@ def _seed_permisos(roles, componentes, out, sty):
             _, created = ComponenteRol.objects.get_or_create(
                 rol=rol,
                 componente=componente,
+                seccional=seccional,
                 defaults={"permiso": ComponenteRol.Permiso.EDITAR},
             )
             if created:
                 out.write(f"    - {rol_nombre} -> {componente_nombre}")
 
 
-def _seed_departamentos(out, sty):
+def _seed_departamentos(seccional, out, sty):
     """Crea los departamentos financieros."""
     departamentos = [
         ("FIN", "Financiero", "Financiero"),
@@ -234,6 +271,7 @@ def _seed_departamentos(out, sty):
     out.write(sty.NOTICE('\n  Departamentos:'))
     for codigo, nombre, tipo in departamentos:
         _, created = Departamento.objects.get_or_create(
+            seccional=seccional,
             codigo=codigo,
             defaults={
                 "nombre": nombre,
@@ -245,7 +283,7 @@ def _seed_departamentos(out, sty):
         out.write(f"    - {msg}: {codigo} {nombre}")
 
 
-def _seed_catalogos_contables(out, sty):
+def _seed_catalogos_contables(seccional, out, sty):
     """Crea cuentas contables y centros de costo."""
     out.write(sty.NOTICE('\n  Catálogos contables:'))
 
@@ -299,6 +337,7 @@ def _seed_catalogos_contables(out, sty):
 
     for cuenta in cuentas_contables:
         _, created = CuentaContable.objects.get_or_create(
+            seccional=seccional,
             codigo=cuenta['codigo'],
             defaults={
                 "nombre": cuenta['nombre'],
@@ -322,9 +361,11 @@ def _seed_catalogos_contables(out, sty):
 
     for codigo, nombre in centros_costo:
         _, created = CentroCosto.objects.get_or_create(
+            seccional=seccional,
             codigo=codigo,
             defaults={
                 "nombre": nombre,
+                "tipo": "Administrativo",
                 "estado": "Activo",
             },
         )
@@ -378,7 +419,7 @@ def _seed_catalogos_geograficos(out, sty):
                 out.write(f"        - {'Creada' if created_ciudad else 'Existente'} ciudad: {nombre_ciudad}")
 
 
-def _seed_proveedores_demo(out, sty):
+def _seed_proveedores_demo(seccional, out, sty):
     """Crea proveedores de demostración."""
     proveedores_demo = [
         {
@@ -486,6 +527,7 @@ def _seed_proveedores_demo(out, sty):
     out.write(sty.NOTICE('\n  Proveedores demo:'))
     for proveedor_data in proveedores_demo:
         proveedor, created = Proveedor.objects.get_or_create(
+            seccional=seccional,
             nit=proveedor_data['nit'],
             defaults=proveedor_data,
         )
@@ -507,7 +549,7 @@ def _seed_proveedores_demo(out, sty):
         out.write(f"    - {msg}: {proveedor_data['razon_social']}")
 
 
-def _seed_usuarios_proveedores(roles, out, sty):
+def _seed_usuarios_proveedores(roles, seccional, sede, out, sty):
     """Crea usuarios de acceso para cada proveedor."""
     out.write(sty.NOTICE('\n  Usuarios de proveedores:'))
 
@@ -515,7 +557,7 @@ def _seed_usuarios_proveedores(roles, out, sty):
     if not rol_proveedor:
         return
 
-    for prov in Proveedor.objects.all():
+    for prov in Proveedor.objects.filter(seccional=seccional):
         if not prov.email:
             slug = _slugify_email(prov.razon_social)
             prov.email = f'{slug}@proveedor.sihul.edu.co'
@@ -530,12 +572,22 @@ def _seed_usuarios_proveedores(roles, out, sty):
             defaults={
                 'nombre': prov.razon_social,
                 'rol': rol_proveedor,
+                'sede': sede,
+                'seccional': seccional,
                 'activo': True,
             },
         )
+        usuario.nombre = prov.razon_social
+        usuario.rol = rol_proveedor
+        usuario.sede = sede
+        usuario.activo = True
         usuario.set_password(contrasena)
         usuario.contrasena_hash = usuario.password
         usuario.save()
+
+        if prov.usuario_id != usuario.id:
+            prov.usuario = usuario
+            prov.save(update_fields=['usuario'])
 
         accion = "Creado" if created else "Actualizado"
         out.write(f"    - {accion}: {prov.razon_social}")
@@ -549,7 +601,7 @@ def _slugify_email(razon_social):
     return s
 
 
-def _seed_sla(out, sty):
+def _seed_sla(seccional, out, sty):
     """Crea los parámetros SLA."""
     parametros_sla = [
         ('Recepción y Registro', 'Funcionario', 5, 'Registro inicial de factura'),
@@ -567,6 +619,7 @@ def _seed_sla(out, sty):
     out.write(sty.NOTICE('\n  Parámetros SLA:'))
     for etapa, rol, dias, descripcion in parametros_sla:
         _, created = ParametroSLA.objects.get_or_create(
+            seccional=seccional,
             etapa=etapa,
             defaults={
                 "rol_responsable": rol,
@@ -581,7 +634,7 @@ def _seed_sla(out, sty):
         out.write(f"    - {msg}: {etapa} ({dias} días)")
 
 
-def _seed_parametros(out, sty):
+def _seed_parametros(seccional, out, sty):
     """Crea los parámetros del sistema financiero."""
     parametros = [
         ("nombre_institucion", "Universidad Libre", "string", "general", "Nombre de la institucion"),
@@ -594,6 +647,7 @@ def _seed_parametros(out, sty):
     out.write(sty.NOTICE('\n  Parámetros financieros:'))
     for clave, valor, tipo_dato, categoria, descripcion in parametros:
         _, created = ParametrosFinanciero.objects.get_or_create(
+            seccional=seccional,
             clave=clave,
             defaults={
                 "valor": valor,
@@ -607,7 +661,7 @@ def _seed_parametros(out, sty):
         out.write(f"    - {msg}: {clave}")
 
 
-def _seed_usuarios_prueba(roles, out, sty):
+def _seed_usuarios_prueba(roles, seccional, sede, out, sty):
     """Crea usuarios de prueba para el módulo financiero."""
     usuarios_prueba = [
         ('funcionario@financiera.edu.co', 'Func#Ul2025!', 'Funcionario', 'Funcionario'),
@@ -627,16 +681,22 @@ def _seed_usuarios_prueba(roles, out, sty):
             defaults={
                 'nombre': nombre,
                 'rol': rol,
+                'sede': sede,
+                'seccional': seccional,
                 'activo': True,
                 'is_active': True,
             },
         )
+        usuario.nombre = nombre
+        usuario.rol = rol
+        usuario.sede = sede
+        usuario.activo = True
         if created:
             usuario.set_password(password)
-            usuario.save()
             out.write(f"    - Creado: {correo}")
         else:
             out.write(f"    - Existente: {correo}")
+        usuario.save()
 
 
 def _seed_bancos_y_tipos_cuenta(out, sty):

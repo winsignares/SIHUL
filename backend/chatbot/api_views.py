@@ -42,7 +42,16 @@ class ConversacionListCreateAPIView(generics.ListCreateAPIView):
         role_name = get_role_name(user)
         if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
             return super().get_queryset()
-        return super().get_queryset().filter(id_usuario=user.id)
+        return super().get_queryset().filter(usuario_ref=user)
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, 'user', None)
+        if user and getattr(user, 'is_authenticated', False):
+            role_name = get_role_name(user)
+            if not (is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'):
+                serializer.save(usuario_ref=user, id_usuario=user.id, usuario=getattr(user, 'nombre', '') or str(user))
+                return
+        serializer.save()
 
 
 class ConversacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -57,4 +66,4 @@ class ConversacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         role_name = get_role_name(user)
         if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
             return super().get_queryset()
-        return super().get_queryset().filter(id_usuario=user.id)
+        return super().get_queryset().filter(usuario_ref=user)
