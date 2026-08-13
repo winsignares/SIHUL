@@ -73,15 +73,6 @@ class Conversacion(models.Model):
     
     def __str__(self):
         return f"{self.usuario} -> {self.chatbot.nombre}: {self.mensaje[:50]} ({self.fecha.strftime('%Y-%m-%d %H:%M')})"
-<<<<<<< Updated upstream
-=======
-
-    def save(self, *args, **kwargs):
-        if self.usuario_ref_id and not self.id_usuario:
-            self.id_usuario = self.usuario_ref_id
-        elif self.id_usuario and not self.usuario_ref_id:
-            self.usuario_ref = Usuario.objects.filter(id=self.id_usuario).first()
-        super().save(*args, **kwargs)
 
 
 class ChatbotDocument(models.Model):
@@ -138,4 +129,3 @@ class ChatbotAppMessage(models.Model):
 
     def __str__(self):
         return f'{self.nombre} ({self.sede}): {self.question[:50]}'
->>>>>>> Stashed changes

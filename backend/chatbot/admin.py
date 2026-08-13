@@ -9,14 +9,8 @@ from .models import (
 )
 
 
-class ReadOnlyChatbotAppAdmin(admin.ModelAdmin):
+class ChatbotAppAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
         return False
 
 @admin.register(Agente)
@@ -60,11 +54,11 @@ class ConversacionAdmin(admin.ModelAdmin):
 
 
 @admin.register(ChatbotDocument)
-class ChatbotDocumentAdmin(ReadOnlyChatbotAppAdmin):
+class ChatbotDocumentAdmin(ChatbotAppAdmin):
     list_display = ['id', 'filename', 'sede', 'created_at', 'content_corto']
     list_filter = ['sede', 'created_at']
     search_fields = ['filename', 'content', 'sede']
-    readonly_fields = ['id', 'filename', 'content', 'sede', 'created_at']
+    readonly_fields = ['id', 'created_at']
     ordering = ['-created_at']
     date_hierarchy = 'created_at'
 
@@ -74,11 +68,11 @@ class ChatbotDocumentAdmin(ReadOnlyChatbotAppAdmin):
 
 
 @admin.register(ChatbotChunk)
-class ChatbotChunkAdmin(ReadOnlyChatbotAppAdmin):
+class ChatbotChunkAdmin(ChatbotAppAdmin):
     list_display = ['id', 'document', 'sede', 'text_corto']
     list_filter = ['sede']
     search_fields = ['text', 'sede', 'document__filename']
-    readonly_fields = ['id', 'document', 'text', 'sede']
+    readonly_fields = ['id']
 
     def text_corto(self, obj):
         return obj.text[:80] + '...' if len(obj.text) > 80 else obj.text
@@ -86,11 +80,11 @@ class ChatbotChunkAdmin(ReadOnlyChatbotAppAdmin):
 
 
 @admin.register(ChatbotAppMessage)
-class ChatbotAppMessageAdmin(ReadOnlyChatbotAppAdmin):
+class ChatbotAppMessageAdmin(ChatbotAppAdmin):
     list_display = ['id', 'nombre', 'sede', 'relevance_score', 'question_corta', 'answer_corta', 'created_at']
     list_filter = ['sede', 'created_at']
     search_fields = ['nombre', 'sede', 'question', 'answer']
-    readonly_fields = ['id', 'nombre', 'sede', 'question', 'answer', 'relevance_score', 'created_at']
+    readonly_fields = ['id', 'created_at']
     ordering = ['-created_at']
     date_hierarchy = 'created_at'
 
