@@ -73,3 +73,69 @@ class Conversacion(models.Model):
     
     def __str__(self):
         return f"{self.usuario} -> {self.chatbot.nombre}: {self.mensaje[:50]} ({self.fecha.strftime('%Y-%m-%d %H:%M')})"
+<<<<<<< Updated upstream
+=======
+
+    def save(self, *args, **kwargs):
+        if self.usuario_ref_id and not self.id_usuario:
+            self.id_usuario = self.usuario_ref_id
+        elif self.id_usuario and not self.usuario_ref_id:
+            self.usuario_ref = Usuario.objects.filter(id=self.id_usuario).first()
+        super().save(*args, **kwargs)
+
+
+class ChatbotDocument(models.Model):
+    filename = models.CharField(max_length=255)
+    content = models.TextField()
+    sede = models.CharField(max_length=50, db_index=True)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'documents'
+        verbose_name = 'Documento del Chatbot'
+        verbose_name_plural = 'Documentos del Chatbot'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.filename} ({self.sede})'
+
+
+class ChatbotChunk(models.Model):
+    document = models.ForeignKey(
+        ChatbotDocument,
+        on_delete=models.DO_NOTHING,
+        db_column='document_id',
+        related_name='chunks',
+    )
+    text = models.TextField()
+    sede = models.CharField(max_length=50, db_index=True)
+
+    class Meta:
+        managed = False
+        db_table = 'chunks'
+        verbose_name = 'Fragmento del Chatbot'
+        verbose_name_plural = 'Fragmentos del Chatbot'
+
+    def __str__(self):
+        return f'{self.document.filename} - {self.text[:50]}'
+
+
+class ChatbotAppMessage(models.Model):
+    nombre = models.CharField(max_length=150)
+    sede = models.CharField(max_length=50, db_index=True)
+    question = models.TextField()
+    answer = models.TextField()
+    relevance_score = models.FloatField(default=0.0)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'chat_messages'
+        verbose_name = 'Mensaje del Chatbot App'
+        verbose_name_plural = 'Mensajes del Chatbot App'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.nombre} ({self.sede}): {self.question[:50]}'
+>>>>>>> Stashed changes
