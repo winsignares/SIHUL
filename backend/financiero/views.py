@@ -30,6 +30,7 @@ from . import models, serializers
 from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
 from mysite.auth_helpers import get_user_seccional_id, is_admin_global
 from usuarios.models import Usuario
+from sedes.models import Seccional
 from notificaciones.signals import crear_notificacion
 
 logger = logging.getLogger(__name__)
@@ -401,9 +402,13 @@ class ProveedorViewSet(FinancieroTenantMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            rol_proveedor = Rol.objects.get(nombre__iexact='Proveedor')
-        except Rol.DoesNotExist:
+        seccional_id = get_user_seccional_id(request.user)
+        if not seccional_id:
+            seccional = Seccional.objects.filter(ciudad__iexact='Barranquilla').first()
+            seccional_id = seccional.id if seccional else None
+
+        rol_proveedor = Rol.objects.filter(nombre__iexact='Proveedor', seccional_id=seccional_id).first()
+        if not rol_proveedor:
             return Response(
                 {'error': 'El rol "Proveedor" no existe en el sistema. Créalo antes de continuar.'},
                 status=status.HTTP_400_BAD_REQUEST,

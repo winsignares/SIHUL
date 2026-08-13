@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from componentes.models import Componente, ComponenteRol
 from usuarios.models import Rol
+from sedes.models import Seccional
 
 class Command(BaseCommand):
     help = 'Seeds the database with initial components and assigns them to roles'
@@ -82,9 +83,14 @@ class Command(BaseCommand):
                 self.stdout.write(f'Component "{componente.nombre}" already exists')
 
         # 2. Asignar componentes a roles
+        seccional = (
+            Seccional.objects.filter(ciudad__iexact='Barranquilla').first()
+            or Seccional.objects.order_by('id').first()
+        )
+
         def assign_components_to_role(role_name, components_list):
             try:
-                rol = Rol.objects.get(nombre=role_name)
+                rol = Rol.objects.get(nombre=role_name, seccional=seccional)
             except Rol.DoesNotExist:
                 self.stdout.write(self.style.ERROR(f'Role "{role_name}" not found. Run seed_roles first.'))
                 return
@@ -96,6 +102,7 @@ class Command(BaseCommand):
                     cr, created = ComponenteRol.objects.get_or_create(
                         rol=rol,
                         componente=componente,
+                        seccional=seccional,
                         defaults={'permiso': 'VER'} # Default permiso
                     )
                     if created:

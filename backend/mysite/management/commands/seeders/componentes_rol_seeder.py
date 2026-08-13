@@ -4,6 +4,14 @@ Seeder de asignación de componentes a roles.
 
 from componentes.models import Componente, ComponenteRol
 from usuarios.models import Rol
+from sedes.models import Seccional
+
+
+def _get_barranquilla_seccional():
+    return (
+        Seccional.objects.filter(ciudad__iexact='Barranquilla').first()
+        or Seccional.objects.order_by('id').first()
+    )
 
 def create_componentes_rol(stdout, style):
     """Asignar componentes a roles con sus permisos"""
@@ -60,16 +68,18 @@ def create_componentes_rol(stdout, style):
         ('estudiante', 'Mi Horario Estudiante', 'VER'),
         ('estudiante', 'Asistentes Virtuales Estudiante', 'VER'),
     ]
+    seccional = _get_barranquilla_seccional()
     
     created_count = 0
     for nombre_rol, nombre_componente, permiso in asignaciones_data:
         try:
-            rol = Rol.objects.get(nombre=nombre_rol)
+            rol = Rol.objects.get(nombre=nombre_rol, seccional=seccional)
             componente = Componente.objects.get(nombre=nombre_componente)
             
             _, created = ComponenteRol.objects.get_or_create(
                 rol=rol,
                 componente=componente,
+                seccional=seccional,
                 defaults={'permiso': permiso}
             )
             

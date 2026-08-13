@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions
+from rest_framework.exceptions import ValidationError
 
 from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
 from mysite.permissions import IsAdminOnly
@@ -30,7 +31,7 @@ class ComponenteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
-    queryset = ComponenteRol.objects.select_related('componente', 'rol').all()
+    queryset = ComponenteRol.objects.select_related('componente', 'rol', 'seccional').all()
     serializer_class = ComponenteRolSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -45,7 +46,7 @@ class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
         if not user or not getattr(user, 'is_authenticated', False):
             return queryset.none()
 
-        if is_admin_global(user) or is_admin_sistema(user) or get_role_name(user) == 'admin financiero':
+        if is_admin_global(user):
             seccional_id = self.request.query_params.get('seccional')
             if seccional_id:
                 return queryset.filter(seccional_id=seccional_id)
@@ -53,19 +54,27 @@ class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
 
         seccional_id = get_user_seccional_id(user)
         if not seccional_id:
-            return queryset.filter(seccional__isnull=True)
+            return queryset.none()
         return queryset.filter(seccional_id=seccional_id)
 
     def perform_create(self, serializer):
         user = getattr(self.request, 'user', None)
-        if user and not (is_admin_global(user) or is_admin_sistema(user) or get_role_name(user) == 'admin financiero'):
-            serializer.save(seccional_id=get_user_seccional_id(user))
+        rol = serializer.validated_data.get('rol')
+        if user and not is_admin_global(user):
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                raise ValidationError('El usuario autenticado no tiene una seccional asignada.')
+            if rol and rol.seccional_id and rol.seccional_id != seccional_id:
+                raise ValidationError({'rol': 'El rol seleccionado no pertenece a la seccional del usuario autenticado.'})
+            serializer.save(seccional_id=seccional_id)
             return
-        serializer.save()
+
+        seccional = serializer.validated_data.get('seccional') or getattr(rol, 'seccional', None)
+        serializer.save(seccional=seccional)
 
 
 class ComponenteRolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ComponenteRol.objects.select_related('componente', 'rol').all()
+    queryset = ComponenteRol.objects.select_related('componente', 'rol', 'seccional').all()
     serializer_class = ComponenteRolSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -80,13 +89,28 @@ class ComponenteRolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         if not user or not getattr(user, 'is_authenticated', False):
             return queryset.none()
 
-        if is_admin_global(user) or is_admin_sistema(user) or get_role_name(user) == 'admin financiero':
+        if is_admin_global(user):
             return queryset
 
         seccional_id = get_user_seccional_id(user)
         if not seccional_id:
-            return queryset.filter(seccional__isnull=True)
+            return queryset.none()
         return queryset.filter(seccional_id=seccional_id)
+
+    def perform_update(self, serializer):
+        user = getattr(self.request, 'user', None)
+        rol = serializer.validated_data.get('rol', getattr(serializer.instance, 'rol', None))
+        if user and not is_admin_global(user):
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                raise ValidationError('El usuario autenticado no tiene una seccional asignada.')
+            if rol and rol.seccional_id and rol.seccional_id != seccional_id:
+                raise ValidationError({'rol': 'El rol seleccionado no pertenece a la seccional del usuario autenticado.'})
+            serializer.save(seccional_id=seccional_id)
+            return
+
+        seccional = serializer.validated_data.get('seccional') or getattr(rol, 'seccional', None)
+        serializer.save(seccional=seccional)
 
 
 class ComponenteUsuarioListCreateAPIView(generics.ListCreateAPIView):
@@ -105,13 +129,36 @@ class ComponenteUsuarioListCreateAPIView(generics.ListCreateAPIView):
             return queryset.none()
 
         role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+        if is_admin_global(user):
+            usuario_id = self.request.query_params.get('usuario')
+            if usuario_id:
+                return queryset.filter(usuario_id=usuario_id)
+            return queryset
+
+        if is_admin_sistema(user) or role_name == 'admin financiero':
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                return queryset.none()
+            queryset = queryset.filter(usuario__seccional_id=seccional_id)
             usuario_id = self.request.query_params.get('usuario')
             if usuario_id:
                 return queryset.filter(usuario_id=usuario_id)
             return queryset
 
         return queryset.filter(usuario_id=user.id)
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, 'user', None)
+        target_user = serializer.validated_data.get('usuario')
+
+        if user and not is_admin_global(user):
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                raise ValidationError('El usuario autenticado no tiene una seccional asignada.')
+            if target_user and target_user.seccional_id != seccional_id:
+                raise ValidationError({'usuario': 'El usuario seleccionado no pertenece a la seccional del usuario autenticado.'})
+
+        serializer.save()
 
 
 class ComponenteUsuarioDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -131,7 +178,26 @@ class ComponenteUsuarioDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             return queryset.none()
 
         role_name = get_role_name(user)
-        if is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero':
+        if is_admin_global(user):
             return queryset
 
+        if is_admin_sistema(user) or role_name == 'admin financiero':
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                return queryset.none()
+            return queryset.filter(usuario__seccional_id=seccional_id)
+
         return queryset.filter(usuario_id=user.id)
+
+    def perform_update(self, serializer):
+        user = getattr(self.request, 'user', None)
+        target_user = serializer.validated_data.get('usuario', getattr(serializer.instance, 'usuario', None))
+
+        if user and not is_admin_global(user):
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                raise ValidationError('El usuario autenticado no tiene una seccional asignada.')
+            if target_user and target_user.seccional_id != seccional_id:
+                raise ValidationError({'usuario': 'El usuario seleccionado no pertenece a la seccional del usuario autenticado.'})
+
+        serializer.save()

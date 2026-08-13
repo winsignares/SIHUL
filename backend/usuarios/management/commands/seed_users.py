@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.hashers import make_password
 from usuarios.models import Usuario, Rol
 from facultades.models import Facultad
+from sedes.models import Seccional
 
 class Command(BaseCommand):
     help = 'Seeds the database with initial users'
@@ -52,10 +53,14 @@ class Command(BaseCommand):
                 'facultad': 'Ingeniería'
             }
         ]
+        seccional = (
+            Seccional.objects.filter(ciudad__iexact='Barranquilla').first()
+            or Seccional.objects.order_by('id').first()
+        )
 
         for u_data in users_data:
             try:
-                rol = Rol.objects.get(nombre=u_data['rol'])
+                rol = Rol.objects.get(nombre=u_data['rol'], seccional=seccional)
                 facultad = None
                 if u_data['facultad']:
                     facultad = Facultad.objects.get(nombre=u_data['facultad'])

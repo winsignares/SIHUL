@@ -28,7 +28,7 @@ def create_financiero_data(out, sty, seccional_ciudad='Barranquilla'):
     out.write(sty.SUCCESS('\n[Financiero] Iniciando carga de datos financieros...'))
 
     seccional, sede = _resolve_financiero_scope(seccional_ciudad, out, sty)
-    roles = _seed_roles(out, sty)
+    roles = _seed_roles(seccional, out, sty)
     componentes = _seed_componentes(out, sty)
     _seed_permisos(roles, componentes, seccional, out, sty)
     _seed_departamentos(seccional, out, sty)
@@ -78,7 +78,7 @@ def _resolve_financiero_scope(seccional_ciudad, out, sty):
     return seccional, sede
 
 
-def _seed_roles(out, sty):
+def _seed_roles(seccional, out, sty):
     """Crea los roles del módulo financiero."""
     roles_data = {
         "Funcionario": "Recibe y registra facturas en el sistema.",
@@ -96,8 +96,12 @@ def _seed_roles(out, sty):
     for nombre, descripcion in roles_data.items():
         rol, created = Rol.objects.get_or_create(
             nombre=nombre,
-            defaults={"descripcion": descripcion},
+            seccional=seccional,
+            defaults={"descripcion": descripcion, "seccional": seccional},
         )
+        if not created and rol.seccional_id != seccional.id:
+            rol.seccional = seccional
+            rol.save(update_fields=['seccional'])
         result[nombre] = rol
         msg = "Creado" if created else "Existente"
         out.write(f"    - {msg}: {nombre}")

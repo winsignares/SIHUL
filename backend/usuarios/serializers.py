@@ -6,12 +6,15 @@ from espacios.models import EspacioFisico, EspacioPermitido
 from facultades.models import Facultad
 from sedes.models import Seccional, Sede
 from .models import Rol, Usuario
+from mysite.auth_helpers import get_user_seccional_id, is_admin_global
 
 
 class RolSerializer(serializers.ModelSerializer):
+    seccional_nombre = serializers.CharField(source='seccional.ciudad', read_only=True)
+
     class Meta:
         model = Rol
-        fields = '__all__'
+        fields = ['id', 'nombre', 'descripcion', 'supervisa_espacios', 'seccional', 'seccional_nombre']
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -77,6 +80,28 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         nuevos = [EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id]) for espacio_id in ids_unicos]
         EspacioPermitido.objects.bulk_create(nuevos)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        request = self.context.get('request')
+        current_user = getattr(request, 'user', None) if request else None
+        target_sede = attrs.get('sede', getattr(self.instance, 'sede', None))
+        target_rol = attrs.get('rol', getattr(self.instance, 'rol', None))
+
+        if current_user and getattr(current_user, 'is_authenticated', False) and not is_admin_global(current_user):
+            current_seccional_id = get_user_seccional_id(current_user)
+            if not current_seccional_id:
+                raise serializers.ValidationError('El usuario autenticado no tiene una seccional asignada.')
+
+            if target_sede and target_sede.seccional_id != current_seccional_id:
+                raise serializers.ValidationError({'sede': 'La sede seleccionada no pertenece a la seccional del usuario autenticado.'})
+
+        target_seccional_id = getattr(target_sede, 'seccional_id', None)
+        rol_seccional_id = getattr(target_rol, 'seccional_id', None)
+        if target_seccional_id and rol_seccional_id and rol_seccional_id != target_seccional_id:
+            raise serializers.ValidationError({'rol': 'El rol seleccionado no pertenece a la seccional de la sede del usuario.'})
+
+        return attrs
 
     def create(self, validated_data):
         espacios_permitidos = validated_data.pop('espacios_permitidos', None)

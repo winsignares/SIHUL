@@ -9,6 +9,8 @@ export interface Rol {
   nombre: string;
   descripcion: string;
   supervisa_espacios?: boolean;
+  seccional?: number | null;
+  seccional_nombre?: string | null;
 }
 
 export interface Usuario {
@@ -97,11 +99,15 @@ export interface LoginResponse {
   id: number;
   nombre: string;
   correo: string;
+  es_superusuario?: boolean;
+  is_superuser?: boolean;
   rol: {
     id: number;
     nombre: string;
     descripcion: string;
     supervisa_espacios?: boolean;
+    seccional?: number | null;
+    seccional_nombre?: string | null;
   } | null;
   facultad: {
     id: number;
@@ -147,6 +153,8 @@ export interface SessionAuthStateResponse {
     nombre: string;
     descripcion: string;
     supervisa_espacios?: boolean;
+    seccional?: number | null;
+    seccional_nombre?: string | null;
   } | null;
   componentes?: Array<{
     id: number;
@@ -161,11 +169,15 @@ export interface SessionUserAuthenticatedResponse {
   id: number;
   nombre: string;
   correo: string;
+  es_superusuario?: boolean;
+  is_superuser?: boolean;
   rol: {
     id: number;
     nombre: string;
     descripcion: string;
     supervisa_espacios?: boolean;
+    seccional?: number | null;
+    seccional_nombre?: string | null;
   } | null;
   facultad: {
     id: number;
@@ -451,7 +463,8 @@ export const rolService = {
     const creado = await apiClient.post<Rol>('/roles/', {
       nombre: rol.nombre,
       descripcion: rol.descripcion,
-      supervisa_espacios: rol.supervisa_espacios ?? false
+      supervisa_espacios: rol.supervisa_espacios ?? false,
+      seccional: rol.seccional ?? null
     });
     return { message: 'Rol creado', id: creado.id ?? 0 };
   },
@@ -467,7 +480,8 @@ export const rolService = {
     const actualizado = await apiClient.put<Rol>(`/roles/${rol.id}/`, {
       nombre: rol.nombre,
       descripcion: rol.descripcion,
-      supervisa_espacios: rol.supervisa_espacios ?? false
+      supervisa_espacios: rol.supervisa_espacios ?? false,
+      seccional: rol.seccional ?? null
     });
     return { message: 'Rol actualizado', id: actualizado.id ?? rol.id };
   },

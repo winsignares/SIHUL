@@ -20,9 +20,21 @@ class ComponenteSerializer(serializers.ModelSerializer):
 
 
 class ComponenteRolSerializer(serializers.ModelSerializer):
+    seccional_nombre = serializers.CharField(source='seccional.ciudad', read_only=True)
+
     class Meta:
         model = ComponenteRol
-        fields = '__all__'
+        fields = ['id', 'componente', 'rol', 'seccional', 'seccional_nombre', 'permiso']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        rol = attrs.get('rol', getattr(self.instance, 'rol', None))
+        seccional = attrs.get('seccional', getattr(self.instance, 'seccional', None))
+
+        if rol and seccional and rol.seccional_id and rol.seccional_id != seccional.id:
+            raise serializers.ValidationError({'seccional': 'La seccional del permiso debe coincidir con la seccional del rol.'})
+
+        return attrs
 
 
 class ComponenteUsuarioSerializer(serializers.ModelSerializer):

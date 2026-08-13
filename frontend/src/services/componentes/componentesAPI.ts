@@ -49,6 +49,8 @@ export interface ComponenteRol {
     componente_nombre?: string;
     rol_id: number;
     rol_nombre?: string;
+    seccional?: number | null;
+    seccional_nombre?: string | null;
     permiso: 'VER' | 'EDITAR';
     permiso_display?: string;
 }
@@ -108,6 +110,8 @@ interface ComponenteRolApi {
     id?: number;
     componente: number;
     rol: number;
+    seccional?: number | null;
+    seccional_nombre?: string | null;
     permiso: 'VER' | 'EDITAR';
 }
 
@@ -115,6 +119,8 @@ const toFrontendComponenteRol = (item: ComponenteRolApi): ComponenteRol => ({
     id: item.id,
     componente_id: item.componente,
     rol_id: item.rol,
+    seccional: item.seccional ?? null,
+    seccional_nombre: item.seccional_nombre ?? null,
     permiso: item.permiso,
 });
 

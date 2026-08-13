@@ -1,14 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { rolService } from '../../services/users/authService';
 import type { Rol } from '../../services/users/authService';
+import { sedeService, type Seccional } from '../../services/sedes/sedeAPI';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { useAuth } from '../../context/AuthContext';
 
 const GESTION_ROLES_CACHE_KEY = 'permisos-gestion-roles-v3';
 const GESTION_USUARIOS_ROLES_CACHE_KEY = 'gestion-academica-roles-v3';
+const GESTION_ROLES_SECCIONALES_CACHE_KEY = 'permisos-gestion-roles-seccionales-v1';
 const ROLES_UPDATED_EVENT = 'roles-updated';
 
 interface UseGestionRolesReturn {
   roles: Rol[];
+  seccionales: Seccional[];
+  puedeSeleccionarSeccional: boolean;
   loading: boolean;
   error: string | null;
   paginaActual: number;
@@ -24,12 +29,16 @@ interface UseGestionRolesReturn {
 }
 
 export function useGestionRoles(): UseGestionRolesReturn {
+  const { user, role } = useAuth();
   const [roles, setRoles] = useState<Rol[]>([]);
+  const [seccionales, setSeccionales] = useState<Seccional[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const itemsPorPagina = 5;
+  const roleName = (role?.nombre || user?.rol?.nombre || '').trim().toLowerCase();
+  const puedeSeleccionarSeccional = Boolean(user?.is_superuser || user?.es_superusuario || roleName === 'admin_global');
 
   const rolesFiltrados = useMemo(() => {
     if (!terminoBusqueda.trim()) return roles;
@@ -81,12 +90,41 @@ export function useGestionRoles(): UseGestionRolesReturn {
     }
   };
 
+  const cargarSeccionales = async ({ force = false }: { force?: boolean } = {}) => {
+    if (!puedeSeleccionarSeccional) {
+      setSeccionales([]);
+      return;
+    }
+
+    try {
+      const activeToken = localStorage.getItem('auth_token');
+      const cachedData = force
+        ? null
+        : getSessionCacheData<{ seccionales: Seccional[] }>(GESTION_ROLES_SECCIONALES_CACHE_KEY, activeToken);
+
+      if (cachedData) {
+        setSeccionales(cachedData.seccionales);
+        return;
+      }
+
+      const res = await sedeService.listarSeccionales();
+      const seccionalesData = (res.seccionales || []).filter((seccional) => seccional.activa);
+      setSeccionales(seccionalesData);
+      setSessionCacheData(GESTION_ROLES_SECCIONALES_CACHE_KEY, activeToken, {
+        seccionales: seccionalesData
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar seccionales');
+    }
+  };
+
   const crearRol = async (rol: Omit<Rol, 'id'>) => {
     setLoading(true);
     setError(null);
     try {
       await rolService.crearRol(rol);
       clearSessionCache(GESTION_USUARIOS_ROLES_CACHE_KEY);
+      clearSessionCache(GESTION_ROLES_CACHE_KEY);
       await cargarRoles({ force: true });
       window.dispatchEvent(new Event(ROLES_UPDATED_EVENT));
     } catch (err) {
@@ -103,6 +141,7 @@ export function useGestionRoles(): UseGestionRolesReturn {
     try {
       await rolService.actualizarRol(rol);
       clearSessionCache(GESTION_USUARIOS_ROLES_CACHE_KEY);
+      clearSessionCache(GESTION_ROLES_CACHE_KEY);
       await cargarRoles({ force: true });
       window.dispatchEvent(new Event(ROLES_UPDATED_EVENT));
     } catch (err) {
@@ -130,9 +169,12 @@ export function useGestionRoles(): UseGestionRolesReturn {
   };
 
   useEffect(() => { cargarRoles(); }, []);
+  useEffect(() => { void cargarSeccionales(); }, [puedeSeleccionarSeccional]);
 
   return {
     roles,
+    seccionales,
+    puedeSeleccionarSeccional,
     loading,
     error,
     paginaActual,

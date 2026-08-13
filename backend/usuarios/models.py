@@ -37,9 +37,18 @@ class UsuarioManager(UserManager):
 
 class Rol(models.Model):
     id = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=50, unique=True)
+    nombre = models.CharField(max_length=50)
     descripcion = models.TextField(blank=True, null=True)
     supervisa_espacios = models.BooleanField(default=False)
+    seccional = models.ForeignKey(Seccional, on_delete=models.SET_NULL, null=True, blank=True, related_name='roles')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['seccional', 'nombre'], name='uniq_rol_seccional_nombre'),
+        ]
+        indexes = [
+            Index(fields=['seccional'], name='idx_rol_seccional'),
+        ]
 
     def __str__(self):
         return self.nombre

@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from werkzeug.security import check_password_hash
@@ -37,7 +38,7 @@ from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, user_supervisa_espacios
+from .auth_helpers import get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective, user_supervisa_espacios
 from .seccional_auth import SeccionalMixin
 from .permissions import (
     IsAdminGlobal,
@@ -85,7 +86,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
         user = self.get_current_user()
 
         if self.request.method == 'GET':
-            if user and is_superuser_effective(user):
+            if user and is_admin_global(user):
                 return Seccional.objects.all()
 
             seccional = self.get_user_seccional()
@@ -94,7 +95,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
             return Seccional.objects.filter(id=seccional.id)
 
-        if user and is_superuser_effective(user):
+        if user and is_admin_global(user):
             return super().get_queryset()
 
         return Seccional.objects.none()
@@ -115,6 +116,8 @@ class SedeViewSet(SeccionalMixin, viewsets.ModelViewSet):
         user = self.get_current_user()
         if not user:
             return Sede.objects.filter(activa=True)
+        if is_admin_global(user):
+            return Sede.objects.all()
         return super().get_queryset()
 
 
@@ -515,15 +518,45 @@ class SolicitudEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
 
 class RolViewSet(SeccionalMixin, viewsets.ModelViewSet):
-    queryset = Rol.objects.all()
+    queryset = Rol.objects.select_related('seccional').all()
     serializer_class = RolSerializer
-    seccional_lookup = None
+    seccional_lookup = 'seccional'
     permission_classes = [permissions.IsAuthenticated, IsAdminRoleManagement]
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
             return [permissions.IsAuthenticated()]
         return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        user = self.get_current_user()
+        if user and is_admin_global(user):
+            seccional_id = self.request.query_params.get('seccional')
+            queryset = self.queryset
+            if seccional_id:
+                return queryset.filter(seccional_id=seccional_id)
+            return queryset
+        return super().get_queryset()
+
+    def perform_create(self, serializer):
+        user = self.get_current_user()
+        if user and not is_admin_global(user):
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                raise DRFValidationError('El usuario autenticado no tiene una seccional asignada.')
+            serializer.save(seccional_id=seccional_id)
+            return
+        serializer.save()
+
+    def perform_update(self, serializer):
+        user = self.get_current_user()
+        if user and not is_admin_global(user):
+            seccional_id = get_user_seccional_id(user)
+            if not seccional_id:
+                raise DRFValidationError('El usuario autenticado no tiene una seccional asignada.')
+            serializer.save(seccional_id=seccional_id)
+            return
+        serializer.save()
 
 
 class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -673,7 +706,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             )
 
         try:
-            usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo_normalizado)
+            usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'rol__seccional', 'facultad').get(correo=correo_normalizado)
         except Usuario.DoesNotExist:
             attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
             attempts = cache.get(attempts_key, 0) + 1
@@ -725,11 +758,15 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             'id': usuario.id,
             'nombre': usuario.nombre,
             'correo': usuario.correo,
+            'es_superusuario': usuario.es_superusuario,
+            'is_superuser': usuario.is_superuser,
             'rol': {
                 'id': usuario.rol.id,
                 'nombre': usuario.rol.nombre,
                 'descripcion': usuario.rol.descripcion,
                 'supervisa_espacios': usuario.rol.supervisa_espacios,
+                'seccional': usuario.rol.seccional_id,
+                'seccional_nombre': usuario.rol.seccional.ciudad if usuario.rol.seccional else None,
             } if usuario.rol else None,
             'facultad': {
                 'id': usuario.facultad.id,
@@ -759,7 +796,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return Response({'error': 'No autenticado'}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
-            usuario = Usuario.objects.select_related('rol').get(id=user_id)
+            usuario = Usuario.objects.select_related('rol', 'rol__seccional').get(id=user_id)
         except Usuario.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -782,6 +819,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 'nombre': usuario.rol.nombre,
                 'descripcion': usuario.rol.descripcion,
                 'supervisa_espacios': usuario.rol.supervisa_espacios,
+                'seccional': usuario.rol.seccional_id,
+                'seccional_nombre': usuario.rol.seccional.ciudad if usuario.rol.seccional else None,
             } if usuario.rol else None,
             'componentes': componentes,
         }, status=status.HTTP_200_OK)

@@ -97,6 +97,7 @@ def user_view(request):
             'sede',
             'sede__seccional',
             'rol',
+            'rol__seccional',
             'facultad',
         ).get(id=auth_user.id)
     except Usuario.DoesNotExist:
@@ -122,11 +123,15 @@ def user_view(request):
             'id': usuario.id,
             'nombre': usuario.nombre,
             'correo': usuario.correo,
+            'es_superusuario': usuario.es_superusuario,
+            'is_superuser': usuario.is_superuser,
             'rol': {
                 'id': usuario.rol.id,
                 'nombre': usuario.rol.nombre,
                 'descripcion': usuario.rol.descripcion,
                 'supervisa_espacios': usuario.rol.supervisa_espacios,
+                'seccional': usuario.rol.seccional_id,
+                'seccional_nombre': usuario.rol.seccional.ciudad if usuario.rol.seccional else None,
             } if usuario.rol else None,
             'facultad': {
                 'id': usuario.facultad.id,

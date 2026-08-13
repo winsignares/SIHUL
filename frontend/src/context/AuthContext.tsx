@@ -72,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: response.id,
             nombre: response.nombre,
             correo: response.correo,
+            es_superusuario: response.es_superusuario,
+            is_superuser: response.is_superuser,
             rol: response.rol,
             facultad: response.facultad,
             sede: response.sede
@@ -127,6 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: response.id,
             nombre: response.nombre,
             correo: response.correo,
+            es_superusuario: response.es_superusuario,
+            is_superuser: response.is_superuser,
             rol: response.rol,
             facultad: response.facultad,
             sede: response.sede,

@@ -237,7 +237,7 @@ class Command(BaseCommand):
                 continue
             usuario.sede = sede
             if usuario.rol_id is None:
-                usuario.rol = Rol.objects.filter(nombre='Proveedor').first()
+                usuario.rol = Rol.objects.filter(nombre='Proveedor', seccional=seccional).first()
             usuario.activo = True
             usuario.save(update_fields=['sede', 'seccional', 'rol', 'activo', 'is_active'])
             proveedor.usuario = usuario

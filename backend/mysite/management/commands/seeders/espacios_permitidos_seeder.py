@@ -4,6 +4,7 @@ Seeder de espacios permitidos para supervisores.
 
 from usuarios.models import Usuario, Rol
 from espacios.models import EspacioFisico, EspacioPermitido
+from sedes.models import Seccional
 
 
 def create_espacios_permitidos(stdout, style):
@@ -12,7 +13,11 @@ def create_espacios_permitidos(stdout, style):
     
     # Obtener rol de supervisor general
     try:
-        rol_supervisor = Rol.objects.get(nombre='supervisor_general')
+        seccional = (
+            Seccional.objects.filter(ciudad__iexact='Barranquilla').first()
+            or Seccional.objects.order_by('id').first()
+        )
+        rol_supervisor = Rol.objects.get(nombre='supervisor_general', seccional=seccional)
     except Rol.DoesNotExist:
         stdout.write(style.ERROR('    ✗ Rol supervisor_general no encontrado'))
         return

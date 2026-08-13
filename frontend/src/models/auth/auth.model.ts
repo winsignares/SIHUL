@@ -23,6 +23,8 @@ export interface Sede {
     id: number;
     nombre: string;
     ciudad?: string;
+    seccional_id?: number | null;
+    seccional_ciudad?: string | null;
     direccion?: string;
 }
 
@@ -55,6 +57,8 @@ export interface Role {
     nombre: string;
     descripcion: string;
     supervisa_espacios?: boolean;
+    seccional?: number | null;
+    seccional_nombre?: string | null;
 }
 
 /**
@@ -64,6 +68,8 @@ export interface User {
     id: number;
     nombre: string;
     correo: string;
+    es_superusuario?: boolean;
+    is_superuser?: boolean;
     rol: Role | null;
     facultad: Faculty | null;
     sede: Sede | null;

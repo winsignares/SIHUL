@@ -16,6 +16,8 @@ export default function GestionRoles() {
     crearRol,
     actualizarRol,
     eliminarRol,
+    seccionales,
+    puedeSeleccionarSeccional,
   } = useGestionRoles();
 
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -24,6 +26,7 @@ export default function GestionRoles() {
   const [nombreRol, setNombreRol] = useState('');
   const [descripcionRol, setDescripcionRol] = useState('');
   const [supervisaEspacios, setSupervisaEspacios] = useState(false);
+  const [seccionalRol, setSeccionalRol] = useState('');
 
   const abrirModalCrear = () => {
     setModoEdicion(false);
@@ -31,6 +34,7 @@ export default function GestionRoles() {
     setNombreRol('');
     setDescripcionRol('');
     setSupervisaEspacios(false);
+    setSeccionalRol('');
     setMostrarModal(true);
   };
 
@@ -40,6 +44,7 @@ export default function GestionRoles() {
     setNombreRol(rol.nombre);
     setDescripcionRol(rol.descripcion);
     setSupervisaEspacios(Boolean(rol.supervisa_espacios) || rol.nombre === 'supervisor_general');
+    setSeccionalRol(rol.seccional?.toString() || '');
     setMostrarModal(true);
   };
 
@@ -48,11 +53,18 @@ export default function GestionRoles() {
       alert('El nombre del rol es obligatorio');
       return;
     }
+    if (puedeSeleccionarSeccional && !seccionalRol) {
+      alert('Debe seleccionar una seccional');
+      return;
+    }
+
+    const payloadSeccional = puedeSeleccionarSeccional ? Number(seccionalRol) : undefined;
+
     try {
       if (modoEdicion && rolEdicion) {
-        await actualizarRol({ id: rolEdicion.id, nombre: nombreRol, descripcion: descripcionRol, supervisa_espacios: supervisaEspacios });
+        await actualizarRol({ id: rolEdicion.id, nombre: nombreRol, descripcion: descripcionRol, supervisa_espacios: supervisaEspacios, seccional: payloadSeccional });
       } else {
-        await crearRol({ nombre: nombreRol, descripcion: descripcionRol, supervisa_espacios: supervisaEspacios });
+        await crearRol({ nombre: nombreRol, descripcion: descripcionRol, supervisa_espacios: supervisaEspacios, seccional: payloadSeccional });
       }
       setMostrarModal(false);
     } catch (err) {
@@ -127,6 +139,9 @@ export default function GestionRoles() {
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Descripción</th>
+                  {puedeSeleccionarSeccional && (
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Seccional</th>
+                  )}
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Supervisor de espacios</th>
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Acciones</th>
                 </tr>
@@ -140,6 +155,11 @@ export default function GestionRoles() {
                     <td className="px-6 py-4">
                       <span className="text-gray-600 text-sm">{rol.descripcion}</span>
                     </td>
+                    {puedeSeleccionarSeccional && (
+                      <td className="px-6 py-4">
+                        <span className="text-gray-600 text-sm">{rol.seccional_nombre || 'Sin seccional'}</span>
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-center">
                       {(rol.supervisa_espacios || rol.nombre === 'supervisor_general') ? (
                         <span className="inline-flex items-center justify-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
@@ -177,7 +197,7 @@ export default function GestionRoles() {
 
                 {rolesPaginados.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={puedeSeleccionarSeccional ? 5 : 4} className="px-6 py-8 text-center text-gray-500">
                       {terminoBusqueda ? 'No se encontraron roles que coincidan con la búsqueda' : 'No hay roles registrados'}
                     </td>
                   </tr>
@@ -259,6 +279,25 @@ export default function GestionRoles() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                   />
                 </div>
+                {puedeSeleccionarSeccional && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Seccional *
+                    </label>
+                    <select
+                      value={seccionalRol}
+                      onChange={(e) => setSeccionalRol(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    >
+                      <option value="">Seleccione una seccional</option>
+                      {seccionales.map((seccional) => (
+                        <option key={seccional.id} value={seccional.id}>
+                          {seccional.ciudad}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <label className="flex items-start gap-3 rounded-lg border border-gray-200 p-3">
                   <input
                     type="checkbox"

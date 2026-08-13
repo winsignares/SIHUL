@@ -11,19 +11,21 @@ def create_usuarios_sistema(stdout, style):
     """Crear usuarios predeterminados para cada rol del sistema"""
     stdout.write('  → Creando usuarios del sistema...')
     
+    sede_centro = Sede.objects.get(nombre='Sede Centro')
+    seccional = sede_centro.seccional
+
     # Obtener roles
     try:
-        rol_admin = Rol.objects.get(nombre='admin')
-        rol_admin_planeacion = Rol.objects.get(nombre='admin_planeacion')
-        rol_planeacion = Rol.objects.get(nombre='planeacion_facultad')
-        rol_supervisor = Rol.objects.get(nombre='supervisor_general')
-        rol_docente = Rol.objects.get(nombre='docente')
-        rol_estudiante = Rol.objects.get(nombre='estudiante')
+        rol_admin = Rol.objects.get(nombre='admin', seccional=seccional)
+        rol_admin_planeacion = Rol.objects.get(nombre='admin_planeacion', seccional=seccional)
+        rol_planeacion = Rol.objects.get(nombre='planeacion_facultad', seccional=seccional)
+        rol_supervisor = Rol.objects.get(nombre='supervisor_general', seccional=seccional)
+        rol_docente = Rol.objects.get(nombre='docente', seccional=seccional)
+        rol_estudiante = Rol.objects.get(nombre='estudiante', seccional=seccional)
     except Rol.DoesNotExist as e:
         stdout.write(style.ERROR(f'    ✗ Error: Rol no encontrado - {str(e)}'))
         return
     
-    sede_centro = Sede.objects.get(nombre='Sede Centro')
     hash_admin = make_password('admin123')
     hash_plan = make_password('plan123')
     hash_supervisor = make_password('sup123')
@@ -99,7 +101,8 @@ def create_usuarios_docentes(stdout, style):
     stdout.write('  → Creando docentes...')
     
     try:
-        rol_docente = Rol.objects.get(nombre='docente')
+        sede_centro = Sede.objects.get(nombre='Sede Centro')
+        rol_docente = Rol.objects.get(nombre='docente', seccional=sede_centro.seccional)
     except Rol.DoesNotExist:
         stdout.write(style.ERROR('    ✗ No se encontró el rol docente'))
         return
@@ -173,4 +176,3 @@ def create_usuarios_docentes(stdout, style):
             created_count += 1
     
     stdout.write(style.SUCCESS(f'    ✓ {created_count} docentes creados ({len(docentes)} totales)'))
-

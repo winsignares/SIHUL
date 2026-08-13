@@ -3,6 +3,7 @@ import { useComponentesRoles } from '../../hooks/permisos/useComponentesRoles';
 import type { ComponenteRol, Componente } from '../../services/componentes/componentesAPI';
 import type { Rol } from '../../services/users/authService';
 import { Search, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 type PermisoType = 'VER' | 'EDITAR';
 
@@ -14,6 +15,7 @@ interface PermisoComponente {
 }
 
 export default function ComponentesRoles() {
+  const { user, role } = useAuth();
   const {
     componentes,
     rolesPaginados,
@@ -35,6 +37,8 @@ export default function ComponentesRoles() {
   const [rolPermisos, setRolPermisos] = useState<Rol | null>(null);
   const [permisosComponentes, setPermisosComponentes] = useState<PermisoComponente[]>([]);
   const [busquedaComponentes, setBusquedaComponentes] = useState('');
+  const roleName = (role?.nombre || user?.rol?.nombre || '').trim().toLowerCase();
+  const puedeVerSeccional = Boolean(user?.is_superuser || user?.es_superusuario || roleName === 'admin_global');
 
   /**
    * Abrir modal de gestión de permisos
@@ -185,6 +189,11 @@ export default function ComponentesRoles() {
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Descripción
                   </th>
+                  {puedeVerSeccional && (
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                      Seccional
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
                     Componentes Asignados
                   </th>
@@ -205,6 +214,11 @@ export default function ComponentesRoles() {
                       <td className="px-6 py-4">
                         <span className="text-gray-600 text-sm">{rol.descripcion}</span>
                       </td>
+                      {puedeVerSeccional && (
+                        <td className="px-6 py-4">
+                          <span className="text-gray-600 text-sm">{rol.seccional_nombre || 'Sin seccional'}</span>
+                        </td>
+                      )}
                       <td className="px-6 py-4 text-center">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                           {numPermisos} {numPermisos === 1 ? 'componente' : 'componentes'}
@@ -230,7 +244,7 @@ export default function ComponentesRoles() {
 
                 {rolesPaginados.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={puedeVerSeccional ? 5 : 4} className="px-6 py-8 text-center text-gray-500">
                       {terminoBusqueda ? 'No se encontraron roles que coincidan con la búsqueda' : 'No hay roles registrados'}
                     </td>
                   </tr>

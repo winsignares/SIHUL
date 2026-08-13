@@ -150,6 +150,15 @@ export default function GestionUsuarios() {
     return rolesDisponibles.find(r => r.id === rolId) || editingUser?.rol;
   };
 
+  const getRolesParaSede = (sedeId?: number | null) => {
+    const seccionalId = sedesDisponibles.find(sede => sede.id === sedeId)?.seccional_id ?? null;
+    if (!seccionalId) return rolesDisponibles;
+    return rolesDisponibles.filter(rol => !rol.seccional || rol.seccional === seccionalId);
+  };
+
+  const rolesDisponiblesCreacion = getRolesParaSede(sedeSeleccionada ? parseInt(sedeSeleccionada, 10) : null);
+  const rolesDisponiblesEdicion = getRolesParaSede(editingUser?.sede_id ?? null);
+
   const tiposEspacioOpcionesCreacion = useMemo(() => {
     const tiposConEspacios = new Set(espaciosDisponiblesCreacion.map((espacio) => espacio.tipo_id));
     const tipos = tiposEspacioDisponibles
@@ -227,7 +236,13 @@ export default function GestionUsuarios() {
                       <SearchableSelect
                         items={sedesDisponibles}
                         value={sedeSeleccionada}
-                        onSelect={(sede) => setSedeSeleccionada(sede.id.toString())}
+                        onSelect={(sede) => {
+                          setSedeSeleccionada(sede.id.toString());
+                          const rolActual = rolesDisponibles.find(rol => rol.id === nuevoUsuario.rol_id);
+                          if (rolActual?.seccional && rolActual.seccional !== sede.seccional_id) {
+                            setNuevoUsuario({ ...nuevoUsuario, rol_id: null });
+                          }
+                        }}
                         getItemId={(sede) => sede.id.toString()}
                         getItemLabel={(sede) => sede.nombre}
                         placeholder="Seleccione una sede"
@@ -312,7 +327,7 @@ export default function GestionUsuarios() {
                     <div className="relative group">
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
                       <SearchableSelect
-                        items={rolesDisponibles}
+                        items={rolesDisponiblesCreacion}
                         value={nuevoUsuario.rol_id?.toString() || ''}
                         onSelect={(rol) => setNuevoUsuario({ ...nuevoUsuario, rol_id: rol.id })}
                         getItemId={(rol) => rol.id.toString()}
@@ -760,6 +775,10 @@ export default function GestionUsuarios() {
                         value={editingUser.sede_id?.toString() || ''}
                         onSelect={(sede) => {
                           setEditingUser({ ...editingUser, sede_id: sede.id });
+                          const rolActual = rolesDisponibles.find(rol => rol.id === editingUser.rol_id);
+                          if (rolActual?.seccional && rolActual.seccional !== sede.seccional_id) {
+                            setEditingUser({ ...editingUser, sede_id: sede.id, rol_id: null });
+                          }
                           setEspacioSeleccionadoEdit('');
                           setEspaciosPermitidosEdit(
                             espaciosPermitidosEdit.filter((espacioId) => {
@@ -799,7 +818,7 @@ export default function GestionUsuarios() {
                     <div className="relative group">
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
                       <SearchableSelect
-                        items={rolesDisponibles}
+                        items={rolesDisponiblesEdicion}
                         value={editingUser.rol_id?.toString() || ''}
                         onSelect={(rol) => setEditingUser({ ...editingUser, rol_id: rol.id })}
                         getItemId={(rol) => rol.id.toString()}
