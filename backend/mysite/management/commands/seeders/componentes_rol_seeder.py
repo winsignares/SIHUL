@@ -15,6 +15,7 @@ def create_componentes_rol(stdout, style):
         ('admin', 'Gestión de Usuarios', 'EDITAR'),
         ('admin', 'Gestión de Roles', 'EDITAR'),
         ('admin', 'Gestión de Componentes', 'EDITAR'),
+        ('admin', 'Gestión de Chatbots', 'EDITAR'),
         ('admin', 'Asignación de espacios por seccional', 'EDITAR'),
 
         # Administrador de planeacion - tiene acceso a todos los componentes de administración

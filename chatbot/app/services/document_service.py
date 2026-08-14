@@ -23,14 +23,14 @@ async def _extract_text(file: UploadFile) -> str:
     return raw.decode("utf-8")
 
 
-async def process_document(file: UploadFile, sede: Sede, db: AsyncSession) -> Document:
+async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: AsyncSession) -> Document:
     """
     Extrae texto, genera embeddings y persiste el documento
-    asociado a una sede específica.
+    asociado a un chatbot y una sede específicos.
     """
     content = await _extract_text(file)
 
-    doc = Document(filename=file.filename, content=content, sede=sede.value)
+    doc = Document(filename=file.filename, content=content, sede=sede.value, chatbot_id=chatbot_id)
     db.add(doc)
     await db.flush()  # obtiene doc.id sin cerrar la transacción
 
@@ -48,6 +48,7 @@ async def process_document(file: UploadFile, sede: Sede, db: AsyncSession) -> Do
             text=text,
             embedding=emb,
             sede=sede.value,   # desnormalizado para filtrado rápido
+            chatbot_id=chatbot_id,   # desnormalizado para filtrado rápido
         )
         for text, emb in zip(texts, embeddings)
     ]

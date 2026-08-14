@@ -19,6 +19,7 @@ const CentroHorarios = lazy(() => import('../pages/gestionAcademica/CentroHorari
 const PrestamosEspacios = lazy(() => import('../pages/espacios/PrestamosEspacios'));
 const PeriodosAcademicos = lazy(() => import('../pages/gestionAcademica/PeriodosAcademicos'));
 const AsistentesVirtuales = lazy(() => import('../pages/chatbot/AsistentesVirtuales'));
+const GestionChatbots = lazy(() => import('../pages/chatbot/GestionChatbots'));
 const OcupacionSemanal = lazy(() => import('../pages/reporte/OcupacionSemanal'));
 const Reportes = lazy(() => import('../pages/reporte/Reportes'));
 const GestionUsuarios = lazy(() => import('../pages/gestionAcademica/GestionUsuarios'));
@@ -474,6 +475,12 @@ export default function AppRouter() {
         <Route path="admin/asistente-virtual" element={
           <ProtectedRoute requiredComponent="Asistentes Virtuales">
             <AsistentesVirtuales />
+          </ProtectedRoute>
+        } />
+
+        <Route path="admin/chatbots" element={
+          <ProtectedRoute requiredComponent="Gestión de Chatbots">
+            <GestionChatbots />
           </ProtectedRoute>
         } />
 

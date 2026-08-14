@@ -49,16 +49,20 @@ def _resolve_user_sede_value(usuario):
     return None
 
 
+def fastapi_base_url():
+    return getattr(settings, 'CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1').rstrip('/')
+
+
 def _fastapi_chat_url():
-    base_url = getattr(settings, 'CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1')
-    return f"{base_url.rstrip('/')}/chat/ask"
+    return f"{fastapi_base_url()}/chat/ask"
 
 
-def _enviar_pregunta_fastapi(nombre, sede, pregunta):
+def _enviar_pregunta_fastapi(nombre, chatbot_id, sede, pregunta):
     response = requests.post(
         _fastapi_chat_url(),
         json={
             'nombre': nombre,
+            'chatbot_id': chatbot_id,
             'sede': sede,
             'question': pregunta,
         },
@@ -151,12 +155,12 @@ def enviar_pregunta(request):
         error_ia = None
         
         try:
-            response = _enviar_pregunta_fastapi(nombre_usuario, sede_value, pregunta)
-            
+            response = _enviar_pregunta_fastapi(nombre_usuario, agente.id, sede_value, pregunta)
+
             # Verificar que la respuesta tenga contenido
             if not response.text or response.text.strip() == '':
                 raise ValueError('El servidor devolvió una respuesta vacía')
-            
+
             # Intentar parsear JSON
             try:
                 respuesta_data = response.json()
@@ -169,14 +173,14 @@ def enviar_pregunta(request):
                 # Si no es JSON válido, mostrar lo que devolvió
                 error_ia = f'Respuesta inválida del servidor: {response.text[:200]}'
                 respuesta_texto = 'Lo siento, el servidor devolvió una respuesta inválida.'
-            
+
         except requests.exceptions.RequestException as e:
             error_ia = str(e)
             respuesta_texto = f'Lo siento, hubo un error al procesar tu pregunta: {str(e)}'
         except ValueError as ve:
             error_ia = str(ve)
             respuesta_texto = f'Lo siento, el servidor no respondió correctamente: {str(ve)}'
-        
+
         # 2. Guardar conversación completa (pregunta + respuesta en un solo registro)
         conversacion = Conversacion.objects.create(
             chat_id=chat_id,
@@ -393,8 +397,8 @@ def enviar_pregunta_publico(request):
         error_ia = None
         
         try:
-            response = _enviar_pregunta_fastapi(nombre_usuario, sede_value, pregunta)
-            
+            response = _enviar_pregunta_fastapi(nombre_usuario, agente.id, sede_value, pregunta)
+
             # Verificar que la respuesta tenga contenido
             if not response.text or response.text.strip() == '':
                 raise ValueError('El servidor devolvió una respuesta vacía')

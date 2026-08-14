@@ -495,7 +495,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
           <motion.div
             key={location.pathname}
             className={
-              (location.pathname.includes('asistente-virtual') || location.pathname.includes('/chat'))
+              (location.pathname.includes('asistente-virtual') || /\/chat(\/|$)/.test(location.pathname))
                 ? 'flex-1 min-h-0 flex overflow-hidden'
                 : 'flex-1 min-h-0 overflow-y-auto scrollbar-hidden'
             }

@@ -71,8 +71,8 @@ class ConversacionAdmin(admin.ModelAdmin):
 
 @admin.register(ChatbotDocument)
 class ChatbotDocumentAdmin(ChatbotAppAdmin):
-    list_display = ['id', 'filename', 'sede', 'created_at', 'content_corto']
-    list_filter = ['sede', 'created_at']
+    list_display = ['id', 'filename', 'chatbot', 'sede', 'created_at', 'content_corto']
+    list_filter = ['chatbot', 'sede', 'created_at']
     search_fields = ['filename', 'content', 'sede']
     readonly_fields = ['id', 'created_at']
     ordering = ['-created_at']
@@ -85,8 +85,8 @@ class ChatbotDocumentAdmin(ChatbotAppAdmin):
 
 @admin.register(ChatbotChunk)
 class ChatbotChunkAdmin(ChatbotAppAdmin):
-    list_display = ['id', 'document', 'sede', 'text_corto']
-    list_filter = ['sede']
+    list_display = ['id', 'document', 'chatbot', 'sede', 'text_corto']
+    list_filter = ['chatbot', 'sede']
     search_fields = ['text', 'sede', 'document__filename']
     readonly_fields = ['id']
 
@@ -97,8 +97,8 @@ class ChatbotChunkAdmin(ChatbotAppAdmin):
 
 @admin.register(ChatbotAppMessage)
 class ChatbotAppMessageAdmin(ChatbotAppAdmin):
-    list_display = ['id', 'nombre', 'sede', 'relevance_score', 'question_corta', 'answer_corta', 'created_at']
-    list_filter = ['sede', 'created_at']
+    list_display = ['id', 'nombre', 'chatbot', 'sede', 'relevance_score', 'question_corta', 'answer_corta', 'created_at']
+    list_filter = ['chatbot', 'sede', 'created_at']
     search_fields = ['nombre', 'sede', 'question', 'answer']
     readonly_fields = ['id', 'created_at']
     ordering = ['-created_at']

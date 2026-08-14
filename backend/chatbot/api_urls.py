@@ -1,5 +1,10 @@
 from django.urls import path
 
+from .admin_views import (
+    ChatbotDocumentoDetalleProxyView,
+    ChatbotDocumentosProxyView,
+    ChatbotSedesProxyView,
+)
 from .api_views import (
     AgenteDetailAPIView,
     AgenteListCreateAPIView,
@@ -23,6 +28,11 @@ urlpatterns = [
     path('preguntas/<int:pk>/', PreguntaSugeridaDetailAPIView.as_view(), name='api-pregunta-detail'),
     path('conversaciones/', ConversacionListCreateAPIView.as_view(), name='api-conversacion-list-create'),
     path('conversaciones/<int:pk>/', ConversacionDetailAPIView.as_view(), name='api-conversacion-detail'),
+
+    # Gestión de documentos del RAG por chatbot/sede (proxy autenticado hacia FastAPI)
+    path('admin/documentos/', ChatbotDocumentosProxyView.as_view(), name='api-admin-documentos'),
+    path('admin/documentos/<int:pk>/', ChatbotDocumentoDetalleProxyView.as_view(), name='api-admin-documento-detalle'),
+    path('admin/sedes/', ChatbotSedesProxyView.as_view(), name='api-admin-sedes'),
 
     # Endpoints publicos (sin autenticacion)
     path('public/agentes/', list_agentes_publico, name='api-public-agentes'),

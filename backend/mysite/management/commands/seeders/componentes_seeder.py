@@ -19,6 +19,7 @@ def create_componentes(stdout, style):
         {'nombre': 'Préstamos de Espacios', 'descripcion': 'Gestión de préstamos de espacios'},
         {'nombre': 'Periodos Académicos', 'descripcion': 'Gestión de periodos académicos'},
         {'nombre': 'Asistentes Virtuales', 'descripcion': 'Chatbots y asistentes virtuales'},
+        {'nombre': 'Gestión de Chatbots', 'descripcion': 'Administración de chatbots y sus documentos por sede'},
         {'nombre': 'Ocupación Semanal', 'descripcion': 'Reporte de ocupación semanal'},
         {'nombre': 'Reportes Generales', 'descripcion': 'Reportes y estadísticas generales'},
         {'nombre': 'Estado de Recursos', 'descripcion': 'Monitoreo de recursos físicos'},

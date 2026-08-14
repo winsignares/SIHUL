@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func
+from sqlalchemy import String, Text, DateTime, Integer, BigInteger, Float, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
 from app.core.database import Base
@@ -12,6 +12,9 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(255))
     content: Mapped[str] = mapped_column(Text)
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    # Referencia al Agente (tabla chatbot_agente, gestionada por Django). Sin FK a nivel
+    # de BD porque esa tabla puede no existir aún cuando FastAPI corre su propio create_all.
+    chatbot_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -30,6 +33,7 @@ class Chunk(Base):
     text: Mapped[str] = mapped_column(Text)
     embedding = mapped_column(Vector(1536))
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    chatbot_id: Mapped[int | None] = mapped_column(BigInteger, index=True)  # desnormalizado para filtrado rápido
     document: Mapped["Document"] = relationship(back_populates="chunks")
 
 
@@ -39,6 +43,7 @@ class ChatMessage(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombre: Mapped[str] = mapped_column(String(150), nullable=False)
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    chatbot_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text)
     relevance_score: Mapped[float] = mapped_column(Float, default=0.0)

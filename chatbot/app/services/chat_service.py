@@ -36,28 +36,29 @@ NO_INFO_RESPONSE = (
 
 async def _retrieve_context(
     q_embedding: list[float],
+    chatbot_id: int,
     sede: Sede,
     db: AsyncSession,
     top_k: int | None = None,
 ) -> tuple[str, float]:
     """
-    Busca los chunks más similares FILTRANDO por sede.
+    Busca los chunks más similares FILTRANDO por chatbot y sede.
     Devuelve (contexto_concatenado, similitud_promedio).
     """
     k = top_k or _settings.TOP_K
     min_sim = _settings.MIN_SIMILARITY
 
-    # El filtro `sede = :sede` aprovecha el índice columnar creado en el modelo.
+    # Los filtros `chatbot_id` y `sede` aprovechan los índices columnares creados en el modelo.
     # La búsqueda vectorial se aplica solo dentro de ese subconjunto.
     query = text(
         "SELECT text, 1 - (embedding <=> :emb) AS similarity "
         "FROM chunks "
-        "WHERE sede = :sede "
+        "WHERE chatbot_id = :chatbot_id AND sede = :sede "
         "ORDER BY embedding <=> :emb "
         "LIMIT :k"
     )
     result = await db.execute(
-        query, {"emb": str(q_embedding), "sede": sede.value, "k": k}
+        query, {"emb": str(q_embedding), "chatbot_id": chatbot_id, "sede": sede.value, "k": k}
     )
     rows = result.fetchall()
 
@@ -75,16 +76,17 @@ async def _retrieve_context(
 
 async def ask(
     nombre: str,
+    chatbot_id: int,
     sede: Sede,
     question: str,
     db: AsyncSession,
 ) -> ChatMessage:
     """
-    Flujo RAG completo con contexto filtrado por sede.
-    Persiste la conversación con nombre y sede del estudiante.
+    Flujo RAG completo con contexto filtrado por chatbot y sede.
+    Persiste la conversación con nombre, chatbot y sede del estudiante.
     """
     q_embedding = await generate_embedding(question)
-    context, relevance_score = await _retrieve_context(q_embedding, sede, db)
+    context, relevance_score = await _retrieve_context(q_embedding, chatbot_id, sede, db)
 
     if not context:
         answer = NO_INFO_RESPONSE
@@ -107,6 +109,7 @@ async def ask(
 
     msg = ChatMessage(
         nombre=nombre,
+        chatbot_id=chatbot_id,
         sede=sede.value,
         question=question,
         answer=answer,

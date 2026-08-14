@@ -78,6 +78,15 @@ class Conversacion(models.Model):
 class ChatbotDocument(models.Model):
     filename = models.CharField(max_length=255)
     content = models.TextField()
+    chatbot = models.ForeignKey(
+        Agente,
+        on_delete=models.DO_NOTHING,
+        db_column='chatbot_id',
+        db_constraint=False,
+        null=True,
+        blank=True,
+        related_name='documentos',
+    )
     sede = models.CharField(max_length=50, db_index=True)
     created_at = models.DateTimeField()
 
@@ -100,6 +109,15 @@ class ChatbotChunk(models.Model):
         related_name='chunks',
     )
     text = models.TextField()
+    chatbot = models.ForeignKey(
+        Agente,
+        on_delete=models.DO_NOTHING,
+        db_column='chatbot_id',
+        db_constraint=False,
+        null=True,
+        blank=True,
+        related_name='chunks',
+    )
     sede = models.CharField(max_length=50, db_index=True)
 
     class Meta:
@@ -114,6 +132,15 @@ class ChatbotChunk(models.Model):
 
 class ChatbotAppMessage(models.Model):
     nombre = models.CharField(max_length=150)
+    chatbot = models.ForeignKey(
+        Agente,
+        on_delete=models.DO_NOTHING,
+        db_column='chatbot_id',
+        db_constraint=False,
+        null=True,
+        blank=True,
+        related_name='mensajes_app',
+    )
     sede = models.CharField(max_length=50, db_index=True)
     question = models.TextField()
     answer = models.TextField()

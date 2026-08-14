@@ -8,12 +8,13 @@ from app.core.sedes import Sede
 class DocumentOut(BaseModel):
     id: int
     filename: str
+    chatbot_id: int | None
     sede: Sede
     created_at: datetime
     model_config = {"from_attributes": True}
 
 
-#  Chat 
+#  Chat
 
 class ChatRequest(BaseModel):
     nombre: str = Field(
@@ -22,6 +23,11 @@ class ChatRequest(BaseModel):
         max_length=150,
         examples=["Jesús Peña"],
         description="Nombre completo del estudiante",
+    )
+    chatbot_id: int = Field(
+        ...,
+        examples=[1],
+        description="ID del chatbot (agente) al que se dirige la pregunta",
     )
     sede: Sede = Field(
         ...,
@@ -39,6 +45,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     id: int
     nombre: str
+    chatbot_id: int | None
     sede: Sede
     question: str
     answer: str
@@ -52,6 +59,7 @@ class ChatResponse(BaseModel):
 class ChatHistoryItem(BaseModel):
     id: int
     nombre: str
+    chatbot_id: int | None
     sede: Sede
     question: str
     answer: str

@@ -1,5 +1,16 @@
 """
-Comando de Django para cargar datos iniciales completos en la base de datos SIHUL.
+Comando de Django para cargar datos DE DEMOSTRACIÓN completos en la base de
+datos SIHUL, pensado para entornos SIN acceso a los ETL de Oracle (desarrollo
+local, demos, pruebas). Carga absolutamente todo, incluyendo datos académicos
+ficticios que en producción llegan por Oracle (facultades, programas,
+asignaturas, espacios, grupos, horarios, ~150 docentes de prueba).
+
+Si SÍ tienes acceso a Oracle, usa en su lugar:
+  - `seed_required_data`: solo la configuración/catálogos que SIHUL necesita
+    siempre y que Oracle no provee (roles, sedes, componentes, recursos,
+    periodos, usuarios fundamentales del sistema, agentes de chatbot, etc.)
+  - Los comandos `etl_oracle_*` para la data académica real (facultades,
+    programas, asignaturas, espacios, grupos, horarios, docentes, estudiantes)
 
 Cada responsabilidad de seed está delegada a su propio módulo en seeders/:
   roles_seeder, sedes_seeder, tipos_espacio_seeder, tipos_actividad_seeder,
