@@ -27,7 +27,7 @@ export default function PublicDashboard() {
       >
         <div>
           <h1 className="text-4xl font-bold text-slate-900 mb-2">¡Bienvenido! 👋</h1>
-          <p className="text-slate-600 text-lg">Portal público de acceso a SIHUL</p>
+          <p className="text-slate-600 text-lg">Portal público de acceso a Benji</p>
           <p className="text-slate-500 text-sm mt-3">Sistema Integral de Gestión Horaria y Uso de Locales, Acceso público a servicios institucionales</p>
         </div>
       </motion.div>
