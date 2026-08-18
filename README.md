@@ -318,6 +318,9 @@ Este proyecto es propiedad de la Universidad Libre.
 **Desarrollador 5**
 - GitHub: [@Andrewsy1004](https://github.com/Andrewsy1004)
 
+**Desarrollador 6**
+- GitHub: [@Llamas126](https://github.com/Llamas126)
+
 ---
 
 ## 📞 Soporte
