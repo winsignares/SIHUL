@@ -127,7 +127,6 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
         setComponentes(cachedData.componentes);
         setRoles(cachedData.roles);
         setAsignaciones(cachedData.asignaciones);
-        return;
       }
 
       // Cargar en paralelo componentes, roles y asignaciones

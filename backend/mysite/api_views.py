@@ -151,14 +151,14 @@ class ProgramaViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet)
         return super().get_queryset()
 
 
-class GrupoViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class GrupoViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Grupo.objects.all()
     serializer_class = GrupoSerializer
     seccional_lookup = 'programa__facultad__sede__seccional'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
 
-class AsignaturaViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class AsignaturaViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Asignatura.objects.all()
     serializer_class = AsignaturaSerializer
     seccional_lookup = 'sede__seccional'
@@ -181,8 +181,18 @@ class AsignaturaViewSet(SeccionalMixin, viewsets.ModelViewSet):
             )
         return Asignatura.objects.filter(sede__isnull=True)
 
+    def get_cache_scope(self):
+        # get_queryset() da acceso completo a is_admin_global (no solo a
+        # superusuarios reales), así que la clave de caché debe seguir ese
+        # mismo criterio o dos roles distintos podrían compartir por error
+        # la respuesta cacheada de otro.
+        user = self.get_current_user()
+        if user and is_admin_global(user):
+            return 'all'
+        return super().get_cache_scope()
 
-class AsignaturaProgramaViewSet(SeccionalMixin, viewsets.ModelViewSet):
+
+class AsignaturaProgramaViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = AsignaturaPrograma.objects.select_related('programa', 'asignatura')
     serializer_class = AsignaturaProgramaSerializer
     seccional_lookup = 'asignatura__sede__seccional'
@@ -827,7 +837,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return Response({'usuarios': data}, status=status.HTTP_200_OK)
 
 
-class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class RecursoViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Recurso.objects.all()
     serializer_class = RecursoSerializer
     seccional_lookup = None
@@ -843,6 +853,16 @@ class RecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if user_supervisa_espacios(user):
             return super().get_queryset().filter(recurso_espacios__espacio__espacios_permitidos__usuario=user).distinct().order_by('nombre')
         return super().get_queryset().distinct().order_by('nombre')
+
+    def get_cache_scope(self):
+        # Un supervisor solo ve los recursos de los espacios que tiene
+        # permitidos (filtro por usuario, no por seccional) — sin esta clave
+        # por usuario, dos supervisores del mismo sitio podrían recibir el
+        # listado cacheado del otro.
+        user = self.get_current_user()
+        if user and user_supervisa_espacios(user):
+            return f'supervisor-{user.id}'
+        return super().get_cache_scope()
 
 
 class EspacioRecursoViewSet(SeccionalMixin, viewsets.ModelViewSet):

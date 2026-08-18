@@ -123,7 +123,6 @@ export function useEspaciosFisicos() {
                 setSedes(cachedData.sedes);
                 setTiposEspacio(cachedData.tiposEspacio);
                 setRecursosDisponibles(cachedData.recursosDisponibles);
-                return;
             }
 
             const [espaciosRes, sedesRes, tiposRes, recursosRes] = await Promise.all([
@@ -181,7 +180,6 @@ export function useEspaciosFisicos() {
 
             if (cachedEspacios) {
                 setEspacios(cachedEspacios);
-                return;
             }
 
             const espaciosRes = await espacioService.list();

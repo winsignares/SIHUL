@@ -185,7 +185,6 @@ export function useGestionUsuarios() {
 
             if (cachedRoles) {
                 setRolesDisponibles(cachedRoles);
-                return;
             }
 
             const response = await rolService.listarRoles();
@@ -206,7 +205,6 @@ export function useGestionUsuarios() {
 
             if (cachedFacultades) {
                 setFacultadesDisponibles(cachedFacultades);
-                return;
             }
 
             const response = await facultadService.list();
@@ -231,7 +229,6 @@ export function useGestionUsuarios() {
 
             if (cachedEspacios) {
                 setEspaciosDisponibles(cachedEspacios);
-                return;
             }
 
             const response = await espacioService.list();
@@ -255,7 +252,6 @@ export function useGestionUsuarios() {
 
             if (cachedTiposEspacio) {
                 setTiposEspacioDisponibles(cachedTiposEspacio);
-                return;
             }
 
             const response = await espacioService.listTipos();
@@ -276,7 +272,6 @@ export function useGestionUsuarios() {
 
             if (cachedSedes) {
                 setSedesDisponibles(cachedSedes);
-                return;
             }
 
             const response = await sedeService.listarSedes();

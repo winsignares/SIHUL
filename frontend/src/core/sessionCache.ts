@@ -4,7 +4,12 @@ type SessionCacheEntry<T> = {
     timestamp: number;
 };
 
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutos
+// Antes eran 30 minutos: una edición hecha desde el panel de Django o por API
+// directa podía tardar hasta media hora en reflejarse para un usuario que ya
+// tenía el dato cargado. Con la caché de catálogos en Redis (ver backend),
+// revalidar más seguido es barato, así que se baja el TTL como red de
+// seguridad general para todo lo que use este caché.
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 const CACHE_PREFIX = 'sihul_cache_';
 
 function getStorageKey(key: string): string {

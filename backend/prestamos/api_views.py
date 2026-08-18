@@ -3,6 +3,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from mysite.cache_utils import CachedCatalogMixin
 from mysite.seccional_auth import SeccionalMixin
 from mysite.auth_helpers import is_authenticated_user, user_supervisa_espacios
 from mysite.permissions import CanManagePrestamosEspacios
@@ -17,7 +18,7 @@ from .serializers import (
 )
 
 
-class TipoActividadListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
+class TipoActividadListCreateAPIView(CachedCatalogMixin, SeccionalMixin, generics.ListCreateAPIView):
     queryset = TipoActividad.objects.all().order_by('nombre')
     serializer_class = TipoActividadSerializer
     permission_classes = [permissions.IsAuthenticated]

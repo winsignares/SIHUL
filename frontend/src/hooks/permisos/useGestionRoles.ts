@@ -65,7 +65,6 @@ export function useGestionRoles(): UseGestionRolesReturn {
 
       if (cachedData) {
         setRoles(cachedData.roles);
-        return;
       }
 
       const res = await rolService.listarRoles();

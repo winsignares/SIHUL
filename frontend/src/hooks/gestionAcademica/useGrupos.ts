@@ -65,10 +65,10 @@ export function useGrupos() {
 
             if (cachedGrupos) {
                 setGrupos(cachedGrupos);
-                return;
+            } else {
+                setLoading(true);
             }
 
-            setLoading(true);
             const response = await grupoService.list();
             setGrupos(response.grupos);
             setSessionCacheData(GRUPOS_CACHE_KEY, activeToken, response.grupos);
@@ -86,7 +86,6 @@ export function useGrupos() {
 
             if (cachedProgramas) {
                 setProgramas(cachedProgramas);
-                return;
             }
 
             const response = await programaService.listarProgramas();
@@ -104,7 +103,6 @@ export function useGrupos() {
 
             if (cachedPeriodos) {
                 setPeriodos(cachedPeriodos);
-                return;
             }
 
             const response = await periodoService.listarPeriodos();

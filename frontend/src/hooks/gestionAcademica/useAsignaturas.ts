@@ -68,10 +68,10 @@ export function useAsignaturas() {
             if (cachedData) {
                 setAsignaturas(cachedData.asignaturas);
                 setProgramas(cachedData.programas);
-                return;
+            } else {
+                setLoading(true);
             }
 
-            setLoading(true);
             const [asignaturasRes, programasRes] = await Promise.all([
                 asignaturaService.list(),
                 programaService.listarProgramas()

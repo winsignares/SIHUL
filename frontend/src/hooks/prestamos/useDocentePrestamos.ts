@@ -101,7 +101,6 @@ export function useDocentePrestamos() {
                 setTiposActividad(cachedInitialData.tiposActividad);
                 setRecursosDisponibles(cachedInitialData.recursosDisponibles);
                 setSedes(cachedInitialData.sedes);
-                return;
             }
 
             const [tiposResp, recursosResp, sedesResp] = await Promise.all([

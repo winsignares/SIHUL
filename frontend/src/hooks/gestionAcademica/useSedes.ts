@@ -59,12 +59,16 @@ export function useSedes() {
             const activeToken = localStorage.getItem('auth_token');
             const cachedSedes = force ? null : getSessionCacheData<Sede[]>(SEDES_CACHE_KEY, activeToken);
 
+            // Stale-while-revalidate: si hay caché, se pinta de inmediato (sin
+            // spinner) pero igual se revalida contra el backend, así que un
+            // cambio hecho desde el admin o por API se refleja en la próxima
+            // carga de esta pantalla en vez de esperar hasta 5 min de TTL.
             if (cachedSedes) {
                 setSedes(cachedSedes);
-                return;
+            } else {
+                setLoading(true);
             }
 
-            setLoading(true);
             const response = await sedeService.listarSedes();
             setSedes(response.sedes);
             setSessionCacheData(SEDES_CACHE_KEY, activeToken, response.sedes);

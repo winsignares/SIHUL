@@ -129,10 +129,10 @@ export function useFacultadesPrograms() {
 
             if (cachedFacultades) {
                 setFacultades(cachedFacultades);
-                return;
+            } else {
+                setLoading(true);
             }
 
-            setLoading(true);
             const response = await facultadService.list();
             setFacultades(response.facultades);
             setSessionCacheData(FACULTADES_CACHE_KEY, activeToken, response.facultades);
@@ -152,10 +152,10 @@ export function useFacultadesPrograms() {
 
             if (cachedProgramas) {
                 setProgramas(cachedProgramas);
-                return;
+            } else {
+                setLoading(true);
             }
 
-            setLoading(true);
             const response = await programaService.listarProgramas();
             // Mapear facultad_id (snake_case) a facultadId (camelCase)
             // Filtrar programas sin facultad asignada
@@ -186,7 +186,6 @@ export function useFacultadesPrograms() {
 
             if (cachedAsignaturas) {
                 setAsignaturas(cachedAsignaturas);
-                return;
             }
 
             const response = await asignaturaService.list();
@@ -207,10 +206,10 @@ export function useFacultadesPrograms() {
 
             if (cachedAsignaturasPrograma) {
                 setAsignaturasPrograma(enrichAsignaturasPrograma(cachedAsignaturasPrograma, asignaturas));
-                return;
+            } else {
+                setLoading(true);
             }
 
-            setLoading(true);
             const response = await asignaturaProgramaService.list(programaId);
             const enrichedAsignaturasPrograma = enrichAsignaturasPrograma(response.asignaturas_programa, asignaturas);
             setAsignaturasPrograma(enrichedAsignaturasPrograma);

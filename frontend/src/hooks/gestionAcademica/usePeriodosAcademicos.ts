@@ -46,7 +46,6 @@ export function usePeriodosAcademicos() {
 
             if (cachedData) {
                 setPeriodos(cachedData.periodos);
-                return;
             }
 
             const response = await periodoService.listarPeriodos();

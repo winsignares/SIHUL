@@ -39,10 +39,10 @@ export function useGestionRecursos() {
 
       if (cachedRecursos) {
         setRecursos(cachedRecursos);
-        return;
+      } else {
+        setLoading(true);
       }
 
-      setLoading(true);
       const response = await recursoService.listarRecursos();
       setRecursos(response.recursos || []);
       setSessionCacheData(GESTION_RECURSOS_CACHE_KEY, activeToken, response.recursos || []);

@@ -111,16 +111,17 @@ export function useAsignacionEspaciosSeccional() {
           setGrupos(cached.grupos);
           setAsignaturas(cached.asignaturas);
           setPeriodos(cached.periodos);
-          
+
           setFiltrosState((prev) => {
             if (prev.periodoId) return prev;
             const periodoActualId = resolveCurrentPeriodoId(cached.periodos);
             if (!periodoActualId) return prev;
             return { ...prev, periodoId: periodoActualId };
           });
-          
+
           filtrosLoadedRef.current = true;
-          return;
+          // No retorna: se revalida en segundo plano contra el backend para
+          // reflejar cambios hechos desde el admin o por API directa.
         }
       }
 

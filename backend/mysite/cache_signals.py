@@ -1,9 +1,13 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from asignaturas.models import Asignatura, AsignaturaPrograma
 from espacios.models import TipoEspacio
 from facultades.models import Facultad
+from grupos.models import Grupo
+from prestamos.models import TipoActividad
 from programas.models import Programa
+from recursos.models import Recurso
 from sedes.models import Sede
 from usuarios.models import Rol
 
@@ -15,6 +19,11 @@ _CATALOG_MODELS = {
     Programa: 'ProgramaViewSet',
     TipoEspacio: 'TipoEspacioViewSet',
     Rol: 'RolViewSet',
+    Grupo: 'GrupoViewSet',
+    Asignatura: 'AsignaturaViewSet',
+    AsignaturaPrograma: 'AsignaturaProgramaViewSet',
+    Recurso: 'RecursoViewSet',
+    TipoActividad: 'TipoActividadListCreateAPIView',
 }
 
 
