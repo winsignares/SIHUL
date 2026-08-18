@@ -2,13 +2,45 @@ import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useNavigate } from 'react-router-dom';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
 import { useLogin } from '../../hooks/users/useLogin';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { publicServices } from '../../services/publicServices';
+
+type Particle = {
+  left: string;
+  top: string;
+  size: string;
+  xOffset: number;
+  duration: number;
+  delay: number;
+};
+
+const createParticleRandom = (seed: number) => {
+  let value = seed;
+  return () => {
+    value = (value * 9301 + 49297) % 233280;
+    return value / 233280;
+  };
+};
+
+const buildParticles = (count: number, seedOffset: number, xRange: number, durationBase: number, durationRange: number, delayRange: number): Particle[] => {
+  return Array.from({ length: count }, (_, index) => {
+    const random = createParticleRandom(seedOffset + index + 1);
+
+    return {
+      left: `${random() * 100}%`,
+      top: `${random() * 100}%`,
+      size: `${2 + random() * 4}px`,
+      xOffset: random() * xRange - xRange / 2,
+      duration: durationBase + random() * durationRange,
+      delay: random() * delayRange,
+    };
+  });
+};
 
 export default function Login() {
   const isMobile = useIsMobile();
@@ -33,6 +65,9 @@ export default function Login() {
     handlePublicAccess,
     handleMicrosoftLogin
   } = useLogin();
+
+  const floatingParticles = useMemo(() => buildParticles(50, 1000, 100, 6, 6, 4), []);
+  const rightSideParticles = useMemo(() => buildParticles(20, 2000, 30, 5, 3, 2), []);
 
   const handlePublicAccessClick = async () => {
     if (!publicRecaptchaToken) {
@@ -131,7 +166,7 @@ export default function Login() {
       />
 
       {/* Floating Particles - Small Animated Particles */}
-      {[...Array(50)].map((_, i) => (
+      {floatingParticles.map((particle, i) => (
         <motion.div
           key={`particle-${i}`}
           className={`absolute rounded-full opacity-40 ${
@@ -140,21 +175,21 @@ export default function Login() {
             'bg-gradient-to-r from-blue-400 to-blue-500'
           }`}
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            width: `${2 + Math.random() * 4}px`,
-            height: `${2 + Math.random() * 4}px`,
+            left: particle.left,
+            top: particle.top,
+            width: particle.size,
+            height: particle.size,
           }}
           animate={{
             y: [0, -150, 0],
-            x: [0, Math.random() * 100 - 50, 0],
+            x: [0, particle.xOffset, 0],
             opacity: [0.1, 0.6, 0.1],
             scale: [0.5, 1.2, 0.5],
           }}
           transition={{
-            duration: 6 + Math.random() * 6,
+            duration: particle.duration,
             repeat: Infinity,
-            delay: Math.random() * 4,
+            delay: particle.delay,
             ease: "easeInOut"
           }}
         />
@@ -576,24 +611,24 @@ export default function Login() {
             </div>
 
             {/* Floating Particles - Right Side */}
-            {[...Array(20)].map((_, i) => (
+            {rightSideParticles.map((particle, i) => (
               <motion.div
                 key={`right-particle-${i}`}
                 className="absolute w-1 h-1 bg-gradient-to-r from-yellow-300 to-yellow-500 rounded-full opacity-40"
                 style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
+                  left: particle.left,
+                  top: particle.top,
                 }}
                 animate={{
                   y: [0, -50, 0],
-                  x: [0, Math.random() * 30 - 15, 0],
+                  x: [0, particle.xOffset, 0],
                   opacity: [0.2, 0.6, 0.2],
                   scale: [0.5, 1.2, 0.5],
                 }}
                 transition={{
-                  duration: 5 + Math.random() * 3,
+                  duration: particle.duration,
                   repeat: Infinity,
-                  delay: Math.random() * 2,
+                  delay: particle.delay,
                   ease: "easeInOut"
                 }}
               />
