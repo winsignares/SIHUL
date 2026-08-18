@@ -59,6 +59,34 @@ export default function Login() {
     }
   };
 
+  const handleEmailInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const target = e.target as HTMLInputElement;
+    if (!target.value) {
+      target.setCustomValidity('Por favor ingresa tu correo institucional');
+    } else if (!target.validity.valid) {
+      target.setCustomValidity('Ingresa un correo válido');
+    }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity('');
+    setEmail(e.target.value);
+  };
+
+  const handlePasswordInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity('Por favor ingresa tu contraseña');
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+    target.setCustomValidity('');
+    setPassword(e.target.value);
+  };
+
   return (
     <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
       {/* Animated Background Elements */}
@@ -204,7 +232,8 @@ export default function Login() {
                       type="email"
                       placeholder="correo@unilibre.edu.co"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={handleEmailChange}
+                      onInvalid={handleEmailInvalid}
                       className="pl-12 h-12 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
                       required
                     />
@@ -224,7 +253,8 @@ export default function Login() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={handlePasswordChange}
+                      onInvalid={handlePasswordInvalid}
                       className="pl-12 pr-12 h-12 bg-slate-50 border-2 border-slate-200 focus:border-red-600 focus:ring-red-600/20 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg text-slate-900"
                       required
                     />
