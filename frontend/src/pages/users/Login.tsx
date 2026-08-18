@@ -2,7 +2,7 @@ import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useNavigate } from 'react-router-dom';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
@@ -42,6 +42,114 @@ const buildParticles = (count: number, seedOffset: number, xRange: number, durat
   });
 };
 
+const LoginBackgroundParticles = memo(function LoginBackgroundParticles() {
+  const floatingParticles = useMemo(() => buildParticles(50, 1000, 100, 6, 6, 4), []);
+
+  return (
+    <>
+      <motion.div
+        className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-600 to-red-700 rounded-full opacity-20 blur-3xl"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, -50, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div
+        className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full opacity-20 blur-3xl"
+        animate={{
+          x: [0, -100, 0],
+          y: [0, 50, 0],
+          scale: [1, 1.3, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 w-72 h-72 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full opacity-15 blur-3xl"
+        animate={{
+          x: [-150, 150, -150],
+          y: [150, -150, 150],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+
+      {floatingParticles.map((particle, i) => (
+        <motion.div
+          key={`particle-${i}`}
+          className={`absolute rounded-full opacity-40 ${
+            i % 3 === 0 ? 'bg-gradient-to-r from-red-400 to-red-500' :
+            i % 3 === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+            'bg-gradient-to-r from-blue-400 to-blue-500'
+          }`}
+          style={{
+            left: particle.left,
+            top: particle.top,
+            width: particle.size,
+            height: particle.size,
+          }}
+          animate={{
+            y: [0, -150, 0],
+            x: [0, particle.xOffset, 0],
+            opacity: [0.1, 0.6, 0.1],
+            scale: [0.5, 1.2, 0.5],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            delay: particle.delay,
+            ease: "easeInOut"
+          }}
+        />
+      ))}
+    </>
+  );
+});
+
+const RightSideParticles = memo(function RightSideParticles() {
+  const rightSideParticles = useMemo(() => buildParticles(20, 2000, 30, 5, 3, 2), []);
+
+  return (
+    <>
+      {rightSideParticles.map((particle, i) => (
+        <motion.div
+          key={`right-particle-${i}`}
+          className="absolute w-1 h-1 bg-gradient-to-r from-yellow-300 to-yellow-500 rounded-full opacity-40"
+          style={{
+            left: particle.left,
+            top: particle.top,
+          }}
+          animate={{
+            y: [0, -50, 0],
+            x: [0, particle.xOffset, 0],
+            opacity: [0.2, 0.6, 0.2],
+            scale: [0.5, 1.2, 0.5],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            delay: particle.delay,
+            ease: "easeInOut"
+          }}
+        />
+      ))}
+    </>
+  );
+});
+
 export default function Login() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -65,9 +173,6 @@ export default function Login() {
     handlePublicAccess,
     handleMicrosoftLogin
   } = useLogin();
-
-  const floatingParticles = useMemo(() => buildParticles(50, 1000, 100, 6, 6, 4), []);
-  const rightSideParticles = useMemo(() => buildParticles(20, 2000, 30, 5, 3, 2), []);
 
   const handlePublicAccessClick = async () => {
     if (!publicRecaptchaToken) {
@@ -124,76 +229,7 @@ export default function Login() {
 
   return (
     <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
-      {/* Animated Background Elements */}
-      <motion.div
-        className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-600 to-red-700 rounded-full opacity-20 blur-3xl"
-        animate={{
-          x: [0, 100, 0],
-          y: [0, -50, 0],
-          scale: [1, 1.2, 1],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      <motion.div
-        className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full opacity-20 blur-3xl"
-        animate={{
-          x: [0, -100, 0],
-          y: [0, 50, 0],
-          scale: [1, 1.3, 1],
-        }}
-        transition={{
-          duration: 25,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      <motion.div
-        className="absolute top-1/2 left-1/2 w-72 h-72 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full opacity-15 blur-3xl"
-        animate={{
-          x: [-150, 150, -150],
-          y: [150, -150, 150],
-          scale: [1, 1.1, 1],
-        }}
-        transition={{
-          duration: 30,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-
-      {/* Floating Particles - Small Animated Particles */}
-      {floatingParticles.map((particle, i) => (
-        <motion.div
-          key={`particle-${i}`}
-          className={`absolute rounded-full opacity-40 ${
-            i % 3 === 0 ? 'bg-gradient-to-r from-red-400 to-red-500' :
-            i % 3 === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
-            'bg-gradient-to-r from-blue-400 to-blue-500'
-          }`}
-          style={{
-            left: particle.left,
-            top: particle.top,
-            width: particle.size,
-            height: particle.size,
-          }}
-          animate={{
-            y: [0, -150, 0],
-            x: [0, particle.xOffset, 0],
-            opacity: [0.1, 0.6, 0.1],
-            scale: [0.5, 1.2, 0.5],
-          }}
-          transition={{
-            duration: particle.duration,
-            repeat: Infinity,
-            delay: particle.delay,
-            ease: "easeInOut"
-          }}
-        />
-      ))}
+      <LoginBackgroundParticles />
 
       {/* Main Login Card */}
       <motion.div
@@ -610,29 +646,7 @@ export default function Login() {
               </motion.div>
             </div>
 
-            {/* Floating Particles - Right Side */}
-            {rightSideParticles.map((particle, i) => (
-              <motion.div
-                key={`right-particle-${i}`}
-                className="absolute w-1 h-1 bg-gradient-to-r from-yellow-300 to-yellow-500 rounded-full opacity-40"
-                style={{
-                  left: particle.left,
-                  top: particle.top,
-                }}
-                animate={{
-                  y: [0, -50, 0],
-                  x: [0, particle.xOffset, 0],
-                  opacity: [0.2, 0.6, 0.2],
-                  scale: [0.5, 1.2, 0.5],
-                }}
-                transition={{
-                  duration: particle.duration,
-                  repeat: Infinity,
-                  delay: particle.delay,
-                  ease: "easeInOut"
-                }}
-              />
-            ))}
+            <RightSideParticles />
           </motion.div>
         </div>
       </motion.div>
