@@ -28,3 +28,6 @@ temp_*.py
 # Django media uploads
 backend/media/
 backend/financiero/media/
+
+# collectstatic output (se regenera en cada deploy)
+backend/staticfiles/

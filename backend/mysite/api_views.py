@@ -38,6 +38,7 @@ from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
 from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, user_supervisa_espacios
+from .cache_utils import CachedCatalogMixin
 from .seccional_auth import SeccionalMixin
 from .permissions import (
     IsAdminGlobal,
@@ -100,7 +101,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return Seccional.objects.none()
 
 
-class SedeViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class SedeViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Sede.objects.all()
     serializer_class = SedeSerializer
     seccional_lookup = 'seccional'
@@ -118,7 +119,7 @@ class SedeViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return super().get_queryset()
 
 
-class FacultadViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class FacultadViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Facultad.objects.all()
     serializer_class = FacultadSerializer
     seccional_lookup = 'sede__seccional'
@@ -134,7 +135,7 @@ class FacultadViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return super().get_queryset()
 
 
-class ProgramaViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class ProgramaViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Programa.objects.all()
     serializer_class = ProgramaSerializer
     seccional_lookup = 'facultad__sede__seccional'
@@ -188,7 +189,7 @@ class AsignaturaProgramaViewSet(SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
 
-class TipoEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class TipoEspacioViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = TipoEspacio.objects.all()
     serializer_class = TipoEspacioSerializer
     seccional_lookup = None
@@ -514,7 +515,7 @@ class SolicitudEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return horario_api.rechazar_solicitud_espacio(request._request)
 
 
-class RolViewSet(SeccionalMixin, viewsets.ModelViewSet):
+class RolViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     queryset = Rol.objects.all()
     serializer_class = RolSerializer
     seccional_lookup = None

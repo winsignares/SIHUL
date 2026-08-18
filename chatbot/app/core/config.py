@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     CHAT_MODEL: str = "gpt-4o-mini"
     MIN_SIMILARITY: float = 0.45
     TOP_K: int = 5
+    REDIS_URL: str | None = None
+    ANSWER_CACHE_TTL_SECONDS: int = 3600
 
     class Config:
         env_file = ".env"

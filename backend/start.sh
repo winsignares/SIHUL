@@ -20,9 +20,11 @@ python manage.py migrate --noinput
 echo "Cargando datos iniciales..."
 python manage.py seed_initial_data
 
+echo "Recolectando archivos estaticos..."
+python manage.py collectstatic --noinput
 
 echo "=========================================="
 echo "Backend listo - Iniciando servidor..."
 echo "=========================================="
 
-exec python manage.py runserver 0.0.0.0:8000
+exec gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60

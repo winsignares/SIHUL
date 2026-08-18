@@ -3,6 +3,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from django.db import IntegrityError, transaction, close_old_connections
 from django.db.models import Q, Sum, Count
 from django.http import HttpResponse
@@ -32,6 +33,12 @@ from usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
 
 logger = logging.getLogger(__name__)
+
+
+class FacturaPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 200
 
 
 DOCUMENTOS_SENSIBLES_POR_ROL = {
@@ -955,10 +962,13 @@ class ComentarioFacturaViewSet(viewsets.ModelViewSet):
     ordering = ['fecha_creacion']
 
     def get_queryset(self):
+        queryset = models.ComentarioFactura.objects.select_related('usuario').prefetch_related(
+            'respuestas__usuario', 'respuestas__respuestas__usuario',
+        )
         factura_id = self.request.query_params.get('factura_id')
         if factura_id:
-            return models.ComentarioFactura.objects.filter(factura_id=factura_id)
-        return models.ComentarioFactura.objects.all()
+            queryset = queryset.filter(factura_id=factura_id)
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
@@ -983,6 +993,7 @@ class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class FacturaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    pagination_class = FacturaPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'indicador_riesgo', 'proveedor', 'departamento', 'urgente']
     search_fields = ['numero_factura', 'numero_radicado', 'proveedor__razon_social']
@@ -993,6 +1004,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = models.Factura.objects.all()
+
+        if self.action == 'list':
+            queryset = queryset.select_related(
+                'proveedor', 'departamento', 'cuenta_contable', 'centro_costo',
+            ).prefetch_related('items')
 
         rol_nombre = (user.rol.nombre if getattr(user, 'rol', None) else '').strip()
         if rol_nombre == 'Funcionario':
@@ -1524,6 +1540,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
         elif self.action == 'list':
             return serializers.FacturaListSerializer
         return serializers.FacturaDetailSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action == 'list':
+            context['parametros_map'] = build_parametros_sla_map()
+        return context
 
     def perform_create(self, serializer):
         factura = serializer.save(creado_por=self.request.user)

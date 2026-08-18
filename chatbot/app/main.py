@@ -33,6 +33,14 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         for table in ("documents", "chunks", "chat_messages"):
             await conn.execute(text(_ADD_CHATBOT_ID_COLUMN.format(table=table)))
+        # Índice ANN: sin esto, la búsqueda por similitud en chunks.embedding
+        # (ORDER BY embedding <=> :emb) es un escaneo secuencial completo de la
+        # tabla en cada pregunta al chatbot. HNSW no requiere afinar un
+        # parámetro "lists" según el volumen de filas, a diferencia de ivfflat.
+        await conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_chunks_embedding_hnsw ON chunks "
+            "USING hnsw (embedding vector_cosine_ops)"
+        ))
     yield
 
 

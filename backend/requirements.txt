@@ -15,3 +15,4 @@ werkzeug
 cryptography
 oracledb>=2.0.0
 smbprotocol==1.15.0
+django-redis==5.4.0

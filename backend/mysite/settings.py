@@ -29,7 +29,10 @@ DEFAULT_DEV_SECRET_KEY = 'django-insecure-6vspu_xp0x41924(a&3!5kkn35+pew*ckujv96
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or DEFAULT_DEV_SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env_bool('DJANGO_DEBUG', True)
+# Falla hacia el lado seguro: si falta la variable de entorno (p. ej. un
+# despliegue nuevo que olvidó configurarla), el sistema arranca en modo
+# producción (DEBUG=False) en vez de exponer información de depuración.
+DEBUG = env_bool('DJANGO_DEBUG', False)
 
 if not DEBUG and SECRET_KEY == DEFAULT_DEV_SECRET_KEY:
     raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set to a non-empty value when DJANGO_DEBUG=False.')
@@ -136,6 +139,29 @@ DATABASES = {
     }
 }
 
+# Cache
+# Si REDIS_URL está definida (docker-compose la fija en dev; en producción hay
+# que exportarla apuntando al Redis propio), se comparte entre todos los
+# workers de gunicorn. Si no, se usa LocMemCache como antes (no compartida
+# entre procesos, pero suficiente para correr sin infraestructura extra).
+REDIS_URL = os.getenv('REDIS_URL')
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -172,6 +198,19 @@ USE_TZ = True
 
 STATIC_URL = os.getenv('STATIC_URL', '/static/')
 STATIC_ROOT = Path(os.getenv('STATIC_ROOT', BASE_DIR / 'staticfiles'))
+
+# nginx sirve /static/ con Cache-Control de larga duración (ver backend/nginx2.conf).
+# Sin nombres de archivo con hash, un deploy puede dejar navegadores sirviendo JS/CSS
+# viejos del admin durante días. ManifestStaticFilesStorage añade el hash y falla el
+# collectstatic si hay una referencia rota, en vez de servir un archivo desactualizado.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
 
 # Media files (user-uploaded content)
 MEDIA_URL = '/media/'
