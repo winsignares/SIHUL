@@ -230,12 +230,22 @@ def list_notificaciones(request):
             notificaciones = Notificacion.objects.filter(id_usuario=id_usuario)
         else:
             notificaciones = Notificacion.objects.all()
-        
+
         if no_leidas:
             notificaciones = notificaciones.filter(es_leida=False)
-        
+
         notificaciones = notificaciones.order_by('-fecha_creacion')
-        
+
+        # Tope de seguridad: sin esto, un admin (id_usuario vacío -> tabla completa)
+        # trae TODAS las notificaciones del sistema en cada llamada. 200 cubre con
+        # margen el caso real (dashboard pide 50 para "actividad reciente").
+        try:
+            limite = int(request.GET.get('limit', 200))
+        except (TypeError, ValueError):
+            limite = 200
+        limite = max(1, min(limite, 200))
+        notificaciones = notificaciones[:limite]
+
         lst = [{
             "id": n.id,
             "id_usuario": n.id_usuario,

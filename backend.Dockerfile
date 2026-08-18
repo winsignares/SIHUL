@@ -43,4 +43,4 @@ CMD until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER}; do \
     echo "Database is ready!" && \
     python manage.py migrate --fake-initial --noinput && \
     python manage.py collectstatic --noinput && \
-    gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
+    gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout 60

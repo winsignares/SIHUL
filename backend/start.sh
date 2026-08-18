@@ -27,4 +27,4 @@ echo "=========================================="
 echo "Backend listo - Iniciando servidor..."
 echo "=========================================="
 
-exec gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
+exec gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout 60

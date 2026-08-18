@@ -81,11 +81,13 @@ export const obtenerNotificacion = async (id: number): Promise<Notificacion> => 
 export const listarNotificaciones = async (params?: {
   id_usuario?: number;
   no_leidas?: boolean;
+  limit?: number;
 }): Promise<NotificacionesResponse> => {
   const queryParams = new URLSearchParams();
   if (params?.id_usuario) queryParams.append('id_usuario', params.id_usuario.toString());
   if (params?.no_leidas !== undefined) queryParams.append('no_leidas', params.no_leidas.toString());
-  
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+
   const queryString = queryParams.toString();
   const endpoint = queryString ? `${API_URL}/?${queryString}` : `${API_URL}/`;
   const notificaciones = await apiClient.get<Notificacion[]>(endpoint);

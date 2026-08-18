@@ -251,7 +251,7 @@ export const obtenerActividadesRecientes = async (): Promise<ActivityRecent[]> =
     // ========== OBTENER TODAS LAS NOTIFICACIONES DEL SISTEMA ==========
     // El backend registra automáticamente TODAS las acciones vía Django signals
     try {
-      const notificacionesResponse = await listarNotificaciones();
+      const notificacionesResponse = await listarNotificaciones({ limit: 50 });
       const notificaciones = notificacionesResponse.notificaciones || [];
 
       // Mapear cada notificación a una actividad
