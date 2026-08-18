@@ -156,7 +156,7 @@ export default function Login() {
                   transition={{ delay: 0.1, duration: 0.6 }}
                   className="text-slate-900 mb-3 text-2xl text-center font-bold tracking-tight"
                 >
-                  ¡BIENVENIDO A Benji!
+                  ¡Bienvenido a Benji!
                 </motion.p>
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
