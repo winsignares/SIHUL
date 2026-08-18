@@ -281,7 +281,7 @@ export default function RegistrarPagoAplicado() {
             <div>
               <h1 className="text-3xl font-black tracking-tight">Registrar Pago Aplicado</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-red-50/90">
-                Registra en SIHUL los pagos ya ejecutados en el banco, una vez confirmados previamente por Direccion Financiera en control bancario.
+                Registra en Benji los pagos ya ejecutados en el banco, una vez confirmados previamente por Direccion Financiera en control bancario.
               </p>
             </div>
           </div>
