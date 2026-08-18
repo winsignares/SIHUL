@@ -539,7 +539,7 @@ export default function AsistentesVirtuales() {
 
             {/* Área de Mensajes */}
             <div
-              className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 relative z-10 scrollbar-hidden chatbot-messages-bg"
+              className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 relative z-10 chatbot-messages-bg"
             >
               <AnimatePresence>
                 {mensajesActuales.map((mensaje, index) => (

@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.urls import path, re_path, include
+from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 
 from mysite.api_views import (
@@ -75,3 +76,11 @@ if settings.MICROSOFT_OAUTH_ENABLED:
     urlpatterns.insert(1, path('accounts/', include('allauth.urls')))
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# En local corremos gunicorn dentro de Docker sin nginx delante, así que nadie
+# sirve /static/. En producción nginx toma ese rol (ver nginx2.conf), por eso
+# esto solo se activa con DEBUG=True.
+if settings.DEBUG:
+    urlpatterns += [
+        re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+    ]

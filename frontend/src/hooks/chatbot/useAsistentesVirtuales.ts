@@ -233,6 +233,8 @@ export function useAsistentesVirtuales() {
                     asistenteActivoId?: string;
                 }>(cacheKey, activeToken);
 
+                let asistenteActivoIdPrevio: string | undefined;
+
                 if (cachedData?.asistentes?.length) {
                     const asistentesRehidratados = cachedData.asistentes.map(rehidratarAsistente);
                     setAsistentes(asistentesRehidratados);
@@ -241,12 +243,14 @@ export function useAsistentesVirtuales() {
                         : asistentesRehidratados[0];
                     if (cachedActive) {
                         setAsistenteActivo(cachedActive);
+                        asistenteActivoIdPrevio = cachedActive.id;
                     }
-                    return;
                 }
 
+                // Siempre revalidar contra el backend, aunque haya caché, para reflejar
+                // cambios hechos fuera de esta app (ej. edición de agentes vía Django admin).
                 // Usar endpoint público si no hay usuario autenticado
-                const response = user?.id 
+                const response = user?.id
                     ? await chatbotAPI.listarAgentes()
                     : await chatbotAPI.listarAgentesPublico();
 
@@ -259,8 +263,12 @@ export function useAsistentesVirtuales() {
                 const agentesUI = agentes.map(convertirAgenteAPI);
                 setAsistentes(agentesUI);
 
+                const activoPrevio = asistenteActivoIdPrevio
+                    ? agentesUI.find((a) => a.id === asistenteActivoIdPrevio)
+                    : undefined;
+
                 // Seleccionar el primer agente por defecto SI NO HAY MENSAJES GUARDADOS
-                if (agentesUI.length > 0 && Object.keys(mensajesGuardados).length === 0) {
+                if (agentesUI.length > 0 && Object.keys(mensajesGuardados).length === 0 && !activoPrevio) {
                     const primerAgente = agentesUI[0];
                     setAsistenteActivo(primerAgente);
                     setMensajes({
@@ -273,13 +281,13 @@ export function useAsistentesVirtuales() {
                         }]
                     });
                 } else if (agentesUI.length > 0) {
-                    // Si hay mensajes guardados, seleccionar el primer agente pero no sobrescribir mensajes
-                    setAsistenteActivo(agentesUI[0]);
+                    // Mantener el agente ya activo (con los datos frescos) o caer al primero
+                    setAsistenteActivo(activoPrevio || agentesUI[0]);
                 }
 
                 setSessionCacheData(cacheKey, activeToken, {
                     asistentes: agentesUI.map(serializarAsistente),
-                    asistenteActivoId: agentesUI[0]?.id
+                    asistenteActivoId: (activoPrevio || agentesUI[0])?.id
                 });
             } catch (error) {
                 console.error('Error al cargar agentes:', error);
