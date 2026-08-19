@@ -25,6 +25,8 @@ export interface OcupacionView {
   estado: string;
   tipo?: 'horario' | 'prestamo';
   prestamo?: PrestamoEspacio;
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
 }
 
 export interface SeleccionRango {

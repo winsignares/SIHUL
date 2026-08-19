@@ -243,6 +243,8 @@ def list_horarios_extendidos(request):
                 'dia_semana': i.dia_semana,
                 'hora_inicio': str(i.hora_inicio),
                 'hora_fin': str(i.hora_fin),
+                'fecha_inicio': str(i.fecha_inicio) if i.fecha_inicio else None,
+                'fecha_fin': str(i.fecha_fin) if i.fecha_fin else None,
                 'cantidad_estudiantes': i.cantidad_estudiantes,
                 'estado': i.estado,
             }
@@ -636,6 +638,8 @@ def horarios_por_periodo(request):
                 'dia_semana': h.dia_semana,
                 'hora_inicio': str(h.hora_inicio),
                 'hora_fin': str(h.hora_fin),
+                'fecha_inicio': str(h.fecha_inicio) if h.fecha_inicio else None,
+                'fecha_fin': str(h.fecha_fin) if h.fecha_fin else None,
                 'cantidad_estudiantes': h.cantidad_estudiantes,
                 'estado': h.estado,
             })

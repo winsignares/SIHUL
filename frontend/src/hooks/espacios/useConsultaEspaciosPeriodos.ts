@@ -55,7 +55,9 @@ function mapearHorariosAOcupacion(horarios: HorarioExtendido[]): OcupacionView[]
       docente: h.docente_nombre,
       grupo: h.grupo_nombre,
       estado: h.estado === 'pendiente' ? 'pendiente' : 'ocupado',
-      tipo: 'horario'
+      tipo: 'horario',
+      fechaInicio: h.fecha_inicio ?? null,
+      fechaFin: h.fecha_fin ?? null
     }));
 }
 

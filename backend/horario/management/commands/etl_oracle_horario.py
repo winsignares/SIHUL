@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import json
 import os
@@ -58,6 +59,24 @@ class Command(BaseCommand):
             return num if num >= 0 else default
         except (TypeError, ValueError, AttributeError):
             return default
+
+    @staticmethod
+    def _to_date(value):
+        if value is None:
+            return None
+        if isinstance(value, datetime.datetime):
+            return value.date()
+        if isinstance(value, datetime.date):
+            return value
+        text = str(value).strip()
+        if not text:
+            return None
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S', '%d/%m/%Y %H:%M:%S'):
+            try:
+                return datetime.datetime.strptime(text, fmt).date()
+            except ValueError:
+                continue
+        return None
 
     @staticmethod
     def _row_hash(payload):
@@ -207,6 +226,8 @@ class Command(BaseCommand):
                     'num_dia': self._first_present(data, ['num_dia', 'numero_dia', 'dia_numero']),
                     'hor_inicio': self._first_present(data, ['hor_inicio']),
                     'hor_fin': self._first_present(data, ['hor_fin']),
+                    'fec_inicio': self._first_present(data, ['fec_inicio']),
+                    'fec_fin': self._first_present(data, ['fec_fin']),
                 }
 
                 id_grupo = self._to_text(raw_payload['id_grupo'])
@@ -216,6 +237,8 @@ class Command(BaseCommand):
                 hor_fin = self._to_text(raw_payload['hor_fin'])
                 nom_aula = self._to_text(raw_payload['nom_aula'])
                 num_dia = self._to_non_negative_int(raw_payload['num_dia'], default=None)
+                fec_inicio = self._to_date(raw_payload['fec_inicio'])
+                fec_fin = self._to_date(raw_payload['fec_fin'])
 
                 row_hash = self._row_hash({'raw_payload': raw_payload, 'raw_row': data})
                 if id_grupo or id_asignatura or periodo:
@@ -237,6 +260,13 @@ class Command(BaseCommand):
                         'hor_inicio': hor_inicio,
                         'hor_fin': hor_fin,
                         'nom_aula': nom_aula,
+                        # FEC_INICIO/FEC_FIN forman parte de la identidad porque
+                        # Oracle puede reportar mas de una fila para la misma
+                        # sesion (grupo+asignatura+periodo+dia+hora+aula) cuando
+                        # esta se subdivide en rangos de fechas distintos dentro
+                        # del mismo periodo academico.
+                        'fec_inicio': fec_inicio.isoformat() if fec_inicio else None,
+                        'fec_fin': fec_fin.isoformat() if fec_fin else None,
                     }
                     external_id = f'HOR:{self._row_hash(key_payload)[:32]}'
                 else:
@@ -263,6 +293,8 @@ class Command(BaseCommand):
                     'num_dia_oracle': num_dia,
                     'hor_inicio_raw': hor_inicio or None,
                     'hor_fin_raw': hor_fin or None,
+                    'fec_inicio_oracle': fec_inicio,
+                    'fec_fin_oracle': fec_fin,
                     'raw_data': data,
                     'row_hash': row_hash,
                     'estado_registro': 'valido' if id_grupo or id_asignatura else 'sin_identificador',

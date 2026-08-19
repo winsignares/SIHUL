@@ -25,6 +25,8 @@ class Horario(models.Model):
     dia_semana = models.CharField(max_length=15)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
     cantidad_estudiantes = models.IntegerField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
@@ -35,6 +37,14 @@ class Horario(models.Model):
             CheckConstraint(
                 check=Q(hora_fin__gt=F('hora_inicio')),
                 name='chk_horario_horas',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(fecha_inicio__isnull=True)
+                    | Q(fecha_fin__isnull=True)
+                    | Q(fecha_fin__gte=F('fecha_inicio'))
+                ),
+                name='chk_horario_fechas',
             ),
         ]
         indexes = [
@@ -139,6 +149,8 @@ class StgOracleHorario(models.Model):
     num_dia_oracle = models.IntegerField(null=True, blank=True, db_index=True)
     hor_inicio_raw = models.TextField(null=True, blank=True)
     hor_fin_raw = models.TextField(null=True, blank=True)
+    fec_inicio_oracle = models.DateField(null=True, blank=True)
+    fec_fin_oracle = models.DateField(null=True, blank=True)
     raw_data = models.JSONField(default=dict, blank=True)
     row_hash = models.CharField(max_length=64, db_index=True)
     estado_registro = models.CharField(max_length=30, default='valido', db_index=True)

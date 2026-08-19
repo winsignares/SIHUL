@@ -292,6 +292,7 @@ export function useConsultaEspaciosFiltros() {
     limpiarFiltros,
     diasSemana,
     encabezadosDiasCronograma,
+    getFechaDiaCronograma,
     horas,
     isDiaBloqueado,
     isCeldaBloqueada,

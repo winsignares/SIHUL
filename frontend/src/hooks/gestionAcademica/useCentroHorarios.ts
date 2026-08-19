@@ -46,6 +46,8 @@ export interface HorarioExtendido {
     dia_semana: string;
     hora_inicio: string;
     hora_fin: string;
+    fecha_inicio?: string | null;
+    fecha_fin?: string | null;
     cantidad_estudiantes: number | null;
 }
 
@@ -157,6 +159,8 @@ export function useCentroHorarios() {
             dia_semana: h.dia_semana,
             hora_inicio: h.hora_inicio,
             hora_fin: h.hora_fin,
+            fecha_inicio: h.fecha_inicio,
+            fecha_fin: h.fecha_fin,
             cantidad_estudiantes: h.cantidad_estudiantes,
         }));
 
@@ -555,6 +559,8 @@ export function useCentroHorarios() {
             diaSemana: horarioEditado.dia_semana,
             horaInicio: horarioEditado.hora_inicio,
             horaFin: horarioEditado.hora_fin,
+            fechaInicio: horarioEditado.fecha_inicio,
+            fechaFin: horarioEditado.fecha_fin,
             cantidadEstudiantes: horarioEditado.cantidad_estudiantes,
             docenteNombre: horarioEditado.docente_nombre,
             espacioNombre: horarioEditado.espacio_nombre,

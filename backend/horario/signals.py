@@ -23,12 +23,24 @@ def hay_solapamiento(inicio1, fin1, inicio2, fin2):
     fin1_min = time_to_minutes(fin1)
     inicio2_min = time_to_minutes(inicio2)
     fin2_min = time_to_minutes(fin2)
-    
+
     return (
         (inicio1_min >= inicio2_min and inicio1_min < fin2_min) or
         (fin1_min > inicio2_min and fin1_min <= fin2_min) or
         (inicio1_min < inicio2_min and fin1_min > fin2_min)
     )
+
+
+def rangos_fecha_se_solapan(inicio1, fin1, inicio2, fin2):
+    """Verifica si dos rangos de fecha se solapan.
+
+    Un horario sin fecha_inicio/fecha_fin (p.ej. creado manualmente antes de
+    que Oracle reportara ese dato) se trata como vigente todo el periodo, para
+    preservar el comportamiento previo a la existencia de estos campos.
+    """
+    if inicio1 is None or fin1 is None or inicio2 is None or fin2 is None:
+        return True
+    return inicio1 <= fin2 and inicio2 <= fin1
 
 
 def normalizar_nombre_dia(nombre_dia):
@@ -48,9 +60,14 @@ def obtener_conflicto_prestamo(instance):
     dia_horario = normalizar_nombre_dia(instance.dia_semana)
     dias_semana = ('lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo')
 
+    # Si el horario trae su propio rango de fechas (dato de Oracle), acotamos
+    # la busqueda de prestamos a ese rango en lugar del periodo completo.
+    rango_inicio = instance.fecha_inicio or periodo.fecha_inicio
+    rango_fin = instance.fecha_fin or periodo.fecha_fin
+
     filtros = {
         'espacio_id': instance.espacio_id,
-        'fecha__range': (periodo.fecha_inicio, periodo.fecha_fin),
+        'fecha__range': (rango_inicio, rango_fin),
         'hora_inicio__lt': instance.hora_fin,
         'hora_fin__gt': instance.hora_inicio,
         'estado__in': ['Pendiente', 'Aprobado'],
@@ -85,6 +102,8 @@ def validar_horario(sender, instance, **kwargs):
                 horario_anterior.dia_semana == instance.dia_semana and
                 horario_anterior.hora_inicio == instance.hora_inicio and
                 horario_anterior.hora_fin == instance.hora_fin and
+                horario_anterior.fecha_inicio == instance.fecha_inicio and
+                horario_anterior.fecha_fin == instance.fecha_fin and
                 horario_anterior.asignatura_id == instance.asignatura_id and
                 horario_anterior.docente_id == instance.docente_id and
                 horario_anterior.cantidad_estudiantes == instance.cantidad_estudiantes):
@@ -111,6 +130,17 @@ def validar_horario(sender, instance, **kwargs):
     
     # Verificar solapamientos
     for horario_existente in horarios_mismo_espacio:
+        if not rangos_fecha_se_solapan(
+            instance.fecha_inicio,
+            instance.fecha_fin,
+            horario_existente.fecha_inicio,
+            horario_existente.fecha_fin
+        ):
+            # Mismos dia/hora/espacio pero rangos de fecha que no coinciden
+            # (p.ej. dos sesiones del mismo salon en semanas distintas del
+            # periodo): no hay conflicto real.
+            continue
+
         if hay_solapamiento(
             instance.hora_inicio,
             instance.hora_fin,

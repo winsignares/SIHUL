@@ -11,6 +11,8 @@ export interface HorarioValidable {
     dia_semana: string;
     hora_inicio: string;
     hora_fin: string;
+    fecha_inicio?: string | null;
+    fecha_fin?: string | null;
     cantidad_estudiantes?: number | null;
 }
 
@@ -35,6 +37,8 @@ export interface ValidacionHorarioInput {
     diaSemana: string;
     horaInicio: string;
     horaFin: string;
+    fechaInicio?: string | null;
+    fechaFin?: string | null;
     cantidadEstudiantes?: number | null;
     docenteNombre?: string;
     espacioNombre?: string;
@@ -69,6 +73,19 @@ const haySolapamiento = (inicio1: string, fin1: string, inicio2: string, fin2: s
     );
 };
 
+// Un horario sin fecha_inicio/fecha_fin (aun no sincronizado con Oracle o
+// creado manualmente) se trata como vigente todo el periodo, igual que el
+// comportamiento previo a la existencia de estos campos.
+const rangosFechaSeSolapan = (
+    inicio1?: string | null,
+    fin1?: string | null,
+    inicio2?: string | null,
+    fin2?: string | null
+) => {
+    if (!inicio1 || !fin1 || !inicio2 || !fin2) return true;
+    return inicio1 <= fin2 && inicio2 <= fin1;
+};
+
 export function useValidacionHorarios({ horarios, grupos, espacios }: UseValidacionHorariosParams) {
     const gruposPorId = new Map(
         grupos
@@ -93,6 +110,7 @@ export function useValidacionHorarios({ horarios, grupos, espacios }: UseValidac
                 if (h.docente_id !== input.docenteId) return false;
                 if (h.dia_semana.toLowerCase() !== diaNormalizado) return false;
                 if (!mismoPeriodo(h.grupo_id)) return false;
+                if (!rangosFechaSeSolapan(input.fechaInicio, input.fechaFin, h.fecha_inicio, h.fecha_fin)) return false;
 
                 return haySolapamiento(input.horaInicio, input.horaFin, h.hora_inicio, h.hora_fin);
             })
@@ -119,6 +137,7 @@ export function useValidacionHorarios({ horarios, grupos, espacios }: UseValidac
             if (h.espacio_id !== input.espacioId) return false;
             if (h.dia_semana.toLowerCase() !== diaNormalizado) return false;
             if (!mismoPeriodo(h.grupo_id)) return false;
+            if (!rangosFechaSeSolapan(input.fechaInicio, input.fechaFin, h.fecha_inicio, h.fecha_fin)) return false;
 
             return haySolapamiento(input.horaInicio, input.horaFin, h.hora_inicio, h.hora_fin);
         });

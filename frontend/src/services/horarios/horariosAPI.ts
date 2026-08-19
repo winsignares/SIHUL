@@ -88,6 +88,8 @@ export interface HorarioExtendido {
     dia_semana: string;
     hora_inicio: string;
     hora_fin: string;
+    fecha_inicio?: string | null;
+    fecha_fin?: string | null;
     cantidad_estudiantes: number | null;
     estado?: HorarioEstado;
     es_solicitud?: boolean; // Para diferenciar solicitudes de horarios aprobados

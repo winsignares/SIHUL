@@ -186,6 +186,8 @@ export function useConsultaEspaciosDatos({
           dia_semana: string;
           hora_inicio: string;
           hora_fin: string;
+          fecha_inicio?: string | null;
+          fecha_fin?: string | null;
           asignatura_nombre: string;
           docente_nombre: string;
           grupo_nombre: string;
@@ -200,6 +202,8 @@ export function useConsultaEspaciosDatos({
             dia_semana: h.dia_semana,
             hora_inicio: h.hora_inicio,
             hora_fin: h.hora_fin,
+            fecha_inicio: h.fecha_inicio,
+            fecha_fin: h.fecha_fin,
             asignatura_nombre: h.asignatura_nombre,
             docente_nombre: h.docente_nombre,
             grupo_nombre: h.grupo_nombre,
@@ -215,7 +219,7 @@ export function useConsultaEspaciosDatos({
           horaInicio: number,
           horaFin: number,
           materia: string
-        ): { id: number; estado?: 'aprobado' | 'pendiente' | 'rechazado' } | undefined => {
+        ): { id: number; estado?: 'aprobado' | 'pendiente' | 'rechazado'; fechaInicio?: string | null; fechaFin?: string | null } | undefined => {
           const diaNormalizado = normalizarDia(dia);
           const match = horariosExtendidos.find((h) => {
             const hDiaNormalizado = normalizarDia(h.dia_semana);
@@ -231,7 +235,7 @@ export function useConsultaEspaciosDatos({
             );
           });
           if (!match) return undefined;
-          return { id: match.id, estado: match.estado };
+          return { id: match.id, estado: match.estado, fechaInicio: match.fecha_inicio, fechaFin: match.fecha_fin };
         };
 
         const allHorarios: OcupacionView[] = [];
@@ -281,7 +285,9 @@ export function useConsultaEspaciosDatos({
               docente: h.docente,
               grupo: h.grupo,
               estado: horarioMeta?.estado === 'pendiente' ? 'pendiente' : 'ocupado',
-              tipo: 'horario'
+              tipo: 'horario',
+              fechaInicio: horarioMeta?.fechaInicio ?? null,
+              fechaFin: horarioMeta?.fechaFin ?? null
             });
           });
 

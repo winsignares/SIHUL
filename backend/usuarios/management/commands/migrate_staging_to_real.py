@@ -1386,6 +1386,9 @@ class Command(BaseCommand):
                     if cantidad is None:
                         cantidad = self._to_int(raw.get('cantidad_estudiantes'), default=None)
 
+                    fecha_inicio = stg_horario.fec_inicio_oracle
+                    fecha_fin = stg_horario.fec_fin_oracle
+
                     # Identidad de un horario = la misma sesion de clase (grupo +
                     # asignatura + dia + hora + espacio). El espacio SI forma
                     # parte de la identidad: VW_HORARIO puede traer, para la
@@ -1446,6 +1449,8 @@ class Command(BaseCommand):
                             **identidad,
                             docente=docente,
                             cantidad_estudiantes=cantidad,
+                            fecha_inicio=fecha_inicio,
+                            fecha_fin=fecha_fin,
                             estado='aprobado',
                             origen='SIUL',
                             oracle_external_id=oracle_external_id or None,
@@ -1466,6 +1471,12 @@ class Command(BaseCommand):
                         changed = True
                     if horario.cantidad_estudiantes != cantidad:
                         horario.cantidad_estudiantes = cantidad
+                        changed = True
+                    if horario.fecha_inicio != fecha_inicio:
+                        horario.fecha_inicio = fecha_inicio
+                        changed = True
+                    if horario.fecha_fin != fecha_fin:
+                        horario.fecha_fin = fecha_fin
                         changed = True
                     if horario.estado != 'aprobado':
                         horario.estado = 'aprobado'

@@ -13,6 +13,8 @@ class HorarioAdmin(admin.ModelAdmin):
         'dia_semana',
         'hora_inicio',
         'hora_fin',
+        'fecha_inicio',
+        'fecha_fin',
         'estado',
     )
     list_filter = ('dia_semana', 'estado', 'espacio__sede')

@@ -117,6 +117,8 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             dia_semana: h.dia_semana,
             hora_inicio: h.hora_inicio,
             hora_fin: h.hora_fin,
+            fecha_inicio: h.fecha_inicio,
+            fecha_fin: h.fecha_fin,
             cantidad_estudiantes: h.cantidad_estudiantes,
         }));
 

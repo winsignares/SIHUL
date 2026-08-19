@@ -57,6 +57,10 @@ def validar_disponibilidad_prestamo(prestamo):
         estado__in=['pendiente', 'aprobado'],
     ).filter(
         Q(hora_inicio__lt=prestamo.hora_fin, hora_fin__gt=prestamo.hora_inicio)
+    ).filter(
+        Q(fecha_inicio__isnull=True) | Q(fecha_inicio__lte=prestamo.fecha)
+    ).filter(
+        Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=prestamo.fecha)
     ).order_by('hora_inicio').first()
 
     if conflicto_horario:

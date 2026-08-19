@@ -111,8 +111,12 @@ def check_espacio_disponible(espacio_id, fecha, hora_inicio, hora_fin, prestamo_
             hora_inicio__lt=hora_fin,
             hora_fin__gt=hora_inicio,
             estado__in=['pendiente', 'aprobado']
+        ).filter(
+            Q(fecha_inicio__isnull=True) | Q(fecha_inicio__lte=fecha)
+        ).filter(
+            Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha)
         )
-        
+
         if horarios_conflicto.exists():
             conflicto = horarios_conflicto.first()
             return False, f"El espacio está ocupado por clase de {conflicto.asignatura.nombre} ({conflicto.hora_inicio} - {conflicto.hora_fin})"
