@@ -1168,6 +1168,7 @@ class Command(BaseCommand):
         espacio_autocreado = 0
         espacio_autocreado_sede_no_resuelta = 0
         hora_default = 0
+        fechas_invertidas = 0
         duplicados_horario_reutilizados = 0
         horarios_huerfanos_eliminados = 0
         horario_ids_procesados = set()
@@ -1388,6 +1389,14 @@ class Command(BaseCommand):
 
                     fecha_inicio = stg_horario.fec_inicio_oracle
                     fecha_fin = stg_horario.fec_fin_oracle
+                    if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+                        # Oracle reporta ocasionalmente FEC_FIN anterior a
+                        # FEC_INICIO para algunas sesiones (dato invalido en
+                        # el origen). Se asume que ambos valores vinieron
+                        # intercambiados y se corrigen invirtiendolos, en vez
+                        # de descartar el rango o romper la migracion.
+                        fecha_inicio, fecha_fin = fecha_fin, fecha_inicio
+                        fechas_invertidas += 1
 
                     # Identidad de un horario = la misma sesion de clase (grupo +
                     # asignatura + dia + hora + espacio). El espacio SI forma
@@ -1547,6 +1556,7 @@ class Command(BaseCommand):
                 f'Espacio no encontrado: {espacio_no_encontrado}, '
                 f'Espacio autocreado fallback: {espacio_autocreado}, '
                 f'Espacio fallback sin sede resuelta: {espacio_autocreado_sede_no_resuelta}, '
-                f'Horas por defecto aplicadas: {hora_default}'
+                f'Horas por defecto aplicadas: {hora_default}, '
+                f'Fechas invertidas corregidas: {fechas_invertidas}'
             )
         )
