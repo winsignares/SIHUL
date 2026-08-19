@@ -275,6 +275,95 @@ def _generar_fechas_ocurrencias(fecha_base, recurrencia):
     return [fecha_base]
 
 
+def _generar_fechas_validacion(fecha_base, recurrencia, horizonte_dias=365, limite_ocurrencias=200):
+    """
+    Calcula el conjunto completo de fechas que abarcaria la serie recurrente,
+    solo para efectos de VALIDAR disponibilidad antes de crear el registro
+    base (no se usa para persistir filas: eso lo sigue decidiendo
+    _generar_fechas_ocurrencias, que hoy siempre devuelve un unico registro).
+
+    Antes de que Horario tuviera fecha_inicio/fecha_fin, validar solo la
+    fecha base bastaba: si el espacio estaba libre un dia de la semana dado,
+    lo estaba TODAS las semanas del periodo. Ahora la disponibilidad de un
+    espacio puede variar semana a semana (una clase puede arrancar a mitad
+    de semestre), asi que un prestamo recurrente aprobado solo contra su
+    fecha base podria chocar en silencio con una clase que arranca en una
+    ocurrencia futura de la serie. Por eso validamos toda la serie aqui,
+    aunque solo se persista un registro.
+
+    `horizonte_dias` y `limite_ocurrencias` acotan series sin fecha de fin
+    ('never') para evitar bucles sin limite.
+    """
+    if not recurrencia['es_recurrente'] or recurrencia['frecuencia'] == 'none':
+        return [fecha_base]
+
+    frecuencia = recurrencia['frecuencia']
+    intervalo = max(1, recurrencia['intervalo'])
+    fin_tipo = recurrencia['fin_repeticion_tipo']
+    fin_fecha = recurrencia['fin_repeticion_fecha']
+    fin_ocurrencias = recurrencia['fin_repeticion_ocurrencias']
+
+    horizonte = fecha_base + datetime.timedelta(days=horizonte_dias)
+    limite_fecha = fin_fecha if (fin_tipo == 'until_date' and fin_fecha) else horizonte
+    limite_fecha = min(limite_fecha, horizonte)
+    limite_count = fin_ocurrencias if (fin_tipo == 'count' and fin_ocurrencias) else limite_ocurrencias
+    limite_count = min(limite_count, limite_ocurrencias)
+
+    fechas = []
+
+    if frecuencia == 'daily':
+        fecha = fecha_base
+        while fecha <= limite_fecha and len(fechas) < limite_count:
+            fechas.append(fecha)
+            fecha += datetime.timedelta(days=intervalo)
+
+    elif frecuencia == 'weekdays':
+        fecha = fecha_base
+        while fecha <= limite_fecha and len(fechas) < limite_count:
+            if fecha.weekday() < 5:
+                fechas.append(fecha)
+            fecha += datetime.timedelta(days=1)
+
+    elif frecuencia == 'weekly':
+        # dias_semana usa la misma convencion que date.weekday() (0=Lunes..6=Domingo).
+        dias_semana = recurrencia['dias_semana'] or [fecha_base.weekday()]
+        lunes_base = fecha_base - datetime.timedelta(days=fecha_base.weekday())
+        semana = 0
+        while len(fechas) < limite_count:
+            lunes_semana = lunes_base + datetime.timedelta(weeks=semana * intervalo)
+            if lunes_semana > limite_fecha or semana > 1000:
+                break
+            for dia in dias_semana:
+                candidata = lunes_semana + datetime.timedelta(days=dia)
+                if candidata < fecha_base or candidata > limite_fecha:
+                    continue
+                fechas.append(candidata)
+                if len(fechas) >= limite_count:
+                    break
+            semana += 1
+        fechas.sort()
+
+    elif frecuencia == 'monthly':
+        i = 0
+        while len(fechas) < limite_count:
+            fecha = _add_months(fecha_base, i * intervalo)
+            if fecha > limite_fecha:
+                break
+            fechas.append(fecha)
+            i += 1
+
+    elif frecuencia == 'yearly':
+        i = 0
+        while len(fechas) < limite_count:
+            fecha = _add_years(fecha_base, i * intervalo)
+            if fecha > limite_fecha:
+                break
+            fechas.append(fecha)
+            i += 1
+
+    return fechas or [fecha_base]
+
+
 def _recurrencia_payload(prestamo):
     return {
         'es_recurrente': prestamo.es_recurrente,
@@ -401,8 +490,12 @@ def create_prestamo(request):
         if not fechas_ocurrencias:
             return JsonResponse({"error": "No se generaron ocurrencias con la configuración enviada"}, status=400)
 
-        # Validar disponibilidad para todas las ocurrencias antes de guardar
-        for fecha_ocurrencia in fechas_ocurrencias:
+        # Validar disponibilidad para TODA la serie recurrente (no solo la
+        # fecha base): aunque hoy solo se persiste un registro por prestamo,
+        # aprobar sin revisar el resto de la serie podria chocar en silencio
+        # con una clase que arranca mas adelante en el semestre (ver
+        # _generar_fechas_validacion).
+        for fecha_ocurrencia in _generar_fechas_validacion(f, recurrencia):
             is_available, error_msg = check_espacio_disponible(espacio_id, fecha_ocurrencia, hi, hf)
             if not is_available:
                 return JsonResponse({
@@ -1177,7 +1270,9 @@ def create_prestamo_publico(request):
         if not fechas_ocurrencias:
             return JsonResponse({"error": "No se generaron ocurrencias con la configuración enviada"}, status=400)
 
-        for fecha_ocurrencia in fechas_ocurrencias:
+        # Ver comentario equivalente en create_prestamo: se valida toda la
+        # serie recurrente, no solo la fecha base.
+        for fecha_ocurrencia in _generar_fechas_validacion(f, recurrencia):
             is_available, error_msg = check_espacio_disponible(espacio_id, fecha_ocurrencia, hi, hf, es_publico=True)
             if not is_available:
                 return JsonResponse({
