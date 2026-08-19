@@ -1429,6 +1429,23 @@ class Command(BaseCommand):
                         'hora_fin': hora_fin,
                         'espacio': espacio,
                     }
+                    # Clave de identidad (no el pk del Horario) para acumular
+                    # fecha_inicio/fecha_fin: cuando existen Horario duplicados
+                    # para la misma identidad, cada fila de staging puede
+                    # terminar tocando un duplicado distinto (ver reutilizacion
+                    # de `coincidencias` mas abajo). Si acumularamos por
+                    # horario.id, cada duplicado veria solo una porcion de las
+                    # fechas. Acumulando por identidad, todas las filas de la
+                    # misma serie suman al mismo calculo sin importar a cual
+                    # duplicado le toque cada una.
+                    identidad_key = (
+                        grupo.id,
+                        asignatura.id,
+                        dia_semana,
+                        hora_inicio,
+                        hora_fin,
+                        espacio.id if espacio else None,
+                    )
                     oracle_external_id = self._to_text(stg_horario.external_id)
 
                     if dry_run:
@@ -1480,25 +1497,25 @@ class Command(BaseCommand):
 
                     if created:
                         horarios_creados += 1
-                        fecha_rango_por_horario[horario.id] = [fecha_inicio, fecha_fin]
+                        fecha_rango_por_horario[identidad_key] = [fecha_inicio, fecha_fin]
                         continue
 
                     # Acumular la fecha_inicio minima y fecha_fin maxima vistas
-                    # en ESTE run para este Horario (ver comentario junto a la
-                    # declaracion de fecha_rango_por_horario). La primera vez
-                    # que se toca un Horario preexistente en este run, se
-                    # reinicia el rango desde cero (se ignora lo que tenia
-                    # guardado de una corrida anterior) para que una serie que
-                    # cambio de fechas no arrastre limites obsoletos.
-                    if horario.id not in fecha_rango_por_horario:
-                        fecha_rango_por_horario[horario.id] = [fecha_inicio, fecha_fin]
+                    # en ESTE run para esta identidad (ver comentario junto a
+                    # identidad_key). La primera vez que se toca una identidad
+                    # preexistente en este run, se reinicia el rango desde cero
+                    # (se ignora lo que tenia guardado de una corrida anterior)
+                    # para que una serie que cambio de fechas no arrastre
+                    # limites obsoletos.
+                    if identidad_key not in fecha_rango_por_horario:
+                        fecha_rango_por_horario[identidad_key] = [fecha_inicio, fecha_fin]
                     else:
-                        rango = fecha_rango_por_horario[horario.id]
+                        rango = fecha_rango_por_horario[identidad_key]
                         if fecha_inicio and (rango[0] is None or fecha_inicio < rango[0]):
                             rango[0] = fecha_inicio
                         if fecha_fin and (rango[1] is None or fecha_fin > rango[1]):
                             rango[1] = fecha_fin
-                    fecha_inicio_final, fecha_fin_final = fecha_rango_por_horario[horario.id]
+                    fecha_inicio_final, fecha_fin_final = fecha_rango_por_horario[identidad_key]
 
                     # espacio ya no se reasigna aqui: forma parte de `identidad`,
                     # asi que coincidencias ya viene filtrado por el mismo espacio.
