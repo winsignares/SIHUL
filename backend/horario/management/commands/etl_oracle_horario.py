@@ -53,6 +53,16 @@ class Command(BaseCommand):
         return None
 
     @staticmethod
+    def _json_safe(value):
+        if isinstance(value, (datetime.datetime, datetime.date)):
+            return value.isoformat()
+        return value
+
+    @classmethod
+    def _json_safe_dict(cls, data):
+        return {key: cls._json_safe(value) for key, value in data.items()}
+
+    @staticmethod
     def _to_non_negative_int(value, default=None):
         try:
             num = int(float(str(value).strip()))
@@ -295,7 +305,7 @@ class Command(BaseCommand):
                     'hor_fin_raw': hor_fin or None,
                     'fec_inicio_oracle': fec_inicio,
                     'fec_fin_oracle': fec_fin,
-                    'raw_data': data,
+                    'raw_data': self._json_safe_dict(data),
                     'row_hash': row_hash,
                     'estado_registro': 'valido' if id_grupo or id_asignatura else 'sin_identificador',
                 }
