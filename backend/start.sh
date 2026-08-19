@@ -5,7 +5,7 @@ set -e
 # Ejecuta migraciones y seeders antes de iniciar el servidor.
 
 echo "=========================================="
-echo "SIHUL Backend - Iniciando servicio..."
+echo "Benji Backend - Iniciando servicio..."
 echo "=========================================="
 
 echo "Esperando base de datos..."

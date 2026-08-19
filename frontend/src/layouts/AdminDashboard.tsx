@@ -130,7 +130,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                       exit={{ opacity: 0, width: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <h1 className="text-white whitespace-nowrap">SIHUL</h1>
+                      <h1 className="text-white whitespace-nowrap">Benji</h1>
                       <p className="text-red-300 whitespace-nowrap text-xs">{getRoleLabel()}</p>
                     </motion.div>
                   )}
@@ -380,7 +380,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center shadow-lg">
               <GraduationCap className="w-6 h-6 text-red-900" />
             </div>
-            <h1 className="text-white font-bold">SIHUL</h1>
+            <h1 className="text-white font-bold">Benji</h1>
           </div>
           <div className="w-10" />
         </div>

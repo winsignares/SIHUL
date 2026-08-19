@@ -1735,7 +1735,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 else:
                     zip_file.writestr(
                         f'{zip_name}.txt',
-                        'No fue posible leer este archivo desde el almacenamiento, pero existe el registro documental en SIHUL.',
+                        'No fue posible leer este archivo desde el almacenamiento, pero existe el registro documental en Benji.',
                     )
 
         content = output.getvalue()
@@ -2506,7 +2506,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         pdf.setFont('Helvetica-Bold', 16)
         pdf.drawString(40, height - 50, 'Comprobante de Egreso')
         pdf.setFont('Helvetica', 9)
-        pdf.drawString(40, height - 66, 'Sistema SIHUL - Tesoreria')
+        pdf.drawString(40, height - 66, 'Sistema Benji - Tesoreria')
 
         # Metadatos principales
         pdf.setFillColor(colors.black)

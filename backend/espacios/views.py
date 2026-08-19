@@ -2433,7 +2433,7 @@ def generar_pdf_reporte_ocupacion(request):
         espacios_table.setStyle(TableStyle(espacios_table_style))
         elements.append(espacios_table)
         elements.append(Spacer(1, 0.1 * inch))
-        elements.append(Paragraph('Generado por SIHUL', body_small_style))
+        elements.append(Paragraph('Generado por Benji', body_small_style))
 
         doc.build(elements)
         buffer.seek(0)
