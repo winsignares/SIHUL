@@ -11,10 +11,13 @@ export type RepeatQuickOption =
   | 'daily'
   | 'weekly_current'
   | 'monthly_date'
-  | 'yearly_date'
   | 'custom';
 
-export type CustomPeriod = 'day' | 'week' | 'month' | 'year';
+// 'year' se descarta a propósito: un periodo académico dura un semestre,
+// nunca un año completo, así que una repetición anual jamás cabría una
+// segunda vez dentro del periodo (ver backend/prestamos/views.py,
+// _fin_periodo_vigente).
+export type CustomPeriod = 'day' | 'week' | 'month';
 
 export interface PeriodoRango {
   fecha_inicio: string;
@@ -42,15 +45,11 @@ export const mesesRestantesEnPeriodo = (fecha: string, periodo: PeriodoRango): n
   return Math.max(0, meses);
 };
 
-/** Años completos restantes desde `fecha` hasta el fin del periodo. */
-export const aniosRestantesEnPeriodo = (fecha: string, periodo: PeriodoRango): number =>
-  Math.floor(mesesRestantesEnPeriodo(fecha, periodo) / 12);
-
 /**
  * Indica si una opción rápida de repetición ("Cada día", "Cada semana...",
- * "Cada mes...", "Anualmente...") cabe al menos una vez más dentro de lo
- * que queda del periodo. 'none' y 'custom' siempre están permitidas
- * (custom se valida aparte con `maxIntervaloPermitido`).
+ * "Cada mes...") cabe al menos una vez más dentro de lo que queda del
+ * periodo. 'none' y 'custom' siempre están permitidas (custom se valida
+ * aparte con `maxIntervaloPermitido`).
  */
 export const opcionRapidaPermitida = (
   option: RepeatQuickOption,
@@ -64,13 +63,12 @@ export const opcionRapidaPermitida = (
   if (option === 'daily') return dias >= 1;
   if (option === 'weekly_current') return dias >= 7;
   if (option === 'monthly_date') return mesesRestantesEnPeriodo(fecha, periodo) >= 1;
-  if (option === 'yearly_date') return aniosRestantesEnPeriodo(fecha, periodo) >= 1;
   return true;
 };
 
 /**
  * Máximo intervalo permitido para el modo "Personalizar" según la unidad
- * elegida (día/semana/mes/año), de modo que la repetición no exceda el
+ * elegida (día/semana/mes), de modo que la repetición no exceda el
  * periodo. Devuelve null si no hay fecha/periodo para acotar (sin límite
  * adicional al que ya impone la UI).
  */
@@ -83,8 +81,7 @@ export const maxIntervaloPermitido = (
 
   if (customPeriod === 'day') return Math.max(1, diasRestantesEnPeriodo(fecha, periodo));
   if (customPeriod === 'week') return Math.max(1, Math.floor(diasRestantesEnPeriodo(fecha, periodo) / 7));
-  if (customPeriod === 'month') return Math.max(1, mesesRestantesEnPeriodo(fecha, periodo));
-  return Math.max(1, aniosRestantesEnPeriodo(fecha, periodo));
+  return Math.max(1, mesesRestantesEnPeriodo(fecha, periodo));
 };
 
 /**
@@ -108,10 +105,10 @@ export const fechaFinPeriodo = (periodo: PeriodoRango | null): string | null =>
 
 /** Días aproximados entre ocurrencias, usado para acotar "N repeticiones". */
 export const diasPorOcurrencia = (
-  frecuencia: 'daily' | 'weekly' | 'monthly' | 'yearly',
+  frecuencia: 'daily' | 'weekly' | 'monthly',
   intervalo: number
 ): number => {
-  const unidad = frecuencia === 'daily' ? 1 : frecuencia === 'weekly' ? 7 : frecuencia === 'monthly' ? 30 : 365;
+  const unidad = frecuencia === 'daily' ? 1 : frecuencia === 'weekly' ? 7 : 30;
   return unidad * Math.max(1, intervalo);
 };
 
@@ -128,15 +125,14 @@ export const maxOcurrenciasPorOpcion = (
 ): number | null => {
   if (!fecha || !periodo) return null;
 
-  let frecuencia: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  let frecuencia: 'daily' | 'weekly' | 'monthly';
   let intervaloEfectivo = 1;
 
   if (option === 'daily') frecuencia = 'daily';
   else if (option === 'weekly_current') frecuencia = 'weekly';
   else if (option === 'monthly_date') frecuencia = 'monthly';
-  else if (option === 'yearly_date') frecuencia = 'yearly';
   else if (option === 'custom') {
-    frecuencia = customPeriod === 'day' ? 'daily' : customPeriod === 'week' ? 'weekly' : customPeriod === 'month' ? 'monthly' : 'yearly';
+    frecuencia = customPeriod === 'day' ? 'daily' : customPeriod === 'week' ? 'weekly' : 'monthly';
     intervaloEfectivo = intervalo;
   } else {
     return null;

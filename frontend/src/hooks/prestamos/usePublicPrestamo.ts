@@ -19,7 +19,6 @@ import {
 } from '../../utils/recurrenceLimits';
 
 const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 const getWeekdayMondayIndex = (dateStr?: string): number => {
     if (!dateStr) return 0;
@@ -173,16 +172,12 @@ export function usePublicPrestamo() {
         const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(formData.fecha)] || 'lunes';
         const date = formData.fecha ? new Date(`${formData.fecha}T00:00:00`) : null;
         const dayOfMonth = date ? date.getDate() : null;
-        const yearlyText = date
-            ? `${dayOfMonth} de ${MONTH_NAMES[date.getMonth()]}`
-            : 'la fecha seleccionada';
 
         const opciones = [
             { value: 'none' as const, label: 'No se repite' },
             { value: 'daily' as const, label: 'Cada día' },
             { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
             { value: 'monthly_date' as const, label: `Cada mes el día ${dayOfMonth || 'X'}` },
-            { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
             { value: 'custom' as const, label: 'Personalizar' },
         ];
 
@@ -216,7 +211,6 @@ export function usePublicPrestamo() {
     const recurrenceSummary = (() => {
         const date = formData.fecha ? new Date(`${formData.fecha}T00:00:00`) : null;
         const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(formData.fecha)] || 'lunes';
-        const yearlyText = date ? `${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}` : 'fecha seleccionada';
 
         const getFinishText = () => {
             if (finRepeticionTipo === 'until_date' && finRepeticionFecha) {
@@ -235,12 +229,9 @@ export function usePublicPrestamo() {
             const dayOfMonth = date ? date.getDate() : 'X';
             return `Se repetirá cada mes el día ${dayOfMonth}${getFinishText()}.`;
         }
-        if (repeatOption === 'yearly_date') return `Se repetirá anualmente el ${yearlyText}${getFinishText()}.`;
-
         const periodText =
             customPeriod === 'day' ? 'día' :
-            customPeriod === 'week' ? 'semana' :
-            customPeriod === 'month' ? 'mes' : 'año';
+            customPeriod === 'week' ? 'semana' : 'mes';
 
         let detail = `Se repetirá cada ${intervalo} ${periodText}${intervalo > 1 ? 's' : ''}`;
         if (customPeriod === 'week' && diasSemana.length > 0) {
@@ -288,14 +279,9 @@ export function usePublicPrestamo() {
                 ...baseEnd,
             };
         }
-        if (repeatOption === 'yearly_date') {
-            return { es_recurrente: true, frecuencia: 'yearly', intervalo: 1, ...baseEnd };
-        }
-
         const freq =
             customPeriod === 'day' ? 'daily' :
-            customPeriod === 'week' ? 'weekly' :
-            customPeriod === 'month' ? 'monthly' : 'yearly';
+            customPeriod === 'week' ? 'weekly' : 'monthly';
 
         return {
             es_recurrente: true,

@@ -53,13 +53,14 @@ type RepeatQuickOption =
   | 'daily'
   | 'weekly_current'
   | 'monthly_date'
-  | 'yearly_date'
   | 'custom';
 
-type CustomPeriod = 'day' | 'week' | 'month' | 'year';
+// 'year' se descarta a propósito: un periodo académico dura un semestre,
+// nunca un año completo, así que una repetición anual jamás cabría una
+// segunda vez dentro del periodo.
+type CustomPeriod = 'day' | 'week' | 'month';
 
 const WEEKDAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 /** Nombre de columna del cronograma → Date.getDay() (0=dom … 6=sáb). */
 const GRID_DIA_A_JS_WEEKDAY: Record<string, number> = {
@@ -364,7 +365,7 @@ export default function ConsultaEspacios() {
     motivo: '',
     telefono: '',
     es_recurrente: false,
-    frecuencia: 'none' as 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays',
+    frecuencia: 'none' as 'none' | 'daily' | 'weekly' | 'monthly' | 'weekdays',
     intervalo: 1,
     dias_semana: [] as number[],
     fin_repeticion_tipo: 'never' as 'never' | 'until_date' | 'count',
@@ -456,11 +457,6 @@ export default function ConsultaEspacios() {
     const fechaBase = nuevaSolicitudData?.fecha;
     const diaG = nuevaSolicitudData?.diaSemana;
     const weekdayName = WEEKDAY_NAMES[getWeekdayMondayIndex(fechaBase, diaG)] || 'lunes';
-    const date = fechaBase ? new Date(`${fechaBase}T12:00:00`) : null;
-    const dayOfMonth = date ? date.getDate() : null;
-    const yearlyText = date
-      ? `${dayOfMonth} de ${MONTH_NAMES[date.getMonth()]}`
-      : 'la fecha seleccionada';
 
     const ordinalWeekdayText = getOrdinalWeekdayText(fechaBase, diaG);
 
@@ -469,7 +465,6 @@ export default function ConsultaEspacios() {
       { value: 'daily' as const, label: 'Cada día' },
       { value: 'weekly_current' as const, label: `Cada semana el ${weekdayName}` },
       { value: 'monthly_date' as const, label: `Cada mes el ${ordinalWeekdayText}` },
-      { value: 'yearly_date' as const, label: `Anualmente el ${yearlyText}` },
       { value: 'custom' as const, label: 'Personalizar' }
     ];
 
@@ -569,24 +564,12 @@ export default function ConsultaEspacios() {
       };
     }
 
-    if (repeatOption === 'yearly_date') {
-      return {
-        es_recurrente: true,
-        frecuencia: 'yearly' as const,
-        intervalo: 1,
-        dias_semana: [] as number[],
-        ...baseEnd
-      };
-    }
-
     const customFrequency =
       customPeriod === 'day'
         ? 'daily' as const
         : customPeriod === 'week'
           ? 'weekly' as const
-          : customPeriod === 'month'
-            ? 'monthly' as const
-            : 'yearly' as const;
+          : 'monthly' as const;
 
     return {
       es_recurrente: true,
@@ -614,12 +597,7 @@ export default function ConsultaEspacios() {
       const ordinalText = getOrdinalWeekdayText(nuevaSolicitudData?.fecha, nuevaSolicitudData?.diaSemana);
       return `Se repetirá cada mes el ${ordinalText}${finishText}.`;
     }
-    if (repeatOption === 'yearly_date' && nuevaSolicitudData?.fecha) {
-      const d = new Date(`${nuevaSolicitudData.fecha}T00:00:00`);
-      return `Se repetirá anualmente el ${d.getDate()} de ${MONTH_NAMES[d.getMonth()]}${finishText}.`;
-    }
-
-    const periodText = customPeriod === 'day' ? 'día' : customPeriod === 'week' ? 'semana' : customPeriod === 'month' ? 'mes' : 'año';
+    const periodText = customPeriod === 'day' ? 'día' : customPeriod === 'week' ? 'semana' : 'mes';
     const daysText =
       customPeriod === 'week' && formData.dias_semana.length > 0
         ? ` los ${formData.dias_semana.map((d) => WEEKDAY_NAMES[d]).join(', ')}`
@@ -638,7 +616,7 @@ export default function ConsultaEspacios() {
     if (repeatOption === 'none') return dates;
 
     let interval = 1;
-    let frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'daily';
+    let frequency: 'daily' | 'weekly' | 'monthly' = 'daily';
     let selectedDays: number[] = [];
 
     // Configurar parámetros según la opción seleccionada
@@ -656,14 +634,9 @@ export default function ConsultaEspacios() {
         frequency = 'monthly';
         interval = 1;
         break;
-      case 'yearly_date':
-        frequency = 'yearly';
-        interval = 1;
-        break;
       case 'custom':
-        frequency = customPeriod === 'day' ? 'daily' : 
-                   customPeriod === 'week' ? 'weekly' : 
-                   customPeriod === 'month' ? 'monthly' : 'yearly';
+        frequency = customPeriod === 'day' ? 'daily' :
+                   customPeriod === 'week' ? 'weekly' : 'monthly';
         interval = Math.max(1, formData.intervalo);
         selectedDays = frequency === 'weekly' ? formData.dias_semana : [];
         break;
@@ -727,11 +700,6 @@ export default function ConsultaEspacios() {
         case 'monthly':
           nextDate = new Date(currentDate);
           nextDate.setMonth(nextDate.getMonth() + interval);
-          break;
-
-        case 'yearly':
-          nextDate = new Date(currentDate);
-          nextDate.setFullYear(nextDate.getFullYear() + interval);
           break;
       }
 
@@ -2434,7 +2402,7 @@ export default function ConsultaEspacios() {
                           }}
                         />
                         <p className="text-xs text-slate-500">
-                          Máximo: {customPeriod === 'day' ? '31 días' : customPeriod === 'week' ? '3 semanas' : customPeriod === 'month' ? '11 meses' : '5 años'}
+                          Máximo: {customPeriod === 'day' ? '31 días' : customPeriod === 'week' ? '3 semanas' : '11 meses'}
                           {intervaloMaximoPeriodo != null && (
                             <> (limitado a {intervaloMaximoPeriodo} por lo que resta del periodo académico)</>
                           )}
@@ -2451,7 +2419,6 @@ export default function ConsultaEspacios() {
                             <SelectItem value="day">Día</SelectItem>
                             <SelectItem value="week">Semana</SelectItem>
                             <SelectItem value="month">Mes</SelectItem>
-                            <SelectItem value="year">Año</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

@@ -517,7 +517,6 @@ export default function PublicPrestamo() {
                                                     <SelectItem value="day">Día</SelectItem>
                                                     <SelectItem value="week">Semana</SelectItem>
                                                     <SelectItem value="month">Mes</SelectItem>
-                                                    <SelectItem value="year">Año</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

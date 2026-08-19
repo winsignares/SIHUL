@@ -22,7 +22,6 @@ import {
   diasPorOcurrencia,
   diasRestantesEnPeriodo,
   mesesRestantesEnPeriodo,
-  aniosRestantesEnPeriodo,
   fechaFinPeriodo,
   type CustomPeriod,
 } from '../../utils/recurrenceLimits';
@@ -102,8 +101,7 @@ export default function PrestamosEspacios() {
     const customPeriod: CustomPeriod =
       frecuencia === 'daily' || frecuencia === 'weekdays' ? 'day'
         : frecuencia === 'weekly' ? 'week'
-        : frecuencia === 'monthly' ? 'month'
-        : 'year';
+        : 'month';
     return maxIntervaloPermitido(customPeriod, fechaEnEdicion, periodoEdicion);
   };
 
@@ -113,7 +111,6 @@ export default function PrestamosEspacios() {
     if (frecuencia === 'daily' || frecuencia === 'weekdays') return diasRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 1;
     if (frecuencia === 'weekly') return diasRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 7;
     if (frecuencia === 'monthly') return mesesRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 1;
-    if (frecuencia === 'yearly') return aniosRestantesEnPeriodo(fechaEnEdicion, periodoEdicion) >= 1;
     return true;
   };
 
@@ -121,8 +118,7 @@ export default function PrestamosEspacios() {
     if (!fechaEnEdicion || !periodoEdicion) return null;
     const dias = frecuencia === 'daily' || frecuencia === 'weekdays' ? diasPorOcurrencia('daily', intervalo)
       : frecuencia === 'weekly' ? diasPorOcurrencia('weekly', intervalo)
-      : frecuencia === 'monthly' ? diasPorOcurrencia('monthly', intervalo)
-      : diasPorOcurrencia('yearly', intervalo);
+      : diasPorOcurrencia('monthly', intervalo);
     return maxOcurrenciasEnPeriodo(dias, fechaEnEdicion, periodoEdicion);
   };
 
@@ -729,7 +725,6 @@ export default function PrestamosEspacios() {
                                                 <SelectItem value="daily" disabled={!frecuenciaCabeEnPeriodo('daily')}>Diario</SelectItem>
                                                 <SelectItem value="weekly" disabled={!frecuenciaCabeEnPeriodo('weekly')}>Semanal</SelectItem>
                                                 <SelectItem value="monthly" disabled={!frecuenciaCabeEnPeriodo('monthly')}>Mensual</SelectItem>
-                                                <SelectItem value="yearly" disabled={!frecuenciaCabeEnPeriodo('yearly')}>Anual</SelectItem>
                                                 <SelectItem value="weekdays" disabled={!frecuenciaCabeEnPeriodo('weekdays')}>Días laborales</SelectItem>
                                               </SelectContent>
                                             </Select>

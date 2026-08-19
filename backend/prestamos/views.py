@@ -141,7 +141,10 @@ def _parse_recurrencia(data, fecha_base):
             'fin_repeticion_ocurrencias': None,
         }
 
-    if frecuencia not in ['daily', 'weekly', 'monthly', 'yearly', 'weekdays']:
+    # 'yearly' se descarta a propósito: el periodo académico vigente acota
+    # toda serie recurrente (ver _fin_periodo_vigente), y una repetición
+    # anual nunca llegaría a una segunda ocurrencia dentro de ese periodo.
+    if frecuencia not in ['daily', 'weekly', 'monthly', 'weekdays']:
         raise ValueError('frecuencia inválida para préstamo recurrente')
 
     intervalo = data.get('intervalo', 1)
@@ -260,39 +263,56 @@ def _add_months(base_date, months):
     return datetime.date(year, month, min(base_date.day, last_day))
 
 
-def _add_years(base_date, years):
-    try:
-        return datetime.date(base_date.year + years, base_date.month, base_date.day)
-    except ValueError:
-        return datetime.date(base_date.year + years, 2, 28)
+# Duracion aproximada de un semestre, usada SOLO como respaldo cuando
+# fecha_base no cae dentro de ningun PeriodoAcademico conocido (p.ej. un
+# prestamo publico para una fecha fuera de calendario academico).
+_HORIZONTE_RESPALDO_DIAS = 180
+
+# Tope de ocurrencias como salvaguarda adicional (p.ej. si alguien pide
+# explicitamente fin_repeticion_ocurrencias=10000 para una frecuencia
+# diaria). El fin del periodo academico (o el respaldo de arriba) es lo que
+# normalmente limita la serie antes de llegar a este numero.
+_LIMITE_OCURRENCIAS_POR_DEFECTO = 200
 
 
-def _generar_fechas_ocurrencias(fecha_base, recurrencia):
-    # Política de negocio actual:
-    # siempre se persiste un único registro por préstamo,
-    # incluso cuando es recurrente.
-    # La recurrencia se mantiene como metadatos en ese mismo registro.
-    return [fecha_base]
-
-
-def _generar_fechas_validacion(fecha_base, recurrencia, horizonte_dias=365, limite_ocurrencias=200):
+def _fin_periodo_vigente(fecha_base):
     """
-    Calcula el conjunto completo de fechas que abarcaria la serie recurrente,
-    solo para efectos de VALIDAR disponibilidad antes de crear el registro
-    base (no se usa para persistir filas: eso lo sigue decidiendo
-    _generar_fechas_ocurrencias, que hoy siempre devuelve un unico registro).
+    Fecha de fin del PeriodoAcademico que contiene fecha_base, si existe.
 
-    Antes de que Horario tuviera fecha_inicio/fecha_fin, validar solo la
-    fecha base bastaba: si el espacio estaba libre un dia de la semana dado,
-    lo estaba TODAS las semanas del periodo. Ahora la disponibilidad de un
-    espacio puede variar semana a semana (una clase puede arrancar a mitad
-    de semestre), asi que un prestamo recurrente aprobado solo contra su
-    fecha base podria chocar en silencio con una clase que arranca en una
-    ocurrencia futura de la serie. Por eso validamos toda la serie aqui,
-    aunque solo se persista un registro.
+    No tiene sentido dejar que un prestamo recurrente siga generando
+    ocurrencias mas alla del periodo academico en curso (p.ej. el periodo
+    20262 llega hasta diciembre): despues de eso ni siquiera hay horarios de
+    clase con los que validar disponibilidad.
+    """
+    from periodos.models import PeriodoAcademico
 
-    `horizonte_dias` y `limite_ocurrencias` acotan series sin fecha de fin
-    ('never') para evitar bucles sin limite.
+    periodo = PeriodoAcademico.objects.filter(
+        fecha_inicio__lte=fecha_base,
+        fecha_fin__gte=fecha_base,
+    ).order_by('-fecha_inicio').first()
+    return periodo.fecha_fin if periodo else None
+
+
+def _generar_fechas_ocurrencias(fecha_base, recurrencia, horizonte_fecha=None, limite_ocurrencias=None):
+    """
+    Calcula el conjunto completo de fechas que abarca un prestamo recurrente.
+    Cada fecha devuelta se persiste como su propio registro (PrestamoEspacio
+    o PrestamoEspacioPublico), enlazado a la solicitud base via
+    `prestamo_padre`/`serie_id`, para poder aprobar/editar/cancelar cada
+    ocurrencia de forma individual.
+
+    Esto es necesario ademas de por gestion operativa: la disponibilidad de
+    un espacio ya no es uniforme semana a semana dentro del periodo, porque
+    Horario.fecha_inicio/fecha_fin puede variar (una clase puede arrancar a
+    mitad de semestre). Validar y persistir ocurrencia por ocurrencia es lo
+    que permite detectar y bloquear el choque puntual de UNA fecha de la
+    serie sin invalidar toda la solicitud recurrente.
+
+    Cuando la serie no trae fin explicito ('never'), la serie se acota al
+    fin del periodo academico vigente para fecha_base (ver
+    _fin_periodo_vigente), o al respaldo de _HORIZONTE_RESPALDO_DIAS si esa
+    fecha no cae dentro de ningun periodo conocido. `limite_ocurrencias` es
+    solo una salvaguarda adicional de cantidad.
     """
     if not recurrencia['es_recurrente'] or recurrencia['frecuencia'] == 'none':
         return [fecha_base]
@@ -303,7 +323,14 @@ def _generar_fechas_validacion(fecha_base, recurrencia, horizonte_dias=365, limi
     fin_fecha = recurrencia['fin_repeticion_fecha']
     fin_ocurrencias = recurrencia['fin_repeticion_ocurrencias']
 
-    horizonte = fecha_base + datetime.timedelta(days=horizonte_dias)
+    if horizonte_fecha is None:
+        horizonte_fecha = _fin_periodo_vigente(fecha_base) or (
+            fecha_base + datetime.timedelta(days=_HORIZONTE_RESPALDO_DIAS)
+        )
+    if limite_ocurrencias is None:
+        limite_ocurrencias = _LIMITE_OCURRENCIAS_POR_DEFECTO
+
+    horizonte = horizonte_fecha
     limite_fecha = fin_fecha if (fin_tipo == 'until_date' and fin_fecha) else horizonte
     limite_fecha = min(limite_fecha, horizonte)
     limite_count = fin_ocurrencias if (fin_tipo == 'count' and fin_ocurrencias) else limite_ocurrencias
@@ -347,15 +374,6 @@ def _generar_fechas_validacion(fecha_base, recurrencia, horizonte_dias=365, limi
         i = 0
         while len(fechas) < limite_count:
             fecha = _add_months(fecha_base, i * intervalo)
-            if fecha > limite_fecha:
-                break
-            fechas.append(fecha)
-            i += 1
-
-    elif frecuencia == 'yearly':
-        i = 0
-        while len(fechas) < limite_count:
-            fecha = _add_years(fecha_base, i * intervalo)
             if fecha > limite_fecha:
                 break
             fechas.append(fecha)
@@ -490,12 +508,11 @@ def create_prestamo(request):
         if not fechas_ocurrencias:
             return JsonResponse({"error": "No se generaron ocurrencias con la configuración enviada"}, status=400)
 
-        # Validar disponibilidad para TODA la serie recurrente (no solo la
-        # fecha base): aunque hoy solo se persiste un registro por prestamo,
-        # aprobar sin revisar el resto de la serie podria chocar en silencio
-        # con una clase que arranca mas adelante en el semestre (ver
-        # _generar_fechas_validacion).
-        for fecha_ocurrencia in _generar_fechas_validacion(f, recurrencia):
+        # Validar disponibilidad para TODA la serie recurrente antes de crear
+        # ningun registro: una fecha en conflicto mas adelante en la serie
+        # (p.ej. una clase que arranca a mitad de semestre) bloquea toda la
+        # solicitud, no solo esa ocurrencia.
+        for fecha_ocurrencia in fechas_ocurrencias:
             is_available, error_msg = check_espacio_disponible(espacio_id, fecha_ocurrencia, hi, hf)
             if not is_available:
                 return JsonResponse({
@@ -1271,8 +1288,8 @@ def create_prestamo_publico(request):
             return JsonResponse({"error": "No se generaron ocurrencias con la configuración enviada"}, status=400)
 
         # Ver comentario equivalente en create_prestamo: se valida toda la
-        # serie recurrente, no solo la fecha base.
-        for fecha_ocurrencia in _generar_fechas_validacion(f, recurrencia):
+        # serie recurrente antes de crear ningun registro.
+        for fecha_ocurrencia in fechas_ocurrencias:
             is_available, error_msg = check_espacio_disponible(espacio_id, fecha_ocurrencia, hi, hf, es_publico=True)
             if not is_available:
                 return JsonResponse({
