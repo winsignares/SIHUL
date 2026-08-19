@@ -1173,6 +1173,16 @@ class Command(BaseCommand):
         horarios_huerfanos_eliminados = 0
         horario_ids_procesados = set()
         periodo_ids_afectados = set()
+        # VW_HORARIO trae una fila por CADA ocurrencia semanal de una clase
+        # recurrente (mismo grupo+asignatura+dia+hora+aula), no una fila por
+        # clase. FEC_INICIO varia en cada fila (es la fecha de esa ocurrencia
+        # puntual) mientras FEC_FIN tiende a repetirse (fecha de la ultima
+        # ocurrencia de la serie). Para que el Horario real refleje la
+        # vigencia real de toda la serie (no solo la de la ultima fila
+        # procesada), se acumula el minimo fecha_inicio y el maximo fecha_fin
+        # vistos en ESTE run por cada Horario, en vez de sobreescribir con
+        # cada fila.
+        fecha_rango_por_horario = {}
 
         grupos = list(Grupo.objects.select_related('periodo', 'programa'))
         grupos_by_id = {str(g.id): g for g in grupos}
@@ -1470,7 +1480,25 @@ class Command(BaseCommand):
 
                     if created:
                         horarios_creados += 1
+                        fecha_rango_por_horario[horario.id] = [fecha_inicio, fecha_fin]
                         continue
+
+                    # Acumular la fecha_inicio minima y fecha_fin maxima vistas
+                    # en ESTE run para este Horario (ver comentario junto a la
+                    # declaracion de fecha_rango_por_horario). La primera vez
+                    # que se toca un Horario preexistente en este run, se
+                    # reinicia el rango desde cero (se ignora lo que tenia
+                    # guardado de una corrida anterior) para que una serie que
+                    # cambio de fechas no arrastre limites obsoletos.
+                    if horario.id not in fecha_rango_por_horario:
+                        fecha_rango_por_horario[horario.id] = [fecha_inicio, fecha_fin]
+                    else:
+                        rango = fecha_rango_por_horario[horario.id]
+                        if fecha_inicio and (rango[0] is None or fecha_inicio < rango[0]):
+                            rango[0] = fecha_inicio
+                        if fecha_fin and (rango[1] is None or fecha_fin > rango[1]):
+                            rango[1] = fecha_fin
+                    fecha_inicio_final, fecha_fin_final = fecha_rango_por_horario[horario.id]
 
                     # espacio ya no se reasigna aqui: forma parte de `identidad`,
                     # asi que coincidencias ya viene filtrado por el mismo espacio.
@@ -1481,11 +1509,11 @@ class Command(BaseCommand):
                     if horario.cantidad_estudiantes != cantidad:
                         horario.cantidad_estudiantes = cantidad
                         changed = True
-                    if horario.fecha_inicio != fecha_inicio:
-                        horario.fecha_inicio = fecha_inicio
+                    if horario.fecha_inicio != fecha_inicio_final:
+                        horario.fecha_inicio = fecha_inicio_final
                         changed = True
-                    if horario.fecha_fin != fecha_fin:
-                        horario.fecha_fin = fecha_fin
+                    if horario.fecha_fin != fecha_fin_final:
+                        horario.fecha_fin = fecha_fin_final
                         changed = True
                     if horario.estado != 'aprobado':
                         horario.estado = 'aprobado'
