@@ -288,8 +288,8 @@ def listar_conversaciones(request):
         if id_usuario:
             query = query.filter(id_usuario=id_usuario)
         
-        # Obtener chat_ids únicos
-        chat_ids = query.values_list('chat_id', flat=True).distinct()
+        # Obtener chat_ids únicos (limpiando el ordering por defecto de Meta para compatibilidad con PostgreSQL distinct)
+        chat_ids = query.order_by().values_list('chat_id', flat=True).distinct()
         
         # Agrupar por chat_id y obtener info de cada hilo
         conversaciones_lista = []

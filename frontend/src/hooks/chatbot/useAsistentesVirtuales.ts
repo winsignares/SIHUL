@@ -604,6 +604,9 @@ export function useAsistentesVirtuales() {
                     }));
                 }, 1000);
 
+                // Sincronizar inmediatamente la lista de historial
+                void cargarHistorialConversaciones();
+
             } else {
                 // Usuario autenticado - Se guarda historial
                 const response = await chatbotAPI.enviarPregunta({
@@ -661,6 +664,9 @@ export function useAsistentesVirtuales() {
                         )
                     }));
                 }, 1000);
+
+                // Sincronizar inmediatamente la lista de historial
+                void cargarHistorialConversaciones();
             }
 
         } catch (error) {
