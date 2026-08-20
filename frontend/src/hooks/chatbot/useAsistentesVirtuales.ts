@@ -373,43 +373,72 @@ export function useAsistentesVirtuales() {
             // Obtener chat_id si existe para esta conversación
             const currentChatId = chatIds[asistente.id];
 
-            // Cargar historial usando chat_id si existe, o por agente_id + usuario si no
-            const response = await chatbotAPI.obtenerHistorial(
-                currentChatId 
-                    ? { chat_id: currentChatId, id_usuario: user.id }
-                    : { agente_id: asistente.id, id_usuario: user.id }
-            );
+            // Cargar historial usando chat_id solo si existe un chat_id activo para este asistente
+            if (currentChatId) {
+                const response = await chatbotAPI.obtenerHistorial({
+                    chat_id: currentChatId,
+                    id_usuario: user.id
+                });
 
-            if (response.mensajes && response.mensajes.length > 0) {
-                // Hay historial, cargar los mensajes
-                const mensajesHistorial = response.mensajes.map((msg) => ({
-                    id: msg.id,
-                    tipo: msg.tipo,
-                    texto: msg.texto,
-                    timestamp: new Date(msg.timestamp),
-                    leido: true
-                }));
+                if (response.mensajes && response.mensajes.length > 0) {
+                    // Hay historial, cargar los mensajes
+                    const mensajesHistorial = response.mensajes.map((msg) => ({
+                        id: msg.id,
+                        tipo: msg.tipo,
+                        texto: msg.texto,
+                        timestamp: new Date(msg.timestamp),
+                        leido: true
+                    }));
 
-                // Solo actualizar si no tenemos mensajes locales o si el backend tiene más mensajes
-                const mensajesLocales = mensajes[asistente.id] || [];
-                if (!tieneMensajesLocales || mensajesHistorial.length > mensajesLocales.length) {
+                    // Solo actualizar si no tenemos mensajes locales o si el backend tiene más mensajes
+                    const mensajesLocales = mensajes[asistente.id] || [];
+                    if (!tieneMensajesLocales || mensajesHistorial.length > mensajesLocales.length) {
+                        setMensajes(prev => ({
+                            ...prev,
+                            [asistente.id]: mensajesHistorial
+                        }));
+                    }
+
+                    // Guardar el chat_id si existe y persistir en localStorage
+                    if (response.mensajes[0]?.chat_id) {
+                        const nuevoChatId = response.mensajes[0].chat_id;
+                        setChatIds(prev => {
+                            const updated = { ...prev, [asistente.id]: nuevoChatId };
+                            guardarChatIdsEnStorage(updated);
+                            return updated;
+                        });
+                    }
+                } else if (!tieneMensajesLocales) {
                     setMensajes(prev => ({
                         ...prev,
-                        [asistente.id]: mensajesHistorial
+                        [asistente.id]: [{
+                            id: '1',
+                            tipo: 'bot',
+                            texto: asistente.mensajeBienvenida,
+                            timestamp: new Date(),
+                            leido: true
+                        }]
                     }));
                 }
-
-                // Guardar el chat_id si existe y persistir en localStorage
-                if (response.mensajes[0]?.chat_id) {
-                    const nuevoChatId = response.mensajes[0].chat_id;
-                    setChatIds(prev => {
-                        const updated = { ...prev, [asistente.id]: nuevoChatId };
-                        guardarChatIdsEnStorage(updated);
-                        return updated;
-                    });
-                }
             } else {
-                // No hay historial, mostrar mensaje de bienvenida
+                // No hay chat_id activo (se presionó "Nueva" o es sesión limpia)
+                if (!tieneMensajesLocales) {
+                    setMensajes(prev => ({
+                        ...prev,
+                        [asistente.id]: [{
+                            id: '1',
+                            tipo: 'bot',
+                            texto: asistente.mensajeBienvenida,
+                            timestamp: new Date(),
+                            leido: true
+                        }]
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Error al cargar historial:', error);
+            // Si hay error, mostrar mensaje de bienvenida si no hay locales
+            if (!tieneMensajesLocales) {
                 setMensajes(prev => ({
                     ...prev,
                     [asistente.id]: [{
@@ -421,19 +450,6 @@ export function useAsistentesVirtuales() {
                     }]
                 }));
             }
-        } catch (error) {
-            console.error('Error al cargar historial:', error);
-            // Si hay error, mostrar mensaje de bienvenida
-            setMensajes(prev => ({
-                ...prev,
-                [asistente.id]: [{
-                    id: '1',
-                    tipo: 'bot',
-                    texto: asistente.mensajeBienvenida,
-                    timestamp: new Date(),
-                    leido: true
-                }]
-            }));
         }
     };
 
@@ -647,6 +663,12 @@ export function useAsistentesVirtuales() {
         if (!asistenteActivo || !user?.id) return;
         
         try {
+            // Vaciar lienzo previo del chat antes de cargar la conversación seleccionada
+            setMensajes(prev => ({
+                ...prev,
+                [asistenteActivo.id]: []
+            }));
+
             const response = await chatbotAPI.obtenerHistorial({
                 chat_id: chat_id,
                 id_usuario: user.id
@@ -712,6 +734,11 @@ export function useAsistentesVirtuales() {
                     }]
                 }));
             }
+        }
+
+        // Actualizar la lista del historial para registrar la conversación previa finalizada
+        if (user?.id) {
+            void cargarHistorialConversaciones();
         }
     };
 
