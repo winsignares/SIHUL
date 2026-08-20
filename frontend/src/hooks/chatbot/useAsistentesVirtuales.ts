@@ -533,7 +533,7 @@ export function useAsistentesVirtuales() {
                 if (!activeChatId) {
                     activeChatId = response.chat_id || `guest-chat-${asistenteActivo.id}-${Date.now()}`;
                     setChatIds(prev => {
-                        const updated = { ...prev, [asistenteActivo.id]: activeChatId };
+                        const updated = { ...prev, [asistenteActivo.id]: activeChatId! };
                         guardarChatIdsEnStorage(updated);
                         return updated;
                     });
@@ -557,44 +557,41 @@ export function useAsistentesVirtuales() {
                     leido: false
                 };
 
-                // Actualizar mensajes en el estado local
-                setMensajes(prev => {
-                    const mensajesActuales = prev[asistenteActivo.id] || [];
-                    const mensajesSinTemporal = mensajesActuales.filter(
-                        m => m.id !== mensajeUsuarioTemporal.id
-                    );
-                    const nuevosMensajes = [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente];
+                const mensajesActuales = mensajes[asistenteActivo.id] || [];
+                const mensajesSinTemporal = mensajesActuales.filter(
+                    m => m.id !== mensajeUsuarioTemporal.id
+                );
+                const nuevosMensajes = [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente];
 
-                    // Actualizar/Guardar en el historial público en caché
-                    const userMsgs = nuevosMensajes.filter(m => m.tipo === 'user');
-                    if (userMsgs.length > 0) {
-                        const item = {
-                            chat_id: activeChatId,
-                            agente_id: asistenteActivo.id,
-                            usuario: 'Invitado',
-                            primer_mensaje: userMsgs[0].texto.substring(0, 100),
-                            ultimo_mensaje: userMsgs[userMsgs.length - 1].texto.substring(0, 100),
-                            fecha_inicio: nuevosMensajes[0]?.timestamp ? new Date(nuevosMensajes[0].timestamp).toISOString() : new Date().toISOString(),
-                            fecha_actualizacion: new Date().toISOString(),
-                            total_interacciones: nuevosMensajes.length,
-                            mensajes: nuevosMensajes
-                        };
-                        const historial = cargarHistorialPublico();
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const idx = historial.findIndex((c: any) => c.chat_id === activeChatId);
-                        if (idx >= 0) {
-                            historial[idx] = item;
-                        } else {
-                            historial.unshift(item);
-                        }
-                        guardarHistorialPublico(historial);
-                    }
-
-                    return {
-                        ...prev,
-                        [asistenteActivo.id]: nuevosMensajes
+                // Guardar historial síncronamente antes de actualizar estado
+                const userMsgs = nuevosMensajes.filter(m => m.tipo === 'user');
+                if (userMsgs.length > 0) {
+                    const item = {
+                        chat_id: activeChatId,
+                        agente_id: asistenteActivo.id,
+                        usuario: 'Invitado',
+                        primer_mensaje: userMsgs[0].texto.substring(0, 100),
+                        ultimo_mensaje: userMsgs[userMsgs.length - 1].texto.substring(0, 100),
+                        fecha_inicio: nuevosMensajes[0]?.timestamp ? new Date(nuevosMensajes[0].timestamp).toISOString() : new Date().toISOString(),
+                        fecha_actualizacion: new Date().toISOString(),
+                        total_interacciones: nuevosMensajes.length,
+                        mensajes: nuevosMensajes
                     };
-                });
+                    const historial = cargarHistorialPublico();
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const idx = historial.findIndex((c: any) => c.chat_id === activeChatId);
+                    if (idx >= 0) {
+                        historial[idx] = item;
+                    } else {
+                        historial.unshift(item);
+                    }
+                    guardarHistorialPublico(historial);
+                }
+
+                setMensajes(prev => ({
+                    ...prev,
+                    [asistenteActivo.id]: nuevosMensajes
+                }));
 
                 // Marcar como leído después de un momento
                 setTimeout(() => {
@@ -804,6 +801,7 @@ export function useAsistentesVirtuales() {
     const limpiarConversacion = (asistenteId: string) => {
         // En modo público (!user?.id), archivar la conversación actual en caché antes de resetear la pantalla
         if (!user?.id) {
+            // Aseguramos que tomamos los mensajes más actualizados del state
             const currentChatId = chatIds[asistenteId];
             const msgsActuales = mensajes[asistenteId] || [];
             const userMsgs = msgsActuales.filter(m => m.tipo === 'user');
@@ -824,7 +822,7 @@ export function useAsistentesVirtuales() {
 
                 const historial = cargarHistorialPublico();
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const idx = historial.findIndex((c: any) => c.chat_id === currentChatId);
+                const idx = historial.findIndex((c: any) => String(c.chat_id) === String(currentChatId));
                 if (idx >= 0) {
                     historial[idx] = item;
                 } else {
