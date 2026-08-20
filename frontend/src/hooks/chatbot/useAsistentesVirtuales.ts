@@ -131,6 +131,31 @@ export function useAsistentesVirtuales() {
         };
     };
 
+    // Historial público efímero en sessionStorage (se borra al cerrar pestaña/navegador)
+    // Cumple políticas de ciberseguridad: no deja rastros en equipos compartidos
+    const SESSION_HIST_KEY = 'sihul_session_history';
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cargarHistorialSesion = (): any[] => {
+        try {
+            const stored = sessionStorage.getItem(SESSION_HIST_KEY);
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const guardarHistorialSesion = (lista: any[]) => {
+        try {
+            // Limitar a las últimas 20 conversaciones para evitar saturar sessionStorage
+            const limitada = lista.slice(0, 20);
+            sessionStorage.setItem(SESSION_HIST_KEY, JSON.stringify(limitada));
+        } catch {
+            // sessionStorage lleno — ignorar silenciosamente
+        }
+    };
+
     const cargarChatIdsDesdeStorage = (): { [key: string]: string } => {
         try {
             const { CHAT_IDS_KEY } = obtenerClavesStorage();
@@ -535,9 +560,37 @@ export function useAsistentesVirtuales() {
                     const mensajesSinTemporal = mensajesActuales.filter(
                         m => m.id !== mensajeUsuarioTemporal.id
                     );
+                    const nuevosMensajes = [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente];
+
+                    // Guardar/actualizar en historial efímero de sesión (sessionStorage)
+                    const activeChatId = response.chat_id || chatIds[asistenteActivo.id];
+                    if (activeChatId) {
+                        const userMsgs = nuevosMensajes.filter(m => m.tipo === 'user');
+                        if (userMsgs.length > 0) {
+                            const item = {
+                                chat_id: activeChatId,
+                                agente_id: asistenteActivo.id,
+                                primer_mensaje: userMsgs[0].texto.substring(0, 100),
+                                fecha_inicio: new Date().toISOString(),
+                                fecha_actualizacion: new Date().toISOString(),
+                                total_interacciones: nuevosMensajes.length,
+                                mensajes: nuevosMensajes
+                            };
+                            const historial = cargarHistorialSesion();
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const idx = historial.findIndex((c: any) => c.chat_id === activeChatId);
+                            if (idx >= 0) {
+                                historial[idx] = item;
+                            } else {
+                                historial.unshift(item);
+                            }
+                            guardarHistorialSesion(historial);
+                        }
+                    }
+
                     return {
                         ...prev,
-                        [asistenteActivo.id]: [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente]
+                        [asistenteActivo.id]: nuevosMensajes
                     };
                 });
 
@@ -643,15 +696,24 @@ export function useAsistentesVirtuales() {
     };
 
     const cargarHistorialConversaciones = async () => {
-        if (!asistenteActivo || !user?.id) return;
-        
+        if (!asistenteActivo) return;
+
         try {
             setCargandoHistorial(true);
-            const response = await chatbotAPI.listarConversaciones({
-                agente_id: asistenteActivo.id,
-                id_usuario: user.id
-            });
-            setConversacionesHistorial(response.conversaciones || []);
+            if (user?.id) {
+                // Usuario autenticado: consultar base de datos
+                const response = await chatbotAPI.listarConversaciones({
+                    agente_id: asistenteActivo.id,
+                    id_usuario: user.id
+                });
+                setConversacionesHistorial(response.conversaciones || []);
+            } else {
+                // Público: leer historial efímero de sessionStorage (sin persistencia)
+                const historial = cargarHistorialSesion();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const filtrados = historial.filter((c: any) => String(c.agente_id) === String(asistenteActivo.id));
+                setConversacionesHistorial(filtrados);
+            }
         } catch (error) {
             console.error('Error al cargar historial de conversaciones:', error);
         } finally {
@@ -660,8 +722,8 @@ export function useAsistentesVirtuales() {
     };
 
     const cargarConversacionAnterior = async (chat_id: string) => {
-        if (!asistenteActivo || !user?.id) return;
-        
+        if (!asistenteActivo) return;
+
         try {
             // Vaciar lienzo previo del chat antes de cargar la conversación seleccionada
             setMensajes(prev => ({
@@ -669,33 +731,58 @@ export function useAsistentesVirtuales() {
                 [asistenteActivo.id]: []
             }));
 
-            const response = await chatbotAPI.obtenerHistorial({
-                chat_id: chat_id,
-                id_usuario: user.id
-            });
-
-            if (response.mensajes && response.mensajes.length > 0) {
-                const mensajesHistorial = response.mensajes.map((msg) => ({
-                    id: msg.id,
-                    tipo: msg.tipo,
-                    texto: msg.texto,
-                    timestamp: new Date(msg.timestamp),
-                    leido: true
-                }));
-
-                setMensajes(prev => ({
-                    ...prev,
-                    [asistenteActivo.id]: mensajesHistorial
-                }));
-
-                // Actualizar chat_id actual
-                setChatIds(prev => {
-                    const updated = { ...prev, [asistenteActivo.id]: chat_id };
-                    guardarChatIdsEnStorage(updated);
-                    return updated;
+            if (user?.id) {
+                // Usuario autenticado: consultar base de datos
+                const response = await chatbotAPI.obtenerHistorial({
+                    chat_id: chat_id,
+                    id_usuario: user.id
                 });
 
-                setMostrarHistorial(false);
+                if (response.mensajes && response.mensajes.length > 0) {
+                    const mensajesHistorial = response.mensajes.map((msg) => ({
+                        id: msg.id,
+                        tipo: msg.tipo,
+                        texto: msg.texto,
+                        timestamp: new Date(msg.timestamp),
+                        leido: true
+                    }));
+
+                    setMensajes(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: mensajesHistorial
+                    }));
+
+                    setChatIds(prev => {
+                        const updated = { ...prev, [asistenteActivo.id]: chat_id };
+                        guardarChatIdsEnStorage(updated);
+                        return updated;
+                    });
+
+                    setMostrarHistorial(false);
+                }
+            } else {
+                // Público: restaurar desde sessionStorage
+                const historial = cargarHistorialSesion();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const encontrado = historial.find((c: any) => c.chat_id === chat_id);
+                if (encontrado?.mensajes) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const mensajesHistorial = encontrado.mensajes.map((msg: any) => ({
+                        ...msg,
+                        timestamp: new Date(msg.timestamp)
+                    }));
+                    setMensajes(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: mensajesHistorial
+                    }));
+
+                    setChatIds(prev => ({
+                        ...prev,
+                        [asistenteActivo.id]: chat_id
+                    }));
+
+                    setMostrarHistorial(false);
+                }
             }
         } catch (error) {
             console.error('Error al cargar conversación anterior:', error);
@@ -736,10 +823,8 @@ export function useAsistentesVirtuales() {
             }
         }
 
-        // Actualizar la lista del historial para registrar la conversación previa finalizada
-        if (user?.id) {
-            void cargarHistorialConversaciones();
-        }
+        // Actualizar la lista del historial
+        void cargarHistorialConversaciones();
     };
 
     const mensajesActuales = asistenteActivo ? (mensajes[asistenteActivo.id] || []) : [];
