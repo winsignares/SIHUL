@@ -796,6 +796,36 @@ export function useAsistentesVirtuales() {
     };
 
     const limpiarConversacion = (asistenteId: string) => {
+        // En modo público (!user?.id), guardar el hilo de conversación actual en sessionStorage antes de resetear la pantalla
+        if (!user?.id) {
+            const currentChatId = chatIds[asistenteId] || `guest-${asistenteId}-${Date.now()}`;
+            const msgsActuales = mensajes[asistenteId] || [];
+            const userMsgs = msgsActuales.filter(m => m.tipo === 'user');
+            
+            if (userMsgs.length > 0) {
+                const primerMensaje = userMsgs[0].texto;
+                const item = {
+                    chat_id: currentChatId,
+                    agente_id: asistenteId,
+                    primer_mensaje: primerMensaje.substring(0, 100),
+                    fecha_inicio: msgsActuales[0]?.timestamp ? new Date(msgsActuales[0].timestamp).toISOString() : new Date().toISOString(),
+                    fecha_actualizacion: new Date().toISOString(),
+                    total_interacciones: msgsActuales.length,
+                    mensajes: msgsActuales
+                };
+
+                const historial = cargarHistorialSesion();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const idx = historial.findIndex((c: any) => c.chat_id === currentChatId);
+                if (idx >= 0) {
+                    historial[idx] = item;
+                } else {
+                    historial.unshift(item);
+                }
+                guardarHistorialSesion(historial);
+            }
+        }
+
         // Eliminar chat_id para iniciar conversación nueva
         setChatIds(prev => {
             const updated = { ...prev };
@@ -829,7 +859,7 @@ export function useAsistentesVirtuales() {
             }
         }
 
-        // Actualizar la lista del historial
+        // Actualizar la lista del historial para registrar la conversación previa finalizada
         void cargarHistorialConversaciones();
     };
 
