@@ -18,7 +18,7 @@ import {
   Star,
   MessageCircle,
   RotateCcw,
-  History,
+  /* History, */
   Clock,
   X
 } from 'lucide-react';
@@ -413,7 +413,8 @@ export default function AsistentesVirtuales() {
 
                 {/* Botones de Acción */}
                 <div className="flex items-center gap-2">
-                  {/* Botón Historial */}
+                  {/* Botón Historial - DESACTIVADO */}
+                  {/*
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -434,6 +435,7 @@ export default function AsistentesVirtuales() {
                       <span className="text-xs font-medium">Historial</span>
                     </Button>
                   </motion.div>
+                  */}
 
                   {/* Botón Nueva Conversación */}
                   <motion.div
@@ -456,7 +458,8 @@ export default function AsistentesVirtuales() {
 
             </motion.div>
 
-            {/* Panel de Historial */}
+            {/* Panel de Historial - DESACTIVADO */}
+            {/*
             <AnimatePresence>
               {mostrarHistorial && (
                 <motion.div
@@ -536,6 +539,7 @@ export default function AsistentesVirtuales() {
                 </motion.div>
               )}
             </AnimatePresence>
+            */}
 
             {/* Área de Mensajes */}
             <div
