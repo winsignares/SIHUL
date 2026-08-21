@@ -100,15 +100,35 @@ class Command(BaseCommand):
         componentes = financiero_seeder._seed_componentes(self.stdout, self.style)
         financiero_seeder._seed_permisos(roles, componentes, self.stdout, self.style)
         financiero_seeder._seed_proveedores_demo(self.stdout, self.style)
-        financiero_seeder._seed_usuarios_proveedores(roles, self.stdout, self.style)
         financiero_seeder._seed_usuarios_prueba(roles, self.stdout, self.style)
 
         usuarios_vinculados = 0
-        for proveedor in Proveedor.objects.exclude(email__isnull=True).exclude(email=''):
-            usuario = Usuario.objects.filter(correo__iexact=proveedor.email).first()
-            if usuario and proveedor.usuario_id != usuario.id:
+        rol_proveedor = roles['Proveedor']
+        nits_prueba = (
+            '900123456-7',
+            '900234567-8',
+            '900345678-9',
+            '900456789-0',
+            '900567890-1',
+        )
+        for proveedor in Proveedor.objects.filter(nit__in=nits_prueba):
+            nit_limpio = ''.join(char for char in proveedor.nit if char.isdigit())
+            usuario, created = Usuario.objects.get_or_create(
+                correo=proveedor.email,
+                defaults={
+                    'nombre': proveedor.razon_social,
+                    'rol': rol_proveedor,
+                    'activo': True,
+                },
+            )
+            # Solo las cuentas de prueba reciben la contraseña conocida del seeder.
+            usuario.set_password(f'Prov{nit_limpio}*')
+            usuario.rol = rol_proveedor
+            usuario.activo = True
+            usuario.save()
+            if proveedor.usuario_id != usuario.id:
                 proveedor.usuario = usuario
                 proveedor.save(update_fields=['usuario'])
                 usuarios_vinculados += 1
 
-        return Proveedor.objects.count(), usuarios_vinculados
+        return len(nits_prueba), usuarios_vinculados
