@@ -140,8 +140,9 @@ export const componenteService = {
     /**
      * Lista todos los componentes
      */
-    list: async (): Promise<ListComponentesResponse> => {
-        const componentes = await apiClient.get<Componente[]>('/componentes/');
+    list: async (params?: { financiero?: boolean }): Promise<ListComponentesResponse> => {
+        const query = params?.financiero ? '?financiero=1' : '';
+        const componentes = await apiClient.get<Componente[]>(`/componentes/${query}`);
         return { componentes };
     },
 
@@ -200,8 +201,9 @@ export const componenteRolService = {
     /**
      * Lista todos los ComponenteRoles
      */
-    list: async (): Promise<ListComponenteRolesResponse> => {
-        const componenteRolesApi = await apiClient.get<ComponenteRolApi[]>('/componentes/roles/');
+    list: async (params?: { financiero?: boolean }): Promise<ListComponenteRolesResponse> => {
+        const query = params?.financiero ? '?financiero=1' : '';
+        const componenteRolesApi = await apiClient.get<ComponenteRolApi[]>(`/componentes/roles/${query}`);
         const componente_roles = componenteRolesApi.map(toFrontendComponenteRol);
         return { componente_roles };
     },
@@ -241,8 +243,11 @@ export const componenteRolService = {
 };
 
 export const componenteUsuarioService = {
-    list: async (usuarioId?: number): Promise<ListComponenteUsuariosResponse> => {
-        const query = usuarioId ? `?usuario=${usuarioId}` : '';
+    list: async (params?: { usuarioId?: number; financiero?: boolean }): Promise<ListComponenteUsuariosResponse> => {
+        const searchParams = new URLSearchParams();
+        if (params?.usuarioId) searchParams.set('usuario', String(params.usuarioId));
+        if (params?.financiero) searchParams.set('financiero', '1');
+        const query = searchParams.size ? `?${searchParams.toString()}` : '';
         const componenteUsuariosApi = await apiClient.get<ComponenteUsuarioApi[]>(`/componentes/usuarios/${query}`);
         const componente_usuarios = componenteUsuariosApi.map(toFrontendComponenteUsuario);
         return { componente_usuarios };

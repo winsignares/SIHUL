@@ -301,8 +301,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         let isCancelled = false;
+        let isSyncing = false;
 
         const syncSessionAuthState = async () => {
+            if (isSyncing) {
+                return;
+            }
+            isSyncing = true;
             try {
                 const response = await authService.getSessionAuthState(authSignatureRef.current || undefined);
                 if (isCancelled) {
@@ -338,6 +343,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
                     return;
                 }
+            } finally {
+                isSyncing = false;
             }
         };
 
@@ -351,7 +358,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void syncSessionAuthState();
 
         // Sync periódico ligero (solo pestaña visible)
-        const intervalId = window.setInterval(syncIfVisible, 7000);
+        const intervalId = window.setInterval(syncIfVisible, 60000);
 
         // Sync inmediato al recuperar foco/visibilidad
         window.addEventListener('focus', syncIfVisible);

@@ -7,6 +7,17 @@ from .models import Componente, ComponenteRol, ComponenteUsuario
 from .serializers import ComponenteRolSerializer, ComponenteSerializer, ComponenteUsuarioSerializer
 
 
+FINANCIAL_ROLE_NAMES = (
+    'Funcionario',
+    'Contabilidad',
+    'Tesorería',
+    'Auditoría',
+    'Dirección Financiera',
+    'Rectoría',
+    'Admin Financiero',
+)
+
+
 class ComponenteListCreateAPIView(generics.ListCreateAPIView):
     queryset = Componente.objects.all().order_by('nombre')
     serializer_class = ComponenteSerializer
@@ -16,6 +27,14 @@ class ComponenteListCreateAPIView(generics.ListCreateAPIView):
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.IsAuthenticated()]
         return [IsAdminOnly()]
+
+    def get_queryset(self):
+        queryset = Componente.objects.all().order_by('nombre')
+        if self.request.query_params.get('financiero') == '1':
+            queryset = queryset.filter(
+                componenterol__rol__nombre__in=FINANCIAL_ROLE_NAMES
+            ).distinct()
+        return queryset
 
 
 class ComponenteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -38,6 +57,12 @@ class ComponenteRolListCreateAPIView(generics.ListCreateAPIView):
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.IsAuthenticated()]
         return [IsAdminOnly()]
+
+    def get_queryset(self):
+        queryset = ComponenteRol.objects.select_related('componente', 'rol').all()
+        if self.request.query_params.get('financiero') == '1':
+            queryset = queryset.filter(rol__nombre__in=FINANCIAL_ROLE_NAMES)
+        return queryset
 
 
 class ComponenteRolDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -71,6 +96,8 @@ class ComponenteUsuarioListCreateAPIView(generics.ListCreateAPIView):
             usuario_id = self.request.query_params.get('usuario')
             if usuario_id:
                 return queryset.filter(usuario_id=usuario_id)
+            if self.request.query_params.get('financiero') == '1':
+                return queryset.filter(usuario__rol__nombre__in=FINANCIAL_ROLE_NAMES)
             return queryset
 
         return queryset.filter(usuario_id=user.id)

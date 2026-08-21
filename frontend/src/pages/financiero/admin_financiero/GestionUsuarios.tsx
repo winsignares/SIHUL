@@ -171,11 +171,11 @@ export default function GestionUsuariosReal() {
     setLoading(true);
     try {
       const [usuariosResp, rolesResp, componentesResp, componenteRolesResp, componenteUsuariosResp] = await Promise.all([
-        userService.listarUsuarios(),
+        userService.listarUsuarios({ financiero: true }),
         rolService.listarRoles(),
-        componenteService.list(),
-        componenteRolService.list(),
-        componenteUsuarioService.list(),
+        componenteService.list({ financiero: true }),
+        componenteRolService.list({ financiero: true }),
+        componenteUsuarioService.list({ financiero: true }),
       ]);
 
       const rolesMap = Object.fromEntries((rolesResp.roles || []).map((r) => [r.id, r.nombre]));

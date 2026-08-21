@@ -543,6 +543,16 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     seccional_lookup = 'seccional'
     permission_classes = [IsAdminUserManagement]
 
+    FINANCIAL_ROLE_NAMES = (
+        'Funcionario',
+        'Contabilidad',
+        'Tesorería',
+        'Auditoría',
+        'Dirección Financiera',
+        'Rectoría',
+        'Admin Financiero',
+    )
+
     def get_permissions(self):
         if self.action in ('login',):
             return [permissions.AllowAny()]
@@ -585,6 +595,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 base_queryset = super().get_queryset()
                 if self.action == 'list_docentes':
                     return base_queryset.filter(activo=True, rol__nombre__iexact='docente')
+                if self.request.query_params.get('financiero') == '1':
+                    return base_queryset.filter(rol__nombre__in=self.FINANCIAL_ROLE_NAMES)
                 return base_queryset
 
             # Usuarios no administradores: solo su propio registro

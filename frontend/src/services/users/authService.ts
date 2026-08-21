@@ -346,8 +346,11 @@ export const userService = {
   /**
    * Obtiene la lista de todos los usuarios
    */
-  listarUsuarios: async (params?: { rol?: string }): Promise<{ usuarios: Usuario[] }> => {
-    const query = params?.rol ? `?rol=${encodeURIComponent(params.rol)}` : '';
+  listarUsuarios: async (params?: { rol?: string; financiero?: boolean }): Promise<{ usuarios: Usuario[] }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.rol) searchParams.set('rol', params.rol);
+    if (params?.financiero) searchParams.set('financiero', '1');
+    const query = searchParams.size ? `?${searchParams.toString()}` : '';
     const response = await apiClient.get<UsuarioApi[] | { usuarios?: UsuarioApi[]; results?: UsuarioApi[] }>(`/usuarios/${query}`);
     const usuariosRaw = Array.isArray(response)
       ? response
