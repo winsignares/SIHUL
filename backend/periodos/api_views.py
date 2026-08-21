@@ -17,6 +17,10 @@ class PeriodoAcademicoListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
+        # El portal público usa el listado únicamente para consultar la
+        # disponibilidad de espacios. La escritura conserva el permiso actual.
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
@@ -126,7 +130,9 @@ class PeriodoAcademicoCopyAPIView(APIView):
 
 
 class PeriodoAcademicoActivoAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # El período activo es información institucional pública y se consume en
+    # las páginas públicas de horarios y disponibilidad de espacios.
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         PeriodoAcademico.sincronizar_activos_por_fecha()

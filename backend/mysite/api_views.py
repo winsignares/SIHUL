@@ -347,6 +347,11 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_permissions(self):
+        # La consulta pública muestra únicamente horarios aprobados. Las demás
+        # operaciones del módulo (incluidos horarios pendientes) continúan
+        # requiriendo una sesión autenticada.
+        if self.action == 'list_extendidos':
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def create(self, request, *args, **kwargs):
@@ -856,12 +861,17 @@ class RecursoViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
+        # El portal público solo necesita el catálogo para filtrar espacios.
+        # La creación, edición, eliminación y consulta individual permanecen
+        # restringidas a usuarios autenticados.
+        if self.action == 'list':
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Recurso.objects.none()
+            return Recurso.objects.all().order_by('nombre')
         if user_supervisa_espacios(user):
             return super().get_queryset().filter(recurso_espacios__espacio__espacios_permitidos__usuario=user).distinct().order_by('nombre')
         return super().get_queryset().distinct().order_by('nombre')
