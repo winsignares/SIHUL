@@ -48,7 +48,6 @@ interface Factura {
   estado: string;
   diasTranscurridos: number;
   slaObjetivoDias?: number | null;
-  descripcion: string;
 }
 
 const toList = <T,>(data: unknown): T[] => {
@@ -71,7 +70,6 @@ const mapFactura = (f: APIFactura): Factura => ({
   estado: f.estado,
   diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
   slaObjetivoDias: f.sla_objetivo_dias ?? null,
-  descripcion: f.descripcion || 'Sin asignar',
 });
 
 const getErrorMessage = (error: unknown, fallback: string) =>
@@ -79,7 +77,7 @@ const getErrorMessage = (error: unknown, fallback: string) =>
 
 export default function ControlPrevio() {
   const auditoriaChecklist = [
-    { id: 'causacion', label: 'Causacion contable validada' },
+    { id: 'causacion', label: 'Causación contable validada' },
     { id: 'soportes', label: 'Soportes completos y legibles' },
     { id: 'rubro', label: 'Distribucion correcta en rubro' },
     { id: 'proceso', label: 'Proceso de pago verificado' },
@@ -87,7 +85,7 @@ export default function ControlPrevio() {
 
   const opcionesRechazo = [
     { id: 'docs', label: 'Soportes incompletos' },
-    { id: 'causacion', label: 'Inconsistencia en causacion contable' },
+    { id: 'causacion', label: 'Inconsistencia en causación contable' },
     { id: 'rubro', label: 'Distribucion incorrecta en rubro' },
     { id: 'banco', label: 'Soporte de pago incompleto' },
     { id: 'otros', label: 'Otro hallazgo' },
@@ -173,7 +171,7 @@ export default function ControlPrevio() {
       setFacturaDetalle({
         ...baseDetail,
         auditoriaView: true,
-        auditoriaNotas: 'Validar causacion contable, soportes completos y distribucion correcta antes de emitir concepto.',
+        auditoriaNotas: 'Validar causación contable, soportes completos y distribución correcta antes de emitir concepto.',
       });
     } catch {
       setFacturaDetalle({
@@ -188,9 +186,8 @@ export default function ControlPrevio() {
         estado: factura.estado,
         diasTranscurridos: factura.diasTranscurridos,
         fechaRecepcion: factura.fechaAlistamiento,
-        descripcion: factura.descripcion,
         auditoriaView: true,
-        auditoriaNotas: 'Validar causacion contable, soportes completos y distribucion correcta antes de emitir concepto.',
+        auditoriaNotas: 'Validar causación contable, soportes completos y distribución correcta antes de emitir concepto.',
         nivelRiesgo: factura.diasTranscurridos >= 18 ? 'rojo' : factura.diasTranscurridos >= 12 ? 'amarillo' : 'verde',
       });
     }
@@ -221,7 +218,7 @@ export default function ControlPrevio() {
   const confirmarAprobacion = () => {
     if (!facturaSeleccionada) return;
     if (!observaciones.trim() || observaciones.trim().length < 10) {
-      toast.error('Las observaciones son obligatorias y deben tener minimo 10 caracteres');
+      toast.error('Las observaciones son obligatorias y deben tener mínimo 10 caracteres');
       return;
     }
 
@@ -230,7 +227,7 @@ export default function ControlPrevio() {
       try {
         await facturasService.aprobarAuditoria(facturaSeleccionada.facturaId, observaciones.trim());
         setFacturasAlistadas(await loadFacturas());
-        toast.success(`Factura aprobada por auditoria: ${facturaSeleccionada.numeroFactura}`);
+        toast.success(`Factura aprobada por auditoría: ${facturaSeleccionada.numeroFactura}`);
         setMostrarDialogAprobar(false);
         setFacturaSeleccionada(null);
       } catch (error: unknown) {
@@ -244,7 +241,7 @@ export default function ControlPrevio() {
   const confirmarRechazo = () => {
     if (!facturaSeleccionada) return;
     if (!motivoRechazo.trim() || motivoRechazo.trim().length < 10) {
-      toast.error('El motivo de rechazo es obligatorio y debe tener minimo 10 caracteres');
+      toast.error('El motivo de rechazo es obligatorio y debe tener mínimo 10 caracteres');
       return;
     }
 
@@ -253,7 +250,7 @@ export default function ControlPrevio() {
       try {
         await facturasService.rechazarAuditoria(facturaSeleccionada.facturaId, motivoRechazo.trim());
         setFacturasAlistadas(await loadFacturas());
-        toast.warning(`Factura rechazada por auditoria: ${facturaSeleccionada.numeroFactura}`);
+        toast.warning(`Factura rechazada por auditoría: ${facturaSeleccionada.numeroFactura}`);
         setMostrarDialogRechazar(false);
         setFacturaSeleccionada(null);
       } catch (error: unknown) {
@@ -277,8 +274,8 @@ export default function ControlPrevio() {
               <ShieldCheck className="w-7 h-7 text-yellow-400" />
             </div>
             <div>
-              <h1 className="text-white mb-1 text-3xl font-bold">Control Previo de Auditoria</h1>
-              <p className="text-red-100 text-sm">Revision documental y contable antes de enviar a direccion financiera</p>
+              <h1 className="text-white mb-1 text-3xl font-bold">Control previo de auditoría</h1>
+              <p className="text-red-100 text-sm">Revisión documental y contable antes de enviar a Dirección Financiera</p>
             </div>
           </div>
         </motion.div>
@@ -287,7 +284,7 @@ export default function ControlPrevio() {
           <Card className="border-0 shadow-lg bg-blue-50 border-blue-200">
             <CardContent className="p-4">
               <p className="text-sm text-blue-700">
-                Alcance de auditoria: revisar causacion contable, soportes y distribucion del rubro. No revisa disponibilidad presupuestal.
+                Alcance de auditoría: revisar causación contable, soportes y distribución del rubro. No revisa disponibilidad presupuestal.
               </p>
             </CardContent>
           </Card>
@@ -409,10 +406,10 @@ export default function ControlPrevio() {
                     <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proceso Pago</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Area</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Área</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                     <TableHead className="font-semibold text-slate-700">Fecha Alistamiento</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Días</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -423,7 +420,7 @@ export default function ControlPrevio() {
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoria.</TableCell>
+                      <TableCell colSpan={8} className="text-center text-slate-500 py-6">No hay facturas alistadas para auditoría.</TableCell>
                     </TableRow>
                   ) : facturasPaginadas.map((factura, index) => {
                     return (
@@ -571,9 +568,9 @@ export default function ControlPrevio() {
 
               <div>
                 <Label className="text-sm font-medium text-slate-700">Observaciones <span className="text-red-600">*</span></Label>
-                <Textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones de auditoria (obligatorio, minimo 10 caracteres)" className="mt-2" />
+                <Textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Observaciones de auditoría (obligatorio, mínimo 10 caracteres)" className="mt-2" />
                 {observaciones.trim().length > 0 && observaciones.trim().length < 10 && (
-                  <p className="text-xs text-red-600 mt-1">Minimo 10 caracteres ({observaciones.trim().length}/10)</p>
+                  <p className="text-xs text-red-600 mt-1">Mínimo 10 caracteres ({observaciones.trim().length}/10)</p>
                 )}
               </div>
             </div>
@@ -592,7 +589,7 @@ export default function ControlPrevio() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Rechazar Factura</DialogTitle>
-            <DialogDescription>Registre el motivo para devolver a tesoreria</DialogDescription>
+            <DialogDescription>Registre el motivo para devolver a Tesorería</DialogDescription>
           </DialogHeader>
 
           {facturaSeleccionada && (
@@ -636,7 +633,7 @@ export default function ControlPrevio() {
 
               <div>
                 <Label className="text-sm font-medium text-slate-700">Motivo de rechazo</Label>
-                <Textarea value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Detalle de la inconsistencia (minimo 10 caracteres)" className="mt-2" />
+                <Textarea value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Detalle de la inconsistencia (mínimo 10 caracteres)" className="mt-2" />
               </div>
             </div>
           )}

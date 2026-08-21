@@ -4,12 +4,16 @@ import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/co
 import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
 
-export const SLA_DIAS_CONTABILIDAD = 12;
+function objetivoSla(factura: Factura) {
+  return Math.max(1, Number(factura.sla_objetivo_dias || 1));
+}
 
-function nivelRiesgo(dias: number): 'verde' | 'amarillo' | 'naranja' | 'vencido' {
-  if (dias > SLA_DIAS_CONTABILIDAD) return 'vencido';
-  if (dias >= SLA_DIAS_CONTABILIDAD - 2) return 'naranja';
-  if (dias >= SLA_DIAS_CONTABILIDAD - 5) return 'amarillo';
+function nivelRiesgo(factura: Factura): 'verde' | 'amarillo' | 'naranja' | 'vencido' {
+  const dias = Number(factura.dias_transcurridos || 0);
+  const objetivo = objetivoSla(factura);
+  if (dias > objetivo) return 'vencido';
+  if (dias >= Math.max(1, objetivo - 2)) return 'naranja';
+  if (dias >= Math.max(1, objetivo - 5)) return 'amarillo';
   return 'verde';
 }
 
@@ -33,7 +37,7 @@ function accionRequerida(factura: Factura): string {
 
   if (factura.estado === 'Registrada') return 'Radicar factura y verificar documentos';
   if (factura.estado === 'Radicada') {
-    if (factura.dias_transcurridos > SLA_DIAS_CONTABILIDAD) return 'URGENTE: Causar factura VENCIDA';
+    if (factura.dias_transcurridos > objetivoSla(factura)) return 'URGENTE: Causar factura VENCIDA';
     return 'Causar factura y cargar soporte Seven';
   }
   return 'Revisar factura';
@@ -105,12 +109,12 @@ export function useContabilidadMisPendientes() {
   }, [facturas, orden]);
 
   const metrics = useMemo(() => {
-    const vencidasCount = facturas.filter((f: Factura) => f.dias_transcurridos > SLA_DIAS_CONTABILIDAD).length;
+    const vencidasCount = facturas.filter((f: Factura) => f.dias_transcurridos > objetivoSla(f)).length;
     const proximasVencerCount = facturas.filter((f: Factura) => {
-      const nivel = nivelRiesgo(f.dias_transcurridos);
+      const nivel = nivelRiesgo(f);
       return nivel === 'amarillo' || nivel === 'naranja';
     }).length;
-    const enTiempoCount = facturas.filter((f: Factura) => nivelRiesgo(f.dias_transcurridos) === 'verde').length;
+    const enTiempoCount = facturas.filter((f: Factura) => nivelRiesgo(f) === 'verde').length;
 
     return { vencidasCount, proximasVencerCount, enTiempoCount };
   }, [facturas]);
@@ -139,7 +143,7 @@ export function useContabilidadMisPendientes() {
     closeDetalle,
     nivelRiesgo,
     accionRequerida,
-    SLA_DIAS: SLA_DIAS_CONTABILIDAD,
+    SLA_DIAS: facturas[0] ? objetivoSla(facturas[0]) : null,
     ...metrics,
   };
 }

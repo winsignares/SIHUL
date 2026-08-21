@@ -303,13 +303,25 @@ def list_usuarios(request):
 
         seccional_id, is_superuser = _get_seccional_scope(usuario_actual)
         if is_superuser:
-            items = Usuario.objects.select_related('sede').all()
+            items = Usuario.objects.select_related('sede', 'rol', 'facultad').all()
         elif seccional_id:
-            items = Usuario.objects.select_related('sede').filter(sede__seccional_id=seccional_id)
+            items = Usuario.objects.select_related('sede', 'rol', 'facultad').filter(sede__seccional_id=seccional_id)
         else:
             return _missing_seccional_response()
 
-        lst = [{"id": i.id, "nombre": i.nombre, "correo": i.correo, "rol_id": (i.rol.id if i.rol else None), "facultad_id": (i.facultad.id if i.facultad else None), "activo": i.activo} for i in items]
+        rol_nombre = (request.GET.get('rol') or '').strip()
+        if rol_nombre:
+            items = items.filter(rol__nombre__iexact=rol_nombre)
+
+        lst = [{
+            "id": i.id,
+            "nombre": i.nombre,
+            "correo": i.correo,
+            "rol_id": i.rol_id,
+            "rol": {"id": i.rol_id, "nombre": i.rol.nombre} if i.rol_id else None,
+            "facultad_id": i.facultad_id,
+            "activo": i.activo,
+        } for i in items]
         return JsonResponse({"usuarios": lst}, status=200)
 
 @csrf_exempt

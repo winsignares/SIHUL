@@ -48,7 +48,7 @@ export default function TableFilters({
   orderKey,
   orderLabel = 'Ordenar por',
   orderOptions = [],
-  searchLabel = 'Numero de Factura',
+  searchLabel = 'Número de factura',
   searchPlaceholder = 'Ej: FAC-2024-001',
 }: TableFiltersProps) {
   const handleReset = () => {
@@ -79,7 +79,7 @@ export default function TableFilters({
             <Filter className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800">Filtros de Busqueda</h3>
+            <h3 className="font-bold text-slate-800">Filtros de búsqueda</h3>
             <p className="text-xs text-slate-500">
               {filtrosActivos > 0
                 ? `${filtrosActivos} filtro${filtrosActivos > 1 ? 's' : ''} activo${filtrosActivos > 1 ? 's' : ''}`
@@ -194,7 +194,7 @@ export default function TableFilters({
           <div className="space-y-2 min-w-0 flex-1 basis-0">
             <Label htmlFor="filter-area" className="text-slate-700 text-xs font-semibold flex items-center gap-1">
               <Search className="w-3 h-3 text-red-600" />
-              Area Solicitante
+              Área solicitante
             </Label>
             <select
               id="filter-area"
@@ -202,7 +202,7 @@ export default function TableFilters({
               onChange={(e) => handleInputChange('areaSolicitante', e.target.value)}
               className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-slate-700 focus:border-red-600 focus:ring-red-600"
             >
-              <option value="">Todas las areas</option>
+              <option value="">Todas las áreas</option>
               {areas.map((area, idx) => (
                 <option key={idx} value={area}>
                   {area}

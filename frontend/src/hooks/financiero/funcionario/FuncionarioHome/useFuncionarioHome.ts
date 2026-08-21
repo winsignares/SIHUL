@@ -92,7 +92,7 @@ export function useFuncionarioHome() {
         trend: 'Listas para contabilidad',
       },
       {
-        title: 'En revision',
+        title: 'En revisión',
         value: String(enRevision),
         icon: TrendingUp,
         color: 'from-red-600 to-red-700',

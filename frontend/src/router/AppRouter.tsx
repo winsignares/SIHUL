@@ -45,6 +45,7 @@ const AsignacionEspaciosSeccionalPage = lazy(() => import('../pages/gestionAcade
 const FuncionarioDashboard = lazy(() => import('../pages/financiero/funcionario'));
 const ProveedorDashboard = lazy(() => import('../pages/financiero/proveedor'));
 const ProveedorFacturaDetalle = lazy(() => import('../pages/financiero/proveedor/FacturaDetalle'));
+const RegistroProveedor = lazy(() => import('../pages/financiero/proveedor/RegistroProveedor'));
 const ContabilidadDashboard = lazy(() => import('../pages/financiero/contabilidad'));
 const TesoreriaDashboard = lazy(() => import('../pages/financiero/tesoreria'));
 const AuditoriaDashboard = lazy(() => import('../pages/financiero/auditoria'));
@@ -321,6 +322,7 @@ export default function AppRouter() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/registro-proveedor" element={<RegistroProveedor />} />
           <Route path="/public" element={<PublicLayout />}>
             <Route index element={<Navigate to="/public/dashboard" replace />} />
             <Route path="dashboard" element={<PublicDashboard />} />
@@ -933,6 +935,7 @@ export default function AppRouter() {
 
       {/* Login fuera del layout */}
       <Route path="/login" element={<Login />} />
+      <Route path="/registro-proveedor" element={<RegistroProveedor />} />
     </Routes>
     </Suspense>
   );

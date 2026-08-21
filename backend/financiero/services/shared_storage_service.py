@@ -37,6 +37,7 @@ class StorageResult:
     nas_relative_path: Optional[str] = None
     error_code: Optional[str] = None
     message: str = ''
+    content_bytes: Optional[bytes] = None
 
 
 # ------------------------------------------------------------------ #
@@ -180,6 +181,25 @@ class SharedStorageService:
             return self._do_copy_unified_pdf(content_bytes, factura, scope)
         except Exception as exc:
             return self._handle_error(exc, 'guardar PDF unificado', factura)
+
+    def read_file(self, nas_relative_path: str) -> StorageResult:
+        """Lee un archivo previamente guardado en el NAS a partir de su ruta relativa."""
+        if not self.enabled:
+            return StorageResult(False, error_code='DISABLED', message='NAS no configurado')
+
+        relative = str(nas_relative_path or '').strip().replace('\\', '/').lstrip('/')
+        if not relative or '..' in relative.split('/'):
+            return StorageResult(False, error_code='INVALID_PATH', message='Ruta de NAS inválida')
+
+        try:
+            smbclient, _ = self._get_smb_client()
+            server, share, base = _parse_unc(self.unc_root)
+            full_relative = f'{base}/{relative}' if base else relative
+            path = _smb_path(server, share, full_relative)
+            with smbclient.open_file(path, mode='rb') as remote_file:
+                return StorageResult(True, nas_relative_path=relative, content_bytes=remote_file.read())
+        except Exception as exc:
+            return self._handle_error(exc, 'leer archivo', None)
 
     # ---------------------------------------------------------------- #
     # Internal: SMB session                                             #

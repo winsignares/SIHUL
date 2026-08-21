@@ -49,7 +49,7 @@ export default function TesoreriaHome({
       trend: 'Estado: Causadas/Detenidas',
     },
     {
-      title: 'Aprobadas por Auditoria',
+      title: 'Aprobadas por Auditoría',
       value: String(statsData.aprobadasAuditoria),
       icon: CheckCircle2,
       color: 'from-purple-600 to-purple-700',
@@ -84,7 +84,7 @@ export default function TesoreriaHome({
     },
     {
       title: 'Enviar Direccion Financiera',
-      description: 'Remite facturas aprobadas por auditoria para cargue formal',
+      description: 'Remite facturas aprobadas por auditoría para cargue formal',
       icon: CheckCircle2,
       color: 'from-purple-600 to-purple-700',
       action: onGoToEnviarDireccion,
@@ -195,7 +195,7 @@ export default function TesoreriaHome({
             <Wallet className="w-6 h-6 text-yellow-400" />
           </div>
           <div>
-            <h1 className="text-white mb-0 text-2xl font-bold">Panel de Tesoreria</h1>
+            <h1 className="text-white mb-0 text-2xl font-bold">Panel de Tesorería</h1>
             <p className="text-red-100 text-sm">Gestiona alistamiento, envio, registro de pagos y expedientes pagados</p>
           </div>
         </div>

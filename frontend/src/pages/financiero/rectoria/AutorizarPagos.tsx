@@ -106,7 +106,7 @@ export default function AutorizarPagos() {
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-red-50">
                 <FileCheck className="h-4 w-4 text-amber-300" />
-                Rectoria / Autorizacion institucional
+                Rectoría / Autorización institucional
               </div>
               <div className="flex items-start gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/12">
@@ -115,7 +115,7 @@ export default function AutorizarPagos() {
                 <div>
                   <h1 className="text-3xl font-black tracking-tight">Autorizar Pagos (RF09)</h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-red-50/90">
-                    Valida pagos remitidos por Direccion Financiera, revisa la documentacion completa y toma la decision final con trazabilidad.
+                    Valida pagos remitidos por Dirección Financiera, revisa la documentación completa y toma la decisión final con trazabilidad.
                   </p>
                 </div>
               </div>
@@ -131,7 +131,7 @@ export default function AutorizarPagos() {
                 <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.criticos}</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Promedio dias</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Promedio de días</p>
                 <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.promedioDias}</p>
               </div>
             </div>
@@ -142,8 +142,8 @@ export default function AutorizarPagos() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-slate-800">Filtros y orden de autorizacion</CardTitle>
-                <CardDescription>Consulta solamente pagos enviados a Rectoria y prioriza los mas antiguos o los de mayor riesgo SLA.</CardDescription>
+                <CardTitle className="text-slate-800">Filtros y orden de autorización</CardTitle>
+                <CardDescription>Consulta solamente pagos enviados a Rectoría y prioriza los más antiguos o los de mayor riesgo del SLA.</CardDescription>
               </div>
               {(filtros.numeroFactura || filtros.numeroRadicado || filtros.numeroProcesoPago) && (
                 <Button size="sm" variant="outline" onClick={() => setFiltros({ numeroFactura: '', numeroRadicado: '', numeroProcesoPago: '', orden: filtros.orden })} className="border-red-200 text-red-600 hover:bg-red-50 gap-1">
@@ -214,7 +214,7 @@ export default function AutorizarPagos() {
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                     <TableHead className="font-semibold text-slate-700">Fecha envio</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Días</TableHead>
                     <TableHead className="font-semibold text-slate-700">Estado</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
@@ -412,18 +412,18 @@ export default function AutorizarPagos() {
               {accion === 'aprobar' ? (
                 <>
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  Confirmacion de autorizacion rectoral
+                  Confirmación de autorización rectoral
                 </>
               ) : (
                 <>
                   <XCircle className="h-5 w-5 text-red-600" />
-                  Rechazo y devolucion a Direccion Financiera
+                  Rechazo y devolución a Dirección Financiera
                 </>
               )}
             </DialogTitle>
             <DialogDescription>
               {accion === 'aprobar'
-                ? 'Confirme la autorizacion institucional para que el pago continue al cierre bancario.'
+                ? 'Confirme la autorización institucional para que el pago continúe al cierre bancario.'
                 : 'Registre el motivo formal del rechazo para devolver el caso con trazabilidad completa.'}
             </DialogDescription>
           </DialogHeader>
@@ -447,7 +447,7 @@ export default function AutorizarPagos() {
 
               {accion === 'aprobar' ? (
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="font-semibold text-emerald-900">Checklist previo a la autorizacion</p>
+                  <p className="font-semibold text-emerald-900">Lista de verificación previa a la autorización</p>
                   <ul className="mt-2 space-y-1 text-sm text-emerald-800">
                     <li>- Expediente completo y validado</li>
                     <li>- Valor y tercero conciliados</li>
@@ -458,7 +458,7 @@ export default function AutorizarPagos() {
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                   <p className="font-semibold text-red-900">Control de rechazo</p>
                   <p className="mt-1 text-sm text-red-800">
-                    El motivo quedara guardado en el historial y el pago regresara a Direccion Financiera para ajuste.
+                    El motivo quedará guardado en el historial y el pago regresará a Dirección Financiera para ajuste.
                   </p>
                 </div>
               )}
@@ -467,19 +467,19 @@ export default function AutorizarPagos() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">
-              {accion === 'rechazar' ? 'Motivo de rechazo' : 'Observaciones de Rectoria'} <span className="text-red-600">*</span>
+              {accion === 'rechazar' ? 'Motivo de rechazo' : 'Observaciones de Rectoría'} <span className="text-red-600">*</span>
             </label>
             <Textarea
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              placeholder={accion === 'rechazar' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre las observaciones institucionales de la autorizacion...'}
+              placeholder={accion === 'rechazar' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre las observaciones institucionales de la autorización...'}
               className={accion === 'rechazar' ? 'border-red-300' : ''}
               rows={4}
             />
             {motivo.trim().length > 0 && motivo.trim().length < 10 ? (
-              <p className="text-xs text-red-600">Minimo 10 caracteres ({motivo.trim().length}/10)</p>
+              <p className="text-xs text-red-600">Mínimo 10 caracteres ({motivo.trim().length}/10)</p>
             ) : (
-              <p className="text-xs text-slate-500">Obligatorio, minimo 10 caracteres.</p>
+              <p className="text-xs text-slate-500">Obligatorio, mínimo 10 caracteres.</p>
             )}
           </div>
 
@@ -499,7 +499,7 @@ export default function AutorizarPagos() {
               disabled={isProcessing || motivo.trim().length < 10}
               className={accion === 'aprobar' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}
             >
-              {isProcessing ? 'Procesando...' : accion === 'aprobar' ? 'Confirmar autorizacion' : 'Confirmar rechazo'}
+              {isProcessing ? 'Procesando...' : accion === 'aprobar' ? 'Confirmar autorización' : 'Confirmar rechazo'}
             </Button>
           </DialogFooter>
         </DialogContent>

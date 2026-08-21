@@ -123,7 +123,7 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
             <Shield className="w-6 h-6 text-yellow-400" />
           </div>
           <div>
-            <h1 className="text-white mb-0 text-2xl font-bold">Panel de Auditoria</h1>
+            <h1 className="text-white mb-0 text-2xl font-bold">Panel de Auditoría</h1>
             <p className="text-red-100 text-sm">Control previo documental y contable antes de continuar el pago</p>
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-slate-800 mb-2 group-hover:text-red-600 transition-colors">Control Previo</h3>
-                <p className="text-sm text-slate-600">Revise soportes, valide la causacion y emita el concepto de auditoria.</p>
+                <p className="text-sm text-slate-600">Revise soportes, valide la causación y emita el concepto de auditoría.</p>
               </div>
             </div>
           </CardContent>
@@ -216,7 +216,7 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
                               {item.estado}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-600 truncate">{item.proveedor} - {item.dias} dias en revision previa</p>
+                          <p className="text-xs text-slate-600 truncate">{item.proveedor} - {item.dias} días en revisión previa</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">

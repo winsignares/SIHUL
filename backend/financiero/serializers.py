@@ -24,7 +24,7 @@ ALLOWED_DOC_MIME_TYPES = {
     'text/plain',
     'application/octet-stream',  # .txt desde Windows/Chrome
 }
-MAX_DOC_SIZE_BYTES = 10 * 1024 * 1024
+MAX_DOC_SIZE_BYTES = 25 * 1024 * 1024
 
 
 DOCUMENTOS_SENSIBLES_POR_ROL = {
@@ -220,7 +220,7 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Tipo de archivo no permitido. Use PDF, XML, PNG o JPG.')
 
         if getattr(archivo, 'size', 0) > MAX_DOC_SIZE_BYTES:
-            raise serializers.ValidationError('El archivo supera el tamaño máximo permitido (10 MB).')
+            raise serializers.ValidationError('El archivo supera el tamaño máximo permitido (25 MB).')
 
         content_type = (getattr(archivo, 'content_type', '') or '').split(';', 1)[0].strip().lower()
         if content_type and content_type not in ALLOWED_DOC_MIME_TYPES:
@@ -364,7 +364,7 @@ class FacturaListSerializer(serializers.ModelSerializer):
             'cuenta_contable', 'centro_costo', 'numero_proceso_pago', 'numero_confirmacion', 'numero_transaccion', 'numero_comprobante',
             'numero_operacion_contable', 'consecutivo_operacion', 'archivo_plano_generado',
             'valor_neto_pagar', 'estado', 'estado_display', 'etapa_actual', 'fecha_inicio_etapa',
-            'tipo_documento', 'descripcion', 'observaciones', 'identificacion_factura', 'fecha_factura', 'fecha_recepcion',
+            'tipo_documento', 'observaciones', 'identificacion_factura', 'fecha_factura', 'fecha_recepcion',
             'fecha_radicacion', 'fecha_causacion', 'fecha_alistamiento', 'fecha_aprobacion_auditoria',
             'fecha_revision_direccion', 'fecha_autorizacion', 'fecha_pago_aplicado', 'fecha_comprobante',
             'dias_transcurridos', 'indicador_riesgo',
@@ -444,12 +444,12 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
     cuenta_contable_id = serializers.IntegerField(required=False, allow_null=True)
     centro_costo_id = serializers.IntegerField(required=False, allow_null=True)
     usuario_responsable_id = serializers.IntegerField(required=False, allow_null=True)
-    items = ItemFacturaSerializer(many=True, required=False, write_only=True)
+    items = ItemFacturaSerializer(many=True, required=True, allow_empty=False, write_only=True)
 
     class Meta:
         model = models.Factura
         fields = [
-            'id', 'numero_factura', 'tipo_documento', 'descripcion', 'observaciones',
+            'id', 'numero_factura', 'tipo_documento', 'observaciones',
             'identificacion_factura',
             'proveedor_id', 'departamento_id', 'cuenta_contable_id', 'centro_costo_id',
             'valor_subtotal', 'valor_iva', 'valor_retencion_renta', 'valor_retencion_iva',

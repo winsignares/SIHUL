@@ -1,6 +1,7 @@
 export * from './facturas/facturasAPI';
 export * from './catalogos-proveedores/catalogosProveedoresAPI';
 export * from './proveedores/proveedoresAPI';
+export * from './proveedores/registroProveedorAPI';
 export * from './departamentos/departamentosAPI';
 export * from './cuentas-contables/cuentasContablesAPI';
 export * from './centros-costo/centrosCostoAPI';

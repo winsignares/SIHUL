@@ -44,7 +44,7 @@ export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
   const quickActions = [
     {
       title: 'Autorizar Pagos',
-      description: 'Revisar y decidir pagos enviados por Direccion Financiera',
+      description: 'Revisar y decidir pagos enviados por Dirección Financiera',
       icon: FileCheck,
       action: onGoToAutorizar,
       className: 'bg-white text-slate-900 border border-white/20 hover:bg-red-50',
@@ -86,9 +86,9 @@ export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
                   <Crown className="h-7 w-7 text-amber-300" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Rectoria</h1>
+                  <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Rectoría</h1>
                   <p className="mt-2 text-sm leading-6 text-red-50/90">
-                    Supervisa la autorizacion institucional y el cierre del flujo con una vista resumida, clara y accionable.
+                    Supervisa la autorización institucional y el cierre del flujo con una vista resumida, clara y accionable.
                   </p>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <Badge className={`${getEstadoBadge(item.estado)} border`}>{item.estado}</Badge>
-                          <Badge variant="outline">{item.areaSolicitante || 'Sin area'}</Badge>
+                          <Badge variant="outline">{item.areaSolicitante || 'Sin área'}</Badge>
                         </div>
                       </motion.button>
                     ))}

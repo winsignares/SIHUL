@@ -346,8 +346,9 @@ export const userService = {
   /**
    * Obtiene la lista de todos los usuarios
    */
-  listarUsuarios: async (): Promise<{ usuarios: Usuario[] }> => {
-    const response = await apiClient.get<UsuarioApi[] | { usuarios?: UsuarioApi[]; results?: UsuarioApi[] }>('/usuarios/');
+  listarUsuarios: async (params?: { rol?: string }): Promise<{ usuarios: Usuario[] }> => {
+    const query = params?.rol ? `?rol=${encodeURIComponent(params.rol)}` : '';
+    const response = await apiClient.get<UsuarioApi[] | { usuarios?: UsuarioApi[]; results?: UsuarioApi[] }>(`/usuarios/${query}`);
     const usuariosRaw = Array.isArray(response)
       ? response
       : (response.usuarios ?? response.results ?? []);

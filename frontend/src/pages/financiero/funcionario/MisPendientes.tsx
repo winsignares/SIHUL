@@ -29,7 +29,6 @@ function mapFacturaToPendingRow(f: Factura): FuncionarioPendingRow {
     nit: f.proveedor?.nit || 'Sin NIT',
     contacto: contacto || 'Sin datos de contacto',
     tipoDocumento: f.tipo_documento || 'Factura',
-    descripcion: f.descripcion || 'Sin descripcion',
     observaciones: f.observaciones || '',
     valorTotal: Number(f.valor_total || 0),
     fechaFactura: f.fecha_factura || '',
@@ -99,7 +98,6 @@ export default function MisPendientes() {
           row.nit,
           row.tipoDocumento,
           row.observaciones,
-          row.descripcion,
           row.areaSolicitante,
         ].some((value) => String(value || '').toLowerCase().includes(normalized));
       })
@@ -167,7 +165,6 @@ export default function MisPendientes() {
           diasTranscurridos: Math.max(0, Number(factura.dias_transcurridos || 0)),
           numeroRadicado: factura.numero_radicado || undefined,
           numeroProcesoPago: factura.numero_proceso_pago || undefined,
-          descripcion: factura.descripcion || undefined,
           observaciones: factura.observaciones || undefined,
           cuentaBancariaProveedor: factura.cuenta_bancaria_proveedor || undefined,
           nivelRiesgo:
@@ -198,7 +195,6 @@ export default function MisPendientes() {
             areaSolicitante: selectedRow.areaSolicitante,
             estado: 'Recibida',
             diasTranscurridos: selectedRow.dias,
-            descripcion: selectedRow.descripcion,
             nit: selectedRow.nit,
             nivelRiesgo:
               selectedRow.nivelRiesgo === 'vencido'
@@ -403,7 +399,6 @@ export default function MisPendientes() {
                                 fechaRecepcion: row.fechaRecepcion,
                                 departamentoId: row.departamentoId,
                                 departamentoNombre: row.departamentoNombre,
-                                descripcion: row.descripcion,
                                 observaciones: row.observaciones,
                               },
                             },

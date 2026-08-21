@@ -6,7 +6,7 @@ export interface Proveedor {
   nit: string;
   razon_social: string;
   nombre_comercial?: string;
-  tipo_proveedor: 'Bienes' | 'Servicios' | 'Construcción' | 'Mixto';
+  tipo_proveedor: 'Bienes' | 'Servicios';
   tipo_persona?: 'Natural' | 'Jurídica';
   email?: string;
   telefono?: string;
@@ -173,7 +173,6 @@ export interface Factura {
   valor_neto_pagar: number;
 
   tipo_documento: 'Factura Electrónica' | 'Factura' | 'Cuenta de Cobro' | 'Nota Débito' | 'Otro';
-  descripcion: string;
   observaciones?: string;
   identificacion_factura?: string;
   items?: ItemFactura[];
@@ -274,10 +273,9 @@ export interface CreateFacturaDTO {
   valor_total: number;
 
   tipo_documento: string;
-  descripcion: string;
   observaciones?: string;
   identificacion_factura?: string;
-  items?: ItemFactura[];
+  items: ItemFactura[];
 
   fecha_factura: string;
   fecha_recepcion: string;

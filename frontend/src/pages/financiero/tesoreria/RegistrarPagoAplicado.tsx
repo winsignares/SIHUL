@@ -90,7 +90,7 @@ const mapFactura = (factura: APIFactura): FacturaRegistroRow => ({
   estado: factura.estado,
   diasTranscurridos: Math.max(0, Number(factura.dias_transcurridos || 0)),
   slaObjetivoDias: factura.sla_objetivo_dias ?? null,
-  numeroConfirmacion: factura.numero_confirmacion || 'Sin confirmacion',
+  numeroConfirmacion: factura.numero_confirmacion || 'Sin confirmación',
   raw: factura,
 });
 
@@ -203,7 +203,7 @@ export default function RegistrarPagoAplicado() {
     if (!facturaSeleccionada) return;
 
     if (!numeroTransaccion.trim()) {
-      toast.error('Debe ingresar el numero de transaccion bancaria.');
+      toast.error('Debe ingresar el número de transacción bancaria.');
       return;
     }
 
@@ -245,7 +245,7 @@ export default function RegistrarPagoAplicado() {
       return;
     }
 
-    const maxSizeBytes = 10 * 1024 * 1024;
+    const maxSizeBytes = 25 * 1024 * 1024;
     const allowedExtensions = ['pdf', 'xml', 'png', 'jpg', 'jpeg'];
     const extension = file.name.split('.').pop()?.toLowerCase() || '';
 
@@ -257,7 +257,7 @@ export default function RegistrarPagoAplicado() {
     }
 
     if (file.size > maxSizeBytes) {
-      toast.error('El archivo supera el tamaño maximo permitido (10 MB).');
+      toast.error('El archivo supera el tamaño máximo permitido (25 MB).');
       event.target.value = '';
       setArchivoComprobante(null);
       return;
@@ -281,7 +281,7 @@ export default function RegistrarPagoAplicado() {
             <div>
               <h1 className="text-3xl font-black tracking-tight">Registrar Pago Aplicado</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-red-50/90">
-                Registra en Benji los pagos ya ejecutados en el banco, una vez confirmados previamente por Direccion Financiera en control bancario.
+                Registra en Benji los pagos ya ejecutados en el banco, una vez confirmados previamente por Dirección Financiera en control bancario.
               </p>
             </div>
           </div>
@@ -290,7 +290,7 @@ export default function RegistrarPagoAplicado() {
         <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="text-slate-800">Filtros y orden de registro</CardTitle>
-            <CardDescription>Consulta pagos confirmados por Direccion Financiera y prioriza los mas antiguos o los de mayor criticidad.</CardDescription>
+            <CardDescription>Consulta pagos confirmados por Dirección Financiera y prioriza los más antiguos o los de mayor criticidad.</CardDescription>
           </CardHeader>
           <CardContent>
             <TableFilters
@@ -319,7 +319,7 @@ export default function RegistrarPagoAplicado() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
-                  Confirmados por Direccion Financiera
+                  Confirmados por Dirección Financiera
                 </Badge>
                 <Button onClick={() => void cargarFacturas()} variant="outline" disabled={loading} className="border-slate-300 text-slate-700 hover:bg-slate-50">
                   <Loader2 className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -343,10 +343,10 @@ export default function RegistrarPagoAplicado() {
                     <TableHead className="font-semibold text-slate-700">SLA</TableHead>
                     <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Area</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Área</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Fecha autorizacion</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Confirmacion</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Fecha de autorización</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Confirmación</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -544,14 +544,14 @@ export default function RegistrarPagoAplicado() {
                   <p className="truncate font-semibold text-slate-800">{facturaSeleccionada.proveedor}</p>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">Confirmacion bancaria</p>
+                  <p className="text-xs text-slate-500">Confirmación bancaria</p>
                   <p className="font-semibold text-emerald-700">{facturaSeleccionada.numeroConfirmacion}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
                 <div>
-                  <Label htmlFor="trans" className="text-xs text-slate-500">Numero de transaccion</Label>
+                  <Label htmlFor="trans" className="text-xs text-slate-500">Número de transacción</Label>
                   <Input id="trans" value={numeroTransaccion} onChange={(e) => setNumeroTransaccion(e.target.value)} placeholder="TRX-XXXX" />
                 </div>
                 <div>
@@ -562,7 +562,7 @@ export default function RegistrarPagoAplicado() {
                   <Label htmlFor="comprobante-bancario" className="text-xs text-slate-500">Comprobante bancario (requerido)</Label>
                   <Input id="comprobante-bancario" type="file" accept=".pdf,.xml,.png,.jpg,.jpeg" onChange={onSelectComprobante} />
                   <Input value={archivoComprobante?.name || ''} readOnly placeholder="Sin archivo" />
-                  <p className="text-xs text-slate-500">Formatos: PDF, XML, PNG o JPG. Maximo 10 MB.</p>
+                  <p className="text-xs text-slate-500">Formatos: PDF, XML, PNG o JPG. Máximo 25 MB.</p>
                 </div>
               </div>
 

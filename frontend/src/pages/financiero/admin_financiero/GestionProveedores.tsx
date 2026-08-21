@@ -49,9 +49,14 @@ type ProveedorFormState = {
   estado: Proveedor['estado'];
 };
 
-const TIPO_PROVEEDOR_OPTIONS: Proveedor['tipo_proveedor'][] = ['Servicios', 'Bienes', 'Construcción', 'Mixto'];
+const TIPO_PROVEEDOR_OPTIONS: Proveedor['tipo_proveedor'][] = ['Bienes', 'Servicios'];
 const TIPO_PERSONA_OPTIONS: NonNullable<Proveedor['tipo_persona']>[] = ['Jurídica', 'Natural'];
-const REGIMEN_OPTIONS = ['Responsable IVA', 'No responsable', 'Gran Contribuyente'] as const;
+const REGIMEN_OPTIONS = [
+  'Responsable IVA',
+  'No Responsable IVA',
+  'Régimen Simple de Tributación',
+  'Régimen Tributario Especial',
+] as const;
 const ESTADO_OPTIONS: Proveedor['estado'][] = ['Activo', 'Inactivo', 'Bloqueado', 'Verificación'];
 
 const emptyForm: ProveedorFormState = {
@@ -180,11 +185,11 @@ export default function GestionProveedoresReal() {
     try {
       const [proveedoresResp, usuariosResp] = await Promise.all([
         proveedoresService.getAll({ limit: 500, ordering: '-id' }),
-        userService.listarUsuarios(),
+        userService.listarUsuarios({ rol: 'Proveedor' }),
       ]);
 
       setProveedores(toArray<ProveedorUI>(proveedoresResp));
-      setUsuariosProveedor((usuariosResp.usuarios || []).filter((usuario) => normalizeText(usuario.rol?.nombre) === 'proveedor'));
+      setUsuariosProveedor(usuariosResp.usuarios || []);
       await cargarCatalogos();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'No se pudieron cargar los proveedores.'));

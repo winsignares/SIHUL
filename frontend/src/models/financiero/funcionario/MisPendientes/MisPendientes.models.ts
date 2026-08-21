@@ -5,7 +5,6 @@ export interface FuncionarioPendingRow {
   nit: string;
   contacto: string;
   tipoDocumento: string;
-  descripcion: string;
   observaciones?: string;
   valorTotal: number;
   fechaFactura: string;

@@ -13,17 +13,14 @@ import type { ParametroSLA } from '../../../models/financiero/core.models';
 import { toast } from 'sonner';
 
 const ETAPAS_ORDEN: Array<{ index: number; terms: string[] }> = [
-  { index: 1, terms: ['registro y recepcion', 'recepcion y registro'] },
-  { index: 2, terms: ['radicacion'] },
+  { index: 1, terms: ['registro por parte del funcionario'] },
+  { index: 2, terms: ['radicacion y causacion'] },
   { index: 3, terms: ['alistamiento'] },
   { index: 4, terms: ['control previo'] },
-  { index: 5, terms: ['envio a direccion financiera'] },
-  { index: 6, terms: ['cargue formal'] },
-  { index: 7, terms: ['envio a rectoria'] },
-  { index: 8, terms: ['aplicacion de pago', 'pago aplicado', 'factura pagada', 'comprobante de egreso', 'generacion comprobante'] },
+  { index: 5, terms: ['cargue formal'] },
+  { index: 6, terms: ['autorizacion de pago'] },
+  { index: 7, terms: ['aplicacion de pago'] },
 ];
-
-const ETAPAS_OCULTAS = ['causacion', 'autorizacion de pago'];
 
 const normalizeText = (value: string) =>
   value
@@ -40,22 +37,8 @@ const getOrderByEtapa = (etapa: string) => {
 
 const getCanonicalEtapaKey = (etapa: string) => {
   const etapaNormalizada = normalizeText(etapa);
-  if (etapaNormalizada.includes('registro y recepcion') || etapaNormalizada.includes('recepcion y registro')) {
-    return 'registro-recepcion';
-  }
-  if (
-    etapaNormalizada.includes('aplicacion de pago') ||
-    etapaNormalizada.includes('pago aplicado') ||
-    etapaNormalizada.includes('factura pagada') ||
-    etapaNormalizada.includes('comprobante de egreso') ||
-    etapaNormalizada.includes('generacion comprobante')
-  ) {
-    return 'aplicacion-pago';
-  }
   return etapaNormalizada;
 };
-
-const isPreferredRegistroLabel = (etapa: string) => normalizeText(etapa).includes('registro y recepcion');
 
 export default function ParametrizacionSLAReal() {
   const [parametros, setParametros] = useState<ParametroSLA[]>([]);
@@ -106,9 +89,7 @@ export default function ParametrizacionSLAReal() {
 
   const parametrosOrdenados = useMemo(
     () => {
-      const visibles = parametros.filter(
-        (p) => !ETAPAS_OCULTAS.some((term) => normalizeText(p.etapa).includes(term))
-      );
+      const visibles = parametros.filter((p) => getOrderByEtapa(p.etapa) !== 999);
       const sorted = visibles.sort((a, b) => {
         const orderA = getOrderByEtapa(a.etapa);
         const orderB = getOrderByEtapa(b.etapa);
@@ -123,9 +104,6 @@ export default function ParametrizacionSLAReal() {
         if (!existing) {
           uniqueMap.set(key, item);
           continue;
-        }
-        if (key === 'registro-recepcion' && isPreferredRegistroLabel(item.etapa) && !isPreferredRegistroLabel(existing.etapa)) {
-          uniqueMap.set(key, item);
         }
       }
 

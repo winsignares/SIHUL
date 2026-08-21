@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Receipt, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { proveedoresService } from '../../../../services/financiero';
 import type { Factura } from '../../../../models/financiero/core.models';
@@ -15,24 +15,40 @@ export function useProveedorHome(miProveedorId?: number) {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadFacturas = useCallback(async (silent = false) => {
     if (!miProveedorId) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
-    const load = async () => {
-      setLoading(true);
-      try {
-        const resp = await proveedoresService.getMisFacturas(miProveedorId, { limit: 20 });
-        setFacturas(toList<Factura>(resp));
-      } catch {
-        setFacturas([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
+    if (!silent) setLoading(true);
+    try {
+      const resp = await proveedoresService.getMisFacturas(miProveedorId, { limit: 20 });
+      setFacturas(toList<Factura>(resp));
+    } catch {
+      if (!silent) setFacturas([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [miProveedorId]);
+
+  useEffect(() => {
+    void loadFacturas();
+  }, [loadFacturas]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadFacturas(true);
+    };
+    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
+  }, [loadFacturas]);
 
   const stats = [
     {

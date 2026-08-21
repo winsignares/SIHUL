@@ -107,16 +107,16 @@ export default function RevisarPagos() {
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-red-50">
               <ListChecks className="h-4 w-4 text-amber-300" />
-              Direccion Financiera / Sindicatura
+              Dirección Financiera / Sindicatura
             </div>
             <div className="flex items-start gap-4">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/12">
                 <FileCheck className="h-8 w-8 text-amber-300" />
               </div>
               <div>
-                <h1 className="text-3xl font-black tracking-tight">Cargue y Revision</h1>
+                <h1 className="text-3xl font-black tracking-tight">Cargue y revisión</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-red-50/90">
-                  Consolida la validacion final del expediente, revisa la trazabilidad documental completa y envia automaticamente cada factura a Rectoria.
+                  Consolida la validación final del expediente, revisa la trazabilidad documental completa y envía automáticamente cada factura a Rectoría.
                 </p>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function RevisarPagos() {
               <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.criticas}</p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Rechazadas Rectoria</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Rechazadas por Rectoría</p>
               <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.devueltas}</p>
             </div>
           </div>
@@ -154,8 +154,8 @@ export default function RevisarPagos() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-slate-800">Filtros y orden de revision</CardTitle>
-              <CardDescription>Consulta unicamente facturas en etapa de cargue pendiente de Direccion Financiera, priorizadas por antiguedad o criticidad SLA.</CardDescription>
+              <CardTitle className="text-slate-800">Filtros y orden de revisión</CardTitle>
+              <CardDescription>Consulta únicamente facturas en etapa de cargue pendiente de Dirección Financiera, priorizadas por antigüedad o criticidad del SLA.</CardDescription>
             </div>
             {(filtros.numeroFactura || filtros.numeroRadicado || filtros.numeroProcesoPago) && (
               <Button size="sm" variant="outline" onClick={() => setFiltros({ numeroFactura: '', numeroRadicado: '', numeroProcesoPago: '', orden: filtros.orden })} className="border-red-200 text-red-600 hover:bg-red-50 gap-1">
@@ -192,7 +192,7 @@ export default function RevisarPagos() {
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle className="text-slate-800">Facturas de cargue y remision a Rectoria</CardTitle>
+              <CardTitle className="text-slate-800">Facturas de cargue y remisión a Rectoría</CardTitle>
               <CardDescription>
                 Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} facturas
               </CardDescription>
@@ -224,9 +224,9 @@ export default function RevisarPagos() {
                   <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                   <TableHead className="font-semibold text-slate-700">N° Proceso Pago</TableHead>
                   <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Area</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Área</TableHead>
                   <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Dias transcurridos</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Días transcurridos</TableHead>
                   <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -409,18 +409,18 @@ export default function RevisarPagos() {
               {decisionTipo === 'aprobar' ? (
                 <>
                   <Upload className="h-5 w-5 text-emerald-600" />
-                  Confirmacion de cargue financiero
+                  Confirmación de cargue financiero
                 </>
               ) : (
                 <>
                   <XCircle className="h-5 w-5 text-red-600" />
-                  Rechazo y devolucion a Tesoreria
+                  Rechazo y devolución a Tesorería
                 </>
               )}
             </DialogTitle>
             <DialogDescription>
               {decisionTipo === 'aprobar'
-                ? 'Valide el expediente y deje la factura cargada con envio automatico a Rectoria.'
+                ? 'Valide el expediente y deje la factura cargada con envío automático a Rectoría.'
                 : 'Registre el motivo formal del rechazo para devolver la factura con trazabilidad completa.'}
             </DialogDescription>
           </DialogHeader>
@@ -450,8 +450,8 @@ export default function RevisarPagos() {
                       <p className="font-semibold text-emerald-900">Checklist previo al cargue</p>
                       <ul className="mt-2 space-y-1 text-sm text-emerald-800">
                         <li>- Expediente completo y legible</li>
-                        <li>- Valor, area y tercero conciliados</li>
-                        <li>- Envio automatico a Rectoria al confirmar</li>
+                        <li>- Valor, área y tercero conciliados</li>
+                        <li>- Envío automático a Rectoría al confirmar</li>
                       </ul>
                     </div>
                   </div>
@@ -479,11 +479,11 @@ export default function RevisarPagos() {
             <Textarea
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              placeholder={decisionTipo === 'devolver' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre las validaciones realizadas y el contexto para Rectoria...'}
+              placeholder={decisionTipo === 'devolver' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre las validaciones realizadas y el contexto para Rectoría...'}
               className="border-slate-300"
               rows={4}
             />
-            <p className="text-xs text-slate-500">Minimo 10 caracteres.</p>
+            <p className="text-xs text-slate-500">Mínimo 10 caracteres.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={cerrarDecision} disabled={procesando}>Cancelar</Button>

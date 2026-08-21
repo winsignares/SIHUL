@@ -29,7 +29,6 @@ interface FacturaPendiente {
   cuentaContable: string;
   centroCosto: string;
   estado: string;
-  descripcion?: string;
 }
 
 const toList = <T,>(data: unknown): T[] => {
@@ -59,12 +58,11 @@ const mapFactura = (f: APIFactura, diasMaximos: number): FacturaPendiente => {
     diasTranscurridos,
     diasMaximos,
     nivelRiesgo: getNivelRiesgo(diasTranscurridos, diasMaximos),
-    accionRequerida: 'Realizar control previo de auditoria',
+    accionRequerida: 'Realizar control previo de auditoría',
     areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
     cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
     centroCosto: f.centro_costo ? `${f.centro_costo.codigo} - ${f.centro_costo.nombre}` : 'Sin centro',
     estado: f.estado,
-    descripcion: f.descripcion,
   };
 };
 
@@ -107,12 +105,11 @@ export default function MisPendientes() {
       estado: factura.estado,
       diasTranscurridos: factura.diasTranscurridos,
       fechaRecepcion: factura.fechaAlistamiento,
-      descripcion: factura.descripcion,
       observaciones: factura.accionRequerida,
       cuentaContable: factura.cuentaContable,
       centroCosto: factura.centroCosto,
       auditoriaView: true,
-      auditoriaNotas: 'Revise causacion contable, soportes y distribucion correcta en el rubro antes de aprobar.',
+      auditoriaNotas: 'Revise causación contable, soportes y distribución correcta en el rubro antes de aprobar.',
       nivelRiesgo: factura.nivelRiesgo,
     });
     setMostrarDetalle(true);
@@ -172,7 +169,7 @@ export default function MisPendientes() {
             </div>
             <div>
               <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
-              <p className="text-red-100 text-sm">Facturas alistadas para control previo (SLA de proceso: 24 dias)</p>
+              <p className="text-red-100 text-sm">Facturas alistadas para control previo (SLA de proceso: 24 días)</p>
             </div>
           </div>
         </motion.div>
@@ -235,7 +232,7 @@ export default function MisPendientes() {
                 <div>
                   <h3 className="font-semibold text-blue-900 mb-1">Mi responsabilidad en control previo</h3>
                   <p className="text-sm text-blue-700">
-                    No revisa disponibilidad presupuestal. Si revisa causacion contable, soportes y distribucion correcta en rubro.
+                    No revisa disponibilidad presupuestal. Sí revisa causación contable, soportes y distribución correcta en rubro.
                   </p>
                 </div>
               </div>
@@ -264,8 +261,8 @@ export default function MisPendientes() {
                       <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                       <TableHead className="font-semibold text-slate-700">Cuenta</TableHead>
                       <TableHead className="font-semibold text-slate-700">Centro Costo</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Area</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Dias</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Área</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Días</TableHead>
                       <TableHead className="font-semibold text-slate-700">Accion</TableHead>
                       <TableHead className="font-semibold text-slate-700">Acciones</TableHead>
                     </TableRow>

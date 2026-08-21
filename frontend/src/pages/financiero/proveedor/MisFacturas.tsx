@@ -87,22 +87,39 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
   const [documentosProveedor, setDocumentosProveedor] = useState<FacturaDocumentoAdjunto[]>([]);
   const ITEMS_PER_PAGE = 5;
 
-  const loadFacturas = useCallback(async () => {
+  const loadFacturas = useCallback(async (silent = false) => {
     if (!miProveedor) return;
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const resp = await proveedoresService.getMisFacturas(miProveedor.id);
       setFacturas(toList<Factura>(resp));
     } catch {
-      setError('No se pudieron cargar tus facturas. Intenta nuevamente.');
+      if (!silent) setError('No se pudieron cargar tus facturas. Intenta nuevamente.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [miProveedor]);
 
   useEffect(() => {
     void loadFacturas();
+  }, [loadFacturas]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadFacturas(true);
+    };
+    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
   }, [loadFacturas]);
 
   // Sort by most recent date (recepcion or factura) and filter

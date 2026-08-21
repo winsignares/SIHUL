@@ -8,7 +8,6 @@ import { buildTimelineFromSeguimiento } from './timeline-builder';
 import { displayDate, displayRadicado, displayText } from './field-placeholders';
 import { facturasService, documentosService, parametrosSlaService } from '../services/financiero';
 import { mapFacturaDetail } from './factura-details-helpers';
-import { parseFacturaDescripcion } from './factura-description';
 import { openDocumentosConsolidados, downloadDocumentoIndividual } from './documentos-consolidados';
 import type { ItemFactura } from '../models/financiero/core.models';
 import { useAuth } from '../context/AuthContext';
@@ -39,7 +38,6 @@ export interface SharedFacturaDetail {
   numeroProcesoPago?: string;
   numeroOperacionContable?: string;
   consecutivoOperacion?: string;
-  descripcion?: string;
   observaciones?: string;
   identificacionFactura?: string;
   items?: ItemFactura[];
@@ -80,9 +78,6 @@ function StructuredItemsList({ items }: { items: ItemFactura[] }) {
             </div>
             <div className="flex-1 min-w-[200px]">
               <p className="font-semibold text-slate-800">{item.descripcion}</p>
-              <p className="text-sm text-slate-500">
-                {item.cantidad} x {formatMoney(item.valor_unitario)} | IVA {item.porcentaje_iva}%
-              </p>
             </div>
             <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 text-sm min-w-[220px]">
               {[
@@ -108,62 +103,6 @@ function StructuredItemsList({ items }: { items: ItemFactura[] }) {
               ))}
             </div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SharedServiciosList({ items }: { items: ReturnType<typeof parseFacturaDescripcion>['items'] }) {
-  return (
-    <div className="space-y-3">
-      {items.map((item, idx) => (
-        <div key={`${item.rawLine}-${idx}`} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
-              {item.index ?? idx + 1}
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <p className="font-semibold text-slate-800">{item.servicio}</p>
-              {(item.cantidad || item.unitario) && (
-                <p className="text-sm text-slate-500">
-                  {item.cantidad ? `${item.cantidad} x ` : ''}{item.unitario || 'Valor no especificado'}
-                </p>
-              )}
-            </div>
-            <div className="flex-1 grid grid-cols-2 lg:grid-cols-5 gap-2 text-sm min-w-[220px]">
-              {[{ key: 'cantidad', label: 'Cantidad', value: item.cantidad || 'Sin dato' },
-                { key: 'unitario', label: 'Valor unitario', value: item.unitario || 'Sin dato' },
-                { key: 'subtotal', label: 'Subtotal', value: item.subtotal },
-                { key: 'iva', label: `Tasa ${item.ivaPorcentaje ? `${item.ivaPorcentaje}%` : ''}`.trim(), value: item.ivaValor },
-                { key: 'total', label: 'Total', value: item.total }]
-                .filter((metric) => metric.value)
-                .map((metric) => (
-                  <div
-                    key={metric.key}
-                    className={`rounded-xl border px-3 py-2 text-right ${
-                      metric.key === 'total'
-                        ? 'bg-purple-50 border-purple-200 text-purple-700'
-                        : metric.key === 'cantidad' || metric.key === 'unitario'
-                          ? 'bg-white border-slate-200 text-slate-700'
-                          : 'bg-slate-100 border-slate-200 text-slate-800'
-                    }`}
-                  >
-                    <p className={`text-[11px] uppercase tracking-wide ${metric.key === 'total' ? 'text-purple-700' : 'text-slate-500'}`}>
-                      {metric.label}
-                    </p>
-                    <p className={`font-semibold ${metric.key === 'total' ? 'text-lg' : ''}`}>
-                      {metric.value}
-                    </p>
-                  </div>
-                ))}
-            </div>
-          </div>
-          {item.extraInfo && item.extraInfo.length > 0 && (
-            <p className="mt-2 text-sm text-slate-500 whitespace-pre-line">
-              {item.extraInfo.join('\n')}
-            </p>
-          )}
         </div>
       ))}
     </div>
@@ -368,13 +307,9 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
     },
   ];
 
-  // Items del nuevo modelo (estructurado) tienen prioridad; si no existen, parseamos descripcion legacy
   const hasStructuredItems = (currentFactura.items?.length ?? 0) > 0;
-  const parsedDescripcion = hasStructuredItems ? { items: [], remainingText: '' } : parseFacturaDescripcion(currentFactura.descripcion);
-  const serviciosFactura = parsedDescripcion.items;
-  const descripcionAdicional = (hasStructuredItems || serviciosFactura.length > 0) ? parsedDescripcion.remainingText : currentFactura.descripcion;
   const identificacionFactura = currentFactura.identificacionFactura;
-  const showDescripcionCard = hasStructuredItems || serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(identificacionFactura);
+  const showDescripcionCard = hasStructuredItems || Boolean(identificacionFactura);
   const hasIdentificacion = Boolean(identificacionFactura);
 
   const openAllDocumentsPreview = () => {
@@ -388,17 +323,17 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl text-slate-800">
             <FileText className="w-6 h-6 text-red-600" />
-            Detalles Completos del Tramite
+            Detalles completos del trámite
           </DialogTitle>
-          <DialogDescription>Informacion detallada de {currentFactura.numeroFactura}</DialogDescription>
+          <DialogDescription>Información detallada de {currentFactura.numeroFactura}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="general" className="w-full">
           <TabsList className={`grid w-full ${tabsClass}`}>
-            <TabsTrigger value="general">Informacion General</TabsTrigger>
+            <TabsTrigger value="general">Información general</TabsTrigger>
             <TabsTrigger value="timeline">Timeline del Proceso</TabsTrigger>
             {hasDocumentos && <TabsTrigger value="documentos">Documentos ({documentos.length})</TabsTrigger>}
-            {showAuditoriaTab && <TabsTrigger value="auditoria">Auditoria</TabsTrigger>}
+            {showAuditoriaTab && <TabsTrigger value="auditoria">Auditoría</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -431,7 +366,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-xs text-slate-500">Razon Social</p>
+                      <p className="text-xs text-slate-500">Razón social</p>
                       <p className="font-semibold text-slate-800">{displayText(currentFactura.proveedor)}</p>
                     </div>
                     {currentFactura.nit && (
@@ -453,7 +388,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   <div className="bg-white border border-slate-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <MapPin className="w-5 h-5 text-red-600" />
-                      <h3 className="font-semibold text-slate-800">Area Solicitante</h3>
+                      <h3 className="font-semibold text-slate-800">Área solicitante</h3>
                     </div>
                     <p className="text-slate-700">{displayText(currentFactura.areaSolicitante)}</p>
                   </div>
@@ -470,7 +405,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                       <p className="text-slate-800">{displayDate(currentFactura.fechaFactura)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Fecha de Recepcion</p>
+                      <p className="text-xs text-slate-500">Fecha de recepción</p>
                       <p className="text-slate-800">{displayDate(currentFactura.fechaRecepcion)}</p>
                     </div>
                     {currentFactura.tipoDocumento && (
@@ -512,22 +447,22 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                 <div className="bg-white border border-slate-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Hash className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-slate-800">Numeros de Tramite</h3>
+                    <h3 className="font-semibold text-slate-800">Números de trámite</h3>
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-xs text-slate-500">Numero de Factura</p>
+                      <p className="text-xs text-slate-500">Número de factura</p>
                       <p className="font-mono text-slate-800">{displayText(currentFactura.numeroFactura)}</p>
                     </div>
                     {currentFactura.numeroRadicado && (
                       <div>
-                        <p className="text-xs text-slate-500">Numero de Radicado</p>
+                        <p className="text-xs text-slate-500">Número de radicado</p>
                         <p className="font-mono text-slate-800">{displayRadicado(currentFactura.numeroRadicado)}</p>
                       </div>
                     )}
                     {currentFactura.numeroProcesoPago && (
                       <div>
-                        <p className="text-xs text-slate-500">Numero de Proceso de Pago</p>
+                        <p className="text-xs text-slate-500">Número de proceso de pago</p>
                         <p className="font-mono text-slate-800">{displayText(currentFactura.numeroProcesoPago)}</p>
                       </div>
                     )}
@@ -555,7 +490,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
 
                 {identificacionFactura && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                    <p className="text-xs uppercase tracking-wide text-amber-600 font-semibold mb-1">Identificación factura</p>
+                    <p className="text-xs uppercase tracking-wide text-amber-600 font-semibold mb-1">Descripción de la factura</p>
                     <p className="text-sm text-amber-900 whitespace-pre-line">{identificacionFactura}</p>
                   </div>
                 )}
@@ -566,18 +501,6 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
                   </div>
                 )}
 
-                {!hasStructuredItems && serviciosFactura.length > 0 && (
-                  <div className={`space-y-4 ${hasIdentificacion ? 'border-t border-slate-100 pt-4' : ''}`}>
-                    <SharedServiciosList items={serviciosFactura} />
-                  </div>
-                )}
-
-                {descripcionAdicional && (
-                  <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1">Descripción textual</p>
-                    <p className="text-sm text-slate-700 whitespace-pre-line">{descripcionAdicional}</p>
-                  </div>
-                )}
               </div>
             )}
           </TabsContent>

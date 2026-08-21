@@ -64,7 +64,7 @@ export default function MisPendientes() {
               <div>
                 <h1 className="text-white mb-1 text-3xl font-bold">Mis Pendientes</h1>
                 <p className="text-red-100 text-sm">
-                  Facturas Registradas pendientes de radicar — SLA: {SLA_DIAS} días
+                  Facturas Registradas pendientes de radicar{SLA_DIAS ? ` — SLA: ${SLA_DIAS} días` : ''}
                 </p>
               </div>
             </div>
@@ -180,7 +180,7 @@ export default function MisPendientes() {
                     </TableHeader>
                     <TableBody>
                       {facturasPaginadas.map((factura) => {
-                        const nivel = nivelRiesgo(factura.dias_transcurridos);
+                        const nivel = nivelRiesgo(factura);
                         const colorDot =
                           nivel === 'vencido' ? 'bg-purple-700' :
                           nivel === 'naranja' ? 'bg-orange-500' :
@@ -223,7 +223,7 @@ export default function MisPendientes() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <span className={colorDias}>{factura.dias_transcurridos}d / {SLA_DIAS}d</span>
+                              <span className={colorDias}>{factura.dias_transcurridos}d / {factura.sla_objetivo_dias ?? '—'}d</span>
                             </TableCell>
                             <TableCell>
                               <Badge className={`text-xs ${nivel === 'vencido' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-100 text-slate-700 border-slate-300'} border`}>

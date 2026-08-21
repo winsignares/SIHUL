@@ -136,7 +136,6 @@ def create_facturas_stress_data(out, sty, total_por_estado: int = TOTAL_POR_ESTA
                     valor_retencion_ica=Decimal('0.00'),
                     valor_total=valor_total,
                     tipo_documento='Factura',
-                    descripcion=f'Factura masiva de stress para el estado {estado}. Caso #{correlativo}.',
                     observaciones=f'Dato de prueba masivo generado automaticamente para validar carga alta en {estado}.',
                     fecha_factura=fecha_factura,
                     fecha_recepcion=fecha_recepcion,

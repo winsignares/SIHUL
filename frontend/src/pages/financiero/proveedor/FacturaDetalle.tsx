@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,8 +14,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { facturasService } from '../../../services/financiero';
-import type { Factura, HistorialFactura } from '../../../models/financiero/core.models';
-import { parseFacturaDescripcion } from '../../../share/factura-description';
+import type { Factura, HistorialFactura, ItemFactura } from '../../../models/financiero/core.models';
 
 const formatMoney = (val: number | string | null | undefined) => {
   const num = Number(val) || 0;
@@ -29,12 +28,18 @@ const ESTADO_STEP: Record<string, number> = {
   'Causada': 4,
   'Alistada': 5,
   'Aprobada Auditoría': 6,
-  'Cargada': 7,
-  'Revisada Dir. Financiera': 8,
-  'Enviada Rectoría': 9,
-  'Autorizada': 10,
-  'Pago Aplicado': 11,
-  'Pagada': 12,
+  'Rechazada Auditoría': 5,
+  'Revisada Dir. Financiera': 6,
+  'Cargada': 6,
+  'Enviada Rectoría': 6,
+  'Autorizada': 7,
+  'Rechazada por Rectoría': 7,
+  'Pago Aplicado': 8,
+  'Pagada': 8,
+  'Detenida': 4,
+  'Devuelta': 1,
+  'Rechazada': 1,
+  'Anulada': 1,
 };
 
 const ESTADO_COLOR: Record<string, string> = {
@@ -75,11 +80,12 @@ export default function FacturaDetalle() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
+  const loadFactura = useCallback(async (initialLoad = false) => {
       if (!id) return;
-      setLoading(true);
-      setError(null);
+      if (initialLoad) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const seg = await facturasService.getSeguimiento(Number(id));
         const facturaSeguimiento = (seg?.factura || null) as Factura | null;
@@ -90,14 +96,29 @@ export default function FacturaDetalle() {
           const f = await facturasService.getById(Number(id));
           setFactura(f);
         } catch {
-          setError('No se pudo cargar la factura.');
+          if (initialLoad) setError('No se pudo cargar la factura.');
         }
       } finally {
-        setLoading(false);
+        if (initialLoad) setLoading(false);
       }
+    }, [id]);
+
+  useEffect(() => {
+    void loadFactura(true);
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadFactura();
     };
-    void load();
-  }, [id]);
+    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
+  }, [loadFactura]);
 
   if (loading) {
     return (
@@ -127,11 +148,8 @@ export default function FacturaDetalle() {
   const canCorregir = factura.estado === 'Devuelta' || factura.estado === 'Rechazada';
   const diasTranscurridos = Math.max(Number(factura.dias_transcurridos) || 0, 0);
   const diasProgress = Math.min(Math.max(diasTranscurridos, 1), 30) / 30 * 100;
-  const parsedDescripcion = parseFacturaDescripcion(factura.descripcion);
-  const serviciosFactura = parsedDescripcion.items;
-  const descripcionAdicional = serviciosFactura.length > 0 ? parsedDescripcion.remainingText : factura.descripcion;
-  const heroDescripcion = serviciosFactura.length === 0 ? factura.descripcion : undefined;
-  const showServiciosSection = serviciosFactura.length > 0 || Boolean(descripcionAdicional) || Boolean(factura.identificacion_factura);
+  const itemsFactura = factura.items || [];
+  const showServiciosSection = itemsFactura.length > 0 || Boolean(factura.identificacion_factura);
   const hasIdentificacionFactura = Boolean(factura.identificacion_factura);
 
   return (
@@ -172,11 +190,6 @@ export default function FacturaDetalle() {
               {factura.numero_radicado && (
                 <p className="text-sm text-slate-600 dark:text-slate-300">
                   Radicado: <span className="font-semibold text-slate-900 dark:text-white">{factura.numero_radicado}</span>
-                </p>
-              )}
-              {heroDescripcion && (
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  {heroDescripcion}
                 </p>
               )}
             </div>
@@ -234,13 +247,13 @@ export default function FacturaDetalle() {
           >
             <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-4 flex items-center gap-2">
               <FileText size={18} className="text-red-600" />
-              Identificacion y Servicios Facturados
+              Descripción de la factura y bienes o servicios facturados
             </h3>
 
             {factura.identificacion_factura && (
               <div className="rounded-2xl border border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 p-4">
                 <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-200 font-semibold mb-1">
-                  Identificacion Factura
+                  Descripción de la factura
                 </p>
                 <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
                   {factura.identificacion_factura}
@@ -248,22 +261,12 @@ export default function FacturaDetalle() {
               </div>
             )}
 
-            {serviciosFactura.length > 0 && (
+            {itemsFactura.length > 0 && (
               <div className={`mt-6 ${hasIdentificacionFactura ? 'border-t border-slate-100 dark:border-slate-700/60 pt-6' : ''}`}>
-                <ServiciosFacturaList items={serviciosFactura} />
+                <ServiciosFacturaList items={itemsFactura} />
               </div>
             )}
 
-            {descripcionAdicional && (
-              <div className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-semibold mb-1">
-                  Descripción del proveedor
-                </p>
-                <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line">
-                  {descripcionAdicional}
-                </p>
-              </div>
-            )}
           </motion.section>
         )}
 
@@ -347,7 +350,7 @@ export default function FacturaDetalle() {
             </h3>
             <div className="space-y-2 text-sm">
               <InfoRow label="Tipo" value={factura.tipo_documento} />
-              <InfoRow label="Identificación" value={factura.identificacion_factura || '—'} />
+              <InfoRow label="Descripción de la factura" value={factura.identificacion_factura || '—'} />
               <InfoRow label="Etapa actual" value={factura.etapa_actual || factura.estado} />
             </div>
           </motion.section>
@@ -505,39 +508,32 @@ function ValueRow({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
-function ServiciosFacturaList({ items }: { items: ReturnType<typeof parseFacturaDescripcion>['items'] }) {
+function ServiciosFacturaList({ items }: { items: ItemFactura[] }) {
   return (
     <div className="space-y-4">
       {items.map((item, idx) => (
         <div
-          key={`${item.rawLine}-${idx}`}
+          key={item.id ?? idx}
           className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/70 p-4 md:p-5"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center text-lg font-bold">
-                {item.index ?? idx + 1}
+                {item.orden ?? idx + 1}
               </div>
               <div>
                 <p className="text-base font-semibold text-slate-900 dark:text-white">
-                  {item.servicio}
+                  {item.descripcion}
                 </p>
-                {(item.cantidad || item.unitario) && (
-                  <p className="text-sm text-slate-500 dark:text-slate-300">
-                    {item.cantidad ? `${item.cantidad} x ` : ''}
-                    {item.unitario || 'valor sin definir'}
-                  </p>
-                )}
               </div>
             </div>
 
             <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
-              {[{ key: 'cantidad', label: 'Cantidad', value: item.cantidad || 'Sin dato' },
-                { key: 'unitario', label: 'Valor unitario', value: item.unitario || 'Sin dato' },
-                { key: 'subtotal', label: 'Subtotal', value: item.subtotal },
-                { key: 'iva', label: `IVA ${item.ivaPorcentaje ? `${item.ivaPorcentaje}%` : ''}`.trim(), value: item.ivaValor },
-                { key: 'total', label: 'Total', value: item.total }]
-                .filter((metric) => metric.value)
+              {[{ key: 'cantidad', label: 'Cantidad', value: item.cantidad },
+                { key: 'unitario', label: 'Valor unitario', value: formatMoney(item.valor_unitario) },
+                { key: 'subtotal', label: 'Subtotal', value: formatMoney(item.valor_subtotal) },
+                { key: 'iva', label: `IVA ${item.porcentaje_iva}%`, value: formatMoney(item.valor_iva) },
+                { key: 'total', label: 'Total', value: formatMoney(item.valor_total) }]
                 .map((metric) => (
                   <div
                     key={metric.key}
@@ -557,14 +553,6 @@ function ServiciosFacturaList({ items }: { items: ReturnType<typeof parseFactura
                     </p>
                   </div>
                 ))}
-              {item.extraInfo && item.extraInfo.length > 0 && (
-                <div className="col-span-2 sm:col-span-3 lg:col-span-5 rounded-xl bg-slate-100/60 dark:bg-slate-800/50 px-3 py-2 text-left">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle adicional</p>
-                  <p className="text-slate-700 dark:text-slate-200 text-sm whitespace-pre-line">
-                    {item.extraInfo.join('\n')}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>

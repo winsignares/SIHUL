@@ -44,14 +44,14 @@ XSS_PATTERNS = [
 ]
 
 
-def sanitize_string(value: str, field_type: str = 'nombre', max_length: int = 255) -> str:
+def sanitize_string(value: str, field_type: str = 'nombre', max_length: Optional[int] = 255) -> str:
     """
     Sanitiza una cadena de texto eliminando caracteres peligrosos y validando contra XSS.
     
     Args:
         value: Cadena a sanitizar
         field_type: Tipo de campo (nombre, codigo, email, url, descripcion, direccion)
-        max_length: Longitud máxima permitida
+        max_length: Longitud máxima permitida; use None para no imponer límite.
         
     Returns:
         Cadena sanitizada
@@ -63,7 +63,7 @@ def sanitize_string(value: str, field_type: str = 'nombre', max_length: int = 25
         raise ValidationError(f"Se esperaba una cadena de texto, se recibió {type(value).__name__}")
     
     # Limitar longitud
-    if len(value) > max_length:
+    if max_length is not None and len(value) > max_length:
         raise ValidationError(f"La cadena excede la longitud máxima de {max_length} caracteres")
     
     # Eliminar espacios en blanco al inicio y final
@@ -576,7 +576,7 @@ PROVEEDOR_SCHEMA = {
     'observaciones': {
         'type': 'string',
         'field_type': 'texto_libre',
-        'max_length': 1000,
+        'max_length': None,
         'required': False,
     },
 }
@@ -594,16 +594,10 @@ FACTURA_SCHEMA = {
         'max_length': 50,
         'required': False,
     },
-    'descripcion': {
-        'type': 'string',
-        'field_type': 'descripcion',
-        'max_length': 500,
-        'required': False,
-    },
     'observaciones': {
         'type': 'string',
         'field_type': 'texto_libre',
-        'max_length': 1000,
+        'max_length': None,
         'required': False,
     },
     'proveedor_id': {

@@ -438,7 +438,7 @@ def _seed_proveedores_demo(out, sty):
             'banco': 'Banco de Bogotá',
             'tipo_cuenta': 'Corriente',
             'numero_cuenta': '9876543210',
-            'regimen_tributario': 'Gran Contribuyente',
+            'regimen_tributario': 'Régimen Tributario Especial',
             'estado': 'Activo',
         },
         {
@@ -458,7 +458,7 @@ def _seed_proveedores_demo(out, sty):
             'banco': 'BBVA',
             'tipo_cuenta': 'Ahorros',
             'numero_cuenta': '5566778899',
-            'regimen_tributario': 'No responsable',
+            'regimen_tributario': 'No Responsable IVA',
             'estado': 'Activo',
         },
         {
@@ -552,14 +552,11 @@ def _slugify_email(razon_social):
 def _seed_sla(out, sty):
     """Crea los parámetros SLA."""
     parametros_sla = [
-        ('Recepción y Registro', 'Funcionario', 5, 'Registro inicial de factura'),
-        ('Radicación', 'Contabilidad', 3, 'Radicación en contabilidad'),
-        ('Causación', 'Contabilidad', 2, 'Causación contable'),
+        ('Registro por parte del Funcionario', 'Funcionario', 5, 'Registro inicial de factura'),
+        ('Radicación y Causación', 'Contabilidad', 3, 'Radicación y causación contable'),
         ('Alistamiento', 'Tesorería', 3, 'Alistamiento sin CE'),
         ('Control Previo', 'Auditoría', 4, 'Control previo de auditoría'),
-        ('Envío a Dirección Financiera', 'Tesorería', 1, 'Envío a Dirección Financiera'),
         ('Cargue Formal', 'Dirección Financiera', 2, 'Cargue para autorización'),
-        ('Envío a Rectoría', 'Dirección Financiera', 1, 'Envío a Rectoría'),
         ('Autorización de Pago', 'Rectoría', 3, 'Autorización por Rectoría'),
         ('Aplicación de Pago', 'Tesorería', 1, 'Ejecución de pago y cierre de factura pagada'),
     ]
@@ -647,6 +644,7 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         ('Bancolombia', 'Bancolombia S.A.', '001'),
         ('Banco de Bogotá', 'Banco de Bogotá S.A.', '002'),
         ('Davivienda', 'Banco Davivienda S.A.', '006'),
+        ('DaviPlata', 'Billetera digital de Davivienda.', '006'),
         ('BBVA', 'BBVA Colombia S.A.', '013'),
         ('Banco Popular', 'Banco Popular S.A.', '058'),
         ('Banco AV Villas', 'Banco AV Villas S.A.', '052'),
@@ -655,6 +653,7 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         ('Scotiabank Colpatria', 'Scotiabank Colpatria S.A.', '065'),
         ('Banco Falabella', 'Banco Falabella S.A.', '062'),
         ('Banco Santander', 'Banco Santander (Colombia) S.A.', '084'),
+        ('Banco Sudameris', 'Banco GNB Sudameris S.A.', '019'),
         ('ICBC', 'ICBC (Colombia) S.A.', '010'),
         ('Banco Itaú', 'Banco Itaú (Colombia) S.A.', '060'),
         ('Banco Pichincha', 'Banco Pichincha S.A.', '012'),
@@ -669,7 +668,6 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
     tipos_cuenta_data = [
         ('Ahorros', 'Cuenta de ahorros'),
         ('Corriente', 'Cuenta corriente'),
-        ('Nómina', 'Cuenta de nómina'),
     ]
 
     for nombre, descripcion, codigo in bancos_data:
@@ -685,7 +683,7 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         out.write(f"    - {msg}: Banco {nombre}")
 
     # Tipos de cuenta es un catalogo unico, no depende del banco seleccionado.
-    TipoCuenta.objects.exclude(nombre__in=[nombre for nombre, _ in tipos_cuenta_data]).delete()
+    TipoCuenta.objects.filter(nombre='Nómina').update(activo=False)
 
     for tipo_nombre, tipo_descripcion in tipos_cuenta_data:
         _, created = TipoCuenta.objects.update_or_create(

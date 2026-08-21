@@ -32,7 +32,6 @@ interface Factura {
   estado: string;
   diasTranscurridos: number;
   slaObjetivoDias?: number | null;
-  descripcion: string;
   observacionesAuditoria?: string;
 }
 
@@ -77,7 +76,6 @@ const mapFactura = (f: APIFactura): Factura => ({
   estado: f.estado,
   diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
   slaObjetivoDias: f.sla_objetivo_dias ?? null,
-  descripcion: f.descripcion || 'Sin asignar',
   observacionesAuditoria: f.observaciones,
 });
 
@@ -197,7 +195,6 @@ export default function EnviarDireccionFinanciera() {
         estado: factura.estado,
         diasTranscurridos: factura.diasTranscurridos,
         fechaRecepcion: factura.fechaAprobacionAuditoria,
-        descripcion: factura.descripcion,
         observaciones: factura.observacionesAuditoria,
         numeroProcesoPago: factura.numeroProcesoPago,
         nivelRiesgo: factura.diasTranscurridos > 17 ? 'rojo' : factura.diasTranscurridos > 10 ? 'amarillo' : 'verde',

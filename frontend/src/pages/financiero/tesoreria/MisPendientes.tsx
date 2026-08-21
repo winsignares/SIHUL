@@ -71,7 +71,6 @@ const mapFactura = (f: APIFactura, diasMaximos: number, accionRequerida: string)
     areaSolicitante: f.departamento?.nombre || 'Sin Asignar',
     estado: f.estado,
     cuentaContable: f.cuenta_contable ? `${f.cuenta_contable.codigo} - ${f.cuenta_contable.nombre}` : 'Sin cuenta',
-    descripcion: f.descripcion,
   };
 };
 
@@ -264,7 +263,6 @@ export default function MisPendientes() {
       estado: factura.estado,
       diasTranscurridos: factura.diasTranscurridos,
       fechaRecepcion: factura.fechaCausacion,
-      descripcion: factura.descripcion,
       observaciones: factura.accionRequerida,
       cuentaContable: factura.cuentaContable,
       nivelRiesgo:

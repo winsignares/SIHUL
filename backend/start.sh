@@ -2,7 +2,7 @@
 set -e
 
 # Script de inicio del backend Django.
-# Ejecuta migraciones y seeders antes de iniciar el servidor.
+# Ejecuta únicamente las migraciones necesarias antes de iniciar el servidor.
 
 echo "=========================================="
 echo "Benji Backend - Iniciando servicio..."
@@ -16,9 +16,6 @@ echo "Base de datos disponible"
 
 echo "Ejecutando migraciones..."
 python manage.py migrate --noinput
-
-echo "Cargando datos iniciales..."
-python manage.py seed_initial_data
 
 echo "Recolectando archivos estaticos..."
 python manage.py collectstatic --noinput

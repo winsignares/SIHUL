@@ -43,7 +43,6 @@ interface Factura {
   estado: string;
   diasTranscurridos: number;
   slaObjetivoDias?: number | null;
-  descripcion: string;
   numeroProcesoPago?: string;
 }
 
@@ -66,7 +65,6 @@ const mapFactura = (f: APIFactura): Factura => ({
   estado: f.estado,
   diasTranscurridos: Math.max(0, Number(f.dias_transcurridos || 0)),
   slaObjetivoDias: f.sla_objetivo_dias ?? null,
-  descripcion: f.descripcion || 'Sin asignar',
   numeroProcesoPago: f.numero_proceso_pago,
 });
 
@@ -174,7 +172,6 @@ export default function AlistarPagos() {
       estado: factura.estado,
       diasTranscurridos: factura.diasTranscurridos,
       fechaRecepcion: factura.fechaCausacion,
-      descripcion: factura.descripcion,
       nivelRiesgo: factura.diasTranscurridos > 17 ? 'rojo' : factura.diasTranscurridos > 10 ? 'amarillo' : 'verde',
     });
     setMostrarDialogDetalle(true);
@@ -205,10 +202,13 @@ export default function AlistarPagos() {
     setIsProcessing(true);
     void (async () => {
       try {
-        await documentosService.upload(facturaSeleccionada.facturaId, archivoSeven, 'Soporte Causacion Seven');
+        // El backend convierte este TXT a PDF antes de guardarlo y de incluirlo
+        // en los documentos unificados de la factura.
+        await documentosService.upload(facturaSeleccionada.facturaId, archivoSeven, 'Archivo Plano Bancario');
+        const nombreArchivoPdf = archivoSeven.name.replace(/\.[^.]+$/, '') + '.pdf';
         await facturasService.alistar(facturaSeleccionada.facturaId, {
           numero_proceso_pago: numeroProcesoPago.trim(),
-          archivo_plano_generado: archivoSeven.name,
+          archivo_plano_generado: nombreArchivoPdf,
           observaciones: observaciones.trim(),
         });
 
@@ -235,7 +235,7 @@ export default function AlistarPagos() {
       try {
         await facturasService.detenerEnTesoreria(facturaSeleccionada.facturaId, motivoRechazo.trim());
         setFacturasTesoreria(await loadFacturas());
-        toast.warning(`Factura rechazada en tesoreria: ${facturaSeleccionada.numeroFactura}`);
+        toast.warning(`Factura rechazada en Tesorería: ${facturaSeleccionada.numeroFactura}`);
         setMostrarDialogRechazar(false);
         setFacturaSeleccionada(null);
       } catch (error: unknown) {
@@ -379,7 +379,7 @@ export default function AlistarPagos() {
                     <TableHead className="font-semibold text-slate-700">Factura</TableHead>
                     <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
                     <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Area</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Área</TableHead>
                     <TableHead className="font-semibold text-slate-700">Monto</TableHead>
                     <TableHead className="font-semibold text-slate-700">Días transcurridos</TableHead>
                     <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
@@ -388,7 +388,7 @@ export default function AlistarPagos() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-6 text-center text-slate-500">Cargando facturas de tesoreria...</TableCell>
+                      <TableCell colSpan={7} className="py-6 text-center text-slate-500">Cargando facturas de Tesorería...</TableCell>
                     </TableRow>
                   ) : facturasOrdenadas.length === 0 ? (
                     <TableRow>
@@ -537,7 +537,7 @@ export default function AlistarPagos() {
                   <p className="font-bold text-slate-800">{facturaSeleccionada.proveedor}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500">Area solicitante</p>
+                  <p className="text-slate-500">Área solicitante</p>
                   <p className="font-bold text-slate-800">{facturaSeleccionada.areaSolicitante}</p>
                 </div>
                 <div>
@@ -613,7 +613,7 @@ export default function AlistarPagos() {
 
           <div className="space-y-3">
             <Label htmlFor="motivo">Observacion de rechazo</Label>
-            <Textarea id="motivo" value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Detalle de la inconsistencia detectada (minimo 10 caracteres)" />
+            <Textarea id="motivo" value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Detalle de la inconsistencia detectada (mínimo 10 caracteres)" />
           </div>
 
           <DialogFooter>

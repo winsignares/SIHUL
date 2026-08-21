@@ -2,8 +2,10 @@ from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIRequestFactory, force_authenticate
 from datetime import date
+from unittest.mock import patch
 from . import models
 from . import views, serializers
+from .services.shared_storage_service import StorageResult
 from usuarios.models import Usuario, Rol
 
 # Create your tests here.
@@ -46,7 +48,6 @@ class FacturaTestCase(TestCase):
             valor_iva=190000,
             valor_total=1190000,
             tipo_documento='Factura',
-            descripcion='Factura de prueba',
             fecha_factura=date(2026, 4, 5),
             fecha_recepcion=date(2026, 4, 5),
             creado_por=self.usuario
@@ -65,7 +66,6 @@ class FacturaTestCase(TestCase):
             valor_subtotal=1000000,
             valor_total=1000000,
             tipo_documento='Factura',
-            descripcion='Factura de prueba',
             fecha_factura=date(2026, 4, 5),
             fecha_recepcion=date(2026, 4, 5),
             creado_por=self.usuario
@@ -78,7 +78,14 @@ class FacturaTestCase(TestCase):
         self.assertEqual(factura.estado, 'Radicada')
         self.assertIsNotNone(factura.fecha_radicacion)
 
-    def test_documento_adjunto_se_guarda_en_base_de_datos(self):
+    @patch('financiero.views._regenerar_pdf_unificado_nas')
+    @patch('financiero.services.shared_storage_service.shared_storage')
+    def test_documento_adjunto_se_guarda_solo_en_carpeta_compartida(self, storage_mock, _regenerar_mock):
+        storage_mock.enabled = True
+        storage_mock.copy_document.return_value = StorageResult(
+            True,
+            nas_relative_path='facturas/2026/04/FAC-003/documentos_especificos/001_factura.pdf',
+        )
         factura = models.Factura.objects.create(
             numero_factura='FAC-003',
             proveedor=self.proveedor,
@@ -86,7 +93,6 @@ class FacturaTestCase(TestCase):
             valor_subtotal=1000000,
             valor_total=1000000,
             tipo_documento='Factura',
-            descripcion='Factura con documento en DB',
             fecha_factura=date(2026, 4, 5),
             fecha_recepcion=date(2026, 4, 5),
             creado_por=self.usuario
@@ -114,9 +120,11 @@ class FacturaTestCase(TestCase):
         self.assertEqual(response.status_code, 201)
 
         documento = models.DocumentoAdjunto.objects.get(id=response.data['id'])
-        self.assertEqual(bytes(documento.contenido_archivo), b'%PDF-1.4 documento de prueba')
+        self.assertIsNone(documento.contenido_archivo)
         self.assertFalse(bool(documento.archivo))
         self.assertEqual(documento.ciclo_documental, 1)
+        self.assertEqual(documento.nas_storage_status, models.DocumentoAdjunto.NAS_STATUS_STORED)
+        self.assertTrue(documento.nas_relative_path)
 
     def test_factura_detail_solo_devuelve_documentos_del_ciclo_actual(self):
         factura = models.Factura.objects.create(
@@ -126,7 +134,6 @@ class FacturaTestCase(TestCase):
             valor_subtotal=1000000,
             valor_total=1000000,
             tipo_documento='Factura',
-            descripcion='Factura con ciclos documentales',
             fecha_factura=date(2026, 4, 5),
             fecha_recepcion=date(2026, 4, 5),
             creado_por=self.usuario

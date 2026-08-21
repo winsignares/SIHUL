@@ -33,4 +33,8 @@ export const documentosService = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete<void>(`${API_BASE}/documentos/${id}/`);
   },
+
+  verificar: async (id: number, verificado: boolean): Promise<DocumentoAdjunto> => {
+    return apiClient.patch<DocumentoAdjunto>(`${API_BASE}/documentos/${id}/`, { verificado });
+  },
 };

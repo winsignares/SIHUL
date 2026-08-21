@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.db import IntegrityError, transaction, close_old_connections
-from django.db.models import Q, Sum, Count
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.conf import settings
 import hashlib
@@ -14,6 +14,7 @@ import logging
 import mimetypes
 import os
 import threading
+import textwrap
 import zipfile
 from datetime import datetime
 from io import BytesIO
@@ -116,9 +117,15 @@ def _resolve_documento_local_path(documento):
 
 
 def _documento_bytes(documento):
-    db_content = getattr(documento, 'contenido_archivo', None)
-    if db_content is not None:
-        return bytes(db_content)
+    nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
+    if nas_path:
+        try:
+            from financiero.services.shared_storage_service import shared_storage
+            result = shared_storage.read_file(nas_path)
+            if result.success:
+                return result.content_bytes
+        except Exception as exc:
+            logger.warning('_documento_bytes: fallo leyendo NAS doc_id=%s nas_path=%s error=%s', documento.id, nas_path, exc)
 
     local_path = _resolve_documento_local_path(documento)
     if local_path:
@@ -130,22 +137,11 @@ def _documento_bytes(documento):
                 documento.id, local_path, exc,
             )
 
-    nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
-    if nas_path:
-        try:
-            from financiero.services.shared_storage_service import shared_storage, _parse_unc, _smb_path
-            if shared_storage.enabled:
-                smbclient, _ = shared_storage._get_smb_client()
-                server, share, base = _parse_unc(shared_storage.unc_root)
-                full_rel = f'{base}/{nas_path}' if base else nas_path
-                smb_file = _smb_path(server, share, full_rel)
-                with smbclient.open_file(smb_file, mode='rb') as f:
-                    return f.read()
-        except Exception as exc:
-            logger.warning(
-                '_documento_bytes: fallo leyendo NAS doc_id=%s nas_path=%s error=%s',
-                documento.id, nas_path, exc,
-            )
+    # Compatibilidad temporal para documentos históricos que todavía tienen
+    # contenido binario en PostgreSQL.
+    db_content = getattr(documento, 'contenido_archivo', None)
+    if db_content is not None:
+        return bytes(db_content)
 
     logger.warning(
         '_documento_bytes: no se pudo obtener bytes de ninguna fuente doc_id=%s nombre=%s url=%s nas=%s',
@@ -210,6 +206,14 @@ DEFAULT_CENTROS_COSTO = [
     {'codigo': 'CC-OPE-001', 'nombre': 'Operación Institucional', 'tipo': 'Operativo', 'estado': 'Activo'},
 ]
 
+AREAS_SOLICITANTES = [
+    ('SOL-DER', 'Facultad de Derecho y Ciencias Políticas'),
+    ('SOL-ING', 'Facultad de Ingeniería'),
+    ('SOL-SAL', 'Facultad de Ciencias de la Salud'),
+    ('SOL-ECO', 'Facultad de Ciencias Económicas, Administrativas y Contables'),
+    ('SOL-ADM', 'Administración'),
+]
+
 ESTADO_ENVIADA_RECTORIA = 'Enviada Rector\u00eda'
 ESTADO_AUTORIZADA = 'Autorizada'
 ESTADO_RECHAZADA_POR_RECTORIA = 'Rechazada por Rector\u00eda'
@@ -259,6 +263,98 @@ def _documento_upload_metadata(uploaded_file):
         len(content),
         hashlib.sha256(content).hexdigest(),
     )
+
+
+def _guardar_documento_en_carpeta_compartida(
+    *, factura, nombre_archivo, tipo_documento, tipo_mime, content_bytes,
+    tamano_bytes, hash_archivo, usuario,
+):
+    """Guarda el binario exclusivamente en el NAS y crea solo sus metadatos en BD."""
+    from financiero.services.shared_storage_service import shared_storage
+
+    if not content_bytes:
+        raise ValidationError({'archivo': 'No fue posible leer el contenido del archivo.'})
+    if not shared_storage.enabled:
+        raise ValidationError({'archivo': 'La carpeta compartida no está configurada. No se puede guardar el documento.'})
+
+    ciclo_documental = _factura_ciclo_documental_actual(factura)
+    index = models.DocumentoAdjunto.objects.filter(
+        factura=factura,
+        ciclo_documental=ciclo_documental,
+    ).count() + 1
+    result = shared_storage.copy_document(
+        factura=factura,
+        index=index,
+        original_filename=nombre_archivo,
+        content_bytes=content_bytes,
+    )
+    if not result.success or not result.nas_relative_path:
+        raise ValidationError({
+            'archivo': f'No fue posible guardar el documento en la carpeta compartida: {result.message or result.error_code or "error desconocido"}.'
+        })
+
+    return models.DocumentoAdjunto.objects.create(
+        factura=factura,
+        nombre_archivo=nombre_archivo[:255],
+        tipo_documento=tipo_documento,
+        tipo_mime=tipo_mime or None,
+        tamano_bytes=tamano_bytes,
+        url_storage='',
+        archivo=None,
+        contenido_archivo=None,
+        hash_archivo=hash_archivo,
+        ciclo_documental=ciclo_documental,
+        cargado_por=usuario,
+        nas_relative_path=result.nas_relative_path,
+        nas_storage_status=models.DocumentoAdjunto.NAS_STATUS_STORED,
+    )
+
+
+def _es_archivo_plano_txt(tipo_documento, nombre_archivo, tipo_mime):
+    """Identifica el TXT que Tesorería genera para el proceso de pago."""
+    tipo = _normalizar_texto_permiso(tipo_documento)
+    nombre = (nombre_archivo or '').strip().lower()
+    mime = (tipo_mime or '').split(';', 1)[0].strip().lower()
+    return (
+        tipo in {'archivo plano bancario', 'soporte causacion seven'}
+        and (nombre.endswith('.txt') or mime in {'text/plain', 'application/octet-stream'})
+    )
+
+
+def _nombre_pdf_archivo_plano(nombre_archivo):
+    base, _extension = os.path.splitext(os.path.basename(nombre_archivo or 'archivo_plano'))
+    return f'{base or "archivo_plano"}.pdf'[:255]
+
+
+def _convertir_archivo_plano_a_pdf(content_bytes, nombre_original):
+    """Convierte el contenido de un archivo plano a un PDF legible y paginado."""
+    try:
+        texto = content_bytes.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        texto = content_bytes.decode('latin-1', errors='replace')
+
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=letter)
+    _width, height = letter
+    pdf.setFont('Courier', 7.5)
+    y = height - 42
+    lineas = texto.splitlines() or ['(El archivo plano no contiene líneas visibles.)']
+    for linea in lineas:
+        # Courier conserva la estructura tabular del TXT al abrirlo como PDF.
+        segmentos = textwrap.wrap(
+            linea.expandtabs(4), width=118, replace_whitespace=False,
+            drop_whitespace=False, break_long_words=True,
+        ) or ['']
+        for segmento in segmentos:
+            pdf.drawString(40, y, segmento)
+            y -= 10
+            if y < 48:
+                pdf.showPage()
+                pdf.setFont('Courier', 7.5)
+                y = height - 42
+
+    pdf.save()
+    return output.getvalue()
 
 
 # ============================================================
@@ -338,9 +434,14 @@ class ProveedorViewSet(viewsets.ModelViewSet):
         self.perform_update(serializer)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['post'], url_path='crear_con_usuario')
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='crear_con_usuario',
+        permission_classes=[permissions.AllowAny],
+    )
     def crear_con_usuario(self, request):
-        """Crea un usuario con rol Proveedor y vincula el perfil de proveedor en una transacción atómica."""
+        """Crea un usuario con rol Proveedor y vincula su perfil en una transacción atómica."""
         from django.contrib.auth.hashers import make_password
         from usuarios.models import Rol
 
@@ -354,6 +455,13 @@ class ProveedorViewSet(viewsets.ModelViewSet):
         if not all([nombre, correo, contrasena, nit, razon_social, tipo_proveedor]):
             return Response(
                 {'error': 'Los campos nombre, correo, contrasena, nit, razon_social y tipo_proveedor son obligatorios.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        es_registro_publico = not getattr(request.user, 'is_authenticated', False)
+        if es_registro_publico and not correo.casefold().endswith('@unilibre.edu.co'):
+            return Response(
+                {'error': 'El correo de acceso debe pertenecer al dominio @unilibre.edu.co.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -391,6 +499,13 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 proveedor_data[campo] = request.data[campo]
         proveedor_data = self._coerce_geo_catalog_data(proveedor_data)
 
+        # El registro público usa el correo y teléfono de acceso como datos
+        # principales del proveedor, sin pedir campos de contacto duplicados.
+        if es_registro_publico:
+            proveedor_data['email'] = proveedor_data.get('email') or correo
+            proveedor_data['contacto_principal'] = nombre
+            proveedor_data['telefono_contacto'] = proveedor_data.get('telefono') or None
+
         try:
             with transaction.atomic():
                 hashed = make_password(contrasena)
@@ -405,7 +520,8 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 nuevo_usuario.save()
 
                 proveedor_data['usuario'] = nuevo_usuario
-                proveedor_data['creado_por'] = request.user
+                if getattr(request.user, 'is_authenticated', False):
+                    proveedor_data['creado_por'] = request.user
                 proveedor = models.Proveedor.objects.create(**proveedor_data)
 
         except IntegrityError as exc:
@@ -521,30 +637,8 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def areas_solicitantes(self, request):
-        """Lista de áreas solicitantes para registro inicial (excluye áreas del flujo financiero)."""
-        excluded_default = [
-            'Financiero',
-            'Contabilidad',
-            'Tesorería',
-            'Auditoría',
-            'Dirección Financiera',
-            'Rectoría',
-        ]
-
-        excluded = excluded_default
-        config = models.ParametrosFinanciero.objects.filter(
-            clave='areas_solicitantes_excluidas'
-        ).first()
-
-        if config and config.valor:
-            try:
-                parsed = json.loads(config.valor)
-                if isinstance(parsed, list):
-                    excluded = [str(item).strip() for item in parsed if str(item).strip()]
-            except (TypeError, ValueError, json.JSONDecodeError):
-                excluded = excluded_default
-
-        queryset = models.Departamento.objects.filter(estado='Activo').exclude(nombre__in=excluded).order_by('nombre')
+        """Lista las áreas activas disponibles en la base de datos."""
+        queryset = models.Departamento.objects.filter(estado='Activo').order_by('nombre')
         serializer = serializers.DepartamentoSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -925,19 +1019,40 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
         archivo = self.request.FILES.get('archivo')
         factura = serializer.validated_data.get('factura')
         content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(archivo)
-        ciclo_documental = _factura_ciclo_documental_actual(factura)
-        instance = serializer.save(
-            cargado_por=self.request.user,
-            url_storage='',
-            archivo=None,
-            contenido_archivo=content_bytes,
+        nombre_archivo = serializer.validated_data.get('nombre_archivo') or getattr(archivo, 'name', '')
+        tipo_documento = serializer.validated_data.get('tipo_documento')
+        tipo_mime = serializer.validated_data.get('tipo_mime') or getattr(archivo, 'content_type', '')
+
+        # El archivo plano se almacena como PDF. Así su vista individual y el
+        # documento unificado muestran el contenido, no solo el nombre del TXT.
+        if content_bytes is not None and _es_archivo_plano_txt(tipo_documento, nombre_archivo, tipo_mime):
+            content_bytes = _convertir_archivo_plano_a_pdf(content_bytes, nombre_archivo)
+            nombre_archivo = _nombre_pdf_archivo_plano(nombre_archivo)
+            tipo_mime = 'application/pdf'
+            tamano_bytes = len(content_bytes)
+            hash_archivo = hashlib.sha256(content_bytes).hexdigest()
+
+        instance = _guardar_documento_en_carpeta_compartida(
+            factura=factura,
+            nombre_archivo=nombre_archivo,
+            tipo_documento=tipo_documento,
+            tipo_mime=tipo_mime,
+            content_bytes=content_bytes,
             tamano_bytes=tamano_bytes or serializer.validated_data.get('tamano_bytes'),
             hash_archivo=hash_archivo,
-            ciclo_documental=ciclo_documental,
+            usuario=self.request.user,
         )
+        serializer.instance = instance
+        _regenerar_pdf_unificado_nas(factura)
 
-        if content_bytes is not None:
-            _programar_sincronizacion_nas_documento(instance.id)
+    def perform_update(self, serializer):
+        verificado = serializer.validated_data.get('verificado')
+        if verificado is True:
+            serializer.save(verificado_por=self.request.user, fecha_verificacion=timezone.now())
+        elif verificado is False:
+            serializer.save(verificado_por=None, fecha_verificacion=None)
+        else:
+            serializer.save()
 
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -1431,6 +1546,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
         nombre_archivo = f'Documentos_{safe_factura}_{safe_scope}.pdf'
         ciclo_documental = _factura_ciclo_documental_actual(factura)
 
+        from financiero.services.shared_storage_service import shared_storage
+        result = shared_storage.copy_unified_pdf(content, factura, scope)
+
         models.DocumentoUnificado.objects.update_or_create(
             factura=factura,
             scope=scope or 'all',
@@ -1439,25 +1557,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 'nombre_archivo': nombre_archivo,
                 'tipo_mime': 'application/pdf',
                 'tamano_bytes': len(content),
-                'contenido_archivo': content,
+                'contenido_archivo': None,
                 'hash_archivo': hashlib.sha256(content).hexdigest(),
+                'nas_relative_path': result.nas_relative_path or '',
+                'nas_storage_status': (
+                    models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+                    else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+                ),
             },
         )
-
-        from financiero.services.shared_storage_service import shared_storage
-        result = shared_storage.copy_unified_pdf(content, factura, scope)
-        defaults = {
-            'nas_relative_path': result.nas_relative_path or '',
-            'nas_storage_status': (
-                models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
-            ),
-        }
-        models.DocumentoUnificado.objects.filter(
-            factura=factura,
-            scope=scope or 'all',
-            ciclo_documental=ciclo_documental,
-        ).update(**defaults)
 
         if not result.success:
             logger.warning(
@@ -1465,7 +1573,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 factura.id, result.error_code, result.message,
             )
 
-    def _pdf_consolidado_documentos(self, factura, documentos, scope):
+    def _pdf_consolidado_documentos(self, factura, documentos, scope, incluir_portada=True, guardar=True):
         try:
             from pypdf import PdfWriter
         except Exception:
@@ -1481,14 +1589,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         writer = PdfWriter()
-        portada = self._build_portada_factura(factura, documentos, scope)
-        self._append_pdf_bytes(writer, portada)
+        if incluir_portada:
+            portada = self._build_portada_factura(factura, documentos, scope)
+            self._append_pdf_bytes(writer, portada)
 
         if not documentos:
             buffer = BytesIO()
             writer.write(buffer)
             content = buffer.getvalue()
-            self._guardar_pdf_unificado(factura, content, scope)
+            if guardar:
+                self._guardar_pdf_unificado(factura, content, scope)
             return content
 
         for documento in documentos:
@@ -1529,7 +1639,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
         buffer = BytesIO()
         writer.write(buffer)
         content = buffer.getvalue()
-        self._guardar_pdf_unificado(factura, content, scope)
+        if guardar:
+            self._guardar_pdf_unificado(factura, content, scope)
         return content
 
     def get_serializer_class(self):
@@ -1665,8 +1776,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.numero_radicado = f"{numero_operacion}-{consecutivo_operacion}"
         factura.numero_operacion_contable = numero_operacion
         factura.consecutivo_operacion = consecutivo_operacion
-        factura.etapa_actual = 'Alistamiento'
-        factura.fecha_inicio_etapa = factura.fecha_radicacion
+        # Radicación y causación comparten una única etapa SLA de Contabilidad.
+        factura.etapa_actual = 'Radicación y Causación'
+        factura.fecha_inicio_etapa = factura.fecha_inicio_etapa or factura.fecha_radicacion
         factura.usuario_responsable = request.user
         factura.save()
 
@@ -1697,10 +1809,37 @@ class FacturaViewSet(viewsets.ModelViewSet):
         descargar = (request.query_params.get('descargar') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
         doc_id = request.query_params.get('doc_id')
 
+        # El expediente consolidado se sirve desde la carpeta compartida. Solo se
+        # regenera si aún no existe para este ciclo documental o si fue eliminado.
+        if not doc_id:
+            unificado = models.DocumentoUnificado.objects.filter(
+                factura=factura,
+                scope=scope,
+                ciclo_documental=_factura_ciclo_documental_actual(factura),
+            ).first()
+            if unificado and unificado.nas_relative_path:
+                from financiero.services.shared_storage_service import shared_storage
+                result = shared_storage.read_file(unificado.nas_relative_path)
+                if result.success and result.content_bytes is not None:
+                    filename = unificado.nombre_archivo or f'Documentos_{factura.numero_factura}_{scope}.pdf'
+                    response = HttpResponse(result.content_bytes, content_type='application/pdf')
+                    response['Content-Disposition'] = f'{"attachment" if descargar else "inline"}; filename="{filename}"'
+                    return response
+
         documentos = self._documentos_filtrados_por_scope(factura, scope)
         if doc_id:
             documentos = [d for d in documentos if str(d.id) == str(doc_id)]
-        content = self._pdf_consolidado_documentos(factura, documentos, scope)
+            if not documentos:
+                return Response({'error': 'El documento solicitado no está disponible.'}, status=status.HTTP_404_NOT_FOUND)
+        # Al abrir un documento puntual no se agrega la portada del expediente ni
+        # se reemplaza el PDF unificado almacenado de la factura.
+        content = self._pdf_consolidado_documentos(
+            factura,
+            documentos,
+            scope,
+            incluir_portada=not bool(doc_id),
+            guardar=not bool(doc_id),
+        )
 
         filename = f'Documentos_{factura.numero_factura}_{scope}.pdf'
         response = HttpResponse(content, content_type='application/pdf')
@@ -1769,7 +1908,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = ESTADO_CARGADA
         factura.fecha_cargue = timezone.now().date()
-        factura.etapa_actual = 'Envío a Rectoría'
+        factura.etapa_actual = 'Autorización de Pago'
         factura.fecha_inicio_etapa = factura.fecha_cargue
         factura.usuario_responsable = request.user
 
@@ -1814,7 +1953,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = ESTADO_ENVIADA_RECTORIA
         factura.fecha_envio_rectoria = timezone.now().date()
-        factura.etapa_actual = 'Aplicación de Pago'
+        factura.etapa_actual = 'Autorización de Pago'
         factura.fecha_inicio_etapa = factura.fecha_envio_rectoria
         factura.usuario_responsable = request.user
 
@@ -1859,11 +1998,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         hoy = timezone.now().date()
 
-        factura.estado = 'Pagada'
+        factura.estado = 'Autorizada'
         factura.fecha_autorizacion = hoy
-        factura.fecha_pago_aplicado = hoy
-        factura.fecha_comprobante = hoy
-        factura.etapa_actual = 'Pagada'
+        factura.etapa_actual = 'Aplicación de Pago'
         factura.fecha_inicio_etapa = hoy
         factura.usuario_responsable = request.user
 
@@ -1876,16 +2013,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         models.HistorialFactura.objects.create(
             factura=factura,
-            accion='Factura pagada por Rectoría',
+            accion='Factura autorizada por Rectoría',
             estado_anterior=estado_anterior,
-            estado_nuevo='Pagada',
+            estado_nuevo='Autorizada',
             usuario=request.user,
             usuario_nombre=request.user.nombre,
             usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
             observacion=observaciones or None,
         )
 
-        self._notificar_transicion(factura, estado_anterior, 'Pagada')
+        self._notificar_transicion(factura, estado_anterior, 'Autorizada')
 
         return Response(
             self._factura_response_data(factura),
@@ -2056,6 +2193,20 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return Response({'error': 'El soporte de causacion debe estar en formato PDF.'}, status=status.HTTP_400_BAD_REQUEST)
         content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(soporte_causacion)
 
+        try:
+            _guardar_documento_en_carpeta_compartida(
+                factura=factura,
+                nombre_archivo=nombre_archivo,
+                tipo_documento='Soporte Causacion Seven',
+                tipo_mime=getattr(soporte_causacion, 'content_type', '') or 'application/pdf',
+                content_bytes=content_bytes,
+                tamano_bytes=tamano_bytes,
+                hash_archivo=hash_archivo,
+                usuario=request.user,
+            )
+        except ValidationError as exc:
+            return Response({'error': 'No fue posible guardar el soporte en la carpeta compartida.', 'detail': exc.detail}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         factura.estado = 'Causada'
         factura.fecha_causacion = timezone.now().date()
         factura.etapa_actual = 'Alistamiento'
@@ -2063,19 +2214,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.usuario_responsable = request.user
         factura.save()
 
-        documento = models.DocumentoAdjunto.objects.create(
-            factura=factura,
-            nombre_archivo=nombre_archivo[:255],
-            tipo_documento='Soporte Causacion Seven',
-            tipo_mime=getattr(soporte_causacion, 'content_type', '') or 'application/pdf',
-            tamano_bytes=tamano_bytes,
-            cargado_por=request.user,
-            contenido_archivo=content_bytes,
-            hash_archivo=hash_archivo,
-            ciclo_documental=_factura_ciclo_documental_actual(factura),
-        )
-
-        _programar_sincronizacion_nas_documento(documento.id)
+        _regenerar_pdf_unificado_nas(factura)
 
         actualizar_sla_factura(factura)
 
@@ -2180,7 +2319,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura.estado = 'Aprobada Auditoría'
         factura.fecha_aprobacion_auditoria = timezone.now().date()
-        factura.etapa_actual = 'Envío a Dirección Financiera'
+        factura.etapa_actual = 'Cargue Formal'
         factura.fecha_inicio_etapa = factura.fecha_aprobacion_auditoria
         factura.usuario_responsable = request.user
 
@@ -2188,6 +2327,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Auditoría] {observaciones}"]))
 
         factura.save()
+
+        actualizar_sla_factura(factura)
 
         models.HistorialFactura.objects.create(
             factura=factura,
@@ -2379,8 +2520,18 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     context={'request': request}
                 )
                 documento_serializer.is_valid(raise_exception=True)
-                documento = documento_serializer.save(cargado_por=request.user)
-                _programar_sincronizacion_nas_documento(documento.id)
+                content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(comprobante_bancario)
+                _guardar_documento_en_carpeta_compartida(
+                    factura=factura,
+                    nombre_archivo=documento_serializer.validated_data.get('nombre_archivo') or comprobante_bancario.name,
+                    tipo_documento='Comprobante de Pago',
+                    tipo_mime=documento_serializer.validated_data.get('tipo_mime') or getattr(comprobante_bancario, 'content_type', ''),
+                    content_bytes=content_bytes,
+                    tamano_bytes=tamano_bytes,
+                    hash_archivo=hash_archivo,
+                    usuario=request.user,
+                )
+                _regenerar_pdf_unificado_nas(factura)
 
                 models.HistorialFactura.objects.create(
                     factura=factura,
@@ -2744,19 +2895,19 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         # Si vienen items nuevos, reemplazar los existentes
         if items_data is not None:
-            models.ItemFactura.objects.filter(factura=factura).delete()
-            for orden, item in enumerate(items_data, start=1):
-                models.ItemFactura.objects.create(
-                    factura=factura,
-                    orden=orden,
-                    descripcion=item.get('descripcion', ''),
-                    cantidad=item.get('cantidad', 1),
-                    valor_unitario=item.get('valor_unitario', 0),
-                    porcentaje_iva=item.get('porcentaje_iva', 0),
-                    valor_subtotal=item.get('valor_subtotal', 0),
-                    valor_iva=item.get('valor_iva', 0),
-                    valor_total=item.get('valor_total', 0),
+            items_serializer = serializers.ItemFacturaSerializer(data=items_data, many=True)
+            items_serializer.is_valid(raise_exception=True)
+            if not items_serializer.validated_data:
+                return Response(
+                    {'items': ['Debe registrar al menos un bien o servicio.']},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            with transaction.atomic():
+                models.ItemFactura.objects.filter(factura=factura).delete()
+                for orden, item in enumerate(items_serializer.validated_data, start=1):
+                    item.pop('orden', None)
+                    models.ItemFactura.objects.create(factura=factura, orden=orden, **item)
 
         factura.estado = 'Recibida'
         factura.etapa_actual = 'Recepción y Registro'
@@ -2903,7 +3054,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             # Cambiar estado a 'Registrada' al completar el registro
             factura.estado = 'Registrada'
-            factura.etapa_actual = 'Radicación'
+            factura.etapa_actual = 'Radicación y Causación'
             # Asignar responsable si no está asignado
             if not factura.usuario_responsable:
                 factura.usuario_responsable = request.user

@@ -93,7 +93,7 @@ export default function ConfirmacionPagos() {
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-red-50">
               <Landmark className="h-4 w-4 text-amber-300" />
-              Direccion Financiera / Control Bancario
+              Dirección Financiera / Control Bancario
             </div>
             <div className="flex items-start gap-4">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/12">
@@ -102,7 +102,7 @@ export default function ConfirmacionPagos() {
               <div>
                 <h1 className="text-3xl font-black tracking-tight">Control de Pago Bancario</h1>
                 <p className="mt-2 text-sm leading-6 text-red-50/90">
-                  Aqui aparecen unicamente los pagos autorizados por Rectoria para confirmar el control bancario antes del registro del pago aplicado.
+                  Aquí aparecen únicamente los pagos autorizados por Rectoría para confirmar el control bancario antes del registro del pago aplicado.
                 </p>
               </div>
             </div>
@@ -123,8 +123,8 @@ export default function ConfirmacionPagos() {
 
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-slate-800">Filtros y control de confirmacion</CardTitle>
-          <CardDescription>Consulta pagos autorizados por Rectoria, prioriza los mas antiguos y confirma el control bancario con trazabilidad.</CardDescription>
+          <CardTitle className="text-slate-800">Filtros y control de confirmación</CardTitle>
+          <CardDescription>Consulta pagos autorizados por Rectoría, prioriza los más antiguos y confirma el control bancario con trazabilidad.</CardDescription>
         </CardHeader>
         <CardContent>
           <TableFilters
@@ -149,7 +149,7 @@ export default function ConfirmacionPagos() {
             <div>
               <CardTitle className="text-slate-800">Pagos autorizados para control bancario</CardTitle>
               <CardDescription>
-                Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} pagos autorizados pendientes de confirmacion bancaria
+                Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} pagos autorizados pendientes de confirmación bancaria
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -178,10 +178,10 @@ export default function ConfirmacionPagos() {
                   <TableHead className="font-semibold text-slate-700">SLA</TableHead>
                   <TableHead className="font-semibold text-slate-700">Factura / Radicado</TableHead>
                   <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Area</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Área</TableHead>
                   <TableHead className="font-semibold text-slate-700">Monto</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Fecha autorizacion</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Confirmacion</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Fecha de autorización</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Confirmación</TableHead>
                   <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -402,7 +402,7 @@ export default function ConfirmacionPagos() {
                   <div>
                     <p className="font-semibold text-emerald-900">Validacion previa al cierre</p>
                     <ul className="mt-2 space-y-1 text-sm text-emerald-800">
-                      <li>- Autorizacion de Rectoria confirmada</li>
+                      <li>- Autorización de Rectoría confirmada</li>
                       <li>- Soportes bancarios y expediente verificados</li>
                       <li>- Lista para marcar control bancario realizado</li>
                     </ul>
@@ -411,7 +411,7 @@ export default function ConfirmacionPagos() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Numero de confirmacion</label>
+                <label className="text-sm font-medium text-slate-700">Número de confirmación</label>
                 <Input
                   value={numeroConfirmacion}
                   readOnly

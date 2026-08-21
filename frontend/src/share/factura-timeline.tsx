@@ -213,7 +213,7 @@ export default function FacturaTimeline({
                           </span>
                           {etapa.diasTranscurridos !== undefined && etapa.diasMaximos && (
                             <span className="text-sm text-slate-600">
-                              ({etapa.diasTranscurridos}/{etapa.diasMaximos} dias)
+                              ({etapa.diasTranscurridos}/{etapa.diasMaximos} días)
                             </span>
                           )}
                         </div>
@@ -292,10 +292,10 @@ export default function FacturaTimeline({
                               <p className="text-xs text-blue-600 font-semibold mb-2">Tiempo de Gestion</p>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-slate-700">
-                                  {etapa.diasTranscurridos} dias transcurridos
+                                  {etapa.diasTranscurridos} días transcurridos
                                 </span>
                                 <span className="text-sm font-bold text-blue-700">
-                                  {etapa.diasMaximos - (etapa.diasTranscurridos || 0)} dias restantes
+                                  {etapa.diasMaximos - (etapa.diasTranscurridos || 0)} días restantes
                                 </span>
                               </div>
                               <div className="mt-2 w-full bg-blue-100 rounded-full h-2 overflow-hidden">

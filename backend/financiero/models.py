@@ -35,8 +35,6 @@ class Proveedor(models.Model):
     TIPO_PROVEEDOR_CHOICES = [
         ('Bienes', 'Bienes'),
         ('Servicios', 'Servicios'),
-        ('Construcción', 'Construcción'),
-        ('Mixto', 'Mixto'),
     ]
     TIPO_CUENTA_CHOICES = [
         ('Ahorros', 'Ahorros'),
@@ -44,8 +42,9 @@ class Proveedor(models.Model):
     ]
     REGIMEN_TRIBUTARIO_CHOICES = [
         ('Responsable IVA', 'Responsable IVA'),
-        ('No responsable', 'No responsable'),
-        ('Gran Contribuyente', 'Gran Contribuyente'),
+        ('No Responsable IVA', 'No Responsable IVA'),
+        ('Régimen Simple de Tributación', 'Régimen Simple de Tributación'),
+        ('Régimen Tributario Especial', 'Régimen Tributario Especial'),
     ]
     CALIFICACION_RIESGO_CHOICES = [
         ('Bajo', 'Bajo'),
@@ -399,7 +398,6 @@ class Factura(models.Model):
 
     # Información del documento
     tipo_documento = models.CharField(max_length=50, choices=TIPO_DOCUMENTO_CHOICES)
-    descripcion = models.TextField()
     observaciones = models.TextField(blank=True, null=True)
     identificacion_factura = models.CharField(max_length=500, blank=True, null=True)
 
@@ -477,7 +475,7 @@ class Factura(models.Model):
 # ============================================================
 class ItemFactura(models.Model):
     factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='items')
-    descripcion = models.CharField(max_length=500)
+    descripcion = models.TextField()
     cantidad = models.DecimalField(max_digits=10, decimal_places=2, default=1)
     valor_unitario = models.DecimalField(max_digits=18, decimal_places=2)
     porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=0)

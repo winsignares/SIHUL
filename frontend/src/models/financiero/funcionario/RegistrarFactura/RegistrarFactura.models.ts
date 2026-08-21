@@ -25,7 +25,6 @@ export interface PrefillFromPendiente {
     fechaFactura?: string;
     fechaRecepcion?: string;
     departamentoId?: number;
-    descripcion?: string;
     observaciones?: string;
   };
 }
