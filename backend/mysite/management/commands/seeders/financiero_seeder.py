@@ -696,6 +696,10 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         # Entidades que ya estaban disponibles en el catálogo del sistema.
         ('ICBC', 'ICBC (Colombia) S.A.', '010'),
         ('Banco Multicolor', 'Banco Multicolor S.A.', '042'),
+        # Productos permitidos expresamente para recibir pagos.
+        ('DaviPlata', 'Billetera digital de Davivienda.', ''),
+        ('Nequi', 'Nequi S.A. Compañía de Financiamiento.', ''),
+        ('Nu Colombia', 'Nu Colombia Compañía de Financiamiento S.A.', ''),
     ]
 
     tipos_cuenta_data = [
