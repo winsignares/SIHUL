@@ -657,16 +657,15 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
     """Crea los bancos y tipos de cuenta colombianos."""
     out.write(sty.NOTICE('\n  Bancos y tipos de cuenta:'))
 
-    # Catálogo vigente: establecimientos bancarios inscritos en Fogafín y
-    # billeteras/productos financieros usados para pagos a proveedores.
+    # Catálogo de bancos para pagos a proveedores.
     # No se deja una opción genérica como "Otro": el proveedor debe escoger
     # una entidad identificable para que Tesorería pueda realizar el pago.
     bancos_data = [
-        ('Banco Agrario de Colombia', 'Banco Agrario de Colombia S.A.', '080'),
+        ('Banco Agrario', 'Banco Agrario de Colombia S.A.', '080'),
         ('Banco AV Villas', 'Banco Comercial AV Villas S.A.', '052'),
         ('Bancamía', 'Banco de las Microfinanzas - Bancamía S.A.', ''),
-        ('Banco BBVA Colombia', 'Banco BBVA Colombia S.A.', '013'),
-        ('Banco BTG Pactual Colombia', 'Banco BTG Pactual Colombia S.A.', ''),
+        ('BBVA', 'Banco BBVA Colombia S.A.', '013'),
+        ('Banco BTG Pactual', 'Banco BTG Pactual Colombia S.A.', ''),
         ('Banco Caja Social', 'Banco Caja Social S.A.', '066'),
         ('Banco Contactar', 'Banco Contactar S.A.', ''),
         ('Banco Cooperativo Coopcentral', 'Banco Cooperativo Coopcentral.', ''),
@@ -674,12 +673,12 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         ('Banco de Occidente', 'Banco de Occidente S.A.', '023'),
         ('Banco Falabella', 'Banco Falabella S.A.', '062'),
         ('Banco Finandina', 'Banco Finandina S.A.', ''),
-        ('Banco GNB Sudameris', 'Banco GNB Sudameris S.A.', '019'),
-        ('Banco J.P. Morgan Colombia', 'Banco J.P. Morgan Colombia S.A.', ''),
+        ('Banco Sudameris', 'Banco GNB Sudameris S.A.', '019'),
+        ('Banco J.P. Morgan', 'Banco J.P. Morgan Colombia S.A.', ''),
         ('Banco Mundo Mujer', 'Banco Mundo Mujer S.A.', ''),
         ('Banco Pichincha', 'Banco Pichincha S.A.', '012'),
         ('Banco Popular', 'Banco Popular S.A.', '058'),
-        ('Banco Santander Colombia', 'Banco Santander Colombia S.A.', '084'),
+        ('Banco Santander', 'Banco Santander Colombia S.A.', '084'),
         ('Banco Serfinanza', 'Banco Serfinanza S.A.', ''),
         ('Banco Unión', 'Banco Unión S.A.', ''),
         ('Banco W', 'Banco W S.A.', ''),
@@ -689,17 +688,14 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         ('Citibank Colombia', 'Citibank Colombia S.A.', ''),
         ('DAVIbank', 'Banco DAVIbank.', ''),
         ('Davivienda', 'Banco Davivienda S.A.', '006'),
-        ('Itaú Colombia', 'Itaú Colombia S.A.', '060'),
+        ('Banco Itaú', 'Itaú Colombia S.A.', '060'),
         ('Lulo Bank', 'Lulo Bank S.A.', ''),
         ('Mibanco', 'Banco de la Microempresa de Colombia S.A.', ''),
         ('Revolut Bank Colombia', 'Revolut Bank Colombia S.A.', ''),
         ('Scotiabank Colpatria', 'Scotiabank Colpatria S.A.', '065'),
-        # Productos financieros de uso frecuente para dispersión de pagos.
-        ('DaviPlata', 'Billetera digital de Davivienda.', ''),
-        ('Nequi', 'Nequi S.A. Compañía de Financiamiento.', ''),
-        ('Nu Colombia', 'Nu Colombia Compañía de Financiamiento S.A.', ''),
-        ('Mercado Pago', 'Mercado Pago Compañía de Financiamiento S.A.', ''),
-        ('RappiPay', 'Rappipay Compañía de Financiamiento S.A.', ''),
+        # Entidades que ya estaban disponibles en el catálogo del sistema.
+        ('ICBC', 'ICBC (Colombia) S.A.', '010'),
+        ('Banco Multicolor', 'Banco Multicolor S.A.', '042'),
     ]
 
     tipos_cuenta_data = [
