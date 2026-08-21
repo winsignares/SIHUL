@@ -30,14 +30,12 @@ def create_financiero_data(out, sty):
     componentes = _seed_componentes(out, sty)
     _seed_permisos(roles, componentes, out, sty)
     _seed_departamentos(out, sty)
+    _seed_areas_solicitantes(out, sty)
     _seed_catalogos_contables(out, sty)
     _seed_bancos_y_tipos_cuenta(out, sty)
     _seed_catalogos_geograficos(out, sty)
-    _seed_proveedores_demo(out, sty)
-    _seed_usuarios_proveedores(roles, out, sty)
     _seed_sla(out, sty)
     _seed_parametros(out, sty)
-    _seed_usuarios_prueba(roles, out, sty)
 
     out.write(sty.SUCCESS('[Financiero] Datos financieros cargados exitosamente.'))
 
@@ -243,6 +241,25 @@ def _seed_departamentos(out, sty):
         )
         msg = "Creado" if created else "Existente"
         out.write(f"    - {msg}: {codigo} {nombre}")
+
+
+def _seed_areas_solicitantes(out, sty):
+    """Carga exclusivamente las áreas que se muestran al registrar facturas."""
+    areas = [
+        ('SOL-DER', 'Facultad de Derecho y Ciencias Políticas', 'Académico'),
+        ('SOL-ING', 'Facultad de Ingeniería', 'Académico'),
+        ('SOL-SAL', 'Facultad de Ciencias de la Salud', 'Académico'),
+        ('SOL-ECO', 'Facultad de Ciencias Económicas, Administrativas y Contables', 'Académico'),
+        ('SOL-ADM', 'Administración', 'Administrativo'),
+    ]
+
+    out.write(sty.NOTICE('\n  Áreas solicitantes:'))
+    for codigo, nombre, tipo in areas:
+        _, created = Departamento.objects.update_or_create(
+            codigo=codigo,
+            defaults={'nombre': nombre, 'tipo': tipo, 'estado': 'Activo'},
+        )
+        out.write(f"    - {'Creada' if created else 'Actualizada'}: {nombre}")
 
 
 def _seed_catalogos_contables(out, sty):
@@ -552,18 +569,18 @@ def _slugify_email(razon_social):
 def _seed_sla(out, sty):
     """Crea los parámetros SLA."""
     parametros_sla = [
-        ('Registro por parte del Funcionario', 'Funcionario', 5, 'Registro inicial de factura'),
+        ('Registro por parte del Funcionario', 'Funcionario', 3, 'Registro inicial de factura'),
         ('Radicación y Causación', 'Contabilidad', 3, 'Radicación y causación contable'),
         ('Alistamiento', 'Tesorería', 3, 'Alistamiento sin CE'),
-        ('Control Previo', 'Auditoría', 4, 'Control previo de auditoría'),
+        ('Control Previo', 'Auditoría', 3, 'Control previo de auditoría'),
         ('Cargue Formal', 'Dirección Financiera', 2, 'Cargue para autorización'),
-        ('Autorización de Pago', 'Rectoría', 3, 'Autorización por Rectoría'),
-        ('Aplicación de Pago', 'Tesorería', 1, 'Ejecución de pago y cierre de factura pagada'),
+        ('Autorización de Pago', 'Rectoría', 1, 'Autorización por Rectoría'),
+        ('Aplicación de Pago', 'Tesorería', 2, 'Ejecución de pago y cierre de factura pagada'),
     ]
 
     out.write(sty.NOTICE('\n  Parámetros SLA:'))
     for etapa, rol, dias, descripcion in parametros_sla:
-        _, created = ParametroSLA.objects.get_or_create(
+        _, created = ParametroSLA.objects.update_or_create(
             etapa=etapa,
             defaults={
                 "rol_responsable": rol,
@@ -590,7 +607,7 @@ def _seed_parametros(out, sty):
 
     out.write(sty.NOTICE('\n  Parámetros financieros:'))
     for clave, valor, tipo_dato, categoria, descripcion in parametros:
-        _, created = ParametrosFinanciero.objects.get_or_create(
+        _, created = ParametrosFinanciero.objects.update_or_create(
             clave=clave,
             defaults={
                 "valor": valor,
@@ -670,8 +687,11 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         ('Corriente', 'Cuenta corriente'),
     ]
 
+    bancos_permitidos = [nombre for nombre, _, _ in bancos_data]
+    Banco.objects.exclude(nombre__in=bancos_permitidos).update(activo=False)
+
     for nombre, descripcion, codigo in bancos_data:
-        _, created = Banco.objects.get_or_create(
+        _, created = Banco.objects.update_or_create(
             nombre=nombre,
             defaults={
                 'descripcion': descripcion,
@@ -682,8 +702,10 @@ def _seed_bancos_y_tipos_cuenta(out, sty):
         msg = "Creado" if created else "Existente"
         out.write(f"    - {msg}: Banco {nombre}")
 
-    # Tipos de cuenta es un catalogo unico, no depende del banco seleccionado.
-    TipoCuenta.objects.filter(nombre='Nómina').update(activo=False)
+    # Tipos de cuenta es un catálogo único, no depende del banco seleccionado.
+    TipoCuenta.objects.exclude(
+        nombre__in=[nombre for nombre, _ in tipos_cuenta_data]
+    ).update(activo=False)
 
     for tipo_nombre, tipo_descripcion in tipos_cuenta_data:
         _, created = TipoCuenta.objects.update_or_create(

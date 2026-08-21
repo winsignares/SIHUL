@@ -638,7 +638,10 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def areas_solicitantes(self, request):
         """Lista las áreas activas disponibles en la base de datos."""
-        queryset = models.Departamento.objects.filter(estado='Activo').order_by('nombre')
+        queryset = models.Departamento.objects.filter(
+            estado='Activo',
+            codigo__startswith='SOL-',
+        ).order_by('nombre')
         serializer = serializers.DepartamentoSerializer(queryset, many=True)
         return Response(serializer.data)
 
