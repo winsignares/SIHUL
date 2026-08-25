@@ -3,33 +3,48 @@ import { Input } from '../../share/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { GraduationCap, Lock, User, ArrowRight, Eye, EyeOff, Mail, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import universityImage from '../../assets/Image/universidad_libre.jpg';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useRegister } from '../../hooks/users/useRegister';
 
-export default function Register() {
-  const isMobile = useIsMobile();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const {
-    formData,
-    isLoading,
-    error,
-    isHovered,
-    setIsHovered,
-    handleChange,
-    handleSelectChange,
-    handleSubmit,
-    navigate,
-    sedes,
-    isLoadingSedes
-  } = useRegister();
+type Particle = {
+  left: string;
+  top: string;
+  size: string;
+  xOffset: number;
+  duration: number;
+  delay: number;
+};
+
+const createParticleRandom = (seed: number) => {
+  let value = seed;
+  return () => {
+    value = (value * 9301 + 49297) % 233280;
+    return value / 233280;
+  };
+};
+
+const buildParticles = (count: number, seedOffset: number, xRange: number, durationBase: number, durationRange: number, delayRange: number): Particle[] => {
+  return Array.from({ length: count }, (_, index) => {
+    const random = createParticleRandom(seedOffset + index + 1);
+
+    return {
+      left: `${random() * 100}%`,
+      top: `${random() * 100}%`,
+      size: `${2 + random() * 4}px`,
+      xOffset: random() * xRange - xRange / 2,
+      duration: durationBase + random() * durationRange,
+      delay: random() * delayRange,
+    };
+  });
+};
+
+const RegisterBackgroundParticles = memo(function RegisterBackgroundParticles() {
+  const floatingParticles = useMemo(() => buildParticles(50, 1000, 100, 6, 6, 4), []);
 
   return (
-    <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
-      {/* Animated Background Elements */}
+    <>
       <motion.div
         className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-600 to-red-700 rounded-full opacity-20 blur-3xl"
         animate={{
@@ -70,8 +85,7 @@ export default function Register() {
         }}
       />
 
-      {/* Floating Particles */}
-      {[...Array(50)].map((_, i) => (
+      {floatingParticles.map((particle, i) => (
         <motion.div
           key={`particle-${i}`}
           className={`absolute rounded-full opacity-40 ${
@@ -80,25 +94,52 @@ export default function Register() {
             'bg-gradient-to-r from-blue-400 to-blue-500'
           }`}
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            width: `${2 + Math.random() * 4}px`,
-            height: `${2 + Math.random() * 4}px`,
+            left: particle.left,
+            top: particle.top,
+            width: particle.size,
+            height: particle.size,
           }}
           animate={{
             y: [0, -150, 0],
-            x: [0, Math.random() * 100 - 50, 0],
+            x: [0, particle.xOffset, 0],
             opacity: [0.1, 0.6, 0.1],
             scale: [0.5, 1.2, 0.5],
           }}
           transition={{
-            duration: 6 + Math.random() * 6,
+            duration: particle.duration,
             repeat: Infinity,
-            delay: Math.random() * 4,
+            delay: particle.delay,
             ease: "easeInOut"
           }}
         />
       ))}
+    </>
+  );
+});
+
+export default function Register() {
+  const isMobile = useIsMobile();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const {
+    formData,
+    isLoading,
+    error,
+    isHovered,
+    setIsHovered,
+    handleChange,
+    handleSelectChange,
+    handleSubmit,
+    navigate,
+    sedes,
+    isLoadingSedes
+  } = useRegister();
+
+  return (
+    <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100`}>
+      {/* Animated Background Particles (memoized — unaffected by user interaction) */}
+      <RegisterBackgroundParticles />
 
       {/* Main Register Card */}
       <motion.div
