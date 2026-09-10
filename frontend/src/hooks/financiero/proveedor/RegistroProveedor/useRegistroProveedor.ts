@@ -35,6 +35,7 @@ const emptyCatalogos: RegistroProveedorCatalogos = {
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+type ErroresFormulario = Partial<Record<keyof RegistroProveedorForm, string>>;
 
 export function useRegistroProveedor() {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export function useRegistroProveedor() {
   const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [erroresCampos, setErroresCampos] = useState<ErroresFormulario>({});
   const [exito, setExito] = useState('');
   const envioEnCurso = useRef(false);
   const redireccionExitosa = useRef<number | null>(null);
@@ -94,8 +96,42 @@ export function useRegistroProveedor() {
       }
       return siguiente;
     });
+    setErroresCampos((actuales) => {
+      const siguientes = { ...actuales };
+      delete siguientes[campo];
+      if (campo === 'paisId') {
+        delete siguientes.departamentoId;
+        delete siguientes.ciudadId;
+      }
+      if (campo === 'departamentoId') delete siguientes.ciudadId;
+      return siguientes;
+    });
     if (error) setError('');
     if (exito) setExito('');
+  };
+
+  const obtenerErroresCampos = (): ErroresFormulario => {
+    const errores: ErroresFormulario = {};
+    const requeridos: Array<keyof RegistroProveedorForm> = [
+      'nombre', 'correo', 'confirmarCorreo', 'contrasena', 'confirmarContrasena',
+      'nit', 'razonSocial', 'nombreComercial', 'direccion', 'paisId', 'departamentoId',
+      'ciudadId', 'telefono', 'correoEmpresa', 'bancoId', 'tipoCuentaId', 'numeroCuenta', 'regimenTributario',
+    ];
+    requeridos.forEach((campo) => {
+      if (!String(form[campo]).trim()) errores[campo] = 'Completa este campo.';
+    });
+    if (form.correo.trim() && !emailPattern.test(form.correo.trim())) errores.correo = 'Ingresa un correo valido.';
+    if (form.correo.trim() && form.confirmarCorreo.trim() && form.correo.trim().toLowerCase() !== form.confirmarCorreo.trim().toLowerCase()) {
+      errores.correo = 'Los correos no coinciden.';
+      errores.confirmarCorreo = 'Los correos no coinciden.';
+    }
+    if (form.correoEmpresa.trim() && !emailPattern.test(form.correoEmpresa.trim())) errores.correoEmpresa = 'Ingresa un correo valido.';
+    if (form.contrasena && form.contrasena.length < 6) errores.contrasena = 'La contrasena debe tener al menos 6 caracteres.';
+    if (form.contrasena && form.confirmarContrasena && form.contrasena !== form.confirmarContrasena) {
+      errores.contrasena = 'Las contrasenas no coinciden.';
+      errores.confirmarContrasena = 'Las contrasenas no coinciden.';
+    }
+    return errores;
   };
 
   const validar = (): string | null => {
@@ -121,7 +157,6 @@ export function useRegistroProveedor() {
     const faltante = requeridos.find(([campo]) => !String(form[campo]).trim());
     if (faltante) return faltante[1];
     if (!emailPattern.test(form.correo.trim())) return 'El correo de acceso no es válido.';
-    if (!form.correo.trim().toLowerCase().endsWith('@unilibre.edu.co')) return 'El correo de acceso debe terminar en @unilibre.edu.co.';
     if (form.correo.trim().toLowerCase() !== form.confirmarCorreo.trim().toLowerCase()) return 'Los correos no coinciden.';
     if (!emailPattern.test(form.correoEmpresa.trim())) return 'El correo de contacto de la empresa no es válido.';
     if (form.contrasena.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
@@ -133,8 +168,10 @@ export function useRegistroProveedor() {
     event.preventDefault();
     if (envioEnCurso.current || exito) return;
 
+    const erroresValidacion = obtenerErroresCampos();
     const mensajeValidacion = validar();
     if (mensajeValidacion) {
+      setErroresCampos(erroresValidacion);
       setError(mensajeValidacion);
       return;
     }
@@ -163,9 +200,10 @@ export function useRegistroProveedor() {
     envioEnCurso.current = true;
     setEnviando(true);
     setError('');
+    setErroresCampos({});
     try {
       await registroProveedorService.registrar(payload);
-      setExito('Registro realizado correctamente. Ya puedes iniciar sesión con tu correo institucional.');
+      setExito('Registro realizado correctamente. Ya puedes iniciar sesión con tu correo de acceso.');
       redireccionExitosa.current = window.setTimeout(() => {
         navigate('/login', {
           replace: true,
@@ -196,6 +234,7 @@ export function useRegistroProveedor() {
     cargandoCatalogos,
     enviando,
     error,
+    erroresCampos,
     exito,
     actualizarCampo,
     enviarRegistro,

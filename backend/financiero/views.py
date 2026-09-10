@@ -458,13 +458,6 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        es_registro_publico = not getattr(request.user, 'is_authenticated', False)
-        if es_registro_publico and not correo.casefold().endswith('@unilibre.edu.co'):
-            return Response(
-                {'error': 'El correo de acceso debe pertenecer al dominio @unilibre.edu.co.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         try:
             rol_proveedor = Rol.objects.get(nombre__iexact='Proveedor')
         except Rol.DoesNotExist:

@@ -22,6 +22,7 @@ export default function RegistroProveedor() {
     cargandoCatalogos,
     enviando,
     error,
+    erroresCampos,
     exito,
     actualizarCampo,
     enviarRegistro,
@@ -89,21 +90,21 @@ export default function RegistroProveedor() {
             </div>
 
             <section>
-              <SectionTitle icon={<LockKeyhole size={18} />} title="Datos de acceso" description="Usa tu correo institucional de la Universidad Libre para ingresar a la plataforma." />
+              <SectionTitle icon={<LockKeyhole size={18} />} title="Datos de acceso" description="Usa un correo personal o corporativo al que tengas acceso para ingresar a la plataforma." />
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <Field label="Nombre para la cuenta" required className="md:col-span-2">
+                <Field label="Nombre para la cuenta" required error={erroresCampos.nombre} className="md:col-span-2">
                   <Input value={form.nombre} onChange={(event) => actualizarCampo('nombre', event.target.value)} placeholder="Nombre completo" disabled={enviando} />
                 </Field>
-                <Field label="Correo de acceso" required>
-                  <Input type="email" value={form.correo} onChange={(event) => actualizarCampo('correo', event.target.value)} placeholder="usuario@unilibre.edu.co" disabled={enviando} />
+                <Field label="Correo de acceso" required error={erroresCampos.correo}>
+                  <Input type="email" value={form.correo} onChange={(event) => actualizarCampo('correo', event.target.value)} placeholder="usuario@correo.com" disabled={enviando} />
                 </Field>
-                <Field label="Confirmar correo" required>
+                <Field label="Confirmar correo" required error={erroresCampos.confirmarCorreo}>
                   <Input type="email" value={form.confirmarCorreo} onChange={(event) => actualizarCampo('confirmarCorreo', event.target.value)} placeholder="Repite el correo" disabled={enviando} />
                 </Field>
-                <Field label="Contraseña" required>
+                <Field label="Contraseña" required error={erroresCampos.contrasena}>
                   <Input type="password" value={form.contrasena} onChange={(event) => actualizarCampo('contrasena', event.target.value)} placeholder="Mínimo 6 caracteres" disabled={enviando} />
                 </Field>
-                <Field label="Confirmar contraseña" required>
+                <Field label="Confirmar contraseña" required error={erroresCampos.confirmarContrasena}>
                   <Input type="password" value={form.confirmarContrasena} onChange={(event) => actualizarCampo('confirmarContrasena', event.target.value)} placeholder="Repite la contraseña" disabled={enviando} />
                 </Field>
               </div>
@@ -112,37 +113,37 @@ export default function RegistroProveedor() {
             <section className="border-t border-slate-200 pt-8">
               <SectionTitle icon={<Building2 size={18} />} title="Datos del proveedor" description="Información comercial y de ubicación." />
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <Field label="NIT" required><Input value={form.nit} onChange={(event) => actualizarCampo('nit', event.target.value)} placeholder="900123456-7" disabled={enviando} /></Field>
-                <Field label="Razón social" required><Input value={form.razonSocial} onChange={(event) => actualizarCampo('razonSocial', event.target.value)} placeholder="Proveedor S.A.S." disabled={enviando} /></Field>
-                <Field label="Nombre comercial" required><Input value={form.nombreComercial} onChange={(event) => actualizarCampo('nombreComercial', event.target.value)} placeholder="Nombre con el que opera" disabled={enviando} /></Field>
-                <Field label="Tipo de persona" required>
+                <Field label="NIT" required error={erroresCampos.nit}><Input value={form.nit} onChange={(event) => actualizarCampo('nit', event.target.value)} placeholder="900123456-7" disabled={enviando} /></Field>
+                <Field label="Razón social" required error={erroresCampos.razonSocial}><Input value={form.razonSocial} onChange={(event) => actualizarCampo('razonSocial', event.target.value)} placeholder="Proveedor S.A.S." disabled={enviando} /></Field>
+                <Field label="Nombre comercial" required error={erroresCampos.nombreComercial}><Input value={form.nombreComercial} onChange={(event) => actualizarCampo('nombreComercial', event.target.value)} placeholder="Nombre con el que opera" disabled={enviando} /></Field>
+                <Field label="Tipo de persona" required error={erroresCampos.tipoPersona}>
                   <Select value={form.tipoPersona} onValueChange={(value) => actualizarCampo('tipoPersona', value as 'Jurídica' | 'Natural')} disabled={enviando}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="Jurídica">Jurídica</SelectItem><SelectItem value="Natural">Natural</SelectItem></SelectContent>
                   </Select>
                 </Field>
-                <Field label="Tipo de proveedor" required>
+                <Field label="Tipo de proveedor" required error={erroresCampos.tipoProveedor}>
                   <Select value={form.tipoProveedor} onValueChange={(value) => actualizarCampo('tipoProveedor', value as 'Bienes' | 'Servicios')} disabled={enviando}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="Bienes">Bienes</SelectItem><SelectItem value="Servicios">Servicios</SelectItem></SelectContent>
                   </Select>
                 </Field>
-                <Field label="Teléfono principal" required><Input type="tel" value={form.telefono} onChange={(event) => actualizarCampo('telefono', event.target.value)} placeholder="300 000 0000" disabled={enviando} /></Field>
-                <Field label="Correo de contacto de la empresa" required className="md:col-span-2 xl:col-span-3"><Input type="email" value={form.correoEmpresa} onChange={(event) => actualizarCampo('correoEmpresa', event.target.value)} placeholder="contacto@empresa.com" disabled={enviando} /></Field>
-                <div className="md:col-span-2 xl:col-span-3"><Field label="Dirección" required><Input value={form.direccion} onChange={(event) => actualizarCampo('direccion', event.target.value)} placeholder="Calle 123 # 45-67" disabled={enviando} /></Field></div>
-                <Field label="País" required>
+                <Field label="Teléfono principal" required error={erroresCampos.telefono}><Input type="tel" value={form.telefono} onChange={(event) => actualizarCampo('telefono', event.target.value)} placeholder="300 000 0000" disabled={enviando} /></Field>
+                <Field label="Correo de contacto de la empresa" required error={erroresCampos.correoEmpresa} className="md:col-span-2 xl:col-span-3"><Input type="email" value={form.correoEmpresa} onChange={(event) => actualizarCampo('correoEmpresa', event.target.value)} placeholder="contacto@empresa.com" disabled={enviando} /></Field>
+                <div className="md:col-span-2 xl:col-span-3"><Field label="Dirección" required error={erroresCampos.direccion}><Input value={form.direccion} onChange={(event) => actualizarCampo('direccion', event.target.value)} placeholder="Calle 123 # 45-67" disabled={enviando} /></Field></div>
+                <Field label="País" required error={erroresCampos.paisId}>
                   <Select value={form.paisId || undefined} onValueChange={(value) => actualizarCampo('paisId', value)} disabled={camposDeshabilitados}>
                     <SelectTrigger><SelectValue placeholder="Selecciona país" /></SelectTrigger>
                     <SelectContent>{catalogos.paises.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
-                <Field label="Departamento" required>
+                <Field label="Departamento" required error={erroresCampos.departamentoId}>
                   <Select value={form.departamentoId || undefined} onValueChange={(value) => actualizarCampo('departamentoId', value)} disabled={camposDeshabilitados || !form.paisId}>
                     <SelectTrigger><SelectValue placeholder="Selecciona departamento" /></SelectTrigger>
                     <SelectContent>{departamentosDisponibles.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
-                <Field label="Ciudad" required>
+                <Field label="Ciudad" required error={erroresCampos.ciudadId}>
                   <Select value={form.ciudadId || undefined} onValueChange={(value) => actualizarCampo('ciudadId', value)} disabled={camposDeshabilitados || !form.departamentoId}>
                     <SelectTrigger><SelectValue placeholder="Selecciona ciudad" /></SelectTrigger>
                     <SelectContent>{ciudadesDisponibles.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}</SelectContent>
@@ -154,20 +155,20 @@ export default function RegistroProveedor() {
             <section className="border-t border-slate-200 pt-8">
               <SectionTitle icon={<ShieldCheck size={18} />} title="Información bancaria y tributaria" description="Necesaria para la validación y el pago de facturas." />
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <Field label="Banco" required>
+                <Field label="Banco" required error={erroresCampos.bancoId}>
                   <Select value={form.bancoId || undefined} onValueChange={(value) => actualizarCampo('bancoId', value)} disabled={camposDeshabilitados}>
                     <SelectTrigger><SelectValue placeholder="Selecciona banco" /></SelectTrigger>
                     <SelectContent>{catalogos.bancos.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
-                <Field label="Tipo de cuenta" required>
+                <Field label="Tipo de cuenta" required error={erroresCampos.tipoCuentaId}>
                   <Select value={form.tipoCuentaId || undefined} onValueChange={(value) => actualizarCampo('tipoCuentaId', value)} disabled={camposDeshabilitados}>
                     <SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger>
                     <SelectContent>{catalogos.tiposCuenta.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.nombre}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
-                <Field label="Número de cuenta" required><Input value={form.numeroCuenta} onChange={(event) => actualizarCampo('numeroCuenta', event.target.value)} disabled={enviando} /></Field>
-                <Field label="Régimen tributario" required className="md:col-span-2 xl:col-span-3">
+                <Field label="Número de cuenta" required error={erroresCampos.numeroCuenta}><Input value={form.numeroCuenta} onChange={(event) => actualizarCampo('numeroCuenta', event.target.value)} disabled={enviando} /></Field>
+                <Field label="Régimen tributario" required error={erroresCampos.regimenTributario} className="md:col-span-2 xl:col-span-3">
                   <Select value={form.regimenTributario || undefined} onValueChange={(value) => actualizarCampo('regimenTributario', value)} disabled={camposDeshabilitados}>
                     <SelectTrigger><SelectValue placeholder="Selecciona régimen" /></SelectTrigger>
                     <SelectContent>{REGIMENES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
@@ -199,6 +200,7 @@ function SectionTitle({ icon, title, description }: { icon: ReactNode; title: st
   );
 }
 
-function Field({ label, required = false, children, className = '' }: { label: string; required?: boolean; children: ReactNode; className?: string }) {
-  return <div className={`space-y-1.5 ${className}`}><Label>{label}{required && <span className="ml-1 text-red-600">*</span>}</Label>{children}</div>;
+function Field({ label, required = false, error, children, className = '' }: { label: string; required?: boolean; error?: string; children: ReactNode; className?: string }) {
+  const errorClasses = error ? '[&_[data-slot=input]]:border-red-500 [&_[data-slot=input]]:bg-red-50 [&_[data-slot=input]]:focus-visible:ring-red-200 [&_[data-slot=select-trigger]]:border-red-500 [&_[data-slot=select-trigger]]:bg-red-50 [&_[data-slot=select-trigger]]:focus-visible:ring-red-200' : '';
+  return <div className={`space-y-1.5 ${errorClasses} ${className}`}><Label className={error ? 'text-red-700' : ''}>{label}{required && <span className="ml-1 text-red-600">*</span>}</Label>{children}{error && <p className="text-xs font-medium text-red-600">{error}</p>}</div>;
 }
