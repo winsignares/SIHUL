@@ -458,6 +458,8 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        es_registro_publico = not getattr(request.user, 'is_authenticated', False)
+
         try:
             rol_proveedor = Rol.objects.get(nombre__iexact='Proveedor')
         except Rol.DoesNotExist:
