@@ -64,25 +64,24 @@ export function useConsultaEspacios() {
     });
   }, [datos.horariosConPrestamos, periodoSeleccionado]);
 
-  // Un horario academico solo debe verse en las columnas del cronograma cuyo
-  // dia real (segun la semana visible, derivada de filterFechaInicio) cae
-  // dentro de su fecha_inicio/fecha_fin de Oracle. Sin fecha_inicio/fecha_fin
-  // (horario manual o aun no sincronizado) se sigue mostrando siempre, igual
-  // que antes de que estos campos existieran.
+  // Un horario academico solo debe verse cuando su fecha_inicio (de Oracle)
+  // cae dentro del intervalo seleccionado en el filtro de fecha
+  // (filterFechaInicio..filterFechaFin). Sin fecha_inicio (horario manual o
+  // aun no sincronizado) o sin rango seleccionado, se sigue mostrando siempre.
   const horariosMostrados = useMemo(() => {
     const horariosAcademicos = (filtros.filterPeriodo ? periodos.horariosPeriodo : datos.horarios)
       .filter((h) => {
-        if (!h.fechaInicio || !h.fechaFin) return true;
-        const fechaColumna = filtros.getFechaDiaCronograma(h.dia);
-        if (!fechaColumna) return true;
-        return fechaColumna >= h.fechaInicio && fechaColumna <= h.fechaFin;
+        if (!h.fechaInicio) return true;
+        if (!filtros.filterFechaInicio || !filtros.filterFechaFin) return true;
+        return h.fechaInicio >= filtros.filterFechaInicio && h.fechaInicio <= filtros.filterFechaFin;
       });
 
     return [...horariosAcademicos, ...prestamosMostrados];
   }, [
     datos.horarios,
     filtros.filterPeriodo,
-    filtros.getFechaDiaCronograma,
+    filtros.filterFechaInicio,
+    filtros.filterFechaFin,
     periodos.horariosPeriodo,
     prestamosMostrados
   ]);
