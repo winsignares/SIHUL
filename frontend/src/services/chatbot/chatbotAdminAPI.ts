@@ -1,28 +1,16 @@
 import { apiClient } from '../../core/apiClient';
+import type {
+    ChatbotAgente,
+    ChatbotAgentePayload,
+    ChatbotDocumento,
+    SubirDocumentoChatbotPayload,
+} from '../../models/chatbot/chatbotAdmin.model';
 
-export interface ChatbotAgente {
-    id: number;
-    nombre: string;
-    subtitulo?: string | null;
-    descripcion: string;
-    icono?: string;
-    color?: string;
-    bg_gradient?: string;
-    activo: boolean;
-    endpoint_url?: string;
-    mensaje_bienvenida: string;
-    orden?: number;
-}
-
-export type ChatbotAgentePayload = Omit<ChatbotAgente, 'id'>;
-
-export interface ChatbotDocumento {
-    id: number;
-    filename: string;
-    chatbot_id: number | null;
-    sede: string;
-    created_at: string;
-}
+export type {
+    ChatbotAgente,
+    ChatbotAgentePayload,
+    ChatbotDocumento,
+} from '../../models/chatbot/chatbotAdmin.model';
 
 function extraerLista<T>(response: unknown): T[] {
     if (Array.isArray(response)) {
@@ -78,7 +66,7 @@ export const chatbotAdminAPI = {
         return extraerLista<ChatbotDocumento>(response);
     },
 
-    subirDocumento: async (data: { chatbot_id: number; sede: string; file: File }): Promise<ChatbotDocumento> => {
+    subirDocumento: async (data: SubirDocumentoChatbotPayload): Promise<ChatbotDocumento> => {
         const formData = new FormData();
         formData.append('chatbot_id', String(data.chatbot_id));
         formData.append('sede', data.sede);
