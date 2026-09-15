@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
+import { normalizeRole } from '../../context/roleUtils';
 import {
     chatbotAdminAPI,
     type ChatbotAgente,
@@ -39,13 +41,27 @@ const emptyForm: ChatbotFormState = {
 const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
 
+const MAX_PDF_SIZE_BYTES = 15 * 1024 * 1024;
+
+const validarDocumentoPdf = (file: File): string | null => {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        return 'Solo se permiten documentos en formato PDF.';
+    }
+    if (file.size > MAX_PDF_SIZE_BYTES) {
+        return 'El documento no puede superar los 15 MB.';
+    }
+    return null;
+};
+
 export function useGestionChatbots() {
+    const { user } = useAuth();
     const [chatbots, setChatbots] = useState<ChatbotAgente[]>([]);
-    const [sedes, setSedes] = useState<string[]>([]);
+    const [sedesDisponibles, setSedesDisponibles] = useState<string[]>([]);
     const [documentos, setDocumentos] = useState<ChatbotDocumento[]>([]);
 
     const [loadingChatbots, setLoadingChatbots] = useState(true);
-    const [loadingDocumentos, setLoadingDocumentos] = useState(false);
+    const [loadingDocumentos, setLoadingDocumentos] = useState(true);
+    const [loadingSeccional, setLoadingSeccional] = useState(true);
     const [savingChatbot, setSavingChatbot] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [accionId, setAccionId] = useState<number | null>(null);
@@ -55,11 +71,34 @@ export function useGestionChatbots() {
     const [form, setForm] = useState<ChatbotFormState>(emptyForm);
 
     const [filtroChatbotId, setFiltroChatbotId] = useState<string>('all');
-    const [filtroSede, setFiltroSede] = useState<string>('all');
-
+    const [busquedaDocumento, setBusquedaDocumento] = useState('');
     const [uploadChatbotId, setUploadChatbotId] = useState<string>('');
-    const [uploadSede, setUploadSede] = useState<string>('');
     const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [uploadInputKey, setUploadInputKey] = useState(0);
+    const [documentoActualizar, setDocumentoActualizar] = useState<ChatbotDocumento | null>(null);
+    const [archivoActualizacion, setArchivoActualizacion] = useState<File | null>(null);
+    const [actualizacionChatbotId, setActualizacionChatbotId] = useState('');
+
+    const normalizarSeccional = useCallback((value?: string | null) => (
+        (value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+    ), []);
+
+    const seccionalUsuario = useMemo(() => {
+        const sede = user?.sede;
+        return normalizarSeccional(sede?.seccional_ciudad || sede?.ciudad || sede?.nombre);
+    }, [normalizarSeccional, user?.sede]);
+
+    const seccionalValida = Boolean(
+        seccionalUsuario && sedesDisponibles.includes(seccionalUsuario)
+    );
+    const puedeGestionarChatbots = seccionalUsuario === 'barranquilla'
+        && normalizeRole(user?.rol?.nombre) === 'admin';
 
     const cargarChatbots = useCallback(async () => {
         setLoadingChatbots(true);
@@ -74,29 +113,40 @@ export function useGestionChatbots() {
     }, []);
 
     const cargarSedes = useCallback(async () => {
+        setLoadingSeccional(true);
         try {
             const data = await chatbotAdminAPI.listarSedes();
-            setSedes(data);
+            setSedesDisponibles(data.map(normalizarSeccional));
         } catch (error) {
             toast.error(getErrorMessage(error, 'No se pudieron cargar las sedes.'));
+        } finally {
+            setLoadingSeccional(false);
         }
-    }, []);
+    }, [normalizarSeccional]);
 
     const cargarDocumentos = useCallback(async () => {
+        if (!seccionalValida) {
+            setDocumentos([]);
+            setLoadingDocumentos(false);
+            return;
+        }
+
         setLoadingDocumentos(true);
         try {
             const data = await chatbotAdminAPI.listarDocumentos({
                 chatbot_id: filtroChatbotId !== 'all' ? Number(filtroChatbotId) : undefined,
-                sede: filtroSede !== 'all' ? filtroSede : undefined,
+                sede: seccionalUsuario,
                 limit: 200,
             });
-            setDocumentos(data);
+            // Defensa adicional en cliente: nunca renderizar documentos de otra seccional,
+            // incluso si el servicio remoto respondiera datos fuera del filtro solicitado.
+            setDocumentos(data.filter((documento) => normalizarSeccional(documento.sede) === seccionalUsuario));
         } catch (error) {
             toast.error(getErrorMessage(error, 'No se pudieron cargar los documentos.'));
         } finally {
             setLoadingDocumentos(false);
         }
-    }, [filtroChatbotId, filtroSede]);
+    }, [filtroChatbotId, normalizarSeccional, seccionalUsuario, seccionalValida]);
 
     useEffect(() => {
         void cargarChatbots();
@@ -111,6 +161,16 @@ export function useGestionChatbots() {
         () => Object.fromEntries(chatbots.map((c) => [c.id, c])),
         [chatbots]
     );
+
+    const documentosFiltrados = useMemo(() => {
+        const termino = busquedaDocumento.trim().toLowerCase();
+        if (!termino) return documentos;
+        return documentos.filter((documento) => {
+            const chatbot = documento.chatbot_id ? chatbotsPorId[documento.chatbot_id]?.nombre : '';
+            return documento.filename.toLowerCase().includes(termino)
+                || chatbot?.toLowerCase().includes(termino);
+        });
+    }, [busquedaDocumento, chatbotsPorId, documentos]);
 
     const abrirNuevoChatbot = () => {
         setEditingChatbotId(null);
@@ -207,8 +267,17 @@ export function useGestionChatbots() {
     };
 
     const subirDocumento = async () => {
-        if (!uploadChatbotId || !uploadSede || !uploadFile) {
-            toast.error('Selecciona el chatbot, la sede y el archivo a subir.');
+        if (!seccionalValida) {
+            toast.error('Tu usuario no tiene una seccional válida asignada.');
+            return;
+        }
+        if (!uploadChatbotId || !uploadFile) {
+            toast.error('Selecciona el chatbot y el archivo a subir.');
+            return;
+        }
+        const errorArchivo = validarDocumentoPdf(uploadFile);
+        if (errorArchivo) {
+            toast.error(errorArchivo);
             return;
         }
 
@@ -216,17 +285,99 @@ export function useGestionChatbots() {
         try {
             await chatbotAdminAPI.subirDocumento({
                 chatbot_id: Number(uploadChatbotId),
-                sede: uploadSede,
+                sede: seccionalUsuario,
                 file: uploadFile,
             });
             toast.success('Documento subido y procesado correctamente.');
             setUploadFile(null);
+            setUploadInputKey((value) => value + 1);
             await cargarDocumentos();
         } catch (error) {
             toast.error(getErrorMessage(error, 'No fue posible subir el documento.'));
         } finally {
             setUploading(false);
         }
+    };
+
+    const seleccionarArchivoCarga = (file: File | null) => {
+        if (!file) {
+            setUploadFile(null);
+            return;
+        }
+        const errorArchivo = validarDocumentoPdf(file);
+        if (errorArchivo) {
+            toast.error(errorArchivo);
+            setUploadFile(null);
+            setUploadInputKey((value) => value + 1);
+            return;
+        }
+        setUploadFile(file);
+    };
+
+    const abrirActualizacionDocumento = (documento: ChatbotDocumento) => {
+        setDocumentoActualizar(documento);
+        setArchivoActualizacion(null);
+        setActualizacionChatbotId(documento.chatbot_id ? String(documento.chatbot_id) : '');
+    };
+
+    const cerrarActualizacionDocumento = () => {
+        if (!uploading) {
+            setDocumentoActualizar(null);
+            setArchivoActualizacion(null);
+            setActualizacionChatbotId('');
+        }
+    };
+
+    const actualizarDocumento = async () => {
+        if (!documentoActualizar || !archivoActualizacion || !actualizacionChatbotId || !seccionalValida) {
+            toast.error('Selecciona el chatbot y el nuevo archivo para actualizar el documento.');
+            return;
+        }
+        const errorArchivo = validarDocumentoPdf(archivoActualizacion);
+        if (errorArchivo) {
+            toast.error(errorArchivo);
+            return;
+        }
+
+        setUploading(true);
+        let nuevoDocumentoCargado = false;
+        try {
+            await chatbotAdminAPI.subirDocumento({
+                chatbot_id: Number(actualizacionChatbotId),
+                sede: seccionalUsuario,
+                file: archivoActualizacion,
+            });
+            nuevoDocumentoCargado = true;
+            await chatbotAdminAPI.eliminarDocumento(documentoActualizar.id);
+            toast.success('Documento actualizado y procesado correctamente.');
+            setDocumentoActualizar(null);
+            setArchivoActualizacion(null);
+            setActualizacionChatbotId('');
+            await cargarDocumentos();
+        } catch (error) {
+            if (nuevoDocumentoCargado) {
+                toast.warning('El archivo nuevo se cargó, pero no fue posible retirar la versión anterior.');
+                await cargarDocumentos();
+            } else {
+                toast.error(getErrorMessage(error, 'No fue posible actualizar el documento.'));
+            }
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const seleccionarArchivoActualizacion = (file: File | null) => {
+        if (!file) {
+            setArchivoActualizacion(null);
+            return;
+        }
+        const errorArchivo = validarDocumentoPdf(file);
+        if (errorArchivo) {
+            toast.error(errorArchivo);
+            setArchivoActualizacion(null);
+            return;
+        }
+        setArchivoActualizacion(file);
     };
 
     const eliminarDocumento = async (documento: ChatbotDocumento) => {
@@ -248,10 +399,14 @@ export function useGestionChatbots() {
     return {
         chatbots,
         chatbotsPorId,
-        sedes,
         documentos,
+        documentosFiltrados,
+        seccionalUsuario,
+        seccionalValida,
+        puedeGestionarChatbots,
         loadingChatbots,
         loadingDocumentos,
+        loadingSeccional,
         savingChatbot,
         uploading,
         accionId,
@@ -269,16 +424,23 @@ export function useGestionChatbots() {
 
         filtroChatbotId,
         setFiltroChatbotId,
-        filtroSede,
-        setFiltroSede,
+        busquedaDocumento,
+        setBusquedaDocumento,
 
         uploadChatbotId,
         setUploadChatbotId,
-        uploadSede,
-        setUploadSede,
         uploadFile,
-        setUploadFile,
+        seleccionarArchivoCarga,
+        uploadInputKey,
         subirDocumento,
+        documentoActualizar,
+        archivoActualizacion,
+        seleccionarArchivoActualizacion,
+        actualizacionChatbotId,
+        setActualizacionChatbotId,
+        abrirActualizacionDocumento,
+        cerrarActualizacionDocumento,
+        actualizarDocumento,
         eliminarDocumento,
     };
 }

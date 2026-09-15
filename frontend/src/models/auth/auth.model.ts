@@ -23,6 +23,8 @@ export interface Sede {
     id: number;
     nombre: string;
     ciudad?: string;
+    seccional_id?: number | null;
+    seccional_ciudad?: string | null;
     direccion?: string;
 }
 
