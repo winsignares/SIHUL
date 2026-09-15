@@ -1169,20 +1169,18 @@ class Command(BaseCommand):
         espacio_autocreado_sede_no_resuelta = 0
         hora_default = 0
         fechas_invertidas = 0
-        duplicados_horario_reutilizados = 0
         horarios_huerfanos_eliminados = 0
         horario_ids_procesados = set()
         periodo_ids_afectados = set()
         # VW_HORARIO trae una fila por CADA ocurrencia semanal de una clase
         # recurrente (mismo grupo+asignatura+dia+hora+aula), no una fila por
-        # clase. FEC_INICIO varia en cada fila (es la fecha de esa ocurrencia
-        # puntual) mientras FEC_FIN tiende a repetirse (fecha de la ultima
-        # ocurrencia de la serie). Para que el Horario real refleje la
-        # vigencia real de toda la serie (no solo la de la ultima fila
-        # procesada), se acumula el minimo fecha_inicio y el maximo fecha_fin
-        # vistos en ESTE run por cada Horario, en vez de sobreescribir con
-        # cada fila.
-        fecha_rango_por_horario = {}
+        # clase: FEC_INICIO varia en cada fila (es la fecha de esa ocurrencia
+        # puntual). Cada fila de staging (identificada por su external_id de
+        # Oracle) se guarda como un Horario real independiente, conservando
+        # su propio fecha_inicio/fecha_fin, en vez de fusionarse con las
+        # demas ocurrencias de la misma serie. Esto permite filtrar horarios
+        # por fecha_inicio contra un rango de calendario (ver
+        # useConsultaEspacios.ts en el frontend).
 
         grupos = list(Grupo.objects.select_related('periodo', 'programa'))
         grupos_by_id = {str(g.id): g for g in grupos}
@@ -1408,19 +1406,15 @@ class Command(BaseCommand):
                         fecha_inicio, fecha_fin = fecha_fin, fecha_inicio
                         fechas_invertidas += 1
 
-                    # Identidad de un horario = la misma sesion de clase (grupo +
-                    # asignatura + dia + hora + espacio). El espacio SI forma
-                    # parte de la identidad: VW_HORARIO puede traer, para la
-                    # misma sesion, mas de una fila con aulas distintas
-                    # simultaneas (clases "mixta" que usan aula teorica + sala
-                    # de computo a la vez), y cada una debe quedar como un
-                    # Horario real independiente. Docente y cantidad de
-                    # estudiantes si son atributos mutables de esa combinacion
-                    # (grupo+asignatura+dia+hora+espacio) y se actualizan en el
-                    # mismo registro. Si Oracle reasigna el aula de una sesion
-                    # entre corridas, la fila vieja (con el espacio anterior)
-                    # deja de aparecer en el staging vigente y la reconciliacion
-                    # de huerfanos de mas abajo la elimina.
+                    # Cada fila de staging = una ocurrencia puntual de Oracle,
+                    # identificada por su external_id. Ya NO se fusionan varias
+                    # ocurrencias de la misma serie (mismo grupo+asignatura+
+                    # dia+hora+espacio) en un solo Horario: cada external_id
+                    # mantiene su propio Horario con su propio fecha_inicio/
+                    # fecha_fin, para que el frontend pueda filtrar por fecha
+                    # de ocurrencia real. `identidad` son los campos "logicos"
+                    # de la sesion (se actualizan si Oracle los cambia para el
+                    # mismo external_id, p. ej. reasignacion de aula).
                     identidad = {
                         'grupo': grupo,
                         'asignatura': asignatura,
@@ -1429,27 +1423,15 @@ class Command(BaseCommand):
                         'hora_fin': hora_fin,
                         'espacio': espacio,
                     }
-                    # Clave de identidad (no el pk del Horario) para acumular
-                    # fecha_inicio/fecha_fin: cuando existen Horario duplicados
-                    # para la misma identidad, cada fila de staging puede
-                    # terminar tocando un duplicado distinto (ver reutilizacion
-                    # de `coincidencias` mas abajo). Si acumularamos por
-                    # horario.id, cada duplicado veria solo una porcion de las
-                    # fechas. Acumulando por identidad, todas las filas de la
-                    # misma serie suman al mismo calculo sin importar a cual
-                    # duplicado le toque cada una.
-                    identidad_key = (
-                        grupo.id,
-                        asignatura.id,
-                        dia_semana,
-                        hora_inicio,
-                        hora_fin,
-                        espacio.id if espacio else None,
-                    )
                     oracle_external_id = self._to_text(stg_horario.external_id)
 
                     if dry_run:
-                        exists = Horario.objects.filter(**identidad).exists()
+                        if oracle_external_id:
+                            exists = Horario.objects.filter(oracle_external_id=oracle_external_id).exists()
+                        else:
+                            exists = Horario.objects.filter(
+                                **identidad, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin
+                            ).exists()
                         if exists:
                             horarios_actualizados += 1
                         else:
@@ -1457,30 +1439,18 @@ class Command(BaseCommand):
                         continue
 
                     periodo_ids_afectados.add(grupo.periodo_id)
-                    coincidencias = list(Horario.objects.filter(**identidad).order_by('id'))
 
-                    if coincidencias:
-                        # Si dos filas de staging distintas colisionan en la misma
-                        # identidad (grupo+asignatura+dia+hora+espacio), usar el
-                        # external_id de Oracle para no fusionarlas por error: solo se
-                        # reutiliza una coincidencia previa si es la MISMA fila Oracle
-                        # (mismo oracle_external_id) o si ninguna coincidencia tiene
-                        # aun un oracle_external_id distinto asignado.
-                        horario = next(
-                            (h for h in coincidencias if oracle_external_id and h.oracle_external_id == oracle_external_id),
-                            None,
-                        )
-                        if horario is None:
-                            horario = next(
-                                (h for h in coincidencias if h.id not in horario_ids_procesados),
-                                None,
-                            )
-                        if horario is None:
-                            horario = coincidencias[0]
-                        created = False
-                        if len(coincidencias) > 1:
-                            duplicados_horario_reutilizados += 1
+                    if oracle_external_id:
+                        horario = Horario.objects.filter(oracle_external_id=oracle_external_id).first()
                     else:
+                        # Sin external_id no hay forma confiable de identificar
+                        # la ocurrencia puntual: se cae a identidad+fecha para
+                        # no crear un Horario nuevo en cada corrida.
+                        horario = Horario.objects.filter(
+                            **identidad, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin
+                        ).first()
+
+                    if horario is None:
                         horario = Horario.objects.create(
                             **identidad,
                             docente=docente,
@@ -1491,46 +1461,42 @@ class Command(BaseCommand):
                             origen='SIUL',
                             oracle_external_id=oracle_external_id or None,
                         )
-                        created = True
+                        horario_ids_procesados.add(horario.id)
+                        horarios_creados += 1
+                        continue
 
                     horario_ids_procesados.add(horario.id)
 
-                    if created:
-                        horarios_creados += 1
-                        fecha_rango_por_horario[identidad_key] = [fecha_inicio, fecha_fin]
-                        continue
-
-                    # Acumular la fecha_inicio minima y fecha_fin maxima vistas
-                    # en ESTE run para esta identidad (ver comentario junto a
-                    # identidad_key). La primera vez que se toca una identidad
-                    # preexistente en este run, se reinicia el rango desde cero
-                    # (se ignora lo que tenia guardado de una corrida anterior)
-                    # para que una serie que cambio de fechas no arrastre
-                    # limites obsoletos.
-                    if identidad_key not in fecha_rango_por_horario:
-                        fecha_rango_por_horario[identidad_key] = [fecha_inicio, fecha_fin]
-                    else:
-                        rango = fecha_rango_por_horario[identidad_key]
-                        if fecha_inicio and (rango[0] is None or fecha_inicio < rango[0]):
-                            rango[0] = fecha_inicio
-                        if fecha_fin and (rango[1] is None or fecha_fin > rango[1]):
-                            rango[1] = fecha_fin
-                    fecha_inicio_final, fecha_fin_final = fecha_rango_por_horario[identidad_key]
-
-                    # espacio ya no se reasigna aqui: forma parte de `identidad`,
-                    # asi que coincidencias ya viene filtrado por el mismo espacio.
                     changed = False
+                    if horario.grupo_id != grupo.id:
+                        horario.grupo = grupo
+                        changed = True
+                    if horario.asignatura_id != asignatura.id:
+                        horario.asignatura = asignatura
+                        changed = True
+                    if horario.dia_semana != dia_semana:
+                        horario.dia_semana = dia_semana
+                        changed = True
+                    if horario.hora_inicio != hora_inicio:
+                        horario.hora_inicio = hora_inicio
+                        changed = True
+                    if horario.hora_fin != hora_fin:
+                        horario.hora_fin = hora_fin
+                        changed = True
+                    if horario.espacio_id != (espacio.id if espacio else None):
+                        horario.espacio = espacio
+                        changed = True
                     if docente and horario.docente_id != docente.id:
                         horario.docente = docente
                         changed = True
                     if horario.cantidad_estudiantes != cantidad:
                         horario.cantidad_estudiantes = cantidad
                         changed = True
-                    if horario.fecha_inicio != fecha_inicio_final:
-                        horario.fecha_inicio = fecha_inicio_final
+                    if horario.fecha_inicio != fecha_inicio:
+                        horario.fecha_inicio = fecha_inicio
                         changed = True
-                    if horario.fecha_fin != fecha_fin_final:
-                        horario.fecha_fin = fecha_fin_final
+                    if horario.fecha_fin != fecha_fin:
+                        horario.fecha_fin = fecha_fin
                         changed = True
                     if horario.estado != 'aprobado':
                         horario.estado = 'aprobado'
@@ -1594,7 +1560,6 @@ class Command(BaseCommand):
                 f'Actualizados: {horarios_actualizados}, '
                 f'Sin cambio: {horarios_sin_cambio}, '
                 f'Errores: {horarios_error}, '
-                f'Duplicados reutilizados: {duplicados_horario_reutilizados}, '
                 f'Huerfanos eliminados: {horarios_huerfanos_eliminados}, '
                 f'Grupo no encontrado: {grupo_no_encontrado}, '
                 f'Asignatura no encontrada: {asignatura_no_encontrada}, '

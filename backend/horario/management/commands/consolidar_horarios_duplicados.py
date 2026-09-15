@@ -8,7 +8,7 @@ from horario.models import Horario, HorarioEstudiante, SolicitudEspacio
 class Command(BaseCommand):
     help = (
         "Consolida horarios duplicados por bloque "
-        "(grupo, asignatura, dia, hora_inicio, hora_fin)."
+        "(grupo, asignatura, dia, hora_inicio, hora_fin, espacio, fecha_inicio, fecha_fin)."
     )
 
     def add_arguments(self, parser):
@@ -46,6 +46,13 @@ class Command(BaseCommand):
         apply_changes = bool(options["apply"])
         limit_slots = options["limit_slots"]
 
+        # fecha_inicio/fecha_fin y espacio forman parte de la clave: desde que
+        # migrate_horarios dejo de fusionar ocurrencias semanales de una misma
+        # serie (cada external_id de Oracle es un Horario propio con su fecha
+        # real), dos filas con igual grupo+asignatura+dia+hora pero distinta
+        # fecha son ocurrencias legitimas de la misma clase, no duplicados; y
+        # dos filas con igual bloque pero distinto espacio son clases "mixta"
+        # simultaneas (aula teorica + sala de computo).
         slots = (
             Horario.objects.values(
                 "grupo_id",
@@ -53,6 +60,9 @@ class Command(BaseCommand):
                 "dia_semana",
                 "hora_inicio",
                 "hora_fin",
+                "espacio_id",
+                "fecha_inicio",
+                "fecha_fin",
             )
             .annotate(total=Count("id"))
             .filter(total__gt=1)
@@ -81,6 +91,9 @@ class Command(BaseCommand):
                     dia_semana=slot["dia_semana"],
                     hora_inicio=slot["hora_inicio"],
                     hora_fin=slot["hora_fin"],
+                    espacio_id=slot["espacio_id"],
+                    fecha_inicio=slot["fecha_inicio"],
+                    fecha_fin=slot["fecha_fin"],
                 )
                 .select_related("docente", "espacio")
                 .order_by("id")

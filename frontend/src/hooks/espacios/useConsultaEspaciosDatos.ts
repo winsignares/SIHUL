@@ -213,30 +213,13 @@ export function useConsultaEspaciosDatos({
           console.warn('No se pudieron cargar los horarios extendidos con IDs:', error);
         }
 
-        const findHorarioMeta = (
-          espacioId: string,
-          dia: string,
-          horaInicio: number,
-          horaFin: number,
-          materia: string
-        ): { id: number; estado?: 'aprobado' | 'pendiente' | 'rechazado'; fechaInicio?: string | null; fechaFin?: string | null } | undefined => {
-          const diaNormalizado = normalizarDia(dia);
-          const match = horariosExtendidos.find((h) => {
-            const hDiaNormalizado = normalizarDia(h.dia_semana);
-            // Normalizar horas para comparación consistente
-            const hHoraInicio = normalizarHoraGrid(horaANumero(h.hora_inicio));
-            const hHoraFin = normalizarHoraGrid(horaANumero(h.hora_fin));
-            return (
-              String(h.espacio_id) === espacioId &&
-              hDiaNormalizado === diaNormalizado &&
-              hHoraInicio === horaInicio &&
-              hHoraFin === horaFin &&
-              h.asignatura_nombre === materia
-            );
-          });
-          if (!match) return undefined;
-          return { id: match.id, estado: match.estado, fechaInicio: match.fecha_inicio, fechaFin: match.fecha_fin };
-        };
+        // Cada Horario real es ahora una ocurrencia puntual (fecha_inicio/fecha_fin
+        // propios), por lo que puede haber varias filas con el mismo
+        // espacio+dia+hora+materia (una por semana de la serie). El id ya viene
+        // directo en la respuesta principal (`h.id`), así que el único dato que
+        // falta completar desde `horariosExtendidos` es el estado 'pendiente',
+        // y se busca por id exacto, no por coincidencia de día/hora/materia.
+        const estadoPorHorarioId = new Map(horariosExtendidos.map((h) => [h.id, h.estado]));
 
         const allHorarios: OcupacionView[] = [];
         const espaciosView: EspacioView[] = [];
@@ -247,13 +230,7 @@ export function useConsultaEspaciosDatos({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           espacio.horarios.forEach((h: any) => {
             debugCounter++;
-            const horarioMeta = findHorarioMeta(
-              espacio.id!.toString(),
-              h.dia,
-              horaANumero(h.hora_inicio),
-              horaANumero(h.hora_fin),
-              h.materia
-            );
+            const estadoHorario = h.id != null ? estadoPorHorarioId.get(h.id) : undefined;
 
             // Normalizar horas al grid de 15 minutos
             const horaInicioRaw = horaANumero(h.hora_inicio);
@@ -276,7 +253,7 @@ export function useConsultaEspaciosDatos({
             }
 
             allHorarios.push({
-              id: horarioMeta?.id,
+              id: h.id ?? undefined,
               espacioId: espacio.id!.toString(),
               dia: normalizarDia(h.dia),
               horaInicio: horaInicioNorm,
@@ -284,10 +261,10 @@ export function useConsultaEspaciosDatos({
               materia: h.materia,
               docente: h.docente,
               grupo: h.grupo,
-              estado: horarioMeta?.estado === 'pendiente' ? 'pendiente' : 'ocupado',
+              estado: estadoHorario === 'pendiente' ? 'pendiente' : 'ocupado',
               tipo: 'horario',
-              fechaInicio: horarioMeta?.fechaInicio ?? null,
-              fechaFin: horarioMeta?.fechaFin ?? null
+              fechaInicio: h.fecha_inicio ?? null,
+              fechaFin: h.fecha_fin ?? null
             });
           });
 

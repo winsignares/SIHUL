@@ -209,12 +209,15 @@ def list_all_espacios_disponibles_with_horarios(request):
             for h in espacio.horarios.all():
                 horarios.append(
                     {
+                        'id': h.id,
                         'dia': h.dia_semana,
                         'hora_inicio': h.hora_inicio.hour,
                         'hora_fin': h.hora_fin.hour,
                         'materia': h.asignatura.nombre if h.asignatura else 'Sin asignatura',
                         'docente': h.docente.nombre if h.docente else 'Sin docente',
                         'grupo': h.grupo.nombre if h.grupo else 'Sin grupo',
+                        'fecha_inicio': str(h.fecha_inicio) if h.fecha_inicio else None,
+                        'fecha_fin': str(h.fecha_fin) if h.fecha_fin else None,
                     }
                 )
 
@@ -277,12 +280,15 @@ def list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=None)
             for h in espacio.horarios.all():
                 horarios.append(
                     {
+                        'id': h.id,
                         'dia': h.dia_semana,
                         'hora_inicio': h.hora_inicio.hour,
                         'hora_fin': h.hora_fin.hour,
                         'materia': h.asignatura.nombre if h.asignatura else 'Sin asignatura',
                         'docente': h.docente.nombre if h.docente else 'Sin docente',
                         'grupo': h.grupo.nombre if h.grupo else 'Sin grupo',
+                        'fecha_inicio': str(h.fecha_inicio) if h.fecha_inicio else None,
+                        'fecha_fin': str(h.fecha_fin) if h.fecha_fin else None,
                     }
                 )
 
