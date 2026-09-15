@@ -18,10 +18,10 @@ const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/
 export default function GestionChatbots() {
   const state = useGestionChatbots();
   const {
-    chatbots, chatbotsPorId, documentosFiltrados, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
+    chatbots, chatbotsPorId, documentosFiltrados, chatbotsDisponiblesParaCarga, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
     loadingDocumentos, loadingSeccional, uploading, accionId,
     filtroChatbotId, setFiltroChatbotId, busquedaDocumento, setBusquedaDocumento,
-    uploadChatbotId, setUploadChatbotId, uploadFile, seleccionarArchivoCarga, uploadInputKey,
+    uploadChatbotId, setUploadChatbotId, uploadFile, seleccionarArchivoCarga, uploadInputKey, puedeSubirDocumento,
     subirDocumento, eliminarDocumento, abrirActualizacionDocumento,
   } = state;
 
@@ -51,20 +51,20 @@ export default function GestionChatbots() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Chatbot <span className="text-red-600">*</span></Label>
-                  <Select value={uploadChatbotId || undefined} onValueChange={setUploadChatbotId} disabled={!seccionalValida}>
+                  <Select value={uploadChatbotId || undefined} onValueChange={setUploadChatbotId} disabled={!seccionalValida || loadingDocumentos || chatbotsDisponiblesParaCarga.length === 0}>
                     <SelectTrigger><SelectValue placeholder="Selecciona un chatbot" /></SelectTrigger>
-                    <SelectContent>{chatbots.filter((chatbot) => chatbot.activo).map((chatbot) => <SelectItem key={chatbot.id} value={String(chatbot.id)}>{chatbot.nombre}</SelectItem>)}</SelectContent>
+                    <SelectContent>{chatbotsDisponiblesParaCarga.map((chatbot) => <SelectItem key={chatbot.id} value={String(chatbot.id)}>{chatbot.nombre}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Seccional</Label><Input value={seccionalValida ? mostrarSeccional(seccionalUsuario) : 'Sin seccional asignada'} disabled /></div>
                 <div className="space-y-2">
                   <Label>Documento PDF (máximo 15 MB) <span className="text-red-600">*</span></Label>
-                  <Input key={uploadInputKey} type="file" accept=".pdf,application/pdf" disabled={!seccionalValida} onChange={(event) => seleccionarArchivoCarga(event.target.files?.[0] ?? null)} />
+                  <Input key={uploadInputKey} type="file" accept=".pdf,application/pdf" disabled={!seccionalValida || loadingDocumentos || chatbotsDisponiblesParaCarga.length === 0} onChange={(event) => seleccionarArchivoCarga(event.target.files?.[0] ?? null)} />
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <p className="truncate text-xs text-slate-500">{uploadFile ? `Seleccionado: ${uploadFile.name}` : 'Selecciona un archivo permitido.'}</p>
-                <Button onClick={() => void subirDocumento()} disabled={uploading || !seccionalValida} className="bg-red-700 text-white hover:bg-red-800"><FileUp className="mr-2 h-4 w-4" />{uploading ? 'Procesando...' : 'Montar documento'}</Button>
+                <p className="truncate text-xs text-slate-500">{chatbotsDisponiblesParaCarga.length === 0 && seccionalValida ? 'Todos los chatbots activos ya tienen un documento para esta seccional.' : uploadFile ? `Seleccionado: ${uploadFile.name}` : 'Selecciona un archivo permitido.'}</p>
+                <Button onClick={() => void subirDocumento()} disabled={!puedeSubirDocumento} className="bg-red-700 text-white hover:bg-red-800"><FileUp className="mr-2 h-4 w-4" />{uploading ? 'Procesando...' : 'Montar documento'}</Button>
               </div>
             </CardContent>
           </Card>

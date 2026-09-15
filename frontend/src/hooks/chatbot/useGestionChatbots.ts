@@ -134,7 +134,6 @@ export function useGestionChatbots() {
         setLoadingDocumentos(true);
         try {
             const data = await chatbotAdminAPI.listarDocumentos({
-                chatbot_id: filtroChatbotId !== 'all' ? Number(filtroChatbotId) : undefined,
                 sede: seccionalUsuario,
                 limit: 200,
             });
@@ -146,7 +145,7 @@ export function useGestionChatbots() {
         } finally {
             setLoadingDocumentos(false);
         }
-    }, [filtroChatbotId, normalizarSeccional, seccionalUsuario, seccionalValida]);
+    }, [normalizarSeccional, seccionalUsuario, seccionalValida]);
 
     useEffect(() => {
         void cargarChatbots();
@@ -164,13 +163,33 @@ export function useGestionChatbots() {
 
     const documentosFiltrados = useMemo(() => {
         const termino = busquedaDocumento.trim().toLowerCase();
-        if (!termino) return documentos;
         return documentos.filter((documento) => {
             const chatbot = documento.chatbot_id ? chatbotsPorId[documento.chatbot_id]?.nombre : '';
-            return documento.filename.toLowerCase().includes(termino)
+            const coincideChatbot = filtroChatbotId === 'all' || documento.chatbot_id === Number(filtroChatbotId);
+            const coincideBusqueda = !termino
+                || documento.filename.toLowerCase().includes(termino)
                 || chatbot?.toLowerCase().includes(termino);
+            return coincideChatbot && coincideBusqueda;
         });
-    }, [busquedaDocumento, chatbotsPorId, documentos]);
+    }, [busquedaDocumento, chatbotsPorId, documentos, filtroChatbotId]);
+
+    const chatbotIdsConDocumento = useMemo(
+        () => new Set(documentos.flatMap((documento) => documento.chatbot_id === null ? [] : [documento.chatbot_id])),
+        [documentos],
+    );
+
+    const chatbotsDisponiblesParaCarga = useMemo(
+        () => chatbots.filter((chatbot) => chatbot.activo && !chatbotIdsConDocumento.has(chatbot.id)),
+        [chatbotIdsConDocumento, chatbots],
+    );
+
+    const puedeSubirDocumento = Boolean(
+        seccionalValida
+        && uploadChatbotId
+        && uploadFile
+        && !uploading
+        && !chatbotIdsConDocumento.has(Number(uploadChatbotId)),
+    );
 
     const abrirNuevoChatbot = () => {
         setEditingChatbotId(null);
@@ -275,6 +294,10 @@ export function useGestionChatbots() {
             toast.error('Selecciona el chatbot y el archivo a subir.');
             return;
         }
+        if (chatbotIdsConDocumento.has(Number(uploadChatbotId))) {
+            toast.error('Este chatbot ya tiene un documento asignado para tu seccional.');
+            return;
+        }
         const errorArchivo = validarDocumentoPdf(uploadFile);
         if (errorArchivo) {
             toast.error(errorArchivo);
@@ -289,6 +312,7 @@ export function useGestionChatbots() {
                 file: uploadFile,
             });
             toast.success('Documento subido y procesado correctamente.');
+            setUploadChatbotId('');
             setUploadFile(null);
             setUploadInputKey((value) => value + 1);
             await cargarDocumentos();
@@ -401,6 +425,7 @@ export function useGestionChatbots() {
         chatbotsPorId,
         documentos,
         documentosFiltrados,
+        chatbotsDisponiblesParaCarga,
         seccionalUsuario,
         seccionalValida,
         puedeGestionarChatbots,
@@ -432,6 +457,7 @@ export function useGestionChatbots() {
         uploadFile,
         seleccionarArchivoCarga,
         uploadInputKey,
+        puedeSubirDocumento,
         subirDocumento,
         documentoActualizar,
         archivoActualizacion,
