@@ -77,7 +77,6 @@ export function useGestionChatbots() {
     const [uploadInputKey, setUploadInputKey] = useState(0);
     const [documentoActualizar, setDocumentoActualizar] = useState<ChatbotDocumento | null>(null);
     const [archivoActualizacion, setArchivoActualizacion] = useState<File | null>(null);
-    const [actualizacionChatbotId, setActualizacionChatbotId] = useState('');
 
     const normalizarSeccional = useCallback((value?: string | null) => (
         (value || '')
@@ -341,20 +340,22 @@ export function useGestionChatbots() {
     const abrirActualizacionDocumento = (documento: ChatbotDocumento) => {
         setDocumentoActualizar(documento);
         setArchivoActualizacion(null);
-        setActualizacionChatbotId(documento.chatbot_id ? String(documento.chatbot_id) : '');
     };
 
     const cerrarActualizacionDocumento = () => {
         if (!uploading) {
             setDocumentoActualizar(null);
             setArchivoActualizacion(null);
-            setActualizacionChatbotId('');
         }
     };
 
     const actualizarDocumento = async () => {
-        if (!documentoActualizar || !archivoActualizacion || !actualizacionChatbotId || !seccionalValida) {
-            toast.error('Selecciona el chatbot y el nuevo archivo para actualizar el documento.');
+        if (!documentoActualizar || !archivoActualizacion || !seccionalValida) {
+            toast.error('Selecciona el nuevo archivo para actualizar el documento.');
+            return;
+        }
+        if (documentoActualizar.chatbot_id === null) {
+            toast.error('El documento no tiene un chatbot asignado.');
             return;
         }
         const errorArchivo = validarDocumentoPdf(archivoActualizacion);
@@ -367,7 +368,7 @@ export function useGestionChatbots() {
         let nuevoDocumentoCargado = false;
         try {
             await chatbotAdminAPI.subirDocumento({
-                chatbot_id: Number(actualizacionChatbotId),
+                chatbot_id: documentoActualizar.chatbot_id,
                 sede: seccionalUsuario,
                 file: archivoActualizacion,
             });
@@ -376,7 +377,6 @@ export function useGestionChatbots() {
             toast.success('Documento actualizado y procesado correctamente.');
             setDocumentoActualizar(null);
             setArchivoActualizacion(null);
-            setActualizacionChatbotId('');
             await cargarDocumentos();
         } catch (error) {
             if (nuevoDocumentoCargado) {
@@ -462,8 +462,6 @@ export function useGestionChatbots() {
         documentoActualizar,
         archivoActualizacion,
         seleccionarArchivoActualizacion,
-        actualizacionChatbotId,
-        setActualizacionChatbotId,
         abrirActualizacionDocumento,
         cerrarActualizacionDocumento,
         actualizarDocumento,

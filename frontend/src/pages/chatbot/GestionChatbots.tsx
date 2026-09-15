@@ -136,13 +136,16 @@ function ChatbotsTable({ state }: { state: GestionState }) {
 }
 
 function ActualizarDocumentoDialog({ state }: { state: GestionState }) {
-  const { documentoActualizar, archivoActualizacion, seleccionarArchivoActualizacion, actualizacionChatbotId, setActualizacionChatbotId, chatbots, cerrarActualizacionDocumento, actualizarDocumento, uploading } = state;
+  const { documentoActualizar, archivoActualizacion, seleccionarArchivoActualizacion, chatbots, cerrarActualizacionDocumento, actualizarDocumento, uploading } = state;
+  const chatbotActual = documentoActualizar?.chatbot_id
+    ? chatbots.find((chatbot) => chatbot.id === documentoActualizar.chatbot_id)?.nombre || 'Chatbot no disponible'
+    : 'Sin chatbot asignado';
   return <Dialog open={Boolean(documentoActualizar)} onOpenChange={(open) => { if (!open) cerrarActualizacionDocumento(); }}>
     <DialogContent className="sm:!max-w-[520px]">
       <DialogHeader><DialogTitle>Actualizar documento</DialogTitle></DialogHeader>
       <p className="text-sm text-slate-600">Reemplaza <strong>{documentoActualizar?.filename}</strong> por una nueva versión.</p>
       <div className="space-y-4 py-2">
-        <div className="space-y-2"><Label>Chatbot asignado</Label><Select value={actualizacionChatbotId || undefined} onValueChange={setActualizacionChatbotId}><SelectTrigger><SelectValue placeholder="Selecciona un chatbot" /></SelectTrigger><SelectContent>{chatbots.filter((chatbot) => chatbot.activo).map((chatbot) => <SelectItem key={chatbot.id} value={String(chatbot.id)}>{chatbot.nombre}</SelectItem>)}</SelectContent></Select></div>
+        <div className="space-y-2"><Label>Chatbot asignado</Label><Input value={chatbotActual} disabled /></div>
         <div className="space-y-2"><Label>Nuevo PDF (máximo 15 MB)</Label><Input type="file" accept=".pdf,application/pdf" onChange={(event) => seleccionarArchivoActualizacion(event.target.files?.[0] ?? null)} />{archivoActualizacion && <p className="text-xs text-slate-500">Seleccionado: {archivoActualizacion.name}</p>}</div>
       </div>
       <DialogFooter><Button variant="outline" onClick={cerrarActualizacionDocumento} disabled={uploading}>Cancelar</Button><Button onClick={() => void actualizarDocumento()} disabled={uploading} className="bg-red-700 text-white hover:bg-red-800"><FilePenLine className="mr-2 h-4 w-4" />{uploading ? 'Procesando...' : 'Actualizar'}</Button></DialogFooter>
