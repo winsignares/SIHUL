@@ -4,6 +4,7 @@ import { horarioService } from '../../services/horarios/horariosAPI';
 import type { PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import type { HorarioExtendido } from '../../services/horarios/horariosAPI';
 import type { OcupacionView } from './types';
+import { getRangoSemanaCompleta } from './semanaUtils';
 
 type HorarioEstado = 'aprobado' | 'pendiente' | 'rechazado';
 
@@ -155,7 +156,13 @@ export function useConsultaEspaciosPeriodos() {
           return null;
         }
 
-        await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente'], { fechaInicio, fechaFin });
+        // Usar la semana Lunes-Domingo completa que contiene fechaInicio (no
+        // el rango literal recibido) por la misma razon que en
+        // useConsultaEspacios.ts: el cronograma siempre muestra la semana
+        // entera, y filtrar solo desde el dia exacto elegido ocultaria los
+        // dias anteriores de esa misma semana.
+        const { desde, hasta } = getRangoSemanaCompleta(fechaInicio);
+        await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente'], { fechaInicio: desde, fechaFin: hasta });
 
         return periodo;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
