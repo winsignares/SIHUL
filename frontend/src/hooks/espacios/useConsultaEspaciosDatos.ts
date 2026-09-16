@@ -27,9 +27,11 @@ function getConsultaEspaciosCacheKey(
   userId?: number,
   rol?: string,
   facultadId?: number | null,
-  periodoId?: number | null
+  periodoId?: number | null,
+  fechaInicio?: string,
+  fechaFin?: string
 ): string {
-  return `${CONSULTA_ESPACIOS_CACHE_KEY}-${String(rol ?? 'publico')}-${userId ?? 'anonimo'}-${facultadId ?? 'sin-facultad'}-${periodoId ?? 'sin-periodo'}`;
+  return `${CONSULTA_ESPACIOS_CACHE_KEY}-${String(rol ?? 'publico')}-${userId ?? 'anonimo'}-${facultadId ?? 'sin-facultad'}-${periodoId ?? 'sin-periodo'}-${fechaInicio ?? 'sin-fecha'}-${fechaFin ?? 'sin-fecha'}`;
 }
 
 function formatFechaLocalYYYYMMDD(d: Date): string {
@@ -134,10 +136,12 @@ function calcularProximaClaseYEstadoPrevio(
 export function useConsultaEspaciosDatos({
   user,
   filterFechaInicio,
+  filterFechaFin,
   filterPeriodo
 }: {
   user?: UserLike;
   filterFechaInicio: string;
+  filterFechaFin: string;
   filterPeriodo?: number | null;
 }) {
   const [espacios, setEspacios] = useState<EspacioView[]>([]);
@@ -154,7 +158,9 @@ export function useConsultaEspaciosDatos({
           user?.id,
           user?.supervisa_espacios ? `${String(user?.rol ?? 'rol')}-supervisa-espacios` : String(user?.rol ?? 'publico'),
           user?.facultad?.id ?? null,
-          filterPeriodo ?? null
+          filterPeriodo ?? null,
+          filterFechaInicio,
+          filterFechaFin
         );
         const cachedData = force
           ? null
@@ -165,6 +171,15 @@ export function useConsultaEspaciosDatos({
           setHorarios(cachedData.horarios);
         }
 
+        // Cada Horario real es ahora una ocurrencia semanal puntual (ver
+        // migrate_horarios), por lo que traer TODAS las del semestre en cada
+        // carga es innecesariamente pesado. Se le pide al backend solo las
+        // que caen en el rango de fecha visible (mas las horarios sin fecha).
+        const rango =
+          filterFechaInicio && filterFechaFin
+            ? { fechaInicio: filterFechaInicio, fechaFin: filterFechaFin }
+            : undefined;
+
         let espaciosConHorarios;
 
         const esSupervisor = isSpaceSupervisorRole({
@@ -173,10 +188,10 @@ export function useConsultaEspaciosDatos({
         });
 
         if (user?.id && esSupervisor) {
-          const response = await espacioHorariosService.getSupervisorDisponiblesHorarios(user.id);
+          const response = await espacioHorariosService.getSupervisorDisponiblesHorarios(user.id, rango);
           espaciosConHorarios = response.espacios;
         } else {
-          const response = await espacioHorariosService.getAllDisponiblesWithHorarios();
+          const response = await espacioHorariosService.getAllDisponiblesWithHorarios(rango);
           espaciosConHorarios = response.espacios;
         }
 
@@ -195,7 +210,7 @@ export function useConsultaEspaciosDatos({
         }[] = [];
 
         try {
-          const horariosResponse = await horarioService.listExtendidos({ includePending: true });
+          const horariosResponse = await horarioService.listExtendidos({ includePending: true, rango });
           horariosExtendidos = horariosResponse.horarios.map((h) => ({
             id: h.id,
             espacio_id: h.espacio_id,
@@ -296,7 +311,7 @@ export function useConsultaEspaciosDatos({
         setLoading(false);
       }
     },
-    [filterPeriodo, user]
+    [filterFechaFin, filterFechaInicio, filterPeriodo, user]
   );
 
   useEffect(() => {
@@ -396,11 +411,22 @@ export function useConsultaEspaciosDatos({
         user?.id,
         user?.supervisa_espacios ? `${String(user?.rol ?? 'rol')}-supervisa-espacios` : String(user?.rol ?? 'publico'),
         user?.facultad?.id ?? null,
-        filterPeriodo ?? null
+        filterPeriodo ?? null,
+        filterFechaInicio,
+        filterFechaFin
       )
     );
     await loadData({ force: true });
-  }, [filterPeriodo, loadData, user?.facultad?.id, user?.id, user?.rol, user?.supervisa_espacios]);
+  }, [
+    filterFechaFin,
+    filterFechaInicio,
+    filterPeriodo,
+    loadData,
+    user?.facultad?.id,
+    user?.id,
+    user?.rol,
+    user?.supervisa_espacios
+  ]);
 
   return {
     espacios,

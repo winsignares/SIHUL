@@ -334,8 +334,11 @@ export const espacioHorariosService = {
 
     /**
      * Obtiene todos los espacios DISPONIBLES con sus horarios aprobados.
+     * Si se pasa `rango`, el backend filtra los horarios cuya fecha_inicio
+     * cae dentro de [fechaInicio, fechaFin] (mas los que no tienen fecha),
+     * evitando traer el semestre completo cuando solo se necesita una semana.
      */
-    getAllDisponiblesWithHorarios: async (): Promise<{
+    getAllDisponiblesWithHorarios: async (rango?: { fechaInicio: string; fechaFin: string }): Promise<{
         espacios: (EspacioFisico & {
             horarios: {
                 id: number;
@@ -345,10 +348,15 @@ export const espacioHorariosService = {
                 materia: string;
                 docente: string;
                 grupo: string;
+                fecha_inicio: string | null;
+                fecha_fin: string | null;
             }[];
         })[];
     }> => {
-        return apiClient.get('/espacios/horarios/disponibles/all/', { requiresAuth: false });
+        const query = rango
+            ? `?fecha_inicio=${encodeURIComponent(rango.fechaInicio)}&fecha_fin=${encodeURIComponent(rango.fechaFin)}`
+            : '';
+        return apiClient.get(`/espacios/horarios/disponibles/all/${query}`, { requiresAuth: false });
     },
 
     /**
@@ -372,8 +380,12 @@ export const espacioHorariosService = {
 
     /**
      * Obtiene espacios DISPONIBLES permitidos para supervisor con horarios aprobados.
+     * Ver nota de `rango` en getAllDisponiblesWithHorarios.
      */
-    getSupervisorDisponiblesHorarios: async (usuarioId: number): Promise<{
+    getSupervisorDisponiblesHorarios: async (
+        usuarioId: number,
+        rango?: { fechaInicio: string; fechaFin: string }
+    ): Promise<{
         espacios: (EspacioFisico & {
             horarios: {
                 id: number;
@@ -383,10 +395,15 @@ export const espacioHorariosService = {
                 materia: string;
                 docente: string;
                 grupo: string;
+                fecha_inicio: string | null;
+                fecha_fin: string | null;
             }[];
         })[];
     }> => {
-        return apiClient.get(`/espacios/horarios/disponibles/supervisor/${usuarioId}/`);
+        const query = rango
+            ? `?fecha_inicio=${encodeURIComponent(rango.fechaInicio)}&fecha_fin=${encodeURIComponent(rango.fechaFin)}`
+            : '';
+        return apiClient.get(`/espacios/horarios/disponibles/supervisor/${usuarioId}/${query}`);
     }
 };
 export interface HorarioEspacio {

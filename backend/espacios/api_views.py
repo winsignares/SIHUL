@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
 
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -9,6 +10,23 @@ from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
 from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+
+
+def _filtrar_horarios_por_rango_fecha(request, queryset):
+    """Filtra un queryset de Horario por fecha_inicio dentro del rango
+    ?fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD si ambos vienen en la
+    request. Los horarios sin fecha_inicio (manuales o aun no sincronizados
+    con Oracle) siempre se incluyen, igual que en el filtro equivalente del
+    frontend (ver useConsultaEspacios.ts). Sin ambos parametros, no filtra
+    (comportamiento previo, usado por otras pantallas que listan horarios
+    completos)."""
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    if not fecha_inicio or not fecha_fin:
+        return queryset
+    return queryset.filter(
+        Q(fecha_inicio__isnull=True) | Q(fecha_inicio__gte=fecha_inicio, fecha_inicio__lte=fecha_fin)
+    )
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
@@ -196,11 +214,12 @@ def list_all_espacios_disponibles_with_horarios(request):
 
         base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
 
+        horarios_qs = _filtrar_horarios_por_rango_fecha(
+            request, Horario.objects.filter(estado='aprobado')
+        ).select_related('asignatura', 'docente', 'grupo')
+
         espacios = base.filter(estado='Disponible').select_related('sede', 'tipo').prefetch_related(
-            Prefetch(
-                'horarios',
-                queryset=Horario.objects.filter(estado='aprobado').select_related('asignatura', 'docente', 'grupo'),
-            )
+            Prefetch('horarios', queryset=horarios_qs)
         )
 
         lista = []
@@ -267,11 +286,11 @@ def list_supervisor_espacios_disponibles_with_horarios(request, usuario_id=None)
             return JsonResponse({'espacios': []}, status=200)
 
         espacios_ids = [ep.espacio.id for ep in espacios_permitidos]
+        horarios_qs = _filtrar_horarios_por_rango_fecha(
+            request, Horario.objects.filter(estado='aprobado')
+        ).select_related('asignatura', 'docente', 'grupo')
         espacios = EspacioFisico.objects.filter(id__in=espacios_ids, estado='Disponible').select_related('sede', 'tipo').prefetch_related(
-            Prefetch(
-                'horarios',
-                queryset=Horario.objects.filter(estado='aprobado').select_related('asignatura', 'docente', 'grupo'),
-            )
+            Prefetch('horarios', queryset=horarios_qs)
         )
 
         lista = []

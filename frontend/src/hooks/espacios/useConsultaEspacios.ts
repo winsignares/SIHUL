@@ -42,6 +42,7 @@ export function useConsultaEspacios() {
   const datos = useConsultaEspaciosDatos({
     user: userParams,
     filterFechaInicio: filtros.filterFechaInicio,
+    filterFechaFin: filtros.filterFechaFin,
     filterPeriodo: filtros.filterPeriodo
   });
 

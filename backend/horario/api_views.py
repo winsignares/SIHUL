@@ -224,6 +224,19 @@ def list_horarios_extendidos(request):
         else:
             return _missing_seccional_response()
 
+    # Filtro opcional por rango de fecha_inicio (mismo criterio que el
+    # frontend en useConsultaEspacios.ts): si vienen ambos parametros, solo
+    # se incluyen horarios cuya fecha_inicio caiga en el rango, mas los que
+    # no tienen fecha_inicio (manuales o sin sincronizar). Sin parametros no
+    # filtra, para no romper otras pantallas que listan horarios completos.
+    fecha_inicio_qs = request.GET.get('fecha_inicio')
+    fecha_fin_qs = request.GET.get('fecha_fin')
+    if fecha_inicio_qs and fecha_fin_qs:
+        qs = qs.filter(
+            Q(fecha_inicio__isnull=True)
+            | Q(fecha_inicio__gte=fecha_inicio_qs, fecha_inicio__lte=fecha_fin_qs)
+        )
+
     lst = []
     for i in qs:
         grupo = i.grupo

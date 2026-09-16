@@ -34,6 +34,8 @@ export interface CreateHorarioPayload {
 interface ListHorariosExtendidosOptions {
     includePending?: boolean;
     estado?: HorarioEstado | 'todos';
+    /** Si se pasa, el backend filtra por fecha_inicio dentro de este rango (mas los horarios sin fecha_inicio). */
+    rango?: { fechaInicio: string; fechaFin: string };
 }
 
 type HorarioEstado = 'pendiente' | 'aprobado' | 'rechazado';
@@ -323,6 +325,10 @@ export const horarioService = {
         }
         if (!options.estado && options.includePending) {
             params.set('include_pending', '1');
+        }
+        if (options.rango) {
+            params.set('fecha_inicio', options.rango.fechaInicio);
+            params.set('fecha_fin', options.rango.fechaFin);
         }
         const query = params.toString() ? `?${params.toString()}` : '';
         return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/list/extendidos/${query}`, { requiresAuth: false });
