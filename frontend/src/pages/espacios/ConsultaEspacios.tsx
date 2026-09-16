@@ -1,4 +1,5 @@
 import { Input } from '../../share/input';
+import { DatePickerField } from '../../share/date-picker-field';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
@@ -1474,10 +1475,9 @@ export default function ConsultaEspacios() {
             <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
               <div className="flex flex-col gap-1">
                 <Label className="text-xs text-slate-500">Desde</Label>
-                <Input
-                  type="date"
+                <DatePickerField
                   value={filterFechaInicio}
-                  onChange={(e) => handleFechaInicioChange(e.target.value)}
+                  onChange={handleFechaInicioChange}
                   className={`${isMobile ? 'flex-1' : 'w-[150px]'} h-9 ${isMobile ? 'text-sm' : ''}`}
                   placeholder="Fecha inicio"
                   title="Fecha inicio del rango"
@@ -1485,10 +1485,9 @@ export default function ConsultaEspacios() {
               </div>
               <div className="flex flex-col gap-1">
                 <Label className="text-xs text-slate-500">Hasta</Label>
-                <Input
-                  type="date"
+                <DatePickerField
                   value={filterFechaFin}
-                  onChange={(e) => handleFechaFinChange(e.target.value)}
+                  onChange={handleFechaFinChange}
                   className={`${isMobile ? 'flex-1' : 'w-[150px]'} h-9 ${isMobile ? 'text-sm' : ''}`}
                   placeholder="Fecha fin"
                   title="Fecha fin del rango"
