@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db.models import Q
 from .models import Horario, HorarioFusionado, HorarioEstudiante, SolicitudEspacio
 from grupos.models import Grupo
 from asignaturas.models import Asignatura
@@ -400,6 +401,21 @@ def list_horarios_extendidos(request):
             items = Horario.objects.select_related('grupo', 'asignatura', 'docente', 'espacio', 'grupo__programa').filter(estado='aprobado', espacio__sede__seccional_id=seccional_id)
         else:
             return _missing_seccional_response()
+
+        # Filtro opcional por rango de fecha_inicio (mismo criterio que el
+        # frontend en useConsultaEspacios.ts): si vienen ambos parametros,
+        # solo se incluyen horarios cuya fecha_inicio caiga en el rango, mas
+        # los que no tienen fecha_inicio (manuales o sin sincronizar). Sin
+        # parametros no filtra, para no romper otras pantallas que listan
+        # horarios completos.
+        fecha_inicio_qs = request.GET.get('fecha_inicio')
+        fecha_fin_qs = request.GET.get('fecha_fin')
+        if fecha_inicio_qs and fecha_fin_qs:
+            items = items.filter(
+                Q(fecha_inicio__isnull=True)
+                | Q(fecha_inicio__gte=fecha_inicio_qs, fecha_inicio__lte=fecha_fin_qs)
+            )
+
         # Traer solo horarios aprobados
         lst = []
         for i in items:
@@ -419,6 +435,8 @@ def list_horarios_extendidos(request):
                 "dia_semana": i.dia_semana,
                 "hora_inicio": str(i.hora_inicio),
                 "hora_fin": str(i.hora_fin),
+                "fecha_inicio": str(i.fecha_inicio) if i.fecha_inicio else None,
+                "fecha_fin": str(i.fecha_fin) if i.fecha_fin else None,
                 "cantidad_estudiantes": i.cantidad_estudiantes,
                 "estado": i.estado
             })
