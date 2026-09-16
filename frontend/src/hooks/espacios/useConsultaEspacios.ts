@@ -6,6 +6,7 @@ import { useConsultaEspaciosPaginacion } from './useConsultaEspaciosPaginacion';
 import { useConsultaEspaciosSeleccion } from './useConsultaEspaciosSeleccion';
 import { useConsultaEspaciosExport } from './useConsultaEspaciosExport';
 import { useConsultaEspaciosPeriodos } from './useConsultaEspaciosPeriodos';
+import { getRangoSemanaCompleta } from './semanaUtils';
 import type { EspacioView, OcupacionView } from './types';
 
 export type {
@@ -66,15 +67,24 @@ export function useConsultaEspacios() {
   }, [datos.horariosConPrestamos, periodoSeleccionado]);
 
   // Un horario academico solo debe verse cuando su fecha_inicio (de Oracle)
-  // cae dentro del intervalo seleccionado en el filtro de fecha
-  // (filterFechaInicio..filterFechaFin). Sin fecha_inicio (horario manual o
-  // aun no sincronizado) o sin rango seleccionado, se sigue mostrando siempre.
+  // cae dentro de la semana Lunes-Domingo que contiene filterFechaInicio.
+  // Se usa la semana completa (no el filterFechaInicio/filterFechaFin
+  // literal) porque el cronograma siempre muestra las 7 columnas Lunes a
+  // Domingo de esa semana: si se usara solo el rango elegido por el usuario
+  // (p. ej. jueves-domingo), las clases de lunes a miercoles de esa misma
+  // semana quedarian ocultas aunque su columna si se muestre. Sin
+  // fecha_inicio (horario manual o aun no sincronizado) se sigue mostrando
+  // siempre.
   const horariosMostrados = useMemo(() => {
+    const { desde, hasta } = filtros.filterFechaInicio
+      ? getRangoSemanaCompleta(filtros.filterFechaInicio)
+      : { desde: '', hasta: '' };
+
     const horariosAcademicos = (filtros.filterPeriodo ? periodos.horariosPeriodo : datos.horarios)
-      .filter((h) => {
+      .filter((h: OcupacionView) => {
         if (!h.fechaInicio) return true;
-        if (!filtros.filterFechaInicio || !filtros.filterFechaFin) return true;
-        return h.fechaInicio >= filtros.filterFechaInicio && h.fechaInicio <= filtros.filterFechaFin;
+        if (!desde || !hasta) return true;
+        return h.fechaInicio >= desde && h.fechaInicio <= hasta;
       });
 
     return [...horariosAcademicos, ...prestamosMostrados];
@@ -82,7 +92,6 @@ export function useConsultaEspacios() {
     datos.horarios,
     filtros.filterPeriodo,
     filtros.filterFechaInicio,
-    filtros.filterFechaFin,
     periodos.horariosPeriodo,
     prestamosMostrados
   ]);

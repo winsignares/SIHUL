@@ -30,6 +30,7 @@ import {
 import { motion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
+import { getRangoSemanaCompleta } from '../../hooks/espacios/semanaUtils';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
@@ -277,14 +278,17 @@ export default function ConsultaEspacios() {
     await Promise.all([
       recargarDatos(),
       cargarPeriodos(),
-      filterPeriodo && filterFechaInicio && filterFechaFin
-        ? cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente'], {
-            fechaInicio: filterFechaInicio,
-            fechaFin: filterFechaFin
-          })
+      filterPeriodo && filterFechaInicio
+        ? (() => {
+            const { desde, hasta } = getRangoSemanaCompleta(filterFechaInicio);
+            return cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente'], {
+              fechaInicio: desde,
+              fechaFin: hasta
+            });
+          })()
         : Promise.resolve()
     ]);
-  }, [cargarHorariosPorPeriodo, cargarPeriodos, filterFechaFin, filterFechaInicio, filterPeriodo, recargarDatos]);
+  }, [cargarHorariosPorPeriodo, cargarPeriodos, filterFechaInicio, filterPeriodo, recargarDatos]);
 
   const resolverPeriodoVigente = () => {
     const hoyISO = fechaServidor || formatFechaLocalYYYYMMDD(getHoyColombia());
@@ -770,13 +774,14 @@ export default function ConsultaEspacios() {
 
   // Efecto para cargar horarios del período seleccionado cuando cambia el filtro de período
   useEffect(() => {
-    if (filterPeriodo && filterFechaInicio && filterFechaFin) {
+    if (filterPeriodo && filterFechaInicio) {
+      const { desde, hasta } = getRangoSemanaCompleta(filterFechaInicio);
       cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente'], {
-        fechaInicio: filterFechaInicio,
-        fechaFin: filterFechaFin
+        fechaInicio: desde,
+        fechaFin: hasta
       });
     }
-  }, [filterPeriodo, filterFechaInicio, filterFechaFin, cargarHorariosPorPeriodo]);
+  }, [filterPeriodo, filterFechaInicio, cargarHorariosPorPeriodo]);
 
   // Actualizar preview de fechas cuando cambian los parámetros de repetición
   useEffect(() => {

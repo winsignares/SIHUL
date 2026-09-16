@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EncabezadoDiaCronograma, MensajeFiltroFecha } from './types';
+import { getFinDeSemana } from './semanaUtils';
 
 function formatFechaLocalYYYYMMDD(d: Date): string {
   const y = d.getFullYear();
@@ -29,12 +30,6 @@ function getFechaColombiaISO(): string {
 
 function getFechaColombia(): Date {
   return new Date(`${getFechaColombiaISO()}T00:00:00`);
-}
-
-function getFechaMasDias(fecha: Date, dias: number): Date {
-  const resultado = new Date(fecha);
-  resultado.setDate(resultado.getDate() + dias);
-  return resultado;
 }
 
 export function useConsultaEspaciosFiltros() {
@@ -86,13 +81,19 @@ export function useConsultaEspaciosFiltros() {
       hoy.setHours(0, 0, 0, 0);
 
       const fechaInicioStr = formatFechaLocalYYYYMMDD(hoy);
-      const fechaFinStr = formatFechaLocalYYYYMMDD(getFechaMasDias(hoy, 7));
+      const fechaFinStr = formatFechaLocalYYYYMMDD(getFinDeSemana(hoy));
 
       setFilterFechaInicio(fechaInicioStr);
       setFilterFechaFin(fechaFinStr);
     }
   }, [filterFechaInicio]);
 
+  // El "Hasta" se autorrellena con el domingo de la semana de "Desde" (no un
+  // +7 fijo): las semanas del cronograma van de lunes a domingo, asi que si
+  // el usuario elige un jueves, el rango sugerido es jueves-domingo, no
+  // jueves-jueves siguiente. El cronograma en si siempre muestra la semana
+  // completa lunes-domingo que contiene "Desde" (ver getRangoSemanaCompleta),
+  // asi que esto es solo el rango que se muestra/edita en el input.
   const handleFechaInicioChange = useCallback((fecha: string) => {
     if (!fecha) {
       setFilterFechaInicio('');
@@ -103,7 +104,7 @@ export function useConsultaEspaciosFiltros() {
 
     const fechaInicio = new Date(fecha + 'T00:00:00');
     setFilterFechaInicio(fecha);
-    setFilterFechaFin(formatFechaLocalYYYYMMDD(getFechaMasDias(fechaInicio, 7)));
+    setFilterFechaFin(formatFechaLocalYYYYMMDD(getFinDeSemana(fechaInicio)));
     setMensajeFiltroFecha({
       tipo: 'info',
       texto: 'Rango actualizado. Puedes ajustar la fecha manualmente si necesitas consultar un intervalo específico.'
@@ -263,7 +264,7 @@ export function useConsultaEspaciosFiltros() {
     const hoy = getFechaColombia();
     hoy.setHours(0, 0, 0, 0);
     const fechaInicioStr = formatFechaLocalYYYYMMDD(hoy);
-    const fechaFinStr = formatFechaLocalYYYYMMDD(getFechaMasDias(hoy, 7));
+    const fechaFinStr = formatFechaLocalYYYYMMDD(getFinDeSemana(hoy));
 
     setFilterFechaInicio(fechaInicioStr);
     setFilterFechaFin(fechaFinStr);

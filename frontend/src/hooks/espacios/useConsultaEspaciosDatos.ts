@@ -12,6 +12,7 @@ import {
   prestamoIntersectsRangoCronograma
 } from './prestamosCronogramaUtils';
 import type { EspacioView, OcupacionView } from './types';
+import { getRangoSemanaCompleta } from './semanaUtils';
 
 const CONSULTA_ESPACIOS_CACHE_VERSION = 'v4';
 const CONSULTA_ESPACIOS_CACHE_KEY = `espacios-consulta-espacios-${CONSULTA_ESPACIOS_CACHE_VERSION}`;
@@ -32,28 +33,6 @@ function getConsultaEspaciosCacheKey(
   fechaFin?: string
 ): string {
   return `${CONSULTA_ESPACIOS_CACHE_KEY}-${String(rol ?? 'publico')}-${userId ?? 'anonimo'}-${facultadId ?? 'sin-facultad'}-${periodoId ?? 'sin-periodo'}-${fechaInicio ?? 'sin-fecha'}-${fechaFin ?? 'sin-fecha'}`;
-}
-
-function formatFechaLocalYYYYMMDD(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function rangoSemanaVisibleCronograma(fechaInicioISO: string): { desde: string; hasta: string } {
-  const referencia = new Date(fechaInicioISO + 'T12:00:00');
-  const diaSemana = referencia.getDay();
-  const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-  const lunes = new Date(referencia);
-  lunes.setDate(referencia.getDate() + diasHastaLunes);
-  const sabado = new Date(lunes);
-  sabado.setDate(lunes.getDate() + 5);
-
-  return {
-    desde: formatFechaLocalYYYYMMDD(lunes),
-    hasta: formatFechaLocalYYYYMMDD(sabado)
-  };
 }
 
 function horaANumero(hora: string | number): number {
@@ -175,10 +154,16 @@ export function useConsultaEspaciosDatos({
         // migrate_horarios), por lo que traer TODAS las del semestre en cada
         // carga es innecesariamente pesado. Se le pide al backend solo las
         // que caen en el rango de fecha visible (mas las horarios sin fecha).
-        const rango =
-          filterFechaInicio && filterFechaFin
-            ? { fechaInicio: filterFechaInicio, fechaFin: filterFechaFin }
-            : undefined;
+        // El cronograma siempre muestra la semana Lunes-Domingo completa que
+        // contiene filterFechaInicio (sin importar el "Hasta" elegido), asi
+        // que ese es el rango real que hay que pedir para no perder los dias
+        // anteriores al que el usuario haya clickeado como "Desde".
+        const rango = filterFechaInicio
+          ? (() => {
+              const { desde, hasta } = getRangoSemanaCompleta(filterFechaInicio);
+              return { fechaInicio: desde, fechaFin: hasta };
+            })()
+          : undefined;
 
         let espaciosConHorarios;
 
@@ -336,7 +321,7 @@ export function useConsultaEspaciosDatos({
           ...((prestamosPublicosResponse.prestamos || []) as unknown as PrestamoEspacio[])
         ];
 
-        const { desde, hasta } = rangoSemanaVisibleCronograma(filterFechaInicio);
+        const { desde, hasta } = getRangoSemanaCompleta(filterFechaInicio);
         const prestamosFiltrados = todosLosPrestamos.filter((p) =>
           prestamoIntersectsRangoCronograma(p, desde, hasta)
         );
@@ -359,7 +344,7 @@ export function useConsultaEspaciosDatos({
       return horarios;
     }
 
-    const { desde, hasta } = rangoSemanaVisibleCronograma(filterFechaInicio);
+    const { desde, hasta } = getRangoSemanaCompleta(filterFechaInicio);
     const prestamosVisibles = expandirPrestamosParaCronograma(prestamos, desde, hasta);
 
     const prestamosComoOcupacion: OcupacionView[] = prestamosVisibles.map((p) => ({
