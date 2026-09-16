@@ -277,9 +277,14 @@ export default function ConsultaEspacios() {
     await Promise.all([
       recargarDatos(),
       cargarPeriodos(),
-      filterPeriodo ? cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente']) : Promise.resolve()
+      filterPeriodo && filterFechaInicio && filterFechaFin
+        ? cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente'], {
+            fechaInicio: filterFechaInicio,
+            fechaFin: filterFechaFin
+          })
+        : Promise.resolve()
     ]);
-  }, [cargarHorariosPorPeriodo, cargarPeriodos, filterPeriodo, recargarDatos]);
+  }, [cargarHorariosPorPeriodo, cargarPeriodos, filterFechaFin, filterFechaInicio, filterPeriodo, recargarDatos]);
 
   const resolverPeriodoVigente = () => {
     const hoyISO = fechaServidor || formatFechaLocalYYYYMMDD(getHoyColombia());
@@ -765,10 +770,13 @@ export default function ConsultaEspacios() {
 
   // Efecto para cargar horarios del período seleccionado cuando cambia el filtro de período
   useEffect(() => {
-    if (filterPeriodo) {
-      cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente']);
+    if (filterPeriodo && filterFechaInicio && filterFechaFin) {
+      cargarHorariosPorPeriodo(filterPeriodo, ['aprobado', 'pendiente'], {
+        fechaInicio: filterFechaInicio,
+        fechaFin: filterFechaFin
+      });
     }
-  }, [filterPeriodo, cargarHorariosPorPeriodo]);
+  }, [filterPeriodo, filterFechaInicio, filterFechaFin, cargarHorariosPorPeriodo]);
 
   // Actualizar preview de fechas cuando cambian los parámetros de repetición
   useEffect(() => {

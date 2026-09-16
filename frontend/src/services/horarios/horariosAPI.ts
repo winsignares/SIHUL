@@ -398,7 +398,8 @@ export const horarioService = {
      */
     horariosPorPeriodo: async (
         periodoId: number,
-        estado?: HorarioEstado | HorarioEstado[]
+        estado?: HorarioEstado | HorarioEstado[],
+        rango?: { fechaInicio: string; fechaFin: string }
     ): Promise<HorariosPorPeriodoResponse> => {
         const params = new URLSearchParams();
         params.set('periodo_id', String(periodoId));
@@ -409,6 +410,11 @@ export const horarioService = {
             } else {
                 params.set('estado', estado);
             }
+        }
+
+        if (rango) {
+            params.set('fecha_inicio', rango.fechaInicio);
+            params.set('fecha_fin', rango.fechaFin);
         }
 
         const query = `?${params.toString()}`;

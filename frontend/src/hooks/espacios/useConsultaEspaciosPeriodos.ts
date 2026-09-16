@@ -106,11 +106,15 @@ export function useConsultaEspaciosPeriodos() {
     }
   }, []);
 
-  const cargarHorariosPorPeriodo = useCallback(async (periodoId: number, estado?: HorarioEstado | HorarioEstado[]) => {
+  const cargarHorariosPorPeriodo = useCallback(async (
+    periodoId: number,
+    estado?: HorarioEstado | HorarioEstado[],
+    rango?: { fechaInicio: string; fechaFin: string }
+  ) => {
     setHorariosLoading(true);
     setErrorBusquedaPeriodo(null);
     try {
-      const result = await horarioService.horariosPorPeriodo(periodoId, estado);
+      const result = await horarioService.horariosPorPeriodo(periodoId, estado, rango);
       const ocupacion = mapearHorariosAOcupacion(result.horarios);
       setHorariosPeriodo(ocupacion);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,7 +155,7 @@ export function useConsultaEspaciosPeriodos() {
           return null;
         }
 
-        await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente']);
+        await cargarHorariosPorPeriodo(periodo.id, ['aprobado', 'pendiente'], { fechaInicio, fechaFin });
 
         return periodo;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

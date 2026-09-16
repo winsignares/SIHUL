@@ -632,6 +632,19 @@ def horarios_por_periodo(request):
 
             horarios_qs = horarios_qs.filter(estado__in=estados_filtrados)
 
+        # Filtro opcional por rango de fecha_inicio (mismo criterio que el
+        # frontend en useConsultaEspacios.ts): sin esto, esta consulta trae
+        # TODOS los horarios del periodo completo (una fila por semana por
+        # clase desde que migrate_horarios dejo de fusionar ocurrencias),
+        # lo que puede superar decenas de miles de filas y provocar timeout.
+        fecha_inicio_qs = request.GET.get('fecha_inicio')
+        fecha_fin_qs = request.GET.get('fecha_fin')
+        if fecha_inicio_qs and fecha_fin_qs:
+            horarios_qs = horarios_qs.filter(
+                Q(fecha_inicio__isnull=True)
+                | Q(fecha_inicio__gte=fecha_inicio_qs, fecha_inicio__lte=fecha_fin_qs)
+            )
+
         lst = []
         for h in horarios_qs:
             grupo = h.grupo
