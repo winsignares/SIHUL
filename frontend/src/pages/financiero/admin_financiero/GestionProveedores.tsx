@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Building2, PauseCircle, PlayCircle, Plus, Save, Search, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { catalogosProveedoresService, proveedoresService } from '../../../services/financiero';
-import { userService, type Usuario } from '../../../services/users/authService';
 import type {
   BancoCatalogo,
   CiudadCatalogo,
@@ -21,7 +20,7 @@ import type {
   TipoCuentaCatalogo,
 } from '../../../models/financiero/core.models';
 
-type ProveedorUI = Proveedor & { usuario?: number | null };
+type ProveedorUI = Proveedor;
 
 type ProveedorFormState = {
   usuario?: number | null;
@@ -105,7 +104,6 @@ const toArray = <T,>(value: T[] | { results?: T[] } | unknown): T[] => {
 
 export default function GestionProveedoresReal() {
   const [proveedores, setProveedores] = useState<ProveedorUI[]>([]);
-  const [usuariosProveedor, setUsuariosProveedor] = useState<Usuario[]>([]);
   const [paises, setPaises] = useState<PaisCatalogo[]>([]);
   const [departamentosGeo, setDepartamentosGeo] = useState<DepartamentoGeograficoCatalogo[]>([]);
   const [ciudades, setCiudades] = useState<CiudadCatalogo[]>([]);
@@ -121,11 +119,6 @@ export default function GestionProveedoresReal() {
   const [tipoFilter, setTipoFilter] = useState('all');
   const [ciudadFilter, setCiudadFilter] = useState('all');
   const [form, setForm] = useState<ProveedorFormState>(emptyForm);
-
-  const usuariosById = useMemo(
-    () => Object.fromEntries(usuariosProveedor.filter((u) => u.id).map((u) => [u.id as number, u])),
-    [usuariosProveedor]
-  );
 
   const paisesById = useMemo(() => Object.fromEntries(paises.map((item) => [item.id, item])), [paises]);
   const departamentosById = useMemo(() => Object.fromEntries(departamentosGeo.map((item) => [item.id, item])), [departamentosGeo]);
@@ -183,13 +176,9 @@ export default function GestionProveedoresReal() {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [proveedoresResp, usuariosResp] = await Promise.all([
-        proveedoresService.getAll({ limit: 500, ordering: '-id' }),
-        userService.listarUsuarios({ rol: 'Proveedor' }),
-      ]);
+      const proveedoresResp = await proveedoresService.getAll({ limit: 500, ordering: '-id' });
 
       setProveedores(toArray<ProveedorUI>(proveedoresResp));
-      setUsuariosProveedor(usuariosResp.usuarios || []);
       await cargarCatalogos();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'No se pudieron cargar los proveedores.'));
@@ -292,7 +281,6 @@ export default function GestionProveedoresReal() {
   };
 
   const abrirEdicion = (proveedor: ProveedorUI) => {
-    const usuario = proveedor.usuario ? usuariosById[proveedor.usuario] : undefined;
     const paisId = findPaisIdByName(proveedor.pais);
     const departamentoId = findDepartamentoIdByName(proveedor.departamento, paisId);
     const ciudadId = findCiudadIdByName(proveedor.ciudad, departamentoId);
@@ -300,8 +288,8 @@ export default function GestionProveedoresReal() {
     setEditingId(proveedor.id);
     setForm({
       usuario: proveedor.usuario ?? null,
-      nombreUsuario: usuario?.nombre || '',
-      correoUsuario: usuario?.correo || proveedor.email || '',
+      nombreUsuario: proveedor.usuario_nombre || '',
+      correoUsuario: proveedor.usuario_correo || '',
       nuevaContrasena: '',
       nit: proveedor.nit || '',
       razon_social: proveedor.razon_social || '',
@@ -377,16 +365,12 @@ export default function GestionProveedoresReal() {
       const proveedorPayload = buildProveedorPayload(form);
 
       if (editingId) {
-        await proveedoresService.update(editingId, proveedorPayload);
-
-        if (form.usuario) {
-          const updatePayload: Parameters<typeof userService.actualizarUsuario>[0] = { id: form.usuario };
-          if (form.nombreUsuario.trim()) updatePayload.nombre = form.nombreUsuario.trim();
-          if (form.correoUsuario.trim()) updatePayload.correo = form.correoUsuario.trim();
-          if (form.nuevaContrasena.trim()) updatePayload.contrasena = form.nuevaContrasena.trim();
-          updatePayload.activo = form.estado === 'Activo';
-          await userService.actualizarUsuario(updatePayload);
-        }
+        await proveedoresService.update(editingId, {
+          ...proveedorPayload,
+          ...(form.usuario && form.nombreUsuario.trim() ? { usuario_nombre: form.nombreUsuario.trim() } : {}),
+          ...(form.usuario && form.correoUsuario.trim() ? { usuario_correo: form.correoUsuario.trim() } : {}),
+          ...(form.usuario && form.nuevaContrasena.trim() ? { usuario_contrasena: form.nuevaContrasena.trim() } : {}),
+        });
 
         toast.success('Proveedor actualizado correctamente.');
       } else {
@@ -414,12 +398,6 @@ export default function GestionProveedoresReal() {
     setAccionProveedorId(proveedor.id);
     try {
       await proveedoresService.update(proveedor.id, { estado: nextEstado });
-      if (proveedor.usuario) {
-        await userService.actualizarUsuario({
-          id: proveedor.usuario,
-          activo: nextEstado === 'Activo',
-        });
-      }
       toast.success(`Proveedor ${nextEstado.toLowerCase()} correctamente.`);
       await cargar();
     } catch (error: unknown) {

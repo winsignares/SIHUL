@@ -362,7 +362,7 @@ def _convertir_archivo_plano_a_pdf(content_bytes, nombre_original):
 # ============================================================
 
 class ProveedorViewSet(viewsets.ModelViewSet):
-    queryset = models.Proveedor.objects.all()
+    queryset = models.Proveedor.objects.select_related('usuario').all()
     serializer_class = serializers.ProveedorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -425,14 +425,59 @@ class ProveedorViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
+        from django.contrib.auth.hashers import make_password
+
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         data = self._coerce_geo_catalog_data(request.data)
+        usuario_nombre = data.pop('usuario_nombre', None)
+        usuario_correo = data.pop('usuario_correo', None)
+        usuario_contrasena = data.pop('usuario_contrasena', None)
+
+        usuario = instance.usuario
+        if usuario is not None:
+            if usuario_nombre is not None:
+                usuario.nombre = str(usuario_nombre).strip()
+            if usuario_correo is not None:
+                correo_normalizado = str(usuario_correo).strip().lower()
+                if not correo_normalizado:
+                    raise ValidationError({'usuario_correo': 'El correo de acceso no puede estar vacío.'})
+                if Usuario.objects.filter(correo__iexact=correo_normalizado).exclude(pk=usuario.pk).exists():
+                    raise ValidationError({'usuario_correo': 'Ya existe un usuario con este correo.'})
+                usuario.correo = correo_normalizado
+            if usuario_contrasena:
+                hashed = make_password(str(usuario_contrasena))
+                usuario.password = hashed
+                usuario.contrasena_hash = hashed
+        elif any(value is not None for value in (usuario_nombre, usuario_correo, usuario_contrasena)):
+            raise ValidationError({'usuario': 'El proveedor no tiene un usuario de acceso vinculado.'})
+
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+
+        if usuario is not None:
+            usuario.activo = serializer.instance.estado == 'Activo'
+            usuario.save()
+
         return Response(serializer.data)
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        usuario = instance.usuario
+        if usuario is not None:
+            rol_nombre = (getattr(usuario.rol, 'nombre', '') or '').strip().casefold()
+            if rol_nombre != 'proveedor':
+                raise ValidationError({
+                    'usuario': 'No se puede eliminar el proveedor porque el usuario vinculado no tiene rol Proveedor.'
+                })
+        self.perform_destroy(instance)
+        if usuario is not None:
+            usuario.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -486,6 +531,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
             'banco', 'tipo_cuenta', 'numero_cuenta', 'cuenta_bancaria_completa',
             'regimen_tributario', 'retencion_renta', 'retencion_iva', 'retencion_ica',
             'autoretenedor', 'estado', 'calificacion_riesgo', 'observaciones',
+            'pais_id', 'departamento_geo_id', 'ciudad_id', 'banco_id', 'tipo_cuenta_id',
         ]
 
         proveedor_data = {'nit': nit, 'razon_social': razon_social, 'tipo_proveedor': tipo_proveedor}

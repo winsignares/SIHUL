@@ -3,6 +3,9 @@
 export interface Proveedor {
   id: number;
   usuario?: number | null;
+  usuario_nombre?: string | null;
+  usuario_correo?: string | null;
+  usuario_contrasena?: string;
   nit: string;
   razon_social: string;
   nombre_comercial?: string;

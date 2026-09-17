@@ -60,6 +60,9 @@ def _documento_es_sensible(documento):
 # ============================================================
 
 class ProveedorSerializer(serializers.ModelSerializer):
+    usuario_nombre = serializers.CharField(source='usuario.nombre', read_only=True, allow_null=True)
+    usuario_correo = serializers.EmailField(source='usuario.correo', read_only=True, allow_null=True)
+
     class Meta:
         model = models.Proveedor
         fields = '__all__'
