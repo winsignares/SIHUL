@@ -44,6 +44,8 @@ async def ask_question(
             db=db,
             chat_id=body.chat_id,
             id_usuario=body.id_usuario,
+            tipo=chatbot.get("tipo"),
+            instrucciones=chatbot.get("instrucciones_adicionales"),
         )
     except openai.OpenAIError:
         # Tiempo agotado, sin conexión, cuota o clave inválida: el detalle va al log,

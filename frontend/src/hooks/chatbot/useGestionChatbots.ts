@@ -8,6 +8,7 @@ import {
     type ChatbotAgentePayload,
     type ChatbotDocumento,
 } from '../../services/chatbot/chatbotAdminAPI';
+import type { ChatbotTipo } from '../../models/chatbot/chatbotAdmin.model';
 
 export type ChatbotFormState = {
     nombre: string;
@@ -19,6 +20,8 @@ export type ChatbotFormState = {
     activo: boolean;
     mensaje_bienvenida: string;
     orden: number;
+    tipo: ChatbotTipo;
+    instrucciones_adicionales: string;
 };
 
 // El modelo Agente conserva endpoint_url por compatibilidad histórica (webhook de n8n),
@@ -36,6 +39,8 @@ const emptyForm: ChatbotFormState = {
     activo: true,
     mensaje_bienvenida: '',
     orden: 0,
+    tipo: 'normativo',
+    instrucciones_adicionales: '',
 };
 
 // apiClient lanza un objeto { message, status } (no una instancia de Error)
@@ -215,6 +220,8 @@ export function useGestionChatbots() {
             activo: chatbot.activo ?? true,
             mensaje_bienvenida: chatbot.mensaje_bienvenida || '',
             orden: chatbot.orden ?? 0,
+            tipo: chatbot.tipo ?? 'normativo',
+            instrucciones_adicionales: chatbot.instrucciones_adicionales ?? '',
         });
         setDialogChatbotOpen(true);
     };
@@ -237,6 +244,8 @@ export function useGestionChatbots() {
                 activo: form.activo,
                 mensaje_bienvenida: form.mensaje_bienvenida.trim(),
                 orden: form.orden,
+                tipo: form.tipo,
+                instrucciones_adicionales: form.instrucciones_adicionales.trim(),
                 endpoint_url: editingChatbotId ? undefined : LEGACY_ENDPOINT_URL,
             };
 

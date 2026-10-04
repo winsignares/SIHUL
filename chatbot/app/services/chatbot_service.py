@@ -14,8 +14,10 @@ async def list_chatbots(db: AsyncSession, solo_activos: bool = True) -> list[dic
 
 async def get_chatbot(chatbot_id: int, db: AsyncSession) -> dict | None:
     """Obtiene un chatbot (Agente) por id, o None si no existe."""
+    # SELECT *: incluye `tipo` e `instrucciones_adicionales` (perfil de comportamiento) si
+    # la migración de Django ya las creó, y sigue funcionando si todavía no.
     result = await db.execute(
-        text("SELECT id, nombre, activo FROM chatbot_agente WHERE id = :id"),
+        text("SELECT * FROM chatbot_agente WHERE id = :id"),
         {"id": chatbot_id},
     )
     row = result.mappings().first()

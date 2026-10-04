@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Textarea } from '../../share/textarea';
 import { useGestionChatbots } from '../../hooks/chatbot/useGestionChatbots';
+import { CHATBOT_TIPOS, MAX_INSTRUCCIONES_ADICIONALES } from '../../models/chatbot/chatbotAdmin.model';
 
 const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
@@ -126,7 +127,7 @@ function ChatbotsTable({ state }: { state: GestionState }) {
       {loadingChatbots ? <p className="px-6 py-5 text-sm text-slate-500">Cargando chatbots...</p> : <div className="overflow-x-auto sm:rounded-xl sm:border"><Table className="min-w-[760px] table-fixed">
         <TableHeader><TableRow className="bg-slate-50"><TableHead className="w-[20%] text-center">Nombre</TableHead><TableHead className="w-[48%] text-center">Descripción</TableHead><TableHead className="w-[12%] text-center">Estado</TableHead><TableHead className="w-[20%] text-center">Acciones</TableHead></TableRow></TableHeader>
         <TableBody>{chatbots.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">No hay chatbots registrados.</TableCell></TableRow> : chatbots.map((chatbot) => <TableRow key={chatbot.id}>
-          <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}</TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}</TableCell>
+          <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}</TableCell>
           <TableCell className="text-center"><Badge className={chatbot.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{chatbot.activo ? 'Activo' : 'Inactivo'}</Badge></TableCell>
           <TableCell><div className="flex justify-center gap-2"><Button size="sm" variant="outline" onClick={() => abrirEdicionChatbot(chatbot)} title="Editar chatbot"><Settings2 className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={accionId === chatbot.id} onClick={() => void alternarActivoChatbot(chatbot)} title={chatbot.activo ? 'Desactivar' : 'Activar'}>{chatbot.activo ? <PauseCircle className="h-4 w-4 text-amber-600" /> : <PlayCircle className="h-4 w-4 text-emerald-600" />}</Button><Button size="sm" variant="destructive" disabled={accionId === chatbot.id} onClick={() => void eliminarChatbot(chatbot)} title="Eliminar chatbot"><Trash2 className="h-4 w-4" /></Button></div></TableCell>
         </TableRow>)}</TableBody>
@@ -162,6 +163,17 @@ function ChatbotDialog({ state }: { state: GestionState }) {
       <div className="space-y-2 md:col-span-2"><Label>Subtítulo</Label><Input value={form.subtitulo} onChange={(event) => setForm((prev) => ({ ...prev, subtitulo: event.target.value }))} /></div>
       <div className="space-y-2 md:col-span-2"><Label>Descripción <span className="text-red-600">*</span></Label><Textarea rows={3} value={form.descripcion} onChange={(event) => setForm((prev) => ({ ...prev, descripcion: event.target.value }))} /></div>
       <div className="space-y-2 md:col-span-2"><Label>Mensaje de bienvenida <span className="text-red-600">*</span></Label><Textarea rows={2} value={form.mensaje_bienvenida} onChange={(event) => setForm((prev) => ({ ...prev, mensaje_bienvenida: event.target.value }))} /></div>
+      <div className="space-y-2 md:col-span-2"><Label>Tipo de chatbot</Label>
+        <Select value={form.tipo} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo: value as typeof prev.tipo }))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{CHATBOT_TIPOS.map((tipo) => <SelectItem key={tipo.value} value={tipo.value}>{tipo.label}</SelectItem>)}</SelectContent>
+        </Select>
+        <p className="text-xs text-slate-500">{CHATBOT_TIPOS.find((tipo) => tipo.value === form.tipo)?.descripcion}</p>
+        {editingChatbotId && <p className="text-xs text-amber-700">Cambiar el tipo cambia cómo responde desde ya. El texto de los documentos ya cargados no se vuelve a procesar.</p>}
+      </div>
+      <div className="space-y-2 md:col-span-2"><Label>Instrucciones adicionales (opcional)</Label><Textarea rows={3} maxLength={MAX_INSTRUCCIONES_ADICIONALES} placeholder="Ej.: Responde siempre en máximo tres frases." value={form.instrucciones_adicionales} onChange={(event) => setForm((prev) => ({ ...prev, instrucciones_adicionales: event.target.value }))} />
+        <p className="text-xs text-slate-500">Ajustes finos que se suman al tipo. No pueden anular la regla de responder solo con los documentos cargados. {form.instrucciones_adicionales.length}/{MAX_INSTRUCCIONES_ADICIONALES}</p>
+      </div>
       <div className="space-y-2"><Label>Ícono (lucide-react)</Label><Input value={form.icono} onChange={(event) => setForm((prev) => ({ ...prev, icono: event.target.value }))} /></div>
       <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.orden} onChange={(event) => setForm((prev) => ({ ...prev, orden: Number(event.target.value) || 0 }))} /></div>
       <div className="flex items-center gap-3 md:col-span-2"><Switch checked={form.activo} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, activo: checked }))} /><Label>Chatbot activo</Label></div>

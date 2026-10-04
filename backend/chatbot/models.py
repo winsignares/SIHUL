@@ -6,6 +6,15 @@ import uuid
 User = get_user_model()
 
 class Agente(models.Model):
+    # Perfil de comportamiento del asistente (prompt, tono, reglas de respuesta). Los
+    # perfiles se definen en el servicio RAG (chatbot/app/core/profiles.py).
+    TIPO_NORMATIVO = 'normativo'
+    TIPO_INVESTIGATIVO = 'investigativo'
+    TIPO_CHOICES = [
+        (TIPO_NORMATIVO, 'Normativo (reglamentos, manuales, procedimientos)'),
+        (TIPO_INVESTIGATIVO, 'Investigativo (monografías, tesis, artículos)'),
+    ]
+
     nombre = models.CharField(max_length=100)
     subtitulo = models.CharField(max_length=200, blank=True, null=True)
     descripcion = models.TextField()
@@ -16,6 +25,15 @@ class Agente(models.Model):
     endpoint_url = models.URLField(max_length=500)
     mensaje_bienvenida = models.TextField()
     orden = models.IntegerField(default=0)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_NORMATIVO)
+    instrucciones_adicionales = models.TextField(
+        max_length=2000,
+        blank=True,
+        default='',
+        help_text='Ajustes finos de comportamiento que se añaden al perfil del tipo '
+                  '(p. ej. "responde siempre en inglés"). No pueden anular la regla de '
+                  'responder solo con los documentos cargados.',
+    )
     
     class Meta:
         verbose_name = 'Agente'

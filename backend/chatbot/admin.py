@@ -31,8 +31,8 @@ class ChatbotAppAdmin(admin.ModelAdmin):
 
 @admin.register(Agente)
 class AgenteAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'activo', 'orden']
-    list_filter = ['activo']
+    list_display = ['nombre', 'tipo', 'activo', 'orden']
+    list_filter = ['activo', 'tipo']
     search_fields = ['nombre', 'descripcion']
     ordering = ['orden']
 

@@ -2,20 +2,35 @@ from rest_framework import generics, permissions
 
 from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 
+from .admin_views import PuedeGestionarChatbots
 from .models import Agente, Conversacion, PreguntaSugerida
 from .serializers import AgenteSerializer, ConversacionSerializer, PreguntaSugeridaSerializer
+
+
+class LecturaAutenticadaEscrituraGestor(permissions.BasePermission):
+    """
+    Cualquier usuario autenticado puede ver los agentes (los asistentes que aparecen en
+    el chat); crearlos, modificarlos o borrarlos exige poder gestionar chatbots. El agente
+    define el comportamiento del asistente (tipo e instrucciones adicionales), así que no
+    debe poder cambiarlo cualquier usuario.
+    """
+
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return PuedeGestionarChatbots().has_permission(request, view)
 
 
 class AgenteListCreateAPIView(generics.ListCreateAPIView):
     queryset = Agente.objects.all().order_by('orden', 'nombre')
     serializer_class = AgenteSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [LecturaAutenticadaEscrituraGestor]
 
 
 class AgenteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Agente.objects.all()
     serializer_class = AgenteSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [LecturaAutenticadaEscrituraGestor]
 
 
 class PreguntaSugeridaListCreateAPIView(generics.ListCreateAPIView):

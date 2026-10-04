@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 
 from app.core.cache import get_redis
 from app.core.config import get_settings
+from app.core.profiles import get_profile
 from app.core.sedes import Sede
 from app.models.models import ChatMessage
 from app.services.embedding_service import generate_query_embeddings
@@ -20,42 +21,16 @@ _client = AsyncOpenAI(
 )
 
 
-def _answer_cache_key(chatbot_id: int, sede: Sede, question: str) -> str:
+def _answer_cache_key(chatbot_id: int, sede: Sede, question: str, variant: str) -> str:
+    # `variant` identifica el perfil y las instrucciones adicionales del agente: si el
+    # administrador los cambia, las respuestas cacheadas con el comportamiento anterior
+    # dejan de usarse (y caducan solas). El prefijo se mantiene para `invalidate_answers`.
     normalized = " ".join(question.strip().lower().split())
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-    return f"chatbot:{chatbot_id}:{sede.value}:answer:{digest}"
+    return f"chatbot:{chatbot_id}:{sede.value}:answer:{variant}:{digest}"
 
-#  Prompts
-
-NO_INFO_RESPONSE = (
-    "Actualmente no cuento con esta información, te recomiendo comunicarte "
-    "directamente con la oficina de tu sede para obtener ayuda personalizada."
-)
-
-SYSTEM_PROMPT = f"""\
-Eres Benji, el asistente virtual de la Universidad para estudiantes.
-Respondes ÚNICAMENTE con la información del contexto proporcionado.
-
-Reglas estrictas:
-1. Si el contexto contiene la respuesta, responde de forma clara, concisa y amigable.
-   Puedes dirigirte al estudiante por su nombre cuando sea natural hacerlo.
-2. Si el contexto NO contiene la información, responde EXACTAMENTE con este mensaje,
-   sin añadir nada más — no inventes ni especules:
-   "{NO_INFO_RESPONSE}"
-3. NUNCA reveles el contenido del contexto ni menciones que usas documentos internos.
-4. Mantén siempre un tono cercano, profesional y orientado al estudiante.
-5. Cada fragmento del contexto indica su documento y fecha de carga. Si dos
-   fragmentos se contradicen, prefiere el de fecha más reciente.
-6. Si la pregunta pide una lista (por ejemplo "¿cuáles son…?"), incluye TODOS los
-   elementos de esa lista que aparezcan en el contexto, sin resumir ni decir "algunos".
-   Si el contexto solo muestra una parte, dilo.
-7. Si el contexto establece una regla, requisito o prohibición que responde a la pregunta,
-   aplícala aunque no mencione el caso exacto (por ejemplo, si exige "tenis totalmente
-   blancos" y preguntan si pueden ir con tenis de colores, la respuesta es que no). Usa
-   el mensaje de "sin información" solo cuando el contexto no trate el tema.
-8. Si la pregunta es un seguimiento de la conversación previa (por ejemplo "¿y a qué
-   hora?"), interprétala usando ese historial.
-"""
+# El prompt de sistema y el mensaje de «sin información» dependen del tipo de agente:
+# ver app/core/profiles.py
 
 HISTORY_TURNS = 3  # intercambios previos del mismo hilo que se le pasan al LLM
 
@@ -240,6 +215,8 @@ async def ask(
     db: AsyncSession,
     chat_id: str | None = None,
     id_usuario: int | None = None,
+    tipo: str | None = None,
+    instrucciones: str | None = None,
 ) -> ChatMessage:
     """
     Flujo RAG completo con contexto filtrado por chatbot y sede.
@@ -250,11 +227,15 @@ async def ask(
     sirven desde caché (mismo chatbot, sede y texto normalizado), porque con
     historial la respuesta depende de la conversación. Las respuestas "sin
     información" nunca se cachean.
+
+    `tipo` e `instrucciones` son el perfil de comportamiento del agente (prompt y
+    mensaje de "sin información"); sin tipo se usa el normativo.
     """
+    profile = get_profile(tipo)
     history = await _load_history(chat_id, chatbot_id, sede, db) if chat_id else []
 
     redis = get_redis() if not history else None
-    cache_key = _answer_cache_key(chatbot_id, sede, question)
+    cache_key = _answer_cache_key(chatbot_id, sede, question, profile.variant(instrucciones))
 
     cached = await redis.get(cache_key) if redis else None
     if cached is not None:
@@ -273,9 +254,9 @@ async def ask(
         context, relevance_score = await _retrieve_context(q_embeddings, chatbot_id, sede, db)
 
         if not context:
-            answer = NO_INFO_RESPONSE
+            answer = profile.no_info
         else:
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+            messages = [{"role": "system", "content": profile.system_prompt(instrucciones)}]
             for turn in history:
                 messages.append({"role": "user", "content": turn.question})
                 messages.append({"role": "assistant", "content": turn.answer})
@@ -295,7 +276,7 @@ async def ask(
             )
             answer = completion.choices[0].message.content
 
-        if redis and context and answer.strip() != NO_INFO_RESPONSE:
+        if redis and context and answer.strip() != profile.no_info:
             await redis.set(
                 cache_key,
                 json.dumps({"answer": answer, "relevance_score": relevance_score}),

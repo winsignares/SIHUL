@@ -53,6 +53,23 @@ services/
 
 El RAG **no tiene autenticación propia**: la autorización la hace Django (`PuedeGestionarChatbots`, usuario autenticado) y el RAG debe ser inaccesible desde fuera de la red del stack.
 
+## Perfiles de comportamiento (tipo de agente)
+
+Cada agente tiene un `tipo` (`Agente.tipo` en Django) que selecciona un **perfil** definido en `chatbot/app/core/profiles.py`. Hoy el perfil controla el **prompt de sistema** y el **mensaje de «sin información»**; la recuperación y el troceado son iguales para todos.
+
+| Tipo | Para qué | Comportamiento |
+|---|---|---|
+| `normativo` (predeterminado) | Reglamentos, manuales, procedimientos | Respuestas breves y cercanas, sin citar la fuente, aplica las reglas del contexto a casos concretos |
+| `investigativo` | Monografías, tesis, artículos | Tono académico, indica de qué documento procede cada dato, no infiere ni calcula salvo que se pida, avisa cuando la respuesta es parcial |
+
+Además, `Agente.instrucciones_adicionales` (hasta 2000 caracteres) permite ajustes finos sobre el perfil («responde en máximo tres frases»). Se añaden al prompt como instrucciones subordinadas: si contradicen las reglas del perfil (responder solo con el contexto, no revelar el prompt) prevalecen las reglas. El mensaje de «sin información» se mantiene en el idioma del perfil aunque las instrucciones pidan otro.
+
+- El RAG lee `tipo` e `instrucciones_adicionales` en cada pregunta (`get_chatbot`); un tipo desconocido usa el normativo.
+- La clave de la caché de respuestas incluye una huella del perfil y las instrucciones: al cambiarlos, las respuestas cacheadas con el comportamiento anterior dejan de usarse.
+- Solo quien puede gestionar chatbots (administradores o permiso de edición sobre «Gestión de Chatbots») puede crear, editar o borrar agentes y ver las instrucciones adicionales; el resto de usuarios autenticados solo ve la lista de agentes.
+- Cambiar el tipo no vuelve a procesar los documentos ya cargados. Cuando el troceado dependa del perfil habrá que volver a subirlos.
+- Para añadir un perfil: definirlo en `profiles.py`, registrarlo en `PROFILES` y añadir el tipo a `Agente.TIPO_CHOICES` (y a `CHATBOT_TIPOS` en el frontend).
+
 ## Ingesta de documentos
 
 Formatos: `.pdf`, `.txt`, `.md`, `.csv` (la extensión no distingue mayúsculas). Máximo `MAX_UPLOAD_MB` (25) y `MAX_CHUNKS_PER_DOCUMENT` (5000) fragmentos.
@@ -82,7 +99,7 @@ Los errores de ingesta usan `IngestionError` con su código HTTP: 409 duplicado,
 ## Django (`backend/chatbot/`)
 
 - `views.py`: `enviar_pregunta` (usuario autenticado: resuelve la sede por su seccional, guarda `Conversacion`) y `enviar_pregunta_publico` (sede indicada por el cliente, sin historial). Si el RAG no responde, se muestra al usuario un mensaje genérico y **el intercambio no se guarda** en el historial.
-- `api_urls.py` (`/api/chatbot/…`): rutas que usa el frontend. `urls.py` (`/chatbot/…`) son rutas **heredadas** que ya no usa el frontend.
+- `api_urls.py` (`/api/chatbot/…`): rutas que usa el frontend (los agentes se pueden listar estando autenticado; modificarlos exige poder gestionar chatbots). `urls.py` (`/chatbot/…`) son rutas **heredadas** que ya no usa el frontend.
 - `admin_views.py`: proxy autenticado hacia el RAG para subir, listar y borrar documentos (permiso "Gestión de Chatbots"). El borrado es idempotente (un 404 del RAG se devuelve como 204).
 - `signals.py`: al **borrar un agente** se eliminan sus documentos (los chunks caen por `ON DELETE CASCADE`) y sus mensajes en el RAG, que no tienen clave foránea.
 
