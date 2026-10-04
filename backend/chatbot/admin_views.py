@@ -9,6 +9,7 @@ from mysite.auth_helpers import is_admin_global, is_admin_sistema, is_authentica
 from .views import fastapi_base_url
 
 COMPONENTE_GESTION_CHATBOTS = 'Gestión de Chatbots'
+MAX_UPLOAD_MB = 25  # mismo tope que MAX_UPLOAD_MB del servicio RAG
 
 
 class PuedeGestionarChatbots(permissions.BasePermission):
@@ -63,6 +64,8 @@ class ChatbotDocumentosProxyView(APIView):
 
         if not chatbot_id or not sede or not file_obj:
             return Response({'error': 'chatbot_id, sede y file son requeridos'}, status=400)
+        if file_obj.size > MAX_UPLOAD_MB * 1024 * 1024:
+            return Response({'error': f'El archivo supera el máximo de {MAX_UPLOAD_MB} MB.'}, status=413)
 
         try:
             resp = requests.post(
@@ -86,6 +89,11 @@ class ChatbotDocumentoDetalleProxyView(APIView):
             resp = requests.delete(f'{fastapi_base_url()}/documents/{pk}', timeout=30)
         except requests.exceptions.RequestException as exc:
             return _proxy_error_response(exc)
+        if resp.status_code == 404:
+            # Borrado idempotente: si el documento ya no existe (p. ej. porque al subir
+            # una nueva versión con el mismo nombre el RAG ya la reemplazó) el resultado
+            # es el que se pedía.
+            return Response(status=204)
         return _forward_response(resp)
 
 

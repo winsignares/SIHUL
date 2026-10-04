@@ -137,7 +137,9 @@ export async function handleApiError(
       apiError.message = 'Recurso no encontrado';
       break;
     case 422:
-      apiError.message = 'Datos de validación incorrectos';
+      if (!hasServerMessage) {
+        apiError.message = 'Datos de validación incorrectos';
+      }
       break;
     case 500:
       if (!hasServerMessage) {

@@ -8,17 +8,21 @@ from app.core.cache import invalidate_answers
 from app.core.sedes import Sede
 from app.models.models import Document, Chunk
 from app.services.embedding_service import generate_embeddings
-from app.services.text_extraction import chunk_text, extract_text
+from app.core.config import get_settings
+from app.services.text_extraction import IngestionError, chunk_text, extract_text
+
+_settings = get_settings()
 
 
-class DuplicateDocumentError(Exception):
+class DuplicateDocumentError(IngestionError):
     """Ya existe un documento con el mismo contenido para ese chatbot y sede."""
 
     def __init__(self, existing: Document):
         self.existing = existing
         super().__init__(
             f"El archivo ya fue cargado como '{existing.filename}' (id {existing.id}) "
-            "para este chatbot y sede."
+            "para este chatbot y sede.",
+            status_code=409,
         )
 
 
@@ -32,6 +36,10 @@ async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: As
       versión nueva y reemplaza al documento anterior (y sus chunks).
     """
     raw = await file.read()
+    if len(raw) > _settings.MAX_UPLOAD_MB * 1024 * 1024:
+        raise IngestionError(
+            f"El archivo supera el máximo de {_settings.MAX_UPLOAD_MB} MB.", status_code=413
+        )
     content_hash = hashlib.sha256(raw).hexdigest()
 
     existing = (
@@ -47,6 +55,12 @@ async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: As
 
     content = extract_text(raw, file.filename)
     texts = chunk_text(content, file.filename)
+    if len(texts) > _settings.MAX_CHUNKS_PER_DOCUMENT:
+        raise IngestionError(
+            f"El documento es demasiado extenso ({len(texts)} fragmentos; el máximo es "
+            f"{_settings.MAX_CHUNKS_PER_DOCUMENT}). Divídelo en varios archivos.",
+            status_code=413,
+        )
     embeddings = await generate_embeddings(texts) if texts else []
 
     # Se reemplaza solo cuando lo nuevo ya se procesó con éxito, para no perder

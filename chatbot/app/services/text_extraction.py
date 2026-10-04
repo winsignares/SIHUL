@@ -1,3 +1,6 @@
+import codecs
+import csv
+import io
 import re
 
 import fitz
@@ -22,12 +25,76 @@ _ARTICULO_NUM = re.compile(r"^(ART[ÍI]CULO\s+\d+\.?)\s*(.*)$")
 _BARE_ARTICULO = re.compile(r"^ART[ÍI]CULO$")
 
 
+class IngestionError(Exception):
+    """El archivo no se puede ingerir; `status_code` es el HTTP que corresponde."""
+
+    def __init__(self, message: str, status_code: int = 422):
+        super().__init__(message)
+        self.status_code = status_code
+
+
 #  Extracción
 
 def extract_text(raw: bytes, filename: str) -> str:
-    if filename.lower().endswith(".pdf"):
-        return _pdf_text(raw)
-    return raw.decode("utf-8")
+    name = filename.lower()
+    if name.endswith(".pdf"):
+        text = _pdf_text(raw)
+        if not text.strip():
+            raise IngestionError(
+                "El PDF no contiene texto extraíble. Si es un documento escaneado "
+                "(páginas como imagen) debe pasar por OCR antes de subirlo."
+            )
+        return text
+
+    text = _decode(raw)
+    if name.endswith(".csv"):
+        text = _csv_to_text(text)
+    if not text.strip():
+        raise IngestionError("El archivo está vacío.")
+    return text
+
+
+def _decode(raw: bytes) -> str:
+    """UTF-8 (con o sin BOM), UTF-16 con BOM y, si no, Windows-1252 (Excel / Word)."""
+    if raw.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return raw.decode("utf-16")
+    if b"\x00" in raw[:4096]:
+        raise IngestionError("El archivo no parece ser de texto.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            return raw.decode("cp1252")
+        except UnicodeDecodeError:
+            return raw.decode("latin-1")  # nunca falla
+
+
+def _csv_to_text(text: str) -> str:
+    """
+    Una línea por fila con el nombre de cada columna («- zona: Norte | horario: 8-12»),
+    de modo que ninguna fila pierda sus encabezados al trocear.
+    """
+    try:
+        try:
+            dialect = csv.Sniffer().sniff(text[:4096], delimiters=",;\t|")
+        except csv.Error:
+            dialect = csv.excel
+        rows = [[_clean(c) for c in r] for r in csv.reader(io.StringIO(text), dialect)]
+    except csv.Error as e:
+        raise IngestionError(f"El CSV está mal formado: {e}")
+    rows = [r for r in rows if any(r)]
+    if len(rows) < 2:
+        return "\n".join(" | ".join(c for c in r if c) for r in rows)
+
+    labels = [h or f"columna {i + 1}" for i, h in enumerate(rows[0])]
+    lines = []
+    for row in rows[1:]:
+        pairs = (
+            f"{labels[i] if i < len(labels) else f'columna {i + 1}'}: {c}"
+            for i, c in enumerate(row) if c
+        )
+        lines.append("- " + " | ".join(pairs))
+    return "\n".join(lines)
 
 
 def _clean(cell) -> str:
@@ -102,7 +169,12 @@ def _table_lines(rows: list[list], carry: dict | None, at_top: bool) -> tuple[li
 
 
 def _pdf_text(raw: bytes) -> str:
-    doc = fitz.open(stream=raw, filetype="pdf")
+    try:
+        doc = fitz.open(stream=raw, filetype="pdf")
+    except Exception:
+        raise IngestionError("El PDF está dañado o no se puede abrir.")
+    if doc.needs_pass:
+        raise IngestionError("El PDF está protegido con contraseña.")
     carry = None
     pages = []
     for page in doc:
@@ -168,6 +240,23 @@ def _is_caps_line(line: str) -> bool:
     )
 
 
+def _pack_lines(lines: list[str], filename: str) -> list[str]:
+    """Agrupa filas completas hasta el tamaño de chunk, sin partir ninguna fila."""
+    limit = _settings.CHUNK_SIZE
+    chunks, current, size = [], [], 0
+    for line in lines:
+        pieces = [line] if len(line) <= limit else _splitter.split_text(line)
+        for piece in pieces:
+            if current and size + len(piece) + 1 > limit:
+                chunks.append(f"[{filename}]\n" + "\n".join(current))
+                current, size = [], 0
+            current.append(piece)
+            size += len(piece) + 1
+    if current:
+        chunks.append(f"[{filename}]\n" + "\n".join(current))
+    return chunks
+
+
 def _join_split_headings(lines: list[str]) -> list[str]:
     """El PDF a veces parte «ARTÍCULO 17. TÍTULO» en tres líneas por cambio de fuente."""
     out, i = [], 0
@@ -193,7 +282,7 @@ def chunk_text(content: str, filename: str) -> list[str]:
     Los CSV y los textos sin encabezados reconocibles se trocean sin prefijo.
     """
     if filename.lower().endswith(".csv"):
-        return _splitter.split_text(content)
+        return _pack_lines(content.split("\n"), filename)
 
     lines = _join_split_headings([l.strip() for l in content.split("\n")])
     crumbs = ["", "", "", ""]

@@ -38,8 +38,15 @@ const emptyForm: ChatbotFormState = {
     orden: 0,
 };
 
-const getErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error ? error.message : fallback;
+// apiClient lanza un objeto { message, status } (no una instancia de Error)
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (error && typeof error === 'object' && 'message' in error) {
+        const { message } = error as { message: unknown };
+        if (typeof message === 'string' && message) return message;
+    }
+    return fallback;
+};
 
 const MAX_PDF_SIZE_BYTES = 15 * 1024 * 1024;
 

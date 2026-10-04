@@ -8,7 +8,8 @@ from app.models.models import Document
 from app.schemas.schemas import DocumentOut
 from app.services.chatbot_service import get_chatbot
 from app.core.cache import invalidate_answers
-from app.services.document_service import DuplicateDocumentError, process_document
+from app.services.document_service import process_document
+from app.services.text_extraction import IngestionError
 
 router = APIRouter(prefix="/documents", tags=["Documentos"])
 
@@ -44,8 +45,8 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=f"El chatbot '{chatbot['nombre']}' está inactivo")
     try:
         return await process_document(file, sede, chatbot_id, db)
-    except DuplicateDocumentError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    except IngestionError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

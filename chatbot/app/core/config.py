@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     CHAT_MODEL: str = "gpt-4o-mini"
     MIN_SIMILARITY: float = 0.45
     TOP_K: int = 8
+    MAX_UPLOAD_MB: int = 25
+    MAX_CHUNKS_PER_DOCUMENT: int = 5000
     REDIS_URL: str | None = None
     ANSWER_CACHE_TTL_SECONDS: int = 3600
 
