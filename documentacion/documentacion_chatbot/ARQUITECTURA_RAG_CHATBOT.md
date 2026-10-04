@@ -1,72 +1,120 @@
-# Chatbot SIHUL (`chatbot/`)
+# Chatbot SIHUL
 
-Servicio de chatbot con **recuperación aumentada por generación (RAG)**, integrado al stack de SIHUL como microservicio independiente. Permite realizar consultas en lenguaje natural sobre documentos cargados en el sistema.
+Servicio de chatbot con **recuperación aumentada por generación (RAG)**, integrado al stack de SIHUL. Responde preguntas en lenguaje natural usando únicamente los documentos cargados para cada **chatbot (agente)** y **sede**.
 
-> El archivo `chatbot/README.md` original tenía problemas de codificación (UTF-16 con acentos rotos); su contenido fue reconstruido y ampliado aquí.
+Son **dos piezas que comparten la misma base de datos PostgreSQL**:
 
-## Tecnologías
+| Pieza | Dónde | Responsabilidad |
+|---|---|---|
+| **Servicio RAG** (FastAPI) | `chatbot/` | Ingesta de documentos, embeddings, búsqueda por similitud, llamada al LLM, caché |
+| **App Django `chatbot`** | `backend/chatbot/` | Agentes y preguntas sugeridas, historial por usuario, permisos, proxy hacia el RAG, admin |
 
-- **FastAPI** (`chatbot/app/main.py`, servido con `uvicorn --reload`) — API REST asíncrona, independiente del backend Django.
-- **PostgreSQL + pgvector** — mismo contenedor `db` que usa el backend Django, pero con conexión propia asíncrona (`asyncpg`). Es decir: chatbot y backend Django son procesos independientes que comparten la misma base de datos.
-- **OpenAI** — generación de embeddings (`text-embedding-3-small`) y respuestas conversacionales (`gpt-4o-mini`).
-- **Docker** — contenedor propio (`chatbot.Dockerfile`), puerto `8001`.
+```
+Frontend (React) ──► Django (backend/chatbot) ──requests──► FastAPI (chatbot/) ──► OpenAI
+                         │                                     │  └──► Redis (db 1): caché de respuestas
+                         └────────── PostgreSQL + pgvector ────┘
+```
 
-## Dependencias clave (`chatbot/requirements.txt`)
+## Qué tabla crea cada servicio
 
-- `fastapi==0.115.6`, `uvicorn==0.34.0`
-- `sqlalchemy==2.0.36` (async) + `asyncpg==0.30.0` (driver PostgreSQL async)
-- `pgvector==0.3.6` (extensión de vectores en PostgreSQL)
-- `openai==1.58.1`
-- `langchain-text-splitters==0.3.4` (chunking de documentos)
-- `pymupdf==1.25.3` (extracción de texto de PDFs)
-- `pydantic-settings==2.7.1`
+| Tabla | La crea | Contenido |
+|---|---|---|
+| `chatbot_agente`, `chatbot_preguntasugerida`, `chatbot_conversacion` | Django (migraciones) | Agentes, preguntas rápidas, historial por usuario/hilo |
+| `documents`, `chunks`, `chat_messages` | FastAPI (al arrancar) | Documentos, fragmentos con su embedding, registro de preguntas del RAG |
+
+Django ve las tablas del RAG con modelos `managed=False` (`ChatbotDocument`, `ChatbotChunk`, `ChatbotAppMessage`) solo para consultarlas desde el admin. FastAPI lee `chatbot_agente` con SQL para validar que el chatbot exista y esté activo.
+
+**Esquema del RAG.** No usa un sistema de migraciones: al arrancar, `_prepare_schema` (`chatbot/app/main.py`) ejecuta `create_all` y añade de forma idempotente las columnas posteriores (`_EXTRA_COLUMNS`). Todo ocurre en una transacción protegida por un *advisory lock* de Postgres, de modo que varios procesos arrancando a la vez no chocan. Para añadir una columna: declararla en `models.py`, agregarla a `_EXTRA_COLUMNS` y reflejarla (si Django debe verla) en `backend/chatbot/models.py` con una migración de estado (ver `0009`), que no ejecuta SQL.
+
+Al arrancar también se **valida** que la dimensión de `chunks.embedding` coincida con `EMBEDDING_DIM` (si no, el servicio no inicia) y se **avisa** si hay documentos procesados con un modelo de embeddings distinto del configurado.
 
 ## Estructura (`chatbot/app/`)
 
 ```
-core/
-  config.py       → Settings (Pydantic): OPENAI_API_KEY, DATABASE_URL,
-                    CHUNK_SIZE (500), CHUNK_OVERLAP (50),
-                    EMBEDDING_MODEL (text-embedding-3-small),
-                    CHAT_MODEL (gpt-4o-mini), MIN_SIMILARITY (0.45), TOP_K (5)
-  database.py     → conexión SQLAlchemy async
-  sedes.py        → utilidades relacionadas a sedes
-models/
-  models.py       → modelos SQLAlchemy (documentos, chunks/embeddings)
-routers/
-  chat.py         → endpoints de conversación
-  documents.py    → endpoints de gestión de documentos (carga, listado)
-schemas/
-  schemas.py      → schemas Pydantic (request/response)
+main.py                 → app FastAPI, preparación del esquema, rutas, CORS
+core/config.py          → Settings (pydantic): variables de entorno y valores por defecto
+core/database.py        → conexión SQLAlchemy async
+core/cache.py           → cliente Redis y borrado de respuestas cacheadas
+core/sedes.py           → enum de sedes válidas
+models/models.py        → Document, Chunk (vector), ChatMessage
+routers/                → chat.py, documents.py, chatbots.py
+schemas/schemas.py      → modelos Pydantic de entrada/salida
 services/
-  chat_service.py       → orquesta la conversación (retrieval + generación)
-  document_service.py   → ingesta y procesamiento de documentos
-  embedding_service.py  → generación y búsqueda de embeddings
+  text_extraction.py    → extracción de texto y troceado estructurado
+  document_service.py   → ingesta (validaciones, duplicados, embeddings, persistencia)
+  embedding_service.py  → embeddings por lotes
+  chat_service.py       → RAG: recuperación, memoria del hilo, LLM, caché
+  chatbot_service.py    → lectura de agentes (tabla de Django)
 ```
 
-## Flujo RAG
+## Endpoints del RAG (`/chatbot/api/v1`)
 
-1. **Ingesta de documentos** (`document_service.py`): un documento (PDF u otro) se extrae con `pymupdf`, se divide en fragmentos (`CHUNK_SIZE=500`, `CHUNK_OVERLAP=50` usando `langchain-text-splitters`).
-2. **Embeddings** (`embedding_service.py`): cada fragmento se convierte en un vector con el modelo `text-embedding-3-small` de OpenAI y se almacena en PostgreSQL vía `pgvector`.
-3. **Consulta** (`chat_service.py`): la pregunta del usuario se embebe, se buscan los `TOP_K=5` fragmentos más similares (umbral `MIN_SIMILARITY=0.45`), y se arma un prompt de contexto para `gpt-4o-mini`, que genera la respuesta final.
+`POST /documents/upload` · `GET /documents/` · `DELETE /documents/{id}` · `POST /chat/ask` · `GET /chat/history` · `GET /chatbots/` · `GET /sedes` · `GET /health`
 
-## Integración con el resto del stack
+El RAG **no tiene autenticación propia**: la autorización la hace Django (`PuedeGestionarChatbots`, usuario autenticado) y el RAG debe ser inaccesible desde fuera de la red del stack.
 
-- **Backend Django como proxy**: la app Django `backend/chatbot/` expone `api_views.py`/`api_urls.py`, que reenvían las peticiones del frontend al servicio FastAPI usando la variable `CHATBOT_FASTAPI_URL` (`http://chatbot:8001/api/v1` dentro de Docker, ver `backend/mysite/settings.py`). Esto permite que el frontend solo hable con el backend Django (misma sesión/autenticación) sin exponer el servicio FastAPI directamente... aunque en desarrollo el puerto `8001` también está expuesto al host (`VITE_CHATBOT_URL` en el frontend).
-- **Frontend**: consume el chatbot vía `frontend/src/services/chatbot/`, con el hook `frontend/src/hooks/chatbot/useAsistentesVirtuales.ts` y la página `frontend/src/pages/chatbot/AsistentesVirtuales.tsx` (reutilizada en las rutas de admin, supervisor, docente, estudiante y la vista pública).
-- **Base de datos compartida**: mismo Postgres que Django (contenedor `db`), pero el chatbot se conecta directo con `DATABASE_URL=postgresql+asyncpg://...` (ver `docker-compose.yml`), sin pasar por el ORM de Django.
-- **Notificaciones relacionadas**: el modelo `Agente` (chatbot) dispara notificaciones `AGENTE_CREADO`/`AGENTE_DESACTIVADO`/`AGENTE_ELIMINADO`, y existe `PreguntaSugerida` con sus propias notificaciones — ver `backend/notificaciones/README.md`.
+## Ingesta de documentos
 
-## Variables de entorno
+Formatos: `.pdf`, `.txt`, `.md`, `.csv` (la extensión no distingue mayúsculas). Máximo `MAX_UPLOAD_MB` (25) y `MAX_CHUNKS_PER_DOCUMENT` (5000) fragmentos.
 
-El chatbot usa su **propio** archivo de entorno (`chatbot/.env`), independiente del `.env` de la raíz del proyecto. En `docker-compose.yml` se le pasa `env_file: ./chatbot/.env` y además `DATABASE_URL` está fijado directamente ahí. Claves esperadas (ver `chatbot/.env.template` o `.envtemplate`): `OPENAI_API_KEY`, `DATABASE_URL`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `EMBEDDING_MODEL`, `CHAT_MODEL`. El archivo `.env.test.example` de la raíz también trae equivalentes de estas variables para el stack de pruebas (con `OPENAI_API_KEY=test-key-not-for-production` como placeholder).
+1. **Validación y duplicados.** El mismo contenido (SHA-256) para el mismo chatbot y sede responde **409**. Un archivo con el mismo nombre y contenido distinto se interpreta como una **versión nueva** y reemplaza al anterior (y sus chunks).
+2. **Extracción.**
+   - *PDF*: PyMuPDF. Las **tablas** se detectan (`find_tables`) y cada fila se guarda con sus columnas (`GRADO: QUINTO | COSTOS 2025 PENSIÓN: $1.114.423`); las tablas que continúan en la página siguiente heredan sus encabezados. Un PDF sin texto (escaneado) se rechaza con 422: **no hay OCR**.
+   - *Texto*: UTF-8 (con o sin BOM), UTF-16 con BOM o Windows-1252.
+   - *CSV*: una línea por fila con el nombre de cada columna; las filas no se parten.
+3. **Troceado.** `CHUNK_SIZE` 900 / `CHUNK_OVERLAP` 150. El texto se divide por secciones (título › capítulo › artículo › subtítulo en mayúsculas) y **cada fragmento lleva su ruta de sección** como prefijo, para que un ítem de una lista conserve el título que lo clasifica. Un subtítulo en mayúsculas solo se reconoce si lo sigue texto (los nombres de una firma no lo son) y el cierre del documento («Expedido en…», «Firman:») forma su propia sección `FIRMAS Y EXPEDICIÓN`. En los PDF, los textos alineados en columnas se emparejan por columna («NOMBRE — Cargo»).
+4. **Embeddings.** `EMBEDDING_MODEL`, en lotes de 128 (hasta 3 en paralelo), conservando el orden. El modelo usado queda registrado en `documents.embedding_model`.
+5. **Persistencia** en `documents` y `chunks` (con `sede` y `chatbot_id` desnormalizados) y borrado de la caché de respuestas de ese chatbot y sede.
+
+Los errores de ingesta usan `IngestionError` con su código HTTP: 409 duplicado, 413 demasiado grande, 422 archivo ilegible/vacío/escaneado/protegido.
+
+## Consulta (`POST /chat/ask`)
+
+1. Se valida que el chatbot exista y esté activo.
+2. Si llega `chat_id`, se cargan los últimos 3 intercambios del hilo (memoria). Para resolver seguimientos ("¿y los sábados?") se buscan **dos formulaciones**: la pregunta sola conserva sus `TOP_K` resultados, exactamente como sin historial, y la combinada con la anterior solo añade unos pocos candidatos extra. Así una pregunta nueva sobre otro tema no queda desplazada por fragmentos de la anterior.
+3. Sin historial, se consulta la caché (Redis, `ANSWER_CACHE_TTL_SECONDS`); las respuestas "sin información" nunca se cachean.
+4. Búsqueda por similitud coseno (índice HNSW) **filtrando por `chatbot_id` y `sede`**; se descartan los fragmentos por debajo de `MIN_SIMILARITY` y los repetidos, y se conservan hasta `TOP_K`. A los 5 mejores se les añaden sus **fragmentos vecinos de la misma sección** (hasta 2 por lado), para que las listas y tablas largas lleguen completas aunque la búsqueda solo haya traído una parte.
+5. Sin contexto relevante se responde con `NO_INFO_RESPONSE` sin llamar al LLM; con contexto, se llama a `CHAT_MODEL` (o a `CHAT_MODEL_LISTS` si la pregunta pide contar o enumerar: «¿cuántas… hay?», «¿cuáles son…?», «en total», «enumera», «lista») con el prompt de sistema (solo responde con el contexto, listas completas, ante contradicciones gana el documento más reciente).
+6. Se registra el intercambio en `chat_messages` (con `chat_id` e `id_usuario` para cruzarlo con el historial de Django).
+
+**Tiempos.** Django espera 30 s al RAG. El embedding de la pregunta (`OPENAI_TIMEOUT_SECONDS / 2`) y el LLM (`OPENAI_TIMEOUT_SECONDS`, 18 s) no reintentan, para no exceder ese plazo. Si OpenAI falla, el RAG responde **503** con un mensaje genérico (el detalle queda en el log).
+
+## Django (`backend/chatbot/`)
+
+- `views.py`: `enviar_pregunta` (usuario autenticado: resuelve la sede por su seccional, guarda `Conversacion`) y `enviar_pregunta_publico` (sede indicada por el cliente, sin historial). Si el RAG no responde, se muestra al usuario un mensaje genérico y **el intercambio no se guarda** en el historial.
+- `api_urls.py` (`/api/chatbot/…`): rutas que usa el frontend. `urls.py` (`/chatbot/…`) son rutas **heredadas** que ya no usa el frontend.
+- `admin_views.py`: proxy autenticado hacia el RAG para subir, listar y borrar documentos (permiso "Gestión de Chatbots"). El borrado es idempotente (un 404 del RAG se devuelve como 204).
+- `signals.py`: al **borrar un agente** se eliminan sus documentos (los chunks caen por `ON DELETE CASCADE`) y sus mensajes en el RAG, que no tienen clave foránea.
+
+## Variables de entorno (`chatbot/.env`)
+
+El chatbot usa su **propio** archivo (`chatbot/.env`, plantilla en `chatbot/.env.template`); `docker-compose.yml` fija además `DATABASE_URL`, `REDIS_URL` y los tamaños de chunk.
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `OPENAI_API_KEY` | — (obligatoria) | Clave de OpenAI |
+| `DATABASE_URL` | — (obligatoria) | `postgresql+asyncpg://…` |
+| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | `text-embedding-3-small` / `1536` | Modelo y dimensión de sus vectores |
+| `CHAT_MODEL` | `gpt-4o-mini` | Modelo que redacta la respuesta |
+| `CHAT_MODEL_LISTS` | `gpt-4o` | Modelo para preguntas de conteo o de listas exhaustivas (vacío = usar siempre `CHAT_MODEL`) |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` | `900` / `150` | Troceado |
+| `TOP_K` / `MIN_SIMILARITY` | `8` / `0.40` | Fragmentos recuperados y umbral |
+| `MAX_UPLOAD_MB` / `MAX_CHUNKS_PER_DOCUMENT` | `25` / `5000` | Límites de ingesta |
+| `OPENAI_TIMEOUT_SECONDS` / `OPENAI_INGEST_TIMEOUT_SECONDS` | `18` / `60` | Tiempos de consulta e ingesta |
+| `REDIS_URL` / `ANSWER_CACHE_TTL_SECONDS` | — / `3600` | Caché de respuestas (opcional) |
+
+### Cambiar el modelo de embeddings
+Los vectores de modelos distintos no son comparables. Para cambiar `EMBEDDING_MODEL`: si la dimensión cambia, actualizar `EMBEDDING_DIM` y recrear `chunks.embedding` (el servicio no arranca mientras no coincidan); en cualquier caso, **volver a cargar los documentos**. Al arrancar se avisa de los documentos procesados con otro modelo.
 
 ## Docker
 
-`chatbot.Dockerfile`: `python:3.11-slim`, instala `requirements.txt`, arranca con:
+`chatbot.Dockerfile` (`python:3.11-slim`) arranca `uvicorn` **sin** `--reload`. En desarrollo, `docker-compose.yml` monta `./chatbot` y sobrescribe el comando con `--reload`. Las dependencias están fijadas en `chatbot/requirements.txt` (la fuente de verdad de las versiones).
 
-```
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
-```
+## Limitaciones conocidas
 
-Sin etapa de build de producción — está orientado a desarrollo con recarga en caliente, igual que el resto de servicios del stack.
+- Sin OCR: los PDF escaneados se rechazan.
+- `gpt-4o-mini` omite a veces los últimos elementos de una lista aunque estén en el contexto; por eso las preguntas de conteo y de listas usan `CHAT_MODEL_LISTS`. La detección es por palabras (`_EXHAUSTIVE_QUESTION` en `chat_service.py`): una pregunta de lista formulada de otra forma («¿qué faltas existen?») irá al modelo económico.
+- Procedimientos con varios plazos en una misma celda de tabla (p. ej. reposición/apelación del Art. 73 del manual de prueba) los puede interpretar mal el modelo económico, aunque el texto se haya extraído bien.
+- Las tablas complejas (celdas combinadas en vertical) pueden quedar parcialmente fragmentadas.
+- El RAG no autentica: debe quedar accesible solo desde Django.
+- Notificaciones: el modelo `Agente` dispara `AGENTE_CREADO`/`AGENTE_DESACTIVADO`/`AGENTE_ELIMINADO` (ver `backend/notificaciones/README.md`).

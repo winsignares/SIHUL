@@ -73,6 +73,7 @@ async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: As
         filename=file.filename,
         content=content,
         content_hash=content_hash,
+        embedding_model=_settings.EMBEDDING_MODEL,
         sede=sede.value,
         chatbot_id=chatbot_id,
     )

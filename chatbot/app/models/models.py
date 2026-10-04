@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, Text, DateTime, Integer, BigInteger, Float, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
+from app.core.config import get_settings
 from app.core.database import Base
 
 
@@ -13,6 +14,9 @@ class Document(Base):
     content: Mapped[str] = mapped_column(Text)
     # SHA-256 del archivo original; evita cargar dos veces el mismo contenido.
     content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    # Modelo con el que se generaron los embeddings de sus chunks. Mezclar modelos en
+    # el mismo índice da similitudes sin sentido; NULL = cargado antes de registrarlo.
+    embedding_model: Mapped[str | None] = mapped_column(String(100))
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # Referencia al Agente (tabla chatbot_agente, gestionada por Django). Sin FK a nivel
     # de BD porque esa tabla puede no existir aún cuando FastAPI corre su propio create_all.
@@ -33,7 +37,7 @@ class Chunk(Base):
         ForeignKey("documents.id", ondelete="CASCADE")
     )
     text: Mapped[str] = mapped_column(Text)
-    embedding = mapped_column(Vector(1536))
+    embedding = mapped_column(Vector(get_settings().EMBEDDING_DIM))
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     chatbot_id: Mapped[int | None] = mapped_column(BigInteger, index=True)  # desnormalizado para filtrado rápido
     document: Mapped["Document"] = relationship(back_populates="chunks")

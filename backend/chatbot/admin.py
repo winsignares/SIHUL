@@ -71,10 +71,10 @@ class ConversacionAdmin(admin.ModelAdmin):
 
 @admin.register(ChatbotDocument)
 class ChatbotDocumentAdmin(ChatbotAppAdmin):
-    list_display = ['id', 'filename', 'chatbot', 'sede', 'created_at', 'content_corto']
-    list_filter = ['chatbot', 'sede', 'created_at']
+    list_display = ['id', 'filename', 'chatbot', 'sede', 'embedding_model', 'created_at', 'content_corto']
+    list_filter = ['chatbot', 'sede', 'embedding_model', 'created_at']
     search_fields = ['filename', 'content', 'sede']
-    readonly_fields = ['id', 'created_at']
+    readonly_fields = ['id', 'created_at', 'content_hash', 'embedding_model']
     ordering = ['-created_at']
     date_hierarchy = 'created_at'
 
@@ -97,10 +97,10 @@ class ChatbotChunkAdmin(ChatbotAppAdmin):
 
 @admin.register(ChatbotAppMessage)
 class ChatbotAppMessageAdmin(ChatbotAppAdmin):
-    list_display = ['id', 'nombre', 'chatbot', 'sede', 'relevance_score', 'question_corta', 'answer_corta', 'created_at']
+    list_display = ['id', 'nombre', 'id_usuario', 'chatbot', 'sede', 'relevance_score', 'question_corta', 'answer_corta', 'created_at']
     list_filter = ['chatbot', 'sede', 'created_at']
-    search_fields = ['nombre', 'sede', 'question', 'answer']
-    readonly_fields = ['id', 'created_at']
+    search_fields = ['nombre', 'sede', 'question', 'answer', 'chat_id']
+    readonly_fields = ['id', 'created_at', 'chat_id', 'id_usuario']
     ordering = ['-created_at']
     date_hierarchy = 'created_at'
 

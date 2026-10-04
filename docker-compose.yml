@@ -100,6 +100,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./chatbot/.env
+    # La imagen arranca sin --reload; en desarrollo se activa aquí junto al volumen
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
     ports:
       - "8001:8001"
     volumes:

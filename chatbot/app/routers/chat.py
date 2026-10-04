@@ -1,3 +1,6 @@
+import logging
+
+import openai
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +12,7 @@ from app.schemas.schemas import ChatRequest, ChatResponse, ChatHistoryItem
 from app.services.chat_service import ask
 from app.services.chatbot_service import get_chatbot
 
+logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
@@ -40,6 +44,14 @@ async def ask_question(
             db=db,
             chat_id=body.chat_id,
             id_usuario=body.id_usuario,
+        )
+    except openai.OpenAIError:
+        # Tiempo agotado, sin conexión, cuota o clave inválida: el detalle va al log,
+        # no al cliente.
+        logger.exception("Falló la llamada a OpenAI")
+        raise HTTPException(
+            status_code=503,
+            detail="El servicio de IA no está disponible en este momento. Intenta de nuevo en unos minutos.",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

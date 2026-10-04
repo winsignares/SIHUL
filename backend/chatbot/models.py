@@ -76,8 +76,12 @@ class Conversacion(models.Model):
 
 
 class ChatbotDocument(models.Model):
+    # Tabla creada y mantenida por el servicio RAG (FastAPI): managed=False, estos campos
+    # solo reflejan sus columnas para poder consultarlas desde el admin.
     filename = models.CharField(max_length=255)
     content = models.TextField()
+    content_hash = models.CharField(max_length=64, null=True, blank=True)
+    embedding_model = models.CharField(max_length=100, null=True, blank=True)
     chatbot = models.ForeignKey(
         Agente,
         on_delete=models.DO_NOTHING,
@@ -132,6 +136,9 @@ class ChatbotChunk(models.Model):
 
 class ChatbotAppMessage(models.Model):
     nombre = models.CharField(max_length=150)
+    # Hilo (mismo chat_id que Conversacion) y usuario que preguntó, para cruzar ambos registros
+    chat_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    id_usuario = models.BigIntegerField(null=True, blank=True, db_index=True)
     chatbot = models.ForeignKey(
         Agente,
         on_delete=models.DO_NOTHING,

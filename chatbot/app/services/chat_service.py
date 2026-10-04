@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +10,14 @@ from app.core.cache import get_redis
 from app.core.config import get_settings
 from app.core.sedes import Sede
 from app.models.models import ChatMessage
-from app.services.embedding_service import generate_embedding
+from app.services.embedding_service import generate_query_embeddings
 
 _settings = get_settings()
-_client = AsyncOpenAI(api_key=_settings.OPENAI_API_KEY)
+_client = AsyncOpenAI(
+    api_key=_settings.OPENAI_API_KEY,
+    timeout=_settings.OPENAI_TIMEOUT_SECONDS,
+    max_retries=0,
+)
 
 
 def _answer_cache_key(chatbot_id: int, sede: Sede, question: str) -> str:
@@ -44,65 +49,168 @@ Reglas estrictas:
 6. Si la pregunta pide una lista (por ejemplo "¿cuáles son…?"), incluye TODOS los
    elementos de esa lista que aparezcan en el contexto, sin resumir ni decir "algunos".
    Si el contexto solo muestra una parte, dilo.
-7. Si la pregunta es un seguimiento de la conversación previa (por ejemplo "¿y a qué
+7. Si el contexto establece una regla, requisito o prohibición que responde a la pregunta,
+   aplícala aunque no mencione el caso exacto (por ejemplo, si exige "tenis totalmente
+   blancos" y preguntan si pueden ir con tenis de colores, la respuesta es que no). Usa
+   el mensaje de "sin información" solo cuando el contexto no trate el tema.
+8. Si la pregunta es un seguimiento de la conversación previa (por ejemplo "¿y a qué
    hora?"), interprétala usando ese historial.
 """
 
 HISTORY_TURNS = 3  # intercambios previos del mismo hilo que se le pasan al LLM
 
 
+#  Modelo según el tipo de pregunta
+
+# «¿Cuántas faltas graves hay (en total)?», «¿Cuáles son los requisitos…?», «enumera…».
+# No incluye «¿cuántas horas…?»: pide una cifra, no recorrer una lista.
+_EXHAUSTIVE_QUESTION = re.compile(
+    r"\bcu[aá]les\s+son\b|\bcu[aá]nt[oa]s\b.{0,40}\b(hay|existen|son|total)\b|"
+    r"\ben\s+total\b|\benum[eé]ra|\blista(r|me)?\b|\btod[oa]s\s+(los|las)\b",
+    re.IGNORECASE,
+)
+
+
+def _model_for(question: str) -> str:
+    if _settings.CHAT_MODEL_LISTS and _EXHAUSTIVE_QUESTION.search(question):
+        return _settings.CHAT_MODEL_LISTS
+    return _settings.CHAT_MODEL
+
+
 #  Retrieval
 
+SEED_FRAGMENTS = 5    # fragmentos mejor puntuados a los que se les añaden vecinos de sección
+NEIGHBOR_REACH = 2    # cuántos fragmentos hacia cada lado
+MAX_CONTEXT_CHARS = 14000
+
+
+def _normalized(chunk_text: str) -> str:
+    return " ".join(chunk_text.split()).lower()
+
+
+def _section(chunk_text: str) -> str | None:
+    """Ruta de sección con que se troceó el fragmento («[TÍTULO > CAPÍTULO > ARTÍCULO]»)."""
+    first = chunk_text.split("\n", 1)[0]
+    return first if first.startswith("[") and " > " in first else None
+
+
+async def _search(
+    q_embedding: list[float], chatbot_id: int, sede: Sede, db: AsyncSession, n: int
+) -> list:
+    # Los filtros `chatbot_id` y `sede` aprovechan los índices columnares creados en el modelo.
+    # La búsqueda vectorial se aplica solo dentro de ese subconjunto.
+    result = await db.execute(
+        text(
+            "SELECT c.id, c.document_id, c.text, 1 - (c.embedding <=> :emb) AS similarity, "
+            "d.filename, d.created_at "
+            "FROM chunks c JOIN documents d ON d.id = c.document_id "
+            "WHERE c.chatbot_id = :chatbot_id AND c.sede = :sede "
+            "ORDER BY c.embedding <=> :emb "
+            "LIMIT :n"
+        ),
+        {"emb": str(q_embedding), "chatbot_id": chatbot_id, "sede": sede.value, "n": n},
+    )
+    return result.fetchall()
+
+
+async def _section_neighbors(hit, db: AsyncSession) -> list:
+    """
+    Fragmentos contiguos de la MISMA sección que `hit`. Una lista o una tabla larga se
+    reparte en varios fragmentos y la búsqueda por similitud puede traer solo algunos;
+    esto completa la sección.
+    """
+    section = _section(hit.text)
+    if section is None:
+        return []
+    rows = (
+        await db.execute(
+            text(
+                "SELECT id, text FROM chunks WHERE document_id = :doc "
+                "AND id BETWEEN :lo AND :hi ORDER BY id"
+            ),
+            {"doc": hit.document_id, "lo": hit.id - NEIGHBOR_REACH, "hi": hit.id + NEIGHBOR_REACH},
+        )
+    ).fetchall()
+    before = [r for r in rows if r.id < hit.id]
+    after = [r for r in rows if r.id > hit.id]
+    keep = []
+    for r in reversed(before):  # hacia atrás hasta que cambie de sección
+        if _section(r.text) != section:
+            break
+        keep.append(r)
+    for r in after:
+        if _section(r.text) != section:
+            break
+        keep.append(r)
+    return keep
+
+
 async def _retrieve_context(
-    q_embedding: list[float],
+    q_embeddings: list[list[float]],
     chatbot_id: int,
     sede: Sede,
     db: AsyncSession,
     top_k: int | None = None,
 ) -> tuple[str, float]:
     """
-    Busca los chunks más similares FILTRANDO por chatbot y sede.
-    Devuelve (contexto_concatenado, similitud_promedio).
+    Busca los chunks más similares FILTRANDO por chatbot y sede, con una o varias
+    formulaciones de la pregunta, y completa cada sección de los mejores resultados con
+    sus fragmentos vecinos.
+    La primera formulación (la pregunta tal cual) conserva sus `TOP_K` resultados, igual
+    que sin historial; las demás (la combinada con la pregunta anterior) solo añaden unos
+    pocos candidatos extra. Mezclarlas por similitud o repartir los puestos a partes
+    iguales dejaba que los fragmentos del tema anterior desplazaran a los de la pregunta
+    actual cuando el usuario cambiaba de tema.
+    Devuelve (contexto_concatenado, similitud_promedio de los fragmentos encontrados).
     """
     k = top_k or _settings.TOP_K
     min_sim = _settings.MIN_SIMILARITY
 
-    # Los filtros `chatbot_id` y `sede` aprovechan los índices columnares creados en el modelo.
-    # La búsqueda vectorial se aplica solo dentro de ese subconjunto. Se piden más
-    # filas que `k` porque luego se descartan los fragmentos repetidos.
-    query = text(
-        "SELECT c.text, 1 - (c.embedding <=> :emb) AS similarity, d.filename, d.created_at "
-        "FROM chunks c JOIN documents d ON d.id = c.document_id "
-        "WHERE c.chatbot_id = :chatbot_id AND c.sede = :sede "
-        "ORDER BY c.embedding <=> :emb "
-        "LIMIT :n"
-    )
-    result = await db.execute(
-        query,
-        {"emb": str(q_embedding), "chatbot_id": chatbot_id, "sede": sede.value, "n": k * 3},
-    )
-
-    relevant = []
-    seen = set()
-    for chunk_text, similarity, filename, created_at in result.fetchall():
-        if similarity < min_sim:
-            continue
-        key = " ".join(chunk_text.split()).lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        relevant.append((chunk_text, similarity, filename, created_at))
-        if len(relevant) == k:
-            break
+    relevant, seen = [], set()
+    for n, emb in enumerate(q_embeddings):
+        # Se piden más filas que `k` porque luego se descartan los fragmentos repetidos.
+        rows = await _search(emb, chatbot_id, sede, db, k * 3)
+        quota = k if n == 0 else max(2, k // 2)
+        taken = 0
+        for row in rows:  # ya vienen ordenadas por similitud
+            if taken == quota or row.similarity < min_sim:
+                break
+            key = _normalized(row.text)
+            if key in seen:
+                continue
+            seen.add(key)
+            relevant.append(row)
+            taken += 1
 
     if not relevant:
         return "", 0.0
 
-    context = "\n---\n".join(
-        f"[Documento: {fn} | cargado: {ts:%Y-%m-%d}]\n{t}" for t, _, fn, ts in relevant
-    )
-    avg_similarity = round(sum(r[1] for r in relevant) / len(relevant), 4)
-    return context, avg_similarity
+    # Orden del contexto: cada fragmento destacado junto a sus vecinos de sección, en el
+    # orden del documento; después el resto de resultados.
+    relevant_ids = {r.id for r in relevant}
+    emitted, parts, size = set(), [], 0
+
+    def add(row, hit):
+        nonlocal size
+        if row.id in emitted or size >= MAX_CONTEXT_CHARS:
+            return
+        key = _normalized(row.text)
+        if row.id not in relevant_ids and key in seen:
+            return  # vecino con el mismo texto que otro fragmento ya incluido
+        emitted.add(row.id)
+        seen.add(key)
+        block = f"[Documento: {hit.filename} | cargado: {hit.created_at:%Y-%m-%d}]\n{row.text}"
+        size += len(block)
+        parts.append(block)
+
+    for hit in relevant[:SEED_FRAGMENTS]:
+        for row in sorted([hit] + await _section_neighbors(hit, db), key=lambda r: r.id):
+            add(row, hit)
+    for hit in relevant[SEED_FRAGMENTS:]:
+        add(hit, hit)
+
+    avg_similarity = round(sum(r.similarity for r in relevant) / len(relevant), 4)
+    return "\n---\n".join(parts), avg_similarity
 
 
 async def _load_history(
@@ -155,10 +263,14 @@ async def ask(
         relevance_score = cached_data["relevance_score"]
     else:
         # En un seguimiento la pregunta sola ("¿y a qué hora?") no tiene contexto
-        # suficiente para el embedding: se le antepone la pregunta anterior.
-        retrieval_text = f"{history[-1].question}\n{question}" if history else question
-        q_embedding = await generate_embedding(retrieval_text)
-        context, relevance_score = await _retrieve_context(q_embedding, chatbot_id, sede, db)
+        # suficiente para el embedding, pero anteponerle siempre la pregunta anterior
+        # contamina las preguntas nuevas sobre otro tema: se buscan las dos formulaciones
+        # y cada fragmento conserva su mejor similitud.
+        texts = [question]
+        if history:
+            texts.append(f"{history[-1].question}\n{question}")
+        q_embeddings = await generate_query_embeddings(texts)
+        context, relevance_score = await _retrieve_context(q_embeddings, chatbot_id, sede, db)
 
         if not context:
             answer = NO_INFO_RESPONSE
@@ -177,7 +289,7 @@ async def ask(
                 ),
             })
             completion = await _client.chat.completions.create(
-                model=_settings.CHAT_MODEL,
+                model=_model_for(question),
                 messages=messages,
                 temperature=0.2,
             )

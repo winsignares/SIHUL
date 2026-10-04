@@ -23,6 +23,10 @@ _CAPITULO = re.compile(r"^CAP[ÍI]TULO\b")
 _ARTICULO = re.compile(r"^ART[ÍI]CULO\b")
 _ARTICULO_NUM = re.compile(r"^(ART[ÍI]CULO\s+\d+\.?)\s*(.*)$")
 _BARE_ARTICULO = re.compile(r"^ART[ÍI]CULO$")
+# Cierre de un documento («Expedido en…», «Firman:»): se aparta en su propia sección
+# para que los nombres y cargos no queden diluidos en el último artículo.
+_CIERRE = re.compile(r"^(Expedido en|Firman\b|Firmado por|Atentamente)", re.IGNORECASE)
+_CIERRE_SECCION = "FIRMAS Y EXPEDICIÓN"
 
 
 class IngestionError(Exception):
@@ -189,9 +193,7 @@ def _pdf_text(raw: bytes) -> str:
             if lines:
                 items.append((t.bbox[1], t.bbox[0], "\n".join(lines)))
 
-        for x0, y0, x1, y1, text, _, kind in page.get_text("blocks"):
-            if kind != 0:
-                continue
+        for x0, y0, x1, y1, text in _page_blocks(page):
             cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
             if any(t.bbox[0] - 3 <= cx <= t.bbox[2] + 3 and t.bbox[1] - 3 <= cy <= t.bbox[3] + 3
                    for t in tables):
@@ -201,8 +203,56 @@ def _pdf_text(raw: bytes) -> str:
                 items.append((y0, x0, text))
 
         items.sort(key=lambda it: (round(it[0]), it[1]))
-        pages.append("\n".join(it[2] for it in items))
+        pages.append("\n".join(it[2] for it in _merge_columns(items)))
     return "\n".join(pages)
+
+
+def _page_blocks(page):
+    """
+    Bloques de texto de la página. Si varios fragmentos están en la misma fila visual
+    (columnas: «NOMBRE      NOMBRE») se separan con un tabulador en vez de salto de línea.
+    """
+    for block in page.get_text("dict")["blocks"]:
+        if block["type"] != 0:
+            continue
+        rows = []  # [(y, [(x, texto)])]
+        for line in block["lines"]:
+            text = "".join(span["text"] for span in line["spans"]).strip()
+            if not text:
+                continue
+            x0, y0 = line["bbox"][0], line["bbox"][1]
+            if rows and abs(rows[-1][0] - y0) <= 3:
+                rows[-1][1].append((x0, text))
+            else:
+                rows.append((y0, [(x0, text)]))
+        if rows:
+            text = "\n".join("\t".join(t for _, t in sorted(segs)) for _, segs in rows)
+            x0, y0, x1, y1 = block["bbox"]
+            yield x0, y0, x1, y1, text
+
+
+def _merge_columns(items: list[tuple]) -> list[tuple]:
+    """
+    Dos filas consecutivas con las mismas columnas (las firmas: los nombres en una fila y
+    los cargos en la siguiente) se unen por columna: «MARLENE BELTRÁN PRIETO — Rectora».
+    Leídas fila por fila, el modelo no puede saber qué cargo corresponde a qué nombre.
+    """
+    def columns(text):
+        parts = [p.strip() for p in text.split("\t")]
+        return parts if len(parts) >= 2 and all(p and len(p) <= 60 for p in parts) else None
+
+    out, i = [], 0
+    while i < len(items):
+        y, x, text = items[i]
+        top = columns(text)
+        bottom = columns(items[i + 1][2]) if top and i + 1 < len(items) else None
+        if top and bottom and len(top) == len(bottom):
+            out.append((y, x, "\n".join(f"{a} — {b}" for a, b in zip(top, bottom))))
+            i += 2
+        else:
+            out.append((y, x, text.replace("\t", " ")))
+            i += 1
+    return out
 
 
 #  Troceado
@@ -227,6 +277,23 @@ def _heading_level(line: str) -> int | None:
     ):
         return 3
     return None
+
+
+def _is_real_subheading(lines: list[str], i: int) -> bool:
+    """
+    Un subtítulo en mayúsculas encabeza texto. Los nombres de una firma o una fila en
+    mayúsculas también lo parecen, pero no van seguidos de un párrafo: son contenido y
+    deben quedar en el fragmento, no desaparecer en la ruta de sección.
+    """
+    if lines[i].endswith(":"):
+        return True
+    j = i + 1
+    while j < len(lines) and not lines[j]:
+        j += 1
+    if j >= len(lines):
+        return False
+    nxt = lines[j]
+    return _heading_level(nxt) is None and (len(nxt) >= 40 or nxt.startswith("- "))
 
 
 def _is_caps_line(line: str) -> bool:
@@ -302,6 +369,14 @@ def chunk_text(content: str, filename: str) -> list[str]:
     while i < len(lines):
         line = lines[i]
         level = _heading_level(line)
+        if level == 3 and not _is_real_subheading(lines, i):
+            level = None
+        if level is None and crumbs[3] != _CIERRE_SECCION and _CIERRE.match(line):
+            flush()
+            crumbs[:] = ["", "", "", _CIERRE_SECCION]  # no pertenece al último artículo
+            buffer.append(line)
+            i += 1
+            continue
         if level is None:
             if line:
                 buffer.append(line)
