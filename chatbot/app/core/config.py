@@ -5,12 +5,12 @@ from functools import lru_cache
 class Settings(BaseSettings):
     OPENAI_API_KEY: str
     DATABASE_URL: str
-    CHUNK_SIZE: int = 500
-    CHUNK_OVERLAP: int = 50
+    CHUNK_SIZE: int = 900
+    CHUNK_OVERLAP: int = 150
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     CHAT_MODEL: str = "gpt-4o-mini"
     MIN_SIMILARITY: float = 0.45
-    TOP_K: int = 5
+    TOP_K: int = 8
     REDIS_URL: str | None = None
     ANSWER_CACHE_TTL_SECONDS: int = 3600
 

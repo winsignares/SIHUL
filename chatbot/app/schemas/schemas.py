@@ -40,6 +40,15 @@ class ChatRequest(BaseModel):
         examples=["¿Cuál es el proceso de matrícula en Barranquilla?"],
         description="Pregunta del usuario",
     )
+    chat_id: str | None = Field(
+        None,
+        max_length=64,
+        description="Identificador del hilo de conversación. Si se envía, el chatbot "
+        "usa los últimos intercambios del hilo para resolver preguntas de seguimiento.",
+    )
+    id_usuario: int | None = Field(
+        None, description="ID del usuario en SIHUL (para correlacionar con el historial de Django)"
+    )
 
 
 class ChatResponse(BaseModel):
@@ -64,6 +73,8 @@ class ChatHistoryItem(BaseModel):
     question: str
     answer: str
     relevance_score: float
+    chat_id: str | None = None
+    id_usuario: int | None = None
     fecha: str = Field(description="Fecha (YYYY-MM-DD)")
     hora: str = Field(description="Hora (HH:MM:SS)")
     model_config = {"from_attributes": True}

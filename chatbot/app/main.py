@@ -7,23 +7,33 @@ from app.core.database import engine, Base
 from app.core.sedes import Sede
 from app.routers import documents, chat, chatbots
 
-# Tablas ya existentes antes de introducir el concepto de chatbot_id: create_all no
-# altera tablas existentes, así que se agrega la columna manualmente y de forma
-# idempotente. No se declara FK a chatbot_agente porque esa tabla la crea Django por
-# separado y no hay garantía de orden de arranque entre los dos servicios; la
-# validación de que el chatbot exista se hace a nivel de aplicación (chatbot_service).
-_ADD_CHATBOT_ID_COLUMN = """
+# Tablas ya existentes antes de introducir nuevas columnas: create_all no altera
+# tablas existentes, así que se agregan manualmente y de forma idempotente. No se
+# declara FK a chatbot_agente porque esa tabla la crea Django por separado y no hay
+# garantía de orden de arranque entre los dos servicios; la validación de que el
+# chatbot exista se hace a nivel de aplicación (chatbot_service).
+_ADD_COLUMN = """
 DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = '{table}' AND column_name = 'chatbot_id'
+        WHERE table_name = '{table}' AND column_name = '{column}'
     ) THEN
-        ALTER TABLE {table} ADD COLUMN chatbot_id BIGINT;
-        CREATE INDEX IF NOT EXISTS ix_{table}_chatbot_id ON {table} (chatbot_id);
+        ALTER TABLE {table} ADD COLUMN {column} {sql_type};
+        CREATE INDEX IF NOT EXISTS ix_{table}_{column} ON {table} ({column});
     END IF;
 END $$;
 """
+
+# (tabla, columna, tipo SQL)
+_EXTRA_COLUMNS = (
+    ("documents", "chatbot_id", "BIGINT"),
+    ("chunks", "chatbot_id", "BIGINT"),
+    ("chat_messages", "chatbot_id", "BIGINT"),
+    ("documents", "content_hash", "VARCHAR(64)"),
+    ("chat_messages", "chat_id", "VARCHAR(64)"),
+    ("chat_messages", "id_usuario", "BIGINT"),
+)
 
 
 @asynccontextmanager
@@ -31,8 +41,10 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
-        for table in ("documents", "chunks", "chat_messages"):
-            await conn.execute(text(_ADD_CHATBOT_ID_COLUMN.format(table=table)))
+        for table, column, sql_type in _EXTRA_COLUMNS:
+            await conn.execute(
+                text(_ADD_COLUMN.format(table=table, column=column, sql_type=sql_type))
+            )
         # Índice ANN: sin esto, la búsqueda por similitud en chunks.embedding
         # (ORDER BY embedding <=> :emb) es un escaneo secuencial completo de la
         # tabla en cada pregunta al chatbot. HNSW no requiere afinar un

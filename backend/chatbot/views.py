@@ -57,7 +57,7 @@ def _fastapi_chat_url():
     return f"{fastapi_base_url()}/chat/ask"
 
 
-def _enviar_pregunta_fastapi(nombre, chatbot_id, sede, pregunta):
+def _enviar_pregunta_fastapi(nombre, chatbot_id, sede, pregunta, chat_id=None, id_usuario=None):
     response = requests.post(
         _fastapi_chat_url(),
         json={
@@ -65,6 +65,8 @@ def _enviar_pregunta_fastapi(nombre, chatbot_id, sede, pregunta):
             'chatbot_id': chatbot_id,
             'sede': sede,
             'question': pregunta,
+            'chat_id': str(chat_id) if chat_id else None,
+            'id_usuario': id_usuario,
         },
         headers={'Content-Type': 'application/json'},
         timeout=30,
@@ -155,7 +157,10 @@ def enviar_pregunta(request):
         error_ia = None
         
         try:
-            response = _enviar_pregunta_fastapi(nombre_usuario, agente.id, sede_value, pregunta)
+            response = _enviar_pregunta_fastapi(
+                nombre_usuario, agente.id, sede_value, pregunta,
+                chat_id=chat_id, id_usuario=usuario.id,
+            )
 
             # Verificar que la respuesta tenga contenido
             if not response.text or response.text.strip() == '':
@@ -365,6 +370,7 @@ def enviar_pregunta_publico(request):
         pregunta_sugerida_id = data.get('pregunta_sugerida_id')
         seccional_raw = data.get('seccional') or data.get('sede')
         nombre_usuario = data.get('nombre_usuario') or 'Invitado'
+        client_chat_id = data.get('chat_id')
         
         # Validaciones mínimas
         if not agente_id or not pregunta:
@@ -381,7 +387,7 @@ def enviar_pregunta_publico(request):
             return JsonResponse({'error': 'Agente no encontrado o inactivo'}, status=404)
         
         # Generar chat_id temporal (no se guardará)
-        chat_id = str(uuid.uuid4())
+        chat_id = str(client_chat_id or uuid.uuid4())
         
         # Incrementar contador si es pregunta sugerida
         if pregunta_sugerida_id:
@@ -397,7 +403,7 @@ def enviar_pregunta_publico(request):
         error_ia = None
         
         try:
-            response = _enviar_pregunta_fastapi(nombre_usuario, agente.id, sede_value, pregunta)
+            response = _enviar_pregunta_fastapi(nombre_usuario, agente.id, sede_value, pregunta, chat_id=chat_id)
 
             # Verificar que la respuesta tenga contenido
             if not response.text or response.text.strip() == '':

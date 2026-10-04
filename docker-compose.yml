@@ -107,8 +107,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
       REDIS_URL: redis://redis:6379/1
-      CHUNK_SIZE: ${CHUNK_SIZE:-500}
-      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
+      CHUNK_SIZE: ${CHUNK_SIZE:-900}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-150}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
       CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
       PYTHONUNBUFFERED: "1"

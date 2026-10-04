@@ -38,6 +38,8 @@ async def ask_question(
             sede=body.sede,
             question=body.question,
             db=db,
+            chat_id=body.chat_id,
+            id_usuario=body.id_usuario,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -71,6 +73,8 @@ async def get_history(
             id=m.id,
             nombre=m.nombre,
             chatbot_id=m.chatbot_id,
+            chat_id=m.chat_id,
+            id_usuario=m.id_usuario,
             sede=m.sede,
             question=m.question,
             answer=m.answer,

@@ -11,6 +11,8 @@ class Document(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     filename: Mapped[str] = mapped_column(String(255))
     content: Mapped[str] = mapped_column(Text)
+    # SHA-256 del archivo original; evita cargar dos veces el mismo contenido.
+    content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # Referencia al Agente (tabla chatbot_agente, gestionada por Django). Sin FK a nivel
     # de BD porque esa tabla puede no existir aún cuando FastAPI corre su propio create_all.
@@ -44,6 +46,9 @@ class ChatMessage(Base):
     nombre: Mapped[str] = mapped_column(String(150), nullable=False)
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     chatbot_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    # Hilo de conversación (el mismo chat_id de Django) y usuario que preguntó.
+    chat_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    id_usuario: Mapped[int | None] = mapped_column(BigInteger, index=True)
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text)
     relevance_score: Mapped[float] = mapped_column(Float, default=0.0)

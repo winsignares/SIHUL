@@ -7,7 +7,8 @@ from app.core.sedes import Sede
 from app.models.models import Document
 from app.schemas.schemas import DocumentOut
 from app.services.chatbot_service import get_chatbot
-from app.services.document_service import process_document
+from app.core.cache import invalidate_answers
+from app.services.document_service import DuplicateDocumentError, process_document
 
 router = APIRouter(prefix="/documents", tags=["Documentos"])
 
@@ -31,7 +32,7 @@ async def upload_document(
     file: UploadFile = File(..., description="Archivo a procesar"),
     db: AsyncSession = Depends(get_db),
 ):
-    if not any(file.filename.endswith(ext) for ext in ALLOWED_EXTENSIONS):
+    if not any(file.filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
         raise HTTPException(
             status_code=400,
             detail=f"Extensión no permitida. Acepta: {', '.join(ALLOWED_EXTENSIONS)}",
@@ -43,6 +44,8 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=f"El chatbot '{chatbot['nombre']}' está inactivo")
     try:
         return await process_document(file, sede, chatbot_id, db)
+    except DuplicateDocumentError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -78,5 +81,8 @@ async def delete_document(document_id: int, db: AsyncSession = Depends(get_db)):
     doc = await db.get(Document, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+    chatbot_id, sede = doc.chatbot_id, doc.sede
     await db.delete(doc)
     await db.commit()
+    if chatbot_id is not None:
+        await invalidate_answers(chatbot_id, sede)
