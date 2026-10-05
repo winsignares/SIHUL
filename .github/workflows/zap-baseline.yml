@@ -12,20 +12,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start local stack (nginx only sample)
+      - name: Create .env for CI
+        # .env está en .gitignore; el compose lo exige (env_file), así que se genera uno de prueba
         run: |
-          docker compose -f docker-compose.yml up -d nginx backend db
-          # Wait for backend health
-          sleep 15
+          cp .env.example .env
+          sed -i 's/^DJANGO_DEBUG=.*/DJANGO_DEBUG=True/' .env
+          sed -i 's/^DJANGO_ALLOWED_HOSTS=.*/DJANGO_ALLOWED_HOSTS=*/' .env
 
-      - name: Run ZAP Baseline against local nginx
+      - name: Start backend stack
+        run: docker compose up -d --build db redis backend
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null http://localhost:8000/; then
+              echo "Backend listo"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Backend no respondió a tiempo"
+          docker compose logs backend
+          exit 1
+
+      - name: Run ZAP Baseline against backend
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: 'http://localhost:8081'
-          cmd_options: '-d -a'
+          target: 'http://localhost:8000'
+          cmd_options: '-a'
 
       - name: Upload ZAP report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zap-baseline-report
           path: report_html.html
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v
