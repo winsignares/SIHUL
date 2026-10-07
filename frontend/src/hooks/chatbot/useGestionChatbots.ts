@@ -26,8 +26,9 @@ export type ChatbotFormState = {
 
 // El modelo Agente conserva endpoint_url por compatibilidad histórica (webhook de n8n),
 // pero ya no se usa: las preguntas se enrutan siempre al servicio RAG interno (FastAPI + apikey de OpenAI).
-// Se envía un valor fijo válido para satisfacer la validación del modelo sin exponerlo en el formulario.
-const LEGACY_ENDPOINT_URL = 'http://chatbot:8001/api/v1/chat/ask';
+// Se envía un valor fijo válido para satisfacer la validación del modelo sin exponerlo en el formulario
+// (el validador de URL de Django rechaza hosts sin dominio como «chatbot», pero acepta «localhost»).
+const LEGACY_ENDPOINT_URL = 'http://localhost:8001/api/v1/chat/ask';
 
 const emptyForm: ChatbotFormState = {
     nombre: '',

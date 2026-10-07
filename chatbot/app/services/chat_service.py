@@ -76,7 +76,7 @@ async def _search(
     # La búsqueda vectorial se aplica solo dentro de ese subconjunto.
     result = await db.execute(
         text(
-            "SELECT c.id, c.document_id, c.text, 1 - (c.embedding <=> :emb) AS similarity, "
+            "SELECT c.id, c.document_id, c.text, c.page, 1 - (c.embedding <=> :emb) AS similarity, "
             "d.filename, d.created_at "
             "FROM chunks c JOIN documents d ON d.id = c.document_id "
             "WHERE c.chatbot_id = :chatbot_id AND c.sede = :sede "
@@ -86,6 +86,64 @@ async def _search(
         {"emb": str(q_embedding), "chatbot_id": chatbot_id, "sede": sede.value, "n": n},
     )
     return result.fetchall()
+
+
+KEYWORD_FRAGMENTS = 3  # fragmentos que aporta la búsqueda por palabras clave
+
+
+async def _keyword_search(question: str, chatbot_id: int, sede: Sede, db: AsyncSession, n: int) -> list:
+    """
+    Búsqueda léxica (texto completo de Postgres, en español) para lo que los embeddings
+    recuperan mal: siglas, códigos, ISBN, nombres propios, cifras. Basta con que aparezca
+    alguno de los términos de la pregunta; se ordena por cuántos coinciden.
+    """
+    terms = sorted({w.lower() for w in re.findall(r"\w{3,}", question)})[:12]
+    if not terms:
+        return []
+    try:
+        # Un término presente en muchos fragmentos («libro», «autor») no distingue ninguno y
+        # desplaza a los raros («ISBN», una sigla, un apellido): se descarta.
+        counts = (
+            await db.execute(
+                text(
+                    "SELECT count(*) AS total, "
+                    + ", ".join(
+                        f"count(*) FILTER (WHERE to_tsvector('spanish', text) @@ "
+                        f"plainto_tsquery('spanish', :t{i})) AS t{i}"
+                        for i in range(len(terms))
+                    )
+                    + " FROM chunks WHERE chatbot_id = :chatbot_id AND sede = :sede"
+                ),
+                {"chatbot_id": chatbot_id, "sede": sede.value, **{f"t{i}": t for i, t in enumerate(terms)}},
+            )
+        ).one()
+        limit = max(3, counts.total * 0.1)
+        kept = [(i, t) for i, t in enumerate(terms) if 0 < getattr(counts, f"t{i}") <= limit]
+        if not kept:
+            return []
+        # Puntuación: cada término presente suma más cuanto más raro es en el documento.
+        score = " + ".join(
+            f"(CASE WHEN to_tsvector('spanish', c.text) @@ plainto_tsquery('spanish', :t{i}) "
+            f"THEN {1.0 / getattr(counts, f't{i}'):.6f} ELSE 0 END)"
+            for i, _ in kept
+        )
+        result = await db.execute(
+            text(
+                "SELECT c.id, c.document_id, c.text, c.page, d.filename, d.created_at "
+                "FROM chunks c JOIN documents d ON d.id = c.document_id "
+                "WHERE c.chatbot_id = :chatbot_id AND c.sede = :sede "
+                "AND to_tsvector('spanish', c.text) @@ to_tsquery('spanish', :q) "
+                f"ORDER BY ({score}) DESC, c.id LIMIT :n"
+            ),
+            {
+                "q": " | ".join(t for _, t in kept), "chatbot_id": chatbot_id,
+                "sede": sede.value, "n": n, **{f"t{i}": t for i, t in kept},
+            },
+        )
+        return result.fetchall()
+    except Exception:
+        await db.rollback()  # la búsqueda léxica es un refuerzo: si falla, solo vale la vectorial
+        return []
 
 
 async def _section_neighbors(hit, db: AsyncSession) -> list:
@@ -100,7 +158,7 @@ async def _section_neighbors(hit, db: AsyncSession) -> list:
     rows = (
         await db.execute(
             text(
-                "SELECT id, text FROM chunks WHERE document_id = :doc "
+                "SELECT id, text, page FROM chunks WHERE document_id = :doc "
                 "AND id BETWEEN :lo AND :hi ORDER BY id"
             ),
             {"doc": hit.document_id, "lo": hit.id - NEIGHBOR_REACH, "hi": hit.id + NEIGHBOR_REACH},
@@ -120,12 +178,21 @@ async def _section_neighbors(hit, db: AsyncSession) -> list:
     return keep
 
 
+class _KeywordHit:
+    """Resultado léxico con la misma forma que una fila vectorial (similitud = el umbral)."""
+
+    def __init__(self, row, similarity: float):
+        self.id, self.document_id, self.text, self.page = row.id, row.document_id, row.text, row.page
+        self.filename, self.created_at, self.similarity = row.filename, row.created_at, similarity
+
+
 async def _retrieve_context(
     q_embeddings: list[list[float]],
     chatbot_id: int,
     sede: Sede,
     db: AsyncSession,
     top_k: int | None = None,
+    question: str | None = None,
 ) -> tuple[str, float]:
     """
     Busca los chunks más similares FILTRANDO por chatbot y sede, con una o varias
@@ -157,6 +224,18 @@ async def _retrieve_context(
             relevant.append(row)
             taken += 1
 
+    if question:
+        # Los resultados léxicos van al final de la lista de destacados, sin desplazar a los
+        # vectoriales; con tan pocos fragmentos relevantes, cada coincidencia exacta cuenta.
+        for row in await _keyword_search(question, chatbot_id, sede, db, KEYWORD_FRAGMENTS * 3):
+            key = _normalized(row.text)
+            if key in seen:
+                continue
+            seen.add(key)
+            relevant.append(_KeywordHit(row, min_sim))
+            if sum(isinstance(r, _KeywordHit) for r in relevant) == KEYWORD_FRAGMENTS:
+                break
+
     if not relevant:
         return "", 0.0
 
@@ -174,7 +253,8 @@ async def _retrieve_context(
             return  # vecino con el mismo texto que otro fragmento ya incluido
         emitted.add(row.id)
         seen.add(key)
-        block = f"[Documento: {hit.filename} | cargado: {hit.created_at:%Y-%m-%d}]\n{row.text}"
+        page = f" | p. {row.page}" if row.page else ""
+        block = f"[Documento: {hit.filename}{page} | cargado: {hit.created_at:%Y-%m-%d}]\n{row.text}"
         size += len(block)
         parts.append(block)
 
@@ -251,7 +331,7 @@ async def ask(
         if history:
             texts.append(f"{history[-1].question}\n{question}")
         q_embeddings = await generate_query_embeddings(texts)
-        context, relevance_score = await _retrieve_context(q_embeddings, chatbot_id, sede, db)
+        context, relevance_score = await _retrieve_context(q_embeddings, chatbot_id, sede, db, question=question)
 
         if not context:
             answer = profile.no_info

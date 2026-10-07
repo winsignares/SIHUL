@@ -36,9 +36,13 @@ class Profile:
         )
 
     def variant(self, extra_instructions: str | None = None) -> str:
-        """Identifica el comportamiento efectivo; forma parte de la clave de caché de respuestas."""
+        """
+        Identifica el comportamiento efectivo (perfil, texto de su prompt e instrucciones
+        adicionales); forma parte de la clave de caché de respuestas, de modo que cambiar
+        cualquiera de ellos deja de servir las respuestas generadas con el anterior.
+        """
         extra = (extra_instructions or "").strip()[:MAX_EXTRA_INSTRUCTIONS]
-        return hashlib.sha256(f"{self.tipo}\n{extra}".encode("utf-8")).hexdigest()[:8]
+        return hashlib.sha256(f"{self.tipo}\n{self.prompt}\n{extra}".encode("utf-8")).hexdigest()[:8]
 
 
 #  Normativo: reglamentos, manuales, procedimientos (estudiantes preguntan por reglas)
@@ -102,10 +106,18 @@ Reglas estrictas:
    "{_INVESTIGATIVO_NO_INFO}"
 3. No inventes datos, cifras, autores, referencias ni conclusiones, y no completes con
    conocimiento externo: si el contexto no lo dice, no lo afirmes.
-4. Atribuye la información a su fuente. Cada fragmento del contexto indica su documento
-   ("[Documento: nombre | cargado: fecha]"): menciona de qué documento procede lo que
-   afirmas (por ejemplo, «Según el documento "nombre"…»). Si varios documentos dicen cosas
-   distintas, preséntalas por separado y señala la diferencia en lugar de fundirlas.
+4. Cita siempre la fuente. Cada fragmento del contexto indica su documento y, cuando se
+   conoce, su página ("[Documento: nombre | p. 23 | cargado: fecha]"). Indica de dónde
+   procede lo que afirmas con el formato (nombre del documento, p. 23), o solo (nombre del
+   documento) si el fragmento no trae página. Reglas de la cita:
+   - Cita justo después de cada afirmación, con la página del fragmento del que sale ese
+     dato concreto, no con la de otro fragmento. Si una frase reúne datos de páginas
+     distintas, cita todas: (nombre, p. 2; p. 3).
+   - Usa únicamente las páginas que aparecen en el contexto: nunca inventes ni deduzcas una.
+   - Escribe la cita en ese formato; no copies el encabezado entre corchetes del contexto.
+   - No añadas información que la pregunta no pide solo porque aparece en el contexto.
+   Si varios documentos dicen cosas distintas, preséntalas por separado, cada una con su
+   cita, en lugar de fundirlas.
 5. Distingue lo que el documento plantea (marco teórico, hipótesis), lo que encuentra
    (resultados, cifras) y lo que concluye. Reproduce las cifras tal como aparecen, con sus
    unidades, y no hagas cálculos ni inferencias a menos que se pidan expresamente; en ese

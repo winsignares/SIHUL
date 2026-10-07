@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Textarea } from '../../share/textarea';
 import { useGestionChatbots } from '../../hooks/chatbot/useGestionChatbots';
-import { CHATBOT_TIPOS, MAX_INSTRUCCIONES_ADICIONALES } from '../../models/chatbot/chatbotAdmin.model';
+import { CHATBOT_ICONOS, CHATBOT_TIPOS, MAX_INSTRUCCIONES_ADICIONALES } from '../../models/chatbot/chatbotAdmin.model';
 
 const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
@@ -169,12 +169,17 @@ function ChatbotDialog({ state }: { state: GestionState }) {
           <SelectContent>{CHATBOT_TIPOS.map((tipo) => <SelectItem key={tipo.value} value={tipo.value}>{tipo.label}</SelectItem>)}</SelectContent>
         </Select>
         <p className="text-xs text-slate-500">{CHATBOT_TIPOS.find((tipo) => tipo.value === form.tipo)?.descripcion}</p>
-        {editingChatbotId && <p className="text-xs text-amber-700">Cambiar el tipo cambia cómo responde desde ya. El texto de los documentos ya cargados no se vuelve a procesar.</p>}
+        {editingChatbotId && <p className="text-xs text-amber-700">Cambiar el tipo cambia cómo responde desde ya. Los documentos ya cargados conservan el procesamiento con que se subieron (secciones y páginas): vuelve a subirlos para aplicar el nuevo tipo.</p>}
       </div>
       <div className="space-y-2 md:col-span-2"><Label>Instrucciones adicionales (opcional)</Label><Textarea rows={3} maxLength={MAX_INSTRUCCIONES_ADICIONALES} placeholder="Ej.: Responde siempre en máximo tres frases." value={form.instrucciones_adicionales} onChange={(event) => setForm((prev) => ({ ...prev, instrucciones_adicionales: event.target.value }))} />
         <p className="text-xs text-slate-500">Ajustes finos que se suman al tipo. No pueden anular la regla de responder solo con los documentos cargados. {form.instrucciones_adicionales.length}/{MAX_INSTRUCCIONES_ADICIONALES}</p>
       </div>
-      <div className="space-y-2"><Label>Ícono (lucide-react)</Label><Input value={form.icono} onChange={(event) => setForm((prev) => ({ ...prev, icono: event.target.value }))} /></div>
+      <div className="space-y-2"><Label>Ícono</Label>
+        <Select value={form.icono} onValueChange={(value) => setForm((prev) => ({ ...prev, icono: value }))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{CHATBOT_ICONOS.map(({ value, label, Icon }) => <SelectItem key={value} value={value}><span className="flex items-center gap-2"><Icon className="h-4 w-4" />{label}</span></SelectItem>)}</SelectContent>
+        </Select>
+      </div>
       <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.orden} onChange={(event) => setForm((prev) => ({ ...prev, orden: Number(event.target.value) || 0 }))} /></div>
       <div className="flex items-center gap-3 md:col-span-2"><Switch checked={form.activo} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, activo: checked }))} /><Label>Chatbot activo</Label></div>
     </div>

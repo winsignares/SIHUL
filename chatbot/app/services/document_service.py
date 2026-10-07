@@ -9,7 +9,13 @@ from app.core.sedes import Sede
 from app.models.models import Document, Chunk
 from app.services.embedding_service import generate_embeddings
 from app.core.config import get_settings
-from app.services.text_extraction import IngestionError, chunk_text, extract_text
+from app.core.profiles import get_profile
+from app.services.text_extraction import (
+    IngestionError,
+    chunk_text_with_pages,
+    extract_text,
+    strip_page_markers,
+)
 
 _settings = get_settings()
 
@@ -26,7 +32,9 @@ class DuplicateDocumentError(IngestionError):
         )
 
 
-async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: AsyncSession) -> Document:
+async def process_document(
+    file: UploadFile, sede: Sede, chatbot_id: int, db: AsyncSession, tipo: str | None = None
+) -> Document:
     """
     Extrae texto, genera embeddings y persiste el documento
     asociado a un chatbot y una sede específicos.
@@ -54,7 +62,14 @@ async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: As
             raise DuplicateDocumentError(prev)
 
     content = extract_text(raw, file.filename)
-    texts = chunk_text(content, file.filename)
+    perfil = get_profile(tipo).tipo
+    # El tipo de agente influye en el troceado: el investigativo reconoce los encabezados
+    # numerados («2.1 Antecedentes») de los trabajos académicos.
+    chunks_with_pages = chunk_text_with_pages(
+        content, file.filename, numbered_headings=perfil == "investigativo"
+    )
+    texts = [text for text, _ in chunks_with_pages]
+    pages = [page for _, page in chunks_with_pages]
     if len(texts) > _settings.MAX_CHUNKS_PER_DOCUMENT:
         raise IngestionError(
             f"El documento es demasiado extenso ({len(texts)} fragmentos; el máximo es "
@@ -71,8 +86,9 @@ async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: As
 
     doc = Document(
         filename=file.filename,
-        content=content,
+        content=strip_page_markers(content),
         content_hash=content_hash,
+        perfil=perfil,
         embedding_model=_settings.EMBEDDING_MODEL,
         sede=sede.value,
         chatbot_id=chatbot_id,
@@ -84,11 +100,12 @@ async def process_document(file: UploadFile, sede: Sede, chatbot_id: int, db: As
         Chunk(
             document_id=doc.id,
             text=text,
+            page=page,
             embedding=emb,
             sede=sede.value,   # desnormalizado para filtrado rápido
             chatbot_id=chatbot_id,   # desnormalizado para filtrado rápido
         )
-        for text, emb in zip(texts, embeddings)
+        for text, page, emb in zip(texts, pages, embeddings)
     )
 
     await db.commit()

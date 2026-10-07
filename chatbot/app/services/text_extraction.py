@@ -2,6 +2,8 @@ import codecs
 import csv
 import io
 import re
+from bisect import bisect_right
+from collections import Counter
 
 import fitz
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -27,6 +29,22 @@ _BARE_ARTICULO = re.compile(r"^ART[ÍI]CULO$")
 # para que los nombres y cargos no queden diluidos en el último artículo.
 _CIERRE = re.compile(r"^(Expedido en|Firman\b|Firmado por|Atentamente)", re.IGNORECASE)
 _CIERRE_SECCION = "FIRMAS Y EXPEDICIÓN"
+
+# Marca de página: el texto extraído de un PDF lleva una línea «⟦p12⟧» al comenzar cada
+# página para que el troceado sepa en qué página cae cada fragmento. Se quita antes de
+# guardar el contenido (strip_page_markers).
+_MARK_RE = re.compile(r"^\u27e6p(\d+)\u27e7$")
+
+# Encabezados de trabajos académicos («2.1 Antecedentes»). Solo se reconocen cuando el
+# agente es de tipo investigativo: en un reglamento, «7. Ingresar a los baños…» es un
+# ítem de lista, no un título.
+_NUM_HEADING = re.compile(r"^(\d{1,2}(?:\.\d{1,2}){0,3})\.?\s+(\S.{1,90})$")
+_SECCION_ACADEMICA = re.compile(
+    r"^(Resumen|Abstract|Introducci[oó]n|Antecedentes|Marco te[oó]rico|Metodolog[ií]a|"
+    r"Resultados|Discusi[oó]n|Conclusiones|Recomendaciones|Referencias|Bibliograf[ií]a|"
+    r"Anexos?|Agradecimientos)\s*:?$",
+    re.IGNORECASE,
+)
 
 
 class IngestionError(Exception):
@@ -172,6 +190,14 @@ def _table_lines(rows: list[list], carry: dict | None, at_top: bool) -> tuple[li
     return lines, carry
 
 
+def _page_mark(number: int) -> str:
+    return f"\u27e6p{number}\u27e7"
+
+
+def strip_page_markers(text: str) -> str:
+    return "\n".join(l for l in text.split("\n") if not _MARK_RE.match(l.strip()))
+
+
 def _pdf_text(raw: bytes) -> str:
     try:
         doc = fitz.open(stream=raw, filetype="pdf")
@@ -180,18 +206,18 @@ def _pdf_text(raw: bytes) -> str:
     if doc.needs_pass:
         raise IngestionError("El PDF está protegido con contraseña.")
     carry = None
-    pages = []
-    for page in doc:
+    pages = []  # (número, [textos])
+    for number, page in enumerate(doc, start=1):
         try:
             tables = page.find_tables().tables
         except Exception:
             tables = []  # si la detección falla se conserva el texto plano
 
-        items = []  # (y, x, texto)
+        items = []  # (y0, x0, x1, y1, texto)
         for t in tables:
             lines, carry = _table_lines(t.extract(), carry, t.bbox[1] < _TOP_OF_PAGE)
             if lines:
-                items.append((t.bbox[1], t.bbox[0], "\n".join(lines)))
+                items.append((t.bbox[1], t.bbox[0], t.bbox[2], t.bbox[3], "\n".join(lines)))
 
         for x0, y0, x1, y1, text in _page_blocks(page):
             cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
@@ -200,11 +226,42 @@ def _pdf_text(raw: bytes) -> str:
                 continue  # ya está representado por la tabla
             text = text.strip()
             if text and not text.isdigit():  # descarta el número de página
-                items.append((y0, x0, text))
+                items.append((y0, x0, x1, y1, text))
 
-        items.sort(key=lambda it: (round(it[0]), it[1]))
-        pages.append("\n".join(it[2] for it in _merge_columns(items)))
-    return "\n".join(pages)
+        items = _merge_columns(_reading_order(items, page.rect.width))
+        pages.append((number, [it[4] for it in items]))
+
+    running = _running_headers(pages)
+    out = []
+    for number, texts in pages:
+        kept = []
+        for t in texts:
+            rows = [l for l in t.split("\n") if l.strip() not in running]
+            if rows:
+                kept.append("\n".join(rows))
+        body = "\n".join(kept)
+        if body.strip():
+            out.append(f"{_page_mark(number)}\n{body}")
+    return "\n".join(out)
+
+
+def _running_headers(pages: list[tuple[int, list[str]]]) -> set[str]:
+    """
+    Encabezados y pies de página repetidos («Autor», «Título del libro»): líneas cortas que
+    abren o cierran muchas páginas con el mismo texto. Si quedaran, ensuciarían los
+    fragmentos y los dividirían en medio de una frase.
+    """
+    if len(pages) < 6:
+        return set()
+    count: Counter = Counter()
+    for _, texts in pages:
+        edge = []
+        for t in texts[:1] + texts[-1:]:
+            rows = [l.strip() for l in t.split("\n") if l.strip()]
+            edge += rows[:2] + rows[-2:]
+        count.update({l for l in edge if len(l) <= 80})
+    minimum = max(4, len(pages) // 4)
+    return {l for l, n in count.items() if n >= minimum}
 
 
 def _page_blocks(page):
@@ -231,6 +288,55 @@ def _page_blocks(page):
             yield x0, y0, x1, y1, text
 
 
+def _reading_order(items: list[tuple], page_width: float) -> list[tuple]:
+    """
+    Orden de lectura de los bloques de una página. En una página de una columna es de
+    arriba abajo. En una de dos columnas (artículos científicos) se lee la columna
+    izquierda completa y luego la derecha; los bloques que ocupan todo el ancho (título,
+    resumen, tablas anchas) separan «bandas» que se leen en su orden vertical.
+    """
+    items = sorted(items, key=lambda it: (round(it[0]), it[1]))
+    mid, tol = page_width / 2, 8
+
+    def side(it):
+        if it[2] <= mid + tol:
+            return "L"
+        if it[1] >= mid - tol:
+            return "R"
+        return None  # ocupa las dos mitades
+
+    sides = [side(it) for it in items]
+    left = [it for it, s in zip(items, sides) if s == "L"]
+    right = [it for it, s in zip(items, sides) if s == "R"]
+    # Dos columnas de verdad: al menos dos bloques de la derecha a la altura de bloques de
+    # la izquierda (una sangría o un número de página suelto no cuentan).
+    paired = sum(
+        any(min(r[3], l[3]) - max(r[0], l[0]) > 0.5 * min(r[3] - r[0], l[3] - l[0]) for l in left)
+        for r in right
+    )
+    if len(left) < 2 or paired < 2:
+        return items
+
+    out, band_left, band_right = [], [], []
+
+    def flush():
+        out.extend(band_left)
+        out.extend(band_right)
+        band_left.clear()
+        band_right.clear()
+
+    for it, s in zip(items, sides):
+        if s == "L":
+            band_left.append(it)
+        elif s == "R":
+            band_right.append(it)
+        else:
+            flush()
+            out.append(it)
+    flush()
+    return out
+
+
 def _merge_columns(items: list[tuple]) -> list[tuple]:
     """
     Dos filas consecutivas con las mismas columnas (las firmas: los nombres en una fila y
@@ -243,14 +349,14 @@ def _merge_columns(items: list[tuple]) -> list[tuple]:
 
     out, i = [], 0
     while i < len(items):
-        y, x, text = items[i]
+        y0, x0, x1, y1, text = items[i]
         top = columns(text)
-        bottom = columns(items[i + 1][2]) if top and i + 1 < len(items) else None
+        bottom = columns(items[i + 1][4]) if top and i + 1 < len(items) else None
         if top and bottom and len(top) == len(bottom):
-            out.append((y, x, "\n".join(f"{a} — {b}" for a, b in zip(top, bottom))))
+            out.append((y0, x0, x1, y1, "\n".join(f"{a} — {b}" for a, b in zip(top, bottom))))
             i += 2
         else:
-            out.append((y, x, text.replace("\t", " ")))
+            out.append((y0, x0, x1, y1, text.replace("\t", " ")))
             i += 1
     return out
 
@@ -307,6 +413,63 @@ def _is_caps_line(line: str) -> bool:
     )
 
 
+def _next_line(lines: list[str], i: int) -> str | None:
+    j = i + 1
+    while j < len(lines) and not lines[j]:
+        j += 1
+    return lines[j] if j < len(lines) else None
+
+
+_TOC_LINE = re.compile(r"(?:\.\s*){4,}")  # puntos guía del índice: «Introducción ..... 12»
+_FUNCTION_WORDS = {
+    "de", "del", "la", "el", "los", "las", "un", "una", "y", "o", "e", "a", "en", "con",
+    "por", "para", "que", "se", "entre", "sobre", "al", "su", "sus", "como", "es", "son",
+}
+
+
+def _academic_heading_level(lines: list[str], i: int) -> int | None:
+    """
+    Nivel (1 a 3) de un encabezado de trabajo académico: «2. Marco teórico», «2.1
+    Antecedentes», «3.2.1 Instrumentos» o una sección conocida («Resumen», «Conclusiones»).
+    Un título va seguido de texto (o de un subtítulo más profundo), no de otro ítem del
+    mismo nivel ni de una línea suelta: así se distinguen de los ítems de una lista.
+    """
+    line = lines[i]
+    nxt = _next_line(lines, i)
+    if nxt is None:
+        return None
+
+    if _SECCION_ACADEMICA.match(line):
+        return 1 if len(nxt) >= 30 or _NUM_HEADING.match(nxt) else None
+
+    m = _NUM_HEADING.match(line)
+    if not m:
+        return None
+    number, title = m.groups()
+    if not title[0].isupper() or title.endswith((".", ";", ",")) or len(title.split()) > 14:
+        return None
+    if title.split()[-1].lower() in _FUNCTION_WORDS:
+        return None  # una frase cortada («1 Aunque en algunos contextos se usan entre»): nota al pie
+    if "." not in number and not m.group(0).startswith(number + ".") and len(title.split()) > 8:
+        return None  # «1 Texto largo…» sin punto tras el número: nota al pie, no título
+    depth = number.count(".") + 1
+    nxt_heading = _NUM_HEADING.match(nxt)
+    if nxt_heading:
+        if nxt_heading.group(1).count(".") + 1 <= depth:
+            return None  # el siguiente es otro ítem del mismo nivel: esto es una lista
+    elif len(nxt) < 30:
+        return None
+    return min(depth, 3)
+
+
+def _same_chapter(parent: str, heading: str) -> bool:
+    """«3. Método» es el padre de «3.2 Muestra»; «Introducción» o «1. Turismo» no lo son."""
+    if not parent:
+        return True
+    x, y = _NUM_HEADING.match(parent), _NUM_HEADING.match(heading)
+    return bool(x and y and x.group(1).split(".")[0] == y.group(1).split(".")[0])
+
+
 def _pack_lines(lines: list[str], filename: str) -> list[str]:
     """Agrupa filas completas hasta el tamaño de chunk, sin partir ninguna fila."""
     limit = _settings.CHUNK_SIZE
@@ -341,67 +504,104 @@ def _join_split_headings(lines: list[str]) -> list[str]:
     return out
 
 
-def chunk_text(content: str, filename: str) -> list[str]:
+def chunk_text(content: str, filename: str, numbered_headings: bool = False) -> list[str]:
+    return [text for text, _ in chunk_text_with_pages(content, filename, numbered_headings)]
+
+
+def chunk_text_with_pages(
+    content: str, filename: str, numbered_headings: bool = False
+) -> list[tuple[str, int | None]]:
     """
     Trocea el texto por secciones (título > capítulo > artículo > subtítulo) y
     antepone la ruta de la sección a cada fragmento. Sin esto, un ítem de una lista
     («Frecuentar billares…») pierde el título que lo clasifica («FALTAS GRAVES»).
     Los CSV y los textos sin encabezados reconocibles se trocean sin prefijo.
+
+    Devuelve (fragmento, página) donde la página es la del inicio del fragmento (None si el
+    documento no es un PDF). Con `numbered_headings` se reconocen además los encabezados
+    de trabajos académicos («2.1 Antecedentes», «Conclusiones»).
     """
     if filename.lower().endswith(".csv"):
-        return _pack_lines(content.split("\n"), filename)
+        return [(c, None) for c in _pack_lines(content.split("\n"), filename)]
 
-    lines = _join_split_headings([l.strip() for l in content.split("\n")])
+    lines, pages, current = [], [], None
+    for line in _join_split_headings([l.strip() for l in content.split("\n")]):
+        mark = _MARK_RE.match(line)
+        if mark:
+            current = int(mark.group(1))
+            continue
+        lines.append(line)
+        pages.append(current)
+
     crumbs = ["", "", "", ""]
-    chunks: list[str] = []
-    buffer: list[str] = []
+    chunks: list[tuple[str, int | None]] = []
+    buffer: list[tuple[str, int | None]] = []  # (línea, página)
 
     def flush():
-        body = "\n".join(buffer).strip()
+        text = "\n".join(l for l, _ in buffer)
+        starts, position = [], 0
+        for l, _ in buffer:
+            starts.append(position)
+            position += len(l) + 1
+        line_pages = [p for _, p in buffer]
         buffer.clear()
+        body = text.strip()
         if not body:
             return
+        lead = len(text) - len(text.lstrip())
         path = " > ".join(c for c in crumbs if c)
+        cursor, page = 0, line_pages[0]
         for piece in _splitter.split_text(body):
-            chunks.append(f"[{path}]\n{piece}" if path else piece)
+            found = body.find(piece[:60], cursor)
+            if found >= 0:
+                page = line_pages[max(bisect_right(starts, lead + found) - 1, 0)]
+                cursor = found + 1
+            chunks.append((f"[{path}]\n{piece}" if path else piece, page))
 
     i = 0
     while i < len(lines):
         line = lines[i]
-        level = _heading_level(line)
-        if level == 3 and not _is_real_subheading(lines, i):
+        if _TOC_LINE.search(line):  # entrada de un índice, no un encabezado
+            buffer.append((line, pages[i]))
+            i += 1
+            continue
+        academic = _academic_heading_level(lines, i) if numbered_headings else None
+        level = academic if academic is not None else _heading_level(line)
+        if academic is None and level == 3 and not _is_real_subheading(lines, i):
             level = None
         if level is None and crumbs[3] != _CIERRE_SECCION and _CIERRE.match(line):
             flush()
             crumbs[:] = ["", "", "", _CIERRE_SECCION]  # no pertenece al último artículo
-            buffer.append(line)
+            buffer.append((line, pages[i]))
             i += 1
             continue
         if level is None:
             if line:
-                buffer.append(line)
+                buffer.append((line, pages[i]))
             i += 1
             continue
 
         flush()
         heading, rest = line, ""
-        if level == 2:
+        if level == 2 and academic is None:
             # «ARTÍCULO 88. Los costos educativos…»: el encabezado es solo el número;
             # el resto de la línea ya es texto del artículo.
             m = _ARTICULO_NUM.match(line)
             if m and m.group(2) and m.group(2) != m.group(2).upper():
                 heading, rest = m.group(1), m.group(2)
-        if level <= 1:  # «CAPÍTULO IV» + «FALTAS» + «DISCIPLINARIAS» en líneas separadas
+        if level <= 1 and academic is None:  # «CAPÍTULO IV» + «FALTAS» + «DISCIPLINARIAS» en líneas separadas
             j = i + 1
             while j < len(lines) and j - i <= 3 and _is_caps_line(lines[j]) and _heading_level(lines[j]) in (None, 3):
                 heading += " " + lines[j]
                 j += 1
             i = j - 1
+        if academic is not None and level >= 2 and not _same_chapter(crumbs[1], heading):
+            crumbs[1] = ""  # el capítulo anterior (p. ej. de un ejemplo) ya no es el padre
         crumbs[level] = heading
         for k in range(level + 1, 4):
             crumbs[k] = ""
         if rest:
-            buffer.append(rest)
+            buffer.append((rest, pages[i]))
         i += 1
 
     flush()

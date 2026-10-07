@@ -100,6 +100,7 @@ class ChatbotDocument(models.Model):
     content = models.TextField()
     content_hash = models.CharField(max_length=64, null=True, blank=True)
     embedding_model = models.CharField(max_length=100, null=True, blank=True)
+    perfil = models.CharField(max_length=20, null=True, blank=True)
     chatbot = models.ForeignKey(
         Agente,
         on_delete=models.DO_NOTHING,
@@ -131,6 +132,7 @@ class ChatbotChunk(models.Model):
         related_name='chunks',
     )
     text = models.TextField()
+    page = models.IntegerField(null=True, blank=True)
     chatbot = models.ForeignKey(
         Agente,
         on_delete=models.DO_NOTHING,

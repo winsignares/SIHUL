@@ -17,6 +17,9 @@ class Document(Base):
     # Modelo con el que se generaron los embeddings de sus chunks. Mezclar modelos en
     # el mismo índice da similitudes sin sentido; NULL = cargado antes de registrarlo.
     embedding_model: Mapped[str | None] = mapped_column(String(100))
+    # Perfil (tipo de agente) con el que se procesó: define cómo se troceó. NULL = anterior
+    # a registrarlo.
+    perfil: Mapped[str | None] = mapped_column(String(20))
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # Referencia al Agente (tabla chatbot_agente, gestionada por Django). Sin FK a nivel
     # de BD porque esa tabla puede no existir aún cuando FastAPI corre su propio create_all.
@@ -37,6 +40,9 @@ class Chunk(Base):
         ForeignKey("documents.id", ondelete="CASCADE")
     )
     text: Mapped[str] = mapped_column(Text)
+    # Página (del PDF) en la que empieza el fragmento; NULL en documentos que no son PDF
+    # o cargados antes de registrarla.
+    page: Mapped[int | None] = mapped_column(Integer)
     embedding = mapped_column(Vector(get_settings().EMBEDDING_DIM))
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     chatbot_id: Mapped[int | None] = mapped_column(BigInteger, index=True)  # desnormalizado para filtrado rápido

@@ -44,7 +44,7 @@ async def upload_document(
     if not chatbot["activo"]:
         raise HTTPException(status_code=400, detail=f"El chatbot '{chatbot['nombre']}' está inactivo")
     try:
-        return await process_document(file, sede, chatbot_id, db)
+        return await process_document(file, sede, chatbot_id, db, tipo=chatbot.get("tipo"))
     except IngestionError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:

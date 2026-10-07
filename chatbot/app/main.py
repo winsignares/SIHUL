@@ -34,6 +34,8 @@ _EXTRA_COLUMNS = (
     ("chat_messages", "chatbot_id", "BIGINT", True),
     ("documents", "content_hash", "VARCHAR(64)", True),
     ("documents", "embedding_model", "VARCHAR(100)", False),
+    ("documents", "perfil", "VARCHAR(20)", False),
+    ("chunks", "page", "INTEGER", False),
     ("chat_messages", "chat_id", "VARCHAR(64)", True),
     ("chat_messages", "id_usuario", "BIGINT", True),
 )
