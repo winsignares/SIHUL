@@ -35,6 +35,7 @@ _EXTRA_COLUMNS = (
     ("documents", "content_hash", "VARCHAR(64)", True),
     ("documents", "embedding_model", "VARCHAR(100)", False),
     ("documents", "perfil", "VARCHAR(20)", False),
+    ("documents", "file_data", "BYTEA", False),
     ("chunks", "page", "INTEGER", False),
     ("chat_messages", "chat_id", "VARCHAR(64)", True),
     ("chat_messages", "id_usuario", "BIGINT", True),

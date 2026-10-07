@@ -1,4 +1,5 @@
 import requests
+from django.http import HttpResponse
 from rest_framework import permissions
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -6,7 +7,8 @@ from rest_framework.views import APIView
 
 from mysite.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user, user_can_edit_componente
 
-from .views import fastapi_base_url
+from .models import Agente
+from .views import _resolve_user_sede_value, fastapi_base_url
 
 COMPONENTE_GESTION_CHATBOTS = 'Gestión de Chatbots'
 MAX_UPLOAD_MB = 25  # mismo tope que MAX_UPLOAD_MB del servicio RAG
@@ -95,6 +97,46 @@ class ChatbotDocumentoDetalleProxyView(APIView):
             # es el que se pedía.
             return Response(status=204)
         return _forward_response(resp)
+
+
+class UsuarioAutenticado(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return is_authenticated_user(request.user)
+
+
+class ChatbotDocumentoArchivoView(APIView):
+    """
+    PDF original de un documento citado por un agente, para previsualizarlo desde el chat.
+    El documento se busca por nombre entre los del agente en la sede DEL USUARIO (la misma
+    con la que se le responde), así que nadie accede a documentos de otra sede.
+    """
+
+    permission_classes = [UsuarioAutenticado]
+
+    def get(self, request):
+        agente_id = request.query_params.get('agente')
+        nombre = request.query_params.get('nombre')
+        if not agente_id or not nombre:
+            return Response({'error': 'agente y nombre son requeridos'}, status=400)
+        if not Agente.objects.filter(id=agente_id, activo=True).exists():
+            return Response({'error': 'Agente no encontrado o inactivo'}, status=404)
+        sede = _resolve_user_sede_value(request.user)
+        if not sede:
+            return Response({'error': 'El usuario no tiene seccional configurada'}, status=400)
+
+        try:
+            resp = requests.get(
+                f'{fastapi_base_url()}/documents/file',
+                params={'chatbot_id': agente_id, 'sede': sede, 'filename': nombre},
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as exc:
+            return _proxy_error_response(exc)
+        if resp.status_code != 200:
+            return Response({'error': 'El documento original no está disponible'}, status=resp.status_code)
+        out = HttpResponse(resp.content, content_type='application/pdf')
+        out['Content-Disposition'] = 'inline'
+        return out
 
 
 class ChatbotSedesProxyView(APIView):

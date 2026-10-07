@@ -1,5 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query, Response
+from sqlalchemy import func, select
+from sqlalchemy.orm import undefer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -70,6 +71,39 @@ async def list_documents(
         stmt = stmt.where(Document.sede == sede.value)
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+@router.get(
+    "/file",
+    summary="Archivo original de un documento",
+    description=(
+        "Devuelve el PDF original del documento con ese nombre para el chatbot y la sede "
+        "indicados (para previsualizarlo desde las citas). 404 si no existe o se cargó "
+        "antes de que se guardara el original."
+    ),
+)
+async def get_document_file(
+    chatbot_id: int = Query(...),
+    sede: Sede = Query(...),
+    filename: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    doc = (
+        await db.execute(
+            select(Document)
+            .options(undefer(Document.file_data))
+            .where(
+                Document.chatbot_id == chatbot_id,
+                Document.sede == sede.value,
+                func.lower(Document.filename) == filename.strip().lower(),
+            )
+            .order_by(Document.created_at.desc())
+            .limit(1)
+        )
+    ).scalars().first()
+    if not doc or not doc.file_data:
+        raise HTTPException(status_code=404, detail="El archivo original no está disponible")
+    return Response(content=doc.file_data, media_type="application/pdf")
 
 
 @router.delete(

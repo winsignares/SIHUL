@@ -183,6 +183,15 @@ function agruparPreguntasSugeridas(preguntas: PreguntaSugeridaAPI[]): Map<number
 
 export const chatbotAPI = {
     /**
+     * PDF original citado en una respuesta (documento del agente, en la sede del usuario)
+     */
+    obtenerArchivoDocumento: (agenteId: number | string, nombre: string): Promise<Blob> =>
+        apiClient.getBlob(
+            `/chatbot/documentos/archivo/?agente=${encodeURIComponent(String(agenteId))}&nombre=${encodeURIComponent(nombre)}`,
+            { suppressErrorLog: true }
+        ),
+
+    /**
      * Obtiene la lista de agentes activos
      */
     listarAgentes: async (): Promise<{ agentes: AgenteAPI[] }> => {

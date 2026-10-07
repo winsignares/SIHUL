@@ -136,3 +136,17 @@ Los vectores de modelos distintos no son comparables. Para cambiar `EMBEDDING_MO
 - Las tablas complejas (celdas combinadas en vertical) pueden quedar parcialmente fragmentadas.
 - El RAG no autentica: debe quedar accesible solo desde Django.
 - Notificaciones: el modelo `Agente` dispara `AGENTE_CREADO`/`AGENTE_DESACTIVADO`/`AGENTE_ELIMINADO` (ver `backend/notificaciones/README.md`).
+
+
+## Vista previa del documento citado
+
+Los PDF se guardan completos en `documents.file_data` (BYTEA, columna diferida: los listados no la cargan). En el chat, el frontend convierte cada cita `(archivo.pdf, p. N)` de una respuesta en un enlace (`MensajeConCitas`) que abre el PDF en un visor (`VistaPreviaDocumento`) en la página citada.
+
+- Django: `GET /api/chatbot/documentos/archivo/?agente=<id>&nombre=<archivo>` (cualquier usuario autenticado). Resuelve la sede del propio usuario y pide el archivo a `GET /api/v1/documents/file` del RAG, de modo que no se puede acceder a documentos de otra sede.
+- El chat público (sin sesión) muestra las citas como texto, sin enlace.
+- Los documentos cargados antes de existir esta columna no tienen original (la vista previa avisa). Subir de nuevo el mismo archivo lo reprocesa y lo guarda; también se reprocesa si el tipo del agente cambió desde que se cargó.
+
+### Citas según el tipo de agente
+
+- **Investigativo:** el modelo cita cada afirmación con `(archivo.pdf, p. N)` (regla 4 del prompt).
+- **Normativo:** el código añade al final de la respuesta **una sola cita** de la fuente principal, el documento y la página del fragmento mejor puntuado (`Profile.cite_main_source`). Se hace en código y no en el prompt porque el modelo pequeño no cumplía el formato de forma fiable. No se añade a la respuesta de «sin información». Solo lleva página si el documento es un PDF cargado con las páginas guardadas; los anteriores se recargan subiendo de nuevo el archivo.

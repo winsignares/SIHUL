@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '../../share/button';
 import { Input } from '../../share/input';
 import {
@@ -26,6 +27,8 @@ import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAsistentesVirtuales } from '../../hooks/chatbot/useAsistentesVirtuales';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { MensajeConCitas } from '../../components/chatbot/MensajeConCitas';
+import { VistaPreviaDocumento, type DocumentoAbierto } from '../../components/chatbot/VistaPreviaDocumento';
 
 const getSafeIcon = (icon: unknown): LucideIcon => {
   return typeof icon === 'function' ? (icon as LucideIcon) : Bot;
@@ -33,6 +36,7 @@ const getSafeIcon = (icon: unknown): LucideIcon => {
 
 export default function AsistentesVirtuales() {
   const isMobile = useIsMobile();
+  const [documentoAbierto, setDocumentoAbierto] = useState<DocumentoAbierto | null>(null);
   const floatingDotPositions = [
     'left-[10%] top-[15%]',
     'left-[25%] top-[65%]',
@@ -599,7 +603,11 @@ export default function AsistentesVirtuales() {
                           whileHover={{ x: '100%' }}
                           transition={{ duration: 0.6 }}
                         />
-                        <div className="text-sm leading-relaxed whitespace-pre-line relative z-10">{mensaje.texto}</div>
+                        <div className="text-sm leading-relaxed whitespace-pre-line relative z-10">
+                          {mensaje.tipo === 'bot' && !esPublico && asistenteActivo
+                            ? <MensajeConCitas texto={mensaje.texto} onAbrir={(archivo, pagina) => setDocumentoAbierto({ agenteId: asistenteActivo.id, archivo, pagina })} />
+                            : mensaje.texto}
+                        </div>
                       </motion.div>
 
                       {/* Timestamp y Estado */}
@@ -736,6 +744,7 @@ export default function AsistentesVirtuales() {
           </div>
         )}
       </motion.div>
+      <VistaPreviaDocumento documento={documentoAbierto} onCerrar={() => setDocumentoAbierto(null)} />
     </div>
   );
 }

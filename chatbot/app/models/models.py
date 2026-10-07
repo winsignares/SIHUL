@@ -1,6 +1,6 @@
 from datetime import datetime
-from sqlalchemy import String, Text, DateTime, Integer, BigInteger, Float, ForeignKey, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, DateTime, Integer, BigInteger, Float, ForeignKey, LargeBinary, func
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
 from app.core.config import get_settings
 from app.core.database import Base
@@ -20,6 +20,9 @@ class Document(Base):
     # Perfil (tipo de agente) con el que se procesó: define cómo se troceó. NULL = anterior
     # a registrarlo.
     perfil: Mapped[str | None] = mapped_column(String(20))
+    # Archivo original (solo PDF) para previsualizarlo desde las citas del chat. Se carga
+    # solo cuando se pide (`deferred`): los listados no deben arrastrar megabytes.
+    file_data: Mapped[bytes | None] = deferred(mapped_column(LargeBinary))
     sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # Referencia al Agente (tabla chatbot_agente, gestionada por Django). Sin FK a nivel
     # de BD porque esa tabla puede no existir aún cuando FastAPI corre su propio create_all.

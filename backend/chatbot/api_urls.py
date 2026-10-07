@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .admin_views import (
+    ChatbotDocumentoArchivoView,
     ChatbotDocumentoDetalleProxyView,
     ChatbotDocumentosProxyView,
     ChatbotSedesProxyView,
@@ -33,6 +34,9 @@ urlpatterns = [
     path('admin/documentos/', ChatbotDocumentosProxyView.as_view(), name='api-admin-documentos'),
     path('admin/documentos/<int:pk>/', ChatbotDocumentoDetalleProxyView.as_view(), name='api-admin-documento-detalle'),
     path('admin/sedes/', ChatbotSedesProxyView.as_view(), name='api-admin-sedes'),
+
+    # PDF original citado en una respuesta (cualquier usuario autenticado, sede propia)
+    path('documentos/archivo/', ChatbotDocumentoArchivoView.as_view(), name='api-documento-archivo'),
 
     # Endpoints publicos (sin autenticacion)
     path('public/agentes/', list_agentes_publico, name='api-public-agentes'),

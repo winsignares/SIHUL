@@ -193,7 +193,7 @@ async def _retrieve_context(
     db: AsyncSession,
     top_k: int | None = None,
     question: str | None = None,
-) -> tuple[str, float]:
+) -> tuple[str, float, tuple[str, int | None] | None]:
     """
     Busca los chunks más similares FILTRANDO por chatbot y sede, con una o varias
     formulaciones de la pregunta, y completa cada sección de los mejores resultados con
@@ -203,7 +203,8 @@ async def _retrieve_context(
     pocos candidatos extra. Mezclarlas por similitud o repartir los puestos a partes
     iguales dejaba que los fragmentos del tema anterior desplazaran a los de la pregunta
     actual cuando el usuario cambiaba de tema.
-    Devuelve (contexto_concatenado, similitud_promedio de los fragmentos encontrados).
+    Devuelve (contexto_concatenado, similitud_promedio de los fragmentos encontrados, fuente
+    principal): el documento y la página del fragmento mejor puntuado (None si no hay).
     """
     k = top_k or _settings.TOP_K
     min_sim = _settings.MIN_SIMILARITY
@@ -237,7 +238,7 @@ async def _retrieve_context(
                 break
 
     if not relevant:
-        return "", 0.0
+        return "", 0.0, None
 
     # Orden del contexto: cada fragmento destacado junto a sus vecinos de sección, en el
     # orden del documento; después el resto de resultados.
@@ -265,7 +266,8 @@ async def _retrieve_context(
         add(hit, hit)
 
     avg_similarity = round(sum(r.similarity for r in relevant) / len(relevant), 4)
-    return "\n---\n".join(parts), avg_similarity
+    main = relevant[0]
+    return "\n---\n".join(parts), avg_similarity, (main.filename, main.page)
 
 
 async def _load_history(
@@ -331,7 +333,7 @@ async def ask(
         if history:
             texts.append(f"{history[-1].question}\n{question}")
         q_embeddings = await generate_query_embeddings(texts)
-        context, relevance_score = await _retrieve_context(q_embeddings, chatbot_id, sede, db, question=question)
+        context, relevance_score, main_source = await _retrieve_context(q_embeddings, chatbot_id, sede, db, question=question)
 
         if not context:
             answer = profile.no_info
@@ -355,6 +357,9 @@ async def ask(
                 temperature=0.2,
             )
             answer = completion.choices[0].message.content
+            if profile.cite_main_source and main_source and answer.strip() != profile.no_info:
+                filename, page = main_source
+                answer = f"{answer.rstrip()}\n\n({filename}{f', p. {page}' if page else ''})"
 
         if redis and context and answer.strip() != profile.no_info:
             await redis.set(

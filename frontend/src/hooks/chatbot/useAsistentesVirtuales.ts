@@ -307,7 +307,21 @@ export function useAsistentesVirtuales() {
                     });
                 } else if (agentesUI.length > 0) {
                     // Mantener el agente ya activo (con los datos frescos) o caer al primero
-                    setAsistenteActivo(activoPrevio || agentesUI[0]);
+                    const elegido = activoPrevio || agentesUI[0];
+                    setAsistenteActivo(elegido);
+                    // Un agente sin conversación guardada (p. ej. uno recién creado) debe abrir con su bienvenida
+                    if (!mensajesGuardados[elegido.id]?.length) {
+                        setMensajes((prev) => prev[elegido.id]?.length ? prev : {
+                            ...prev,
+                            [elegido.id]: [{
+                                id: '1',
+                                tipo: 'bot',
+                                texto: elegido.mensajeBienvenida,
+                                timestamp: new Date(),
+                                leido: true
+                            }]
+                        });
+                    }
                 }
 
                 setSessionCacheData(cacheKey, activeToken, {

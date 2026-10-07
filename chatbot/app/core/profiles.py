@@ -21,6 +21,9 @@ class Profile:
     tipo: str
     no_info: str
     prompt: str  # incluye el texto de `no_info`
+    # Añade al final de la respuesta una cita sencilla de la fuente principal, puesta por el
+    # código (el perfil investigativo, en cambio, hace que el modelo cite cada afirmación).
+    cite_main_source: bool = False
 
     def system_prompt(self, extra_instructions: str | None = None) -> str:
         extra = (extra_instructions or "").strip()[:MAX_EXTRA_INSTRUCTIONS]
@@ -55,6 +58,7 @@ _NORMATIVO_NO_INFO = (
 _NORMATIVO = Profile(
     tipo="normativo",
     no_info=_NORMATIVO_NO_INFO,
+    cite_main_source=True,
     prompt=f"""\
 Eres Benji, el asistente virtual de la Universidad para estudiantes.
 Respondes ÚNICAMENTE con la información del contexto proporcionado.

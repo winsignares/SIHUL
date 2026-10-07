@@ -50,19 +50,27 @@ async def process_document(
         )
     content_hash = hashlib.sha256(raw).hexdigest()
 
-    existing = (
+    is_pdf = file.filename.lower().endswith(".pdf")
+    perfil = get_profile(tipo).tipo
+    rows = (
         await db.execute(
-            select(Document).where(
+            select(Document, Document.file_data.is_not(None).label("has_file")).where(
                 Document.chatbot_id == chatbot_id, Document.sede == sede.value
             )
         )
-    ).scalars().all()
-    for prev in existing:
+    ).all()
+    existing = [doc for doc, _ in rows]
+    stale_ids = set()  # mismo contenido, pero procesado de otra forma: se rehace
+    for prev, has_file in rows:
         if prev.content_hash == content_hash:
-            raise DuplicateDocumentError(prev)
+            # Mismo archivo: es un duplicado salvo que falte el original (cargado antes de
+            # guardarlo) o que el tipo del agente haya cambiado desde entonces; en esos
+            # casos volver a subirlo lo reprocesa y reemplaza al anterior.
+            if (has_file or not is_pdf) and prev.perfil == perfil:
+                raise DuplicateDocumentError(prev)
+            stale_ids.add(prev.id)
 
     content = extract_text(raw, file.filename)
-    perfil = get_profile(tipo).tipo
     # El tipo de agente influye en el troceado: el investigativo reconoce los encabezados
     # numerados («2.1 Antecedentes») de los trabajos académicos.
     chunks_with_pages = chunk_text_with_pages(
@@ -81,7 +89,7 @@ async def process_document(
     # Se reemplaza solo cuando lo nuevo ya se procesó con éxito, para no perder
     # la versión anterior si falla la extracción o el embedding.
     for prev in existing:
-        if prev.filename.lower() == file.filename.lower():
+        if prev.id in stale_ids or prev.filename.lower() == file.filename.lower():
             await db.delete(prev)
 
     doc = Document(
@@ -89,6 +97,7 @@ async def process_document(
         content=strip_page_markers(content),
         content_hash=content_hash,
         perfil=perfil,
+        file_data=raw if is_pdf else None,
         embedding_model=_settings.EMBEDDING_MODEL,
         sede=sede.value,
         chatbot_id=chatbot_id,
