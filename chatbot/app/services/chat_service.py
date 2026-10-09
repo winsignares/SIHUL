@@ -186,6 +186,62 @@ class _KeywordHit:
         self.filename, self.created_at, self.similarity = row.filename, row.created_at, similarity
 
 
+def _reserve_per_document(relevant: list, rows: list, seen: set, min_sim: float, k: int, reserve: int = 2):
+    """
+    Con varios documentos, uno puede ocupar todos los puestos y dejar fuera a otro que
+    también trata el tema. Reserva hasta `reserve` puestos para el mejor fragmento de los
+    documentos que no aparecen, siempre que sea casi tan relevante como el primero. Los
+    fragmentos mejor puntuados (las semillas) no se tocan: se sacrifican los últimos.
+    """
+    if not relevant:
+        return
+    threshold = max(min_sim, 0.85 * relevant[0].similarity)
+    present = {r.document_id for r in relevant}
+    swaps = 0
+    for row in rows:
+        if swaps == reserve:
+            break
+        if row.document_id in present or row.similarity < threshold:
+            continue
+        key = _normalized(row.text)
+        if key in seen:
+            continue
+        pos = min(SEED_FRAGMENTS + swaps, len(relevant))
+        if len(relevant) >= k:
+            if len(relevant) <= pos:
+                break
+            seen.discard(_normalized(relevant.pop().text))
+        seen.add(key)
+        present.add(row.document_id)
+        relevant.insert(pos, row)
+        swaps += 1
+
+
+MAX_CITED_DOCUMENTS = 2
+
+
+def _cited_sources(relevant: list) -> list[tuple[str, int | None]]:
+    """
+    Fuente principal (documento y página del mejor fragmento) y, si otro documento aporta un
+    fragmento casi igual de relevante, también la suya. Los resultados léxicos no cuentan
+    como segunda fuente: su similitud es solo el umbral.
+    """
+    if not relevant:
+        return []
+    top = relevant[0]
+    sources = [(top.filename, top.page)]
+    for row in relevant[1:SEED_FRAGMENTS + 2]:
+        if len(sources) == MAX_CITED_DOCUMENTS:
+            break
+        if (
+            not isinstance(row, _KeywordHit)
+            and row.filename not in {name for name, _ in sources}
+            and row.similarity >= 0.9 * top.similarity
+        ):
+            sources.append((row.filename, row.page))
+    return sources
+
+
 async def _retrieve_context(
     q_embeddings: list[list[float]],
     chatbot_id: int,
@@ -193,7 +249,7 @@ async def _retrieve_context(
     db: AsyncSession,
     top_k: int | None = None,
     question: str | None = None,
-) -> tuple[str, float, tuple[str, int | None] | None]:
+) -> tuple[str, float, list[tuple[str, int | None]]]:
     """
     Busca los chunks más similares FILTRANDO por chatbot y sede, con una o varias
     formulaciones de la pregunta, y completa cada sección de los mejores resultados con
@@ -203,8 +259,9 @@ async def _retrieve_context(
     pocos candidatos extra. Mezclarlas por similitud o repartir los puestos a partes
     iguales dejaba que los fragmentos del tema anterior desplazaran a los de la pregunta
     actual cuando el usuario cambiaba de tema.
-    Devuelve (contexto_concatenado, similitud_promedio de los fragmentos encontrados, fuente
-    principal): el documento y la página del fragmento mejor puntuado (None si no hay).
+    Devuelve (contexto_concatenado, similitud_promedio de los fragmentos encontrados, fuentes
+    citables): documento y página del fragmento mejor puntuado y, si otro documento aporta
+    uno casi igual de relevante, también el suyo.
     """
     k = top_k or _settings.TOP_K
     min_sim = _settings.MIN_SIMILARITY
@@ -224,6 +281,8 @@ async def _retrieve_context(
             seen.add(key)
             relevant.append(row)
             taken += 1
+        if n == 0:
+            _reserve_per_document(relevant, rows, seen, min_sim, k)
 
     if question:
         # Los resultados léxicos van al final de la lista de destacados, sin desplazar a los
@@ -238,7 +297,7 @@ async def _retrieve_context(
                 break
 
     if not relevant:
-        return "", 0.0, None
+        return "", 0.0, []
 
     # Orden del contexto: cada fragmento destacado junto a sus vecinos de sección, en el
     # orden del documento; después el resto de resultados.
@@ -266,8 +325,7 @@ async def _retrieve_context(
         add(hit, hit)
 
     avg_similarity = round(sum(r.similarity for r in relevant) / len(relevant), 4)
-    main = relevant[0]
-    return "\n---\n".join(parts), avg_similarity, (main.filename, main.page)
+    return "\n---\n".join(parts), avg_similarity, _cited_sources(relevant)
 
 
 async def _load_history(
@@ -333,7 +391,7 @@ async def ask(
         if history:
             texts.append(f"{history[-1].question}\n{question}")
         q_embeddings = await generate_query_embeddings(texts)
-        context, relevance_score, main_source = await _retrieve_context(q_embeddings, chatbot_id, sede, db, question=question)
+        context, relevance_score, sources = await _retrieve_context(q_embeddings, chatbot_id, sede, db, question=question)
 
         if not context:
             answer = profile.no_info
@@ -357,9 +415,9 @@ async def ask(
                 temperature=0.2,
             )
             answer = completion.choices[0].message.content
-            if profile.cite_main_source and main_source and answer.strip() != profile.no_info:
-                filename, page = main_source
-                answer = f"{answer.rstrip()}\n\n({filename}{f', p. {page}' if page else ''})"
+            if profile.cite_main_source and sources and answer.strip() != profile.no_info:
+                citas = " ".join(f"({name}{f', p. {page}' if page else ''})" for name, page in sources)
+                answer = f"{answer.rstrip()}\n\n{citas}"
 
         if redis and context and answer.strip() != profile.no_info:
             await redis.set(

@@ -185,22 +185,23 @@ export function useGestionChatbots() {
         });
     }, [busquedaDocumento, chatbotsPorId, documentos, filtroChatbotId]);
 
-    const chatbotIdsConDocumento = useMemo(
-        () => new Set(documentos.flatMap((documento) => documento.chatbot_id === null ? [] : [documento.chatbot_id])),
-        [documentos],
+    // Un chatbot puede tener varios documentos por seccional; subir uno con el mismo nombre
+    // que otro ya cargado lo reemplaza (el servicio RAG lo interpreta como una versión nueva).
+    const chatbotsDisponiblesParaCarga = useMemo(
+        () => chatbots.filter((chatbot) => chatbot.activo),
+        [chatbots],
     );
 
-    const chatbotsDisponiblesParaCarga = useMemo(
-        () => chatbots.filter((chatbot) => chatbot.activo && !chatbotIdsConDocumento.has(chatbot.id)),
-        [chatbotIdsConDocumento, chatbots],
+    const documentosDelChatbotSeleccionado = useMemo(
+        () => documentos.filter((documento) => documento.chatbot_id === Number(uploadChatbotId)),
+        [documentos, uploadChatbotId],
     );
 
     const puedeSubirDocumento = Boolean(
         seccionalValida
         && uploadChatbotId
         && uploadFile
-        && !uploading
-        && !chatbotIdsConDocumento.has(Number(uploadChatbotId)),
+        && !uploading,
     );
 
     const abrirNuevoChatbot = () => {
@@ -308,10 +309,6 @@ export function useGestionChatbots() {
         }
         if (!uploadChatbotId || !uploadFile) {
             toast.error('Selecciona el chatbot y el archivo a subir.');
-            return;
-        }
-        if (chatbotIdsConDocumento.has(Number(uploadChatbotId))) {
-            toast.error('Este chatbot ya tiene un documento asignado para tu seccional.');
             return;
         }
         const errorArchivo = validarDocumentoPdf(uploadFile);
@@ -443,6 +440,7 @@ export function useGestionChatbots() {
         documentos,
         documentosFiltrados,
         chatbotsDisponiblesParaCarga,
+        documentosDelChatbotSeleccionado,
         seccionalUsuario,
         seccionalValida,
         puedeGestionarChatbots,

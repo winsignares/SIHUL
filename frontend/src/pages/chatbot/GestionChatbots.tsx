@@ -19,7 +19,7 @@ const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/
 export default function GestionChatbots() {
   const state = useGestionChatbots();
   const {
-    chatbots, chatbotsPorId, documentosFiltrados, chatbotsDisponiblesParaCarga, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
+    chatbots, chatbotsPorId, documentosFiltrados, chatbotsDisponiblesParaCarga, documentosDelChatbotSeleccionado, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
     loadingDocumentos, loadingSeccional, uploading, accionId,
     filtroChatbotId, setFiltroChatbotId, busquedaDocumento, setBusquedaDocumento,
     uploadChatbotId, setUploadChatbotId, uploadFile, seleccionarArchivoCarga, uploadInputKey, puedeSubirDocumento,
@@ -64,7 +64,7 @@ export default function GestionChatbots() {
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <p className="truncate text-xs text-slate-500">{chatbotsDisponiblesParaCarga.length === 0 && seccionalValida ? 'Todos los chatbots activos ya tienen un documento para esta seccional.' : uploadFile ? `Seleccionado: ${uploadFile.name}` : 'Selecciona un archivo permitido.'}</p>
+                <p className="text-xs text-slate-500">{chatbotsDisponiblesParaCarga.length === 0 && seccionalValida ? 'No hay chatbots activos.' : uploadFile ? `Seleccionado: ${uploadFile.name}` : documentosDelChatbotSeleccionado.length > 0 ? `Este chatbot ya tiene ${documentosDelChatbotSeleccionado.length} documento(s) en esta seccional; el nuevo se sumará (con el mismo nombre, reemplaza al existente).` : 'Selecciona un archivo permitido.'}</p>
                 <Button onClick={() => void subirDocumento()} disabled={!puedeSubirDocumento} className="bg-red-700 text-white hover:bg-red-800"><FileUp className="mr-2 h-4 w-4" />{uploading ? 'Procesando...' : 'Montar documento'}</Button>
               </div>
             </CardContent>

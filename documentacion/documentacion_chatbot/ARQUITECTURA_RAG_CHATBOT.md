@@ -150,3 +150,9 @@ Los PDF se guardan completos en `documents.file_data` (BYTEA, columna diferida: 
 
 - **Investigativo:** el modelo cita cada afirmación con `(archivo.pdf, p. N)` (regla 4 del prompt).
 - **Normativo:** el código añade al final de la respuesta **una sola cita** de la fuente principal, el documento y la página del fragmento mejor puntuado (`Profile.cite_main_source`). Se hace en código y no en el prompt porque el modelo pequeño no cumplía el formato de forma fiable. No se añade a la respuesta de «sin información». Solo lleva página si el documento es un PDF cargado con las páginas guardadas; los anteriores se recargan subiendo de nuevo el archivo.
+
+### Varios documentos por chatbot
+
+Un chatbot puede tener varios documentos por seccional (subir uno con el mismo nombre reemplaza al existente; con otro nombre se suma). En la recuperación se **reservan hasta 2 puestos** para el mejor fragmento de los documentos que no aparecen entre los resultados, siempre que sea al menos el 85 % de relevante que el primero; las 5 semillas no se tocan. La cita automática del perfil normativo incluye un segundo documento solo si su mejor fragmento alcanza el 90 % de la similitud del primero (máximo 2).
+
+Límites conocidos: si dos documentos se contradicen, el modelo pequeño no siempre lo señala; una pregunta que mezcla temas de dos documentos puede citar solo uno; las preguntas sobre el propio conjunto de documentos («¿qué documentos tienes?») no se responden.
