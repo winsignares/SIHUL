@@ -7,7 +7,7 @@ export const CHATBOT_TIPOS: { value: ChatbotTipo; label: string; descripcion: st
     {
         value: 'normativo',
         label: 'Normativo',
-        descripcion: 'Reglamentos, manuales y procedimientos: respuestas breves y cercanas, sin citar la fuente.',
+        descripcion: 'Reglamentos, manuales y procedimientos: respuestas breves y cercanas, con una cita de la fuente principal.',
     },
     {
         value: 'investigativo',

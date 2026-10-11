@@ -1,3 +1,4 @@
+from django.db.models.functions import Lower
 from rest_framework import generics, permissions
 
 from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
@@ -22,7 +23,7 @@ class LecturaAutenticadaEscrituraGestor(permissions.BasePermission):
 
 
 class AgenteListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Agente.objects.all().order_by('orden', 'nombre')
+    queryset = Agente.objects.all().order_by(Lower('nombre'))
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
 

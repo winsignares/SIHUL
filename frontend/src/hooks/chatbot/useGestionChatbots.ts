@@ -19,7 +19,6 @@ export type ChatbotFormState = {
     bg_gradient: string;
     activo: boolean;
     mensaje_bienvenida: string;
-    orden: number;
     tipo: ChatbotTipo;
     instrucciones_adicionales: string;
 };
@@ -39,7 +38,6 @@ const emptyForm: ChatbotFormState = {
     bg_gradient: 'from-blue-500 via-blue-600 to-indigo-600',
     activo: true,
     mensaje_bienvenida: '',
-    orden: 0,
     tipo: 'normativo',
     instrucciones_adicionales: '',
 };
@@ -85,6 +83,8 @@ export function useGestionChatbots() {
 
     const [filtroChatbotId, setFiltroChatbotId] = useState<string>('all');
     const [busquedaDocumento, setBusquedaDocumento] = useState('');
+    const [busquedaChatbot, setBusquedaChatbot] = useState('');
+    const [filtroTipoChatbot, setFiltroTipoChatbot] = useState<string>('all');
     const [uploadChatbotId, setUploadChatbotId] = useState<string>('');
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [uploadInputKey, setUploadInputKey] = useState(0);
@@ -173,6 +173,19 @@ export function useGestionChatbots() {
         [chatbots]
     );
 
+    // Orden alfabético (sin distinguir mayúsculas); el servicio ya los entrega así, se reordena
+    // por si cambia un nombre sin recargar.
+    const chatbotsFiltrados = useMemo(() => {
+        const termino = busquedaChatbot.trim().toLowerCase();
+        return chatbots
+            .filter((chatbot) => {
+                const tipo = chatbot.tipo ?? 'normativo';
+                return (filtroTipoChatbot === 'all' || tipo === filtroTipoChatbot)
+                    && (!termino || chatbot.nombre.toLowerCase().includes(termino));
+            })
+            .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+    }, [busquedaChatbot, chatbots, filtroTipoChatbot]);
+
     const documentosFiltrados = useMemo(() => {
         const termino = busquedaDocumento.trim().toLowerCase();
         return documentos.filter((documento) => {
@@ -221,7 +234,6 @@ export function useGestionChatbots() {
             bg_gradient: chatbot.bg_gradient || 'from-blue-500 via-blue-600 to-indigo-600',
             activo: chatbot.activo ?? true,
             mensaje_bienvenida: chatbot.mensaje_bienvenida || '',
-            orden: chatbot.orden ?? 0,
             tipo: chatbot.tipo ?? 'normativo',
             instrucciones_adicionales: chatbot.instrucciones_adicionales ?? '',
         });
@@ -245,7 +257,6 @@ export function useGestionChatbots() {
                 bg_gradient: form.bg_gradient.trim() || 'from-blue-500 via-blue-600 to-indigo-600',
                 activo: form.activo,
                 mensaje_bienvenida: form.mensaje_bienvenida.trim(),
-                orden: form.orden,
                 tipo: form.tipo,
                 instrucciones_adicionales: form.instrucciones_adicionales.trim(),
                 endpoint_url: editingChatbotId ? undefined : LEGACY_ENDPOINT_URL,
@@ -466,6 +477,11 @@ export function useGestionChatbots() {
         setFiltroChatbotId,
         busquedaDocumento,
         setBusquedaDocumento,
+        chatbotsFiltrados,
+        busquedaChatbot,
+        setBusquedaChatbot,
+        filtroTipoChatbot,
+        setFiltroTipoChatbot,
 
         uploadChatbotId,
         setUploadChatbotId,

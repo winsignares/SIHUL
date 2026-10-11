@@ -117,16 +117,23 @@ export default function GestionChatbots() {
 type GestionState = ReturnType<typeof useGestionChatbots>;
 
 function ChatbotsTable({ state }: { state: GestionState }) {
-  const { chatbots, loadingChatbots, accionId, abrirNuevoChatbot, abrirEdicionChatbot, alternarActivoChatbot, eliminarChatbot } = state;
+  const { chatbots, chatbotsFiltrados, busquedaChatbot, setBusquedaChatbot, filtroTipoChatbot, setFiltroTipoChatbot, loadingChatbots, accionId, abrirNuevoChatbot, abrirEdicionChatbot, alternarActivoChatbot, eliminarChatbot } = state;
   return <Card className="border-0 shadow-lg">
     <CardHeader className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between">
       <div><CardTitle className="text-base text-slate-900">Chatbots disponibles</CardTitle><p className="mt-1 text-sm text-slate-500">Estos asistentes pueden recibir documentación de la seccional.</p></div>
       <Button size="sm" onClick={abrirNuevoChatbot} className="bg-red-700 text-white hover:bg-red-800"><Plus className="mr-2 h-4 w-4" />Nuevo chatbot</Button>
     </CardHeader>
     <CardContent className="px-0 sm:px-6">
+      <div className="grid grid-cols-1 gap-3 px-6 pb-4 pt-4 sm:px-0 md:grid-cols-[1fr_240px]">
+        <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input value={busquedaChatbot} onChange={(event) => setBusquedaChatbot(event.target.value)} placeholder="Buscar chatbot por nombre" className="pl-9" /></div>
+        <Select value={filtroTipoChatbot} onValueChange={setFiltroTipoChatbot}>
+          <SelectTrigger><SelectValue placeholder="Filtrar por tipo" /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Todos los tipos</SelectItem>{CHATBOT_TIPOS.map((tipo) => <SelectItem key={tipo.value} value={tipo.value}>{tipo.label}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
       {loadingChatbots ? <p className="px-6 py-5 text-sm text-slate-500">Cargando chatbots...</p> : <div className="overflow-x-auto sm:rounded-xl sm:border"><Table className="min-w-[760px] table-fixed">
         <TableHeader><TableRow className="bg-slate-50"><TableHead className="w-[20%] text-center">Nombre</TableHead><TableHead className="w-[48%] text-center">Descripción</TableHead><TableHead className="w-[12%] text-center">Estado</TableHead><TableHead className="w-[20%] text-center">Acciones</TableHead></TableRow></TableHeader>
-        <TableBody>{chatbots.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">No hay chatbots registrados.</TableCell></TableRow> : chatbots.map((chatbot) => <TableRow key={chatbot.id}>
+        <TableBody>{chatbotsFiltrados.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">{chatbots.length === 0 ? 'No hay chatbots registrados.' : 'Ningún chatbot coincide con el filtro.'}</TableCell></TableRow> : chatbotsFiltrados.map((chatbot) => <TableRow key={chatbot.id}>
           <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}</TableCell>
           <TableCell className="text-center"><Badge className={chatbot.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{chatbot.activo ? 'Activo' : 'Inactivo'}</Badge></TableCell>
           <TableCell><div className="flex justify-center gap-2"><Button size="sm" variant="outline" onClick={() => abrirEdicionChatbot(chatbot)} title="Editar chatbot"><Settings2 className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={accionId === chatbot.id} onClick={() => void alternarActivoChatbot(chatbot)} title={chatbot.activo ? 'Desactivar' : 'Activar'}>{chatbot.activo ? <PauseCircle className="h-4 w-4 text-amber-600" /> : <PlayCircle className="h-4 w-4 text-emerald-600" />}</Button><Button size="sm" variant="destructive" disabled={accionId === chatbot.id} onClick={() => void eliminarChatbot(chatbot)} title="Eliminar chatbot"><Trash2 className="h-4 w-4" /></Button></div></TableCell>
@@ -174,13 +181,12 @@ function ChatbotDialog({ state }: { state: GestionState }) {
       <div className="space-y-2 md:col-span-2"><Label>Instrucciones adicionales (opcional)</Label><Textarea rows={3} maxLength={MAX_INSTRUCCIONES_ADICIONALES} placeholder="Ej.: Responde siempre en máximo tres frases." value={form.instrucciones_adicionales} onChange={(event) => setForm((prev) => ({ ...prev, instrucciones_adicionales: event.target.value }))} />
         <p className="text-xs text-slate-500">Ajustes finos que se suman al tipo. No pueden anular la regla de responder solo con los documentos cargados. {form.instrucciones_adicionales.length}/{MAX_INSTRUCCIONES_ADICIONALES}</p>
       </div>
-      <div className="space-y-2"><Label>Ícono</Label>
+      <div className="space-y-2 md:col-span-2"><Label>Ícono</Label>
         <Select value={form.icono} onValueChange={(value) => setForm((prev) => ({ ...prev, icono: value }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{CHATBOT_ICONOS.map(({ value, label, Icon }) => <SelectItem key={value} value={value}><span className="flex items-center gap-2"><Icon className="h-4 w-4" />{label}</span></SelectItem>)}</SelectContent>
         </Select>
       </div>
-      <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.orden} onChange={(event) => setForm((prev) => ({ ...prev, orden: Number(event.target.value) || 0 }))} /></div>
       <div className="flex items-center gap-3 md:col-span-2"><Switch checked={form.activo} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, activo: checked }))} /><Label>Chatbot activo</Label></div>
     </div>
     <DialogFooter><Button variant="outline" onClick={() => setDialogChatbotOpen(false)}>Cancelar</Button><Button onClick={() => void guardarChatbot()} disabled={savingChatbot} className="bg-red-700 text-white hover:bg-red-800"><Save className="mr-2 h-4 w-4" />{savingChatbot ? 'Guardando...' : 'Guardar'}</Button></DialogFooter>

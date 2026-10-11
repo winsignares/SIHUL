@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Lower
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 import uuid
@@ -38,7 +39,7 @@ class Agente(models.Model):
     class Meta:
         verbose_name = 'Agente'
         verbose_name_plural = 'Agentes'
-        ordering = ['orden', 'nombre']
+        ordering = [Lower('nombre')]
     
     def __str__(self):
         return self.nombre
