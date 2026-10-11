@@ -8,7 +8,7 @@ import {
     type ChatbotAgentePayload,
     type ChatbotDocumento,
 } from '../../services/chatbot/chatbotAdminAPI';
-import type { ChatbotTipo } from '../../models/chatbot/chatbotAdmin.model';
+import { limiteDocumentos, MAX_DOCUMENTOS, MIN_DOCUMENTOS, maxDocumentosPorDefecto, type ChatbotTipo } from '../../models/chatbot/chatbotAdmin.model';
 
 export type ChatbotFormState = {
     nombre: string;
@@ -21,6 +21,7 @@ export type ChatbotFormState = {
     mensaje_bienvenida: string;
     tipo: ChatbotTipo;
     instrucciones_adicionales: string;
+    max_documentos: number;
 };
 
 // El modelo Agente conserva endpoint_url por compatibilidad histórica (webhook de n8n),
@@ -40,6 +41,7 @@ const emptyForm: ChatbotFormState = {
     mensaje_bienvenida: '',
     tipo: 'normativo',
     instrucciones_adicionales: '',
+    max_documentos: maxDocumentosPorDefecto('normativo'),
 };
 
 // apiClient lanza un objeto { message, status } (no una instancia de Error)
@@ -195,7 +197,9 @@ export function useGestionChatbots() {
                 || documento.filename.toLowerCase().includes(termino)
                 || chatbot?.toLowerCase().includes(termino);
             return coincideChatbot && coincideBusqueda;
-        });
+        }).sort((a, b) =>
+            (chatbotsPorId[a.chatbot_id ?? -1]?.nombre ?? '').localeCompare(chatbotsPorId[b.chatbot_id ?? -1]?.nombre ?? '', 'es', { sensitivity: 'base' })
+            || (a.prioridad ?? 999) - (b.prioridad ?? 999));
     }, [busquedaDocumento, chatbotsPorId, documentos, filtroChatbotId]);
 
     // Un chatbot puede tener varios documentos por seccional; subir uno con el mismo nombre
@@ -210,11 +214,29 @@ export function useGestionChatbots() {
         [documentos, uploadChatbotId],
     );
 
+    const limiteDelChatbotSeleccionado = limiteDocumentos(chatbotsPorId[Number(uploadChatbotId)]);
+    // Con el cupo lleno solo se admite un archivo que reemplace a otro por tener el mismo nombre
+    const cupoLlenoParaSubir = Boolean(
+        uploadChatbotId
+        && documentosDelChatbotSeleccionado.length >= limiteDelChatbotSeleccionado
+        && !(uploadFile && documentosDelChatbotSeleccionado.some(
+            (documento) => documento.filename.toLowerCase() === uploadFile.name.toLowerCase(),
+        )),
+    );
+
     const puedeSubirDocumento = Boolean(
         seccionalValida
         && uploadChatbotId
         && uploadFile
-        && !uploading,
+        && !uploading
+        && !cupoLlenoParaSubir,
+    );
+
+    // Documentos que el chatbot en edición ya tiene en la seccional del usuario (el servidor
+    // comprueba además las demás seccionales)
+    const cantidadDocumentosEnEdicion = useMemo(
+        () => (editingChatbotId ? documentos.filter((d) => d.chatbot_id === editingChatbotId).length : 0),
+        [documentos, editingChatbotId],
     );
 
     const abrirNuevoChatbot = () => {
@@ -236,6 +258,7 @@ export function useGestionChatbots() {
             mensaje_bienvenida: chatbot.mensaje_bienvenida || '',
             tipo: chatbot.tipo ?? 'normativo',
             instrucciones_adicionales: chatbot.instrucciones_adicionales ?? '',
+            max_documentos: limiteDocumentos(chatbot),
         });
         setDialogChatbotOpen(true);
     };
@@ -243,6 +266,11 @@ export function useGestionChatbots() {
     const guardarChatbot = async () => {
         if (!form.nombre.trim() || !form.descripcion.trim() || !form.mensaje_bienvenida.trim()) {
             toast.error('Nombre, descripción y mensaje de bienvenida son obligatorios.');
+            return;
+        }
+
+        if (editingChatbotId && Math.round(form.max_documentos) < cantidadDocumentosEnEdicion) {
+            toast.error(`No puedes bajar el límite a ${Math.round(form.max_documentos)}: este chatbot ya tiene ${cantidadDocumentosEnEdicion} documentos. Elimina documentos antes de reducirlo.`);
             return;
         }
 
@@ -259,6 +287,7 @@ export function useGestionChatbots() {
                 mensaje_bienvenida: form.mensaje_bienvenida.trim(),
                 tipo: form.tipo,
                 instrucciones_adicionales: form.instrucciones_adicionales.trim(),
+                max_documentos: Math.min(MAX_DOCUMENTOS, Math.max(MIN_DOCUMENTOS, Math.round(form.max_documentos) || maxDocumentosPorDefecto(form.tipo))),
                 endpoint_url: editingChatbotId ? undefined : LEGACY_ENDPOINT_URL,
             };
 
@@ -320,6 +349,10 @@ export function useGestionChatbots() {
         }
         if (!uploadChatbotId || !uploadFile) {
             toast.error('Selecciona el chatbot y el archivo a subir.');
+            return;
+        }
+        if (cupoLlenoParaSubir) {
+            toast.error(`Este chatbot ya tiene el máximo de ${limiteDelChatbotSeleccionado} documento(s) en tu seccional. Elimina alguno o ajusta el límite en la gestión del chatbot.`);
             return;
         }
         const errorArchivo = validarDocumentoPdf(uploadFile);
@@ -396,6 +429,7 @@ export function useGestionChatbots() {
                 chatbot_id: documentoActualizar.chatbot_id,
                 sede: seccionalUsuario,
                 file: archivoActualizacion,
+                replace_document_id: documentoActualizar.id,
             });
             nuevoDocumentoCargado = true;
             await chatbotAdminAPI.eliminarDocumento(documentoActualizar.id);
@@ -429,6 +463,20 @@ export function useGestionChatbots() {
         setArchivoActualizacion(file);
     };
 
+    const cambiarPrioridadDocumento = async (documento: ChatbotDocumento, prioridad: number) => {
+        if (documento.prioridad === prioridad) return;
+        setAccionId(documento.id);
+        try {
+            await chatbotAdminAPI.cambiarPrioridadDocumento(documento.id, prioridad);
+            toast.success('Prioridad actualizada.');
+            await cargarDocumentos();
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'No fue posible cambiar la prioridad.'));
+        } finally {
+            setAccionId(null);
+        }
+    };
+
     const eliminarDocumento = async (documento: ChatbotDocumento) => {
         const confirmar = window.confirm(`¿Eliminar el documento "${documento.filename}"?`);
         if (!confirmar) return;
@@ -452,6 +500,9 @@ export function useGestionChatbots() {
         documentosFiltrados,
         chatbotsDisponiblesParaCarga,
         documentosDelChatbotSeleccionado,
+        cantidadDocumentosEnEdicion,
+        limiteDelChatbotSeleccionado,
+        cambiarPrioridadDocumento,
         seccionalUsuario,
         seccionalValida,
         puedeGestionarChatbots,

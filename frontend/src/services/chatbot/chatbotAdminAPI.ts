@@ -71,8 +71,14 @@ export const chatbotAdminAPI = {
         formData.append('chatbot_id', String(data.chatbot_id));
         formData.append('sede', data.sede);
         formData.append('file', data.file);
+        if (data.replace_document_id) {
+            formData.append('replace_document_id', String(data.replace_document_id));
+        }
         return apiClient.postFormData('/chatbot/admin/documentos/', formData);
     },
+
+    cambiarPrioridadDocumento: (id: number, prioridad: number): Promise<ChatbotDocumento> =>
+        apiClient.patch(`/chatbot/admin/documentos/${id}/prioridad/`, { prioridad }),
 
     eliminarDocumento: (id: number): Promise<unknown> =>
         apiClient.delete(`/chatbot/admin/documentos/${id}/`),

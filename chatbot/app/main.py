@@ -36,6 +36,7 @@ _EXTRA_COLUMNS = (
     ("documents", "embedding_model", "VARCHAR(100)", False),
     ("documents", "perfil", "VARCHAR(20)", False),
     ("documents", "file_data", "BYTEA", False),
+    ("documents", "prioridad", "INTEGER", False),
     ("chunks", "page", "INTEGER", False),
     ("chat_messages", "chat_id", "VARCHAR(64)", True),
     ("chat_messages", "id_usuario", "BIGINT", True),
@@ -62,6 +63,19 @@ async def _prepare_schema(conn):
         await conn.execute(text(
             _ADD_COLUMN.format(table=table, column=column, sql_type=sql_type, create_index=create_index)
         ))
+
+    # Documentos anteriores a la columna `prioridad`: se numeran como una pila (el más
+    # reciente = 1) por cada (chatbot, sede) que tenga alguno sin numerar.
+    await conn.execute(text(
+        "UPDATE documents d SET prioridad = r.rn FROM ("
+        "  SELECT id, row_number() OVER ("
+        "    PARTITION BY chatbot_id, sede ORDER BY created_at DESC, id DESC) AS rn "
+        "  FROM documents "
+        "  WHERE (chatbot_id, sede) IN ("
+        "    SELECT chatbot_id, sede FROM documents WHERE prioridad IS NULL AND chatbot_id IS NOT NULL"
+        "  )"
+        ") r WHERE d.id = r.id"
+    ))
 
     settings = get_settings()
     # Si cambia el modelo de embeddings y su dimensión, las inserciones y las

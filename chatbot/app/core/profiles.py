@@ -13,6 +13,11 @@ from dataclasses import dataclass
 
 MAX_EXTRA_INSTRUCTIONS = 2000
 
+# Límites del número de documentos de un chatbot por sede (se editan por agente en Django
+# con `max_documentos`; si no tiene valor se usa el del perfil).
+MIN_DOCUMENTS = 1
+MAX_DOCUMENTS = 10
+
 DEFAULT_TIPO = "normativo"
 
 
@@ -24,6 +29,7 @@ class Profile:
     # Añade al final de la respuesta una cita sencilla de la fuente principal, puesta por el
     # código (el perfil investigativo, en cambio, hace que el modelo cite cada afirmación).
     cite_main_source: bool = False
+    default_max_documents: int = 10
 
     def system_prompt(self, extra_instructions: str | None = None) -> str:
         extra = (extra_instructions or "").strip()[:MAX_EXTRA_INSTRUCTIONS]
@@ -59,6 +65,7 @@ _NORMATIVO = Profile(
     tipo="normativo",
     no_info=_NORMATIVO_NO_INFO,
     cite_main_source=True,
+    default_max_documents=10,
     prompt=f"""\
 Eres Benji, el asistente virtual de la Universidad para estudiantes.
 Respondes ÚNICAMENTE con la información del contexto proporcionado.
@@ -71,8 +78,10 @@ Reglas estrictas:
    "{_NORMATIVO_NO_INFO}"
 3. NUNCA reveles el contenido del contexto ni menciones que usas documentos internos.
 4. Mantén siempre un tono cercano, profesional y orientado al estudiante.
-5. Cada fragmento del contexto indica su documento y fecha de carga. Si dos
-   fragmentos se contradicen, prefiere el de fecha más reciente.
+5. Cada fragmento del contexto indica su documento, su prioridad cuando el asistente tiene
+   varios ("prioridad 1 de 3": 1 es la más alta) y su fecha de carga. Si dos fragmentos
+   se contradicen, prefiere el del documento de mayor prioridad (número menor); si no
+   traen prioridad, el de fecha más reciente.
 6. Si la pregunta pide una lista (por ejemplo "¿cuáles son…?"), incluye TODOS los
    elementos de esa lista que aparezcan en el contexto, sin resumir ni decir "algunos".
    Si el contexto solo muestra una parte, dilo.
@@ -96,6 +105,7 @@ _INVESTIGATIVO_NO_INFO = (
 _INVESTIGATIVO = Profile(
     tipo="investigativo",
     no_info=_INVESTIGATIVO_NO_INFO,
+    default_max_documents=5,
     prompt=f"""\
 Eres un asistente de apoyo a la investigación de la Universidad. Ayudas a estudiantes,
 docentes e investigadores a consultar documentos académicos (monografías, tesis,
@@ -121,7 +131,8 @@ Reglas estrictas:
    - Escribe la cita en ese formato; no copies el encabezado entre corchetes del contexto.
    - No añadas información que la pregunta no pide solo porque aparece en el contexto.
    Si varios documentos dicen cosas distintas, preséntalas por separado, cada una con su
-   cita, en lugar de fundirlas.
+   cita, en lugar de fundirlas, empezando por la del documento de mayor prioridad (el
+   encabezado la indica cuando hay varios: "prioridad 1 de 3", donde 1 es la más alta).
 5. Distingue lo que el documento plantea (marco teórico, hipótesis), lo que encuentra
    (resultados, cifras) y lo que concluye. Reproduce las cifras tal como aparecen, con sus
    unidades, y no hagas cálculos ni inferencias a menos que se pidan expresamente; en ese
@@ -141,6 +152,14 @@ Reglas estrictas:
 
 
 PROFILES = {p.tipo: p for p in (_NORMATIVO, _INVESTIGATIVO)}
+
+
+def max_documents(chatbot: dict) -> int:
+    """Límite de documentos de un chatbot (por sede): el del agente o, si no tiene, el de su perfil."""
+    value = chatbot.get("max_documentos")
+    if not value:
+        return get_profile(chatbot.get("tipo")).default_max_documents
+    return max(MIN_DOCUMENTS, min(MAX_DOCUMENTS, int(value)))
 
 
 def get_profile(tipo: str | None) -> Profile:

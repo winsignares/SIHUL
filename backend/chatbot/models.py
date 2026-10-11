@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
 from django.contrib.auth import get_user_model
@@ -27,6 +28,13 @@ class Agente(models.Model):
     mensaje_bienvenida = models.TextField()
     orden = models.IntegerField(default=0)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_NORMATIVO)
+    # Tope de documentos del agente por sede (1 a 10). Vacío = el del tipo (ver
+    # limite_documentos); debe coincidir con los perfiles del servicio RAG.
+    max_documentos = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+    )
     instrucciones_adicionales = models.TextField(
         max_length=2000,
         blank=True,
@@ -41,6 +49,12 @@ class Agente(models.Model):
         verbose_name_plural = 'Agentes'
         ordering = [Lower('nombre')]
     
+    @property
+    def limite_documentos(self):
+        if self.max_documentos:
+            return self.max_documentos
+        return 5 if self.tipo == self.TIPO_INVESTIGATIVO else 10
+
     def __str__(self):
         return self.nombre
 
@@ -102,6 +116,7 @@ class ChatbotDocument(models.Model):
     content_hash = models.CharField(max_length=64, null=True, blank=True)
     embedding_model = models.CharField(max_length=100, null=True, blank=True)
     perfil = models.CharField(max_length=20, null=True, blank=True)
+    prioridad = models.IntegerField(null=True, blank=True)  # 1 = la más alta en su chatbot y sede
     chatbot = models.ForeignKey(
         Agente,
         on_delete=models.DO_NOTHING,

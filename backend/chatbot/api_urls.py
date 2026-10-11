@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .admin_views import (
+    ChatbotDocumentoPrioridadProxyView,
     ChatbotDocumentoArchivoView,
     ChatbotDocumentoDetalleProxyView,
     ChatbotDocumentosProxyView,
@@ -33,6 +34,7 @@ urlpatterns = [
     # Gestión de documentos del RAG por chatbot/sede (proxy autenticado hacia FastAPI)
     path('admin/documentos/', ChatbotDocumentosProxyView.as_view(), name='api-admin-documentos'),
     path('admin/documentos/<int:pk>/', ChatbotDocumentoDetalleProxyView.as_view(), name='api-admin-documento-detalle'),
+    path('admin/documentos/<int:pk>/prioridad/', ChatbotDocumentoPrioridadProxyView.as_view(), name='api-admin-documento-prioridad'),
     path('admin/sedes/', ChatbotSedesProxyView.as_view(), name='api-admin-sedes'),
 
     # PDF original citado en una respuesta (cualquier usuario autenticado, sede propia)

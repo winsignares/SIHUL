@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.sedes import Sede
 from app.models.models import Document
-from app.schemas.schemas import DocumentOut
+from app.schemas.schemas import DocumentOut, PrioridadIn
+from app.core.profiles import max_documents
+from app.services import document_priority
 from app.services.chatbot_service import get_chatbot
 from app.core.cache import invalidate_answers
 from app.services.document_service import process_document
@@ -32,6 +34,9 @@ async def upload_document(
     chatbot_id: int = Query(..., description="ID del chatbot (agente) al que pertenece el documento"),
     sede: Sede = Query(..., description="Sede a la que pertenece el documento"),
     file: UploadFile = File(..., description="Archivo a procesar"),
+    replace_document_id: int | None = Query(
+        None, description="Documento del mismo chatbot y sede al que sustituye (conserva su prioridad)"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     if not any(file.filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
@@ -45,7 +50,10 @@ async def upload_document(
     if not chatbot["activo"]:
         raise HTTPException(status_code=400, detail=f"El chatbot '{chatbot['nombre']}' está inactivo")
     try:
-        return await process_document(file, sede, chatbot_id, db, tipo=chatbot.get("tipo"))
+        return await process_document(
+            file, sede, chatbot_id, db, tipo=chatbot.get("tipo"),
+            max_documents=max_documents(chatbot), replace_id=replace_document_id,
+        )
     except IngestionError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:
@@ -64,7 +72,11 @@ async def list_documents(
     limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Document).order_by(Document.created_at.desc()).limit(limit)
+    stmt = (
+        select(Document)
+        .order_by(Document.chatbot_id, Document.sede, Document.prioridad.nulls_last(), Document.created_at.desc())
+        .limit(limit)
+    )
     if chatbot_id is not None:
         stmt = stmt.where(Document.chatbot_id == chatbot_id)
     if sede:
@@ -106,6 +118,30 @@ async def get_document_file(
     return Response(content=doc.file_data, media_type="application/pdf")
 
 
+@router.patch(
+    "/{document_id}/priority",
+    response_model=DocumentOut,
+    summary="Cambiar la prioridad de un documento",
+    description=(
+        "Mueve el documento a la prioridad indicada (1 = la más alta) entre los documentos de "
+        "su chatbot y sede; los demás se desplazan. Debe estar entre 1 y el número de documentos."
+    ),
+)
+async def set_document_priority(document_id: int, body: PrioridadIn, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(Document, document_id)
+    if not doc or doc.chatbot_id is None:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    await document_priority.lock(db, doc.chatbot_id, doc.sede)
+    try:
+        await document_priority.move(db, doc.id, doc.chatbot_id, doc.sede, body.prioridad)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    await db.commit()
+    await db.refresh(doc)
+    await invalidate_answers(doc.chatbot_id, doc.sede)
+    return doc
+
+
 @router.delete(
     "/{document_id}",
     status_code=204,
@@ -117,7 +153,12 @@ async def delete_document(document_id: int, db: AsyncSession = Depends(get_db)):
     if not doc:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     chatbot_id, sede = doc.chatbot_id, doc.sede
+    if chatbot_id is not None:
+        await document_priority.lock(db, chatbot_id, sede)
     await db.delete(doc)
+    await db.flush()
+    if chatbot_id is not None:
+        await document_priority.renumber(db, chatbot_id, sede)  # cierra el hueco
     await db.commit()
     if chatbot_id is not None:
         await invalidate_answers(chatbot_id, sede)

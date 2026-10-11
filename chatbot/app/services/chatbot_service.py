@@ -7,7 +7,7 @@ async def list_chatbots(db: AsyncSession, solo_activos: bool = True) -> list[dic
     query = "SELECT id, nombre, activo FROM chatbot_agente"
     if solo_activos:
         query += " WHERE activo = true"
-    query += " ORDER BY orden, nombre"
+    query += " ORDER BY lower(nombre)"
     result = await db.execute(text(query))
     return [dict(row) for row in result.mappings().all()]
 

@@ -77,7 +77,8 @@ async def _search(
     result = await db.execute(
         text(
             "SELECT c.id, c.document_id, c.text, c.page, 1 - (c.embedding <=> :emb) AS similarity, "
-            "d.filename, d.created_at "
+            "d.filename, d.created_at, d.prioridad, "
+            "(SELECT count(*) FROM documents x WHERE x.chatbot_id = c.chatbot_id AND x.sede = c.sede) AS n_docs "
             "FROM chunks c JOIN documents d ON d.id = c.document_id "
             "WHERE c.chatbot_id = :chatbot_id AND c.sede = :sede "
             "ORDER BY c.embedding <=> :emb "
@@ -86,6 +87,19 @@ async def _search(
         {"emb": str(q_embedding), "chatbot_id": chatbot_id, "sede": sede.value, "n": n},
     )
     return result.fetchall()
+
+
+# Peso de la prioridad del documento al ordenar los candidatos: la prioridad 1 suma esto a la
+# similitud y la más baja no suma nada (en medio, proporcional). Es una preferencia, no un
+# filtro: un documento de baja prioridad con un fragmento claramente mejor sigue ganando.
+PRIORITY_BOOST = 0.08
+
+
+def _priority_bonus(row) -> float:
+    n, p = row.n_docs or 1, row.prioridad
+    if n <= 1 or not p:
+        return 0.0
+    return PRIORITY_BOOST * (n - min(p, n)) / (n - 1)
 
 
 KEYWORD_FRAGMENTS = 3  # fragmentos que aporta la búsqueda por palabras clave
@@ -129,7 +143,8 @@ async def _keyword_search(question: str, chatbot_id: int, sede: Sede, db: AsyncS
         )
         result = await db.execute(
             text(
-                "SELECT c.id, c.document_id, c.text, c.page, d.filename, d.created_at "
+                "SELECT c.id, c.document_id, c.text, c.page, d.filename, d.created_at, d.prioridad, "
+                "(SELECT count(*) FROM documents x WHERE x.chatbot_id = c.chatbot_id AND x.sede = c.sede) AS n_docs "
                 "FROM chunks c JOIN documents d ON d.id = c.document_id "
                 "WHERE c.chatbot_id = :chatbot_id AND c.sede = :sede "
                 "AND to_tsvector('spanish', c.text) @@ to_tsquery('spanish', :q) "
@@ -184,6 +199,7 @@ class _KeywordHit:
     def __init__(self, row, similarity: float):
         self.id, self.document_id, self.text, self.page = row.id, row.document_id, row.text, row.page
         self.filename, self.created_at, self.similarity = row.filename, row.created_at, similarity
+        self.prioridad, self.n_docs = row.prioridad, row.n_docs
 
 
 def _reserve_per_document(relevant: list, rows: list, seen: set, min_sim: float, k: int, reserve: int = 2):
@@ -236,7 +252,7 @@ def _cited_sources(relevant: list) -> list[tuple[str, int | None]]:
         if (
             not isinstance(row, _KeywordHit)
             and row.filename not in {name for name, _ in sources}
-            and row.similarity >= 0.9 * top.similarity
+            and row.similarity + _priority_bonus(row) >= 0.9 * (top.similarity + _priority_bonus(top))
         ):
             sources.append((row.filename, row.page))
     return sources
@@ -270,11 +286,15 @@ async def _retrieve_context(
     for n, emb in enumerate(q_embeddings):
         # Se piden más filas que `k` porque luego se descartan los fragmentos repetidos.
         rows = await _search(emb, chatbot_id, sede, db, k * 3)
+        # Orden por similitud más la preferencia por la prioridad del documento
+        rows = sorted(rows, key=lambda r: r.similarity + _priority_bonus(r), reverse=True)
         quota = k if n == 0 else max(2, k // 2)
         taken = 0
-        for row in rows:  # ya vienen ordenadas por similitud
-            if taken == quota or row.similarity < min_sim:
+        for row in rows:
+            if taken == quota:
                 break
+            if row.similarity < min_sim:
+                continue
             key = _normalized(row.text)
             if key in seen:
                 continue
@@ -314,7 +334,8 @@ async def _retrieve_context(
         emitted.add(row.id)
         seen.add(key)
         page = f" | p. {row.page}" if row.page else ""
-        block = f"[Documento: {hit.filename}{page} | cargado: {hit.created_at:%Y-%m-%d}]\n{row.text}"
+        prio = f" | prioridad {hit.prioridad} de {hit.n_docs}" if hit.n_docs > 1 and hit.prioridad else ""
+        block = f"[Documento: {hit.filename}{prio}{page} | cargado: {hit.created_at:%Y-%m-%d}]\n{row.text}"
         size += len(block)
         parts.append(block)
 

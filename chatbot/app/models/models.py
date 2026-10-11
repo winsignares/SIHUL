@@ -20,6 +20,9 @@ class Document(Base):
     # Perfil (tipo de agente) con el que se procesó: define cómo se troceó. NULL = anterior
     # a registrarlo.
     perfil: Mapped[str | None] = mapped_column(String(20))
+    # Prioridad entre los documentos de su chatbot y sede (1 = la más alta); ver
+    # app/services/document_priority.py. NULL solo en documentos anteriores a esta columna.
+    prioridad: Mapped[int | None] = mapped_column(Integer)
     # Archivo original (solo PDF) para previsualizarlo desde las citas del chat. Se carga
     # solo cuando se pide (`deferred`): los listados no deben arrastrar megabytes.
     file_data: Mapped[bytes | None] = deferred(mapped_column(LargeBinary))

@@ -10,8 +10,13 @@ class DocumentOut(BaseModel):
     filename: str
     chatbot_id: int | None
     sede: Sede
+    prioridad: int | None = Field(None, description="1 = la más alta entre los documentos de su chatbot y sede")
     created_at: datetime
     model_config = {"from_attributes": True}
+
+
+class PrioridadIn(BaseModel):
+    prioridad: int = Field(..., ge=1, description="Nueva prioridad (1 = la más alta)")
 
 
 #  Chat

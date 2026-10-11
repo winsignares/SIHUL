@@ -12,14 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Textarea } from '../../share/textarea';
 import { useGestionChatbots } from '../../hooks/chatbot/useGestionChatbots';
-import { CHATBOT_ICONOS, CHATBOT_TIPOS, MAX_INSTRUCCIONES_ADICIONALES } from '../../models/chatbot/chatbotAdmin.model';
+import { CHATBOT_ICONOS, CHATBOT_TIPOS, MAX_DOCUMENTOS, MAX_INSTRUCCIONES_ADICIONALES, MIN_DOCUMENTOS, maxDocumentosPorDefecto } from '../../models/chatbot/chatbotAdmin.model';
 
 const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export default function GestionChatbots() {
   const state = useGestionChatbots();
   const {
-    chatbots, chatbotsPorId, documentosFiltrados, chatbotsDisponiblesParaCarga, documentosDelChatbotSeleccionado, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
+    chatbots, chatbotsPorId, documentos, documentosFiltrados, chatbotsDisponiblesParaCarga, documentosDelChatbotSeleccionado, limiteDelChatbotSeleccionado, cambiarPrioridadDocumento, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
     loadingDocumentos, loadingSeccional, uploading, accionId,
     filtroChatbotId, setFiltroChatbotId, busquedaDocumento, setBusquedaDocumento,
     uploadChatbotId, setUploadChatbotId, uploadFile, seleccionarArchivoCarga, uploadInputKey, puedeSubirDocumento,
@@ -64,7 +64,7 @@ export default function GestionChatbots() {
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-500">{chatbotsDisponiblesParaCarga.length === 0 && seccionalValida ? 'No hay chatbots activos.' : uploadFile ? `Seleccionado: ${uploadFile.name}` : documentosDelChatbotSeleccionado.length > 0 ? `Este chatbot ya tiene ${documentosDelChatbotSeleccionado.length} documento(s) en esta seccional; el nuevo se sumará (con el mismo nombre, reemplaza al existente).` : 'Selecciona un archivo permitido.'}</p>
+                <p className="text-xs text-slate-500">{chatbotsDisponiblesParaCarga.length === 0 && seccionalValida ? 'No hay chatbots activos.' : uploadFile ? `Seleccionado: ${uploadFile.name}` : uploadChatbotId ? `Este chatbot tiene ${documentosDelChatbotSeleccionado.length} de ${limiteDelChatbotSeleccionado} documento(s) en esta seccional. El nuevo entra con la prioridad 1 (con el mismo nombre que otro, lo reemplaza).` : 'Selecciona un archivo permitido.'}</p>
                 <Button onClick={() => void subirDocumento()} disabled={!puedeSubirDocumento} className="bg-red-700 text-white hover:bg-red-800"><FileUp className="mr-2 h-4 w-4" />{uploading ? 'Procesando...' : 'Montar documento'}</Button>
               </div>
             </CardContent>
@@ -84,13 +84,20 @@ export default function GestionChatbots() {
             <CardContent className="px-0 sm:px-6">
               {loadingDocumentos ? <p className="px-6 py-5 text-sm text-slate-500 sm:px-0">Cargando documentos...</p> : (
                 <div className="overflow-x-auto sm:rounded-xl sm:border"><Table>
-                  <TableHeader><TableRow className="bg-slate-50"><TableHead className="text-center">Nombre del documento</TableHead><TableHead className="text-center">Chatbot asignado</TableHead><TableHead className="text-center">Seccional</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow className="bg-slate-50"><TableHead className="text-center">Nombre del documento</TableHead><TableHead className="text-center">Chatbot asignado</TableHead><TableHead className="text-center" title="1 = la más alta: se prefiere cuando los documentos del chatbot se contradicen">Prioridad</TableHead><TableHead className="text-center">Seccional</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {documentosFiltrados.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">No hay documentos para esta seccional y los filtros seleccionados.</TableCell></TableRow> : documentosFiltrados.map((documento) => {
+                    {documentosFiltrados.length === 0 ? <TableRow><TableCell colSpan={5} className="py-8 text-center text-slate-500">No hay documentos para esta seccional y los filtros seleccionados.</TableCell></TableRow> : documentosFiltrados.map((documento) => {
                       const chatbotNombre = documento.chatbot_id ? chatbotsPorId[documento.chatbot_id]?.nombre : null;
                       return <TableRow key={documento.id}>
                         <TableCell className="text-center font-medium text-slate-800">{documento.filename}</TableCell>
                         <TableCell className="text-center">{chatbotNombre ? <Badge variant="outline">{chatbotNombre}</Badge> : <span className="text-xs text-slate-400">Sin asignar</span>}</TableCell>
+                        <TableCell className="text-center">{documento.chatbot_id === null ? <span className="text-xs text-slate-400">—</span> : (() => {
+                          const total = documentos.filter((d) => d.chatbot_id === documento.chatbot_id).length;
+                          return <Select value={String(documento.prioridad ?? '')} onValueChange={(value) => void cambiarPrioridadDocumento(documento, Number(value))} disabled={accionId === documento.id || total < 2}>
+                            <SelectTrigger className="mx-auto w-[88px]"><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>{Array.from({ length: total }, (_, i) => i + 1).map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+                          </Select>;
+                        })()}</TableCell>
                         <TableCell className="text-center">{mostrarSeccional(documento.sede)}</TableCell>
                         <TableCell><div className="flex justify-center gap-2">
                           <Button size="sm" variant="outline" onClick={() => abrirActualizacionDocumento(documento)} title="Actualizar documento"><FilePenLine className="h-4 w-4" /></Button>
@@ -162,7 +169,7 @@ function ActualizarDocumentoDialog({ state }: { state: GestionState }) {
 }
 
 function ChatbotDialog({ state }: { state: GestionState }) {
-  const { dialogChatbotOpen, setDialogChatbotOpen, editingChatbotId, form, setForm, guardarChatbot, savingChatbot } = state;
+  const { dialogChatbotOpen, setDialogChatbotOpen, editingChatbotId, form, setForm, guardarChatbot, savingChatbot, cantidadDocumentosEnEdicion } = state;
   return <Dialog open={dialogChatbotOpen} onOpenChange={setDialogChatbotOpen}><DialogContent className="max-h-[92vh] w-[96vw] overflow-y-auto sm:!max-w-[640px]">
     <DialogHeader><DialogTitle>{editingChatbotId ? 'Editar chatbot' : 'Nuevo chatbot'}</DialogTitle></DialogHeader>
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -171,12 +178,16 @@ function ChatbotDialog({ state }: { state: GestionState }) {
       <div className="space-y-2 md:col-span-2"><Label>Descripción <span className="text-red-600">*</span></Label><Textarea rows={3} value={form.descripcion} onChange={(event) => setForm((prev) => ({ ...prev, descripcion: event.target.value }))} /></div>
       <div className="space-y-2 md:col-span-2"><Label>Mensaje de bienvenida <span className="text-red-600">*</span></Label><Textarea rows={2} value={form.mensaje_bienvenida} onChange={(event) => setForm((prev) => ({ ...prev, mensaje_bienvenida: event.target.value }))} /></div>
       <div className="space-y-2 md:col-span-2"><Label>Tipo de chatbot</Label>
-        <Select value={form.tipo} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo: value as typeof prev.tipo }))}>
+        <Select value={form.tipo} onValueChange={(value) => setForm((prev) => ({ ...prev, tipo: value as typeof prev.tipo, max_documentos: prev.max_documentos === maxDocumentosPorDefecto(prev.tipo) ? maxDocumentosPorDefecto(value as typeof prev.tipo) : prev.max_documentos }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{CHATBOT_TIPOS.map((tipo) => <SelectItem key={tipo.value} value={tipo.value}>{tipo.label}</SelectItem>)}</SelectContent>
         </Select>
         <p className="text-xs text-slate-500">{CHATBOT_TIPOS.find((tipo) => tipo.value === form.tipo)?.descripcion}</p>
         {editingChatbotId && <p className="text-xs text-amber-700">Cambiar el tipo cambia cómo responde desde ya. Los documentos ya cargados conservan el procesamiento con que se subieron (secciones y páginas): vuelve a subirlos para aplicar el nuevo tipo.</p>}
+      </div>
+      <div className="space-y-2 md:col-span-2"><Label>Máximo de documentos por seccional</Label>
+        <Input type="number" min={Math.max(MIN_DOCUMENTOS, cantidadDocumentosEnEdicion)} max={MAX_DOCUMENTOS} value={form.max_documentos} onChange={(event) => setForm((prev) => ({ ...prev, max_documentos: Number(event.target.value) }))} />
+        <p className="text-xs text-slate-500">Cantidad máxima de documentos que este chatbot puede tener en cada seccional, entre {MIN_DOCUMENTOS} y {MAX_DOCUMENTOS} (por defecto 10 en normativos y 5 en investigativos). Más documentos restan precisión y encarecen cada consulta. {editingChatbotId ? `Hoy tiene ${cantidadDocumentosEnEdicion} en tu seccional: solo puedes bajarlo hasta esa cantidad; para reducirlo más, elimina documentos antes.` : 'Podrás bajarlo después solo hasta la cantidad de documentos que tenga.'}</p>
       </div>
       <div className="space-y-2 md:col-span-2"><Label>Instrucciones adicionales (opcional)</Label><Textarea rows={3} maxLength={MAX_INSTRUCCIONES_ADICIONALES} placeholder="Ej.: Responde siempre en máximo tres frases." value={form.instrucciones_adicionales} onChange={(event) => setForm((prev) => ({ ...prev, instrucciones_adicionales: event.target.value }))} />
         <p className="text-xs text-slate-500">Ajustes finos que se suman al tipo. No pueden anular la regla de responder solo con los documentos cargados. {form.instrucciones_adicionales.length}/{MAX_INSTRUCCIONES_ADICIONALES}</p>

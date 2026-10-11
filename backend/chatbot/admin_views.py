@@ -63,6 +63,7 @@ class ChatbotDocumentosProxyView(APIView):
         chatbot_id = request.data.get('chatbot_id')
         sede = request.data.get('sede')
         file_obj = request.FILES.get('file')
+        replace_id = request.data.get('replace_document_id')
 
         if not chatbot_id or not sede or not file_obj:
             return Response({'error': 'chatbot_id, sede y file son requeridos'}, status=400)
@@ -72,7 +73,7 @@ class ChatbotDocumentosProxyView(APIView):
         try:
             resp = requests.post(
                 f'{fastapi_base_url()}/documents/upload',
-                params={'chatbot_id': chatbot_id, 'sede': sede},
+                params={'chatbot_id': chatbot_id, 'sede': sede, **({'replace_document_id': replace_id} if replace_id else {})},
                 files={'file': (file_obj.name, file_obj.read(), file_obj.content_type)},
                 timeout=120,
             )
@@ -96,6 +97,23 @@ class ChatbotDocumentoDetalleProxyView(APIView):
             # una nueva versión con el mismo nombre el RAG ya la reemplazó) el resultado
             # es el que se pedía.
             return Response(status=204)
+        return _forward_response(resp)
+
+
+class ChatbotDocumentoPrioridadProxyView(APIView):
+    """Cambia la prioridad de un documento entre los de su chatbot y sede (1 = la más alta)."""
+
+    permission_classes = [PuedeGestionarChatbots]
+
+    def patch(self, request, pk):
+        try:
+            resp = requests.patch(
+                f'{fastapi_base_url()}/documents/{pk}/priority',
+                json={'prioridad': request.data.get('prioridad')},
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as exc:
+            return _proxy_error_response(exc)
         return _forward_response(resp)
 
 
