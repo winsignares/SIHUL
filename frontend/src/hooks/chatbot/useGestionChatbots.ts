@@ -67,7 +67,7 @@ const validarDocumentoPdf = (file: File): string | null => {
 };
 
 export function useGestionChatbots() {
-    const { user } = useAuth();
+    const { user, hasEditPermission } = useAuth();
     const [chatbots, setChatbots] = useState<ChatbotAgente[]>([]);
     const [sedesDisponibles, setSedesDisponibles] = useState<string[]>([]);
     const [documentos, setDocumentos] = useState<ChatbotDocumento[]>([]);
@@ -111,8 +111,10 @@ export function useGestionChatbots() {
     const seccionalValida = Boolean(
         seccionalUsuario && sedesDisponibles.includes(seccionalUsuario)
     );
-    const puedeGestionarChatbots = seccionalUsuario === 'barranquilla'
-        && normalizeRole(user?.rol?.nombre) === 'admin';
+    // Misma regla que el backend (PuedeGestionarChatbots): rol admin o permiso EDITAR sobre el
+    // componente «Gestión de Chatbots» (asignable en Gestión de Roles), de cualquier seccional.
+    const puedeGestionarChatbots = normalizeRole(user?.rol?.nombre) === 'admin'
+        || hasEditPermission('Gestión de Chatbots');
 
     const cargarChatbots = useCallback(async () => {
         setLoadingChatbots(true);
