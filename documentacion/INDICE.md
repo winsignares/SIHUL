@@ -46,6 +46,7 @@ documentacion/
 
 ### Financiero
 - [GUIA_INTEGRACION_MODULO_FINANCIERO.md](documentacion_financiero/GUIA_INTEGRACION_MODULO_FINANCIERO.md), [CAMBIOS_SIHUL_FINANCIERO.md](documentacion_financiero/CAMBIOS_SIHUL_FINANCIERO.md), [MODULO_FINANCIERO.md](documentacion_financiero/backend/MODULO_FINANCIERO.md).
+- Estructura vigente del backend y seeds: [ESTRUCTURA_ACTUAL.md](documentacion_financiero/backend/ESTRUCTURA_ACTUAL.md).
 - Frontend: [HOOKS_FINANCIERO.md](documentacion_financiero/frontend/hooks/HOOKS_FINANCIERO.md), [SERVICES_FINANCIERO.md](documentacion_financiero/frontend/services/SERVICES_FINANCIERO.md), [PAGINAS_CHATBOT_FINANCIERO.md](documentacion_financiero/frontend/paginas/PAGINAS_CHATBOT_FINANCIERO.md).
 
 ### Chatbot

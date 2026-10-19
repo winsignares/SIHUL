@@ -6,12 +6,12 @@
 **Problema:** Las facturas del seed data causaban errores 404 y conflictos al intentar registrar desde "Mis Pendientes"
 
 **Solución:**
-- Comentado el bloque de creación de facturas demo en `seed_financiero.py`
+- Comentado el bloque de creación de facturas demo en `seed --solo financiero.py`
 - Las facturas deben crearse manualmente a través del panel
 - Evita inconsistencias en la base de datos
 
 **Archivo modificado:**
-- `backend/financiero/management/commands/seed_financiero.py` (línea ~400)
+- `backend/financiero/management/commands/seed --solo financiero.py` (línea ~400)
 
 ---
 
@@ -57,7 +57,7 @@ frontend/src/pages/financiero/proveedor/
 
 ### Backend (`financiero`)
 ```python
-# seed_financiero.py - Seed data comentado
+# seed --solo financiero.py - Seed data comentado
 if False:  # Deshabilitado intencionalmente
     for data in facturas_demo:
         # Creación deshabilitada
@@ -151,7 +151,7 @@ const ProveedorFacturaDetalle = lazy(() => import('../pages/financiero/proveedor
 
 ### 1. Seed data deshabilitado
 ```bash
-grep -n "if False:" backend/financiero/management/commands/seed_financiero.py
+grep -n "if False:" backend/financiero/management/commands/seed --solo financiero.py
 ```
 ✅ Debe mostrar la línea con `if False:`
 
@@ -173,7 +173,7 @@ grep -n "ProveedorDashboard" frontend/src/router/AppRouter.tsx
 
 | Archivo | Estado | Motivo |
 |---------|--------|--------|
-| `backend/financiero/management/commands/seed_financiero.py` | Modificado | Seed data deshabilitado |
+| `backend/financiero/management/commands/seed --solo financiero.py` | Modificado | Seed data deshabilitado |
 | `frontend/src/pages/financiero/proveedor/index.tsx` | Creado | Dashboard de proveedor |
 | `frontend/src/pages/financiero/proveedor/FacturaDetalle.tsx` | Creado | Detalles de factura |
 | `frontend/src/pages/financiero/proveedor/README.md` | Creado | Documentación |
@@ -220,7 +220,7 @@ npm run dev
 ### Seed data aún se crea
 ```bash
 # Verificar que el cambio se guardó
-grep -A 5 "COMENTADO: Seed data" backend/financiero/management/commands/seed_financiero.py
+grep -A 5 "COMENTADO: Seed data" backend/financiero/management/commands/seed --solo financiero.py
 ```
 
 ---
