@@ -92,6 +92,38 @@ services:
       - sihul_network
 
   # ==========================================
+  # SEED DE DATOS (MANUAL - nunca arranca solo)
+  # Perfil "tools": `docker compose up` NO lo levanta.
+  #   docker compose run --rm seed                                   # todo (demo)
+  #   docker compose run --rm seed python manage.py seed --solo-requeridos
+  #   docker compose run --rm seed python manage.py seed --listar
+  # ==========================================
+  seed:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    restart: "no"
+    env_file:
+      - ./.env
+    volumes:
+      - ./backend:/app
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "manage.py", "seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sihul_network
+
+  # ==========================================
   # CHATBOT FASTAPI + RAG
   # ==========================================
   chatbot:

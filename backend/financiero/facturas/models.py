@@ -4,7 +4,7 @@ from django.utils import timezone
 from unispace.usuarios.models import Usuario
 from financiero.proveedores.models import Proveedor
 from financiero.contabilidad.models import Departamento, CuentaContable, CentroCosto
-from financiero._upload_paths import documento_financiero_upload_to
+from financiero.facturas.upload_paths import documento_financiero_upload_to
 
 class Factura(models.Model):
     TIPO_DOCUMENTO_CHOICES = [

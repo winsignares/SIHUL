@@ -5,12 +5,11 @@ from __future__ import annotations
 import unicodedata
 from collections import defaultdict
 
-from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from financiero.proveedores.models import Ciudad, DepartamentoGeografico, Pais, Proveedor
-from config.management.commands.seeders import financiero_seeder
+from config.management.commands.seeders import financiero_seeder, geografia_colombia_seeder
 from unispace.usuarios.models import Usuario
 
 
@@ -37,7 +36,7 @@ class Command(BaseCommand):
             raise CommandError('Operación cancelada. Ejecute de nuevo con --confirm.')
 
         # Primero obtiene los nombres y códigos vigentes desde la fuente oficial.
-        call_command('seed_geografia_colombia', stdout=self.stdout)
+        geografia_colombia_seeder.create_geografia_colombia(self.stdout, self.style)
 
         with transaction.atomic():
             departamentos_eliminados, ciudades_eliminadas = self._consolidar_geografia()

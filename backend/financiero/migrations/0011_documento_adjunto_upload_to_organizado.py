@@ -1,6 +1,6 @@
 from django.db import migrations, models
 
-import financiero._upload_paths
+import financiero.facturas.upload_paths
 
 
 class Migration(migrations.Migration):
@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='documentoadjunto',
             name='archivo',
-            field=models.FileField(blank=True, null=True, upload_to=financiero._upload_paths.documento_financiero_upload_to),
+            field=models.FileField(blank=True, null=True, upload_to=financiero.facturas.upload_paths.documento_financiero_upload_to),
         ),
     ]

@@ -32,7 +32,8 @@ from reportlab.pdfgen import canvas
 from financiero.proveedores.models import Proveedor
 from .models import ComentarioFactura, DocumentoAdjunto, DocumentoUnificado, Factura, HistorialFactura, ItemFactura, RechazoDevolucion
 from .serializers import ComentarioFacturaSerializer, DocumentoAdjuntoSerializer, FacturaCreateSerializer, FacturaDetailSerializer, FacturaListSerializer, HistorialFacturaSerializer, ItemFacturaSerializer, RechazoDevolacionSerializer
-from financiero.sla import actualizar_sla_factura, build_parametros_sla_map, sincronizar_sla_facturas
+from financiero.facturas.upload_paths import _safe_path_segment
+from financiero.facturas.sla import actualizar_sla_factura, build_parametros_sla_map, sincronizar_sla_facturas
 from unispace.usuarios.models import Usuario
 from unispace.notificaciones.signals import crear_notificacion
 
@@ -108,7 +109,7 @@ def _documento_bytes(documento):
     nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
     if nas_path:
         try:
-            from financiero.services.shared_storage_service import shared_storage
+            from financiero.facturas.shared_storage import shared_storage
             result = shared_storage.read_file(nas_path)
             if result.success:
                 return result.content_bytes
@@ -164,7 +165,7 @@ def _estado_matches(actual, expected):
     return _normalize_text(actual) == _normalize_text(expected)
 def _factura_document_base_path(factura):
     date = getattr(factura, 'fecha_recepcion', None) or timezone.localdate()
-    factura_label = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
+    factura_label = _safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
     return Path(settings.MEDIA_ROOT) / f'{date:%Y}' / f'{date:%m}' / factura_label
 def _factura_ciclo_documental_actual(factura):
     return getattr(factura, 'ciclo_documental_actual', 1) or 1
@@ -194,7 +195,7 @@ def _guardar_documento_en_carpeta_compartida(
     tamano_bytes, hash_archivo, usuario,
 ):
     """Guarda el binario exclusivamente en el NAS y crea solo sus metadatos en BD."""
-    from financiero.services.shared_storage_service import shared_storage
+    from financiero.facturas.shared_storage import shared_storage
 
     if not content_bytes:
         raise ValidationError({'archivo': 'No fue posible leer el contenido del archivo.'})
@@ -836,12 +837,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return _documento_bytes(documento)
 
     def _guardar_pdf_unificado(self, factura, content, scope):
-        safe_scope = models._safe_path_segment(scope or 'all')
-        safe_factura = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
+        safe_scope = _safe_path_segment(scope or 'all')
+        safe_factura = _safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
         nombre_archivo = f'Documentos_{safe_factura}_{safe_scope}.pdf'
         ciclo_documental = _factura_ciclo_documental_actual(factura)
 
-        from financiero.services.shared_storage_service import shared_storage
+        from financiero.facturas.shared_storage import shared_storage
         result = shared_storage.copy_unified_pdf(content, factura, scope)
 
         DocumentoUnificado.objects.update_or_create(
@@ -1113,7 +1114,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 ciclo_documental=_factura_ciclo_documental_actual(factura),
             ).first()
             if unificado and unificado.nas_relative_path:
-                from financiero.services.shared_storage_service import shared_storage
+                from financiero.facturas.shared_storage import shared_storage
                 result = shared_storage.read_file(unificado.nas_relative_path)
                 if result.success and result.content_bytes is not None:
                     filename = unificado.nombre_archivo or f'Documentos_{factura.numero_factura}_{scope}.pdf'
@@ -1156,8 +1157,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
             for index, documento in enumerate(documentos, 1):
                 raw_bytes = self._documento_bytes(documento)
-                base_name = models._safe_path_segment(documento.nombre_archivo or f'documento-{index}')
-                folder = models._safe_path_segment(documento.tipo_documento or 'documento')
+                base_name = _safe_path_segment(documento.nombre_archivo or f'documento-{index}')
+                folder = _safe_path_segment(documento.tipo_documento or 'documento')
                 zip_name = f'especificos/{folder}/{index:02d}-{base_name}'
 
                 if zip_name in used_names:
@@ -1175,7 +1176,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         content = output.getvalue()
         output.close()
 
-        filename = f'Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.zip'
+        filename = f'Expediente_{_safe_path_segment(factura.numero_factura or factura.id)}.zip'
         response = HttpResponse(content, content_type='application/zip')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
@@ -1931,7 +1932,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
         content = self._pdf_consolidado_documentos(factura, documentos, scope)
-        filename = f"Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.pdf"
+        filename = f"Expediente_{_safe_path_segment(factura.numero_factura or factura.id)}.pdf"
         response = HttpResponse(content, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
@@ -2128,7 +2129,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         # Archivar documentos del NAS cuando se devuelve al proveedor
         if estado_destino == 'Devuelta':
-            from financiero.services.shared_storage_service import shared_storage
+            from financiero.facturas.shared_storage import shared_storage
             version_label = f'devolucion_{n_devoluciones + 1:02d}'
             result = shared_storage.archive_documents_folder(factura, version_label)
             if not result.success and result.error_code not in ('DISABLED', 'NETWORK_ERROR'):
@@ -2387,7 +2388,7 @@ def _sincronizar_documento_y_pdf_nas(documento_id):
     """
     close_old_connections()
     try:
-        from financiero.services.shared_storage_service import shared_storage
+        from financiero.facturas.shared_storage import shared_storage
 
         documento = (
             DocumentoAdjunto.objects
