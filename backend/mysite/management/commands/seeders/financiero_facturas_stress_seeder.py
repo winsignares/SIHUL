@@ -4,7 +4,9 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from financiero.models import CentroCosto, CuentaContable, Departamento, Factura, Proveedor
+from financiero.contabilidad.models import CentroCosto, CuentaContable, Departamento
+from financiero.facturas.models import Factura
+from financiero.proveedores.models import Proveedor
 from unispace.usuarios.models import Usuario
 
 TOTAL_POR_ESTADO = 10

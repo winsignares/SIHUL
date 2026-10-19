@@ -1,26 +1,15 @@
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from django.urls import path, include
 
-# Crear router
+from .proveedores.urls import registrations as _prov
+from .contabilidad.urls import registrations as _cont
+from .parametros.urls import registrations as _param
+from .reportes.urls import registrations as _rep
+from .facturas.urls import registrations as _fact
+
 router = DefaultRouter()
-router.register(r'proveedores', views.ProveedorViewSet, basename='proveedor')
-router.register(r'paises', views.PaisViewSet, basename='pais')
-router.register(r'departamentos-geograficos', views.DepartamentoGeograficoViewSet, basename='departamento-geografico')
-router.register(r'ciudades', views.CiudadViewSet, basename='ciudad')
-router.register(r'departamentos', views.DepartamentoViewSet, basename='departamento')
-router.register(r'cuentas-contables', views.CuentaContableViewSet, basename='cuenta-contable')
-router.register(r'centros-costo', views.CentroCostoViewSet, basename='centro-costo')
-router.register(r'parametros-sla', views.ParametroSLAViewSet, basename='parametro-sla')
-router.register(r'parametros-financiero', views.ParametrosFinancieroViewSet, basename='parametro-financiero')
-router.register(r'reportes', views.ReporteGeneradoViewSet, basename='reporte')
-router.register(r'documentos', views.DocumentoAdjuntoViewSet, basename='documento')
-router.register(r'historial', views.HistorialFacturaViewSet, basename='historial')
-router.register(r'comentarios', views.ComentarioFacturaViewSet, basename='comentario')
-router.register(r'rechazos', views.RechazoDevolacionViewSet, basename='rechazo')
-router.register(r'facturas', views.FacturaViewSet, basename='factura')
-router.register(r'bancos', views.BancoViewSet, basename='banco')
-router.register(r'tipos-cuenta', views.TipoCuentaViewSet, basename='tipo-cuenta')
+for prefix, viewset, basename in (_prov + _cont + _param + _rep + _fact):
+    router.register(prefix, viewset, basename=basename)
 
 app_name = 'financiero'
 

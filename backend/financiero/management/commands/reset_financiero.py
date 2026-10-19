@@ -3,26 +3,11 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from financiero.models import (
-    Banco,
-    CentroCosto,
-    Ciudad,
-    ComentarioFactura,
-    CuentaContable,
-    Departamento,
-    DepartamentoGeografico,
-    DocumentoAdjunto,
-    DocumentoUnificado,
-    Factura,
-    HistorialFactura,
-    Pais,
-    ParametroSLA,
-    ParametrosFinanciero,
-    Proveedor,
-    RechazoDevolucion,
-    ReporteGenerado,
-    TipoCuenta,
-)
+from financiero.contabilidad.models import Banco, CentroCosto, CuentaContable, Departamento, TipoCuenta
+from financiero.facturas.models import ComentarioFactura, DocumentoAdjunto, DocumentoUnificado, Factura, HistorialFactura, RechazoDevolucion
+from financiero.parametros.models import ParametroSLA, ParametrosFinanciero
+from financiero.proveedores.models import Ciudad, DepartamentoGeografico, Pais, Proveedor
+from financiero.reportes.models import ReporteGenerado
 from mysite.management.commands.seeders.financiero_seeder import create_financiero_data
 
 

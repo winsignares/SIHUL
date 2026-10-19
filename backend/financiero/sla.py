@@ -4,7 +4,8 @@ from datetime import date, timedelta
 from typing import Dict, Iterable, Optional
 import unicodedata
 
-from .models import Factura, ParametroSLA
+from financiero.facturas.models import Factura
+from financiero.parametros.models import ParametroSLA
 
 
 _ALIAS_MAP = {

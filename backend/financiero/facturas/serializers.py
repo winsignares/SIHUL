@@ -1,17 +1,16 @@
 from rest_framework import serializers
-from . import models
-from .sla import obtener_parametro_por_etapa
-from unispace.usuarios.serializers import UsuarioSerializer
 from decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from mysite.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, FACTURA_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
 import os
-import re
-import uuid
-from urllib.parse import urlparse
-import unicodedata
+
+from .models import ComentarioFactura, DocumentoAdjunto, Factura, HistorialFactura, ItemFactura, RechazoDevolucion
+from financiero.proveedores.serializers import ProveedorSerializer
+from financiero.contabilidad.serializers import CentroCostoSerializer, CuentaContableSerializer, DepartamentoSerializer
+from unispace.usuarios.serializers import UsuarioSerializer
+from financiero.sla import obtener_parametro_por_etapa
 
 
 ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg', 'txt'}
@@ -25,168 +24,25 @@ ALLOWED_DOC_MIME_TYPES = {
     'application/octet-stream',  # .txt desde Windows/Chrome
 }
 MAX_DOC_SIZE_BYTES = 25 * 1024 * 1024
-
-
 DOCUMENTOS_SENSIBLES_POR_ROL = {
     'archivo plano bancario',
     'soporte causacion seven',
 }
-
 ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
     'auditoria',
     'direccion financiera',
 }
-
-
 def _normalizar_texto_permiso(value):
     normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
     without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
     return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
-
-
 def _usuario_puede_ver_documentos_sensibles(user):
     rol = _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
     return rol in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
-
-
 def _documento_es_sensible(documento):
     tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
     nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
     return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
-
-
-# ============================================================
-# SERIALIZERS SIMPLES
-# ============================================================
-
-class ProveedorSerializer(serializers.ModelSerializer):
-    usuario_nombre = serializers.CharField(source='usuario.nombre', read_only=True, allow_null=True)
-    usuario_correo = serializers.EmailField(source='usuario.correo', read_only=True, allow_null=True)
-
-    class Meta:
-        model = models.Proveedor
-        fields = '__all__'
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion', 'numero_facturas_procesadas', 'total_pagado_historico']
-    
-    def validate(self, data):
-        # Sanitizar y validar inputs contra XSS
-        # En PATCH (partial=True) solo validar campos presentes en el payload
-        try:
-            is_partial = self.partial
-            schema = {k: v for k, v in PROVEEDOR_SCHEMA.items() if k in data} if is_partial else PROVEEDOR_SCHEMA
-            sanitized_data = sanitize_dict(data, schema)
-            data.update(sanitized_data)
-        except ValidationError as e:
-            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
-        return data
-
-
-class PaisSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Pais
-        fields = ['id', 'nombre', 'codigo_iso', 'activo']
-
-
-class DepartamentoGeograficoSerializer(serializers.ModelSerializer):
-    pais = PaisSerializer(read_only=True)
-    pais_id = serializers.IntegerField(source='pais.id', read_only=True)
-
-    class Meta:
-        model = models.DepartamentoGeografico
-        fields = ['id', 'nombre', 'codigo', 'activo', 'pais', 'pais_id']
-
-
-class CiudadSerializer(serializers.ModelSerializer):
-    departamento = DepartamentoGeograficoSerializer(read_only=True)
-    departamento_id = serializers.IntegerField(source='departamento.id', read_only=True)
-    pais_id = serializers.IntegerField(source='departamento.pais.id', read_only=True)
-
-    class Meta:
-        model = models.Ciudad
-        fields = ['id', 'nombre', 'activo', 'departamento', 'departamento_id', 'pais_id']
-
-
-class DepartamentoSerializer(serializers.ModelSerializer):
-    responsable = UsuarioSerializer(read_only=True)
-    responsable_id = serializers.IntegerField(write_only=True, required=False)
-
-    class Meta:
-        model = models.Departamento
-        fields = '__all__'
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion']
-    
-    def validate(self, data):
-        try:
-            is_partial = self.partial
-            schema = {k: v for k, v in DEPARTAMENTO_SCHEMA.items() if k in data} if is_partial else DEPARTAMENTO_SCHEMA
-            sanitized_data = sanitize_dict(data, schema)
-            data.update(sanitized_data)
-        except ValidationError as e:
-            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
-        return data
-
-
-class CuentaContableSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.CuentaContable
-        fields = '__all__'
-        read_only_fields = ['fecha_creacion']
-    
-    def validate(self, data):
-        try:
-            is_partial = self.partial
-            schema = {k: v for k, v in CUENTA_CONTABLE_SCHEMA.items() if k in data} if is_partial else CUENTA_CONTABLE_SCHEMA
-            sanitized_data = sanitize_dict(data, schema)
-            data.update(sanitized_data)
-        except ValidationError as e:
-            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
-        return data
-
-
-class CentroCostoSerializer(serializers.ModelSerializer):
-    porcentaje_ejecucion_display = serializers.ReadOnlyField(source='porcentaje_ejecucion')
-
-    class Meta:
-        model = models.CentroCosto
-        fields = '__all__'
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion']
-    
-    def validate(self, data):
-        try:
-            is_partial = self.partial
-            schema = {k: v for k, v in CENTRO_COSTO_SCHEMA.items() if k in data} if is_partial else CENTRO_COSTO_SCHEMA
-            sanitized_data = sanitize_dict(data, schema)
-            data.update(sanitized_data)
-        except ValidationError as e:
-            raise serializers.ValidationError(f"Validación fallida: {str(e)}")
-        return data
-
-
-class ParametroSLASerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.ParametroSLA
-        fields = '__all__'
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion']
-
-
-class ParametrosFinancieroSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.ParametrosFinanciero
-        fields = '__all__'
-        read_only_fields = ['fecha_modificacion']
-
-
-class ReporteGeneradoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.ReporteGenerado
-        fields = '__all__'
-        read_only_fields = ['fecha_generacion']
-
-
-# ============================================================
-# SERIALIZERS ANIDADOS Y COMPLEJOS
-# ============================================================
-
 class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
     archivo = serializers.FileField(write_only=True, required=False, allow_null=True)
     cargado_por = UsuarioSerializer(read_only=True)
@@ -195,7 +51,7 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
     archivo_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = models.DocumentoAdjunto
+        model = DocumentoAdjunto
         fields = [
             'id', 'factura', 'nombre_archivo', 'tipo_documento', 'tipo_mime', 'tamano_bytes',
             'url_storage', 'archivo', 'hash_archivo', 'obligatorio', 'verificado',
@@ -299,53 +155,39 @@ class DocumentoAdjuntoSerializer(serializers.ModelSerializer):
         if 'url_storage' in validated_data:
             validated_data['url_storage'] = self.validate_url_storage(validated_data.get('url_storage'))
         return super().create(validated_data)
-
-
 class HistorialFacturaSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
     numero_factura = serializers.CharField(source='factura.numero_factura', read_only=True)
 
     class Meta:
-        model = models.HistorialFactura
+        model = HistorialFactura
         fields = '__all__'
         read_only_fields = ['fecha_accion']
-
-
 class ComentarioFacturaSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
     usuario_id = serializers.IntegerField(write_only=True, required=False)
     respuestas = serializers.SerializerMethodField()
 
     class Meta:
-        model = models.ComentarioFactura
+        model = ComentarioFactura
         fields = '__all__'
         read_only_fields = ['fecha_creacion', 'fecha_edicion', 'editado']
 
     def get_respuestas(self, obj):
         respuestas = obj.respuestas.all()
         return ComentarioFacturaSerializer(respuestas, many=True).data
-
-
 class RechazoDevolacionSerializer(serializers.ModelSerializer):
     usuario_rechaza = UsuarioSerializer(read_only=True)
     usuario_corrige = UsuarioSerializer(read_only=True)
 
     class Meta:
-        model = models.RechazoDevolucion
+        model = RechazoDevolucion
         fields = '__all__'
         read_only_fields = ['fecha_rechazo']
-
-
 class ItemFacturaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.ItemFactura
+        model = ItemFactura
         fields = ['id', 'descripcion', 'cantidad', 'valor_unitario', 'porcentaje_iva', 'valor_subtotal', 'valor_iva', 'valor_total', 'orden']
-
-
-# ============================================================
-# SERIALIZER FACTURA (COMPLEJO)
-# ============================================================
-
 class FacturaListSerializer(serializers.ModelSerializer):
     proveedor = ProveedorSerializer(read_only=True)
     departamento = DepartamentoSerializer(read_only=True)
@@ -361,7 +203,7 @@ class FacturaListSerializer(serializers.ModelSerializer):
     items = ItemFacturaSerializer(read_only=True, many=True)
 
     class Meta:
-        model = models.Factura
+        model = Factura
         fields = [
             'id', 'numero_factura', 'numero_radicado', 'proveedor', 'departamento', 'departamento_id', 'valor_total',
             'cuenta_contable', 'centro_costo', 'numero_proceso_pago', 'numero_confirmacion', 'numero_transaccion', 'numero_comprobante',
@@ -382,8 +224,6 @@ class FacturaListSerializer(serializers.ModelSerializer):
         if not parametro or not parametro.activo:
             return None
         return int(parametro.dias_maximos or 0)
-
-
 class FacturaDetailSerializer(serializers.ModelSerializer):
     proveedor = ProveedorSerializer(read_only=True)
     proveedor_id = serializers.IntegerField(write_only=True)
@@ -408,7 +248,7 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
     indicador_riesgo_display = serializers.CharField(source='get_indicador_riesgo_display', read_only=True)
 
     class Meta:
-        model = models.Factura
+        model = Factura
         fields = '__all__'
         read_only_fields = [
             'fecha_creacion', 'fecha_modificacion', 'valor_neto_pagar',
@@ -438,8 +278,6 @@ class FacturaDetailSerializer(serializers.ModelSerializer):
                 if not _documento_es_sensible(documento)
             ]
         return DocumentoAdjuntoSerializer(documentos, many=True, context=self.context).data
-
-
 class FacturaCreateSerializer(serializers.ModelSerializer):
     numero_factura = serializers.CharField(required=False, allow_blank=True)
     proveedor_id = serializers.IntegerField()
@@ -450,7 +288,7 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
     items = ItemFacturaSerializer(many=True, required=True, allow_empty=False, write_only=True)
 
     class Meta:
-        model = models.Factura
+        model = Factura
         fields = [
             'id', 'numero_factura', 'tipo_documento', 'observaciones',
             'identificacion_factura',
@@ -483,7 +321,7 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
         year = timezone.now().year
         prefix = f"FAC-{year}-"
         last_number = (
-            models.Factura.objects
+            Factura.objects
             .filter(numero_factura__startswith=prefix)
             .order_by('-numero_factura')
             .values_list('numero_factura', flat=True)
@@ -524,24 +362,6 @@ class FacturaCreateSerializer(serializers.ModelSerializer):
 
         for orden, item_data in enumerate(items_data, start=1):
             item_data.pop('orden', None)
-            models.ItemFactura.objects.create(factura=factura, orden=orden, **item_data)
+            ItemFactura.objects.create(factura=factura, orden=orden, **item_data)
 
         return factura
-
-
-# ============================================================
-# SERIALIZERS PARA BANCO Y TIPO DE CUENTA
-# ============================================================
-
-class BancoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Banco
-        fields = ['id', 'nombre', 'descripcion', 'codigo_bancario', 'activo', 'fecha_creacion', 'fecha_modificacion']
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion']
-
-
-class TipoCuentaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.TipoCuenta
-        fields = ['id', 'nombre', 'descripcion', 'activo', 'fecha_creacion', 'fecha_modificacion']
-        read_only_fields = ['fecha_creacion', 'fecha_modificacion']

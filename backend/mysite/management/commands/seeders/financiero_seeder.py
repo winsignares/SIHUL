@@ -7,19 +7,9 @@ Carga: roles, componentes, permisos, departamentos, catálogos contables,
 import re
 from unispace.usuarios.models import Rol, Usuario
 from unispace.componentes.models import Componente, ComponenteRol
-from financiero.models import (
-    Departamento,
-    DepartamentoGeografico,
-    ParametroSLA,
-    ParametrosFinanciero,
-    Pais,
-    Proveedor,
-    CuentaContable,
-    CentroCosto,
-    Banco,
-    Ciudad,
-    TipoCuenta,
-)
+from financiero.contabilidad.models import Banco, CentroCosto, CuentaContable, Departamento, TipoCuenta
+from financiero.parametros.models import ParametroSLA, ParametrosFinanciero
+from financiero.proveedores.models import Ciudad, DepartamentoGeografico, Pais, Proveedor
 
 
 def create_financiero_data(out, sty):

@@ -11,7 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
 
-from financiero.models import Ciudad, DepartamentoGeografico, Pais
+from financiero.proveedores.models import Ciudad, DepartamentoGeografico, Pais
 
 
 DANE_BASE_URL = (

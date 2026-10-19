@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import ParametroSLA, Factura
+from financiero.facturas.models import Factura
+from financiero.parametros.models import ParametroSLA
 from .sla import build_parametros_sla_map, sincronizar_sla_facturas
 
 

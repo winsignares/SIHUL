@@ -4,7 +4,9 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 from datetime import date
 from unittest.mock import patch
-from . import models
+from financiero.contabilidad.models import Banco, Departamento, TipoCuenta
+from financiero.facturas.models import DocumentoAdjunto, Factura
+from financiero.proveedores.models import Ciudad, DepartamentoGeografico, Pais, Proveedor
 from . import views, serializers
 from .services.shared_storage_service import StorageResult
 from unispace.usuarios.models import Usuario, Rol
@@ -25,14 +27,14 @@ class FacturaTestCase(TestCase):
         )
         
         # Crear proveedor
-        self.proveedor = models.Proveedor.objects.create(
+        self.proveedor = Proveedor.objects.create(
             nit='123456789',
             razon_social='Proveedor Test S.A.S.',
             tipo_proveedor='Servicios'
         )
         
         # Crear departamento
-        self.departamento = models.Departamento.objects.create(
+        self.departamento = Departamento.objects.create(
             codigo='DEP001',
             nombre='Departamento Test',
             tipo='Administrativo'
@@ -41,7 +43,7 @@ class FacturaTestCase(TestCase):
 
     def test_crear_factura(self):
         """Test para crear una factura"""
-        factura = models.Factura.objects.create(
+        factura = Factura.objects.create(
             numero_factura='FAC-001',
             proveedor=self.proveedor,
             departamento=self.departamento,
@@ -60,7 +62,7 @@ class FacturaTestCase(TestCase):
 
     def test_radicar_factura(self):
         """Test para radicar una factura"""
-        factura = models.Factura.objects.create(
+        factura = Factura.objects.create(
             numero_factura='FAC-002',
             proveedor=self.proveedor,
             departamento=self.departamento,
@@ -87,7 +89,7 @@ class FacturaTestCase(TestCase):
             True,
             nas_relative_path='facturas/2026/04/FAC-003/documentos_especificos/001_factura.pdf',
         )
-        factura = models.Factura.objects.create(
+        factura = Factura.objects.create(
             numero_factura='FAC-003',
             proveedor=self.proveedor,
             departamento=self.departamento,
@@ -120,15 +122,15 @@ class FacturaTestCase(TestCase):
         response = views.DocumentoAdjuntoViewSet.as_view({'post': 'create'})(request)
         self.assertEqual(response.status_code, 201)
 
-        documento = models.DocumentoAdjunto.objects.get(id=response.data['id'])
+        documento = DocumentoAdjunto.objects.get(id=response.data['id'])
         self.assertIsNone(documento.contenido_archivo)
         self.assertFalse(bool(documento.archivo))
         self.assertEqual(documento.ciclo_documental, 1)
-        self.assertEqual(documento.nas_storage_status, models.DocumentoAdjunto.NAS_STATUS_STORED)
+        self.assertEqual(documento.nas_storage_status, DocumentoAdjunto.NAS_STATUS_STORED)
         self.assertTrue(documento.nas_relative_path)
 
     def test_factura_detail_solo_devuelve_documentos_del_ciclo_actual(self):
-        factura = models.Factura.objects.create(
+        factura = Factura.objects.create(
             numero_factura='FAC-004',
             proveedor=self.proveedor,
             departamento=self.departamento,
@@ -140,7 +142,7 @@ class FacturaTestCase(TestCase):
             creado_por=self.usuario
         )
 
-        models.DocumentoAdjunto.objects.create(
+        DocumentoAdjunto.objects.create(
             factura=factura,
             nombre_archivo='viejo.pdf',
             tipo_documento='Factura',
@@ -151,7 +153,7 @@ class FacturaTestCase(TestCase):
         )
         factura.ciclo_documental_actual = 2
         factura.save(update_fields=['ciclo_documental_actual'])
-        models.DocumentoAdjunto.objects.create(
+        DocumentoAdjunto.objects.create(
             factura=factura,
             nombre_archivo='nuevo.pdf',
             tipo_documento='Factura',
@@ -178,17 +180,17 @@ class ProveedorLifecycleTestCase(TestCase):
             nombre='Admin Financiero',
             rol=self.rol_admin,
         )
-        self.pais = models.Pais.objects.create(nombre='Colombia', codigo_iso='COL')
-        self.departamento = models.DepartamentoGeografico.objects.create(
+        self.pais = Pais.objects.create(nombre='Colombia', codigo_iso='COL')
+        self.departamento = DepartamentoGeografico.objects.create(
             pais=self.pais,
             nombre='Atlántico',
         )
-        self.ciudad = models.Ciudad.objects.create(
+        self.ciudad = Ciudad.objects.create(
             departamento=self.departamento,
             nombre='Barranquilla',
         )
-        self.banco = models.Banco.objects.create(nombre='Banco de prueba')
-        self.tipo_cuenta = models.TipoCuenta.objects.create(nombre='Ahorros')
+        self.banco = Banco.objects.create(nombre='Banco de prueba')
+        self.tipo_cuenta = TipoCuenta.objects.create(nombre='Ahorros')
 
     @staticmethod
     def _con_sesion(request):
@@ -227,7 +229,7 @@ class ProveedorLifecycleTestCase(TestCase):
         response = self._crear_proveedor_publico()
 
         self.assertEqual(response.status_code, 201)
-        proveedor = models.Proveedor.objects.select_related('usuario').get(nit='901940009-7')
+        proveedor = Proveedor.objects.select_related('usuario').get(nit='901940009-7')
         self.assertEqual(proveedor.pais, 'Colombia')
         self.assertEqual(proveedor.departamento, 'Atlántico')
         self.assertEqual(proveedor.ciudad, 'Barranquilla')
@@ -239,7 +241,7 @@ class ProveedorLifecycleTestCase(TestCase):
 
     def test_actualizacion_modifica_proveedor_y_usuario_en_una_transaccion(self):
         self._crear_proveedor_publico()
-        proveedor = models.Proveedor.objects.get(nit='901940009-7')
+        proveedor = Proveedor.objects.get(nit='901940009-7')
         request = self.factory.patch(
             f'/api/financiero/proveedores/{proveedor.id}/',
             {
@@ -267,7 +269,7 @@ class ProveedorLifecycleTestCase(TestCase):
 
     def test_eliminar_proveedor_elimina_tambien_usuario_vinculado(self):
         self._crear_proveedor_publico()
-        proveedor = models.Proveedor.objects.get(nit='901940009-7')
+        proveedor = Proveedor.objects.get(nit='901940009-7')
         usuario_id = proveedor.usuario_id
         request = self.factory.delete(f'/api/financiero/proveedores/{proveedor.id}/')
         self._con_sesion(request)
@@ -276,7 +278,7 @@ class ProveedorLifecycleTestCase(TestCase):
         response = views.ProveedorViewSet.as_view({'delete': 'destroy'})(request, pk=proveedor.id)
 
         self.assertEqual(response.status_code, 204)
-        self.assertFalse(models.Proveedor.objects.filter(pk=proveedor.id).exists())
+        self.assertFalse(Proveedor.objects.filter(pk=proveedor.id).exists())
         self.assertFalse(Usuario.objects.filter(pk=usuario_id).exists())
 
     def test_no_elimina_un_usuario_vinculado_con_otro_rol(self):
@@ -286,7 +288,7 @@ class ProveedorLifecycleTestCase(TestCase):
             nombre='Usuario ajeno',
             rol=self.rol_admin,
         )
-        proveedor = models.Proveedor.objects.create(
+        proveedor = Proveedor.objects.create(
             usuario=usuario_ajeno,
             nit='900000001-1',
             razon_social='Proveedor con vínculo incorrecto',
@@ -299,5 +301,5 @@ class ProveedorLifecycleTestCase(TestCase):
         response = views.ProveedorViewSet.as_view({'delete': 'destroy'})(request, pk=proveedor.id)
 
         self.assertEqual(response.status_code, 400)
-        self.assertTrue(models.Proveedor.objects.filter(pk=proveedor.id).exists())
+        self.assertTrue(Proveedor.objects.filter(pk=proveedor.id).exists())
         self.assertTrue(Usuario.objects.filter(pk=usuario_ajeno.id).exists())

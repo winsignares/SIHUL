@@ -1,4 +1,4 @@
-﻿from rest_framework import viewsets, filters, parsers, status, permissions
+from rest_framework import viewsets, filters, parsers, status, permissions
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -28,8 +28,11 @@ from openpyxl import Workbook
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
-from . import models, serializers
-from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
+
+from financiero.proveedores.models import Proveedor
+from .models import ComentarioFactura, DocumentoAdjunto, DocumentoUnificado, Factura, HistorialFactura, ItemFactura, RechazoDevolucion
+from .serializers import ComentarioFacturaSerializer, DocumentoAdjuntoSerializer, FacturaCreateSerializer, FacturaDetailSerializer, FacturaListSerializer, HistorialFacturaSerializer, ItemFacturaSerializer, RechazoDevolacionSerializer
+from financiero.sla import actualizar_sla_factura, build_parametros_sla_map, sincronizar_sla_facturas
 from unispace.usuarios.models import Usuario
 from unispace.notificaciones.signals import crear_notificacion
 
@@ -40,39 +43,26 @@ class FacturaPagination(PageNumberPagination):
     page_size = 50
     page_size_query_param = 'page_size'
     max_page_size = 200
-
-
 DOCUMENTOS_SENSIBLES_POR_ROL = {
     'archivo plano bancario',
     'soporte causacion seven',
 }
-
 ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
     'auditoria',
     'direccion financiera',
 }
-
-
 def _normalizar_texto_permiso(value):
     normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
     without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
     return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
-
-
 def _rol_usuario_normalizado(user):
     return _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
-
-
 def _usuario_puede_ver_documentos_sensibles(user):
     return _rol_usuario_normalizado(user) in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
-
-
 def _documento_es_sensible(documento):
     tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
     nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
     return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
-
-
 def _resolve_documento_local_path(documento):
     archivo = getattr(documento, 'archivo', None)
     if archivo:
@@ -114,8 +104,6 @@ def _resolve_documento_local_path(documento):
         return candidate
 
     return None
-
-
 def _documento_bytes(documento):
     nas_path = (getattr(documento, 'nas_relative_path', None) or '').strip()
     if nas_path:
@@ -151,61 +139,12 @@ def _documento_bytes(documento):
         nas_path or '',
     )
     return None
-
-
 def _documento_content_type(documento):
     content_type = (getattr(documento, 'tipo_mime', None) or '').strip()
     if content_type:
         return content_type
     guessed, _ = mimetypes.guess_type(getattr(documento, 'nombre_archivo', '') or '')
     return guessed or 'application/octet-stream'
-
-
-DEFAULT_CUENTAS_CONTABLES = [
-    {
-        'codigo': '513505',
-        'nombre': 'Servicios públicos',
-        'tipo_cuenta': 'Gasto',
-        'nivel': 4,
-        'cuenta_padre': '5135',
-        'naturaleza': 'Débito',
-        'acepta_movimiento': True,
-        'requiere_tercero': True,
-        'requiere_centro_costo': True,
-        'estado': 'Activo',
-    },
-    {
-        'codigo': '513595',
-        'nombre': 'Otros servicios administrativos',
-        'tipo_cuenta': 'Gasto',
-        'nivel': 4,
-        'cuenta_padre': '5135',
-        'naturaleza': 'Débito',
-        'acepta_movimiento': True,
-        'requiere_tercero': True,
-        'requiere_centro_costo': True,
-        'estado': 'Activo',
-    },
-    {
-        'codigo': '220505',
-        'nombre': 'Proveedores nacionales',
-        'tipo_cuenta': 'Pasivo',
-        'nivel': 4,
-        'cuenta_padre': '2205',
-        'naturaleza': 'Crédito',
-        'acepta_movimiento': True,
-        'requiere_tercero': True,
-        'requiere_centro_costo': False,
-        'estado': 'Activo',
-    },
-]
-
-DEFAULT_CENTROS_COSTO = [
-    {'codigo': 'CC-ADM-001', 'nombre': 'Administración General', 'tipo': 'Administrativo', 'estado': 'Activo'},
-    {'codigo': 'CC-ACA-001', 'nombre': 'Gestión Académica', 'tipo': 'Académico', 'estado': 'Activo'},
-    {'codigo': 'CC-OPE-001', 'nombre': 'Operación Institucional', 'tipo': 'Operativo', 'estado': 'Activo'},
-]
-
 AREAS_SOLICITANTES = [
     ('SOL-DER', 'Facultad de Derecho y Ciencias Políticas'),
     ('SOL-ING', 'Facultad de Ingeniería'),
@@ -213,40 +152,27 @@ AREAS_SOLICITANTES = [
     ('SOL-ECO', 'Facultad de Ciencias Económicas, Administrativas y Contables'),
     ('SOL-ADM', 'Administración'),
 ]
-
 ESTADO_ENVIADA_RECTORIA = 'Enviada Rector\u00eda'
 ESTADO_AUTORIZADA = 'Autorizada'
 ESTADO_RECHAZADA_POR_RECTORIA = 'Rechazada por Rector\u00eda'
 ESTADO_REVISADA_DIRECCION_FINANCIERA = 'Revisada Dir. Financiera'
 ESTADO_DEVUELTA = 'Devuelta'
 ESTADO_CARGADA = 'Cargada'
-
-
 def _normalize_text(value):
     return unicodedata.normalize('NFD', value or '').encode('ascii', 'ignore').decode('ascii').lower().strip()
-
-
 def _estado_matches(actual, expected):
     return _normalize_text(actual) == _normalize_text(expected)
-
-
 def _factura_document_base_path(factura):
     date = getattr(factura, 'fecha_recepcion', None) or timezone.localdate()
     factura_label = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
     return Path(settings.MEDIA_ROOT) / f'{date:%Y}' / f'{date:%m}' / factura_label
-
-
 def _factura_ciclo_documental_actual(factura):
     return getattr(factura, 'ciclo_documental_actual', 1) or 1
-
-
 def _documentos_queryset_ciclo_actual(factura):
-    return models.DocumentoAdjunto.objects.filter(
+    return DocumentoAdjunto.objects.filter(
         factura=factura,
         ciclo_documental=_factura_ciclo_documental_actual(factura),
     )
-
-
 def _documento_upload_metadata(uploaded_file):
     if uploaded_file is None:
         return None, None, None
@@ -263,8 +189,6 @@ def _documento_upload_metadata(uploaded_file):
         len(content),
         hashlib.sha256(content).hexdigest(),
     )
-
-
 def _guardar_documento_en_carpeta_compartida(
     *, factura, nombre_archivo, tipo_documento, tipo_mime, content_bytes,
     tamano_bytes, hash_archivo, usuario,
@@ -278,7 +202,7 @@ def _guardar_documento_en_carpeta_compartida(
         raise ValidationError({'archivo': 'La carpeta compartida no está configurada. No se puede guardar el documento.'})
 
     ciclo_documental = _factura_ciclo_documental_actual(factura)
-    index = models.DocumentoAdjunto.objects.filter(
+    index = DocumentoAdjunto.objects.filter(
         factura=factura,
         ciclo_documental=ciclo_documental,
     ).count() + 1
@@ -293,7 +217,7 @@ def _guardar_documento_en_carpeta_compartida(
             'archivo': f'No fue posible guardar el documento en la carpeta compartida: {result.message or result.error_code or "error desconocido"}.'
         })
 
-    return models.DocumentoAdjunto.objects.create(
+    return DocumentoAdjunto.objects.create(
         factura=factura,
         nombre_archivo=nombre_archivo[:255],
         tipo_documento=tipo_documento,
@@ -306,10 +230,8 @@ def _guardar_documento_en_carpeta_compartida(
         ciclo_documental=ciclo_documental,
         cargado_por=usuario,
         nas_relative_path=result.nas_relative_path,
-        nas_storage_status=models.DocumentoAdjunto.NAS_STATUS_STORED,
+        nas_storage_status=DocumentoAdjunto.NAS_STATUS_STORED,
     )
-
-
 def _es_archivo_plano_txt(tipo_documento, nombre_archivo, tipo_mime):
     """Identifica el TXT que Tesorería genera para el proceso de pago."""
     tipo = _normalizar_texto_permiso(tipo_documento)
@@ -319,13 +241,9 @@ def _es_archivo_plano_txt(tipo_documento, nombre_archivo, tipo_mime):
         tipo in {'archivo plano bancario', 'soporte causacion seven'}
         and (nombre.endswith('.txt') or mime in {'text/plain', 'application/octet-stream'})
     )
-
-
 def _nombre_pdf_archivo_plano(nombre_archivo):
     base, _extension = os.path.splitext(os.path.basename(nombre_archivo or 'archivo_plano'))
     return f'{base or "archivo_plano"}.pdf'[:255]
-
-
 def _convertir_archivo_plano_a_pdf(content_bytes, nombre_original):
     """Convierte el contenido de un archivo plano a un PDF legible y paginado."""
     try:
@@ -355,663 +273,8 @@ def _convertir_archivo_plano_a_pdf(content_bytes, nombre_original):
 
     pdf.save()
     return output.getvalue()
-
-
-# ============================================================
-# VIEWSETS SIMPLES
-# ============================================================
-
-class ProveedorViewSet(viewsets.ModelViewSet):
-    queryset = models.Proveedor.objects.select_related('usuario').all()
-    serializer_class = serializers.ProveedorSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['estado', 'tipo_proveedor']
-    search_fields = ['nit', 'razon_social', 'email']
-    ordering_fields = ['fecha_creacion', 'razon_social']
-    ordering = ['-fecha_creacion']
-
-    def _coerce_geo_catalog_data(self, payload):
-        data = dict(payload)
-
-        pais_id = data.pop('pais_id', None)
-        departamento_id = data.pop('departamento_geo_id', None)
-        ciudad_id = data.pop('ciudad_id', None)
-        banco_id = data.pop('banco_id', None)
-        tipo_cuenta_id = data.pop('tipo_cuenta_id', None)
-
-        ciudad = None
-        departamento = None
-        pais = None
-
-        if ciudad_id:
-            ciudad = models.Ciudad.objects.filter(id=ciudad_id, activo=True).select_related('departamento__pais').first()
-            if ciudad:
-                departamento = ciudad.departamento
-                pais = departamento.pais
-
-        if departamento is None and departamento_id:
-            departamento = models.DepartamentoGeografico.objects.filter(id=departamento_id, activo=True).select_related('pais').first()
-            if departamento:
-                pais = departamento.pais
-
-        if pais is None and pais_id:
-            pais = models.Pais.objects.filter(id=pais_id, activo=True).first()
-
-        if ciudad:
-            data['ciudad'] = ciudad.nombre
-        if departamento:
-            data['departamento'] = departamento.nombre
-        if pais:
-            data['pais'] = pais.nombre
-
-        if banco_id:
-            banco = models.Banco.objects.filter(id=banco_id, activo=True).first()
-            if banco:
-                data['banco'] = banco.nombre
-
-        if tipo_cuenta_id:
-            tipo_cuenta = models.TipoCuenta.objects.filter(id=tipo_cuenta_id, activo=True).first()
-            if tipo_cuenta:
-                data['tipo_cuenta'] = tipo_cuenta.nombre
-
-        return data
-
-    def create(self, request, *args, **kwargs):
-        data = self._coerce_geo_catalog_data(request.data)
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    @transaction.atomic
-    def update(self, request, *args, **kwargs):
-        from django.contrib.auth.hashers import make_password
-
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        data = self._coerce_geo_catalog_data(request.data)
-        usuario_nombre = data.pop('usuario_nombre', None)
-        usuario_correo = data.pop('usuario_correo', None)
-        usuario_contrasena = data.pop('usuario_contrasena', None)
-
-        usuario = instance.usuario
-        if usuario is not None:
-            if usuario_nombre is not None:
-                usuario.nombre = str(usuario_nombre).strip()
-            if usuario_correo is not None:
-                correo_normalizado = str(usuario_correo).strip().lower()
-                if not correo_normalizado:
-                    raise ValidationError({'usuario_correo': 'El correo de acceso no puede estar vacío.'})
-                if Usuario.objects.filter(correo__iexact=correo_normalizado).exclude(pk=usuario.pk).exists():
-                    raise ValidationError({'usuario_correo': 'Ya existe un usuario con este correo.'})
-                usuario.correo = correo_normalizado
-            if usuario_contrasena:
-                hashed = make_password(str(usuario_contrasena))
-                usuario.password = hashed
-                usuario.contrasena_hash = hashed
-        elif any(value is not None for value in (usuario_nombre, usuario_correo, usuario_contrasena)):
-            raise ValidationError({'usuario': 'El proveedor no tiene un usuario de acceso vinculado.'})
-
-        serializer = self.get_serializer(instance, data=data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if usuario is not None:
-            usuario.activo = serializer.instance.estado == 'Activo'
-            usuario.save()
-
-        return Response(serializer.data)
-
-    @transaction.atomic
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        usuario = instance.usuario
-        if usuario is not None:
-            rol_nombre = (getattr(usuario.rol, 'nombre', '') or '').strip().casefold()
-            if rol_nombre != 'proveedor':
-                raise ValidationError({
-                    'usuario': 'No se puede eliminar el proveedor porque el usuario vinculado no tiene rol Proveedor.'
-                })
-        self.perform_destroy(instance)
-        if usuario is not None:
-            usuario.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(
-        detail=False,
-        methods=['post'],
-        url_path='crear_con_usuario',
-        permission_classes=[permissions.AllowAny],
-    )
-    def crear_con_usuario(self, request):
-        """Crea un usuario con rol Proveedor y vincula su perfil en una transacción atómica."""
-        from django.contrib.auth.hashers import make_password
-        from unispace.usuarios.models import Rol
-
-        nombre = (request.data.get('nombre') or '').strip()
-        correo = (request.data.get('correo') or '').strip()
-        contrasena = (request.data.get('contrasena') or '').strip()
-        nit = (request.data.get('nit') or '').strip()
-        razon_social = (request.data.get('razon_social') or '').strip()
-        tipo_proveedor = (request.data.get('tipo_proveedor') or '').strip()
-
-        if not all([nombre, correo, contrasena, nit, razon_social, tipo_proveedor]):
-            return Response(
-                {'error': 'Los campos nombre, correo, contrasena, nit, razon_social y tipo_proveedor son obligatorios.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        es_registro_publico = not getattr(request.user, 'is_authenticated', False)
-
-        try:
-            rol_proveedor = Rol.objects.get(nombre__iexact='Proveedor')
-        except Rol.DoesNotExist:
-            return Response(
-                {'error': 'El rol "Proveedor" no existe en el sistema. Créalo antes de continuar.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if Usuario.objects.filter(correo__iexact=correo).exists():
-            return Response(
-                {'error': f'Ya existe un usuario con el correo "{correo}".'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if models.Proveedor.objects.filter(nit=nit).exists():
-            return Response(
-                {'error': f'Ya existe un proveedor con el NIT "{nit}".'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        campos_opcionales = [
-            'nombre_comercial', 'tipo_persona', 'direccion', 'ciudad', 'departamento',
-            'pais', 'telefono', 'email', 'contacto_principal', 'telefono_contacto',
-            'banco', 'tipo_cuenta', 'numero_cuenta', 'cuenta_bancaria_completa',
-            'regimen_tributario', 'retencion_renta', 'retencion_iva', 'retencion_ica',
-            'autoretenedor', 'estado', 'calificacion_riesgo', 'observaciones',
-            'pais_id', 'departamento_geo_id', 'ciudad_id', 'banco_id', 'tipo_cuenta_id',
-        ]
-
-        proveedor_data = {'nit': nit, 'razon_social': razon_social, 'tipo_proveedor': tipo_proveedor}
-        for campo in campos_opcionales:
-            if campo in request.data:
-                proveedor_data[campo] = request.data[campo]
-        proveedor_data = self._coerce_geo_catalog_data(proveedor_data)
-
-        # El registro público usa el correo y teléfono de acceso como datos
-        # principales del proveedor, sin pedir campos de contacto duplicados.
-        if es_registro_publico:
-            proveedor_data['email'] = proveedor_data.get('email') or correo
-            proveedor_data['contacto_principal'] = nombre
-            proveedor_data['telefono_contacto'] = proveedor_data.get('telefono') or None
-
-        try:
-            with transaction.atomic():
-                hashed = make_password(contrasena)
-                nuevo_usuario = Usuario(
-                    nombre=nombre,
-                    correo=correo,
-                    password=hashed,
-                    contrasena_hash=hashed,
-                    rol=rol_proveedor,
-                    activo=True,
-                )
-                nuevo_usuario.save()
-
-                proveedor_data['usuario'] = nuevo_usuario
-                if getattr(request.user, 'is_authenticated', False):
-                    proveedor_data['creado_por'] = request.user
-                proveedor = models.Proveedor.objects.create(**proveedor_data)
-
-        except IntegrityError as exc:
-            return Response({'error': f'Error de integridad: {exc}'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(
-            {
-                'usuario_id': nuevo_usuario.id,
-                'proveedor': serializers.ProveedorSerializer(proveedor).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-    @action(detail=False, methods=['get'], url_path='mi_perfil')
-    def mi_perfil(self, request):
-        """Encuentra el proveedor asociado al usuario actual por vínculo directo, email o NIT."""
-        user = request.user
-        proveedor = models.Proveedor.objects.filter(usuario=user).first()
-
-        # 1. Fallback por email del usuario
-        if not proveedor and user.correo:
-            proveedor = models.Proveedor.objects.filter(email__iexact=user.correo).first()
-
-        # 2. Fallback por NIT pasado como query param
-        if not proveedor:
-            nit = (request.query_params.get('nit') or '').strip()
-            if nit:
-                proveedor = models.Proveedor.objects.filter(nit=nit).first()
-
-        if proveedor and proveedor.usuario_id and proveedor.usuario_id != user.id:
-            return Response(
-                {'detail': 'Este proveedor ya está vinculado a otro usuario.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # Auto-vincular en primer acceso para consolidar la relación usuario <-> proveedor
-        if proveedor and not proveedor.usuario_id:
-            proveedor.usuario = user
-            proveedor.save(update_fields=['usuario'])
-
-        if proveedor:
-            return Response(serializers.ProveedorSerializer(proveedor).data)
-
-        return Response(
-            {'detail': 'No se encontró un proveedor asociado a este usuario.'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-
-class PaisViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = models.Pais.objects.filter(activo=True).order_by('nombre')
-    serializer_class = serializers.PaisSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['activo', 'codigo_iso']
-    search_fields = ['nombre', 'codigo_iso']
-    ordering = ['nombre']
-
-
-class DepartamentoGeograficoViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = serializers.DepartamentoGeograficoSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['activo', 'pais']
-    search_fields = ['nombre', 'codigo', 'pais__nombre']
-    ordering = ['nombre']
-
-    def get_queryset(self):
-        queryset = models.DepartamentoGeografico.objects.filter(activo=True).select_related('pais').order_by('nombre')
-        pais_id = self.request.query_params.get('pais_id') or self.request.query_params.get('pais')
-        ciudad_id = self.request.query_params.get('ciudad_id')
-
-        if ciudad_id:
-            ciudad = models.Ciudad.objects.filter(id=ciudad_id, activo=True).select_related('departamento').first()
-            if ciudad:
-                queryset = queryset.filter(id=ciudad.departamento_id)
-
-        if pais_id:
-            queryset = queryset.filter(pais_id=pais_id)
-
-        return queryset
-
-
-class CiudadViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = serializers.CiudadSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['activo', 'departamento']
-    search_fields = ['nombre', 'departamento__nombre', 'departamento__pais__nombre']
-    ordering = ['nombre']
-
-    def get_queryset(self):
-        queryset = models.Ciudad.objects.filter(activo=True).select_related('departamento__pais').order_by('nombre')
-        departamento_id = self.request.query_params.get('departamento_id') or self.request.query_params.get('departamento')
-        pais_id = self.request.query_params.get('pais_id') or self.request.query_params.get('pais')
-
-        if departamento_id:
-            queryset = queryset.filter(departamento_id=departamento_id)
-
-        if pais_id:
-            queryset = queryset.filter(departamento__pais_id=pais_id)
-
-        return queryset
-
-
-class DepartamentoViewSet(viewsets.ModelViewSet):
-    queryset = models.Departamento.objects.all()
-    serializer_class = serializers.DepartamentoSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tipo', 'estado']
-    search_fields = ['codigo', 'nombre']
-
-    @action(detail=False, methods=['get'])
-    def areas_solicitantes(self, request):
-        """Lista las áreas activas disponibles en la base de datos."""
-        queryset = models.Departamento.objects.filter(
-            estado='Activo',
-            codigo__startswith='SOL-',
-        ).order_by('nombre')
-        serializer = serializers.DepartamentoSerializer(queryset, many=True)
-        return Response(serializer.data)
-
-
-class CuentaContableViewSet(viewsets.ModelViewSet):
-    queryset = models.CuentaContable.objects.all()
-    serializer_class = serializers.CuentaContableSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tipo_cuenta', 'nivel', 'estado']
-    search_fields = ['codigo', 'nombre']
-
-    def list(self, request, *args, **kwargs):
-        if not models.CuentaContable.objects.exists():
-            for cuenta in DEFAULT_CUENTAS_CONTABLES:
-                models.CuentaContable.objects.get_or_create(codigo=cuenta['codigo'], defaults=cuenta)
-        return super().list(request, *args, **kwargs)
-
-
-class CentroCostoViewSet(viewsets.ModelViewSet):
-    queryset = models.CentroCosto.objects.all()
-    serializer_class = serializers.CentroCostoSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tipo', 'estado']
-    search_fields = ['codigo', 'nombre']
-
-    def list(self, request, *args, **kwargs):
-        if not models.CentroCosto.objects.exists():
-            for centro in DEFAULT_CENTROS_COSTO:
-                models.CentroCosto.objects.get_or_create(codigo=centro['codigo'], defaults=centro)
-        return super().list(request, *args, **kwargs)
-
-
-class ParametroSLAViewSet(viewsets.ModelViewSet):
-    queryset = models.ParametroSLA.objects.all()
-    serializer_class = serializers.ParametroSLASerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['etapa', 'rol_responsable']
-
-    def perform_create(self, serializer):
-        serializer.save(modificado_por=self.request.user)
-
-    def perform_update(self, serializer):
-        serializer.save(modificado_por=self.request.user)
-
-
-class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
-    queryset = models.ParametrosFinanciero.objects.all()
-    serializer_class = serializers.ParametrosFinancieroSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['categoria']
-
-    def perform_create(self, serializer):
-        serializer.save(modificado_por=self.request.user)
-
-    def perform_update(self, serializer):
-        serializer.save(modificado_por=self.request.user)
-
-    @action(detail=False, methods=['get'])
-    def por_categoria(self, request):
-        """Obtener parámetros agrupados por categoría"""
-        params = models.ParametrosFinanciero.objects.all()
-        grouped = {}
-        for param in params:
-            if param.categoria not in grouped:
-                grouped[param.categoria] = []
-            grouped[param.categoria].append({
-                'clave': param.clave,
-                'valor': param.valor,
-                'tipo_dato': param.tipo_dato
-            })
-        return Response(grouped)
-
-
-class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = models.ReporteGenerado.objects.all()
-    serializer_class = serializers.ReporteGeneradoSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['tipo_reporte', 'formato']
-    ordering = ['-fecha_generacion']
-
-    def get_queryset(self):
-        # Cada usuario ve solo sus reportes
-        return models.ReporteGenerado.objects.filter(generado_por=self.request.user)
-
-    def _parse_date(self, value):
-        if not value:
-            return None
-        try:
-            return datetime.strptime(str(value), '%Y-%m-%d').date()
-        except ValueError:
-            return None
-
-    def _filtrar_facturas(self, filtros):
-        queryset = models.Factura.objects.select_related('proveedor', 'departamento').all()
-
-        fecha_inicio = self._parse_date(filtros.get('fecha_inicio'))
-        fecha_fin = self._parse_date(filtros.get('fecha_fin'))
-        estado = (filtros.get('estado') or '').strip()
-        proveedor_id = filtros.get('proveedor_id')
-
-        if fecha_inicio:
-            queryset = queryset.filter(fecha_recepcion__gte=fecha_inicio)
-        if fecha_fin:
-            queryset = queryset.filter(fecha_recepcion__lte=fecha_fin)
-        if estado:
-            queryset = queryset.filter(estado=estado)
-        if proveedor_id:
-            queryset = queryset.filter(proveedor_id=proveedor_id)
-
-        return queryset.order_by('-fecha_recepcion')
-
-    def _build_factura_rows(self, queryset):
-        rows = []
-        for factura in queryset:
-            rows.append([
-                factura.numero_factura,
-                factura.proveedor.razon_social if factura.proveedor else '',
-                factura.proveedor.nit if factura.proveedor else '',
-                factura.departamento.nombre if factura.departamento else '',
-                factura.estado,
-                float(factura.valor_total or 0),
-                str(factura.fecha_recepcion or ''),
-                str(factura.fecha_autorizacion or ''),
-                str(factura.fecha_pago_aplicado or ''),
-                str(factura.fecha_comprobante or ''),
-                factura.numero_transaccion or '',
-                factura.numero_comprobante or '',
-            ])
-        return rows
-
-    def _registrar_reporte(self, *, tipo_reporte, formato, filtros, nombre, cantidad_registros, tamano):
-        return models.ReporteGenerado.objects.create(
-            tipo_reporte=tipo_reporte,
-            nombre_reporte=nombre,
-            formato=formato,
-            parametros_filtros=filtros or {},
-            cantidad_registros=cantidad_registros,
-            tamano_archivo_bytes=tamano,
-            generado_por=self.request.user,
-        )
-
-    @action(detail=False, methods=['get'], url_path='dashboard_admin')
-    def dashboard_admin(self, request):
-        facturas = models.Factura.objects.all()
-        estados_cierre = ['Pagada', 'Anulada']
-        facturas_en_proceso = facturas.exclude(estado__in=estados_cierre)
-
-        roles_financieros = [
-            'Funcionario',
-            'Contabilidad',
-            'Tesorería',
-            'Tesoreria',
-            'Auditoría',
-            'Auditoria',
-            'Dirección Financiera',
-            'Direccion Financiera',
-            'Rectoría',
-            'Rectoria',
-            'Admin Financiero',
-            'admin_financiero',
-        ]
-        roles_q = Q()
-        for nombre_rol in roles_financieros:
-            roles_q |= Q(rol__nombre__iexact=nombre_rol)
-
-        usuarios_activos = Usuario.objects.filter(activo=True).filter(roles_q).count()
-        proveedores_activos = models.Proveedor.objects.filter(estado='Activo').count()
-
-        total_facturas = facturas.count()
-        cantidad_proceso = facturas_en_proceso.count()
-        monto_total = facturas_en_proceso.aggregate(total=Sum('valor_total')).get('total') or 0
-        facturas_riesgo = facturas.filter(indicador_riesgo__in=['atencion', 'atrasada', 'vencida']).count()
-        facturas_vencidas = facturas.filter(indicador_riesgo='vencida').count()
-
-        now = timezone.now()
-        pagos_aplicados_mes = facturas.filter(
-            estado__in=['Pago Aplicado', 'Pagada'],
-            fecha_pago_aplicado__year=now.year,
-            fecha_pago_aplicado__month=now.month,
-        ).count()
-
-        dias = [f.dias_transcurridos for f in facturas_en_proceso.only('fecha_recepcion')]
-        tiempo_promedio = round((sum(dias) / len(dias)), 2) if dias else 0
-
-        distribucion = list(
-            facturas.values('estado').annotate(cantidad=Count('id')).order_by('-cantidad')
-        )
-
-        alertas_qs = models.Factura.objects.filter(indicador_riesgo__in=['atencion', 'atrasada', 'vencida']).order_by('-fecha_recepcion')[:15]
-        alertas = [
-            {
-                'id': f.id,
-                'numero_factura': f.numero_factura,
-                'estado': f.estado,
-                'indicador_riesgo': f.indicador_riesgo,
-                'dias_transcurridos': f.dias_transcurridos,
-                'valor_total': float(f.valor_total or 0),
-            }
-            for f in alertas_qs
-        ]
-
-        actividades_qs = models.HistorialFactura.objects.select_related('factura', 'usuario').order_by('-fecha_accion')[:12]
-        actividades = [
-            {
-                'id': h.id,
-                'numero_factura': h.factura.numero_factura if h.factura else None,
-                'usuario_nombre': h.usuario_nombre or (h.usuario.nombre if h.usuario else 'Sistema'),
-                'accion': h.accion,
-                'estado_nuevo': h.estado_nuevo,
-                'fecha_accion': h.fecha_accion,
-            }
-            for h in actividades_qs
-        ]
-
-        return Response({
-            'resumen': {
-                'usuarios_activos': usuarios_activos,
-                'proveedores_activos': proveedores_activos,
-                'total_facturas': total_facturas,
-                'facturas_en_proceso': cantidad_proceso,
-                'facturas_riesgo': facturas_riesgo,
-                'facturas_vencidas': facturas_vencidas,
-                'monto_total_tramite': float(monto_total),
-                'tiempo_promedio_dias': tiempo_promedio,
-                'pagos_aplicados_mes': pagos_aplicados_mes,
-            },
-            'distribucion_estados': distribucion,
-            'alertas': alertas,
-            'actividades': actividades,
-        })
-
-    @action(detail=False, methods=['post'], url_path='exportar')
-    def exportar(self, request):
-        formato = (request.data.get('formato') or 'Excel').strip()
-        tipo_reporte = (request.data.get('tipo_reporte') or 'consolidado_facturas').strip()
-        filtros = request.data.get('filtros') if isinstance(request.data.get('filtros'), dict) else {}
-
-        if formato not in ['Excel', 'PDF']:
-            return Response({'error': 'Formato no soportado. Use Excel o PDF.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        queryset = self._filtrar_facturas(filtros)
-        rows = self._build_factura_rows(queryset)
-        now_stamp = timezone.now().strftime('%Y%m%d_%H%M%S')
-        filename_base = f"{tipo_reporte}_{now_stamp}"
-
-        headers = [
-            'Numero Factura', 'Proveedor', 'NIT', 'Departamento', 'Estado', 'Valor Total',
-            'Fecha Recepcion', 'Fecha Autorizacion', 'Fecha Pago Aplicado', 'Fecha Comprobante',
-            'Numero Transaccion', 'Numero Comprobante'
-        ]
-
-        if formato == 'Excel':
-            wb = Workbook()
-            ws = wb.active
-            ws.title = 'Reporte Financiero'
-            ws.append(headers)
-            for row in rows:
-                ws.append(row)
-
-            output = BytesIO()
-            wb.save(output)
-            content = output.getvalue()
-            output.close()
-
-            self._registrar_reporte(
-                tipo_reporte=tipo_reporte,
-                formato='Excel',
-                filtros=filtros,
-                nombre=f'{filename_base}.xlsx',
-                cantidad_registros=len(rows),
-                tamano=len(content),
-            )
-
-            response = HttpResponse(
-                content,
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = f'attachment; filename="{filename_base}.xlsx"'
-            return response
-
-        output = BytesIO()
-        pdf = canvas.Canvas(output, pagesize=letter)
-        _, height = letter
-
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.drawString(40, height - 40, f'Reporte Financiero - {tipo_reporte}')
-        pdf.setFont('Helvetica', 9)
-        pdf.drawString(40, height - 55, f'Generado: {timezone.now().strftime("%Y-%m-%d %H:%M") }')
-        pdf.drawString(40, height - 70, f'Registros: {len(rows)}')
-
-        y = height - 95
-        for row in rows:
-            line = f"{row[0]} | {row[1][:22]} | {row[4]} | ${row[5]:,.0f}"
-            pdf.drawString(40, y, line)
-            y -= 13
-            if y < 50:
-                pdf.showPage()
-                pdf.setFont('Helvetica', 9)
-                y = height - 40
-
-        pdf.save()
-        content = output.getvalue()
-        output.close()
-
-        self._registrar_reporte(
-            tipo_reporte=tipo_reporte,
-            formato='PDF',
-            filtros=filtros,
-            nombre=f'{filename_base}.pdf',
-            cantidad_registros=len(rows),
-            tamano=len(content),
-        )
-
-        response = HttpResponse(content, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{filename_base}.pdf"'
-        return response
-
-
-# ============================================================
-# VIEWSETS COMPLEJOS
-# ============================================================
-
 class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
-    serializer_class = serializers.DocumentoAdjuntoSerializer
+    serializer_class = DocumentoAdjuntoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['factura', 'factura_id', 'tipo_documento']
@@ -1020,7 +283,7 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         puede_ver_sensibles = _usuario_puede_ver_documentos_sensibles(self.request.user)
         factura_id = self.request.query_params.get('factura_id') or self.request.query_params.get('factura')
-        queryset = models.DocumentoAdjunto.objects.all()
+        queryset = DocumentoAdjunto.objects.all()
 
         if not puede_ver_sensibles:
             queryset = queryset.exclude(
@@ -1033,7 +296,7 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(factura_id=factura_id)
             include_historico = (self.request.query_params.get('include_historico') or '').strip().lower() in {'1', 'true', 'si', 'yes'}
             if not include_historico:
-                factura = models.Factura.objects.filter(id=factura_id).only('id', 'ciclo_documental_actual').first()
+                factura = Factura.objects.filter(id=factura_id).only('id', 'ciclo_documental_actual').first()
                 if factura:
                     queryset = queryset.filter(ciclo_documental=_factura_ciclo_documental_actual(factura))
             return queryset.order_by('fecha_carga', 'id')
@@ -1097,10 +360,8 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
             serializer.save(verificado_por=None, fecha_verificacion=None)
         else:
             serializer.save()
-
-
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = serializers.HistorialFacturaSerializer
+    serializer_class = HistorialFacturaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['factura', 'accion']
@@ -1109,19 +370,17 @@ class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         factura_id = self.request.query_params.get('factura_id')
         if factura_id:
-            return models.HistorialFactura.objects.filter(factura_id=factura_id)
-        return models.HistorialFactura.objects.all()
-
-
+            return HistorialFactura.objects.filter(factura_id=factura_id)
+        return HistorialFactura.objects.all()
 class ComentarioFacturaViewSet(viewsets.ModelViewSet):
-    serializer_class = serializers.ComentarioFacturaSerializer
+    serializer_class = ComentarioFacturaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['factura', 'tipo']
     ordering = ['fecha_creacion']
 
     def get_queryset(self):
-        queryset = models.ComentarioFactura.objects.select_related('usuario').prefetch_related(
+        queryset = ComentarioFactura.objects.select_related('usuario').prefetch_related(
             'respuestas__usuario', 'respuestas__respuestas__usuario',
         )
         factura_id = self.request.query_params.get('factura_id')
@@ -1131,10 +390,8 @@ class ComentarioFacturaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
-
-
 class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = serializers.RechazoDevolacionSerializer
+    serializer_class = RechazoDevolacionSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['factura', 'tipo', 'estado_devolucion']
@@ -1142,14 +399,8 @@ class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         factura_id = self.request.query_params.get('factura_id')
         if factura_id:
-            return models.RechazoDevolucion.objects.filter(factura_id=factura_id)
-        return models.RechazoDevolucion.objects.all()
-
-
-# ============================================================
-# FACTURA VIEWSET (PRINCIPAL)
-# ============================================================
-
+            return RechazoDevolucion.objects.filter(factura_id=factura_id)
+        return RechazoDevolucion.objects.all()
 class FacturaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = FacturaPagination
@@ -1162,7 +413,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = models.Factura.objects.all()
+        queryset = Factura.objects.all()
 
         if self.action == 'list':
             queryset = queryset.select_related(
@@ -1179,9 +430,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
             ).distinct()
         elif rol_nombre == 'Proveedor':
             # Proveedor solo ve sus propias facturas (por vínculo directo o email)
-            proveedor = models.Proveedor.objects.filter(usuario=user).first()
+            proveedor = Proveedor.objects.filter(usuario=user).first()
             if not proveedor and user.correo:
-                proveedor = models.Proveedor.objects.filter(email__iexact=user.correo).first()
+                proveedor = Proveedor.objects.filter(email__iexact=user.correo).first()
 
             if proveedor and not proveedor.usuario_id:
                 proveedor.usuario = user
@@ -1243,7 +494,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         motivo_devolucion = None
         if es_devolucion:
             motivo_devolucion = (
-                models.RechazoDevolucion.objects
+                RechazoDevolucion.objects
                 .filter(factura=factura)
                 .order_by('-fecha_rechazo')
                 .values_list('motivo', flat=True)
@@ -1283,7 +534,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         year = timezone.now().year
         prefix = f"CONF-{year}-"
         last_number = (
-            models.Factura.objects
+            Factura.objects
             .filter(numero_confirmacion__startswith=prefix)
             .order_by('-numero_confirmacion')
             .values_list('numero_confirmacion', flat=True)
@@ -1345,7 +596,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return requested_scope or self._scope_documental_por_rol(request)
 
     def _factura_response_data(self, factura):
-        return serializers.FacturaDetailSerializer(
+        return FacturaDetailSerializer(
             factura,
             context={'request': self.request},
         ).data
@@ -1593,7 +844,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         from financiero.services.shared_storage_service import shared_storage
         result = shared_storage.copy_unified_pdf(content, factura, scope)
 
-        models.DocumentoUnificado.objects.update_or_create(
+        DocumentoUnificado.objects.update_or_create(
             factura=factura,
             scope=scope or 'all',
             ciclo_documental=ciclo_documental,
@@ -1605,8 +856,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 'hash_archivo': hashlib.sha256(content).hexdigest(),
                 'nas_relative_path': result.nas_relative_path or '',
                 'nas_storage_status': (
-                    models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                    else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+                    DocumentoAdjunto.NAS_STATUS_STORED if result.success
+                    else (result.error_code or DocumentoAdjunto.NAS_STATUS_FAILED)
                 ),
             },
         )
@@ -1689,12 +940,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return serializers.FacturaDetailSerializer
+            return FacturaDetailSerializer
         elif self.action == 'create':
-            return serializers.FacturaCreateSerializer
+            return FacturaCreateSerializer
         elif self.action == 'list':
-            return serializers.FacturaListSerializer
-        return serializers.FacturaDetailSerializer
+            return FacturaListSerializer
+        return FacturaDetailSerializer
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -1713,7 +964,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura.save(update_fields=['etapa_actual', 'fecha_inicio_etapa', 'fecha_modificacion'])
         
         # Crear entrada en historial
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura registrada',
             estado_nuevo='Recibida',
@@ -1733,7 +984,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         
         # Obtener todas las facturas del año para ordenarlas numéricamente
         all_facturas = (
-            models.Factura.objects
+            Factura.objects
             .filter(numero_factura__startswith=prefix)
             .values_list('numero_factura', flat=True)
         )
@@ -1803,7 +1054,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        duplicado = models.Factura.objects.filter(
+        duplicado = Factura.objects.filter(
             consecutivo_operacion=consecutivo_operacion
         ).exclude(pk=factura.pk).first()
         if duplicado:
@@ -1828,7 +1079,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura radicada',
             estado_anterior=estado_anterior,
@@ -1856,7 +1107,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         # El expediente consolidado se sirve desde la carpeta compartida. Solo se
         # regenera si aún no existe para este ciclo documental o si fue eliminado.
         if not doc_id:
-            unificado = models.DocumentoUnificado.objects.filter(
+            unificado = DocumentoUnificado.objects.filter(
                 factura=factura,
                 scope=scope,
                 ciclo_documental=_factura_ciclo_documental_actual(factura),
@@ -1963,7 +1214,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura cargada en dirección financiera',
             estado_anterior=estado_anterior,
@@ -2008,7 +1259,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura enviada a rectoría',
             estado_anterior=estado_anterior,
@@ -2055,7 +1306,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura autorizada por Rectoría',
             estado_anterior=estado_anterior,
@@ -2101,7 +1352,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.RechazoDevolucion.objects.create(
+        RechazoDevolucion.objects.create(
             factura=factura,
             tipo='Rechazo',
             etapa_rechazo='Rectoría',
@@ -2110,7 +1361,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             usuario_rechaza=request.user,
         )
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura rechazada por rectoría',
             estado_anterior=estado_anterior,
@@ -2167,7 +1418,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Control de pago bancario confirmado',
             estado_anterior='Autorizada',
@@ -2262,7 +1513,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura causada',
             estado_anterior='Radicada',
@@ -2302,7 +1553,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         if numero_proceso_pago:
-            duplicado = models.Factura.objects.filter(
+            duplicado = Factura.objects.filter(
                 numero_proceso_pago=numero_proceso_pago
             ).exclude(pk=factura.pk).first()
             if duplicado:
@@ -2329,7 +1580,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura alistada',
             estado_anterior=estado_anterior,
@@ -2374,7 +1625,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura aprobada por auditoría',
             estado_anterior=estado_anterior,
@@ -2420,7 +1671,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura rechazada por auditoría',
             estado_anterior=estado_anterior,
@@ -2465,7 +1716,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura enviada a Dirección Financiera',
             estado_anterior=estado_anterior,
@@ -2519,7 +1770,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if models.Factura.objects.filter(numero_transaccion=numero_transaccion).exclude(pk=factura.pk).exists():
+        if Factura.objects.filter(numero_transaccion=numero_transaccion).exclude(pk=factura.pk).exists():
             return Response(
                 {'error': 'El número de transacción bancaria ya está registrado en otra factura.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -2559,7 +1810,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     'tipo_mime': getattr(comprobante_bancario, 'content_type', '') or None,
                     'archivo': comprobante_bancario,
                 }
-                documento_serializer = serializers.DocumentoAdjuntoSerializer(
+                documento_serializer = DocumentoAdjuntoSerializer(
                     data=documento_data,
                     context={'request': request}
                 )
@@ -2577,7 +1828,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 )
                 _regenerar_pdf_unificado_nas(factura)
 
-                models.HistorialFactura.objects.create(
+                HistorialFactura.objects.create(
                     factura=factura,
                     accion='Pago aplicado y factura pagada',
                     estado_anterior=estado_anterior,
@@ -2648,7 +1899,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura marcada como pagada',
             estado_anterior=estado_anterior,
@@ -2801,7 +2052,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura detenida en tesorería',
             estado_anterior=estado_anterior,
@@ -2857,9 +2108,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
             etapa_destino = 'Devolución'
             responsable_destino = None
         
-        n_devoluciones = models.RechazoDevolucion.objects.filter(factura=factura).count()
+        n_devoluciones = RechazoDevolucion.objects.filter(factura=factura).count()
 
-        models.RechazoDevolucion.objects.create(
+        RechazoDevolucion.objects.create(
             factura=factura,
             tipo='Rechazo',
             etapa_rechazo=factura.etapa_actual,
@@ -2888,7 +2139,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         actualizar_sla_factura(factura)
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Factura devuelta',
             estado_anterior=estado_anterior,
@@ -2925,7 +2176,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         # Separar items antes de pasar al serializer de detalle (que no los acepta en escritura)
         items_data = request.data.get('items', None)
 
-        serializer = serializers.FacturaDetailSerializer(
+        serializer = FacturaDetailSerializer(
             factura,
             data=request.data,
             partial=True,
@@ -2939,7 +2190,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         # Si vienen items nuevos, reemplazar los existentes
         if items_data is not None:
-            items_serializer = serializers.ItemFacturaSerializer(data=items_data, many=True)
+            items_serializer = ItemFacturaSerializer(data=items_data, many=True)
             items_serializer.is_valid(raise_exception=True)
             if not items_serializer.validated_data:
                 return Response(
@@ -2948,10 +2199,10 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 )
 
             with transaction.atomic():
-                models.ItemFactura.objects.filter(factura=factura).delete()
+                ItemFactura.objects.filter(factura=factura).delete()
                 for orden, item in enumerate(items_serializer.validated_data, start=1):
                     item.pop('orden', None)
-                    models.ItemFactura.objects.create(factura=factura, orden=orden, **item)
+                    ItemFactura.objects.create(factura=factura, orden=orden, **item)
 
         factura.estado = 'Recibida'
         factura.etapa_actual = 'Recepción y Registro'
@@ -2965,7 +2216,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             observaciones_correccion = 'Corrección enviada por proveedor.'
 
         ultimo_rechazo = (
-            models.RechazoDevolucion.objects
+            RechazoDevolucion.objects
             .filter(factura=factura)
             .order_by('-fecha_rechazo')
             .first()
@@ -2982,7 +2233,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 'observaciones_correccion'
             ])
 
-        models.HistorialFactura.objects.create(
+        HistorialFactura.objects.create(
             factura=factura,
             accion='Corrección enviada por proveedor',
             estado_anterior=estado_anterior,
@@ -2997,7 +2248,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         self._notificar_transicion(factura, estado_anterior, factura.estado)
 
         return Response(
-            serializers.FacturaDetailSerializer(factura, context={'request': request}).data,
+            FacturaDetailSerializer(factura, context={'request': request}).data,
             status=status.HTTP_200_OK
         )
 
@@ -3017,25 +2268,25 @@ class FacturaViewSet(viewsets.ModelViewSet):
         
         # Pendientes = SOLO facturas sin responsable en estado Recibida
         # (facturas nuevas que vienen del proveedor y deben ser procesadas)
-        pendientes = models.Factura.objects.filter(
+        pendientes = Factura.objects.filter(
             usuario_responsable__isnull=True, 
             estado='Recibida'
         ).order_by('-fecha_recepcion', '-id')
         
-        serializer = serializers.FacturaListSerializer(pendientes, many=True)
+        serializer = FacturaListSerializer(pendientes, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
         """Obtener estadísticas de facturas"""
-        queryset = models.Factura.objects.all()
+        queryset = Factura.objects.all()
         rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
         if rol_nombre == 'Funcionario':
             queryset = queryset.filter(estado__in=['Recibida', 'Registrada'])
 
         total = queryset.count()
         por_estado = {}
-        estados = [choice[0] for choice in models.Factura.ESTADO_CHOICES]
+        estados = [choice[0] for choice in Factura.ESTADO_CHOICES]
         
         for estado in estados:
             count = queryset.filter(estado=estado).count()
@@ -3055,7 +2306,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='sincronizar_sla')
     def sincronizar_sla(self, request):
         """Sincroniza indicadores SLA para facturas en proceso."""
-        facturas = models.Factura.objects.exclude(estado__in=['Pagada', 'Anulada'])
+        facturas = Factura.objects.exclude(estado__in=['Pagada', 'Anulada'])
         parametros_map = build_parametros_sla_map()
         actualizadas = sincronizar_sla_facturas(facturas, parametros_map=parametros_map)
         return Response({'actualizadas': actualizadas, 'total': facturas.count()})
@@ -3066,11 +2317,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura = self.get_object()
         ctx = {'request': request}
         return Response({
-            'factura': serializers.FacturaDetailSerializer(factura, context=ctx).data,
-            'historial': serializers.HistorialFacturaSerializer(
+            'factura': FacturaDetailSerializer(factura, context=ctx).data,
+            'historial': HistorialFacturaSerializer(
                 factura.historial.all(), many=True, context=ctx
             ).data,
-            'comentarios': serializers.ComentarioFacturaSerializer(
+            'comentarios': ComentarioFacturaSerializer(
                 factura.comentarios.all(), many=True, context=ctx
             ).data
         })
@@ -3089,7 +2340,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
         
         # Permitir actualización de campos específicos sin validaciones estrictas
-        serializer = serializers.FacturaDetailSerializer(
+        serializer = FacturaDetailSerializer(
             factura, 
             data=request.data, 
             partial=True
@@ -3129,12 +2380,6 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# ============================================================
-# HELPERS DE PDF — accesibles desde cualquier ViewSet
-# ============================================================
-
 def _sincronizar_documento_y_pdf_nas(documento_id):
     """
     Sincroniza en segundo plano el documento individual y el PDF unificado con el NAS.
@@ -3145,7 +2390,7 @@ def _sincronizar_documento_y_pdf_nas(documento_id):
         from financiero.services.shared_storage_service import shared_storage
 
         documento = (
-            models.DocumentoAdjunto.objects
+            DocumentoAdjunto.objects
             .select_related('factura')
             .filter(id=documento_id)
             .first()
@@ -3162,7 +2407,7 @@ def _sincronizar_documento_y_pdf_nas(documento_id):
             return
 
         index = (
-            models.DocumentoAdjunto.objects
+            DocumentoAdjunto.objects
             .filter(
                 factura=documento.factura,
                 ciclo_documental=_factura_ciclo_documental_actual(documento.factura),
@@ -3179,8 +2424,8 @@ def _sincronizar_documento_y_pdf_nas(documento_id):
         )
         documento.nas_relative_path = result.nas_relative_path or ''
         documento.nas_storage_status = (
-            models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-            else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+            DocumentoAdjunto.NAS_STATUS_STORED if result.success
+            else (result.error_code or DocumentoAdjunto.NAS_STATUS_FAILED)
         )
         documento.save(update_fields=['nas_relative_path', 'nas_storage_status'])
 
@@ -3198,8 +2443,6 @@ def _sincronizar_documento_y_pdf_nas(documento_id):
         logger.exception('[SHARED_STORAGE] Error sincronizando documento/PDF con NAS. documento_id=%s', documento_id)
     finally:
         close_old_connections()
-
-
 def _programar_sincronizacion_nas_documento(documento_id):
     def _runner():
         _sincronizar_documento_y_pdf_nas(documento_id)
@@ -3208,8 +2451,6 @@ def _programar_sincronizacion_nas_documento(documento_id):
         transaction.on_commit(lambda: threading.Thread(target=_runner, daemon=True).start())
     except Exception:
         logger.exception('[SHARED_STORAGE] No se pudo programar sincronización NAS. documento_id=%s', documento_id)
-
-
 def _regenerar_pdf_unificado_nas(factura):
     """
     Regenera el PDF unificado con todos los documentos actuales de la factura
@@ -3218,7 +2459,7 @@ def _regenerar_pdf_unificado_nas(factura):
     """
     try:
         documentos = list(
-            models.DocumentoAdjunto.objects
+            DocumentoAdjunto.objects
             .filter(
                 factura=factura,
                 ciclo_documental=_factura_ciclo_documental_actual(factura),
@@ -3230,27 +2471,3 @@ def _regenerar_pdf_unificado_nas(factura):
         _vs._pdf_consolidado_documentos(factura, documentos, 'all')
     except Exception:
         logger.exception('[SHARED_STORAGE] Error regenerando PDF unificado. factura_id=%s', factura.id)
-
-
-# ============================================================
-# VIEWSETS PARA BANCO Y TIPO DE CUENTA
-# ============================================================
-
-class BancoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = models.Banco.objects.filter(activo=True).order_by('nombre')
-    serializer_class = serializers.BancoSerializer
-    permission_classes = [permissions.AllowAny]
-    filterset_fields = ['activo']
-    search_fields = ['nombre', 'descripcion']
-    ordering_fields = ['nombre', 'fecha_creacion']
-    ordering = ['nombre']
-
-
-class TipoCuentaViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = models.TipoCuenta.objects.filter(activo=True).order_by('nombre')
-    serializer_class = serializers.TipoCuentaSerializer
-    permission_classes = [permissions.AllowAny]
-    filterset_fields = ['activo']
-    search_fields = ['nombre', 'descripcion']
-    ordering_fields = ['nombre', 'fecha_creacion']
-    ordering = ['nombre']
