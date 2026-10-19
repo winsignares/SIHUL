@@ -2,7 +2,7 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.core.exceptions import ValidationError
 import unicodedata
 
-from usuarios.models import Rol, Usuario
+from unispace.usuarios.models import Rol, Usuario
 
 
 def _microsoft_email(sociallogin, data=None):

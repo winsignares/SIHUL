@@ -2,7 +2,7 @@
 Seeder de tipos de actividad para préstamos de espacios.
 """
 
-from prestamos.models import TipoActividad
+from unispace.prestamos.models import TipoActividad
 
 
 def create_tipos_actividad(stdout, style):

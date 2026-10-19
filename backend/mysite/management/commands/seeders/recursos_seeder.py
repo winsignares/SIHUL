@@ -2,7 +2,7 @@
 Seeder de recursos para espacios físicos.
 """
 
-from recursos.models import Recurso
+from unispace.recursos.models import Recurso
 
 
 def create_recursos(stdout, style):

@@ -2,7 +2,7 @@
 Seeder de roles del sistema.
 """
 
-from usuarios.models import Rol
+from unispace.usuarios.models import Rol
 
 
 def create_roles(stdout, style):

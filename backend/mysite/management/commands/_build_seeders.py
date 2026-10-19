@@ -72,77 +72,77 @@ def transform(body: str) -> str:
 # 4. Construir cada archivo seeder                                             #
 # --------------------------------------------------------------------------- #
 IMPORTS_BASE = """\
-from sedes.models import Sede
-from espacios.models import TipoEspacio, EspacioFisico
-from usuarios.models import Rol, Usuario
-from facultades.models import Facultad
-from programas.models import Programa
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from componentes.models import Componente, ComponenteRol
-from periodos.models import PeriodoAcademico
-from grupos.models import Grupo
-from horario.models import Horario
+from unispace.sedes.models import Sede
+from unispace.espacios.models import TipoEspacio, EspacioFisico
+from unispace.usuarios.models import Rol, Usuario
+from unispace.facultades.models import Facultad
+from unispace.programas.models import Programa
+from unispace.asignaturas.models import Asignatura, AsignaturaPrograma
+from unispace.componentes.models import Componente, ComponenteRol
+from unispace.periodos.models import PeriodoAcademico
+from unispace.grupos.models import Grupo
+from unispace.horario.models import Horario
 from datetime import date, time
 """
 
 SEEDER_FILES = {
     "roles_seeder.py": {
         "doc": "Seeder de roles del sistema.",
-        "imports": "from usuarios.models import Rol",
+        "imports": "from unispace.usuarios.models import Rol",
         "methods": ["create_roles"],
         "public_fn": "create_roles",
     },
     "sedes_seeder.py": {
         "doc": "Seeder de sedes de la universidad.",
-        "imports": "from sedes.models import Sede",
+        "imports": "from unispace.sedes.models import Sede",
         "methods": ["create_sedes"],
         "public_fn": "create_sedes",
     },
     "tipos_espacio_seeder.py": {
         "doc": "Seeder de tipos de espacio físico.",
-        "imports": "from espacios.models import TipoEspacio",
+        "imports": "from unispace.espacios.models import TipoEspacio",
         "methods": ["create_tipos_espacio"],
         "public_fn": "create_tipos_espacio",
     },
     "facultades_seeder.py": {
         "doc": "Seeder de facultades.",
-        "imports": "from sedes.models import Sede\nfrom facultades.models import Facultad",
+        "imports": "from unispace.sedes.models import Sede\nfrom facultades.models import Facultad",
         "methods": ["create_facultades"],
         "public_fn": "create_facultades",
     },
     "programas_seeder.py": {
         "doc": "Seeder de programas académicos.",
-        "imports": "from facultades.models import Facultad\nfrom programas.models import Programa",
+        "imports": "from unispace.facultades.models import Facultad\nfrom programas.models import Programa",
         "methods": ["create_programas"],
         "public_fn": "create_programas",
     },
     "usuarios_seeder.py": {
         "doc": "Seeder de usuarios del sistema y docentes.",
-        "imports": "from sedes.models import Sede\nfrom usuarios.models import Rol, Usuario",
+        "imports": "from unispace.sedes.models import Sede\nfrom usuarios.models import Rol, Usuario",
         "methods": ["create_usuarios_sistema", "create_usuarios_docentes"],
         "public_fn": None,  # múltiples funciones públicas
     },
     "asignaturas_seeder.py": {
         "doc": "Seeder de asignaturas de todos los programas.",
-        "imports": "from asignaturas.models import Asignatura",
+        "imports": "from unispace.asignaturas.models import Asignatura",
         "methods": ["create_asignaturas", "_get_all_asignaturas"],
         "public_fn": "create_asignaturas",
     },
     "asignaturas_programa_seeder.py": {
         "doc": "Seeder de relaciones Asignatura-Programa.",
-        "imports": "from asignaturas.models import Asignatura, AsignaturaPrograma\nfrom programas.models import Programa",
+        "imports": "from unispace.asignaturas.models import Asignatura, AsignaturaPrograma\nfrom programas.models import Programa",
         "methods": ["create_asignaturas_programa"],
         "public_fn": "create_asignaturas_programa",
     },
     "espacios_seeder.py": {
         "doc": "Seeder de espacios físicos de las sedes.",
-        "imports": "from sedes.models import Sede\nfrom espacios.models import TipoEspacio, EspacioFisico",
+        "imports": "from unispace.sedes.models import Sede\nfrom espacios.models import TipoEspacio, EspacioFisico",
         "methods": ["create_espacios_fisicos"],
         "public_fn": "create_espacios_fisicos",
     },
     "componentes_seeder.py": {
         "doc": "Seeder de componentes del sistema de permisos y su asignación a roles.",
-        "imports": "from componentes.models import Componente, ComponenteRol\nfrom usuarios.models import Rol",
+        "imports": "from unispace.componentes.models import Componente, ComponenteRol\nfrom usuarios.models import Rol",
         "methods": ["create_componentes", "create_componentes_rol"],
         "public_fn": None,
     },
@@ -154,7 +154,7 @@ SEEDER_FILES = {
     },
     "grupos_seeder.py": {
         "doc": "Seeder de grupos académicos.",
-        "imports": "from programas.models import Programa\nfrom periodos.models import PeriodoAcademico\nfrom grupos.models import Grupo",
+        "imports": "from unispace.programas.models import Programa\nfrom periodos.models import PeriodoAcademico\nfrom grupos.models import Grupo",
         "methods": ["create_grupos"],
         "public_fn": "create_grupos",
     },
@@ -162,14 +162,14 @@ SEEDER_FILES = {
         "doc": "Seeder de horarios para Sede Centro y Sede Principal.",
         "imports": (
             "from datetime import time\n"
-            "from sedes.models import Sede\n"
-            "from espacios.models import TipoEspacio, EspacioFisico\n"
-            "from usuarios.models import Rol, Usuario\n"
-            "from asignaturas.models import Asignatura\n"
-            "from programas.models import Programa\n"
-            "from periodos.models import PeriodoAcademico\n"
-            "from grupos.models import Grupo\n"
-            "from horario.models import Horario"
+            "from unispace.sedes.models import Sede\n"
+            "from unispace.espacios.models import TipoEspacio, EspacioFisico\n"
+            "from unispace.usuarios.models import Rol, Usuario\n"
+            "from unispace.asignaturas.models import Asignatura\n"
+            "from unispace.programas.models import Programa\n"
+            "from unispace.periodos.models import PeriodoAcademico\n"
+            "from unispace.grupos.models import Grupo\n"
+            "from unispace.horario.models import Horario"
         ),
         "methods": ["create_horarios_sede_centro", "create_horarios_sede_principal"],
         "public_fn": None,

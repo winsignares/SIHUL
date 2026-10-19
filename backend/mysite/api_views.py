@@ -12,30 +12,30 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from werkzeug.security import check_password_hash
 
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from asignaturas.serializers import AsignaturaProgramaSerializer, AsignaturaSerializer
-from espacios.models import EspacioFisico, EspacioPermitido, TipoEspacio
-from espacios.serializers import EspacioFisicoSerializer, EspacioPermitidoSerializer, TipoEspacioSerializer
-from facultades.models import Facultad
-from facultades.serializers import FacultadSerializer
-from grupos.models import Grupo
-from grupos.serializers import GrupoSerializer
-from horario.models import Horario, HorarioEstudiante, HorarioFusionado, SolicitudEspacio
-from horario.serializers import (
+from unispace.asignaturas.models import Asignatura, AsignaturaPrograma
+from unispace.asignaturas.serializers import AsignaturaProgramaSerializer, AsignaturaSerializer
+from unispace.espacios.models import EspacioFisico, EspacioPermitido, TipoEspacio
+from unispace.espacios.serializers import EspacioFisicoSerializer, EspacioPermitidoSerializer, TipoEspacioSerializer
+from unispace.facultades.models import Facultad
+from unispace.facultades.serializers import FacultadSerializer
+from unispace.grupos.models import Grupo
+from unispace.grupos.serializers import GrupoSerializer
+from unispace.horario.models import Horario, HorarioEstudiante, HorarioFusionado, SolicitudEspacio
+from unispace.horario.serializers import (
     HorarioEstudianteSerializer,
     HorarioFusionadoSerializer,
     HorarioSerializer,
     SolicitudEspacioSerializer,
 )
-from programas.models import Programa
-from programas.serializers import ProgramaSerializer
-from recursos.models import EspacioRecurso, Recurso
-from recursos.serializers import EspacioRecursoSerializer, RecursoSerializer
-from sedes.models import Seccional, Sede
-from sedes.serializers import SeccionalSerializer, SedeSerializer
-from usuarios.models import Rol, Usuario
-from notificaciones.signals import crear_notificacion
-from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
+from unispace.programas.models import Programa
+from unispace.programas.serializers import ProgramaSerializer
+from unispace.recursos.models import EspacioRecurso, Recurso
+from unispace.recursos.serializers import EspacioRecursoSerializer, RecursoSerializer
+from unispace.sedes.models import Seccional, Sede
+from unispace.sedes.serializers import SeccionalSerializer, SedeSerializer
+from unispace.usuarios.models import Rol, Usuario
+from unispace.notificaciones.signals import crear_notificacion
+from unispace.usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
 from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, user_supervisa_espacios
 from .cache_utils import CachedCatalogMixin
@@ -47,8 +47,8 @@ from .permissions import (
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
 
-from espacios import api_adapters as espacios_api
-from horario import api_adapters as horario_api
+from unispace.espacios import api_adapters as espacios_api
+from unispace.horario import api_adapters as horario_api
 
 
 def _password_valida(usuario, password_plano):
@@ -621,7 +621,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if not usuario.rol:
             return []
 
-        from componentes.models import ComponenteRol, ComponenteUsuario
+        from unispace.componentes.models import ComponenteRol, ComponenteUsuario
 
         componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
         componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
@@ -659,7 +659,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return list(componentes_por_id.values())
 
     def _build_espacios_permitidos(self, usuario):
-        from espacios.models import EspacioPermitido
+        from unispace.espacios.models import EspacioPermitido
 
         espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
         if getattr(usuario, 'sede_id', None):

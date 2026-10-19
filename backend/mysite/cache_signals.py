@@ -1,15 +1,15 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from espacios.models import TipoEspacio
-from facultades.models import Facultad
-from grupos.models import Grupo
-from prestamos.models import TipoActividad
-from programas.models import Programa
-from recursos.models import Recurso
-from sedes.models import Sede
-from usuarios.models import Rol
+from unispace.asignaturas.models import Asignatura, AsignaturaPrograma
+from unispace.espacios.models import TipoEspacio
+from unispace.facultades.models import Facultad
+from unispace.grupos.models import Grupo
+from unispace.prestamos.models import TipoActividad
+from unispace.programas.models import Programa
+from unispace.recursos.models import Recurso
+from unispace.sedes.models import Sede
+from unispace.usuarios.models import Rol
 
 from .cache_utils import invalidate_catalog_cache
 

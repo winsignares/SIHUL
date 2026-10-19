@@ -3,7 +3,7 @@ Seeder de periodos académicos.
 """
 
 from datetime import date
-from periodos.models import PeriodoAcademico
+from unispace.periodos.models import PeriodoAcademico
 
 
 def create_periodos_academicos(stdout, style):

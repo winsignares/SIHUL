@@ -2,8 +2,8 @@
 Seeder de espacios permitidos para supervisores.
 """
 
-from usuarios.models import Usuario, Rol
-from espacios.models import EspacioFisico, EspacioPermitido
+from unispace.usuarios.models import Usuario, Rol
+from unispace.espacios.models import EspacioFisico, EspacioPermitido
 
 
 def create_espacios_permitidos(stdout, style):

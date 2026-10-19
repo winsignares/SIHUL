@@ -104,7 +104,7 @@ def get_componente_permiso(user, nombre_componente):
     if not is_authenticated_user(user):
         return None
 
-    from componentes.models import Componente, ComponenteRol, ComponenteUsuario
+    from unispace.componentes.models import Componente, ComponenteRol, ComponenteUsuario
 
     try:
         componente = Componente.objects.get(nombre=nombre_componente)

@@ -19,7 +19,7 @@ class SedeFilterMiddleware(MiddlewareMixin):
         
         if user_id:
             try:
-                from usuarios.models import Usuario
+                from unispace.usuarios.models import Usuario
                 usuario = Usuario.objects.select_related('sede').get(id=user_id)
                 
                 # Agregar información de sede al request

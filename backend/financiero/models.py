@@ -3,8 +3,8 @@ import unicodedata
 
 from django.db import models
 from django.db.models import Index
-from usuarios.models import Usuario
-from facultades.models import Facultad
+from unispace.usuarios.models import Usuario
+from unispace.facultades.models import Facultad
 from django.utils import timezone
 
 

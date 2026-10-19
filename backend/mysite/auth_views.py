@@ -7,10 +7,10 @@ from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_GET
 
-from componentes.models import ComponenteRol, ComponenteUsuario
-from espacios.models import EspacioPermitido
+from unispace.componentes.models import ComponenteRol, ComponenteUsuario
+from unispace.espacios.models import EspacioPermitido
 from mysite.auth_helpers import role_supervisa_espacios
-from usuarios.models import Usuario
+from unispace.usuarios.models import Usuario
 
 
 def _build_componentes(usuario: Usuario):

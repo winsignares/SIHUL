@@ -24,7 +24,7 @@ class SessionUsuarioAuthentication(BaseAuthentication):
         if not user_id:
             return None
 
-        from usuarios.models import Usuario
+        from unispace.usuarios.models import Usuario
 
         try:
             usuario = Usuario.objects.select_related('sede', 'seccional').get(id=user_id, activo=True)

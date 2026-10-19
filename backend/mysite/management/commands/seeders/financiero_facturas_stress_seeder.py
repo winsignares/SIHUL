@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from financiero.models import CentroCosto, CuentaContable, Departamento, Factura, Proveedor
-from usuarios.models import Usuario
+from unispace.usuarios.models import Usuario
 
 TOTAL_POR_ESTADO = 10
 PREFIJO_FACTURA = 'STRESS-FAC'

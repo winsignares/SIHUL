@@ -2,8 +2,8 @@
 Seeder de sedes de la universidad.
 """
 
-from sedes.models import Sede
-from sedes.models import Seccional
+from unispace.sedes.models import Sede
+from unispace.sedes.models import Seccional
 
 
 def create_sedes(stdout, style):

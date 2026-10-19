@@ -1,0 +1,1930 @@
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
+from django.db import transaction
+from django.conf import settings
+from django.utils.crypto import constant_time_compare
+from django.core.exceptions import ValidationError
+from .models import PrestamoEspacio, PrestamoEspacioPublico, TipoActividad, PrestamoRecurso
+from unispace.espacios.models import EspacioFisico
+from unispace.usuarios.models import Usuario
+from unispace.recursos.models import Recurso
+from unispace.horario.models import Horario
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
+from mysite.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
+import json
+import datetime
+import uuid
+import calendar
+import urllib.request
+import urllib.parse
+
+# ========== Helper Functions ==========
+
+
+def _require_auth(request):
+    user = getattr(request, 'user', None)
+    if not user or not user.is_authenticated:
+        return JsonResponse({"error": "Autenticación requerida"}, status=403)
+    return None
+
+
+def _get_request_user(request):
+    return getattr(request, 'user_obj', None) or getattr(request, 'user', None)
+
+
+def _get_seccional_scope(request):
+    user = _get_request_user(request)
+    if is_superuser_effective(user):
+        return None, True
+    return get_user_seccional_id(user), False
+
+
+def _missing_seccional_response():
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
+
+def check_espacio_disponible(espacio_id, fecha, hora_inicio, hora_fin, prestamo_id=None, es_publico=False):
+    """
+    Verifica si un espacio está disponible en la fecha y horas especificadas
+    Valida contra préstamos autenticados, públicos y horarios académicos
+    Returns: (bool, str) - (is_available, error_message)
+    """
+    try:
+        # Convertir strings a objetos date y time si es necesario
+        if isinstance(fecha, str):
+            fecha = datetime.date.fromisoformat(fecha)
+        if isinstance(hora_inicio, str):
+            hora_inicio = datetime.time.fromisoformat(hora_inicio)
+        if isinstance(hora_fin, str):
+            hora_fin = datetime.time.fromisoformat(hora_fin)
+        
+        # 1. Validar contra Préstamos de usuarios autenticados
+        prestamos_conflicto = PrestamoEspacio.objects.filter(
+            espacio_id=espacio_id,
+            fecha=fecha,
+            estado__in=['Pendiente', 'Aprobado']  # Solo préstamos activos
+        )
+        
+        # Si estamos actualizando un préstamo autenticado, excluirlo
+        if not es_publico and prestamo_id:
+            prestamos_conflicto = prestamos_conflicto.exclude(id=prestamo_id)
+        
+        prestamos_conflicto = prestamos_conflicto.filter(
+            # Verificar solapamiento de horarios
+            Q(hora_inicio__lt=hora_fin, hora_fin__gt=hora_inicio)
+        )
+        
+        if prestamos_conflicto.exists():
+            conflicto = prestamos_conflicto.first()
+            return False, f"El espacio ya está reservado de {conflicto.hora_inicio} a {conflicto.hora_fin} para el mismo día (Préstamo Usuario)"
+        
+        # 2. Validar contra Préstamos públicos
+        prestamos_publicos_conflicto = PrestamoEspacioPublico.objects.filter(
+            espacio_id=espacio_id,
+            fecha=fecha,
+            estado__in=['Pendiente', 'Aprobado']
+        )
+        
+        # Si estamos actualizando un préstamo público, excluirlo
+        if es_publico and prestamo_id:
+            prestamos_publicos_conflicto = prestamos_publicos_conflicto.exclude(id=prestamo_id)
+        
+        prestamos_publicos_conflicto = prestamos_publicos_conflicto.filter(
+            Q(hora_inicio__lt=hora_fin, hora_fin__gt=hora_inicio)
+        )
+        
+        if prestamos_publicos_conflicto.exists():
+            conflicto = prestamos_publicos_conflicto.first()
+            return False, f"El espacio ya está reservado de {conflicto.hora_inicio} a {conflicto.hora_fin} para el mismo día (Préstamo Público)"
+
+        # 3. Validar contra Horarios Académicos
+        dias_semana = {
+            0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 
+            4: 'Viernes', 5: 'Sábado', 6: 'Domingo'
+        }
+        dia_nombre = dias_semana[fecha.weekday()]
+        
+        horarios_conflicto = Horario.objects.filter(
+            espacio_id=espacio_id,
+            dia_semana__iexact=dia_nombre, # Case insensitive por seguridad
+            hora_inicio__lt=hora_fin,
+            hora_fin__gt=hora_inicio,
+            estado__in=['pendiente', 'aprobado']
+        ).filter(
+            Q(fecha_inicio__isnull=True) | Q(fecha_inicio__lte=fecha)
+        ).filter(
+            Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha)
+        )
+
+        if horarios_conflicto.exists():
+            conflicto = horarios_conflicto.first()
+            return False, f"El espacio está ocupado por clase de {conflicto.asignatura.nombre} ({conflicto.hora_inicio} - {conflicto.hora_fin})"
+        
+        return True, ""
+    except Exception as e:
+        return False, f"Error al validar disponibilidad: {str(e)}"
+
+
+def _parse_recurrencia(data, fecha_base):
+    es_recurrente = bool(data.get('es_recurrente', False))
+    frecuencia = (data.get('frecuencia') or 'none').lower().strip()
+
+    if not es_recurrente:
+        return {
+            'es_recurrente': False,
+            'frecuencia': 'none',
+            'intervalo': 1,
+            'dias_semana': [],
+            'fin_repeticion_tipo': 'never',
+            'fin_repeticion_fecha': None,
+            'fin_repeticion_ocurrencias': None,
+        }
+
+    # 'yearly' se descarta a propósito: el periodo académico vigente acota
+    # toda serie recurrente (ver _fin_periodo_vigente), y una repetición
+    # anual nunca llegaría a una segunda ocurrencia dentro de ese periodo.
+    if frecuencia not in ['daily', 'weekly', 'monthly', 'weekdays']:
+        raise ValueError('frecuencia inválida para préstamo recurrente')
+
+    intervalo = data.get('intervalo', 1)
+    try:
+        intervalo = int(intervalo)
+    except (TypeError, ValueError):
+        raise ValueError('intervalo debe ser un entero >= 1')
+    if intervalo < 1:
+        raise ValueError('intervalo debe ser >= 1')
+
+    dias_semana = data.get('dias_semana', [])
+    if frecuencia == 'weekly':
+        if not dias_semana or not isinstance(dias_semana, list):
+            raise ValueError('dias_semana es obligatorio para frecuencia weekly')
+        dias_semana = sorted(set(int(d) for d in dias_semana))
+        if any(d < 0 or d > 6 for d in dias_semana):
+            raise ValueError('dias_semana debe contener valores entre 0 y 6')
+    else:
+        dias_semana = []
+
+    fin_tipo = (data.get('fin_repeticion_tipo') or 'never').lower().strip()
+    if fin_tipo not in ['never', 'until_date', 'count']:
+        raise ValueError('fin_repeticion_tipo inválido')
+
+    fin_fecha = None
+    fin_ocurrencias = None
+
+    if fin_tipo == 'until_date':
+        fin_repeticion_fecha = data.get('fin_repeticion_fecha')
+        if not fin_repeticion_fecha:
+            raise ValueError('fin_repeticion_fecha es obligatoria cuando fin_repeticion_tipo=until_date')
+        fin_fecha = datetime.date.fromisoformat(fin_repeticion_fecha)
+        if fin_fecha < fecha_base:
+            raise ValueError('fin_repeticion_fecha no puede ser menor a la fecha inicial')
+
+    if fin_tipo == 'count':
+        fin_repeticion_ocurrencias = data.get('fin_repeticion_ocurrencias')
+        if fin_repeticion_ocurrencias is None:
+            raise ValueError('fin_repeticion_ocurrencias es obligatoria cuando fin_repeticion_tipo=count')
+        try:
+            fin_ocurrencias = int(fin_repeticion_ocurrencias)
+        except (TypeError, ValueError):
+            raise ValueError('fin_repeticion_ocurrencias debe ser un entero >= 1')
+        if fin_ocurrencias < 1:
+            raise ValueError('fin_repeticion_ocurrencias debe ser >= 1')
+
+    return {
+        'es_recurrente': True,
+        'frecuencia': frecuencia,
+        'intervalo': intervalo,
+        'dias_semana': dias_semana,
+        'fin_repeticion_tipo': fin_tipo,
+        'fin_repeticion_fecha': fin_fecha,
+        'fin_repeticion_ocurrencias': fin_ocurrencias,
+    }
+
+
+def _extract_public_token(request, data=None):
+    token = request.headers.get('X-Public-Token')
+    if not token:
+        token = request.GET.get('token_publico') or request.GET.get('token')
+    if not token and data:
+        token = data.get('token_publico') or data.get('token')
+    return (token or '').strip()
+
+
+def _require_public_token(request, prestamo, data=None):
+    user = getattr(request, 'user', None)
+    if user and user.is_authenticated:
+        return True, None
+
+    token = _extract_public_token(request, data)
+    if not token:
+        return False, JsonResponse({"error": "Token público requerido"}, status=403)
+    if not prestamo.token_publico or not constant_time_compare(prestamo.token_publico, token):
+        return False, JsonResponse({"error": "Token público inválido"}, status=403)
+    return True, None
+
+
+def _verify_recaptcha(token, remote_ip=None):
+    if not settings.RECAPTCHA_SECRET_KEY:
+        if settings.DEBUG:
+            return True, ""
+        return False, "reCAPTCHA no está configurado"
+    if not token:
+        return False, "Token reCAPTCHA es requerido"
+
+    payload = {
+        'secret': settings.RECAPTCHA_SECRET_KEY,
+        'response': token,
+    }
+    if remote_ip:
+        payload['remoteip'] = remote_ip
+
+    try:
+        data = urllib.parse.urlencode(payload).encode()
+        req = urllib.request.Request(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data=data,
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=8) as response:
+            parsed = json.loads(response.read().decode('utf-8'))
+        if parsed.get('success'):
+            return True, ""
+        return False, "reCAPTCHA inválido"
+    except Exception:
+        return False, "No se pudo validar reCAPTCHA"
+
+
+def _add_months(base_date, months):
+    month_idx = base_date.month - 1 + months
+    year = base_date.year + month_idx // 12
+    month = month_idx % 12 + 1
+    last_day = calendar.monthrange(year, month)[1]
+    return datetime.date(year, month, min(base_date.day, last_day))
+
+
+# Duracion aproximada de un semestre, usada SOLO como respaldo cuando
+# fecha_base no cae dentro de ningun PeriodoAcademico conocido (p.ej. un
+# prestamo publico para una fecha fuera de calendario academico).
+_HORIZONTE_RESPALDO_DIAS = 180
+
+# Tope de ocurrencias como salvaguarda adicional (p.ej. si alguien pide
+# explicitamente fin_repeticion_ocurrencias=10000 para una frecuencia
+# diaria). El fin del periodo academico (o el respaldo de arriba) es lo que
+# normalmente limita la serie antes de llegar a este numero.
+_LIMITE_OCURRENCIAS_POR_DEFECTO = 200
+
+
+def _fin_periodo_vigente(fecha_base):
+    """
+    Fecha de fin del PeriodoAcademico que contiene fecha_base, si existe.
+
+    No tiene sentido dejar que un prestamo recurrente siga generando
+    ocurrencias mas alla del periodo academico en curso (p.ej. el periodo
+    20262 llega hasta diciembre): despues de eso ni siquiera hay horarios de
+    clase con los que validar disponibilidad.
+    """
+    from unispace.periodos.models import PeriodoAcademico
+
+    periodo = PeriodoAcademico.objects.filter(
+        fecha_inicio__lte=fecha_base,
+        fecha_fin__gte=fecha_base,
+    ).order_by('-fecha_inicio').first()
+    return periodo.fecha_fin if periodo else None
+
+
+def _generar_fechas_ocurrencias(fecha_base, recurrencia, horizonte_fecha=None, limite_ocurrencias=None):
+    """
+    Calcula el conjunto completo de fechas que abarca un prestamo recurrente.
+    Cada fecha devuelta se persiste como su propio registro (PrestamoEspacio
+    o PrestamoEspacioPublico), enlazado a la solicitud base via
+    `prestamo_padre`/`serie_id`, para poder aprobar/editar/cancelar cada
+    ocurrencia de forma individual.
+
+    Esto es necesario ademas de por gestion operativa: la disponibilidad de
+    un espacio ya no es uniforme semana a semana dentro del periodo, porque
+    Horario.fecha_inicio/fecha_fin puede variar (una clase puede arrancar a
+    mitad de semestre). Validar y persistir ocurrencia por ocurrencia es lo
+    que permite detectar y bloquear el choque puntual de UNA fecha de la
+    serie sin invalidar toda la solicitud recurrente.
+
+    Cuando la serie no trae fin explicito ('never'), la serie se acota al
+    fin del periodo academico vigente para fecha_base (ver
+    _fin_periodo_vigente), o al respaldo de _HORIZONTE_RESPALDO_DIAS si esa
+    fecha no cae dentro de ningun periodo conocido. `limite_ocurrencias` es
+    solo una salvaguarda adicional de cantidad.
+    """
+    if not recurrencia['es_recurrente'] or recurrencia['frecuencia'] == 'none':
+        return [fecha_base]
+
+    frecuencia = recurrencia['frecuencia']
+    intervalo = max(1, recurrencia['intervalo'])
+    fin_tipo = recurrencia['fin_repeticion_tipo']
+    fin_fecha = recurrencia['fin_repeticion_fecha']
+    fin_ocurrencias = recurrencia['fin_repeticion_ocurrencias']
+
+    if horizonte_fecha is None:
+        horizonte_fecha = _fin_periodo_vigente(fecha_base) or (
+            fecha_base + datetime.timedelta(days=_HORIZONTE_RESPALDO_DIAS)
+        )
+    if limite_ocurrencias is None:
+        limite_ocurrencias = _LIMITE_OCURRENCIAS_POR_DEFECTO
+
+    horizonte = horizonte_fecha
+    limite_fecha = fin_fecha if (fin_tipo == 'until_date' and fin_fecha) else horizonte
+    limite_fecha = min(limite_fecha, horizonte)
+    limite_count = fin_ocurrencias if (fin_tipo == 'count' and fin_ocurrencias) else limite_ocurrencias
+    limite_count = min(limite_count, limite_ocurrencias)
+
+    fechas = []
+
+    if frecuencia == 'daily':
+        fecha = fecha_base
+        while fecha <= limite_fecha and len(fechas) < limite_count:
+            fechas.append(fecha)
+            fecha += datetime.timedelta(days=intervalo)
+
+    elif frecuencia == 'weekdays':
+        fecha = fecha_base
+        while fecha <= limite_fecha and len(fechas) < limite_count:
+            if fecha.weekday() < 5:
+                fechas.append(fecha)
+            fecha += datetime.timedelta(days=1)
+
+    elif frecuencia == 'weekly':
+        # dias_semana usa la misma convencion que date.weekday() (0=Lunes..6=Domingo).
+        dias_semana = recurrencia['dias_semana'] or [fecha_base.weekday()]
+        lunes_base = fecha_base - datetime.timedelta(days=fecha_base.weekday())
+        semana = 0
+        while len(fechas) < limite_count:
+            lunes_semana = lunes_base + datetime.timedelta(weeks=semana * intervalo)
+            if lunes_semana > limite_fecha or semana > 1000:
+                break
+            for dia in dias_semana:
+                candidata = lunes_semana + datetime.timedelta(days=dia)
+                if candidata < fecha_base or candidata > limite_fecha:
+                    continue
+                fechas.append(candidata)
+                if len(fechas) >= limite_count:
+                    break
+            semana += 1
+        fechas.sort()
+
+    elif frecuencia == 'monthly':
+        i = 0
+        while len(fechas) < limite_count:
+            fecha = _add_months(fecha_base, i * intervalo)
+            if fecha > limite_fecha:
+                break
+            fechas.append(fecha)
+            i += 1
+
+    return fechas or [fecha_base]
+
+
+def _recurrencia_payload(prestamo):
+    return {
+        'es_recurrente': prestamo.es_recurrente,
+        'frecuencia': prestamo.frecuencia,
+        'intervalo': prestamo.intervalo,
+        'dias_semana': prestamo.dias_semana or [],
+        'fin_repeticion_tipo': prestamo.fin_repeticion_tipo,
+        'fin_repeticion_fecha': str(prestamo.fin_repeticion_fecha) if prestamo.fin_repeticion_fecha else None,
+        'fin_repeticion_ocurrencias': prestamo.fin_repeticion_ocurrencias,
+        'serie_id': prestamo.serie_id,
+        'es_ocurrencia_generada': prestamo.es_ocurrencia_generada,
+        'prestamo_padre_id': prestamo.prestamo_padre_id,
+    }
+
+# ========== TipoActividad Views ==========
+
+@csrf_exempt
+def list_tipos_actividad(request):
+    """Lista todos los tipos de actividad"""
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        tipos = TipoActividad.objects.all()
+        lst = [{
+            "id": t.id,
+            "nombre": t.nombre,
+            "descripcion": t.descripcion
+        } for t in tipos]
+        return JsonResponse({"tipos_actividad": lst}, status=200)
+    return JsonResponse({"error": "Método no permitido"}, status=405)
+
+@csrf_exempt
+def create_tipo_actividad(request):
+    """Crea un nuevo tipo de actividad"""
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method != 'POST':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, TIPO_ACTIVIDAD_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
+        nombre = sanitized_data.get('nombre')
+        descripcion = sanitized_data.get('descripcion', '')
+        
+        if not nombre:
+            return JsonResponse({"error": "El nombre es requerido"}, status=400)
+        
+        tipo = TipoActividad(nombre=nombre, descripcion=descripcion)
+        tipo.save()
+        return JsonResponse({"message": "Tipo de actividad creado", "id": tipo.id}, status=201)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+# ========== PrestamoEspacio Views ==========
+
+@csrf_exempt
+def create_prestamo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method != 'POST':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, PRESTAMO_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
+        espacio_id = data.get('espacio_id')
+        usuario_id = data.get('usuario_id')
+        administrador_id = data.get('administrador_id')
+        tipo_actividad_id = data.get('tipo_actividad_id')
+        fecha = data.get('fecha')
+        hora_inicio = data.get('hora_inicio')
+        hora_fin = data.get('hora_fin')
+        motivo = sanitized_data.get('motivo')
+        asistentes = data.get('asistentes', 0)
+        telefono = sanitized_data.get('telefono', '')
+        estado = data.get('estado', 'Pendiente')
+        recursos = data.get('recursos', [])  # Array de {recurso_id, cantidad}
+        
+        # Validar campos requeridos
+        if not all([espacio_id, tipo_actividad_id, fecha, hora_inicio, hora_fin]):
+            return JsonResponse({
+                "error": "espacio_id, tipo_actividad_id, fecha, hora_inicio y hora_fin son requeridos"
+            }, status=400)
+        
+        # Obtener objetos relacionados
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+        
+        # Validar capacidad del espacio
+        if asistentes > espacio.capacidad:
+            return JsonResponse({
+                "error": f"El número de asistentes ({asistentes}) excede la capacidad del espacio ({espacio.capacidad})"
+            }, status=400)
+        
+        tipo_actividad = TipoActividad.objects.get(id=tipo_actividad_id)
+        usuario = Usuario.objects.get(id=usuario_id) if usuario_id else None
+        administrador = Usuario.objects.get(id=administrador_id) if administrador_id else None
+        
+        # Crear préstamo
+        f = datetime.date.fromisoformat(fecha)
+        hi = datetime.time.fromisoformat(hora_inicio)
+        hf = datetime.time.fromisoformat(hora_fin)
+
+        if hf <= hi:
+            return JsonResponse({"error": "hora_fin debe ser mayor que hora_inicio"}, status=400)
+
+        recurrencia = _parse_recurrencia(data, f)
+        fechas_ocurrencias = _generar_fechas_ocurrencias(f, recurrencia)
+        if not fechas_ocurrencias:
+            return JsonResponse({"error": "No se generaron ocurrencias con la configuración enviada"}, status=400)
+
+        # Validar disponibilidad para TODA la serie recurrente antes de crear
+        # ningun registro: una fecha en conflicto mas adelante en la serie
+        # (p.ej. una clase que arranca a mitad de semestre) bloquea toda la
+        # solicitud, no solo esa ocurrencia.
+        for fecha_ocurrencia in fechas_ocurrencias:
+            is_available, error_msg = check_espacio_disponible(espacio_id, fecha_ocurrencia, hi, hf)
+            if not is_available:
+                return JsonResponse({
+                    "error": f"Conflicto en fecha {fecha_ocurrencia}: {error_msg}"
+                }, status=409)
+
+        serie_id = str(uuid.uuid4()) if recurrencia['es_recurrente'] else None
+
+        with transaction.atomic():
+            p = PrestamoEspacio(
+                espacio=espacio,
+                usuario=usuario,
+                administrador=administrador,
+                tipo_actividad=tipo_actividad,
+                prestamo_padre=None,
+                serie_id=serie_id,
+                es_ocurrencia_generada=False,
+                es_recurrente=recurrencia['es_recurrente'],
+                frecuencia=recurrencia['frecuencia'],
+                intervalo=recurrencia['intervalo'],
+                dias_semana=recurrencia['dias_semana'],
+                fin_repeticion_tipo=recurrencia['fin_repeticion_tipo'],
+                fin_repeticion_fecha=recurrencia['fin_repeticion_fecha'],
+                fin_repeticion_ocurrencias=recurrencia['fin_repeticion_ocurrencias'],
+                fecha=f,
+                hora_inicio=hi,
+                hora_fin=hf,
+                motivo=motivo,
+                asistentes=asistentes,
+                telefono=telefono,
+                estado=estado
+            )
+            p.save()
+
+            # Crear relaciones con recursos del préstamo base
+            for recurso_data in recursos:
+                recurso_id = recurso_data.get('recurso_id')
+                cantidad = recurso_data.get('cantidad', 1)
+                if recurso_id:
+                    recurso = Recurso.objects.get(id=recurso_id)
+                    PrestamoRecurso.objects.create(
+                        prestamo=p,
+                        recurso=recurso,
+                        cantidad=cantidad
+                    )
+
+            # Crear ocurrencias hijas para fechas distintas a la fecha base
+            ocurrencias_creadas = 1
+            for fecha_ocurrencia in fechas_ocurrencias:
+                if fecha_ocurrencia == f:
+                    continue
+
+                hijo = PrestamoEspacio.objects.create(
+                    espacio=espacio,
+                    usuario=usuario,
+                    administrador=administrador,
+                    tipo_actividad=tipo_actividad,
+                    prestamo_padre=p,
+                    serie_id=serie_id,
+                    es_ocurrencia_generada=True,
+                    es_recurrente=recurrencia['es_recurrente'],
+                    frecuencia=recurrencia['frecuencia'],
+                    intervalo=recurrencia['intervalo'],
+                    dias_semana=recurrencia['dias_semana'],
+                    fin_repeticion_tipo=recurrencia['fin_repeticion_tipo'],
+                    fin_repeticion_fecha=recurrencia['fin_repeticion_fecha'],
+                    fin_repeticion_ocurrencias=recurrencia['fin_repeticion_ocurrencias'],
+                    fecha=fecha_ocurrencia,
+                    hora_inicio=hi,
+                    hora_fin=hf,
+                    motivo=motivo,
+                    asistentes=asistentes,
+                    telefono=telefono,
+                    estado=estado
+                )
+                for recurso_data in recursos:
+                    recurso_id = recurso_data.get('recurso_id')
+                    cantidad = recurso_data.get('cantidad', 1)
+                    if recurso_id:
+                        recurso = Recurso.objects.get(id=recurso_id)
+                        PrestamoRecurso.objects.create(
+                            prestamo=hijo,
+                            recurso=recurso,
+                            cantidad=cantidad
+                        )
+                ocurrencias_creadas += 1
+
+        return JsonResponse({
+            "message": "Prestamo creado",
+            "id": p.id,
+            "serie_id": p.serie_id,
+            "es_recurrente": p.es_recurrente,
+            "ocurrencias_creadas": ocurrencias_creadas
+        }, status=201)
+        
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({"error": "Espacio no encontrado."}, status=404)
+    except TipoActividad.DoesNotExist:
+        return JsonResponse({"error": "Tipo de actividad no encontrado."}, status=404)
+    except Usuario.DoesNotExist:
+        return JsonResponse({"error": "Usuario no encontrado."}, status=404)
+    except Recurso.DoesNotExist:
+        return JsonResponse({"error": "Recurso no encontrado."}, status=404)
+    except ValueError:
+        return JsonResponse({"error": "Formato de fecha/hora inválido."}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def update_prestamo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method != 'PUT':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+        id = data.get('id')
+        if not id:
+            return JsonResponse({"error": "ID es requerido"}, status=400)
+        
+        p = PrestamoEspacio.objects.get(id=id)
+        actualizar_serie = bool(data.get('actualizar_serie', False))
+
+        # Actualización de toda la serie solo desde el préstamo base
+        if actualizar_serie and p.es_recurrente and p.prestamo_padre is None:
+            with transaction.atomic():
+                if 'espacio_id' in data:
+                    p.espacio = EspacioFisico.objects.get(id=data.get('espacio_id'))
+                if 'usuario_id' in data:
+                    p.usuario = Usuario.objects.get(id=data.get('usuario_id')) if data.get('usuario_id') else None
+                if 'administrador_id' in data:
+                    p.administrador = Usuario.objects.get(id=data.get('administrador_id')) if data.get('administrador_id') else None
+                if 'tipo_actividad_id' in data:
+                    p.tipo_actividad = TipoActividad.objects.get(id=data.get('tipo_actividad_id'))
+                if 'fecha' in data:
+                    p.fecha = datetime.date.fromisoformat(data.get('fecha'))
+                if 'hora_inicio' in data:
+                    p.hora_inicio = datetime.time.fromisoformat(data.get('hora_inicio'))
+                if 'hora_fin' in data:
+                    p.hora_fin = datetime.time.fromisoformat(data.get('hora_fin'))
+                if p.hora_fin <= p.hora_inicio:
+                    return JsonResponse({"error": "hora_fin debe ser mayor que hora_inicio"}, status=400)
+                if 'motivo' in data:
+                    p.motivo = data.get('motivo')
+                if 'asistentes' in data:
+                    p.asistentes = data.get('asistentes')
+                if 'telefono' in data:
+                    p.telefono = data.get('telefono')
+                if 'estado' in data:
+                    p.estado = data.get('estado')
+
+                recurrencia_input = {
+                    'es_recurrente': data.get('es_recurrente', p.es_recurrente),
+                    'frecuencia': data.get('frecuencia', p.frecuencia),
+                    'intervalo': data.get('intervalo', p.intervalo),
+                    'dias_semana': data.get('dias_semana', p.dias_semana),
+                    'fin_repeticion_tipo': data.get('fin_repeticion_tipo', p.fin_repeticion_tipo),
+                    'fin_repeticion_fecha': data.get('fin_repeticion_fecha', str(p.fin_repeticion_fecha) if p.fin_repeticion_fecha else None),
+                    'fin_repeticion_ocurrencias': data.get('fin_repeticion_ocurrencias', p.fin_repeticion_ocurrencias),
+                }
+                recurrencia = _parse_recurrencia(recurrencia_input, p.fecha)
+
+                p.es_recurrente = recurrencia['es_recurrente']
+                p.frecuencia = recurrencia['frecuencia']
+                p.intervalo = recurrencia['intervalo']
+                p.dias_semana = recurrencia['dias_semana']
+                p.fin_repeticion_tipo = recurrencia['fin_repeticion_tipo']
+                p.fin_repeticion_fecha = recurrencia['fin_repeticion_fecha']
+                p.fin_repeticion_ocurrencias = recurrencia['fin_repeticion_ocurrencias']
+
+                if p.asistentes > p.espacio.capacidad:
+                    return JsonResponse({
+                        "error": f"El número de asistentes ({p.asistentes}) excede la capacidad del espacio ({p.espacio.capacidad})"
+                    }, status=400)
+
+                fechas_ocurrencias = _generar_fechas_ocurrencias(p.fecha, recurrencia)
+
+                # Borrar ocurrencias hijas actuales para regenerar serie
+                p.ocurrencias_generadas.all().delete()
+
+                # Validar disponibilidad del padre
+                ok, err = check_espacio_disponible(p.espacio.id, p.fecha, p.hora_inicio, p.hora_fin, prestamo_id=p.id)
+                if not ok:
+                    return JsonResponse({"error": f"Conflicto en fecha {p.fecha}: {err}"}, status=409)
+
+                # Validar disponibilidad de nuevas ocurrencias
+                for fecha_ocurrencia in fechas_ocurrencias:
+                    if fecha_ocurrencia == p.fecha:
+                        continue
+                    ok, err = check_espacio_disponible(p.espacio.id, fecha_ocurrencia, p.hora_inicio, p.hora_fin)
+                    if not ok:
+                        return JsonResponse({"error": f"Conflicto en fecha {fecha_ocurrencia}: {err}"}, status=409)
+
+                p.save()
+
+                recursos_payload = data.get('recursos')
+                if recursos_payload is not None:
+                    p.prestamo_recursos.all().delete()
+                    for recurso_data in recursos_payload:
+                        recurso_id = recurso_data.get('recurso_id')
+                        cantidad = recurso_data.get('cantidad', 1)
+                        if recurso_id:
+                            recurso = Recurso.objects.get(id=recurso_id)
+                            PrestamoRecurso.objects.create(prestamo=p, recurso=recurso, cantidad=cantidad)
+                else:
+                    recursos_payload = [{
+                        'recurso_id': rr.recurso_id,
+                        'cantidad': rr.cantidad
+                    } for rr in p.prestamo_recursos.all()]
+
+                for fecha_ocurrencia in fechas_ocurrencias:
+                    if fecha_ocurrencia == p.fecha:
+                        continue
+                    hijo = PrestamoEspacio.objects.create(
+                        espacio=p.espacio,
+                        usuario=p.usuario,
+                        administrador=p.administrador,
+                        tipo_actividad=p.tipo_actividad,
+                        prestamo_padre=p,
+                        serie_id=p.serie_id,
+                        es_ocurrencia_generada=True,
+                        es_recurrente=p.es_recurrente,
+                        frecuencia=p.frecuencia,
+                        intervalo=p.intervalo,
+                        dias_semana=p.dias_semana,
+                        fin_repeticion_tipo=p.fin_repeticion_tipo,
+                        fin_repeticion_fecha=p.fin_repeticion_fecha,
+                        fin_repeticion_ocurrencias=p.fin_repeticion_ocurrencias,
+                        fecha=fecha_ocurrencia,
+                        hora_inicio=p.hora_inicio,
+                        hora_fin=p.hora_fin,
+                        motivo=p.motivo,
+                        asistentes=p.asistentes,
+                        telefono=p.telefono,
+                        estado=p.estado,
+                    )
+                    for recurso_data in recursos_payload:
+                        recurso_id = recurso_data.get('recurso_id')
+                        cantidad = recurso_data.get('cantidad', 1)
+                        if recurso_id:
+                            recurso = Recurso.objects.get(id=recurso_id)
+                            PrestamoRecurso.objects.create(prestamo=hijo, recurso=recurso, cantidad=cantidad)
+
+            return JsonResponse({"message": "Prestamo actualizado", "id": p.id, "actualizacion": "serie"}, status=200)
+
+        # Actualización individual (comportamiento actual)
+        espacio_id = data.get('espacio_id', p.espacio.id)
+        fecha = data.get('fecha', str(p.fecha))
+        hora_inicio = data.get('hora_inicio', str(p.hora_inicio))
+        hora_fin = data.get('hora_fin', str(p.hora_fin))
+
+        if datetime.time.fromisoformat(hora_fin) <= datetime.time.fromisoformat(hora_inicio):
+            return JsonResponse({"error": "hora_fin debe ser mayor que hora_inicio"}, status=400)
+
+        is_available, error_msg = check_espacio_disponible(
+            espacio_id, fecha, hora_inicio, hora_fin, prestamo_id=id
+        )
+        if not is_available:
+            return JsonResponse({"error": error_msg}, status=409)
+
+        if 'espacio_id' in data:
+            p.espacio = EspacioFisico.objects.get(id=data.get('espacio_id'))
+        if 'usuario_id' in data:
+            p.usuario = Usuario.objects.get(id=data.get('usuario_id')) if data.get('usuario_id') else None
+        if 'administrador_id' in data:
+            p.administrador = Usuario.objects.get(id=data.get('administrador_id')) if data.get('administrador_id') else None
+        if 'tipo_actividad_id' in data:
+            p.tipo_actividad = TipoActividad.objects.get(id=data.get('tipo_actividad_id'))
+        if 'fecha' in data:
+            p.fecha = datetime.date.fromisoformat(data.get('fecha'))
+        if 'hora_inicio' in data:
+            p.hora_inicio = datetime.time.fromisoformat(data.get('hora_inicio'))
+        if 'hora_fin' in data:
+            p.hora_fin = datetime.time.fromisoformat(data.get('hora_fin'))
+        if 'motivo' in data:
+            p.motivo = data.get('motivo')
+        if 'asistentes' in data:
+            p.asistentes = data.get('asistentes')
+        if 'telefono' in data:
+            p.telefono = data.get('telefono')
+        if 'estado' in data:
+            p.estado = data.get('estado')
+
+        if p.asistentes > p.espacio.capacidad:
+            return JsonResponse({
+                "error": f"El número de asistentes ({p.asistentes}) excede la capacidad del espacio ({p.espacio.capacidad})"
+            }, status=400)
+
+        if 'es_recurrente' in data:
+            p.es_recurrente = bool(data.get('es_recurrente'))
+        if 'frecuencia' in data:
+            p.frecuencia = data.get('frecuencia')
+        if 'intervalo' in data:
+            p.intervalo = int(data.get('intervalo'))
+        if 'dias_semana' in data:
+            p.dias_semana = data.get('dias_semana') or []
+        if 'fin_repeticion_tipo' in data:
+            p.fin_repeticion_tipo = data.get('fin_repeticion_tipo')
+        if 'fin_repeticion_fecha' in data:
+            p.fin_repeticion_fecha = datetime.date.fromisoformat(data.get('fin_repeticion_fecha')) if data.get('fin_repeticion_fecha') else None
+        if 'fin_repeticion_ocurrencias' in data:
+            p.fin_repeticion_ocurrencias = int(data.get('fin_repeticion_ocurrencias')) if data.get('fin_repeticion_ocurrencias') else None
+
+        if 'recursos' in data:
+            p.prestamo_recursos.all().delete()
+            for recurso_data in data.get('recursos', []):
+                recurso_id = recurso_data.get('recurso_id')
+                cantidad = recurso_data.get('cantidad', 1)
+                if recurso_id:
+                    recurso = Recurso.objects.get(id=recurso_id)
+                    PrestamoRecurso.objects.create(prestamo=p, recurso=recurso, cantidad=cantidad)
+
+        p.save()
+        return JsonResponse({"message": "Prestamo actualizado", "id": p.id}, status=200)
+    except PrestamoEspacio.DoesNotExist:
+        return JsonResponse({"error": "Prestamo no encontrado."}, status=404)
+    except (EspacioFisico.DoesNotExist, Usuario.DoesNotExist, TipoActividad.DoesNotExist):
+        return JsonResponse({"error": "Relacionada no encontrada."}, status=404)
+    except ValueError:
+        return JsonResponse({"error": "Formato de fecha/hora inválido."}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def delete_prestamo(request):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method != 'DELETE':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+        id = data.get('id')
+        if not id:
+            return JsonResponse({"error": "ID es requerido"}, status=400)
+        p = PrestamoEspacio.objects.get(id=id)
+        eliminar_serie = bool(data.get('eliminar_serie', True))
+
+        if p.prestamo_padre_id:
+            p.delete()
+            return JsonResponse({"message": "Prestamo eliminado", "eliminacion": "ocurrencia"}, status=200)
+
+        if p.es_recurrente and p.ocurrencias_generadas.exists():
+            if eliminar_serie:
+                with transaction.atomic():
+                    p.ocurrencias_generadas.all().delete()
+                    p.delete()
+                return JsonResponse({"message": "Prestamo eliminado", "eliminacion": "serie"}, status=200)
+            return JsonResponse({"error": "Este préstamo es base de una serie. Envíe eliminar_serie=true para eliminar toda la serie."}, status=400)
+
+        p.delete()
+        return JsonResponse({"message": "Prestamo eliminado"}, status=200)
+    except PrestamoEspacio.DoesNotExist:
+        return JsonResponse({"error": "Prestamo no encontrado."}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def get_prestamo(request, id=None):
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if id is None:
+        return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
+    try:
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
+            p = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso', 'ocurrencias_generadas').get(id=id)
+        elif seccional_id:
+            p = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso', 'ocurrencias_generadas').get(
+                id=id,
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            return _missing_seccional_response()
+        
+        
+        # Obtener recursos asociados
+        recursos = [{
+            "recurso_id": pr.recurso.id,
+            "recurso_nombre": pr.recurso.nombre,
+            "cantidad": pr.cantidad
+        } for pr in p.prestamo_recursos.all()]
+        
+        response = {
+            "id": p.id,
+            "espacio_id": p.espacio.id,
+            "espacio_nombre": p.espacio.nombre,
+            "espacio_tipo": p.espacio.tipo.nombre,
+            "usuario_id": (p.usuario.id if p.usuario else None),
+            "usuario_nombre": (p.usuario.nombre if p.usuario else None),
+            "usuario_correo": (p.usuario.correo if p.usuario else None),
+            "administrador_id": (p.administrador.id if p.administrador else None),
+            "administrador_nombre": (p.administrador.nombre if p.administrador else None),
+            "tipo_actividad_id": p.tipo_actividad.id,
+            "tipo_actividad_nombre": p.tipo_actividad.nombre,
+            "fecha": str(p.fecha),
+            "hora_inicio": str(p.hora_inicio),
+            "hora_fin": str(p.hora_fin),
+            "motivo": p.motivo,
+            "asistentes": p.asistentes,
+            "telefono": p.telefono,
+            "estado": p.estado,
+            "recursos": recursos
+        }
+        response.update(_recurrencia_payload(p))
+
+        if p.prestamo_padre is None and p.es_recurrente:
+            response["ocurrencias"] = [{
+                "id": o.id,
+                "fecha": str(o.fecha),
+                "hora_inicio": str(o.hora_inicio),
+                "hora_fin": str(o.hora_fin),
+                "estado": o.estado,
+                "es_ocurrencia_generada": o.es_ocurrencia_generada
+            } for o in p.ocurrencias_generadas.all().order_by('fecha', 'hora_inicio')]
+
+        return JsonResponse(response, status=200)
+    except PrestamoEspacio.DoesNotExist:
+        return JsonResponse({"error": "Prestamo no encontrado."}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    
+def list_prestamos(request):
+    """
+    Lista préstamos de usuarios AUTENTICADOS solamente
+    """
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
+
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
+            items = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').all()
+        elif seccional_id:
+            items = PrestamoEspacio.objects.select_related(
+                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            return _missing_seccional_response()
+
+        if not include_ocurrencias:
+            items = items.filter(prestamo_padre__isnull=True)
+        
+        lst = []
+        for i in items:
+            recursos = [{
+                "recurso_id": pr.recurso.id,
+                "recurso_nombre": pr.recurso.nombre,
+                "cantidad": pr.cantidad
+            } for pr in i.prestamo_recursos.all()]
+            
+            item = {
+                "id": i.id,
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "usuario_id": (i.usuario.id if i.usuario else None),
+                "usuario_nombre": (i.usuario.nombre if i.usuario else None),
+                "usuario_correo": (i.usuario.correo if i.usuario else None),
+                "administrador_id": (i.administrador.id if i.administrador else None),
+                "administrador_nombre": (i.administrador.nombre if i.administrador else None),
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono,
+                "estado": i.estado,
+                "recursos": recursos
+            }
+            item.update(_recurrencia_payload(i))
+            lst.append(item)
+        
+        return JsonResponse({"prestamos": lst}, status=200)
+
+def list_prestamos_todos_admin(request):
+    """
+    Lista TODOS los préstamos (autenticados y públicos) para el panel de administración
+    Combina ambas tablas en una sola respuesta
+    """
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        lst = []
+        
+        # 1. Obtener préstamos de usuarios autenticados
+        include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
+
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
+            items_auth = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').all()
+        elif seccional_id:
+            items_auth = PrestamoEspacio.objects.select_related(
+                'espacio__sede', 'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            return _missing_seccional_response()
+
+        if not include_ocurrencias:
+            items_auth = items_auth.filter(prestamo_padre__isnull=True)
+        
+        for i in items_auth:
+            recursos = [{
+                "recurso_id": pr.recurso.id,
+                "recurso_nombre": pr.recurso.nombre,
+                "cantidad": pr.cantidad
+            } for pr in i.prestamo_recursos.all()]
+            
+            item = {
+                "id": f"auth-{i.id}",  # ID único para evitar colisiones
+                "id_real": i.id,  # ID original de la base de datos
+                "tipo_prestamo": "autenticado",  # Para distinguir en frontend
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "espacio_capacidad": i.espacio.capacidad,
+                "usuario_id": i.usuario.id if i.usuario else None,
+                "usuario_nombre": i.usuario.nombre if i.usuario else None,
+                "usuario_correo": i.usuario.correo if i.usuario else None,
+                "administrador_id": i.administrador.id if i.administrador else None,
+                "administrador_nombre": i.administrador.nombre if i.administrador else None,
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono,
+                "estado": i.estado,
+                "recursos": recursos
+            }
+            item.update(_recurrencia_payload(i))
+            lst.append(item)
+        
+        # 2. Obtener préstamos públicos
+        if is_superuser:
+            items_public = PrestamoEspacioPublico.objects.select_related(
+                'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).all()
+        elif seccional_id:
+            items_public = PrestamoEspacioPublico.objects.select_related(
+                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            return _missing_seccional_response()
+
+        if not include_ocurrencias:
+            items_public = items_public.filter(prestamo_padre__isnull=True)
+        
+        for i in items_public:
+            # PrestamoEspacioPublico no tiene recursos por ahora (simplificado)
+            recursos = []
+            
+            item = {
+                "id": f"public-{i.id}",  # ID único para evitar colisiones
+                "id_real": i.id,  # ID original de la base de datos
+                "tipo_prestamo": "publico",  # Para distinguir en frontend
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "espacio_capacidad": i.espacio.capacidad,
+                "usuario_id": None,  # No hay usuario autenticado
+                "usuario_nombre": i.nombre_solicitante,
+                "usuario_correo": i.correo_solicitante,
+                "solicitante_publico_nombre": i.nombre_solicitante,
+                "solicitante_publico_correo": i.correo_solicitante,
+                "solicitante_publico_telefono": i.telefono_solicitante,
+                "solicitante_publico_identificacion": i.identificacion_solicitante,
+                "administrador_id": i.administrador.id if i.administrador else None,
+                "administrador_nombre": i.administrador.nombre if i.administrador else None,
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono_solicitante,
+                "estado": i.estado,
+                "recursos": recursos
+            }
+            item.update(_recurrencia_payload(i))
+            lst.append(item)
+        
+        # Ordenar por ID descendente (proxy de fecha de creación para mostrar los más recientes arriba)
+        lst.sort(key=lambda x: x['id_real'], reverse=True)
+        
+        return JsonResponse({"prestamos": lst}, status=200)
+
+def list_prestamos_by_user(request, usuario_id):
+    """
+    Lista todos los préstamos de un usuario específico
+    """
+    auth_error = _require_auth(request)
+    if auth_error:
+        return auth_error
+    if request.method == 'GET':
+        try:
+            # Verificar que el usuario existe
+            usuario = Usuario.objects.get(id=usuario_id)
+            
+            include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
+
+            # Filtrar préstamos por usuario
+            items = PrestamoEspacio.objects.select_related(
+                'espacio', 'usuario', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).prefetch_related('prestamo_recursos__recurso').filter(
+                usuario=usuario
+            ).order_by('-fecha', '-hora_inicio')
+
+            if not include_ocurrencias:
+                items = items.filter(prestamo_padre__isnull=True)
+            
+            lst = []
+            for i in items:
+                recursos = [{
+                    "recurso_id": pr.recurso.id,
+                    "recurso_nombre": pr.recurso.nombre,
+                    "cantidad": pr.cantidad
+                } for pr in i.prestamo_recursos.all()]
+                
+                item = {
+                    "id": i.id,
+                    "espacio_id": i.espacio.id,
+                    "espacio_nombre": i.espacio.nombre,
+                    "espacio_tipo": i.espacio.tipo.nombre,
+                    "usuario_id": i.usuario.id,
+                    "usuario_nombre": i.usuario.nombre,
+                    "usuario_correo": i.usuario.correo,
+                    "administrador_id": (i.administrador.id if i.administrador else None),
+                    "administrador_nombre": (i.administrador.nombre if i.administrador else None),
+                    "tipo_actividad_id": i.tipo_actividad.id,
+                    "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                    "fecha": str(i.fecha),
+                    "hora_inicio": str(i.hora_inicio),
+                    "hora_fin": str(i.hora_fin),
+                    "motivo": i.motivo,
+                    "asistentes": i.asistentes,
+                    "telefono": i.telefono,
+                    "estado": i.estado,
+                    "recursos": recursos
+                }
+                item.update(_recurrencia_payload(i))
+                lst.append(item)
+            
+            return JsonResponse({"prestamos": lst}, status=200)
+        except Usuario.DoesNotExist:
+            return JsonResponse({"error": "Usuario no encontrado."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+
+# ========== ENDPOINTS PARA USUARIOS PÚBLICOS ==========
+
+@csrf_exempt
+def create_prestamo_publico(request):
+    """
+    Crea un préstamo para usuarios públicos (sin autenticación)
+    Requiere datos personales en lugar de usuario_id
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+
+        recaptcha_token = data.get('recaptcha_token') or data.get('recaptcha')
+        recaptcha_ok, recaptcha_error = _verify_recaptcha(
+            recaptcha_token,
+            request.META.get('REMOTE_ADDR')
+        )
+        if not recaptcha_ok:
+            return JsonResponse({"error": recaptcha_error}, status=403)
+        
+        # Sanitizar y validar inputs contra XSS
+        try:
+            sanitized_data = sanitize_dict(data, PRESTAMO_PUBLICO_SCHEMA)
+        except ValidationError as e:
+            return JsonResponse({"error": f"Validación fallida: {str(e)}"}, status=400)
+        
+        # Datos personales (en lugar de usuario_id)
+        nombre_completo = sanitized_data.get('nombre_completo')
+        correo_institucional = sanitized_data.get('correo_institucional')
+        telefono = sanitized_data.get('telefono')
+        identificacion = sanitized_data.get('identificacion')
+        
+        # Datos del préstamo
+        espacio_id = data.get('espacio_id')
+        tipo_actividad_id = data.get('tipo_actividad_id')
+        fecha = data.get('fecha')
+        hora_inicio = data.get('hora_inicio')
+        hora_fin = data.get('hora_fin')
+        motivo = sanitized_data.get('motivo')
+        asistentes = data.get('asistentes', 0)
+        
+        # Validar campos requeridos
+        if not all([nombre_completo, correo_institucional, telefono, identificacion, 
+                   espacio_id, tipo_actividad_id, fecha, hora_inicio, hora_fin, motivo]):
+            return JsonResponse({
+                "error": "Todos los campos son requeridos"
+            }, status=400)
+        
+        # Validar correo institucional (debe terminar en el dominio de la universidad)
+        dominios_validos = ['@unilibre.edu.co', '@unilibrepereira.edu.co']
+        if not any(correo_institucional.endswith(dominio) for dominio in dominios_validos):
+            return JsonResponse({
+                "error": "El correo debe ser institucional (@unilibre.edu.co o @unilibrepereira.edu.co)"
+            }, status=400)
+        
+        # Validar teléfono (solo números, 7-10 dígitos)
+        telefono_limpio = telefono.replace(' ', '').replace('-', '')
+        if not telefono_limpio.isdigit() or len(telefono_limpio) < 7 or len(telefono_limpio) > 10:
+            return JsonResponse({
+                "error": "El teléfono debe tener entre 7 y 10 dígitos"
+            }, status=400)
+        
+        # Validar asistentes
+        if asistentes < 1:
+            return JsonResponse({
+                "error": "El número de asistentes debe ser al menos 1"
+            }, status=400)
+        
+        # Obtener objetos relacionados
+        espacio = EspacioFisico.objects.get(id=espacio_id)
+        
+        # Validar capacidad del espacio
+        if asistentes > espacio.capacidad:
+            return JsonResponse({
+                "error": f"El número de asistentes ({asistentes}) excede la capacidad del espacio ({espacio.capacidad})"
+            }, status=400)
+        
+        tipo_actividad = TipoActividad.objects.get(id=tipo_actividad_id)
+        
+        # Convertir fecha y horas
+        f = datetime.date.fromisoformat(fecha)
+        hi = datetime.time.fromisoformat(hora_inicio)
+        hf = datetime.time.fromisoformat(hora_fin)
+
+        if hf <= hi:
+            return JsonResponse({"error": "hora_fin debe ser mayor que hora_inicio"}, status=400)
+
+        recurrencia = _parse_recurrencia(data, f)
+        fechas_ocurrencias = _generar_fechas_ocurrencias(f, recurrencia)
+        if not fechas_ocurrencias:
+            return JsonResponse({"error": "No se generaron ocurrencias con la configuración enviada"}, status=400)
+
+        # Ver comentario equivalente en create_prestamo: se valida toda la
+        # serie recurrente antes de crear ningun registro.
+        for fecha_ocurrencia in fechas_ocurrencias:
+            is_available, error_msg = check_espacio_disponible(espacio_id, fecha_ocurrencia, hi, hf, es_publico=True)
+            if not is_available:
+                return JsonResponse({
+                    "error": f"Conflicto en fecha {fecha_ocurrencia}: {error_msg}"
+                }, status=409)
+
+        serie_id = str(uuid.uuid4()) if recurrencia['es_recurrente'] else None
+        token_publico = uuid.uuid4().hex
+        
+        with transaction.atomic():
+            # Crear préstamo base
+            p = PrestamoEspacioPublico(
+                espacio=espacio,
+                nombre_solicitante=nombre_completo,
+                correo_solicitante=correo_institucional,
+                telefono_solicitante=telefono,
+                identificacion_solicitante=identificacion,
+                administrador=None,
+                tipo_actividad=tipo_actividad,
+                token_publico=token_publico,
+                prestamo_padre=None,
+                serie_id=serie_id,
+                es_ocurrencia_generada=False,
+                es_recurrente=recurrencia['es_recurrente'],
+                frecuencia=recurrencia['frecuencia'],
+                intervalo=recurrencia['intervalo'],
+                dias_semana=recurrencia['dias_semana'],
+                fin_repeticion_tipo=recurrencia['fin_repeticion_tipo'],
+                fin_repeticion_fecha=recurrencia['fin_repeticion_fecha'],
+                fin_repeticion_ocurrencias=recurrencia['fin_repeticion_ocurrencias'],
+                fecha=f,
+                hora_inicio=hi,
+                hora_fin=hf,
+                motivo=motivo,
+                asistentes=asistentes,
+                estado='Pendiente'
+            )
+            p.save()
+
+            ocurrencias_creadas = 1
+            for fecha_ocurrencia in fechas_ocurrencias:
+                if fecha_ocurrencia == f:
+                    continue
+                PrestamoEspacioPublico.objects.create(
+                    espacio=espacio,
+                    nombre_solicitante=nombre_completo,
+                    correo_solicitante=correo_institucional,
+                    telefono_solicitante=telefono,
+                    identificacion_solicitante=identificacion,
+                    administrador=None,
+                    tipo_actividad=tipo_actividad,
+                    token_publico=token_publico,
+                    prestamo_padre=p,
+                    serie_id=serie_id,
+                    es_ocurrencia_generada=True,
+                    es_recurrente=recurrencia['es_recurrente'],
+                    frecuencia=recurrencia['frecuencia'],
+                    intervalo=recurrencia['intervalo'],
+                    dias_semana=recurrencia['dias_semana'],
+                    fin_repeticion_tipo=recurrencia['fin_repeticion_tipo'],
+                    fin_repeticion_fecha=recurrencia['fin_repeticion_fecha'],
+                    fin_repeticion_ocurrencias=recurrencia['fin_repeticion_ocurrencias'],
+                    fecha=fecha_ocurrencia,
+                    hora_inicio=hi,
+                    hora_fin=hf,
+                    motivo=motivo,
+                    asistentes=asistentes,
+                    estado='Pendiente'
+                )
+                ocurrencias_creadas += 1
+        
+        return JsonResponse({
+            "message": "Solicitud de préstamo enviada exitosamente. Recibirás una notificación al correo proporcionado.",
+            "id": p.id,
+            "serie_id": p.serie_id,
+            "es_recurrente": p.es_recurrente,
+            "ocurrencias_creadas": ocurrencias_creadas,
+            "token_publico": token_publico
+        }, status=201)
+        
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({"error": "Espacio no encontrado."}, status=404)
+    except TipoActividad.DoesNotExist:
+        return JsonResponse({"error": "Tipo de actividad no encontrado."}, status=404)
+    except ValueError as e:
+        return JsonResponse({"error": f"Formato de datos inválido: {str(e)}"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def list_espacios_disponibles_publico(request):
+    """
+    Lista espacios disponibles para una fecha y hora específica
+    Filtrado por sede (opcional)
+    Optimizado: usa consultas batch en lugar de N+1
+    """
+    if request.method == 'GET':
+        try:
+            fecha = request.GET.get('fecha')
+            hora_inicio = request.GET.get('hora_inicio')
+            hora_fin = request.GET.get('hora_fin')
+            sede_id = request.GET.get('sede_id')
+
+            if not all([fecha, hora_inicio, hora_fin]):
+                return JsonResponse({
+                    "error": "fecha, hora_inicio y hora_fin son requeridos"
+                }, status=400)
+
+            # Parsear fecha y horas una sola vez
+            f = datetime.date.fromisoformat(fecha)
+            hi = datetime.time.fromisoformat(hora_inicio)
+            hf = datetime.time.fromisoformat(hora_fin)
+
+            # Obtener todos los espacios (opcionalmente filtrados por sede)
+            espacios_query = EspacioFisico.objects.select_related('tipo', 'sede')
+            if sede_id:
+                espacios_query = espacios_query.filter(sede_id=sede_id)
+
+            # Obtener IDs de espacios para consultas batch
+            espacios_ids = list(espacios_query.values_list('id', flat=True))
+
+            if not espacios_ids:
+                return JsonResponse({"espacios": [], "total": 0}, status=200)
+
+            # === CONSULTAS BATCH - Todas las conflictos en 3 queries ===
+
+            # 1. Préstamos autenticados conflictivos
+            prestamos_conflictivos = set(
+                PrestamoEspacio.objects.filter(
+                    espacio_id__in=espacios_ids,
+                    fecha=f,
+                    estado__in=['Pendiente', 'Aprobado'],
+                    hora_inicio__lt=hf,
+                    hora_fin__gt=hi
+                ).values_list('espacio_id', flat=True)
+            )
+
+            # 2. Préstamos públicos conflictivos
+            prestamos_publicos_conflictivos = set(
+                PrestamoEspacioPublico.objects.filter(
+                    espacio_id__in=espacios_ids,
+                    fecha=f,
+                    estado__in=['Pendiente', 'Aprobado'],
+                    hora_inicio__lt=hf,
+                    hora_fin__gt=hi
+                ).values_list('espacio_id', flat=True)
+            )
+
+            # 3. Horarios académicos conflictivos
+            dias_semana = {
+                0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves',
+                4: 'Viernes', 5: 'Sábado', 6: 'Domingo'
+            }
+            dia_nombre = dias_semana[f.weekday()]
+
+            horarios_conflictivos = set(
+                Horario.objects.filter(
+                    espacio_id__in=espacios_ids,
+                    dia_semana__iexact=dia_nombre,
+                    estado__in=['pendiente', 'aprobado'],
+                    hora_inicio__lt=hf,
+                    hora_fin__gt=hi
+                ).values_list('espacio_id', flat=True)
+            )
+
+            # Unir todos los espacios ocupados
+            espacios_ocupados = prestamos_conflictivos | prestamos_publicos_conflictivos | horarios_conflictivos
+
+            # Filtrar espacios disponibles
+            espacios_disponibles = []
+            for espacio in espacios_query:
+                if espacio.id not in espacios_ocupados:
+                    espacios_disponibles.append({
+                        "id": espacio.id,
+                        "nombre": espacio.nombre,
+                        "capacidad": espacio.capacidad,
+                        "tipo": espacio.tipo.nombre,
+                        "sede": espacio.sede.nombre,
+                        "sede_id": espacio.sede.id,
+                        "ubicacion": espacio.ubicacion
+                    })
+
+            return JsonResponse({
+                "espacios": espacios_disponibles,
+                "total": len(espacios_disponibles)
+            }, status=200)
+
+        except ValueError as e:
+            return JsonResponse({"error": f"Formato inválido: {str(e)}"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+
+@csrf_exempt
+def list_prestamos_publicos(request):
+    """
+    Lista todos los préstamos públicos.
+    Respeta el alcance de sede/seccional del usuario cuando aplica middleware de sede.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
+
+        include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
+
+        seccional_id, is_superuser = _get_seccional_scope(request)
+        if is_superuser:
+            items = PrestamoEspacioPublico.objects.select_related(
+                'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).all()
+        elif seccional_id:
+            items = PrestamoEspacioPublico.objects.select_related(
+                'espacio__sede', 'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+            ).filter(
+                espacio__sede__seccional_id=seccional_id
+            )
+        else:
+            return _missing_seccional_response()
+
+        if not include_ocurrencias:
+            items = items.filter(prestamo_padre__isnull=True)
+
+        lst = []
+        for i in items:
+            item = {
+                "id": i.id,
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "usuario_id": None,
+                "usuario_nombre": i.nombre_solicitante,
+                "usuario_correo": i.correo_solicitante,
+                "solicitante_publico_nombre": i.nombre_solicitante,
+                "solicitante_publico_correo": i.correo_solicitante,
+                "solicitante_publico_telefono": i.telefono_solicitante,
+                "solicitante_publico_identificacion": i.identificacion_solicitante,
+                "administrador_id": i.administrador.id if i.administrador else None,
+                "administrador_nombre": i.administrador.nombre if i.administrador else None,
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono_solicitante,
+                "estado": i.estado,
+                "recursos": []
+            }
+            item.update(_recurrencia_payload(i))
+            lst.append(item)
+
+        return JsonResponse({"prestamos": lst}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def get_prestamo_publico(request, id=None):
+    """
+    Obtiene un préstamo público por ID
+    """
+    if id is None:
+        return JsonResponse({"error": "El ID es requerido en la URL"}, status=400)
+    try:
+        p = PrestamoEspacioPublico.objects.select_related(
+            'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+        ).prefetch_related('ocurrencias_generadas_publicas').get(id=id)
+
+        allowed, error_response = _require_public_token(request, p)
+        if not allowed:
+            return error_response
+
+        response = {
+            "id": p.id,
+            "espacio_id": p.espacio.id,
+            "espacio_nombre": p.espacio.nombre,
+            "espacio_tipo": p.espacio.tipo.nombre,
+            "usuario_id": None,  # Público no tiene usuario
+            "usuario_nombre": p.nombre_solicitante,
+            "usuario_correo": p.correo_solicitante,
+            "administrador_id": (p.administrador.id if p.administrador else None),
+            "administrador_nombre": (p.administrador.nombre if p.administrador else None),
+            "tipo_actividad_id": p.tipo_actividad.id,
+            "tipo_actividad_nombre": p.tipo_actividad.nombre,
+            "fecha": str(p.fecha),
+            "hora_inicio": str(p.hora_inicio),
+            "hora_fin": str(p.hora_fin),
+            "motivo": p.motivo,
+            "asistentes": p.asistentes,
+            "telefono": p.telefono_solicitante,
+            "estado": p.estado,
+            "recursos": []  # Préstamos públicos no tienen recursos por ahora
+        }
+        response.update(_recurrencia_payload(p))
+
+        if p.prestamo_padre is None and p.es_recurrente:
+            response["ocurrencias"] = [{
+                "id": o.id,
+                "fecha": str(o.fecha),
+                "hora_inicio": str(o.hora_inicio),
+                "hora_fin": str(o.hora_fin),
+                "estado": o.estado,
+                "es_ocurrencia_generada": o.es_ocurrencia_generada
+            } for o in p.ocurrencias_generadas_publicas.all().order_by('fecha', 'hora_inicio')]
+
+        return JsonResponse(response, status=200)
+    except PrestamoEspacioPublico.DoesNotExist:
+        return JsonResponse({"error": "Prestamo público no encontrado."}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def update_prestamo_publico(request):
+    """
+    Actualiza un préstamo público
+    """
+    if request.method != 'PUT':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+        id = data.get('id')
+        if not id:
+            return JsonResponse({"error": "ID es requerido"}, status=400)
+        
+        p = PrestamoEspacioPublico.objects.get(id=id)
+        allowed, error_response = _require_public_token(request, p, data)
+        if not allowed:
+            return error_response
+        actualizar_serie = bool(data.get('actualizar_serie', False))
+
+        if actualizar_serie and p.es_recurrente and p.prestamo_padre is None:
+            with transaction.atomic():
+                if 'espacio_id' in data:
+                    p.espacio = EspacioFisico.objects.get(id=data.get('espacio_id'))
+                if 'nombre_solicitante' in data:
+                    p.nombre_solicitante = data.get('nombre_solicitante')
+                if 'correo_solicitante' in data:
+                    p.correo_solicitante = data.get('correo_solicitante')
+                if 'telefono_solicitante' in data or 'telefono' in data:
+                    p.telefono_solicitante = data.get('telefono_solicitante') or data.get('telefono')
+                if 'identificacion_solicitante' in data:
+                    p.identificacion_solicitante = data.get('identificacion_solicitante')
+                if 'administrador_id' in data:
+                    p.administrador = Usuario.objects.get(id=data.get('administrador_id')) if data.get('administrador_id') else None
+                if 'tipo_actividad_id' in data:
+                    p.tipo_actividad = TipoActividad.objects.get(id=data.get('tipo_actividad_id'))
+                if 'fecha' in data:
+                    p.fecha = datetime.date.fromisoformat(data.get('fecha'))
+                if 'hora_inicio' in data:
+                    p.hora_inicio = datetime.time.fromisoformat(data.get('hora_inicio'))
+                if 'hora_fin' in data:
+                    p.hora_fin = datetime.time.fromisoformat(data.get('hora_fin'))
+                if p.hora_fin <= p.hora_inicio:
+                    return JsonResponse({"error": "hora_fin debe ser mayor que hora_inicio"}, status=400)
+                if 'motivo' in data:
+                    p.motivo = data.get('motivo')
+                if 'asistentes' in data:
+                    p.asistentes = data.get('asistentes')
+                if 'estado' in data:
+                    p.estado = data.get('estado')
+
+                recurrencia_input = {
+                    'es_recurrente': data.get('es_recurrente', p.es_recurrente),
+                    'frecuencia': data.get('frecuencia', p.frecuencia),
+                    'intervalo': data.get('intervalo', p.intervalo),
+                    'dias_semana': data.get('dias_semana', p.dias_semana),
+                    'fin_repeticion_tipo': data.get('fin_repeticion_tipo', p.fin_repeticion_tipo),
+                    'fin_repeticion_fecha': data.get('fin_repeticion_fecha', str(p.fin_repeticion_fecha) if p.fin_repeticion_fecha else None),
+                    'fin_repeticion_ocurrencias': data.get('fin_repeticion_ocurrencias', p.fin_repeticion_ocurrencias),
+                }
+                recurrencia = _parse_recurrencia(recurrencia_input, p.fecha)
+
+                p.es_recurrente = recurrencia['es_recurrente']
+                p.frecuencia = recurrencia['frecuencia']
+                p.intervalo = recurrencia['intervalo']
+                p.dias_semana = recurrencia['dias_semana']
+                p.fin_repeticion_tipo = recurrencia['fin_repeticion_tipo']
+                p.fin_repeticion_fecha = recurrencia['fin_repeticion_fecha']
+                p.fin_repeticion_ocurrencias = recurrencia['fin_repeticion_ocurrencias']
+
+                if p.asistentes > p.espacio.capacidad:
+                    return JsonResponse({
+                        "error": f"El número de asistentes ({p.asistentes}) excede la capacidad del espacio ({p.espacio.capacidad})"
+                    }, status=400)
+
+                fechas_ocurrencias = _generar_fechas_ocurrencias(p.fecha, recurrencia)
+
+                p.ocurrencias_generadas_publicas.all().delete()
+
+                ok, err = check_espacio_disponible(
+                    p.espacio.id,
+                    p.fecha,
+                    p.hora_inicio,
+                    p.hora_fin,
+                    prestamo_id=p.id,
+                    es_publico=True
+                )
+                if not ok:
+                    return JsonResponse({"error": f"Conflicto en fecha {p.fecha}: {err}"}, status=409)
+
+                for fecha_ocurrencia in fechas_ocurrencias:
+                    if fecha_ocurrencia == p.fecha:
+                        continue
+                    ok, err = check_espacio_disponible(p.espacio.id, fecha_ocurrencia, p.hora_inicio, p.hora_fin, es_publico=True)
+                    if not ok:
+                        return JsonResponse({"error": f"Conflicto en fecha {fecha_ocurrencia}: {err}"}, status=409)
+
+                p.save()
+
+                for fecha_ocurrencia in fechas_ocurrencias:
+                    if fecha_ocurrencia == p.fecha:
+                        continue
+                    PrestamoEspacioPublico.objects.create(
+                        espacio=p.espacio,
+                        nombre_solicitante=p.nombre_solicitante,
+                        correo_solicitante=p.correo_solicitante,
+                        telefono_solicitante=p.telefono_solicitante,
+                        identificacion_solicitante=p.identificacion_solicitante,
+                        administrador=p.administrador,
+                        tipo_actividad=p.tipo_actividad,
+                        prestamo_padre=p,
+                        serie_id=p.serie_id,
+                        es_ocurrencia_generada=True,
+                        es_recurrente=p.es_recurrente,
+                        frecuencia=p.frecuencia,
+                        intervalo=p.intervalo,
+                        dias_semana=p.dias_semana,
+                        fin_repeticion_tipo=p.fin_repeticion_tipo,
+                        fin_repeticion_fecha=p.fin_repeticion_fecha,
+                        fin_repeticion_ocurrencias=p.fin_repeticion_ocurrencias,
+                        fecha=fecha_ocurrencia,
+                        hora_inicio=p.hora_inicio,
+                        hora_fin=p.hora_fin,
+                        motivo=p.motivo,
+                        asistentes=p.asistentes,
+                        estado=p.estado,
+                    )
+
+            return JsonResponse({"message": "Prestamo público actualizado exitosamente", "id": p.id, "actualizacion": "serie"}, status=200)
+
+        espacio_id = data.get('espacio_id', p.espacio.id)
+        fecha = data.get('fecha', str(p.fecha))
+        hora_inicio = data.get('hora_inicio', str(p.hora_inicio))
+        hora_fin = data.get('hora_fin', str(p.hora_fin))
+
+        if datetime.time.fromisoformat(hora_fin) <= datetime.time.fromisoformat(hora_inicio):
+            return JsonResponse({"error": "hora_fin debe ser mayor que hora_inicio"}, status=400)
+
+        is_available, error_msg = check_espacio_disponible(
+            espacio_id, fecha, hora_inicio, hora_fin, prestamo_id=id, es_publico=True
+        )
+        if not is_available:
+            return JsonResponse({"error": error_msg}, status=409)
+
+        if 'espacio_id' in data:
+            p.espacio = EspacioFisico.objects.get(id=data.get('espacio_id'))
+        if 'nombre_solicitante' in data:
+            p.nombre_solicitante = data.get('nombre_solicitante')
+        if 'correo_solicitante' in data:
+            p.correo_solicitante = data.get('correo_solicitante')
+        if 'telefono_solicitante' in data or 'telefono' in data:
+            p.telefono_solicitante = data.get('telefono_solicitante') or data.get('telefono')
+        if 'identificacion_solicitante' in data:
+            p.identificacion_solicitante = data.get('identificacion_solicitante')
+        if 'administrador_id' in data:
+            p.administrador = Usuario.objects.get(id=data.get('administrador_id')) if data.get('administrador_id') else None
+        if 'tipo_actividad_id' in data:
+            p.tipo_actividad = TipoActividad.objects.get(id=data.get('tipo_actividad_id'))
+        if 'fecha' in data:
+            p.fecha = datetime.date.fromisoformat(data.get('fecha'))
+        if 'hora_inicio' in data:
+            p.hora_inicio = datetime.time.fromisoformat(data.get('hora_inicio'))
+        if 'hora_fin' in data:
+            p.hora_fin = datetime.time.fromisoformat(data.get('hora_fin'))
+        if 'motivo' in data:
+            p.motivo = data.get('motivo')
+        if 'asistentes' in data:
+            p.asistentes = data.get('asistentes')
+        if 'estado' in data:
+            p.estado = data.get('estado')
+
+        if p.asistentes > p.espacio.capacidad:
+            return JsonResponse({
+                "error": f"El número de asistentes ({p.asistentes}) excede la capacidad del espacio ({p.espacio.capacidad})"
+            }, status=400)
+
+        if 'es_recurrente' in data:
+            p.es_recurrente = bool(data.get('es_recurrente'))
+        if 'frecuencia' in data:
+            p.frecuencia = data.get('frecuencia')
+        if 'intervalo' in data:
+            p.intervalo = int(data.get('intervalo'))
+        if 'dias_semana' in data:
+            p.dias_semana = data.get('dias_semana') or []
+        if 'fin_repeticion_tipo' in data:
+            p.fin_repeticion_tipo = data.get('fin_repeticion_tipo')
+        if 'fin_repeticion_fecha' in data:
+            p.fin_repeticion_fecha = datetime.date.fromisoformat(data.get('fin_repeticion_fecha')) if data.get('fin_repeticion_fecha') else None
+        if 'fin_repeticion_ocurrencias' in data:
+            p.fin_repeticion_ocurrencias = int(data.get('fin_repeticion_ocurrencias')) if data.get('fin_repeticion_ocurrencias') else None
+
+        p.save()
+
+        return JsonResponse({
+            "message": "Prestamo público actualizado exitosamente",
+            "id": p.id
+        }, status=200)
+    except PrestamoEspacioPublico.DoesNotExist:
+        return JsonResponse({"error": "Prestamo público no encontrado."}, status=404)
+    except EspacioFisico.DoesNotExist:
+        return JsonResponse({"error": "Espacio no encontrado."}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def list_prestamos_publicos_by_identificacion(request):
+    """
+    Lista préstamos públicos por identificación y correo institucional.
+    Permite que el solicitante público consulte sus solicitudes.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return JsonResponse({"error": "Autenticación requerida"}, status=403)
+
+        identificacion = (request.GET.get('identificacion') or '').strip()
+        correo = (request.GET.get('correo') or '').strip().lower()
+        include_ocurrencias = (request.GET.get('include_ocurrencias', 'false').lower() == 'true')
+
+        if not identificacion or not correo:
+            return JsonResponse({
+                "error": "identificacion y correo son requeridos"
+            }, status=400)
+
+        items = PrestamoEspacioPublico.objects.select_related(
+            'espacio', 'administrador', 'tipo_actividad', 'prestamo_padre'
+        ).filter(
+            identificacion_solicitante=identificacion,
+            correo_solicitante__iexact=correo
+        ).order_by('-fecha', '-hora_inicio')
+
+        if not include_ocurrencias:
+            items = items.filter(prestamo_padre__isnull=True)
+
+        lst = []
+        for i in items:
+            item = {
+                "id": i.id,
+                "espacio_id": i.espacio.id,
+                "espacio_nombre": i.espacio.nombre,
+                "espacio_tipo": i.espacio.tipo.nombre,
+                "usuario_id": None,
+                "usuario_nombre": i.nombre_solicitante,
+                "usuario_correo": i.correo_solicitante,
+                "administrador_id": i.administrador.id if i.administrador else None,
+                "administrador_nombre": i.administrador.nombre if i.administrador else None,
+                "tipo_actividad_id": i.tipo_actividad.id,
+                "tipo_actividad_nombre": i.tipo_actividad.nombre,
+                "fecha": str(i.fecha),
+                "hora_inicio": str(i.hora_inicio),
+                "hora_fin": str(i.hora_fin),
+                "motivo": i.motivo,
+                "asistentes": i.asistentes,
+                "telefono": i.telefono_solicitante,
+                "identificacion": i.identificacion_solicitante,
+                "estado": i.estado,
+                "recursos": []
+            }
+            item.update(_recurrencia_payload(i))
+            lst.append(item)
+
+        return JsonResponse({"prestamos": lst}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def delete_prestamo_publico(request):
+    """
+    Elimina un préstamo público. Si se envían identificación y correo,
+    valida pertenencia del préstamo al solicitante.
+    """
+    if request.method != 'DELETE':
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        prestamo_id = data.get('id')
+        identificacion = (data.get('identificacion') or '').strip()
+        correo = (data.get('correo') or '').strip().lower()
+
+        if not prestamo_id:
+            return JsonResponse({"error": "ID es requerido"}, status=400)
+
+        p = PrestamoEspacioPublico.objects.get(id=prestamo_id)
+        allowed, error_response = _require_public_token(request, p, data)
+        if not allowed:
+            return error_response
+
+        if identificacion and correo:
+            if p.identificacion_solicitante != identificacion or p.correo_solicitante.lower() != correo:
+                return JsonResponse({"error": "No autorizado para eliminar esta solicitud"}, status=403)
+
+        eliminar_serie = bool(data.get('eliminar_serie', True))
+
+        if p.prestamo_padre_id:
+            p.delete()
+            return JsonResponse({"message": "Prestamo público eliminado", "eliminacion": "ocurrencia"}, status=200)
+
+        if p.es_recurrente and p.ocurrencias_generadas_publicas.exists():
+            if eliminar_serie:
+                with transaction.atomic():
+                    p.ocurrencias_generadas_publicas.all().delete()
+                    p.delete()
+                return JsonResponse({"message": "Prestamo público eliminado", "eliminacion": "serie"}, status=200)
+            return JsonResponse({"error": "Este préstamo es base de una serie. Envíe eliminar_serie=true para eliminar toda la serie."}, status=400)
+
+        p.delete()
+        return JsonResponse({"message": "Prestamo público eliminado"}, status=200)
+    except PrestamoEspacioPublico.DoesNotExist:
+        return JsonResponse({"error": "Prestamo público no encontrado."}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

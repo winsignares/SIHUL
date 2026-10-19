@@ -2,7 +2,7 @@
 Seeder de asignaturas de todos los programas.
 """
 
-from asignaturas.models import Asignatura
+from unispace.asignaturas.models import Asignatura
 
 
 def create_asignaturas(stdout, style):

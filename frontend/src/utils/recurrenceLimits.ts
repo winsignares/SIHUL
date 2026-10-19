@@ -1,7 +1,7 @@
 /**
  * Límites de repetición de préstamos en función del periodo académico
  * al que pertenece la fecha del préstamo. La repetición nunca debe
- * extenderse más allá de la fecha_fin del periodo (backend/prestamos
+ * extenderse más allá de la fecha_fin del periodo (backend/unispace/prestamos
  * asigna el periodo automáticamente según `fecha` y rechaza fechas
  * fuera de todo periodo).
  */
@@ -15,7 +15,7 @@ export type RepeatQuickOption =
 
 // 'year' se descarta a propósito: un periodo académico dura un semestre,
 // nunca un año completo, así que una repetición anual jamás cabría una
-// segunda vez dentro del periodo (ver backend/prestamos/views.py,
+// segunda vez dentro del periodo (ver backend/unispace/prestamos/views.py,
 // _fin_periodo_vigente).
 export type CustomPeriod = 'day' | 'week' | 'month';
 

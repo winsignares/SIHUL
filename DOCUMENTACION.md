@@ -474,7 +474,7 @@ function toComponentSlug(name: string): string {
 
 ## 5️⃣ MODELO DE USUARIO
 
-### 5.1 Backend (backend/usuarios/models.py)
+### 5.1 Backend (backend/unispace/usuarios/models.py)
 
 ```python
 class Usuario(AbstractUser):
@@ -1288,9 +1288,9 @@ if (hasEditPermission("Mi Componente")) {
 ## 7️⃣ DÓNDE ESTÁ TODO
 
 **Backend**:
-- Autenticación: `backend/usuarios/views.py` (función `login`)
-- Modelos Usuario/Rol: `backend/usuarios/models.py`
-- Componentes: `backend/componentes/models.py`
+- Autenticación: `backend/unispace/usuarios/views.py` (función `login`)
+- Modelos Usuario/Rol: `backend/unispace/usuarios/models.py`
+- Componentes: `backend/unispace/componentes/models.py`
 - API REST: `backend/<app>/views.py` + `api_urls.py`
 
 **Frontend**:
@@ -1472,8 +1472,8 @@ curl -X POST http://localhost:8000/usuarios/login/ \
 **AppRouter**: `frontend/src/router/AppRouter.tsx` (244 líneas)  
 **componentRoutes**: `frontend/src/config/componentRoutes.ts` (165 líneas)  
 **useAdminDashboard**: `frontend/src/hooks/useAdminDashboard.ts` (350 líneas)  
-**Login Backend**: `backend/usuarios/views.py` linea ~333  
-**Modelos**: `backend/usuarios/models.py` + `backend/componentes/models.py`
+**Login Backend**: `backend/unispace/usuarios/views.py` linea ~333  
+**Modelos**: `backend/unispace/usuarios/models.py` + `backend/unispace/componentes/models.py`
 
 ---
 
@@ -2909,7 +2909,7 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 | `recursos` | Recursos/equipos asociados a espacios. |
 | `prestamos` | Préstamos de espacios/recursos, lógica de disponibilidad (`availability.py`). |
 | `chatbot` | App puente Django ↔ servicio FastAPI: `api_views.py`/`api_urls.py` actúan de proxy hacia `CHATBOT_FASTAPI_URL`. |
-| `notificaciones` | Notificaciones vía señales Django (`signals.py`), consumidas por el frontend con polling cada 30s. Ver `backend/notificaciones/README.md` para el detalle completo de tipos de evento y prioridades. |
+| `notificaciones` | Notificaciones vía señales Django (`signals.py`), consumidas por el frontend con polling cada 30s. Ver `backend/unispace/notificaciones/README.md` para el detalle completo de tipos de evento y prioridades. |
 | `financiero` | Módulo de facturación institucional. Ver [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md). |
 
 ## Documentos relacionados en esta carpeta
@@ -3150,7 +3150,7 @@ Los vectores de modelos distintos no son comparables. Para cambiar `EMBEDDING_MO
 - Procedimientos con varios plazos en una misma celda de tabla (p. ej. reposición/apelación del Art. 73 del manual de prueba) los puede interpretar mal el modelo económico, aunque el texto se haya extraído bien.
 - Las tablas complejas (celdas combinadas en vertical) pueden quedar parcialmente fragmentadas.
 - El RAG no autentica: debe quedar accesible solo desde Django.
-- Notificaciones: el modelo `Agente` dispara `AGENTE_CREADO`/`AGENTE_DESACTIVADO`/`AGENTE_ELIMINADO` (ver `backend/notificaciones/README.md`).
+- Notificaciones: el modelo `Agente` dispara `AGENTE_CREADO`/`AGENTE_DESACTIVADO`/`AGENTE_ELIMINADO` (ver `backend/unispace/notificaciones/README.md`).
 
 
 ## Vista previa del documento citado
@@ -3791,7 +3791,7 @@ Según rol del usuario, recibirá notificaciones de:
 ## 📚 Documentación
 
 - **Frontend**: `frontend/src/docs/NOTIFICACIONES.md`
-- **Backend Triggers**: `backend/notificaciones/TRIGGERS_GUIDE.md`
+- **Backend Triggers**: `backend/unispace/notificaciones/TRIGGERS_GUIDE.md`
 - **Este resumen**: `RESUMEN_NOTIFICACIONES.md`
 
 ## 🎉 Estado Final
@@ -4729,7 +4729,7 @@ Puramente local (no llama al backend): gestiona preferencias en `localStorage` (
 
 ## `services/notificaciones/notificacionesAPI.ts`
 
-Funciones sueltas, no un objeto de servicio: `crearNotificacion`, `actualizarNotificacion`, `eliminarNotificacion`, `obtenerNotificacion`, `listarNotificaciones(params?)`, `obtenerMisNotificaciones(params)` (paginado, con filtros de búsqueda/tipo/prioridad/tiempo/categoría), `obtenerMisNotificacionesPaginadas`, `obtenerEstadisticas(id_usuario)`, `marcarComoLeida(id)`, `marcarTodasComoLeidas(id_usuario)`, más helpers: `obtenerNotificacionesNoLeidas`, `contarNotificacionesNoLeidas`, `tieneNotificacionesNoLeidas`, `obtenerNotificacionesRecientes`, `obtenerNotificacionesPorPrioridad`. Todos sobre base `/notificaciones`. También exporta un `default` con todo agrupado. Ver `backend/notificaciones/README.md` para el catálogo completo de tipos de evento en el backend.
+Funciones sueltas, no un objeto de servicio: `crearNotificacion`, `actualizarNotificacion`, `eliminarNotificacion`, `obtenerNotificacion`, `listarNotificaciones(params?)`, `obtenerMisNotificaciones(params)` (paginado, con filtros de búsqueda/tipo/prioridad/tiempo/categoría), `obtenerMisNotificacionesPaginadas`, `obtenerEstadisticas(id_usuario)`, `marcarComoLeida(id)`, `marcarTodasComoLeidas(id_usuario)`, más helpers: `obtenerNotificacionesNoLeidas`, `contarNotificacionesNoLeidas`, `tieneNotificacionesNoLeidas`, `obtenerNotificacionesRecientes`, `obtenerNotificacionesPorPrioridad`. Todos sobre base `/notificaciones`. También exporta un `default` con todo agrupado. Ver `backend/unispace/notificaciones/README.md` para el catálogo completo de tipos de evento en el backend.
 
 ## `services/dashboard/dashboardAPI.ts`
 

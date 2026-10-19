@@ -2,8 +2,8 @@
 Seeder de espacios físicos de las sedes.
 """
 
-from sedes.models import Sede
-from espacios.models import TipoEspacio, EspacioFisico
+from unispace.sedes.models import Sede
+from unispace.espacios.models import TipoEspacio, EspacioFisico
 
 
 def create_espacios_fisicos(stdout, style):

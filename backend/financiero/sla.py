@@ -179,7 +179,7 @@ def actualizar_sla_factura(
                 f"{estado_label}. {dias_transcurridos} días de {parametro.dias_maximos if parametro else 'N/A'}."
             )
 
-            from notificaciones.signals import crear_notificacion
+            from unispace.notificaciones.signals import crear_notificacion
 
             destinatarios = {factura.usuario_responsable_id, factura.creado_por_id}
             for user_id in destinatarios:

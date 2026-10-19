@@ -30,8 +30,8 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from . import models, serializers
 from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
-from usuarios.models import Usuario
-from notificaciones.signals import crear_notificacion
+from unispace.usuarios.models import Usuario
+from unispace.notificaciones.signals import crear_notificacion
 
 logger = logging.getLogger(__name__)
 
@@ -488,7 +488,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     def crear_con_usuario(self, request):
         """Crea un usuario con rol Proveedor y vincula su perfil en una transacción atómica."""
         from django.contrib.auth.hashers import make_password
-        from usuarios.models import Rol
+        from unispace.usuarios.models import Rol
 
         nombre = (request.data.get('nombre') or '').strip()
         correo = (request.data.get('correo') or '').strip()

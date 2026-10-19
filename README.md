@@ -229,7 +229,7 @@ docker compose exec backend bash   # Acceder al contenedor backend
 - 📘 [Documentación de Docker](./README.Docker.md)
 - 🔔 [Sistema de Notificaciones](./RESUMEN_NOTIFICACIONES.md)
 - 📱 [Actualizaciones Responsivas](./RESPONSIVE_UPDATES.md)
-- 🔧 [Documentación Backend](./backend/notificaciones/README.md)
+- 🔧 [Documentación Backend](./backend/unispace/notificaciones/README.md)
 
 ---
 

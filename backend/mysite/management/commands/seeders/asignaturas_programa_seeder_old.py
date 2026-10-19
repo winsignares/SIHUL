@@ -2,8 +2,8 @@
 Seeder de relaciones Asignatura-Programa.
 """
 
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from programas.models import Programa
+from unispace.asignaturas.models import Asignatura, AsignaturaPrograma
+from unispace.programas.models import Programa
 
 
 def create_asignaturas_programa(stdout, style):

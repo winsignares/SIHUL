@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db.models import F
 from django.utils import timezone
 from .models import Agente, PreguntaSugerida, Conversacion
-from usuarios.models import Usuario
+from unispace.usuarios.models import Usuario
 import json
 import logging
 import re

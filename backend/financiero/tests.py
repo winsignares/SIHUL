@@ -7,7 +7,7 @@ from unittest.mock import patch
 from . import models
 from . import views, serializers
 from .services.shared_storage_service import StorageResult
-from usuarios.models import Usuario, Rol
+from unispace.usuarios.models import Usuario, Rol
 
 # Create your tests here.
 

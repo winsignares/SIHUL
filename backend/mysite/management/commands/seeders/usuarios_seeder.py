@@ -3,8 +3,8 @@ Seeder de usuarios del sistema y docentes.
 """
 
 from django.contrib.auth.hashers import make_password
-from sedes.models import Sede
-from usuarios.models import Rol, Usuario
+from unispace.sedes.models import Sede
+from unispace.usuarios.models import Rol, Usuario
 
 
 def create_usuarios_sistema(stdout, style):

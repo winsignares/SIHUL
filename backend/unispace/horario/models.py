@@ -1,0 +1,173 @@
+from django.db import models
+from django.db.models import F, CheckConstraint, Q, Index
+from unispace.grupos.models import Grupo
+from unispace.asignaturas.models import Asignatura
+from unispace.usuarios.models import Usuario
+from unispace.espacios.models import EspacioFisico
+
+class Horario(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aprobado', 'Aprobado'),
+        ('rechazado', 'Rechazado'),
+    ]
+    
+    ORIGEN_CHOICES = [
+        ('SIUL', 'SIUL'),
+        ('SIHUL', 'SIHUL'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='horarios')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='horarios')
+    docente = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='horarios_docente')
+    espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='horarios', null=True, blank=True)
+    dia_semana = models.CharField(max_length=15)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
+    cantidad_estudiantes = models.IntegerField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='SIHUL')
+    oracle_external_id = models.CharField(max_length=120, null=True, blank=True, db_index=True)
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(hora_fin__gt=F('hora_inicio')),
+                name='chk_horario_horas',
+            ),
+            CheckConstraint(
+                check=(
+                    Q(fecha_inicio__isnull=True)
+                    | Q(fecha_fin__isnull=True)
+                    | Q(fecha_fin__gte=F('fecha_inicio'))
+                ),
+                name='chk_horario_fechas',
+            ),
+        ]
+        indexes = [
+            Index(fields=['espacio'], name='idx_horario_espacio'),
+            Index(fields=['docente'], name='idx_horario_docente'),
+        ]
+
+    def __str__(self):
+        return f"{self.dia_semana} {self.hora_inicio}-{self.hora_fin}"
+
+class HorarioFusionado(models.Model):
+    id = models.AutoField(primary_key=True)
+    grupo1 = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='horarios_fusionados_1')
+    grupo2 = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='horarios_fusionados_2')
+    grupo3 = models.ForeignKey(Grupo, on_delete=models.CASCADE, null=True, blank=True, related_name='horarios_fusionados_3')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='horarios_fusionados')
+    docente = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='horarios_fusionados')
+    espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='horarios_fusionados')
+    dia_semana = models.CharField(max_length=15)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    cantidad_estudiantes = models.IntegerField(null=True, blank=True)
+    comentario = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(hora_fin__gt=F('hora_inicio')),
+                name='chk_horario_fusionado_horas',
+            ),
+        ]
+
+    def __str__(self):
+        return f"Fusionado {self.asignatura} {self.dia_semana}"
+
+class HorarioEstudiante(models.Model):
+    id = models.AutoField(primary_key=True)
+    horario = models.ForeignKey(Horario, on_delete=models.CASCADE, related_name='estudiantes_inscritos')
+    estudiante = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='horarios_inscritos')
+
+    class Meta:
+        unique_together = ('horario', 'estudiante')
+        verbose_name = 'Horario de Estudiante'
+        verbose_name_plural = 'Horarios de Estudiantes'
+
+    def __str__(self):
+        return f"{self.estudiante.nombre} - {self.horario}"
+
+class SolicitudEspacio(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aprobada', 'Aprobada'),
+        ('rechazada', 'Rechazada'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='solicitudes_espacio')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='solicitudes_espacio')
+    docente = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes_docente')
+    espacio_solicitado = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='solicitudes_espacio')
+    planificador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes_creadas')
+    horario_generado = models.OneToOneField(Horario, on_delete=models.CASCADE, null=True, blank=True, related_name='solicitud')
+    dia_semana = models.CharField(max_length=15)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    cantidad_estudiantes = models.IntegerField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_aprobacion = models.DateTimeField(null=True, blank=True)
+    aprobado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes_aprobadas')
+    comentario = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(hora_fin__gt=F('hora_inicio')),
+                name='chk_solicitud_horas',
+            ),
+        ]
+    
+    def __str__(self):
+        return f"Solicitud {self.asignatura.nombre} - {self.estado}"
+
+
+class StgOracleHorario(models.Model):
+    source_system = models.CharField(max_length=50, default='ORACLE_SIU', db_index=True)
+    external_id = models.CharField(max_length=120, db_index=True)
+    id_grupo_oracle = models.CharField(max_length=22, null=True, blank=True, db_index=True)
+    programa_oracle = models.CharField(max_length=5, null=True, blank=True, db_index=True)
+    id_asignatura_oracle = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    nombre_grupo_oracle = models.CharField(max_length=20, null=True, blank=True)
+    periodo_oracle = models.CharField(max_length=5, null=True, blank=True, db_index=True)
+    cantidad_estudiantes_oracle = models.IntegerField(null=True, blank=True)
+    asignatura_oracle = models.CharField(max_length=255, null=True, blank=True)
+    nombre_programa_oracle = models.CharField(max_length=273, null=True, blank=True)
+    id_sede_oracle = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    nombre_sede_oracle = models.CharField(max_length=50, null=True, blank=True)
+    num_identificacion_docente = models.CharField(max_length=30, null=True, blank=True, db_index=True)
+    nombre_docente_oracle = models.CharField(max_length=501, null=True, blank=True)
+    apellidos_docente_oracle = models.CharField(max_length=501, null=True, blank=True)
+    nom_aula_oracle = models.CharField(max_length=60, null=True, blank=True)
+    num_dia_oracle = models.IntegerField(null=True, blank=True, db_index=True)
+    hor_inicio_raw = models.TextField(null=True, blank=True)
+    hor_fin_raw = models.TextField(null=True, blank=True)
+    fec_inicio_oracle = models.DateField(null=True, blank=True)
+    fec_fin_oracle = models.DateField(null=True, blank=True)
+    raw_data = models.JSONField(default=dict, blank=True)
+    row_hash = models.CharField(max_length=64, db_index=True)
+    estado_registro = models.CharField(max_length=30, default='valido', db_index=True)
+    fecha_carga = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_system', 'external_id'],
+                name='uq_stg_oracle_horario_source_external',
+            )
+        ]
+        # Orden cronologico (no por external_id/hash): si llegaran a coexistir
+        # filas duplicadas para la misma sesion, migrate_horarios debe procesar
+        # primero las mas antiguas para que la mas reciente sea la que prevalezca.
+        ordering = ['fecha_carga', 'id']
+
+    def __str__(self):
+        display_name = self.nombre_grupo_oracle or self.id_grupo_oracle or self.id_asignatura_oracle or ''
+        return f'{self.source_system}:{self.external_id} {display_name}'.strip()
