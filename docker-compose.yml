@@ -52,8 +52,8 @@ services:
   backend:
     container_name: sihul-backend
     build:
-      context: .
-      dockerfile: backend.Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ./.env
@@ -95,11 +95,11 @@ services:
   chatbot:
     container_name: sihul-chatbot
     build:
-      context: .
-      dockerfile: chatbot.Dockerfile
+      context: ./chatbot
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - ./chatbot/.env
+      - ./.env
     # La imagen arranca sin --reload; en desarrollo se activa aquí junto al volumen
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
     ports:
@@ -128,8 +128,8 @@ services:
   frontend:
     container_name: react_vite_app
     build:
-      context: .
-      dockerfile: frontend.Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "5173:5173"

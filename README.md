@@ -262,18 +262,15 @@ docker compose exec backend bash   # Acceder al contenedor backend
 
 El sistema utiliza las siguientes variables de entorno:
 
-### Backend (`.env` en `/backend`)
-```env
-DEBUG=True
-SECRET_KEY=tu-clave-secreta
-DATABASE_URL=postgresql://usuario:password@localhost:5432/sihul
-ALLOWED_HOSTS=localhost,127.0.0.1
+Un solo archivo `.env` en la raiz del proyecto, leido tanto por `docker-compose.yml` (produccion) como por `docker-compose.test.yml` (pruebas) y por Vite (frontend). Copia `.env.example` (produccion) o `.env.test.example` (pruebas) a `.env` segun el entorno que vayas a levantar:
+
+```
+cp .env.example .env        # produccion
+# o
+cp .env.test.example .env   # pruebas
 ```
 
-### Frontend (`.env` en `/frontend`)
-```env
-VITE_API_URL=http://localhost:8000
-```
+Incluye, entre otras: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `FRONTEND_URL`, credenciales de Microsoft OAuth, `OPENAI_API_KEY` (chatbot) y `VITE_API_URL`/`VITE_CHATBOT_URL`/`VITE_RECAPTCHA_SITE_KEY` (frontend). Ver `.env.example` para la lista completa.
 
 ---
 

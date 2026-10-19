@@ -1,0 +1,15 @@
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
+*.pyo
+**/*.pyo
+*.log
+.env
+.env.local
+.pytest_cache/
+.coverage
+.vscode/
+.idea/
+*.swp
+*.swo

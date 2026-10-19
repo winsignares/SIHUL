@@ -16,13 +16,13 @@ WORKDIR /app
 RUN apk add --no-cache git tzdata
 
 # Copiar archivos de dependencias
-COPY frontend/package*.json ./
+COPY package*.json ./
 
 # Instalar dependencias
 RUN npm ci --prefer-offline --no-audit
 
 # Copiar código del frontend
-COPY frontend/ .
+COPY . .
 
 # Ajustar permisos y ejecutar como usuario no-root
 RUN chown -R node:node /app

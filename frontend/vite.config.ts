@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -52,6 +53,8 @@ export default defineConfig(() => {
   const apiUrlClean = apiUrl.replace(/\/+$/, '');
   
   return {
+    // El .env vive en la raiz del repo (compartido con docker-compose), no en frontend/
+    envDir: path.resolve(__dirname, '..'),
     plugins: [react()],
     server: {
       host: true, // Permite acceso externo (0.0.0.0) útil en contenedores

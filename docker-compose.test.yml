@@ -1,6 +1,6 @@
 # Isolated SIHUL test/staging stack.
 # Run with:
-# docker compose --env-file .env.test -f docker-compose.test.yml up -d --build
+# docker compose --env-file .env -f docker-compose.test.yml up -d --build
 
 name: ${COMPOSE_PROJECT_NAME:-sihul-test}
 
@@ -9,7 +9,7 @@ services:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     env_file:
-      - ./.env.test
+      - ./.env
     environment:
       POSTGRES_DB: ${DB_NAME:-sihul_test_db}
       POSTGRES_USER: ${DB_USER:-sihul_test_user}
@@ -33,11 +33,11 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend.Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - ./.env.test
+      - ./.env
     environment:
       APP_ENV: ${APP_ENV:-test}
       DJANGO_SETTINGS_MODULE: mysite.settings
@@ -80,11 +80,11 @@ services:
 
   chatbot:
     build:
-      context: .
-      dockerfile: chatbot.Dockerfile
+      context: ./chatbot
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - ./.env.test
+      - ./.env
     environment:
       DATABASE_URL: postgresql+asyncpg://${DB_USER:-sihul_test_user}:${DB_PASSWORD:-sihul_test_password}@db:5432/${DB_NAME:-sihul_test_db}
       CHUNK_SIZE: ${CHUNK_SIZE:-500}
@@ -104,8 +104,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend.Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: development
