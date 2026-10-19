@@ -8,4 +8,4 @@ Cada app tiene `tests.py`; la mayoría son el placeholder por defecto de Django.
 
 ## Seeders
 
-`backend/mysite/management/commands/seed_all.py` orquesta los seeders individuales en `backend/mysite/management/commands/seeders/`: roles, componentes, componentes-rol, sedes, usuarios, espacios, financiero (`financiero_seeder.py`, `financiero_facturas_stress_seeder.py` para pruebas de carga). `backend/mysite/comandos.txt` documenta los comandos manuales típicos vía `docker compose exec`.
+El comando único `python manage.py seed` (`backend/config/management/commands/seed.py`) ejecuta, siempre de forma manual, los seeders registrados en orden en `backend/config/management/commands/seeders/registro.py` (flags: `--solo-requeridos`, `--solo a,b`, `--con-divipola`, `--listar`; en Docker: `docker compose run --rm seed`). Seeders disponibles: roles, componentes, componentes-rol, sedes, usuarios, espacios, financiero (`financiero_seeder.py`, `financiero_facturas_stress_seeder.py` para pruebas de carga). 
