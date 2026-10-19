@@ -3,6 +3,8 @@ import type {
     ChatbotAgente,
     ChatbotAgentePayload,
     ChatbotDocumento,
+    GuardarPreguntaRespuestaPayload,
+    PreguntaRespuestaChatbot,
     SubirDocumentoChatbotPayload,
 } from '../../models/chatbot/chatbotAdmin.model';
 
@@ -10,7 +12,21 @@ export type {
     ChatbotAgente,
     ChatbotAgentePayload,
     ChatbotDocumento,
+    GuardarPreguntaRespuestaPayload,
+    PreguntaRespuestaChatbot,
 } from '../../models/chatbot/chatbotAdmin.model';
+
+function formDataPreguntaRespuesta(data: GuardarPreguntaRespuestaPayload): FormData {
+    const formData = new FormData();
+    formData.append('agente', String(data.agente));
+    if (data.sede) formData.append('sede', data.sede);
+    formData.append('pregunta', data.pregunta);
+    formData.append('respuesta', data.respuesta);
+    formData.append('activo', String(data.activo));
+    data.anexosNuevos.forEach((archivo) => formData.append('anexos', archivo));
+    (data.anexosEliminar ?? []).forEach((id) => formData.append('anexos_eliminar', String(id)));
+    return formData;
+}
 
 function extraerLista<T>(response: unknown): T[] {
     if (Array.isArray(response)) {
@@ -82,4 +98,23 @@ export const chatbotAdminAPI = {
 
     eliminarDocumento: (id: number): Promise<unknown> =>
         apiClient.delete(`/chatbot/admin/documentos/${id}/`),
+
+    /**
+     * Preguntas-respuestas con anexos (documentos de soporte) por chatbot y sede
+     */
+    listarPreguntasRespuestas: async (params: { sede: string; agente?: number }): Promise<PreguntaRespuestaChatbot[]> => {
+        const query = new URLSearchParams({ sede: params.sede });
+        if (params.agente) query.append('agente', String(params.agente));
+        const response = await apiClient.get<unknown>(`/chatbot/admin/preguntas-respuestas/?${query.toString()}`);
+        return extraerLista<PreguntaRespuestaChatbot>(response);
+    },
+
+    crearPreguntaRespuesta: (data: GuardarPreguntaRespuestaPayload): Promise<PreguntaRespuestaChatbot> =>
+        apiClient.postFormData('/chatbot/admin/preguntas-respuestas/', formDataPreguntaRespuesta(data)),
+
+    actualizarPreguntaRespuesta: (id: number, data: GuardarPreguntaRespuestaPayload): Promise<PreguntaRespuestaChatbot> =>
+        apiClient.patchFormData(`/chatbot/admin/preguntas-respuestas/${id}/`, formDataPreguntaRespuesta(data)),
+
+    eliminarPreguntaRespuesta: (id: number): Promise<unknown> =>
+        apiClient.delete(`/chatbot/admin/preguntas-respuestas/${id}/`),
 };

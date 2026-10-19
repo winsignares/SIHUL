@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../services/users/authService';
-import type { AuthState } from '../models/auth/auth.model';
+import type { AuthState, EspaciosScope } from '../models/auth/auth.model';
 import { clearAuthClientState } from '../core/clearStaleState';
 
 type AuthComponent = AuthState['components'][number];
@@ -13,6 +13,14 @@ interface AuthContextType extends AuthState {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Alcance de espacios que informa el backend; sin dato se asume sin límite (el backend decide). */
+function buildEspaciosScope(response: { tipos_espacio_permitidos?: number[]; puede_crear_espacios?: boolean }): EspaciosScope {
+    return {
+        tiposPermitidos: response.tipos_espacio_permitidos ?? [],
+        puedeCrearEspacios: response.puede_crear_espacios ?? true,
+    };
+}
 
 function readStoredJson<T>(key: string, fallback: T): T {
     const raw = localStorage.getItem(key);
@@ -38,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         components: readStoredJson('auth_components', []),
         faculties: readStoredJson('auth_faculties', null) || undefined,
         areas: readStoredJson('auth_areas', null) || undefined,
+        espaciosScope: readStoredJson('auth_espacios_scope', null) || undefined,
         isAuthenticated: !!localStorage.getItem('auth_token'),
         isLoading: false,
     });
@@ -53,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             components: [],
             faculties: undefined,
             areas: undefined,
+            espaciosScope: undefined,
             isAuthenticated: false,
             isLoading: false,
         });
@@ -99,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
             localStorage.removeItem('auth_areas');
         }
+        localStorage.setItem('auth_espacios_scope', JSON.stringify(buildEspaciosScope(response)));
 
         if ('signature' in response && response.signature) {
             const signature = String(response.signature);
@@ -113,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             components: response.componentes || [],
             faculties: response.facultad ? [response.facultad] : undefined,
             areas: response.espacios_permitidos,
+            espaciosScope: buildEspaciosScope(response),
             isAuthenticated: true,
             isLoading: false,
         });
@@ -154,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
             localStorage.removeItem('auth_areas');
         }
+        localStorage.setItem('auth_espacios_scope', JSON.stringify(buildEspaciosScope(response)));
 
         if (response.signature) {
             localStorage.setItem('auth_signature', response.signature);
@@ -170,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             components: response.componentes || [],
             faculties: response.facultad ? [response.facultad] : undefined,
             areas: response.espacios_permitidos,
+            espaciosScope: buildEspaciosScope(response),
             isAuthenticated: true,
             isLoading: false,
         });
@@ -215,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             components: [],
             faculties: undefined,
             areas: undefined,
+            espaciosScope: undefined,
             isAuthenticated: false,
             isLoading: false,
         });

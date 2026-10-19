@@ -56,10 +56,33 @@ class EspacioFisico(models.Model):
     
 class EspacioPermitido(models.Model):
     espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='espacios_permitidos')
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='espacios_permitidos')   
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='espacios_permitidos')
+    # True: asignado a mano (individual); False: deriva de un tipo asignado al usuario
+    # (TipoEspacioPermitido) y lo mantiene espacios/alcance.py. La sincronización por tipo solo
+    # toca las derivadas, así que un supervisor puede tener tipos Y espacios sueltos a la vez.
+    individual = models.BooleanField(default=True)   
 
     def __str__(self):
         return f"{self.usuario} para {self.espacio}"
+
+
+class TipoEspacioPermitido(models.Model):
+    """
+    Tipo de espacio que un supervisor gestiona (asignación «por tipo»).
+
+    A diferencia de `EspacioPermitido` (espacios sueltos), un tipo asignado abarca también
+    los espacios de ese tipo que se creen después en la sede del usuario, y es lo que
+    autoriza al supervisor a CREAR espacios de ese tipo. Los `EspacioPermitido` de un usuario
+    con tipos asignados se mantienen derivados de estos (ver espacios/alcance.py).
+    """
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='tipos_espacio_permitidos')
+    tipo = models.ForeignKey(TipoEspacio, on_delete=models.CASCADE, related_name='supervisores_permitidos')
+
+    class Meta:
+        unique_together = ('usuario', 'tipo')
+
+    def __str__(self):
+        return f"{self.usuario} gestiona espacios de tipo {self.tipo}"
 
 
 class StgOracleEspacioFisico(models.Model):

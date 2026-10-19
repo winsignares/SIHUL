@@ -19,6 +19,19 @@ class Settings(BaseSettings):
     CHAT_MODEL_LISTS: str = "gpt-4o"
     MIN_SIMILARITY: float = 0.40
     TOP_K: int = 8
+    # Preguntas-respuestas registradas en Django (app/services/qa_service.py). La similitud
+    # se mide entre la pregunta del usuario y la pregunta registrada.
+    # - QA_MIN_SIMILARITY: desde aquí la pareja entra al contexto del LLM.
+    # - QA_ANEXO_MIN_SIMILARITY: desde aquí la pareja es candidata a entregar sus anexos;
+    #   un verificador (LLM) decide si la consulta pide lo mismo que la pregunta registrada.
+    #   Hace falta porque preguntas del mismo tema con otra intención («¿cómo pago la
+    #   matrícula?» frente a «¿cómo cancelo la matrícula?») se parecen tanto como
+    #   reformulaciones legítimas.
+    # - QA_ANEXO_AUTO_SIMILARITY: desde aquí (casi la misma frase) se entregan sin verificar.
+    QA_MIN_SIMILARITY: float = 0.45
+    QA_ANEXO_MIN_SIMILARITY: float = 0.55
+    QA_ANEXO_AUTO_SIMILARITY: float = 0.92
+    QA_TOP_K: int = 3
     MAX_UPLOAD_MB: int = 25
     MAX_CHUNKS_PER_DOCUMENT: int = 5000
     REDIS_URL: str | None = None

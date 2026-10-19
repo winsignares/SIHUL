@@ -7,6 +7,11 @@ from .admin_views import (
     ChatbotDocumentosProxyView,
     ChatbotSedesProxyView,
 )
+from .preguntas_respuestas_views import (
+    AnexoDescargaView,
+    PreguntaRespuestaDetalleView,
+    PreguntasRespuestasView,
+)
 from .api_views import (
     AgenteDetailAPIView,
     AgenteListCreateAPIView,
@@ -36,6 +41,13 @@ urlpatterns = [
     path('admin/documentos/<int:pk>/', ChatbotDocumentoDetalleProxyView.as_view(), name='api-admin-documento-detalle'),
     path('admin/documentos/<int:pk>/prioridad/', ChatbotDocumentoPrioridadProxyView.as_view(), name='api-admin-documento-prioridad'),
     path('admin/sedes/', ChatbotSedesProxyView.as_view(), name='api-admin-sedes'),
+
+    # Preguntas-respuestas con anexos (documentos de soporte) por chatbot/sede
+    path('admin/preguntas-respuestas/', PreguntasRespuestasView.as_view(), name='api-admin-preguntas-respuestas'),
+    path('admin/preguntas-respuestas/<int:pk>/', PreguntaRespuestaDetalleView.as_view(), name='api-admin-pregunta-respuesta-detalle'),
+
+    # Descarga de un anexo entregado en una respuesta (enlace firmado; también en el chat público)
+    path('anexos/<int:pk>/descargar/', AnexoDescargaView.as_view(), name='api-anexo-descargar'),
 
     # PDF original citado en una respuesta (cualquier usuario autenticado, sede propia)
     path('documentos/archivo/', ChatbotDocumentoArchivoView.as_view(), name='api-documento-archivo'),

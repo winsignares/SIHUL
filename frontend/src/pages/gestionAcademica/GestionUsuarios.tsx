@@ -359,7 +359,7 @@ export default function GestionUsuarios() {
                       onClick={() => setModoAsignacionSupervisor('individual')}
                       className={modoAsignacionSupervisor === 'individual' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
                     >
-                      Asignacion Individual
+                      Asignacion Individual{espaciosPermitidos.length > 0 ? ` (${espaciosPermitidos.length})` : ''}
                     </Button>
                     <Button
                       type="button"
@@ -367,9 +367,12 @@ export default function GestionUsuarios() {
                       onClick={() => setModoAsignacionSupervisor('tipo')}
                       className={modoAsignacionSupervisor === 'tipo' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
                     >
-                      Asignacion por Tipo
+                      Asignacion por Tipo{asignarTodosEspaciosPorTipo ? ' (todos)' : tiposEspacioPermitidos.length > 0 ? ` (${tiposEspacioPermitidos.length})` : ''}
                     </Button>
                   </div>
+                  <p className="text-xs text-slate-500">
+                    Puedes combinar ambas: los tipos dan acceso a todos sus espacios (también los que se creen después) y permiten crear espacios de esos tipos; los espacios individuales añaden espacios sueltos que solo podrá gestionar, sin crear más.
+                  </p>
 
                   {modoAsignacionSupervisor === 'individual' && (
                     <>
@@ -399,6 +402,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {espacioSeleccionado && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {espaciosPermitidos.length > 0 && (
@@ -459,6 +465,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {tipoEspacioSeleccionado && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {(asignarTodosEspaciosPorTipo || tiposEspacioPermitidos.length > 0) && (
@@ -843,7 +852,7 @@ export default function GestionUsuarios() {
                       onClick={() => setModoAsignacionSupervisorEdit('individual')}
                       className={modoAsignacionSupervisorEdit === 'individual' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
                     >
-                      Asignacion Individual
+                      Asignacion Individual{espaciosPermitidosEdit.length > 0 ? ` (${espaciosPermitidosEdit.length})` : ''}
                     </Button>
                     <Button
                       type="button"
@@ -851,9 +860,12 @@ export default function GestionUsuarios() {
                       onClick={() => setModoAsignacionSupervisorEdit('tipo')}
                       className={modoAsignacionSupervisorEdit === 'tipo' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
                     >
-                      Asignacion por Tipo
+                      Asignacion por Tipo{asignarTodosEspaciosPorTipoEdit ? ' (todos)' : tiposEspacioPermitidosEdit.length > 0 ? ` (${tiposEspacioPermitidosEdit.length})` : ''}
                     </Button>
                   </div>
+                  <p className="text-xs text-slate-500">
+                    Puedes combinar ambas: los tipos dan acceso a todos sus espacios (también los que se creen después) y permiten crear espacios de esos tipos; los espacios individuales añaden espacios sueltos que solo podrá gestionar, sin crear más.
+                  </p>
 
                   {modoAsignacionSupervisorEdit === 'individual' && (
                     <>
@@ -883,6 +895,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {espacioSeleccionadoEdit && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {espaciosPermitidosEdit.length > 0 && (
@@ -942,6 +957,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {tipoEspacioSeleccionadoEdit && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {(asignarTodosEspaciosPorTipoEdit || tiposEspacioPermitidosEdit.length > 0) && (

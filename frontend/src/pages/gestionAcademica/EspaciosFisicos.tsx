@@ -14,6 +14,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 export default function EspaciosFisicos() {
   const isMobile = useIsMobile();
   const {
+    puedeCrearEspacios, puedeCrearTipos, tiposParaFormulario, sedesParaFormulario,
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
     filterSede, setFilterSede,
@@ -78,21 +79,25 @@ export default function EspaciosFisicos() {
           <h2 className="text-slate-900 dark:text-slate-100 text-lg font-semibold">Gestión de Espacios Físicos</h2>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={() => setShowCreateTipoDialog(true)}
-            variant="outline"
-            className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Tipo
-          </Button>
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Espacio
-          </Button>
+          {puedeCrearTipos && (
+            <Button
+              onClick={() => setShowCreateTipoDialog(true)}
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Tipo
+            </Button>
+          )}
+          {puedeCrearEspacios && (
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Espacio
+            </Button>
+          )}
         </div>
       </div>
 
@@ -384,7 +389,7 @@ export default function EspaciosFisicos() {
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {tiposEspacio.map(tipo => (
+                    {tiposParaFormulario.map(tipo => (
                       <SelectItem key={tipo.id} value={tipo.id?.toString() || ''}>{tipo.nombre}</SelectItem>
                     ))}
                   </SelectContent>
@@ -400,7 +405,7 @@ export default function EspaciosFisicos() {
                     <SelectValue placeholder="Seleccionar sede" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sedes.map(sede => (
+                    {sedesParaFormulario.map(sede => (
                       <SelectItem key={sede.id} value={sede.id?.toString() || ''}>{sede.nombre}</SelectItem>
                     ))}
                   </SelectContent>
@@ -584,7 +589,7 @@ export default function EspaciosFisicos() {
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {tiposEspacio.map(tipo => (
+                    {tiposParaFormulario.map(tipo => (
                       <SelectItem key={tipo.id} value={tipo.id?.toString() || ''}>{tipo.nombre}</SelectItem>
                     ))}
                   </SelectContent>
@@ -600,7 +605,7 @@ export default function EspaciosFisicos() {
                     <SelectValue placeholder="Seleccionar sede" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sedes.map(sede => (
+                    {sedesParaFormulario.map(sede => (
                       <SelectItem key={sede.id} value={sede.id?.toString() || ''}>{sede.nombre}</SelectItem>
                     ))}
                   </SelectContent>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 import { espacioService, type EspacioFisico } from '../../services/espacios/espaciosAPI';
 import { sedeService, type Sede } from '../../services/sedes/sedeAPI';
 import { recursoService, espacioRecursoService, type Recurso } from '../../services/recursos/recursoAPI';
@@ -27,6 +28,7 @@ const SEDES_UPDATED_EVENT = 'sedes-updated';
 
 export function useEspaciosFisicos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
+    const { user, espaciosScope } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState<string>('all');
     const [filterSede, setFilterSede] = useState<string>('all');
@@ -514,7 +516,26 @@ export function useEspaciosFisicos() {
         }
     };
 
+    // Alcance del supervisor de espacios (el backend es quien lo aplica; aquí solo se ajusta la
+    // pantalla): por tipo puede crear espacios de esos tipos en su sede; individual no crea ninguno.
+    const tiposPermitidos = useMemo(() => espaciosScope?.tiposPermitidos ?? [], [espaciosScope]);
+    const puedeCrearEspacios = espaciosScope?.puedeCrearEspacios ?? true;
+    const supervisorRestringido = !puedeCrearEspacios || tiposPermitidos.length > 0;
+    const sedeUsuarioId = user?.sede?.id;
+    const tiposParaFormulario = useMemo(
+        () => (tiposPermitidos.length ? tiposEspacio.filter((tipo) => tipo.id != null && tiposPermitidos.includes(tipo.id)) : tiposEspacio),
+        [tiposEspacio, tiposPermitidos],
+    );
+    const sedesParaFormulario = useMemo(
+        () => (supervisorRestringido && sedeUsuarioId != null ? sedes.filter((sede) => sede.id === sedeUsuarioId) : sedes),
+        [sedes, supervisorRestringido, sedeUsuarioId],
+    );
+
     return {
+        puedeCrearEspacios,
+        puedeCrearTipos: !supervisorRestringido,
+        tiposParaFormulario,
+        sedesParaFormulario,
         searchTerm, setSearchTerm,
         filterTipo, setFilterTipo,
         filterSede, setFilterSede,

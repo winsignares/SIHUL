@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET
 
 from unispace.componentes.models import ComponenteRol, ComponenteUsuario
 from unispace.espacios.models import EspacioPermitido
+from unispace.espacios import alcance as alcance_espacios
 from mysite.auth_helpers import role_supervisa_espacios
 from unispace.usuarios.models import Usuario
 
@@ -141,6 +142,7 @@ def user_view(request):
             } if usuario.sede else None,
             'componentes': componentes,
             'espacios_permitidos': espacios_permitidos,
+            **alcance_espacios.resumen_sesion(usuario),
             'token': request.session['token'],
             'signature': _session_signature(usuario.rol, componentes),
         },

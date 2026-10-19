@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAsistentesVirtuales } from '../../hooks/chatbot/useAsistentesVirtuales';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MensajeConCitas } from '../../components/chatbot/MensajeConCitas';
+import { AnexosRespuesta } from '../../components/chatbot/AnexosRespuesta';
 import { VistaPreviaDocumento, type DocumentoAbierto } from '../../components/chatbot/VistaPreviaDocumento';
 
 const getSafeIcon = (icon: unknown): LucideIcon => {
@@ -608,6 +609,11 @@ export default function AsistentesVirtuales() {
                             ? <MensajeConCitas texto={mensaje.texto} onAbrir={(archivo, pagina) => setDocumentoAbierto({ agenteId: asistenteActivo.id, archivo, pagina })} />
                             : mensaje.texto}
                         </div>
+                        {mensaje.tipo === 'bot' && (
+                          <div className="relative z-10 whitespace-normal">
+                            <AnexosRespuesta anexos={mensaje.anexos} />
+                          </div>
+                        )}
                       </motion.div>
 
                       {/* Timestamp y Estado */}

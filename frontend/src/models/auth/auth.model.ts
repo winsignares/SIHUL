@@ -79,6 +79,18 @@ export interface LoginResponse extends User {
     token: string;
     componentes: Component[];
     espacios_permitidos: AllowedSpace[];
+    tipos_espacio_permitidos?: number[];
+    puede_crear_espacios?: boolean;
+}
+
+/**
+ * Alcance de un supervisor de espacios: los tipos que tiene asignados (puede crear espacios de
+ * esos tipos) y si puede crear espacios. Los usuarios que no supervisan espacios no tienen límite.
+ * El backend es quien lo aplica; esto solo ajusta la pantalla.
+ */
+export interface EspaciosScope {
+    tiposPermitidos: number[];
+    puedeCrearEspacios: boolean;
 }
 
 /**
@@ -101,6 +113,7 @@ export interface AuthState {
     components: Component[];
     faculties?: Faculty[]; // Mantener por compatibilidad si se usa en otro lado, aunque backend no lo manda en login (manda 'facultad' singular en user)
     areas?: AllowedSpace[]; // Mapear espacios_permitidos a areas
+    espaciosScope?: EspaciosScope;
     isAuthenticated: boolean;
     isLoading: boolean;
 }

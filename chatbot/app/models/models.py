@@ -55,6 +55,22 @@ class Chunk(Base):
     document: Mapped["Document"] = relationship(back_populates="chunks")
 
 
+class QAEmbedding(Base):
+    """
+    Embedding de la pregunta de cada pregunta-respuesta registrada en Django (tabla
+    `chatbot_preguntarespuesta`). Se mantiene al día en app/services/qa_service.py:
+    `content_hash` cambia cuando cambia la pregunta (o el modelo de embeddings) y entonces
+    se recalcula. Sin FK a la tabla de Django por la misma razón que `chatbot_id`.
+    """
+    __tablename__ = "qa_embeddings"
+
+    pregunta_respuesta_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    chatbot_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    sede: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    embedding = mapped_column(Vector(get_settings().EMBEDDING_DIM))
+
+
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 

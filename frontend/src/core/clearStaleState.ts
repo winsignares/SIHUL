@@ -9,6 +9,7 @@ const AUTH_KEYS = [
   'auth_components',
   'auth_faculties',
   'auth_areas',
+  'auth_espacios_scope',
   'auth_sede',
   'auth_signature',
   'auth_is_public',

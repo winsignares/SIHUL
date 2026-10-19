@@ -56,6 +56,15 @@ class ChatRequest(BaseModel):
     )
 
 
+class AnexoOut(BaseModel):
+    """Documento de soporte de la pregunta-respuesta oficial que corresponde a lo preguntado."""
+    id: int
+    pregunta_respuesta_id: int
+    nombre: str = Field(description="Nombre original del archivo")
+    tipo_mime: str
+    tamano: int = Field(description="Tamaño en bytes")
+
+
 class ChatResponse(BaseModel):
     id: int
     nombre: str
@@ -67,7 +76,17 @@ class ChatResponse(BaseModel):
         description="Similitud coseno promedio (0–1). Más cerca de 1 = contexto más relevante."
     )
     created_at: datetime
+    anexos: list[AnexoOut] = Field(
+        default_factory=list,
+        description="Anexos (Word, PDF, Excel) que acompañan la respuesta. Vacío si no aplica. "
+        "Los enlaces de descarga los genera Django.",
+    )
     model_config = {"from_attributes": True}
+
+
+class QASyncOut(BaseModel):
+    preguntas: int = Field(description="Preguntas-respuestas activas del chatbot en la sede")
+    actualizadas: int = Field(description="Embeddings calculados o recalculados")
 
 
 class ChatHistoryItem(BaseModel):

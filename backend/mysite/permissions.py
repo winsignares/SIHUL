@@ -116,7 +116,7 @@ class IsEstudiante(BasePermission):
 class IsSupervisorGeneral(BasePermission):
     def has_permission(self, request, view):
         user = getattr(request, 'user', None)
-        return user_supervisa_espacios(user) or has_any_role(user, {'supervisor_general'})
+        return user_supervisa_espacios(user) or is_admin_global(user)
 
 
 class CanManagePrestamosEspacios(BasePermission):

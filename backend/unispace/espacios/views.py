@@ -15,6 +15,7 @@ from collections import defaultdict
 import unicodedata
 
 from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
+from . import alcance
 
 
 def _filtrar_espacios_por_sede_usuario(request, queryset):
@@ -201,6 +202,9 @@ def create_espacio(request):
             if not sede_id or not nombre or not tipo_id or capacidad is None:
                 return JsonResponse({"error": "sede_id, nombre, tipo_id y capacidad son requeridos"}, status=400)
             
+            motivo = alcance.motivo_no_puede_crear(getattr(request, 'user_obj', None), tipo_id, sede_id)
+            if motivo:
+                return JsonResponse({"error": motivo}, status=403)
             sede = Sede.objects.get(id=sede_id)
             tipo = TipoEspacio.objects.get(id=tipo_id)
             e = EspacioFisico(sede=sede, nombre=nombre, tipo=tipo, capacidad=int(capacidad), ubicacion=ubicacion, estado=estado)
@@ -244,6 +248,11 @@ def update_espacio(request):
                 return JsonResponse({"error": "ID es requerido"}, status=400)
             
             e = EspacioFisico.objects.get(id=id)
+            motivo = alcance.motivo_no_puede_actualizar(
+                getattr(request, 'user_obj', None), e, tipo_id=data.get('tipo_id'), sede_id=data.get('sede_id')
+            )
+            if motivo:
+                return JsonResponse({"error": motivo}, status=403)
             if 'sede_id' in data:
                 e.sede = Sede.objects.get(id=data.get('sede_id'))
             if 'nombre' in data:
@@ -302,6 +311,8 @@ def delete_espacio(request):
             if not id:
                 return JsonResponse({"error": "ID es requerido"}, status=400)
             e = EspacioFisico.objects.get(id=id)
+            if not alcance.puede_gestionar_espacio(getattr(request, 'user_obj', None), e.id):
+                return JsonResponse({"error": alcance.MSG_ESPACIO_NO_ASIGNADO}, status=403)
             # Eliminar explícitamente las relaciones con recursos
             EspacioRecurso.objects.filter(espacio=e).delete()
             # Eliminar el espacio (esto también eliminará EspacioPermitido por CASCADE)

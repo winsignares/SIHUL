@@ -8,12 +8,14 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from werkzeug.security import check_password_hash
 
 from unispace.asignaturas.models import Asignatura, AsignaturaPrograma
 from unispace.asignaturas.serializers import AsignaturaProgramaSerializer, AsignaturaSerializer
+from unispace.espacios import alcance as alcance_espacios
 from unispace.espacios.models import EspacioFisico, EspacioPermitido, TipoEspacio
 from unispace.espacios.serializers import EspacioFisicoSerializer, EspacioPermitidoSerializer, TipoEspacioSerializer
 from unispace.facultades.models import Facultad
@@ -233,6 +235,29 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return self.queryset.filter(id__in=espacios_ids)
         return super().get_queryset()
 
+    def perform_create(self, serializer):
+        # Un supervisor solo crea espacios de los tipos que tiene asignados, en su sede
+        motivo = alcance_espacios.motivo_no_puede_crear(
+            self.get_current_user(),
+            serializer.validated_data['tipo'].id,
+            serializer.validated_data['sede'].id,
+        )
+        if motivo:
+            raise PermissionDenied(motivo)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        datos = serializer.validated_data
+        motivo = alcance_espacios.motivo_no_puede_actualizar(
+            self.get_current_user(),
+            serializer.instance,
+            tipo_id=datos['tipo'].id if 'tipo' in datos else None,
+            sede_id=datos['sede'].id if 'sede' in datos else None,
+        )
+        if motivo:
+            raise PermissionDenied(motivo)
+        serializer.save()
+
     def _deny_unassigned_space_for_supervisor(self, pk):
         user = self.get_current_user()
         if user and user_supervisa_espacios(user):
@@ -334,6 +359,12 @@ class EspacioPermitidoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     serializer_class = EspacioPermitidoSerializer
     seccional_lookup = 'espacio__sede__seccional'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        # Las asignaciones las define quien administra usuarios; un supervisor las ve, no las cambia
+        if request.method not in permissions.SAFE_METHODS and alcance_espacios.esta_restringido(self.get_current_user()):
+            raise PermissionDenied('Un supervisor de espacios no puede modificar las asignaciones de espacios.')
 
     @action(detail=False, methods=['get'], url_path=r'usuario/(?P<usuario_id>\d+)')
     def por_usuario(self, request, usuario_id=None):
@@ -543,7 +574,7 @@ class RolViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
 
 
 class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
-    queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional')
+    queryset = Usuario.objects.select_related('rol', 'facultad', 'sede', 'seccional').prefetch_related('tipos_espacio_permitidos')
     serializer_class = UsuarioSerializer
     seccional_lookup = 'seccional'
     permission_classes = [IsAdminUserManagement]
@@ -772,6 +803,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             } if usuario.sede else None,
             'componentes': componentes,
             'espacios_permitidos': espacios_permitidos,
+            **alcance_espacios.resumen_sesion(usuario),
             'token': token,
         }, status=status.HTTP_200_OK)
 

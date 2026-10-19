@@ -1,4 +1,5 @@
 import { BookOpen, Bot, DoorOpen, Headphones, Trophy, type LucideIcon } from 'lucide-react';
+import type { AnexoChatbot } from './chatbot';
 export type ChatbotTipo = 'normativo' | 'investigativo';
 
 // Debe coincidir con Agente.TIPO_CHOICES (backend/chatbot/models.py) y los perfiles del
@@ -59,6 +60,37 @@ export interface SubirDocumentoChatbotPayload {
     sede: string;
     file: File;
     replace_document_id?: number;
+}
+
+// Anexos (documentos de soporte) de las preguntas-respuestas. Debe coincidir con
+// FORMATOS_ANEXO y CHATBOT_ANEXO_* del backend (backend/chatbot/anexos.py, settings.py).
+export const ANEXO_EXTENSIONES = ['pdf', 'doc', 'docx', 'xls', 'xlsx'] as const;
+export const ANEXO_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+export const ANEXO_MAX_MB = 15;
+export const ANEXO_MAX_POR_RESPUESTA = 5;
+
+/** Pregunta | respuesta oficial de un chatbot en una seccional, con sus anexos. */
+export interface PreguntaRespuestaChatbot {
+    id: number;
+    agente: number;
+    agente_nombre: string;
+    sede: string;
+    pregunta: string;
+    respuesta: string;
+    activo: boolean;
+    creado: string;
+    actualizado: string;
+    anexos: AnexoChatbot[];
+}
+
+export interface GuardarPreguntaRespuestaPayload {
+    agente: number;
+    sede?: string;
+    pregunta: string;
+    respuesta: string;
+    activo: boolean;
+    anexosNuevos: File[];
+    anexosEliminar?: number[];
 }
 
 // Íconos que la aplicación sabe dibujar; debe coincidir con `iconMap` de

@@ -1,10 +1,12 @@
 from django.contrib import admin
 from .models import (
     Agente,
+    AnexoRespuesta,
     ChatbotAppMessage,
     ChatbotChunk,
     ChatbotDocument,
     Conversacion,
+    PreguntaRespuesta,
     PreguntaSugerida,
 )
 
@@ -46,6 +48,35 @@ class PreguntaSugeridaAdmin(admin.ModelAdmin):
     def pregunta_corta(self, obj):
         return obj.pregunta[:75] + '...' if len(obj.pregunta) > 75 else obj.pregunta
     pregunta_corta.short_description = 'Pregunta'
+
+class AnexoRespuestaInline(admin.TabularInline):
+    # Solo lectura: los anexos se cargan desde Gestión de Chatbots, que valida el formato
+    # (Word, PDF, Excel) y el contenido real del archivo.
+    model = AnexoRespuesta
+    extra = 0
+    fields = ['nombre', 'tipo_mime', 'tamano', 'creado']
+    readonly_fields = fields
+    can_delete = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PreguntaRespuesta)
+class PreguntaRespuestaAdmin(admin.ModelAdmin):
+    list_display = ['pregunta_corta', 'agente', 'sede', 'activo', 'cantidad_anexos', 'actualizado']
+    list_filter = ['agente', 'sede', 'activo']
+    search_fields = ['pregunta', 'respuesta']
+    inlines = [AnexoRespuestaInline]
+
+    def pregunta_corta(self, obj):
+        return obj.pregunta[:75] + '...' if len(obj.pregunta) > 75 else obj.pregunta
+    pregunta_corta.short_description = 'Pregunta'
+
+    def cantidad_anexos(self, obj):
+        return obj.anexos.count()
+    cantidad_anexos.short_description = 'Anexos'
+
 
 @admin.register(Conversacion)
 class ConversacionAdmin(admin.ModelAdmin):

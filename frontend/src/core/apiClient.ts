@@ -206,6 +206,18 @@ class ApiClient {
       body: formData,
     });
   }
+
+  async patchFormData<T>(
+    endpoint: string,
+    formData: FormData,
+    config?: RequestConfig
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...config,
+      method: 'PATCH',
+      body: formData,
+    });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

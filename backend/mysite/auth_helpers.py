@@ -60,11 +60,8 @@ def role_supervisa_espacios(rol):
     if not rol:
         return False
 
-    if bool(getattr(rol, 'supervisa_espacios', False)):
-        return True
-
-    rol_nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
-    return rol_nombre == 'supervisor_general'
+    # Solo la casilla «Supervisor de espacios» del rol; el nombre del rol no cuenta
+    return bool(getattr(rol, 'supervisa_espacios', False))
 
 
 def user_supervisa_espacios(user):

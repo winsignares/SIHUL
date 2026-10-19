@@ -1,4 +1,5 @@
 import { apiClient } from '../../core/apiClient';
+import type { AnexoChatbot } from '../../models/chatbot/chatbot';
 
 const DEFAULT_BG_GRADIENT = 'from-blue-500 via-blue-600 to-indigo-600';
 
@@ -65,6 +66,8 @@ export interface EnviarPreguntaResponse {
     fecha: string;
     usuario: string;
     error?: string | null;
+    /** Documentos de soporte de la respuesta (vacío o ausente si no aplica) */
+    anexos?: AnexoChatbot[];
 }
 
 export interface MensajeHistorial {
@@ -75,6 +78,7 @@ export interface MensajeHistorial {
     timestamp: string;
     leido: boolean;
     usuario: string;
+    anexos?: AnexoChatbot[];
 }
 
 export interface ObtenerHistorialResponse {
@@ -270,7 +274,7 @@ export const chatbotAPI = {
         seccional: string;
         pregunta_sugerida_id?: number;
         nombre_usuario?: string;
-    }): Promise<{ chat_id: string; respuesta: string; timestamp: string }> => {
+    }): Promise<{ chat_id: string; respuesta: string; timestamp: string; anexos?: AnexoChatbot[] }> => {
         return apiClient.post('/chatbot/public/pregunta/', data);
     }
 };

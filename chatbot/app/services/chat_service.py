@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.profiles import get_profile
 from app.core.sedes import Sede
 from app.models.models import ChatMessage
+from app.services import qa_service
 from app.services.embedding_service import generate_query_embeddings
 
 _settings = get_settings()
@@ -378,7 +379,7 @@ async def ask(
     id_usuario: int | None = None,
     tipo: str | None = None,
     instrucciones: str | None = None,
-) -> ChatMessage:
+) -> tuple[ChatMessage, list[dict]]:
     """
     Flujo RAG completo con contexto filtrado por chatbot y sede.
     Persiste la conversación con nombre, chatbot y sede del estudiante.
@@ -391,18 +392,27 @@ async def ask(
 
     `tipo` e `instrucciones` son el perfil de comportamiento del agente (prompt y
     mensaje de "sin información"); sin tipo se usa el normativo.
+
+    Devuelve el mensaje guardado y los anexos (documentos de soporte) de la
+    pregunta-respuesta oficial que corresponde a lo preguntado, si la hay
+    (ver app/services/qa_service.py); sin parejas registradas, la lista va vacía y el
+    flujo es el de siempre.
     """
     profile = get_profile(tipo)
     history = await _load_history(chat_id, chatbot_id, sede, db) if chat_id else []
+    qa_signature = await qa_service.signature(chatbot_id, sede, db)
 
     redis = get_redis() if not history else None
-    cache_key = _answer_cache_key(chatbot_id, sede, question, profile.variant(instrucciones))
+    variant = profile.variant(instrucciones) + (f"-qa{qa_signature}" if qa_signature else "")
+    cache_key = _answer_cache_key(chatbot_id, sede, question, variant)
 
+    anexos: list[dict] = []
     cached = await redis.get(cache_key) if redis else None
     if cached is not None:
         cached_data = json.loads(cached)
         answer = cached_data["answer"]
         relevance_score = cached_data["relevance_score"]
+        anexos = cached_data.get("anexos", [])
     else:
         # En un seguimiento la pregunta sola ("¿y a qué hora?") no tiene contexto
         # suficiente para el embedding, pero anteponerle siempre la pregunta anterior
@@ -413,6 +423,19 @@ async def ask(
             texts.append(f"{history[-1].question}\n{question}")
         q_embeddings = await generate_query_embeddings(texts)
         context, relevance_score, sources = await _retrieve_context(q_embeddings, chatbot_id, sede, db, question=question)
+
+        # Preguntas-respuestas oficiales: van primero en el contexto y, si una corresponde
+        # a lo preguntado, sus anexos acompañan la respuesta.
+        # Se elige antes de generar la respuesta para decirle al LLM qué anexos se adjuntan:
+        # así puede remitir a ellos («diligencia el formato adjunto»), en particular en un
+        # seguimiento como «¿y qué formato lleno?».
+        qa_hits = await qa_service.search(q_embeddings, chatbot_id, sede, db) if qa_signature else []
+        candidates = await qa_service.candidates(qa_hits, db)
+        chosen = await qa_service.choose(candidates, question, history[-1].question if history else None)
+        if qa_hits:
+            context = "\n---\n".join(qa_service.context_blocks(qa_hits, chosen) + ([context] if context else []))
+            if not relevance_score:
+                relevance_score = qa_hits[0].best_similarity
 
         if not context:
             answer = profile.no_info
@@ -436,14 +459,21 @@ async def ask(
                 temperature=0.2,
             )
             answer = completion.choices[0].message.content
-            if profile.cite_main_source and sources and answer.strip() != profile.no_info:
+            anexos = chosen.anexos if chosen else []
+            # Si la respuesta sale de una pregunta-respuesta oficial, esa es la fuente (y su
+            # soporte, los anexos): citar el PDF mejor puntuado sería atribuirla a otro documento.
+            if profile.cite_main_source and sources and not chosen and answer.strip() != profile.no_info:
                 citas = " ".join(f"({name}{f', p. {page}' if page else ''})" for name, page in sources)
                 answer = f"{answer.rstrip()}\n\n{citas}"
+
+        # Sin respuesta no hay soporte que adjuntar
+        if answer.strip() == profile.no_info:
+            anexos = []
 
         if redis and context and answer.strip() != profile.no_info:
             await redis.set(
                 cache_key,
-                json.dumps({"answer": answer, "relevance_score": relevance_score}),
+                json.dumps({"answer": answer, "relevance_score": relevance_score, "anexos": anexos}),
                 ex=_settings.ANSWER_CACHE_TTL_SECONDS,
             )
 
@@ -460,4 +490,4 @@ async def ask(
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
-    return msg
+    return msg, anexos
