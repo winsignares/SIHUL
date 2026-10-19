@@ -15,16 +15,18 @@ services:
     restart: always
     ports:
       - "5432:5432"
+    env_file:
+      - ./.env
     environment:
-      POSTGRES_DB: mypostgresdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - sihul_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mypostgresdb"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,9 +70,9 @@ services:
       # Database (usa los mismos valores que el servicio db)
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: mysecretpassword
-      DB_NAME: mypostgresdb
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
       # Caché compartida entre workers de gunicorn
       REDIS_URL: redis://redis:6379/0
       # Python
@@ -107,7 +109,7 @@ services:
     volumes:
       - ./chatbot:/app
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       REDIS_URL: redis://redis:6379/1
       CHUNK_SIZE: ${CHUNK_SIZE:-900}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-150}
