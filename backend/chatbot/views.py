@@ -3,7 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.db.models import F
 from django.utils import timezone
-from .models import Agente, PreguntaSugerida, Conversacion
+from .anexos import anexos_json
+from .models import Agente, AnexoRespuesta, PreguntaSugerida, Conversacion
 from usuarios.models import Usuario
 import json
 import logging
@@ -85,25 +86,46 @@ def _enviar_pregunta_fastapi(nombre, chatbot_id, sede, pregunta, chat_id=None, i
 
 def _consultar_rag(nombre, chatbot_id, sede, pregunta, chat_id=None, id_usuario=None):
     """
-    Pregunta al servicio RAG. Devuelve (respuesta, None) o, si no se pudo obtener una
-    respuesta válida, (RAG_ERROR_MESSAGE, código_de_error). Quien llama no debe
-    guardar en el historial un intercambio que terminó en error.
+    Pregunta al servicio RAG. Devuelve (respuesta, None, ids_de_anexos) o, si no se pudo
+    obtener una respuesta válida, (RAG_ERROR_MESSAGE, código_de_error, []). Quien llama no
+    debe guardar en el historial un intercambio que terminó en error.
+
+    `ids_de_anexos` son los anexos (documentos de soporte) de la pregunta-respuesta
+    registrada que corresponde a lo preguntado; vacío si no hay ninguna.
     """
     try:
         response = _enviar_pregunta_fastapi(nombre, chatbot_id, sede, pregunta, chat_id=chat_id, id_usuario=id_usuario)
         data = response.json()
     except requests.exceptions.RequestException:
         logger.warning('El servicio RAG no respondió correctamente', exc_info=True)
-        return RAG_ERROR_MESSAGE, 'servicio_no_disponible'
+        return RAG_ERROR_MESSAGE, 'servicio_no_disponible', []
     except ValueError:
         logger.warning('El servicio RAG devolvió una respuesta que no es JSON', exc_info=True)
-        return RAG_ERROR_MESSAGE, 'respuesta_invalida'
+        return RAG_ERROR_MESSAGE, 'respuesta_invalida', []
 
     respuesta = data.get('answer') or data.get('respuesta')
     if not respuesta:
         logger.warning('El servicio RAG devolvió una respuesta vacía: %s', data)
-        return RAG_ERROR_MESSAGE, 'respuesta_vacia'
-    return respuesta, None
+        return RAG_ERROR_MESSAGE, 'respuesta_vacia', []
+    ids_anexos = [a.get('id') for a in data.get('anexos') or [] if isinstance(a, dict) and isinstance(a.get('id'), int)]
+    return respuesta, None, ids_anexos
+
+
+def _anexos_de_respuesta(ids_anexos, agente, sede):
+    """
+    Anexos que el RAG indicó para la respuesta. Se vuelven a consultar aquí (no se confía
+    en lo que diga el RAG): deben ser del mismo agente y sede y estar activos.
+    """
+    if not ids_anexos:
+        return []
+    return list(
+        AnexoRespuesta.objects.filter(
+            id__in=ids_anexos,
+            pregunta_respuesta__agente=agente,
+            pregunta_respuesta__sede=sede,
+            pregunta_respuesta__activo=True,
+        ).order_by('id')
+    )
 
 
 def _registrar_uso_pregunta_sugerida(pregunta_sugerida_id, agente):
@@ -187,7 +209,7 @@ def enviar_pregunta(request):
         _registrar_uso_pregunta_sugerida(pregunta_sugerida_id, agente)
 
         # 1. Enviar pregunta al endpoint RAG (FastAPI)
-        respuesta_texto, error_ia = _consultar_rag(
+        respuesta_texto, error_ia, ids_anexos = _consultar_rag(
             nombre_usuario, agente.id, sede_value, pregunta,
             chat_id=chat_id, id_usuario=usuario.id,
         )
@@ -202,7 +224,8 @@ def enviar_pregunta(request):
                 'mensaje': pregunta,
                 'fecha': timezone.now().isoformat(),
                 'usuario': nombre_usuario,
-                'error': error_ia
+                'error': error_ia,
+                'anexos': [],
             }, status=200)
 
         # 2. Guardar conversación completa (pregunta + respuesta en un solo registro)
@@ -215,8 +238,11 @@ def enviar_pregunta(request):
             respuesta=respuesta_texto,
             fecha=timezone.now()
         )
+        anexos = _anexos_de_respuesta(ids_anexos, agente, sede_value)
+        if anexos:
+            conversacion.anexos.set(anexos)
         
-        # 3. Devolver respuesta al frontend
+        # 3. Devolver respuesta al frontend (con los anexos de soporte, si los hay)
         return JsonResponse({
             'id': conversacion.id,
             'chat_id': str(chat_id),
@@ -224,7 +250,8 @@ def enviar_pregunta(request):
             'mensaje': pregunta,
             'fecha': conversacion.fecha.isoformat(),
             'usuario': nombre_usuario,
-            'error': error_ia
+            'error': error_ia,
+            'anexos': anexos_json(request, anexos),
         }, status=200)
             
     except json.JSONDecodeError:
@@ -259,7 +286,11 @@ def obtener_historial(request):
             query = query.filter(id_usuario=id_usuario)
         
         # Obtener conversaciones ordenadas por fecha
-        conversaciones = query.order_by('fecha').select_related('chatbot')
+        conversaciones = (
+            query.order_by('fecha')
+            .select_related('chatbot')
+            .prefetch_related('anexos__pregunta_respuesta')
+        )
         
         # Formatear respuesta - Convertir cada conversación a par de mensajes para el frontend
         mensajes_lista = []
@@ -274,7 +305,9 @@ def obtener_historial(request):
                 'leido': True,
                 'usuario': conv.usuario
             })
-            # Respuesta del agente
+            # Respuesta del agente, con enlaces nuevos (los firmados caducan) a los anexos
+            # que la acompañaron y que siguen disponibles
+            anexos = [a for a in conv.anexos.all() if a.pregunta_respuesta.activo]
             mensajes_lista.append({
                 'id': f"{conv.id}-bot",
                 'chat_id': str(conv.chat_id),
@@ -282,7 +315,8 @@ def obtener_historial(request):
                 'texto': conv.respuesta,
                 'timestamp': conv.fecha.isoformat(),
                 'leido': True,
-                'usuario': conv.chatbot.nombre
+                'usuario': conv.chatbot.nombre,
+                'anexos': anexos_json(request, anexos),
             })
         
         return JsonResponse({
@@ -398,7 +432,8 @@ def enviar_pregunta_publico(request):
 
         # Enviar pregunta al endpoint RAG (FastAPI); si falla, respuesta_texto ya es
         # el mensaje genérico para el usuario
-        respuesta_texto, _error_ia = _consultar_rag(nombre_usuario, agente.id, sede_value, pregunta, chat_id=chat_id)
+        respuesta_texto, _error_ia, ids_anexos = _consultar_rag(nombre_usuario, agente.id, sede_value, pregunta, chat_id=chat_id)
+        anexos = _anexos_de_respuesta(ids_anexos, agente, sede_value)
 
         # NO guardamos la conversación para usuarios públicos
         # Retornamos directamente la respuesta
@@ -406,7 +441,8 @@ def enviar_pregunta_publico(request):
         return JsonResponse({
             'chat_id': chat_id,
             'respuesta': respuesta_texto,
-            'timestamp': timezone.now().isoformat()
+            'timestamp': timezone.now().isoformat(),
+            'anexos': anexos_json(request, anexos),
         }, status=200)
         
     except json.JSONDecodeError:

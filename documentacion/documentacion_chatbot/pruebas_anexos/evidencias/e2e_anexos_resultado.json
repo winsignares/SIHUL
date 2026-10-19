@@ -1,0 +1,312 @@
+[
+  {
+    "prueba": "Chat sin anexos registrados responde normal",
+    "ok": true,
+    "detalle": "Las faltas graves según el manual de convivencia son:\n\n1. Incumplir los compromisos adquiridos en coordinación o con el "
+  },
+  {
+    "prueba": "Chat sin anexos devuelve anexos=[]",
+    "ok": true,
+    "detalle": "[]"
+  },
+  {
+    "prueba": "Crear pregunta-respuesta con 5 anexos (doc, docx, pdf, xls, xlsx) -> 201",
+    "ok": true,
+    "detalle": "201"
+  },
+  {
+    "prueba": "Se guardaron los 5 anexos",
+    "ok": true,
+    "detalle": "['Formato_cancelacion_matricula.docx', 'Formato_cancelacion_matricula.doc', 'Instructivo_cancelacion_matricula.pdf', 'Tabla_devoluciones_matricula.xlsx', 'Tabla_devoluciones_matricula.xls']"
+  },
+  {
+    "prueba": "  Formato_cancelacion_matricula.docx: MIME y tamaño correctos",
+    "ok": true,
+    "detalle": "application/vnd.openxmlformats-officedocument.wordprocessingml.document 13322"
+  },
+  {
+    "prueba": "  Formato_cancelacion_matricula.doc: MIME y tamaño correctos",
+    "ok": true,
+    "detalle": "application/msword 25088"
+  },
+  {
+    "prueba": "  Instructivo_cancelacion_matricula.pdf: MIME y tamaño correctos",
+    "ok": true,
+    "detalle": "application/pdf 17186"
+  },
+  {
+    "prueba": "  Tabla_devoluciones_matricula.xlsx: MIME y tamaño correctos",
+    "ok": true,
+    "detalle": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet 9050"
+  },
+  {
+    "prueba": "  Tabla_devoluciones_matricula.xls: MIME y tamaño correctos",
+    "ok": true,
+    "detalle": "application/vnd.ms-excel 26112"
+  },
+  {
+    "prueba": "  Descarga (gestión) Formato_cancelacion_matricula.docx: archivo idéntico",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "  Descarga (gestión) Formato_cancelacion_matricula.doc: archivo idéntico",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "  Descarga (gestión) Instructivo_cancelacion_matricula.pdf: archivo idéntico",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "  Descarga (gestión) Tabla_devoluciones_matricula.xlsx: archivo idéntico",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "  Descarga (gestión) Tabla_devoluciones_matricula.xls: archivo idéntico",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Rechaza virus.exe (extensión no permitida) -> 400",
+    "ok": true,
+    "detalle": "«virus.exe»: formato no permitido. Se aceptan Word (.doc, .docx), PDF (.pdf) y Excel (.xls, .xlsx)."
+  },
+  {
+    "prueba": "Rechaza notas.txt (extensión no permitida) -> 400",
+    "ok": true,
+    "detalle": "«notas.txt»: formato no permitido. Se aceptan Word (.doc, .docx), PDF (.pdf) y Excel (.xls, .xlsx)."
+  },
+  {
+    "prueba": "Rechaza falso.pdf (PDF con contenido falso) -> 400",
+    "ok": true,
+    "detalle": "«falso.pdf» no es un archivo .pdf válido o está dañado."
+  },
+  {
+    "prueba": "Rechaza falso.docx (ZIP que no es Word) -> 400",
+    "ok": true,
+    "detalle": "«falso.docx» no es un archivo .docx válido o está dañado."
+  },
+  {
+    "prueba": "Rechaza falso.xls (XLS con contenido falso) -> 400",
+    "ok": true,
+    "detalle": "«falso.xls» no es un archivo .xls válido o está dañado."
+  },
+  {
+    "prueba": "Rechaza grande.pdf (supera 15 MB) -> 400",
+    "ok": true,
+    "detalle": "«grande.pdf» supera el máximo de 15 MB."
+  },
+  {
+    "prueba": "Rechaza vacio.pdf (archivo vacío) -> 400",
+    "ok": true,
+    "detalle": "«vacio.pdf» está vacío."
+  },
+  {
+    "prueba": "Rechaza más de 5 anexos -> 400",
+    "ok": true,
+    "detalle": "Máximo 5 anexos por respuesta."
+  },
+  {
+    "prueba": "Rechaza pregunta/respuesta vacías -> 400",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Estudiante NO puede listar la gestión -> 403",
+    "ok": true,
+    "detalle": "403"
+  },
+  {
+    "prueba": "Estudiante NO puede crear -> 403",
+    "ok": true,
+    "detalle": "403"
+  },
+  {
+    "prueba": "Sin sesión NO puede listar la gestión -> 401/403",
+    "ok": true,
+    "detalle": "403"
+  },
+  {
+    "prueba": "Admin lista la pregunta creada",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Chat (pregunta parafraseada) responde",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Chat devuelve los 5 anexos con nombre, url y tipo",
+    "ok": true,
+    "detalle": "['Formato_cancelacion_matricula.docx', 'Formato_cancelacion_matricula.doc', 'Instructivo_cancelacion_matricula.pdf', 'Tabla_devoluciones_matricula.xlsx', 'Tabla_devoluciones_matricula.xls']"
+  },
+  {
+    "prueba": "  Descarga (chat) Formato_cancelacion_matricula.docx: 200, attachment, idéntico",
+    "ok": true,
+    "detalle": "200 application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  },
+  {
+    "prueba": "  Descarga (chat) Formato_cancelacion_matricula.doc: 200, attachment, idéntico",
+    "ok": true,
+    "detalle": "200 application/msword"
+  },
+  {
+    "prueba": "  Descarga (chat) Instructivo_cancelacion_matricula.pdf: 200, attachment, idéntico",
+    "ok": true,
+    "detalle": "200 application/pdf"
+  },
+  {
+    "prueba": "  Descarga (chat) Tabla_devoluciones_matricula.xlsx: 200, attachment, idéntico",
+    "ok": true,
+    "detalle": "200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
+  {
+    "prueba": "  Descarga (chat) Tabla_devoluciones_matricula.xls: 200, attachment, idéntico",
+    "ok": true,
+    "detalle": "200 application/vnd.ms-excel"
+  },
+  {
+    "prueba": "Respuesta oficial no se atribuye a otro PDF",
+    "ok": true,
+    "detalle": "rmato en los documentos de soporte de esta respuesta. ¡Espero que esto te ayude!"
+  },
+  {
+    "prueba": "Seguimiento en el mismo hilo (\"¿y qué formato…?\") entrega los anexos",
+    "ok": true,
+    "detalle": "Para cancelar tu matrícula, debes llenar el formato de cancelación de matrícula. Puedes descargar el formato en los docu"
+  },
+  {
+    "prueba": "El texto no inventa enlaces (los anexos van como botones)",
+    "ok": true,
+    "detalle": "Para cancelar tu matrícula, debes llenar el formato de cancelación de matrícula. Puedes descargar el formato en los documentos de soporte de esta respuesta. ¡Espero que esto te ayude!"
+  },
+  {
+    "prueba": "Mismo tema, otra intención (\"¿Cómo pago la matrícula?\") NO lleva anexos",
+    "ok": true,
+    "detalle": "Actualmente no cuento con esta información, te recomiendo comunicarte directamente con la oficina de tu sede para obtene"
+  },
+  {
+    "prueba": "Historial conserva los anexos de la respuesta",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Enlace del historial descarga el archivo",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Pregunta no relacionada NO lleva anexos",
+    "ok": true,
+    "detalle": "[]"
+  },
+  {
+    "prueba": "Pregunta no relacionada sigue citando el PDF del RAG",
+    "ok": true,
+    "detalle": "en el protocolo para faltas gravísimas.\n\n(MANUAL-DE-CONVIVENCIA-2025.pdf, p. 14)"
+  },
+  {
+    "prueba": "Chat público devuelve los anexos",
+    "ok": true,
+    "detalle": "Para cancelar la matrícula, debes radicar la solicitud de cancelación en la Secretaría Académica de "
+  },
+  {
+    "prueba": "Chat público: descarga sin sesión",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Chat público, pregunta no relacionada: sin anexos",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Otra sede (Bogotá) NO recibe anexos de Barranquilla",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Sin token -> 403",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Token alterado -> 403",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Token de un anexo no sirve para otro -> 403",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Cabeceras seguras (nosniff, no-store)",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Editar: quita .doc y .xls y agrega un .docx nuevo",
+    "ok": true,
+    "detalle": "['Formato_cancelacion_matricula.docx', 'Formato_cancelacion_v2.docx', 'Instructivo_cancelacion_matricula.pdf', 'Tabla_devoluciones_matricula.xlsx']"
+  },
+  {
+    "prueba": "Chat refleja la edición (4 anexos, sin caché vieja)",
+    "ok": true,
+    "detalle": "['Formato_cancelacion_matricula.docx', 'Instructivo_cancelacion_matricula.pdf', 'Tabla_devoluciones_matricula.xlsx', 'Formato_cancelacion_v2.docx']"
+  },
+  {
+    "prueba": "Anexo eliminado ya no se descarga -> 404",
+    "ok": true,
+    "detalle": "404"
+  },
+  {
+    "prueba": "Edición conserva el resto de anexos descargables",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Desactivar -> 200",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Enlace de chat de una pregunta inactiva -> 404",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Enlace de gestión sigue sirviendo (para el administrador)",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Chat con la pregunta inactiva: sin anexos",
+    "ok": true,
+    "detalle": "Actualmente no cuento con esta información, te recomiendo comunicarte directamente con la oficina de"
+  },
+  {
+    "prueba": "API RAG /chat/ask expone anexos",
+    "ok": true,
+    "detalle": "['Formato_cancelacion_matricula.docx', 'Instructivo_cancelacion_matricula.pdf', 'Tabla_devoluciones_matricula.xlsx', 'Formato_cancelacion_v2.docx']"
+  },
+  {
+    "prueba": "Eliminar pregunta-respuesta -> 204",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Sus anexos ya no se descargan",
+    "ok": true,
+    "detalle": ""
+  },
+  {
+    "prueba": "Chat tras eliminar: sin anexos, sigue respondiendo",
+    "ok": true,
+    "detalle": ""
+  }
+]

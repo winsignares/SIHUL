@@ -20,9 +20,11 @@ Frontend (React) ──► Django (backend/chatbot) ──requests──► Fast
 | Tabla | La crea | Contenido |
 |---|---|---|
 | `chatbot_agente`, `chatbot_preguntasugerida`, `chatbot_conversacion` | Django (migraciones) | Agentes, preguntas rápidas, historial por usuario/hilo |
+| `chatbot_preguntarespuesta`, `chatbot_anexorespuesta`, `chatbot_conversacion_anexos` | Django (migración `0014`) | Preguntas-respuestas oficiales con anexos y qué anexos acompañó cada respuesta (ver [ANEXOS_PREGUNTAS_RESPUESTAS.md](ANEXOS_PREGUNTAS_RESPUESTAS.md)) |
 | `documents`, `chunks`, `chat_messages` | FastAPI (al arrancar) | Documentos, fragmentos con su embedding, registro de preguntas del RAG |
+| `qa_embeddings` | FastAPI (al arrancar) | Embedding de cada pregunta registrada en `chatbot_preguntarespuesta` |
 
-Django ve las tablas del RAG con modelos `managed=False` (`ChatbotDocument`, `ChatbotChunk`, `ChatbotAppMessage`) solo para consultarlas desde el admin. FastAPI lee `chatbot_agente` con SQL para validar que el chatbot exista y esté activo.
+Django ve las tablas del RAG con modelos `managed=False` (`ChatbotDocument`, `ChatbotChunk`, `ChatbotAppMessage`) solo para consultarlas desde el admin. FastAPI lee `chatbot_agente` con SQL para validar que el chatbot exista y esté activo, y `chatbot_preguntarespuesta`/`chatbot_anexorespuesta` para las preguntas-respuestas con anexos.
 
 **Esquema del RAG.** No usa un sistema de migraciones: al arrancar, `_prepare_schema` (`chatbot/app/main.py`) ejecuta `create_all` y añade de forma idempotente las columnas posteriores (`_EXTRA_COLUMNS`). Todo ocurre en una transacción protegida por un *advisory lock* de Postgres, de modo que varios procesos arrancando a la vez no chocan. Para añadir una columna: declararla en `models.py`, agregarla a `_EXTRA_COLUMNS` y reflejarla (si Django debe verla) en `backend/chatbot/models.py` con una migración de estado (ver `0009`), que no ejecuta SQL.
 
@@ -36,20 +38,21 @@ core/config.py          → Settings (pydantic): variables de entorno y valores 
 core/database.py        → conexión SQLAlchemy async
 core/cache.py           → cliente Redis y borrado de respuestas cacheadas
 core/sedes.py           → enum de sedes válidas
-models/models.py        → Document, Chunk (vector), ChatMessage
-routers/                → chat.py, documents.py, chatbots.py
+models/models.py        → Document, Chunk (vector), ChatMessage, QAEmbedding
+routers/                → chat.py, documents.py, chatbots.py, qa.py
 schemas/schemas.py      → modelos Pydantic de entrada/salida
 services/
   text_extraction.py    → extracción de texto y troceado estructurado
   document_service.py   → ingesta (validaciones, duplicados, embeddings, persistencia)
   embedding_service.py  → embeddings por lotes
   chat_service.py       → RAG: recuperación, memoria del hilo, LLM, caché
+  qa_service.py         → preguntas-respuestas oficiales: búsqueda, elección y anexos
   chatbot_service.py    → lectura de agentes (tabla de Django)
 ```
 
 ## Endpoints del RAG (`/chatbot/api/v1`)
 
-`POST /documents/upload` · `GET /documents/` · `DELETE /documents/{id}` · `POST /chat/ask` · `GET /chat/history` · `GET /chatbots/` · `GET /sedes` · `GET /health`
+`POST /documents/upload` · `GET /documents/` · `DELETE /documents/{id}` · `POST /chat/ask` · `GET /chat/history` · `POST /qa/sync` · `GET /chatbots/` · `GET /sedes` · `GET /health`
 
 El RAG **no tiene autenticación propia**: la autorización la hace Django (`PuedeGestionarChatbots`, usuario autenticado) y el RAG debe ser inaccesible desde fuera de la red del stack.
 
@@ -102,7 +105,12 @@ Los errores de ingesta usan `IngestionError` con su código HTTP: 409 duplicado,
 - `views.py`: `enviar_pregunta` (usuario autenticado: resuelve la sede por su seccional, guarda `Conversacion`) y `enviar_pregunta_publico` (sede indicada por el cliente, sin historial). Si el RAG no responde, se muestra al usuario un mensaje genérico y **el intercambio no se guarda** en el historial.
 - `api_urls.py` (`/api/chatbot/…`): rutas que usa el frontend (los agentes se pueden listar estando autenticado; modificarlos exige poder gestionar chatbots). `urls.py` (`/chatbot/…`) son rutas **heredadas** que ya no usa el frontend.
 - `admin_views.py`: proxy autenticado hacia el RAG para subir, listar y borrar documentos (permiso "Gestión de Chatbots"). El borrado es idempotente (un 404 del RAG se devuelve como 204).
-- `signals.py`: al **borrar un agente** se eliminan sus documentos (los chunks caen por `ON DELETE CASCADE`) y sus mensajes en el RAG, que no tienen clave foránea.
+- `signals.py`: al **borrar un agente** se eliminan sus documentos (los chunks caen por `ON DELETE CASCADE`) y sus mensajes en el RAG, que no tienen clave foránea. Al borrar un anexo se borra su archivo del disco.
+- `preguntas_respuestas_views.py` y `anexos.py`: gestión de preguntas-respuestas con anexos y descarga con enlace firmado (ver «Preguntas-respuestas con anexos»).
+
+## Preguntas-respuestas con anexos
+
+Respuestas oficiales por chatbot y seccional con documentos de soporte (Word, PDF, Excel) que el chat entrega como enlaces de descarga. En `POST /chat/ask`, las preguntas registradas parecidas a la del usuario entran al contexto antes que los fragmentos; si una corresponde a lo que se pregunta (similitud casi idéntica o confirmación de un verificador), la respuesta devuelve sus `anexos` y no lleva la cita automática del PDF. Detalle completo (modelo, API, seguridad, umbrales, pruebas) en [ANEXOS_PREGUNTAS_RESPUESTAS.md](ANEXOS_PREGUNTAS_RESPUESTAS.md).
 
 ## Variables de entorno (`chatbot/.env`)
 
@@ -120,6 +128,7 @@ El chatbot usa su **propio** archivo (`chatbot/.env`, plantilla en `chatbot/.env
 | `MAX_UPLOAD_MB` / `MAX_CHUNKS_PER_DOCUMENT` | `25` / `5000` | Límites de ingesta |
 | `OPENAI_TIMEOUT_SECONDS` / `OPENAI_INGEST_TIMEOUT_SECONDS` | `18` / `60` | Tiempos de consulta e ingesta |
 | `REDIS_URL` / `ANSWER_CACHE_TTL_SECONDS` | — / `3600` | Caché de respuestas (opcional) |
+| `QA_MIN_SIMILARITY` / `QA_ANEXO_MIN_SIMILARITY` / `QA_ANEXO_AUTO_SIMILARITY` / `QA_TOP_K` | `0.45` / `0.55` / `0.92` / `3` | Preguntas-respuestas con anexos (ver su documento) |
 
 ### Cambiar el modelo de embeddings
 Los vectores de modelos distintos no son comparables. Para cambiar `EMBEDDING_MODEL`: si la dimensión cambia, actualizar `EMBEDDING_DIM` y recrear `chunks.embedding` (el servicio no arranca mientras no coincidan); en cualquier caso, **volver a cargar los documentos**. Al arrancar se avisa de los documentos procesados con otro modelo.

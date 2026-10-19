@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.sedes import Sede
 from app.models.models import ChatMessage
-from app.schemas.schemas import ChatRequest, ChatResponse, ChatHistoryItem
+from app.schemas.schemas import AnexoOut, ChatRequest, ChatResponse, ChatHistoryItem
 from app.services.chat_service import ask
 from app.services.chatbot_service import get_chatbot
 
@@ -36,7 +36,7 @@ async def ask_question(
     if not chatbot["activo"]:
         raise HTTPException(status_code=400, detail=f"El chatbot '{chatbot['nombre']}' está inactivo")
     try:
-        return await ask(
+        msg, anexos = await ask(
             nombre=body.nombre,
             chatbot_id=body.chatbot_id,
             sede=body.sede,
@@ -46,6 +46,9 @@ async def ask_question(
             id_usuario=body.id_usuario,
             tipo=chatbot.get("tipo"),
             instrucciones=chatbot.get("instrucciones_adicionales"),
+        )
+        return ChatResponse.model_validate(msg).model_copy(
+            update={"anexos": [AnexoOut(**a) for a in anexos]}
         )
     except openai.OpenAIError:
         # Tiempo agotado, sin conexión, cuota o clave inválida: el detalle va al log,

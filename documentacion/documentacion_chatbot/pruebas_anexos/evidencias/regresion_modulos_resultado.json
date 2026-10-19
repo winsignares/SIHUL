@@ -1,0 +1,197 @@
+[
+  {
+    "prueba": "Login con contraseña incorrecta se rechaza",
+    "ok": true,
+    "detalle": "401"
+  },
+  {
+    "prueba": "Login admin",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Login estudiante",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Estado de sesión del admin",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Seccionales (/api/seccionales/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Sedes (/api/sedes/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Facultades (/api/facultades/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Programas (/api/programas/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Asignaturas (/api/asignaturas/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Grupos (/api/grupos/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Tipos de espacio (/api/tipos-espacio/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Espacios (/api/espacios/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Horarios (/api/horarios/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Horarios extendidos (/api/horarios/list/extendidos/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Horarios fusionados (/api/horarios-fusionados/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Solicitudes de espacio (/api/solicitudes-espacio/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Recursos (/api/recursos/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Roles (/api/roles/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Usuarios (/api/usuarios/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Periodos (/api/periodos/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Componentes (/api/componentes/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Préstamos: tipos de actividad (/api/prestamos/tipos-actividad/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Préstamos de espacios (/api/prestamos/espacios/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Préstamos públicos (/api/prestamos/publicos/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Notificaciones (/api/notificaciones/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Reporte de capacidad (/api/espacios/reporte/capacidad/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Reporte de ocupación (/api/espacios/reporte/ocupacion/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Chatbot: agentes (/api/chatbot/agentes/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Chatbot: preguntas sugeridas (/api/chatbot/preguntas/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Chatbot: documentos RAG (/api/chatbot/admin/documentos/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Chatbot: agentes públicos (/api/chatbot/public/agentes/)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Reporte de capacidad en PDF",
+    "ok": true,
+    "detalle": "200 application/pdf"
+  },
+  {
+    "prueba": "Mi horario (estudiante)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Notificaciones (estudiante)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Chatbot: agentes (estudiante)",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Estudiante NO ve el horario de otro usuario",
+    "ok": true,
+    "detalle": "403"
+  },
+  {
+    "prueba": "Estudiante NO entra a la gestión de documentos del chatbot",
+    "ok": true,
+    "detalle": "403"
+  },
+  {
+    "prueba": "Logout admin",
+    "ok": true,
+    "detalle": "200"
+  },
+  {
+    "prueba": "Tras el logout no se accede a usuarios",
+    "ok": true,
+    "detalle": "403"
+  }
+]

@@ -4,9 +4,29 @@ from django.db import DatabaseError, transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
-from .models import Agente, ChatbotAppMessage, ChatbotDocument
+from .models import Agente, AnexoRespuesta, ChatbotAppMessage, ChatbotDocument
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_delete, sender=AnexoRespuesta)
+def borrar_archivo_del_anexo(sender, instance, **kwargs):
+    """
+    Borra del almacenamiento el archivo de un anexo eliminado (directamente, o en cascada
+    al borrar su pregunta-respuesta o su agente). Se hace al confirmar la transacción:
+    si se revierte, el registro vuelve y su archivo debe seguir ahí.
+    """
+    archivo = instance.archivo
+    if not archivo:
+        return
+
+    def borrar():
+        try:
+            archivo.storage.delete(archivo.name)
+        except OSError:
+            logger.warning('No se pudo borrar el archivo del anexo %s', archivo.name, exc_info=True)
+
+    transaction.on_commit(borrar)
 
 
 @receiver(post_delete, sender=Agente)

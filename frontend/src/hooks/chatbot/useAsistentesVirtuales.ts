@@ -426,7 +426,8 @@ export function useAsistentesVirtuales() {
                         tipo: msg.tipo,
                         texto: msg.texto,
                         timestamp: new Date(msg.timestamp),
-                        leido: true
+                        leido: true,
+                        anexos: msg.anexos ?? []
                     }));
 
                     // Solo actualizar si no tenemos mensajes locales o si el backend tiene más mensajes
@@ -568,7 +569,8 @@ export function useAsistentesVirtuales() {
                     tipo: 'bot',
                     texto: response.respuesta,
                     timestamp: new Date(response.timestamp || Date.now()),
-                    leido: false
+                    leido: false,
+                    anexos: response.anexos ?? []
                 };
 
                 const mensajesActuales = mensajes[asistenteActivo.id] || [];
@@ -653,7 +655,8 @@ export function useAsistentesVirtuales() {
                     tipo: 'bot',
                     texto: response.respuesta,
                     timestamp: new Date(response.fecha),
-                    leido: false
+                    leido: false,
+                    anexos: response.anexos ?? []
                 };
 
                 // Actualizar mensajes con los datos reales del backend
@@ -765,7 +768,8 @@ export function useAsistentesVirtuales() {
                         tipo: msg.tipo,
                         texto: msg.texto,
                         timestamp: new Date(msg.timestamp),
-                        leido: true
+                        leido: true,
+                        anexos: msg.anexos ?? []
                     }));
 
                     setMensajes(prev => ({

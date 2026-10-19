@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models.functions import Lower
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+import os
 import uuid
 
 User = get_user_model()
@@ -90,6 +91,15 @@ class Conversacion(models.Model):
     # Contenido de la conversación (pregunta + respuesta en un solo registro)
     mensaje = models.TextField(help_text='Pregunta enviada por el usuario')
     respuesta = models.TextField(help_text='Respuesta generada por el agente IA')
+
+    # Documentos de soporte que acompañaron la respuesta, para volver a ofrecerlos al
+    # reabrir el historial. Si un anexo se elimina, simplemente deja de aparecer.
+    anexos = models.ManyToManyField(
+        'AnexoRespuesta',
+        blank=True,
+        related_name='conversaciones',
+        help_text='Anexos (documentos de soporte) entregados con la respuesta',
+    )
     
     # Timestamp
     fecha = models.DateTimeField(default=timezone.now, db_index=True)
@@ -106,6 +116,66 @@ class Conversacion(models.Model):
     
     def __str__(self):
         return f"{self.usuario} -> {self.chatbot.nombre}: {self.mensaje[:50]} ({self.fecha.strftime('%Y-%m-%d %H:%M')})"
+
+
+class PreguntaRespuesta(models.Model):
+    """
+    Pareja pregunta | respuesta oficial de un agente en una sede, con sus anexos
+    (documentos de soporte que la persona debe presentar o diligenciar).
+
+    El servicio RAG (chatbot/app/services/qa_service.py) lee esta tabla directamente:
+    compara la pregunta del usuario con `pregunta`, usa la respuesta como contexto
+    prioritario y, si la pareja corresponde a lo preguntado, entrega sus anexos junto
+    con la respuesta del chatbot.
+    """
+
+    agente = models.ForeignKey(Agente, on_delete=models.CASCADE, related_name='preguntas_respuestas')
+    # Mismo valor de sede que usa el servicio RAG ('barranquilla', 'bogota', ...).
+    sede = models.CharField(max_length=50, db_index=True)
+    pregunta = models.TextField()
+    respuesta = models.TextField()
+    activo = models.BooleanField(default=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Pregunta y respuesta'
+        verbose_name_plural = 'Preguntas y respuestas'
+        ordering = ['agente_id', '-actualizado']
+        indexes = [models.Index(fields=['agente', 'sede', 'activo'])]
+
+    def __str__(self):
+        return f'{self.agente.nombre} ({self.sede}) - {self.pregunta[:50]}'
+
+
+def anexo_respuesta_upload_to(instance, filename):
+    # Nombre aleatorio en disco: la ruta no debe poder adivinarse. El nombre original se
+    # conserva en AnexoRespuesta.nombre y es el que recibe quien lo descarga.
+    extension = os.path.splitext(filename)[1].lower()
+    return f'chatbot/anexos/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{extension}'
+
+
+class AnexoRespuesta(models.Model):
+    """Documento de soporte (Word, PDF o Excel) adjunto a una pregunta-respuesta."""
+
+    pregunta_respuesta = models.ForeignKey(PreguntaRespuesta, on_delete=models.CASCADE, related_name='anexos')
+    archivo = models.FileField(upload_to=anexo_respuesta_upload_to, max_length=255)
+    nombre = models.CharField(max_length=255, help_text='Nombre original del archivo')
+    tipo_mime = models.CharField(max_length=150)
+    tamano = models.PositiveIntegerField(help_text='Tamaño en bytes')
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anexo de respuesta'
+        verbose_name_plural = 'Anexos de respuestas'
+        ordering = ['id']
+
+    @property
+    def extension(self):
+        return os.path.splitext(self.nombre)[1].lower().lstrip('.')
+
+    def __str__(self):
+        return self.nombre
 
 
 class ChatbotDocument(models.Model):

@@ -50,6 +50,11 @@ DEFAULT_FRONTEND_URL = 'http://localhost:5173' if DEBUG else 'https://sihul.unil
 FRONTEND_URL = os.getenv('FRONTEND_URL', DEFAULT_FRONTEND_URL).rstrip('/')
 MICROSOFT_OAUTH_ENABLED = bool(MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET)
 CHATBOT_FASTAPI_URL = os.getenv('CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1').rstrip('/')
+# Anexos (documentos de soporte) de las preguntas-respuestas de los chatbots
+CHATBOT_ANEXO_MAX_MB = int(os.getenv('CHATBOT_ANEXO_MAX_MB', '15'))
+CHATBOT_ANEXO_MAX_POR_RESPUESTA = int(os.getenv('CHATBOT_ANEXO_MAX_POR_RESPUESTA', '5'))
+# Vigencia (segundos) de los enlaces de descarga que se entregan en el chat
+CHATBOT_ANEXO_URL_MAX_AGE = int(os.getenv('CHATBOT_ANEXO_URL_MAX_AGE', str(7 * 24 * 3600)))
 
 
 # Application definition

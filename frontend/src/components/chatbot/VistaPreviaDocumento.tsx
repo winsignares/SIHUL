@@ -13,14 +13,18 @@ export function VistaPreviaDocumento({ documento, onCerrar }: { documento: Docum
     const [url, setUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    // La vista previa solo depende de qué documento es; cambiar de página no lo vuelve a descargar
+    const agenteId = documento?.agenteId;
+    const archivo = documento?.archivo;
+
     useEffect(() => {
-        if (!documento) return;
+        if (agenteId === undefined || !archivo) return;
         let activo = true;
         let objectUrl: string | null = null;
         setUrl(null);
         setError(null);
         chatbotAPI
-            .obtenerArchivoDocumento(documento.agenteId, documento.archivo)
+            .obtenerArchivoDocumento(agenteId, archivo)
             .then((blob) => {
                 if (!activo) return;
                 objectUrl = URL.createObjectURL(blob);
@@ -33,7 +37,7 @@ export function VistaPreviaDocumento({ documento, onCerrar }: { documento: Docum
             activo = false;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [documento?.agenteId, documento?.archivo]);
+    }, [agenteId, archivo]);
 
     const pagina = documento?.pagina && documento.pagina > 0 ? documento.pagina : 1;
     return (

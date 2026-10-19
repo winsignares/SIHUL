@@ -7,7 +7,7 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.database import engine, Base
 from app.core.sedes import Sede
-from app.routers import documents, chat, chatbots
+from app.routers import documents, chat, chatbots, qa
 
 # Tablas ya existentes antes de introducir nuevas columnas: create_all no altera
 # tablas existentes, así que se agregan manualmente y de forma idempotente. No se
@@ -140,6 +140,7 @@ app.add_middleware(
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(chatbots.router, prefix="/api/v1")
+app.include_router(qa.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"], summary="Estado del servicio")

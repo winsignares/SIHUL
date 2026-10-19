@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
-import { Bot, FilePenLine, FileText, FileUp, PauseCircle, PlayCircle, Plus, Save, Search, Settings2, Trash2, UploadCloud } from 'lucide-react';
+import { Bot, FilePenLine, FileText, FileUp, MessageSquarePlus, PauseCircle, PlayCircle, Plus, Save, Search, Settings2, Trash2, UploadCloud } from 'lucide-react';
+import { PreguntasRespuestasTab } from '../../components/chatbot/PreguntasRespuestasTab';
 import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
@@ -42,6 +43,7 @@ export default function GestionChatbots() {
       <Tabs defaultValue="documentos" className="w-full space-y-4">
         <TabsList>
           <TabsTrigger value="documentos" className="flex items-center gap-2"><FileText className="h-4 w-4" />Documentos</TabsTrigger>
+          <TabsTrigger value="preguntas" className="flex items-center gap-2"><MessageSquarePlus className="h-4 w-4" />Preguntas y respuestas</TabsTrigger>
           {puedeGestionarChatbots && <TabsTrigger value="chatbots" className="flex items-center gap-2"><Bot className="h-4 w-4" />Chatbots disponibles</TabsTrigger>}
         </TabsList>
 
@@ -111,6 +113,8 @@ export default function GestionChatbots() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="preguntas"><PreguntasRespuestasTab seccional={seccionalUsuario} seccionalValida={seccionalValida} chatbots={chatbots} /></TabsContent>
 
         {puedeGestionarChatbots && <TabsContent value="chatbots"><ChatbotsTable state={state} /></TabsContent>}
       </Tabs>
