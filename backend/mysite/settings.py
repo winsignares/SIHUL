@@ -76,6 +76,11 @@ INSTALLED_APPS = [
     'chatbot',
     'unispace.notificaciones',
     'financiero',  # App nueva para gestión financiera
+    'financiero.proveedores',
+    'financiero.contabilidad',
+    'financiero.facturas',
+    'financiero.parametros',
+    'financiero.reportes',
     'rest_framework',
     'corsheaders',
     'django_filters',  # Para filtrados en API
