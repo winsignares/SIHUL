@@ -47,12 +47,16 @@ def _sync_espacios_permitidos_usuario(usuario, espacios_ids):
     if fuera_sede:
         return f'Los espacios no pertenecen a la sede del usuario: {fuera_sede}'
 
-    EspacioPermitido.objects.filter(usuario=usuario).delete()
-    usuario.tipos_espacio_permitidos.all().delete()  # asignación individual: sin tipos
+    # Asignación individual: reemplaza las asignadas a mano; las derivadas de tipos se ponen al día
+    from espacios import alcance
+
+    EspacioPermitido.objects.filter(usuario=usuario, individual=True).delete()
+    EspacioPermitido.objects.filter(usuario=usuario, espacio_id__in=ids_unicos).delete()
     EspacioPermitido.objects.bulk_create([
-        EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id])
+        EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id], individual=True)
         for espacio_id in ids_unicos
     ])
+    alcance.sincronizar_por_tipos(usuario)
     return None
 
 

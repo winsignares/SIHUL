@@ -363,6 +363,7 @@ def list_espacios_by_usuario(request, usuario_id=None):
                     'estado': ep.espacio.estado,
                     'sede_id': ep.espacio.sede.id,
                     'recursos': recursos,
+                    'individual': ep.individual,
                 }
             )
 

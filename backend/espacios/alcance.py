@@ -6,9 +6,12 @@ asignó, de dos formas:
 
 - **Asignación por tipo** (`TipoEspacioPermitido`): todos los espacios de ese tipo en su sede,
   también los que se creen después. Es la única que permite CREAR espacios, y solo de esos
-  tipos. Sus `EspacioPermitido` se mantienen derivados de los tipos (`sincronizar_por_tipos`).
-- **Asignación individual** (`EspacioPermitido` sin tipos): solo esos espacios; puede
+  tipos. Sus `EspacioPermitido` derivados (individual=False) los mantiene `sincronizar_por_tipos`.
+- **Asignación individual** (`EspacioPermitido` con individual=True): solo esos espacios; puede
   consultarlos, editarlos y gestionar sus préstamos, pero no crear ni tocar ningún otro.
+
+Ambas se pueden combinar: un supervisor con un tipo asignado y, además, espacios sueltos de otros
+tipos gestiona los espacios de su tipo y esos espacios; crear solo puede los de sus tipos.
 
 Los demás usuarios (admins, superusuarios, quienes no supervisan espacios) no se ven afectados por
 estas reglas. «Supervisa espacios» lo decide solo la casilla del rol (`Rol.supervisa_espacios`).
@@ -51,6 +54,11 @@ def resumen_sesion(user) -> dict:
     }
 
 
+def individuales_ids(user) -> set[int]:
+    """Espacios asignados a mano (no derivados de un tipo)."""
+    return set(EspacioPermitido.objects.filter(usuario=user, individual=True).values_list('espacio_id', flat=True))
+
+
 def puede_crear_espacios(user) -> bool:
     """Si puede crear espacios en general (los no restringidos sí; los supervisores, solo con tipos)."""
     return not esta_restringido(user) or bool(tipos_ids(user))
@@ -90,31 +98,39 @@ def motivo_no_puede_actualizar(user, espacio, tipo_id=None, sede_id=None) -> str
     if sede_id is not None and int(sede_id) != espacio.sede_id:
         return MSG_OTRA_SEDE
     permitidos = tipos_ids(user)
-    if tipo_id is not None and permitidos and int(tipo_id) not in permitidos:
+    if (
+        tipo_id is not None
+        and permitidos
+        and int(tipo_id) not in permitidos
+        and espacio.id not in individuales_ids(user)  # uno asignado a mano puede cambiar de tipo
+    ):
         return MSG_TIPO_NO_ASIGNADO
     return None
 
 
 def sincronizar_por_tipos(usuario) -> None:
     """
-    Deja los `EspacioPermitido` del usuario iguales a los espacios de sus tipos asignados en su
-    sede. Sin tipos asignados no hace nada: sus espacios son individuales y no se tocan.
+    Pone al día los `EspacioPermitido` DERIVADOS del usuario (individual=False): quedan iguales a
+    los espacios de sus tipos asignados en su sede. Las asignaciones individuales no se tocan, y un
+    espacio que ya tiene asignación individual no se duplica como derivado.
     """
     tipos = tipos_ids(usuario)
-    if not tipos:
-        return
     sede_id = getattr(usuario, 'sede_id', None)
     deseados = set(
         EspacioFisico.objects.filter(sede_id=sede_id, tipo_id__in=tipos).values_list('id', flat=True)
-    ) if sede_id else set()
-    actuales = espacios_ids(usuario)
-    sobran = actuales - deseados
+    ) if tipos and sede_id else set()
+
+    filas = list(EspacioPermitido.objects.filter(usuario=usuario).values_list('id', 'espacio_id', 'individual'))
+    individuales = {espacio_id for _, espacio_id, individual in filas if individual}
+    derivadas = {espacio_id: fila_id for fila_id, espacio_id, individual in filas if not individual}
+
+    sobran = [fila_id for espacio_id, fila_id in derivadas.items() if espacio_id not in deseados or espacio_id in individuales]
     if sobran:
-        EspacioPermitido.objects.filter(usuario=usuario, espacio_id__in=sobran).delete()
-    faltan = deseados - actuales
+        EspacioPermitido.objects.filter(id__in=sobran).delete()
+    faltan = deseados - individuales - set(derivadas)
     if faltan:
         EspacioPermitido.objects.bulk_create(
-            [EspacioPermitido(usuario=usuario, espacio_id=espacio_id) for espacio_id in faltan]
+            [EspacioPermitido(usuario=usuario, espacio_id=espacio_id, individual=False) for espacio_id in faltan]
         )
 
 
@@ -138,7 +154,7 @@ def resincronizar_por_espacio(espacio) -> None:
 
     afectados = (
         Usuario.objects.filter(tipos_espacio_permitidos__tipo_id=espacio.tipo_id, sede_id=espacio.sede_id)
-        | Usuario.objects.filter(espacios_permitidos__espacio=espacio, tipos_espacio_permitidos__isnull=False)
+        | Usuario.objects.filter(espacios_permitidos__espacio=espacio, espacios_permitidos__individual=False)
     ).distinct()
     for usuario in afectados:
         sincronizar_por_tipos(usuario)

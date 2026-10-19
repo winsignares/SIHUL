@@ -17,6 +17,10 @@ from . import alcance
 from .models import EspacioFisico, EspacioPermitido, TipoEspacio, TipoEspacioPermitido
 
 
+def tipos_de(usuario):
+    return set(TipoEspacioPermitido.objects.filter(usuario=usuario).values_list('tipo_id', flat=True))
+
+
 class AlcanceSupervisorTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -88,18 +92,17 @@ class AlcanceSupervisorTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         usuario = serializer.save()
         self.assertEqual(UsuarioSerializer(usuario).data['tipos_espacio_permitidos'], [self.lab.id])
-        ids = set(EspacioPermitido.objects.filter(usuario=usuario).values_list('espacio_id', flat=True))
-        self.assertEqual(ids, {self.lab1.id})  # los espacios pasan a ser los del tipo
+        # el espacio suelto (individual) y los del tipo (derivados) conviven
+        filas = {ep.espacio_id: ep.individual for ep in EspacioPermitido.objects.filter(usuario=usuario)}
+        self.assertEqual(filas, {self.aula1.id: True, self.lab1.id: False})
 
-    def test_asignacion_individual_quita_los_tipos(self):
-        serializer = UsuarioSerializer(self.sup_tipo, data={'espacios_permitidos': [self.aula1.id]}, partial=True)
+    def test_enviar_solo_espacios_conserva_los_tipos(self):
+        serializer = UsuarioSerializer(self.sup_tipo, data={'espacios_permitidos': [self.lab1.id]}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         usuario = serializer.save()
-        self.assertFalse(TipoEspacioPermitido.objects.filter(usuario=usuario).exists())
-        self.assertEqual(
-            set(EspacioPermitido.objects.filter(usuario=usuario).values_list('espacio_id', flat=True)),
-            {self.aula1.id},
-        )
+        self.assertEqual(tipos_de(usuario), {self.aula.id})
+        filas = {ep.espacio_id: ep.individual for ep in EspacioPermitido.objects.filter(usuario=usuario)}
+        self.assertEqual(filas, {self.aula1.id: False, self.aula2.id: False, self.lab1.id: True})
 
     def test_tipo_inexistente_se_rechaza(self):
         serializer = UsuarioSerializer(self.sup_tipo, data={'tipos_espacio_permitidos': [99999]}, partial=True)
@@ -267,3 +270,66 @@ class AlcanceSupervisorTests(TestCase):
         Rol.objects.filter(id=self.rol_general.id).update(supervisa_espacios=False)
         self.sup_general.rol.refresh_from_db()
         self.assertFalse(alcance.esta_restringido(self.sup_general))
+
+    # ---------------------------------------------------------------- tipos + espacios individuales a la vez
+    def asignar_mixto(self):
+        """sup_tipo (tipo Aula) con, además, el laboratorio 1 asignado a mano."""
+        serializer = UsuarioSerializer(
+            self.sup_tipo,
+            data={'tipos_espacio_permitidos': [self.aula.id], 'espacios_permitidos': [self.lab1.id]},
+            partial=True,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        return serializer.save()
+
+    def ids_de(self, usuario):
+        return set(EspacioPermitido.objects.filter(usuario=usuario).values_list('espacio_id', flat=True))
+
+    def test_mixto_gestiona_los_del_tipo_y_los_sueltos(self):
+        usuario = self.asignar_mixto()
+        self.assertEqual(self.ids_de(usuario), {self.aula1.id, self.aula2.id, self.lab1.id})
+
+    def test_mixto_la_sincronizacion_por_tipo_no_borra_los_individuales(self):
+        usuario = self.asignar_mixto()
+        EspacioFisico.objects.create(nombre='Aula 3', sede=self.sede, tipo=self.aula, capacidad=10)  # dispara la sincronización
+        alcance.sincronizar_por_tipos(usuario)
+        ids = self.ids_de(usuario)
+        self.assertIn(self.lab1.id, ids)
+        self.assertEqual(len(ids), 4)
+        # quitar los tipos borra solo las derivadas
+        alcance.asignar_tipos(usuario, [])
+        self.assertEqual(self.ids_de(usuario), {self.lab1.id})
+
+    def test_mixto_quitar_el_espacio_suelto_conserva_los_del_tipo(self):
+        usuario = self.asignar_mixto()
+        serializer = UsuarioSerializer(usuario, data={'espacios_permitidos': []}, partial=True)
+        self.assertTrue(serializer.is_valid())
+        serializer.save()
+        self.assertEqual(self.ids_de(usuario), {self.aula1.id, self.aula2.id})
+
+    def test_espacio_suelto_que_tambien_es_del_tipo_no_se_duplica(self):
+        serializer = UsuarioSerializer(self.sup_tipo, data={'espacios_permitidos': [self.aula1.id]}, partial=True)
+        self.assertTrue(serializer.is_valid())
+        usuario = serializer.save()
+        self.assertEqual(EspacioPermitido.objects.filter(usuario=usuario, espacio=self.aula1).count(), 1)
+        self.assertTrue(EspacioPermitido.objects.get(usuario=usuario, espacio=self.aula1).individual)
+
+    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    def test_mixto_reglas_de_creacion_y_edicion(self, _):
+        usuario = self.asignar_mixto()
+        client = self.cliente(usuario)
+        # crear: solo del tipo asignado (aunque tenga un laboratorio suelto)
+        self.assertEqual(client.post('/api/espacios/', self.payload_espacio(self.aula, self.sede), format='json').status_code, 201)
+        self.assertEqual(client.post('/api/espacios/', self.payload_espacio(self.lab, self.sede), format='json').status_code, 403)
+        # editar el laboratorio suelto: sí, incluso cambiarle el tipo
+        self.assertEqual(client.patch(f'/api/espacios/{self.lab1.id}/', {'capacidad': 21}, format='json').status_code, 200)
+        self.assertEqual(client.patch(f'/api/espacios/{self.lab1.id}/', {'tipo': self.aula.id}, format='json').status_code, 200)
+        # un espacio del tipo (derivado) no puede pasar a un tipo no asignado
+        self.assertEqual(client.patch(f'/api/espacios/{self.aula2.id}/', {'tipo': self.lab.id}, format='json').status_code, 403)
+        # y no toca espacios ajenos
+        self.assertEqual(client.patch(f'/api/espacios/{self.aula_b.id}/', {'capacidad': 1}, format='json').status_code, 404)
+
+    def test_la_migracion_de_datos_marca_las_derivadas(self):
+        # los espacios de quien tiene tipos son derivados; los de quien no, individuales
+        self.assertFalse(EspacioPermitido.objects.get(usuario=self.sup_tipo, espacio=self.aula1).individual)
+        self.assertTrue(EspacioPermitido.objects.get(usuario=self.sup_individual, espacio=self.aula1).individual)

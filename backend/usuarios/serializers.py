@@ -80,23 +80,32 @@ class UsuarioSerializer(serializers.ModelSerializer):
                 'espacios_permitidos': f'Los espacios no pertenecen a la sede del usuario: {fuera_sede}'
             })
 
-        EspacioPermitido.objects.filter(usuario=usuario).delete()
-        if not ids_unicos:
-            return
-
-        nuevos = [EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id]) for espacio_id in ids_unicos]
-        EspacioPermitido.objects.bulk_create(nuevos)
+        # `ids_unicos` son las asignaciones INDIVIDUALES (a mano); las derivadas de tipos no se tocan
+        # aquí (las pone al día _sync_tipos_espacio, que corre después)
+        EspacioPermitido.objects.filter(usuario=usuario, individual=True).exclude(espacio_id__in=ids_unicos).delete()
+        existentes = {
+            ep.espacio_id: ep
+            for ep in EspacioPermitido.objects.filter(usuario=usuario, espacio_id__in=ids_unicos)
+        }
+        EspacioPermitido.objects.filter(
+            id__in=[ep.id for ep in existentes.values() if not ep.individual]
+        ).update(individual=True)  # una derivada que ahora se asigna a mano pasa a ser individual
+        EspacioPermitido.objects.bulk_create([
+            EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id], individual=True)
+            for espacio_id in ids_unicos if espacio_id not in existentes
+        ])
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['tipos_espacio_permitidos'] = sorted(t.tipo_id for t in instance.tipos_espacio_permitidos.all())
         return data
 
-    def _sync_tipos_espacio(self, usuario, tipos_ids, espacios_ids):
+    def _sync_tipos_espacio(self, usuario, tipos_ids):
         """
-        Con tipos, los espacios del usuario pasan a ser los de esos tipos en su sede (también los
-        que se creen luego). Sin tipos pero con espacios (asignación individual), se quitan los
-        tipos para que los espacios sueltos no se reemplacen. Sin ninguno, solo se actualiza.
+        Los tipos asignados pasan a ser la asignación por tipo del usuario (lista vacía = ninguna) y
+        sus espacios derivados se ponen al día, también los que se creen luego. Convive con las
+        asignaciones individuales de `espacios_permitidos`. Sin tipos en la petición, solo se
+        actualizan las derivadas (p. ej. si cambió su sede).
         """
         if tipos_ids is not None:
             existentes = set(TipoEspacio.objects.filter(id__in=tipos_ids).values_list('id', flat=True))
@@ -108,10 +117,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
                     'tipos_espacio_permitidos': 'El usuario debe tener una sede para asignarle tipos de espacio.'
                 })
             alcance.asignar_tipos(usuario, tipos_ids)
-        elif espacios_ids is not None:
-            alcance.asignar_tipos(usuario, [])
         else:
-            alcance.sincronizar_por_tipos(usuario)  # p. ej. cambió su sede
+            alcance.sincronizar_por_tipos(usuario)
 
     def create(self, validated_data):
         espacios_permitidos = validated_data.pop('espacios_permitidos', None)
@@ -123,7 +130,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             usuario = super().create(validated_data)
             self._sync_espacios_permitidos(usuario, espacios_permitidos)
-            self._sync_tipos_espacio(usuario, tipos_permitidos, espacios_permitidos)
+            self._sync_tipos_espacio(usuario, tipos_permitidos)
 
         return usuario
 
@@ -137,7 +144,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             usuario = super().update(instance, validated_data)
             self._sync_espacios_permitidos(usuario, espacios_permitidos)
-            self._sync_tipos_espacio(usuario, tipos_permitidos, espacios_permitidos)
+            self._sync_tipos_espacio(usuario, tipos_permitidos)
 
         return usuario
 

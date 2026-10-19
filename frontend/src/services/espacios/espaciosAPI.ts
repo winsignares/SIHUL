@@ -11,6 +11,8 @@ export interface EspacioFisico {
     sede_seccional_id?: number | null;
     tipo?: number | { id: number };
     tipo_id: number;
+    // Solo en los espacios asignados a un usuario: true = asignado a mano, false = deriva de un tipo
+    individual?: boolean;
     tipo_espacio?: {
         id: number;
         nombre: string;

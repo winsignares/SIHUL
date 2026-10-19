@@ -447,25 +447,11 @@ export function useGestionUsuarios() {
         setAsignarTodosEspaciosPorTipo(false);
     }, [sedeSeleccionada]);
 
-    const buildEspaciosPayloadPorTipo = useCallback((tiposIds: number[], asignarTodos: boolean, espaciosBase = espaciosDisponibles) => {
-        if (asignarTodos) {
-            return espaciosBase.map(e => e.id);
-        }
-
-        if (tiposIds.length === 0) {
-            return [];
-        }
-
-        return espaciosBase
-            .filter(e => tiposIds.includes(e.tipo_id))
-            .map(e => e.id);
-    }, [espaciosDisponibles]);
-
-    // Tipos que se guardan en la asignación por tipo («todos» = todos los del catálogo). Lista vacía =
-    // asignación individual. El backend mantiene los espacios derivados de los tipos (también los
-    // que se creen después) y solo con tipos asignados el supervisor puede crear espacios.
-    const buildTiposPayload = useCallback((modo: 'individual' | 'tipo', tiposIds: number[], asignarTodos: boolean) => {
-        if (modo !== 'tipo') return [];
+    // Tipos de la asignación por tipo («todos» = todos los del catálogo); lista vacía = ninguno. El
+    // backend mantiene los espacios derivados de los tipos (también los que se creen después) y solo
+    // con tipos asignados el supervisor puede crear espacios. Se combina con las asignaciones
+    // individuales (`espacios_permitidos`), que son los espacios sueltos elegidos a mano.
+    const buildTiposPayload = useCallback((tiposIds: number[], asignarTodos: boolean) => {
         if (asignarTodos) {
             return tiposEspacioDisponibles.map((tipo) => tipo.id).filter((id): id is number => typeof id === 'number');
         }
@@ -505,10 +491,8 @@ export function useGestionUsuarios() {
             let tiposPayload: number[] | undefined;
 
             if (isSpaceSupervisorRole(rol)) {
-                espaciosPayload = modoAsignacionSupervisor === 'individual'
-                    ? espaciosPermitidos
-                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, espaciosDisponiblesCreacion);
-                tiposPayload = buildTiposPayload(modoAsignacionSupervisor, tiposEspacioPermitidos, asignarTodosEspaciosPorTipo);
+                espaciosPayload = espaciosPermitidos;
+                tiposPayload = buildTiposPayload(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo);
             }
 
             const created = await userService.crearUsuario({
@@ -556,10 +540,8 @@ export function useGestionUsuarios() {
             let tiposPayload: number[] | undefined;
 
             if (isSpaceSupervisorRole(rol)) {
-                espaciosPayload = modoAsignacionSupervisorEdit === 'individual'
-                    ? espaciosPermitidosEdit
-                    : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, espaciosDisponiblesEdicion);
-                tiposPayload = buildTiposPayload(modoAsignacionSupervisorEdit, tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit);
+                espaciosPayload = espaciosPermitidosEdit;
+                tiposPayload = buildTiposPayload(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit);
             }
 
             const rolActualizado = editingUser.rol_id
@@ -688,7 +670,9 @@ export function useGestionUsuarios() {
                 const espaciosPermitidosNormalizados = (response.espacios || [])
                     .map(normalizeEspacioAsignable)
                     .filter((espacio): espacio is EspacioAsignable => espacio !== null);
+                // Solo los asignados a mano van a la lista individual; los derivados salen de los tipos
                 const espaciosIds = (response.espacios || [])
+                    .filter((espacio) => espacio.individual !== false)
                     .map((espacio) => espacio.id)
                     .filter((id): id is number => typeof id === 'number');
                 setEspaciosDisponibles((prev) => {

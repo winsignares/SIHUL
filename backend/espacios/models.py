@@ -56,7 +56,11 @@ class EspacioFisico(models.Model):
     
 class EspacioPermitido(models.Model):
     espacio = models.ForeignKey(EspacioFisico, on_delete=models.CASCADE, related_name='espacios_permitidos')
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='espacios_permitidos')   
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='espacios_permitidos')
+    # True: asignado a mano (individual); False: deriva de un tipo asignado al usuario
+    # (TipoEspacioPermitido) y lo mantiene espacios/alcance.py. La sincronización por tipo solo
+    # toca las derivadas, así que un supervisor puede tener tipos Y espacios sueltos a la vez.
+    individual = models.BooleanField(default=True)   
 
     def __str__(self):
         return f"{self.usuario} para {self.espacio}"
