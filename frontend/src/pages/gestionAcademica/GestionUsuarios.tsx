@@ -402,6 +402,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {espacioSeleccionado && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {espaciosPermitidos.length > 0 && (
@@ -462,6 +465,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {tipoEspacioSeleccionado && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {(asignarTodosEspaciosPorTipo || tiposEspacioPermitidos.length > 0) && (
@@ -889,6 +895,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {espacioSeleccionadoEdit && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {espaciosPermitidosEdit.length > 0 && (
@@ -948,6 +957,9 @@ export default function GestionUsuarios() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                        {tipoEspacioSeleccionadoEdit && (
+                          <p className="text-xs text-amber-700">Pulsa «+» para añadirlo. Si guardas sin pulsarlo, también se añadirá.</p>
+                        )}
                       </div>
 
                       {(asignarTodosEspaciosPorTipoEdit || tiposEspacioPermitidosEdit.length > 0) && (

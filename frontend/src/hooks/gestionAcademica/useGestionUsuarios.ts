@@ -458,6 +458,27 @@ export function useGestionUsuarios() {
         return tiposIds;
     }, [tiposEspacioDisponibles]);
 
+    // Lo elegido en un selector pero sin pulsar «+» también se asigna al guardar: antes se perdía en
+    // silencio y parecía que la asignación no se guardaba.
+    const resolverSeleccionPendiente = (
+        tipos: number[], todos: boolean, tipoPendiente: string, espacios: number[], espacioPendiente: string,
+    ) => {
+        let tiposFinal = tipos;
+        let todosFinal = todos;
+        if (tipoPendiente === 'todos') {
+            todosFinal = true;
+        } else if (tipoPendiente) {
+            const tipoId = parseInt(tipoPendiente, 10);
+            if (!Number.isNaN(tipoId) && !tiposFinal.includes(tipoId)) tiposFinal = [...tiposFinal, tipoId];
+        }
+        let espaciosFinal = espacios;
+        if (espacioPendiente) {
+            const espacioId = parseInt(espacioPendiente, 10);
+            if (!Number.isNaN(espacioId) && !espaciosFinal.includes(espacioId)) espaciosFinal = [...espaciosFinal, espacioId];
+        }
+        return { tiposFinal, todosFinal, espaciosFinal };
+    };
+
     // Crear usuario
     const crearUsuario = async () => {
         // Validaciones
@@ -491,8 +512,11 @@ export function useGestionUsuarios() {
             let tiposPayload: number[] | undefined;
 
             if (isSpaceSupervisorRole(rol)) {
-                espaciosPayload = espaciosPermitidos;
-                tiposPayload = buildTiposPayload(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo);
+                const sel = resolverSeleccionPendiente(
+                    tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, tipoEspacioSeleccionado, espaciosPermitidos, espacioSeleccionado,
+                );
+                espaciosPayload = sel.espaciosFinal;
+                tiposPayload = buildTiposPayload(sel.tiposFinal, sel.todosFinal);
             }
 
             const created = await userService.crearUsuario({
@@ -540,8 +564,11 @@ export function useGestionUsuarios() {
             let tiposPayload: number[] | undefined;
 
             if (isSpaceSupervisorRole(rol)) {
-                espaciosPayload = espaciosPermitidosEdit;
-                tiposPayload = buildTiposPayload(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit);
+                const sel = resolverSeleccionPendiente(
+                    tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, tipoEspacioSeleccionadoEdit, espaciosPermitidosEdit, espacioSeleccionadoEdit,
+                );
+                espaciosPayload = sel.espaciosFinal;
+                tiposPayload = buildTiposPayload(sel.tiposFinal, sel.todosFinal);
             }
 
             const rolActualizado = editingUser.rol_id
@@ -662,6 +689,8 @@ export function useGestionUsuarios() {
 
         setEditingUser(usuarioConDatosCompletos);
         setFacultadSeleccionadaEdit(facultadId);
+        setEspacioSeleccionadoEdit('');
+        setTipoEspacioSeleccionadoEdit('');
 
         // Cargar espacios permitidos si el rol supervisa espacios.
         if (isSpaceSupervisorRole(rol)) {
@@ -738,6 +767,7 @@ export function useGestionUsuarios() {
     const resetEditStates = () => {
         setEditingUser(null);
         setEspaciosPermitidosEdit([]);
+        setEspacioSeleccionadoEdit('');
         setModoAsignacionSupervisorEdit('individual');
         setTipoEspacioSeleccionadoEdit('');
         setTiposEspacioPermitidosEdit([]);
