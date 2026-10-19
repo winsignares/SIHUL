@@ -1,4 +1,4 @@
-from mysite.api_views import (
+from config.api_views import (
     EspacioRecursoByIdsAPIView,
     EspacioRecursoDetailAPIView,
     EspacioRecursoListCreateAPIView,

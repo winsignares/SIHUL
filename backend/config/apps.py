@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class MysiteConfig(AppConfig):
+class ConfigConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'mysite'
+    name = 'config'
     verbose_name = 'Configuración del Sistema'
 
     def ready(self):

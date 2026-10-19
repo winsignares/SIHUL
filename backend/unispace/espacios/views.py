@@ -14,7 +14,7 @@ from django.db.models import Count
 from collections import defaultdict
 import unicodedata
 
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
 from . import alcance
 
 
@@ -842,7 +842,7 @@ def proximos_apertura_cierre(request):
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
-        from mysite.auth_helpers import user_supervisa_espacios
+        from config.auth_helpers import user_supervisa_espacios
 
         if user_supervisa_espacios(usuario):
             # Para supervisor: solo espacios permitidos explicitos.

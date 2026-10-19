@@ -8,7 +8,7 @@ from financiero.facturas.models import ComentarioFactura, DocumentoAdjunto, Docu
 from financiero.parametros.models import ParametroSLA, ParametrosFinanciero
 from financiero.proveedores.models import Ciudad, DepartamentoGeografico, Pais, Proveedor
 from financiero.reportes.models import ReporteGenerado
-from mysite.management.commands.seeders.financiero_seeder import create_financiero_data
+from config.management.commands.seeders.financiero_seeder import create_financiero_data
 
 
 class Command(BaseCommand):

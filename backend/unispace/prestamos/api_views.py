@@ -4,10 +4,10 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.auth_helpers import is_authenticated_user, user_supervisa_espacios
-from mysite.permissions import CanManagePrestamosEspacios
+from config.cache_utils import CachedCatalogMixin
+from config.seccional_auth import SeccionalMixin
+from config.auth_helpers import is_authenticated_user, user_supervisa_espacios
+from config.permissions import CanManagePrestamosEspacios
 from unispace.espacios import alcance
 from unispace.espacios.models import EspacioPermitido
 

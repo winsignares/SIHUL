@@ -111,7 +111,7 @@ class AlcanceSupervisorTests(TestCase):
             serializer.save()
 
     # ---------------------------------------------------------------- crear espacios
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_por_tipo_crea_solo_su_tipo_en_su_sede(self, _):
         client = self.cliente(self.sup_tipo)
         r = client.post('/api/espacios/', self.payload_espacio(self.aula, self.sede), format='json')
@@ -124,7 +124,7 @@ class AlcanceSupervisorTests(TestCase):
         r = client.post('/api/espacios/', self.payload_espacio(self.aula, self.otra_sede), format='json')
         self.assertEqual(r.status_code, 403)
 
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_individual_no_puede_crear(self, _):
         r = self.cliente(self.sup_individual).post('/api/espacios/', self.payload_espacio(self.aula, self.sede), format='json')
         self.assertEqual(r.status_code, 403)
@@ -136,7 +136,7 @@ class AlcanceSupervisorTests(TestCase):
         self.assertEqual(r.status_code, 201, r.content)
 
     # ---------------------------------------------------------------- editar espacios
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_individual_edita_solo_su_espacio(self, _):
         client = self.cliente(self.sup_individual)
         r = client.patch(f'/api/espacios/{self.aula1.id}/', {'capacidad': 55}, format='json')
@@ -149,14 +149,14 @@ class AlcanceSupervisorTests(TestCase):
         self.assertEqual(r.status_code, 404)
         self.assertTrue(EspacioFisico.objects.filter(id=self.aula2.id).exists())
 
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_no_mueve_su_espacio_a_otra_sede(self, _):
         r = self.cliente(self.sup_individual).patch(
             f'/api/espacios/{self.aula1.id}/', {'sede': self.otra_sede.id}, format='json')
         self.assertEqual(r.status_code, 403)
         self.assertEqual(EspacioFisico.objects.get(id=self.aula1.id).sede_id, self.sede.id)
 
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_por_tipo_no_cambia_un_espacio_a_un_tipo_no_asignado(self, _):
         client = self.cliente(self.sup_tipo)
         r = client.patch(f'/api/espacios/{self.aula1.id}/', {'tipo': self.lab.id}, format='json')
@@ -165,7 +165,7 @@ class AlcanceSupervisorTests(TestCase):
         r = client.patch(f'/api/espacios/{self.aula1.id}/', {'nombre': 'Aula Uno'}, format='json')
         self.assertEqual(r.status_code, 200, r.content)
 
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_no_modifica_asignaciones(self, _):
         r = self.cliente(self.sup_individual).post(
             '/api/espacios-permitidos/', {'espacio': self.aula2.id, 'usuario': self.sup_individual.id}, format='json')
@@ -257,7 +257,7 @@ class AlcanceSupervisorTests(TestCase):
         self.assertEqual(alcance.resumen_sesion(self.sup_general),
                          {'tipos_espacio_permitidos': [], 'puede_crear_espacios': False})
 
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_supervisor_general_sin_asignacion_por_tipo_no_crea_espacios(self, _):
         r = self.cliente(self.sup_general).post('/api/espacios/', self.payload_espacio(self.aula, self.sede), format='json')
         self.assertEqual(r.status_code, 403)
@@ -314,7 +314,7 @@ class AlcanceSupervisorTests(TestCase):
         self.assertEqual(EspacioPermitido.objects.filter(usuario=usuario, espacio=self.aula1).count(), 1)
         self.assertTrue(EspacioPermitido.objects.get(usuario=usuario, espacio=self.aula1).individual)
 
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_mixto_reglas_de_creacion_y_edicion(self, _):
         usuario = self.asignar_mixto()
         client = self.cliente(usuario)
@@ -335,7 +335,7 @@ class AlcanceSupervisorTests(TestCase):
         self.assertTrue(EspacioPermitido.objects.get(usuario=self.sup_individual, espacio=self.aula1).individual)
 
     # ---------------------------------------------------------------- varios tipos a la vez
-    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    @mock.patch('config.permissions.user_can_edit_componente', return_value=True)
     def test_varios_tipos_asignados(self, _):
         auditorio = TipoEspacio.objects.get_or_create(nombre='Auditorio')[0]
         serializer = UsuarioSerializer(self.sup_individual, data={'tipos_espacio_permitidos': [self.aula.id, self.lab.id]}, partial=True)

@@ -7,12 +7,12 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from unispace.notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
 from unispace.usuarios.models import Usuario
 from unispace.espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
-from mysite.auth_helpers import is_superuser_effective
+from config.auth_helpers import is_superuser_effective
 
 
 def _get_request_user(request):

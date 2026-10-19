@@ -4,7 +4,7 @@ Tests específicos para validar protecciones XSS en Asignaturas
 
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from mysite.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
+from config.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
 
 
 class AsignaturaXSSTestCase(TestCase):

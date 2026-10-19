@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
-from mysite.permissions import IsAdminOnly
+from config.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from config.permissions import IsAdminOnly
 
 from .models import Componente, ComponenteRol, ComponenteUsuario
 from .serializers import ComponenteRolSerializer, ComponenteSerializer, ComponenteUsuarioSerializer

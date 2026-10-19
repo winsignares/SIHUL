@@ -11,8 +11,8 @@ from unispace.espacios.models import EspacioFisico
 from unispace.usuarios.models import Usuario
 from unispace.recursos.models import Recurso
 from unispace.horario.models import Horario
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
-from mysite.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
+from config.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
 import json
 import datetime
 import uuid

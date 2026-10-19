@@ -6,8 +6,8 @@ from django.core.exceptions import ValidationError
 import json
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
-from mysite.auth_helpers import is_admin_global
-from mysite.xss_protection import NOTIFICACION_SCHEMA, sanitize_dict
+from config.auth_helpers import is_admin_global
+from config.xss_protection import NOTIFICACION_SCHEMA, sanitize_dict
 
 
 def _get_current_user(request):

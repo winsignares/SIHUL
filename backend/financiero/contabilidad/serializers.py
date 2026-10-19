@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from mysite.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, FACTURA_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
+from config.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, FACTURA_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
 import os
 
 from .models import Banco, CentroCosto, CuentaContable, Departamento, TipoCuenta

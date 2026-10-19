@@ -16,7 +16,7 @@ tipos gestiona los espacios de su tipo y esos espacios; crear solo puede los de 
 Los demás usuarios (admins, superusuarios, quienes no supervisan espacios) no se ven afectados por
 estas reglas. «Supervisa espacios» lo decide solo la casilla del rol (`Rol.supervisa_espacios`).
 """
-from mysite.auth_helpers import is_superuser_effective, user_supervisa_espacios
+from config.auth_helpers import is_superuser_effective, user_supervisa_espacios
 
 from .models import EspacioFisico, EspacioPermitido, TipoEspacioPermitido
 

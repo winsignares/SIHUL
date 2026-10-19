@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from mysite.auth_helpers import user_can_edit_componente
+from config.auth_helpers import user_can_edit_componente
 from .availability import validar_disponibilidad_prestamo
 from .models import (
     PrestamoEspacio,

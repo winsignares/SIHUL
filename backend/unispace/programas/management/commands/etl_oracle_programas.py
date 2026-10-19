@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from unispace.facultades.models import Facultad
-from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from config.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 from unispace.programas.models import Programa, StgOraclePrograma
 from unispace.sedes.models import StgOracleFacultad
 

@@ -60,7 +60,7 @@ CHATBOT_ANEXO_URL_MAX_AGE = int(os.getenv('CHATBOT_ANEXO_URL_MAX_AGE', str(7 * 2
 # Application definition
 
 INSTALLED_APPS = [
-    'mysite.apps.MysiteConfig',  # App principal del proyecto
+    'config.apps.ConfigConfig',  # App principal del proyecto
     'unispace.horario',
     'unispace.usuarios',
     'unispace.componentes',
@@ -109,13 +109,13 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'mysite.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
+    'config.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
 ]
 
 if MICROSOFT_OAUTH_ENABLED:
     MIDDLEWARE.insert(MIDDLEWARE.index('django.contrib.messages.middleware.MessageMiddleware'), 'allauth.account.middleware.AccountMiddleware')
 
-ROOT_URLCONF = 'mysite.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -132,7 +132,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'mysite.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -258,7 +258,7 @@ if MICROSOFT_OAUTH_ENABLED:
 
     SOCIALACCOUNT_AUTO_SIGNUP = True
     SOCIALACCOUNT_LOGIN_ON_GET = True
-    SOCIALACCOUNT_ADAPTER = 'mysite.social_adapter.SocialAccountAdapter'
+    SOCIALACCOUNT_ADAPTER = 'config.social_adapter.SocialAccountAdapter'
     ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.getenv('ACCOUNT_DEFAULT_HTTP_PROTOCOL', 'https' if not DEBUG else 'http')
 
     SOCIALACCOUNT_PROVIDERS = {
@@ -310,7 +310,7 @@ CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'mysite.seccional_auth.SessionUsuarioAuthentication',
+        'config.seccional_auth.SessionUsuarioAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [

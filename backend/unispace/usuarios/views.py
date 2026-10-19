@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash
 import datetime
 import secrets
 import hashlib
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
 
 
 def _password_valida(usuario, password_plano):

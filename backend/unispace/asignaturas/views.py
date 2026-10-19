@@ -8,8 +8,8 @@ from django.core.exceptions import ValidationError
 from .models import Asignatura, AsignaturaPrograma
 from unispace.programas.models import Programa
 
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
-from mysite.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_superuser_effective
+from config.xss_protection import sanitize_dict, ASIGNATURA_SCHEMA
 
 
 def _get_request_user(request):

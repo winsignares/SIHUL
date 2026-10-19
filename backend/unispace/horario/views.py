@@ -11,7 +11,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import datetime
 from unispace.notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch

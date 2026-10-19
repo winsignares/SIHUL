@@ -86,13 +86,13 @@ def has_any_role(user, allowed_roles):
 def get_componente_permiso(user, nombre_componente):
     """Resuelve el permiso efectivo ('VER'/'EDITAR'/None) de `user` sobre el
     Componente `nombre_componente`, replicando la precedencia usada por
-    mysite.api_views para construir la lista de componentes del frontend:
+    config.api_views para construir la lista de componentes del frontend:
     el override de ComponenteUsuario (si existe y está activo) reemplaza al
     permiso del rol; si el override existe pero activo=False, se revoca el
     acceso aunque el rol lo conceda; si no hay grant de rol pero sí un
     override activo, igual se concede acceso con el permiso del override.
 
-    Réplica exacta de mysite.api_views._build_componentes: no hay bypass
+    Réplica exacta de config.api_views._build_componentes: no hay bypass
     implícito por rol (ni siquiera admin_global); el acceso depende
     estrictamente de los registros ComponenteRol/ComponenteUsuario, igual
     que en el frontend (hasEditPermission solo consulta la lista enviada

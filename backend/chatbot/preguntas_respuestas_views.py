@@ -24,7 +24,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.auth_helpers import is_admin_global, is_admin_sistema
+from config.auth_helpers import is_admin_global, is_admin_sistema
 
 from .admin_views import PuedeGestionarChatbots
 from .anexos import (

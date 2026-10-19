@@ -5,7 +5,7 @@ from django.urls import path, re_path, include
 from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 
-from mysite.api_views import (
+from config.api_views import (
     AsignaturaProgramaViewSet,
     AsignaturaViewSet,
     EspacioFisicoViewSet,
@@ -49,7 +49,7 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 urlpatterns = [
     path('panel-sihul-gestion/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('api/auth/', include('mysite.auth_urls')),
+    path('api/auth/', include('config.auth_urls')),
     path('api/periodos/', include('unispace.periodos.api_urls')),
     path('api/componentes/', include('unispace.componentes.api_urls')),
     path('api/prestamos/', include('unispace.prestamos.api_urls')),

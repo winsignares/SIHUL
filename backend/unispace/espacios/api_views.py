@@ -9,7 +9,7 @@ from .models import EspacioFisico, EspacioPermitido
 from unispace.horario.models import Horario
 from unispace.prestamos.models import PrestamoEspacio
 from unispace.usuarios.models import Usuario
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+from config.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
 
 
 def _filtrar_horarios_por_rango_fecha(request, queryset):

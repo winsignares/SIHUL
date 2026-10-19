@@ -121,7 +121,7 @@ npm run dev
 ```
 SIHUL/
 ├── 🔧 backend/                 # Django Backend
-│   ├── mysite/                 # Configuración principal
+│   ├── config/                 # Configuración principal
 │   ├── usuarios/               # Gestión de usuarios
 │   ├── horario/                # Sistema de horarios
 │   ├── espacios/               # Gestión de espacios
@@ -374,7 +374,7 @@ SIHUL/
 ├── backend/                   ← Código Django
 │   ├── manage.py
 │   ├── requirements.txt
-│   ├── mysite/
+│   ├── config/
 │   └── ...
 │
 └── frontend/                  ← Código React

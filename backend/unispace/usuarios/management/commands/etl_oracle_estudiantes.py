@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from mysite.oracle_seccional_filter import (
+from config.oracle_seccional_filter import (
     execute_oracle_query_with_optional_seccional,
     normalize_seccional_name,
 )

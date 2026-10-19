@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from mysite.management.commands.seeders import financiero_seeder
+from config.management.commands.seeders import financiero_seeder
 
 
 class Command(BaseCommand):

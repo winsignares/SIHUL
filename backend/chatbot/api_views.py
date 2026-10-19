@@ -1,7 +1,7 @@
 from django.db.models.functions import Lower
 from rest_framework import generics, permissions
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from config.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 
 from .admin_views import PuedeGestionarChatbots
 from .models import Agente, Conversacion, PreguntaSugerida

@@ -5,7 +5,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user, user_can_edit_componente
+from config.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user, user_can_edit_componente
 
 from .models import Agente
 from .views import _resolve_user_sede_value, fastapi_base_url

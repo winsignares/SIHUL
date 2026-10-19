@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import PeriodoAcademico
-from mysite.permissions import IsAuthenticatedReadOnlyOrAdminWrite
+from config.permissions import IsAuthenticatedReadOnlyOrAdminWrite
 from .serializers import PeriodoAcademicoSerializer
 
 
