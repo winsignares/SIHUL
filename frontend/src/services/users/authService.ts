@@ -35,6 +35,8 @@ export interface Usuario {
     nombre: string;
   } | null;
   espacios_permitidos?: number[];
+  // Asignación por tipo (supervisores de espacios): ids de los tipos que gestiona
+  tipos_espacio_permitidos?: number[];
 }
 
 interface UsuarioApi {
@@ -58,6 +60,8 @@ interface UsuarioApi {
   sede_id?: number | null;
   activo: boolean;
   espacios_permitidos?: number[];
+  // Asignación por tipo (supervisores de espacios): ids de los tipos que gestiona
+  tipos_espacio_permitidos?: number[];
 }
 
 export interface CreateUsuarioPayload {
@@ -69,6 +73,7 @@ export interface CreateUsuarioPayload {
   facultad_id?: number | null;
   activo?: boolean;
   espacios_permitidos?: number[];
+  tipos_espacio_permitidos?: number[];
   sede?: string;
   // Compatibilidad con formularios existentes; backend usa "sede".
   sede_id?: number | null;
@@ -85,6 +90,8 @@ export interface UpdateUsuarioPayload {
   sede_id?: number | null;
   activo?: boolean;
   espacios_permitidos?: number[];
+  // Asignación por tipo (supervisores de espacios): ids de los tipos que gestiona
+  tipos_espacio_permitidos?: number[];
 }
 
 export interface LoginPayload {
@@ -130,6 +137,8 @@ export interface LoginResponse {
     sede_id: number;
     sede_nombre: string;
   }>;
+  tipos_espacio_permitidos?: number[];
+  puede_crear_espacios?: boolean;
   token: string;
 }
 
@@ -194,6 +203,8 @@ export interface SessionUserAuthenticatedResponse {
     sede_id: number;
     sede_nombre: string;
   }>;
+  tipos_espacio_permitidos?: number[];
+  puede_crear_espacios?: boolean;
   token: string;
   signature?: string;
 }
@@ -255,6 +266,7 @@ const toFrontendUsuario = (usuario: UsuarioApi): Usuario => {
     rol: rolObj,
     facultad: facultadObj,
     espacios_permitidos: usuario.espacios_permitidos,
+    tipos_espacio_permitidos: usuario.tipos_espacio_permitidos,
   };
 };
 
@@ -394,6 +406,7 @@ export const userService = {
       facultad: usuario.facultad_id,
       activo: usuario.activo ?? true,
       espacios_permitidos: usuario.espacios_permitidos,
+      tipos_espacio_permitidos: usuario.tipos_espacio_permitidos,
       sede
     });
   },
@@ -415,7 +428,8 @@ export const userService = {
       facultad: usuario.facultad_id,
       sede: usuario.sede_id,
       activo: usuario.activo,
-      espacios_permitidos: usuario.espacios_permitidos
+      espacios_permitidos: usuario.espacios_permitidos,
+      tipos_espacio_permitidos: usuario.tipos_espacio_permitidos
     });
     return { message: 'Usuario actualizado', id: actualizado.id ?? usuario.id };
   },

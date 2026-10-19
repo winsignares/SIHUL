@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isSpaceSupervisorRole } from '../context/spaceSupervisorRole';
 import { getRouteForComponent, getIconForComponent } from '../config/componentRoutes';
 import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
@@ -526,8 +527,8 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
                 label: 'Gestión de Espacios',
                 items: espaciosComponents.map(c => {
                     let route = getRouteForComponent(c.nombre);
-                    // Fix para Supervisor General y Estado de Recursos
-                    if (normalizedRole.includes('supervisor') && c.nombre === 'Estado de Recursos') {
+                    // Los supervisores de espacios (casilla del rol) usan su propia vista de Estado de Recursos
+                    if (isSpaceSupervisorRole(role) && c.nombre === 'Estado de Recursos') {
                         route = '/supervisor/recursos';
                     }
                     return {

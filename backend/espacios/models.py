@@ -62,6 +62,25 @@ class EspacioPermitido(models.Model):
         return f"{self.usuario} para {self.espacio}"
 
 
+class TipoEspacioPermitido(models.Model):
+    """
+    Tipo de espacio que un supervisor gestiona (asignación «por tipo»).
+
+    A diferencia de `EspacioPermitido` (espacios sueltos), un tipo asignado abarca también
+    los espacios de ese tipo que se creen después en la sede del usuario, y es lo que
+    autoriza al supervisor a CREAR espacios de ese tipo. Los `EspacioPermitido` de un usuario
+    con tipos asignados se mantienen derivados de estos (ver espacios/alcance.py).
+    """
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='tipos_espacio_permitidos')
+    tipo = models.ForeignKey(TipoEspacio, on_delete=models.CASCADE, related_name='supervisores_permitidos')
+
+    class Meta:
+        unique_together = ('usuario', 'tipo')
+
+    def __str__(self):
+        return f"{self.usuario} gestiona espacios de tipo {self.tipo}"
+
+
 class StgOracleEspacioFisico(models.Model):
     source_system = models.CharField(max_length=50, default='ORACLE_SIU', db_index=True)
     external_id = models.CharField(max_length=100, db_index=True)

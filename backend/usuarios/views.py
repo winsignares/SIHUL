@@ -48,6 +48,7 @@ def _sync_espacios_permitidos_usuario(usuario, espacios_ids):
         return f'Los espacios no pertenecen a la sede del usuario: {fuera_sede}'
 
     EspacioPermitido.objects.filter(usuario=usuario).delete()
+    usuario.tipos_espacio_permitidos.all().delete()  # asignación individual: sin tipos
     EspacioPermitido.objects.bulk_create([
         EspacioPermitido(usuario=usuario, espacio=espacios_map[espacio_id])
         for espacio_id in ids_unicos

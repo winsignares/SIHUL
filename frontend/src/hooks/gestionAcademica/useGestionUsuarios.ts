@@ -461,6 +461,17 @@ export function useGestionUsuarios() {
             .map(e => e.id);
     }, [espaciosDisponibles]);
 
+    // Tipos que se guardan en la asignación por tipo («todos» = todos los del catálogo). Lista vacía =
+    // asignación individual. El backend mantiene los espacios derivados de los tipos (también los
+    // que se creen después) y solo con tipos asignados el supervisor puede crear espacios.
+    const buildTiposPayload = useCallback((modo: 'individual' | 'tipo', tiposIds: number[], asignarTodos: boolean) => {
+        if (modo !== 'tipo') return [];
+        if (asignarTodos) {
+            return tiposEspacioDisponibles.map((tipo) => tipo.id).filter((id): id is number => typeof id === 'number');
+        }
+        return tiposIds;
+    }, [tiposEspacioDisponibles]);
+
     // Crear usuario
     const crearUsuario = async () => {
         // Validaciones
@@ -491,11 +502,13 @@ export function useGestionUsuarios() {
             // Si el rol supervisa espacios, incluir espacios permitidos.
             const rol = rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
             let espaciosPayload: number[] = [];
+            let tiposPayload: number[] | undefined;
 
             if (isSpaceSupervisorRole(rol)) {
                 espaciosPayload = modoAsignacionSupervisor === 'individual'
                     ? espaciosPermitidos
                     : buildEspaciosPayloadPorTipo(tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, espaciosDisponiblesCreacion);
+                tiposPayload = buildTiposPayload(modoAsignacionSupervisor, tiposEspacioPermitidos, asignarTodosEspaciosPorTipo);
             }
 
             const created = await userService.crearUsuario({
@@ -506,6 +519,7 @@ export function useGestionUsuarios() {
                 facultad_id: facultadSeleccionada,
                 activo: true,
                 espacios_permitidos: espaciosPayload,
+                tipos_espacio_permitidos: tiposPayload,
                 sede_id: parseInt(sedeSeleccionada)
             });
 
@@ -539,11 +553,13 @@ export function useGestionUsuarios() {
             const rolId = editingUser.rol_id || editingUser.rol?.id;
             const rol = rolesDisponibles.find(r => r.id === rolId);
             let espaciosPayload: number[] = [];
+            let tiposPayload: number[] | undefined;
 
             if (isSpaceSupervisorRole(rol)) {
                 espaciosPayload = modoAsignacionSupervisorEdit === 'individual'
                     ? espaciosPermitidosEdit
                     : buildEspaciosPayloadPorTipo(tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, espaciosDisponiblesEdicion);
+                tiposPayload = buildTiposPayload(modoAsignacionSupervisorEdit, tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit);
             }
 
             const rolActualizado = editingUser.rol_id
@@ -566,7 +582,8 @@ export function useGestionUsuarios() {
                 facultad_id: facultadSeleccionadaEdit,
                 sede_id: editingUser.sede_id ?? null,
                 activo: editingUser.activo,
-                espacios_permitidos: espaciosPayload
+                espacios_permitidos: espaciosPayload,
+                tipos_espacio_permitidos: tiposPayload
             });
 
             // Reflejar cambio local de inmediato para mejor feedback en UI.
@@ -589,6 +606,7 @@ export function useGestionUsuarios() {
                             }
                             : null,
                         espacios_permitidos: espaciosPayload,
+                        tipos_espacio_permitidos: tiposPayload ?? u.tipos_espacio_permitidos,
                         activo: editingUser.activo,
                     }
                     : u
@@ -681,9 +699,20 @@ export function useGestionUsuarios() {
                     return Array.from(espaciosPorId.values());
                 });
                 setEspaciosPermitidosEdit(espaciosIds);
-                setModoAsignacionSupervisorEdit('individual');
-                setTiposEspacioPermitidosEdit([]);
-                setAsignarTodosEspaciosPorTipoEdit(false);
+                const tiposAsignados = usuario.tipos_espacio_permitidos ?? [];
+                if (tiposAsignados.length > 0) {
+                    // Asignación por tipo: se conserva como tal (si no, al guardar pasaría a individual)
+                    setModoAsignacionSupervisorEdit('tipo');
+                    setTiposEspacioPermitidosEdit(tiposAsignados);
+                    setAsignarTodosEspaciosPorTipoEdit(
+                        tiposEspacioDisponibles.length > 0
+                        && tiposEspacioDisponibles.every((tipo) => tipo.id != null && tiposAsignados.includes(tipo.id)),
+                    );
+                } else {
+                    setModoAsignacionSupervisorEdit('individual');
+                    setTiposEspacioPermitidosEdit([]);
+                    setAsignarTodosEspaciosPorTipoEdit(false);
+                }
             } catch (error) {
                 console.error('Error cargando espacios permitidos:', error);
                 setEspaciosPermitidosEdit([]);

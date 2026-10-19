@@ -1,5 +1,6 @@
 from django.db.models import Q
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -7,6 +8,7 @@ from mysite.cache_utils import CachedCatalogMixin
 from mysite.seccional_auth import SeccionalMixin
 from mysite.auth_helpers import is_authenticated_user, user_supervisa_espacios
 from mysite.permissions import CanManagePrestamosEspacios
+from espacios import alcance
 from espacios.models import EspacioPermitido
 
 from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
@@ -16,6 +18,38 @@ from .serializers import (
     PrestamoRecursoSerializer,
     TipoActividadSerializer,
 )
+
+
+class RestringirASupervisorMixin:
+    """
+    Un supervisor de espacios solo ve y gestiona los registros de los espacios que tiene
+    asignados (ver espacios/alcance.py). `espacio_lookup` es el campo que lleva al espacio.
+    """
+
+    espacio_lookup = 'espacio_id'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.get_current_user()
+        if alcance.esta_restringido(user):
+            return queryset.filter(**{f'{self.espacio_lookup}__in': alcance.espacios_ids(user)})
+        return queryset
+
+
+def _exigir_espacio_asignado(request, user):
+    """
+    Si la petición indica un espacio, el supervisor debe tenerlo asignado. Se comprueba antes
+    de validar el resto de la solicitud para no revelar nada de espacios ajenos.
+    """
+    espacio_id = request.data.get('espacio')
+    if espacio_id in (None, ''):
+        return
+    try:
+        espacio_id = int(getattr(espacio_id, 'id', espacio_id))
+    except (TypeError, ValueError):
+        return  # el serializador rechaza un identificador inválido
+    if not alcance.puede_gestionar_espacio(user, espacio_id):
+        raise PermissionDenied(alcance.MSG_ESPACIO_NO_ASIGNADO)
 
 
 class TipoActividadListCreateAPIView(CachedCatalogMixin, SeccionalMixin, generics.ListCreateAPIView):
@@ -54,11 +88,22 @@ class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIVie
             return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
 
-class PrestamoEspacioDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
+    def create(self, request, *args, **kwargs):
+        # Un supervisor solo crea préstamos en los espacios que tiene asignados
+        _exigir_espacio_asignado(request, self.get_current_user())
+        return super().create(request, *args, **kwargs)
+
+
+class PrestamoEspacioDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated, CanManagePrestamosEspacios]
     seccional_lookup = 'espacio__sede__seccional'
+
+    def update(self, request, *args, **kwargs):
+        # No puede mover un préstamo a un espacio que no tiene asignado
+        _exigir_espacio_asignado(request, self.get_current_user())
+        return super().update(request, *args, **kwargs)
 
 
 class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
@@ -79,7 +124,7 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
         return super().get_queryset()
 
 
-class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
+class PrestamoEspacioPublicoDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioPublicoSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -101,24 +146,26 @@ class PrestamoEspacioPublicoDetailAPIView(SeccionalMixin, generics.RetrieveUpdat
         return super().get_queryset()
 
 
-class PrestamoRecursoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
+class PrestamoRecursoListCreateAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.ListCreateAPIView):
     queryset = PrestamoRecurso.objects.select_related('prestamo', 'recurso').all()
     serializer_class = PrestamoRecursoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'prestamo__espacio__sede__seccional'
+    espacio_lookup = 'prestamo__espacio_id'
 
 
-class PrestamoRecursoDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
+class PrestamoRecursoDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = PrestamoRecurso.objects.select_related('prestamo', 'recurso').all()
     serializer_class = PrestamoRecursoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'prestamo__espacio__sede__seccional'
+    espacio_lookup = 'prestamo__espacio_id'
 
 
 class SupervisorEspaciosPermitidosPrestamosAPIView(SeccionalMixin, generics.ListAPIView):
     """
     Retorna todos los préstamos de los espacios permitidos para un usuario supervisor.
-    Solo accesible para usuarios con rol que comience con 'supervisor'.
+    Solo accesible para usuarios con un rol marcado como «Supervisor de espacios».
     Endpoint: GET /api/prestamos/supervisor/espacios-prestamos/
     """
     serializer_class = PrestamoEspacioSerializer

@@ -5,5 +5,5 @@ type SpaceSupervisorRole = Pick<Rol, 'nombre' | 'supervisa_espacios'> | Pick<Rol
 
 export const isSpaceSupervisorRole = (role: SpaceSupervisorRole): boolean => {
   if (!role) return false;
-  return Boolean(role.supervisa_espacios) || role.nombre === 'supervisor_general';
+  return Boolean(role.supervisa_espacios);
 };

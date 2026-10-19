@@ -39,7 +39,7 @@ export default function GestionRoles() {
     setRolEdicion(rol);
     setNombreRol(rol.nombre);
     setDescripcionRol(rol.descripcion);
-    setSupervisaEspacios(Boolean(rol.supervisa_espacios) || rol.nombre === 'supervisor_general');
+    setSupervisaEspacios(Boolean(rol.supervisa_espacios));
     setMostrarModal(true);
   };
 
@@ -141,7 +141,7 @@ export default function GestionRoles() {
                       <span className="text-gray-600 text-sm">{rol.descripcion}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {(rol.supervisa_espacios || rol.nombre === 'supervisor_general') ? (
+                      {rol.supervisa_espacios ? (
                         <span className="inline-flex items-center justify-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
                           <Building2 className="h-3.5 w-3.5" />
                           Si
